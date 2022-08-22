@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 
 @Builder
-@AllArgsConstructor
 public record Dependency(String name, DependencySpec dependencySpec, boolean mandatory)
     implements VajramDependencyDefinition {
 

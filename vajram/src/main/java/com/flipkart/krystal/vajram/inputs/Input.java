@@ -9,10 +9,7 @@ import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
-@EqualsAndHashCode(callSuper = false)
-@ToString
 @Builder
-@AllArgsConstructor
 public record Input<T>(
     String name,
     DataType<? extends T> type,

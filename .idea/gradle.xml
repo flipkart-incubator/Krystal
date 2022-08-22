@@ -12,6 +12,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/vajram" />
+            <option value="$PROJECT_DIR$/vajram-codegen" />
             <option value="$PROJECT_DIR$/vajram-samples" />
           </set>
         </option>
