@@ -1,4 +1,6 @@
-# The Krystal Programming Model
+# The Krystal Programming Model 
+
+This doc is a WIP
 
 Democratizing Development of Synchronous Scatter Gather Business logic
 
