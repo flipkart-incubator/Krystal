@@ -13,7 +13,7 @@ import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.ResolutionSources;
 import com.flipkart.krystal.vajram.inputs.Resolve;
-import com.flipkart.krystal.vajram.inputs.VajramDependencyDefinition;
+import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.Arrays;
@@ -33,7 +33,7 @@ public class GreetingVajram extends NonBlockingVajram {
   // design-time dependencies of this vajram, as well as
   // objects like loggers and metrics collectors injected by the runtime.
   @Override
-  public List<VajramDependencyDefinition> getInputDefinitions() {
+  public List<VajramInputDefinition> getInputDefinitions() {
     return Arrays.asList(
         Input.builder()
             // Local name for this input

@@ -1,4 +1,5 @@
 rootProject.name = 'krystal'
-include 'vajram', 'vajram-samples'
+include 'vajram'
+include 'vajram-samples'
 include 'vajram-codegen'
 

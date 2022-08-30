@@ -8,13 +8,13 @@ import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.inputs.BindFrom;
 import com.flipkart.krystal.vajram.inputs.DefaultInputResolver;
+import com.flipkart.krystal.vajram.inputs.Dependency;
+import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputId;
 import com.flipkart.krystal.vajram.inputs.InputResolver;
 import com.flipkart.krystal.vajram.inputs.QualifiedInputId;
 import com.flipkart.krystal.vajram.inputs.ResolutionSources;
 import com.flipkart.krystal.vajram.inputs.Resolve;
-import com.flipkart.krystal.vajram.inputs.Dependency;
-import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableList;
@@ -72,8 +72,7 @@ public class ResolutionValidator {
                         .filter(unresolvedInput -> unresolvedInput.defaultValue() == null)
                         .filter(Input::mandatory);
               }
-              for (Input<?> unresolvedInput :
-                  unresolvedInputsOfDependencyStream.toList()) {
+              for (Input<?> unresolvedInput : unresolvedInputsOfDependencyStream.toList()) {
                 if (inputResolvers.get(
                         new QualifiedInputId(
                             resolvedInput.name(), vajramID.vajramId(), unresolvedInput.name()))
