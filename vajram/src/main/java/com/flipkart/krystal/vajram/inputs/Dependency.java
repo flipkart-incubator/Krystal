@@ -1,12 +1,11 @@
 package com.flipkart.krystal.vajram.inputs;
 
 import com.flipkart.krystal.vajram.DependencySpec;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 
 @Builder
 public record Dependency(String name, DependencySpec dependencySpec, boolean mandatory)
-    implements VajramDependencyDefinition {
+    implements VajramInputDefinition {
 
   @Override
   public boolean needsModulation() {

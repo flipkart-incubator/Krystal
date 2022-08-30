@@ -4,10 +4,7 @@ import static com.google.common.collect.Sets.newHashSet;
 
 import com.flipkart.krystal.datatypes.DataType;
 import java.util.Set;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
 
 @Builder
 public record Input<T>(
@@ -18,7 +15,7 @@ public record Input<T>(
     String documentation,
     boolean needsModulation,
     Set<ResolutionSources> resolvableBy)
-    implements VajramDependencyDefinition {
+    implements VajramInputDefinition {
 
   private static final Set<ResolutionSources> DEFAULT_RESOLUTION_SOURCES =
       Set.of(ResolutionSources.REQUEST);

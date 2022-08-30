@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.inputs;
 
-public interface VajramDependencyDefinition {
+public sealed interface VajramInputDefinition permits Dependency, Input {
   String name();
 
   boolean needsModulation();
