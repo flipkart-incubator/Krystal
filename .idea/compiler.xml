@@ -3,22 +3,24 @@
   <component name="CompilerConfiguration">
     <annotationProcessing>
       <profile default="true" name="Default" enabled="true" />
-<<<<<<< HEAD
-=======
       <profile name="Gradle Imported" enabled="true">
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
           <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.projectlombok/lombok/1.18.24/13a394eed5c4f9efb2a6d956e2086f1d81e857d9/lombok-1.18.24.jar" />
         </processorPath>
-        <module name="krystal.vajram.main" />
+        <module name="vajram.main" />
       </profile>
->>>>>>> Fix errors
     </annotationProcessing>
-    <bytecodeTargetLevel target="17" />
-  </component>
-  <component name="JavacSettings">
-    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="krystal.vajram-codegen.main" options="--add-modules java.compiler" />
-    </option>
+    <bytecodeTargetLevel>
+      <module name="krystal.vajram" target="17" />
+      <module name="krystal.vajram-samples" target="17" />
+      <module name="krystal.vajram-samples.main" target="17" />
+      <module name="krystal.vajram-samples.test" target="17" />
+      <module name="krystal.vajram.main" target="17" />
+      <module name="krystal.vajram.test" target="17" />
+      <module name="vajram" target="17" />
+      <module name="vajram.main" target="17" />
+      <module name="vajram.test" target="17" />
+    </bytecodeTargetLevel>
   </component>
 </project>

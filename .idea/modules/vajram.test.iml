@@ -12,7 +12,6 @@
     <orderEntry type="module" module-name="vajram.main" />
     <orderEntry type="library" name="Gradle: com.google.guava:guava:31.1-jre" level="project" />
     <orderEntry type="library" name="Gradle: org.reflections:reflections:0.10.2" level="project" />
-    <orderEntry type="library" name="Gradle: org.projectlombok:lombok:1.18.24" level="project" />
     <orderEntry type="library" name="Gradle: org.junit.jupiter:junit-jupiter-api:5.9.0" level="project" />
     <orderEntry type="library" name="Gradle: com.google.guava:failureaccess:1.0.1" level="project" />
     <orderEntry type="library" name="Gradle: com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava" level="project" />
