@@ -1,4 +1,4 @@
-package caramel.model;
+package com.flipkart.krystal.caramel.model;
 
 import java.util.function.Supplier;
 

@@ -1,4 +1,4 @@
-package caramel.model;
+package com.flipkart.krystal.caramel.model;
 
 public class ImmutabilityViolationException extends RuntimeException {
   public ImmutabilityViolationException(Value<?, ?> value) {
