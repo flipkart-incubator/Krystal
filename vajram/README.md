@@ -1,8 +1,7 @@
 The Vajram Programming Model
 ============================
 
-Introduction
-------------
+## Introduction
 
 The Vajram Programming model provides a way to design and write synchronous scatter-gather code. Apart from the 
 general goals of the Krystal Project, the vajram progamming model is designed keeping in mind the following goals:
@@ -14,11 +13,9 @@ general goals of the Krystal Project, the vajram progamming model is designed ke
 1. Cross-feature and Cross-application re-usability: The same piece of business logic can be reused for different
    requirements within an application and also across different application runtimes.
 
-Programming Model Design
-========================
+## Programming Model Design
 
-Vajram
-------
+### Vajram
 
 The basic building block of a Krystal is a Vajram. Each vajram is responsible for one piece of well-defined, reusable
 business logic (possibly encapsulating a network call to an external system). Each Vajram is identified by its
@@ -127,8 +124,7 @@ Every Vajram is defined by the following properties
   Orchestration platform makes use of these Vajrams. Application developers developing widgets will normally not have to
   interact with GENERATOR Vajrams
 
-Programming Spec
-----------------
+### Programming Spec
 
 ```java
 import com.flipkart.userservice.UserServiceVajram;
@@ -214,25 +210,23 @@ public class GreetingVajram extends SyncVajram {
 }
 ```
 
-Design choices in Detail
-========================
+## Design choices in Detail
 
-Static dependency declaration
------------------------------
+### Static dependency declaration
 
 One of the core tenets of Krystal is to allow for a reactive execution environment to minimize usage of resources like
 threads. To achieve this Krystal
 
-Input Modulation
-----------------
+### Input Modulation
 
-### Definition
+
+#### Definition
 
 Input modulation is the process of squashing/collapsing/merging multiple independent inputs to a blocking operation so
 that the blocking operation can compute outputs to these inputs in an optimal fashion consuming minimum resources like
 network bandwidth, disk IO etc. Input modulation is a generalization of the concept we know as Batching.
 
-#### Batching vs Modulation
+##### Batching vs Modulation
 
 Why are we calling this feature Input Modulation and not batching? This is because there might be other kinds of request
 merging which are different from batching. Batching is a process where we take N requests objects each consisting of one
@@ -243,7 +237,7 @@ is a subset of HIGH. If two clients request data from the API, one with the LOW 
 ideally want to make a single call with MEDIUM as the info level. Here the input modulation modulates both the requests
 into a single request containing the MEDIUM info level.
 
-### Problems
+#### Problems
 
 Let us understand the philosophy and design Krystal Programming model's input modulation feature by considering a
 hypothetical example. Let us consider a user path system which performs scatter gather operations to serve widgets to
@@ -268,7 +262,7 @@ Price: ₹12300.00
 
 Note that the Title, manufacturer Date, and Brand are all served by the same API of Entity Service:
 
-### Batch API
+#### Batch API
 
 ```java
 class EntityServiceClient {
@@ -281,12 +275,12 @@ class EntityServiceClient {
 Since this Entity Service server is capable of returning multiple attributes of a given product in a single network
 call, the client library API obviously reflects that capability.
 
-#### Problem 1 - Leaking of implementation details to clients
+##### Problem 1 - Leaking of implementation details to clients
 
 This API is exposed to clients of Entity Service like Entity Details widget and Entity Card widget. This is not ideal.
 Ideally the API contract that Entity Service would like to provide to its client looks like this:
 
-### Mono API
+#### Mono API
 
 ```java
 class EntityServiceClient {
@@ -299,7 +293,7 @@ writing a piece of business logic which needs data from Entity Service doesn't n
 name in a list just to conform to the API, and then doesn't need to unwrap the response map to get the attribute value.
 This makes the code simpler and representative of the actual requirements rather than the APIs internal details.
 
-#### Problem 2 - Suboptimal batching
+##### Problem 2 - Suboptimal batching
 
 Now, to avoid problem 1, the Entity Service API library can provide both the batch API and the mono API, and clients can
 choose to use the one that suits them. This way, if there is a client who needs multiple attributes of the same product,
@@ -314,7 +308,7 @@ and any time a new piece of business logic is written that needs Entity Service 
 of the above coordination and has to register for the same. Any such miss can cause a significant increase in Entity
 Service calls and reduction in system performance.
 
-### Design
+#### Design
 
 To solve the above problems, the Krystal Programming model introduces the concept called input modulation. Every Vajram
 which encapsulates potentially blocking logic, and can optimize its performance by merging/squashing multiple
@@ -332,7 +326,7 @@ interface InputModulator {
 }
 ```
 
-#### add(...)
+##### add(...)
 
 Whenever a client of Entity Service requests some data from Entity Service, the Krystal Runtime passes on this request
 object to the add method of the input modulator of Entity Service vajram which stores it in memory and in most cases
@@ -348,7 +342,7 @@ clients of the API have not requested enough data to reach the max batch size. I
 returns a list of modulated requests and thus we need a way to proactively trigger the API call with the available set
 of requests. This is where the modulate and register methods come in.
 
-#### modulate(...)
+##### modulate(...)
 
 Since the Krystal Programming model is based on Vajrams which statically declare their dependencies and because the
 wiring and interaction between these Vajrams is completely under the control of the Krystal Runtime which wires these
@@ -358,7 +352,7 @@ See Krystex LLD for reference implementation). When the runtime realizes that th
 from Entity Service, the runtime calls the modulate method of the input modulator which merges all the pending requests
 and returns the list of modulated requests which are then used by the Runtime to make the network call(s).
 
-#### register(...)
+##### register(...)
 
 Another strategy for modulation is for the input modulator to have a timeout for which it will wait for new requests.
 After that timeout is breached, the input modulator modulates all the pending requests. When it does this, it needs a
@@ -368,7 +362,7 @@ can then trigger the actual netwerk call.
 
 ![](assets/modulation_workflow.png)
 
-### Demodulation
+#### Demodulation
 
 If a client has requested data for attribute 'a', and the input modulator has modulated the input into a list of
 attributes 'a', 'b' and 'c' and the Entity Service API returns the response as a Map contains the three attribute names
@@ -378,7 +372,7 @@ particular client. This process of taking the response of a batched/modulated AP
 information for a given unmodulated request is called demodulation and can be performed either by the input modulator,
 or by the Blocking Vajram itself.
 
-### Rationale
+#### Rationale
 
 The above design solves multiple problems
 
@@ -406,9 +400,9 @@ The above design solves multiple problems
    modulating requests and demodulating responses. All this logic is encapsulated by the dependency Vajram
 5. The functional contract accurately represents the domain of the server giving longevity to contracts.
 
-### Comparison with other technologies
+#### Comparison with other technologies
 
-#### [graphql/dataloader](https://github.com/graphql/dataloader)
+##### [graphql/dataloader](https://github.com/graphql/dataloader)
 
 The Graphql Dataloader solves the batching problem (not the general input modulation problem) for the javascript
 programming language. The trigger for modulating is one tick in the javascript runtime eventloop, though users can
@@ -422,5 +416,4 @@ The Krystal Programming model achieves the optimal batching across ticks of the 
 framework running on the reactive model, it is also works on the principle of statically declared, granular dependencies
 allowing it to optimally batch and modulate requests without any additional effort from the application developer.
 
-Comparison with other technologies
-=====================================
+## Comparison with other technologies
