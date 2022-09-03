@@ -1,11 +1,10 @@
 # The Krystal Project
 
-<<This doc is a WIP>>
+///// This doc is a WIP
 
 Super-charging the development of synchronous and asynchronous business workflows.
 
-Introduction
-============
+## Introduction
 
 The Krystal Project facilitates a developer-friendly way to write high-performant, complex, business logic which is easily maintainable and observabe. The project encompasses the following major components. 
    * Vajram: A programming model which allows developers to design and write code for synchronous scatter gather business logic in a 'bottom-up' manner.
@@ -13,8 +12,7 @@ The Krystal Project facilitates a developer-friendly way to write high-performan
    * Krystex: A runtime environment which executes synchronous parts of the code written in vajram/caramel programming models in an optimal way by understanding static dependencies between pieces of code, creating a logical Directed-Acyclic-Graph, and executing the DAG with maximal concurrency.
    * Raven: An asynchronous workflow orchestrator which orchestrates the asynchronous parts of worflows written in the caramel programming model.
 
-Design Goals
-============
+## Design Goals
 
 Components of the Krystal Project try to adhere to the following design goals:
 
