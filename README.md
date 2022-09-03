@@ -15,11 +15,11 @@ The Krystal Project facilitates a developer-friendly way to write high-performan
 ## Bottom-up vs. Top-down programming
 The Krystal project supports two ways of writing business logic - Bottom-up and top-down. 
 
-### Bottom-up programming or Orchestration
-Bottom-up programming is a paradigm in which a developer focuses on one atomic piece of business logic and it's dependencies without being aware of when, how and in what order the code will be executed with respect to other business logic in the application. The orchestration of the execution of the code is the reponsibility of the platform runtime, which analyzes the static dependencies declared by each piece of business logic and orchestrates the execution of the all the different pieces of the business logic in the most optimal fashion by building a Directed Acyclic Graph. This also called Orchestration.
+### Bottom-up programming or Choreography
+Bottom-up programming is a paradigm in which a developer focuses on one atomic piece of business logic and it's dependencies without being aware of when, how and in what order the code will be executed with respect to other business logic in the application. The orchestration of the execution of the code is the reponsibility of the platform runtime, which analyzes the static dependencies declared by each piece of business logic and orchestrates the execution of the all the different pieces of the business logic in the most optimal fashion by building a Directed Acyclic Graph. This also called Choreography.
 
-### Top-down programming or Choreography
-Top-down programming is a paradigm in which the developer wants complete control over when and in what order a piece of business logic is executed. This means that the developer has an awareness of the uber workflow and a design intent for ordering of the various operations which are part of the workflow in a specific pre-determined order.
+### Top-down programming or Orchestration
+Top-down programming is a paradigm in which the developer wants complete control over when and in what order a piece of business logic is executed. This means that the developer has an awareness of the uber workflow and a design intent for ordering of the various operations which are part of the workflow in a specific pre-determined order. This is also called Orchestration.
 
 ### Example 1
 Let's say a developer wants to write a piece of business logic that returns the population of the capital of a country, and let us say there are two exisinting APIs which return the capital of a given country and the pupulation of a given city respectively.
