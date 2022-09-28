@@ -1,3 +1,5 @@
 include 'caramel'
 include 'caramel'
+include 'caramel:caramel-samples'
+findProject(':caramel:caramel-samples')?.name = 'caramel-samples'
 
