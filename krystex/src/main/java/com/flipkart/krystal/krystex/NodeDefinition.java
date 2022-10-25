@@ -1,7 +1,6 @@
 package com.flipkart.krystal.krystex;
 
 import java.util.LinkedHashSet;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -33,38 +32,5 @@ public abstract sealed class NodeDefinition<T>
 
   public Set<String> dependants() {
     return dependants;
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (obj == this) {
-      return true;
-    }
-    if (obj == null || obj.getClass() != this.getClass()) {
-      return false;
-    }
-    var that = (NodeDefinition) obj;
-    return Objects.equals(this.nodeId, that.nodeId)
-        && Objects.equals(this.inputs, that.inputs)
-        && Objects.equals(this.dependants, that.dependants);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(nodeId, inputs, dependants);
-  }
-
-  @Override
-  public String toString() {
-    return "NodeDefinition["
-        + "nodeId="
-        + nodeId
-        + ", "
-        + "inputs="
-        + inputs
-        + ", "
-        + "dependants="
-        + dependants
-        + ']';
   }
 }
