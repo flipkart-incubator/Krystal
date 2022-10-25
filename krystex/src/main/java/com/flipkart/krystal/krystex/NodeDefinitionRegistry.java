@@ -1,11 +1,13 @@
 package com.flipkart.krystal.krystex;
 
+import static java.util.Collections.emptySet;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public final class NodeDefinitions {
+public final class NodeDefinitionRegistry {
   private final Map<String, NodeDefinition<?>> nodeDefinitions = new HashMap<>();
   private final Map<String, Set<NodeDefinition<?>>> nodeDefinitionsByInputs = new HashMap<>();
 
@@ -24,7 +26,7 @@ public final class NodeDefinitions {
               }
             });
     nodeDefinitionsByInputs
-        .get(nodeDefinition.nodeId())
+        .getOrDefault(nodeDefinition.nodeId(), emptySet())
         .forEach(dependent -> nodeDefinition.isAnInputTo(dependent.nodeId()));
   }
 

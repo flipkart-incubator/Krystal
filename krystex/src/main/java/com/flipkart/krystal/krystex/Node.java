@@ -4,11 +4,11 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
-public abstract class Node<T> {
+public final class Node<T> {
 
   private final NodeDefinition<T> nodeDefinition;
   private final NodeRegistry nodeRegistry;
-  private final CompletableFuture<T> future = new CompletableFuture<>();
+  private final Result<T> result = new Result<>(new CompletableFuture<>());
   private final String nodeId;
   private final List<LogicDecorationStrategy> decorationStrategies;
 
@@ -25,9 +25,11 @@ public abstract class Node<T> {
     this.decorationStrategies = decorationStrategies;
   }
 
-  abstract CompletableFuture<Result<T>> getOutput();
+  public Result<T> getResult() {
+    return result;
+  }
 
-  final CompletableFuture<T> execute() {
+  CompletableFuture<T> execute() {
     if (nodeRegistry.getAll(nodeDefinition.inputs()).stream()
         .anyMatch(node -> !node.hasExecuted())) {
       throw new IllegalStateException();
@@ -36,6 +38,7 @@ public abstract class Node<T> {
       decoratedLogic()
           .whenComplete(
               (t, throwable) -> {
+                CompletableFuture<T> future = result.future();
                 if (throwable != null) {
                   future.completeExceptionally(throwable);
                 } else {
@@ -43,11 +46,11 @@ public abstract class Node<T> {
                 }
               });
     } catch (Exception e) {
-      future.completeExceptionally(e);
+      result.future().completeExceptionally(e);
     } finally {
       hasExecuted = true;
     }
-    return future;
+    return result.future();
   }
 
   private CompletionStage<T> decoratedLogic() {

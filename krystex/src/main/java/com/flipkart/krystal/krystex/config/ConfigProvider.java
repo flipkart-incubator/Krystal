@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex;
+package com.flipkart.krystal.krystex.config;
 
 import java.util.Optional;
 

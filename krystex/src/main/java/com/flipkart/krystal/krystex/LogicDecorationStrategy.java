@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex;
 
+import com.flipkart.krystal.krystex.Node;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 

@@ -1,11 +1,7 @@
 package com.flipkart.krystal.krystex;
 
-import io.github.resilience4j.ratelimiter.RateLimiter;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -25,7 +21,7 @@ public abstract sealed class NodeDefinition<T>
     dependants.add(nodeId);
   }
 
-  protected abstract CompletableFuture<T> logic();
+  public abstract CompletableFuture<T> logic();
 
   public String nodeId() {
     return nodeId;

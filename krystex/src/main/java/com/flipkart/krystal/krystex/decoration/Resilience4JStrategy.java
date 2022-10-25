@@ -1,7 +1,12 @@
-package com.flipkart.krystal.krystex;
+package com.flipkart.krystal.krystex.decoration;
 
 import static com.flipkart.krystal.krystex.RateLimitingStrategy.SEMAPHORE;
 
+import com.flipkart.krystal.krystex.LogicDecorationStrategy;
+import com.flipkart.krystal.krystex.Node;
+import com.flipkart.krystal.krystex.NonBlockingNodeDefinition;
+import com.flipkart.krystal.krystex.RateLimitingStrategy;
+import com.flipkart.krystal.krystex.config.ConfigProvider;
 import io.github.resilience4j.decorators.Decorators;
 import io.github.resilience4j.decorators.Decorators.DecorateCompletionStage;
 import io.github.resilience4j.ratelimiter.RateLimiter;
@@ -13,6 +18,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
+// TODO move to a dedicated module
 public class Resilience4JStrategy implements LogicDecorationStrategy {
 
   private final ConfigProvider configProvider;

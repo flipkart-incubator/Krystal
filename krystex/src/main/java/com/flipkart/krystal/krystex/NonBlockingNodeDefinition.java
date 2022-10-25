@@ -12,7 +12,7 @@ public abstract non-sealed class NonBlockingNodeDefinition<T> extends NodeDefini
   }
 
   @Override
-  protected final CompletableFuture<T> logic() {
+  public final CompletableFuture<T> logic() {
     return completedFuture(nonBlockingLogic());
   }
 
