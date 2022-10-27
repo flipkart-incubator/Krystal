@@ -1,5 +1,8 @@
-include 'caramel'
+rootProject.name = 'krystal'
 include 'caramel'
 include 'caramel:caramel-samples'
 findProject(':caramel:caramel-samples')?.name = 'caramel-samples'
-
+include 'vajram'
+include 'vajram-samples'
+include 'vajram-codegen'
+include 'krystex'
