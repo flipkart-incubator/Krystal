@@ -10,7 +10,7 @@ The Krystal Project facilitates a developer-friendly way to write high-performan
    * Vajram: A programming model which allows developers to design and write code for synchronous scatter gather business logic in a 'bottom-up' (choreographed) manner.
    * Caramel: A programming model which allows developers to design and write code for synchronous and asynchronous workflows in a 'top-down' (orchestrated) manner.
    * Krystex: A runtime environment which executes synchronous parts of the code written in vajram/caramel programming models in an optimal way by understanding static dependencies between pieces of code, creating a logical Directed-Acyclic-Graph, and executing the DAG with maximal concurrency.
-   * Raven: An asynchronous workflow orchestrator which orchestrates the asynchronous parts of worflows written in the caramel programming model.
+   * Honeycomb: An asynchronous workflow orchestrator which orchestrates the asynchronous parts of worflows written in the caramel programming model.
    
 ## Bottom-up vs. Top-down programming
 The Krystal project supports two ways of writing business logic - Bottom-up and top-down. 
