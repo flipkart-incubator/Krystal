@@ -4,9 +4,9 @@ import static java.util.Collections.emptyList;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
@@ -23,7 +23,10 @@ public final class KrystalTaskExecutor implements KrystalExecutor {
 
   public KrystalTaskExecutor(NodeDefinitionRegistry nodeDefinitionRegistry) {
     this.nodeRegistry = new NodeRegistry(nodeDefinitionRegistry);
-    this.mainLoopTask = newSingleThreadExecutor().submit(this::mainLoop);
+    this.mainLoopTask =
+        newSingleThreadExecutor(
+                new ThreadFactoryBuilder().setNameFormat("KrystalTaskExecutorMonoThread").build())
+            .submit(this::mainLoop);
   }
 
   public synchronized void shutdown() {
@@ -36,6 +39,7 @@ public final class KrystalTaskExecutor implements KrystalExecutor {
     if (shutdownRequested) {
       throw new IllegalStateException("Krystal has already been shutdown.");
     }
+    // TODO Implement caching
     Node<T> node = new Node<>(nodeDefinition, nodeRegistry, nodeDefinition.nodeId(), emptyList());
     this.nodeRegistry.add(node);
     enqueue(node);
@@ -50,19 +54,14 @@ public final class KrystalTaskExecutor implements KrystalExecutor {
     while (!shutdownRequested) {
       try {
         Node<?> currentNode = taskQueue.take();
-        if (currentNode.hasExecuted()) {
+        if (currentNode.wasExecutionTriggered()) {
           // TODO Emit a no-op metric that shows that a node was added to the task queue
           // unnecessarily
           continue;
         }
-        NodeDefinition<?> nodeDefinition = currentNode.definition();
-        Set<Node<?>> inputs = nodeRegistry.getAll(nodeDefinition.inputs());
-        boolean hasPendingInputs = executePendingInputs(currentNode, inputs);
+        boolean hasPendingInputs = enqueuePendingInputs(currentNode);
         if (!hasPendingInputs) {
-          CompletableFuture<?> future = currentNode.execute();
-          future.whenComplete(
-              (o, throwable) ->
-                  taskQueue.addAll(nodeRegistry.getAll(currentNode.definition().dependants())));
+          currentNode.execute();
         }
       } catch (InterruptedException ignored) {
 
@@ -70,18 +69,34 @@ public final class KrystalTaskExecutor implements KrystalExecutor {
     }
   }
 
-  private boolean executePendingInputs(Node<?> currentNode, Set<Node<?>> inputNodes) {
+  private boolean enqueuePendingInputs(Node<?> currentNode) {
+    NodeDefinition<?> nodeDefinition = currentNode.definition();
     boolean hasPendingInputs = false;
     List<CompletableFuture<?>> inputFutures = new ArrayList<>();
-    for (Node<?> inputNode : inputNodes) {
-      if (!inputNode.hasExecuted()) {
+    for (String depNodeId : nodeDefinition.inputs()) {
+      Node<Object> depNode = nodeRegistry.get(depNodeId);
+      if (depNode == null) {
         hasPendingInputs = true;
-        enqueue(inputNode);
-        inputFutures.add(inputNode.getResult().future());
+        inputFutures.add(
+            requestExecution(nodeRegistry.getNodeDefinitionRegistry().get(depNodeId)).future());
+      } else {
+        if (!depNode.isDone()) {
+          hasPendingInputs = true;
+          if (!depNode.wasExecutionTriggered()) {
+            enqueue(depNode);
+          }
+        }
+        inputFutures.add(depNode.getResult().future());
       }
     }
-    allOf(inputFutures.toArray(new CompletableFuture[] {}))
-        .thenAccept((o) -> taskQueue.add(currentNode));
+    // This implementation treats all dependencies as mandatory
+    // TODO Add support for optional dependencies
+    // TODO Add support for deadlines/timeouts
+    // TODO Add support for deadline propagation
+    if (hasPendingInputs) {
+      allOf(inputFutures.toArray(new CompletableFuture[] {}))
+          .whenComplete((o, t) -> enqueue(currentNode));
+    }
     return hasPendingInputs;
   }
 }

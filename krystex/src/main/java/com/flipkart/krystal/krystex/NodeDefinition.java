@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex;
 
+import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -20,7 +21,7 @@ public abstract sealed class NodeDefinition<T>
     dependants.add(nodeId);
   }
 
-  public abstract CompletableFuture<T> logic();
+  public abstract CompletableFuture<T> logic(ImmutableMap<String, ?> dependencyValues);
 
   public String nodeId() {
     return nodeId;

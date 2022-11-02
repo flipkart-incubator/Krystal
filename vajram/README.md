@@ -160,7 +160,7 @@ public class GreetingVajram extends SyncVajram {
                         // GreetingVajram needs UserService's Response to compose the Greeting
                         // which it can get from the UserServiceVajram 
                         // (which is an Async Vajram as it makes network calls.
-                        .dependencySpec(vajramID(UserServiceVajram.ID))
+                        .dataAccessSpec(vajramID(UserServiceVajram.ID))
                         // If this dependency fails, fail this Vajram
                         .isMandatory()
                         .build(),
@@ -175,7 +175,7 @@ public class GreetingVajram extends SyncVajram {
                         // Data type of resolved dependencies is inferred from the 
                         // dependency Vajram's Definition
                         .name("push_analytics_event")
-                        .dependencySpec(vajramID(AnalyticsEventSink.ID))
+                        .dataAccessSpec(vajramID(AnalyticsEventSink.ID))
                         .build());
     }
 

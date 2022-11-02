@@ -1,12 +1,16 @@
 package com.flipkart.krystal.krystex;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+
+import com.google.common.collect.ImmutableMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.function.Function;
+import lombok.Getter;
 
 public final class NodeRegistry {
-  private final NodeDefinitionRegistry nodeDefinitionRegistry;
+  @Getter private final NodeDefinitionRegistry nodeDefinitionRegistry;
   private final Map<String, Node<?>> nodes = new HashMap<>();
 
   public NodeRegistry(NodeDefinitionRegistry nodeDefinitionRegistry) {
@@ -22,7 +26,7 @@ public final class NodeRegistry {
     return (Node<T>) nodes.get(nodeId);
   }
 
-  public <T> Set<Node<?>> getAll(Set<String> nodeIds) {
-    return nodeIds.stream().map(this::get).collect(Collectors.toSet());
+  public <T> ImmutableMap<String, Node<?>> getAll(Set<String> nodeIds) {
+    return nodeIds.stream().collect(toImmutableMap(Function.identity(), this::get));
   }
 }

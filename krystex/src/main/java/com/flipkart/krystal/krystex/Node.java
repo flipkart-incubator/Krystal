@@ -1,9 +1,18 @@
 package com.flipkart.krystal.krystex;
 
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.function.Function.identity;
 
+import com.google.common.collect.ImmutableMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import lombok.ToString;
+
+@ToString(of = {"nodeId", "executionTriggered"})
 public final class Node<T> {
 
   private final NodeDefinition<T> nodeDefinition;
@@ -11,8 +20,7 @@ public final class Node<T> {
   private final Result<T> result = new Result<>(new CompletableFuture<>());
   private final String nodeId;
   private final List<LogicDecorationStrategy> decorationStrategies;
-
-  private boolean hasExecuted;
+  private boolean executionTriggered;
 
   public Node(
       NodeDefinition<T> nodeDefinition,
@@ -29,40 +37,57 @@ public final class Node<T> {
     return result;
   }
 
-  CompletableFuture<T> execute() {
-    if (nodeRegistry.getAll(nodeDefinition.inputs()).stream()
-        .anyMatch(node -> !node.hasExecuted())) {
+  void execute() {
+    if (nodeRegistry.getAll(nodeDefinition.inputs()).values().stream()
+        .anyMatch(node -> !node.isDone())) {
       throw new IllegalStateException();
     }
-    try {
+    ImmutableMap<String, Result<?>> dependencyResults =
+        nodeDefinition.inputs().stream()
+            .collect(toImmutableMap(identity(), s -> nodeRegistry.get(s).getResult()));
+    CompletableFuture<T> resultFuture = result.future();
+    // The following implementation treats all dependencies as mandatory
+    // TODO add support for optional dependencies.
+    if (dependencyResults.values().stream().anyMatch(Result::isFailure)) {
+      Map<String, Throwable> reasons =
+          dependencyResults.entrySet().stream()
+              .filter(e -> e.getValue().isFailure())
+              .collect(
+                  Collectors.toMap(
+                      Entry::getKey,
+                      e -> e.getValue().future().handle((o, throwable) -> throwable).getNow(null)));
+      resultFuture.completeExceptionally(new MandatoryDependencyFailureException(reasons));
+    } else {
       decoratedLogic()
+          .apply(
+              dependencyResults.entrySet().stream()
+                  .collect(toImmutableMap(Entry::getKey, e -> e.getValue().future().getNow(null))))
           .whenComplete(
               (t, throwable) -> {
-                CompletableFuture<T> future = result.future();
                 if (throwable != null) {
-                  future.completeExceptionally(throwable);
+                  resultFuture.completeExceptionally(throwable);
                 } else {
-                  future.complete(t);
+                  resultFuture.complete(t);
                 }
               });
-    } catch (Exception e) {
-      result.future().completeExceptionally(e);
-    } finally {
-      hasExecuted = true;
     }
-    return result.future();
+    executionTriggered = true;
   }
 
-  private CompletionStage<T> decoratedLogic() {
-    CompletionStage<T> result = nodeDefinition.logic();
+  private Function<ImmutableMap<String, ?>, CompletableFuture<T>> decoratedLogic() {
+    Function<ImmutableMap<String, ?>, CompletableFuture<T>> logic = nodeDefinition::logic;
     for (LogicDecorationStrategy decorationStrategy : decorationStrategies) {
-      result = decorationStrategy.decorateLogic(this).get();
+      logic = decorationStrategy.decorateLogic(this, logic);
     }
-    return result;
+    return logic;
   }
 
-  boolean hasExecuted() {
-    return hasExecuted;
+  boolean wasExecutionTriggered() {
+    return executionTriggered;
+  }
+
+  boolean isDone() {
+    return result.future().isDone();
   }
 
   public NodeDefinition<T> definition() {
