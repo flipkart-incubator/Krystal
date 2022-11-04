@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.inputs;
 
-import com.flipkart.krystal.vajram.validators.DefaultInputResolver;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collection;
 import java.util.Collections;

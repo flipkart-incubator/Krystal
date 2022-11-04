@@ -15,8 +15,8 @@ public class KrystexVajramExecutor implements VajramExecutor {
   @Override
   public <T> CompletableFuture<T> requestExecution(String vajramId) {
     VajramDefinition vajramDefinition = vajramRegistry.getVajramDefinition(vajramId).orElseThrow();
-    //noinspection unchecked
-    return (CompletableFuture<T>)
-        krystalExecutor.requestExecution(vajramDefinition.getMainLogicNodeDefinition()).future();
+    vajramRegistry.getExecutionNode(vajramDefinition);
+    // TODO integrate with krystal Executor
+    return null;
   }
 }

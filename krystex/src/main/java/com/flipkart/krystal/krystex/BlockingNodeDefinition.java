@@ -1,10 +1,10 @@
 package com.flipkart.krystal.krystex;
 
-import java.util.Set;
+import java.util.Map;
 
 public abstract non-sealed class BlockingNodeDefinition<T> extends NodeDefinition<T> {
 
-  BlockingNodeDefinition(String nodeId, Set<String> inputs) {
+  BlockingNodeDefinition(String nodeId, Map<String, String> inputs) {
     super(nodeId, inputs);
   }
 

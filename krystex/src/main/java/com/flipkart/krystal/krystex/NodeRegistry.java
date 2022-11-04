@@ -3,6 +3,7 @@ package com.flipkart.krystal.krystex;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.google.common.collect.ImmutableMap;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -26,7 +27,7 @@ public final class NodeRegistry {
     return (Node<T>) nodes.get(nodeId);
   }
 
-  public <T> ImmutableMap<String, Node<?>> getAll(Set<String> nodeIds) {
+  public <T> ImmutableMap<String, Node<?>> getAll(Collection<String> nodeIds) {
     return nodeIds.stream().collect(toImmutableMap(Function.identity(), this::get));
   }
 }

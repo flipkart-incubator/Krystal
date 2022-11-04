@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.validators;
+package com.flipkart.krystal.vajram.inputs;
 
 import com.flipkart.krystal.vajram.inputs.InputResolver;
 import com.flipkart.krystal.vajram.inputs.QualifiedInputs;

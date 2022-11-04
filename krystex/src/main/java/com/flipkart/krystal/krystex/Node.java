@@ -1,15 +1,22 @@
 package com.flipkart.krystal.krystex;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.function.Function.identity;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
+import com.google.common.collect.Maps;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.ToString;
 
 @ToString(of = {"nodeId", "executionTriggered"})
@@ -17,7 +24,8 @@ public final class Node<T> {
 
   private final NodeDefinition<T> nodeDefinition;
   private final NodeRegistry nodeRegistry;
-  private final Result<T> result = new Result<>(new CompletableFuture<>());
+  private final Map<Request, ImmutableList<Result<T>>> results = new HashMap<>();
+  private final CompletableFuture<Void> completion = new CompletableFuture<>();
   private final String nodeId;
   private final List<LogicDecorationStrategy> decorationStrategies;
   private boolean executionTriggered;
@@ -33,49 +41,145 @@ public final class Node<T> {
     this.decorationStrategies = decorationStrategies;
   }
 
-  public Result<T> getResult() {
-    return result;
+  public Map<Request, List<Result<T>>> getResults() {
+    return ImmutableMap.copyOf(results);
   }
 
   void execute() {
-    if (nodeRegistry.getAll(nodeDefinition.inputs()).values().stream()
+    if (nodeRegistry.getAll(nodeDefinition.inputs().values()).values().stream()
         .anyMatch(node -> !node.isDone())) {
       throw new IllegalStateException();
     }
-    ImmutableMap<String, Result<?>> dependencyResults =
-        nodeDefinition.inputs().stream()
-            .collect(toImmutableMap(identity(), s -> nodeRegistry.get(s).getResult()));
-    CompletableFuture<T> resultFuture = result.future();
+    ImmutableMap<String, ImmutableList<Result<?>>> dependencyResults =
+        nodeDefinition.inputs().values().stream()
+            .collect(
+                toImmutableMap(
+                    identity(),
+                    s ->
+                        nodeRegistry.get(s).getResults().values().stream()
+                            .flatMap(Collection::stream)
+                            .collect(toImmutableList())));
+
+    // This is the list of batched responses from each dependency. If dep1 returns batch of size
+    // m, dep2 returns batch of size n and dep3 returns batch of size p, the logic of this
+    // vajram needs to be called m X n X p times.
+    ImmutableList<Request> requests =
+        createIndividualRequestsFromBatchResponses(dependencyResults).stream()
+            .map(Request::new)
+            .collect(toImmutableList());
+
     // The following implementation treats all dependencies as mandatory
     // TODO add support for optional dependencies.
-    if (dependencyResults.values().stream().anyMatch(Result::isFailure)) {
-      Map<String, Throwable> reasons =
-          dependencyResults.entrySet().stream()
-              .filter(e -> e.getValue().isFailure())
-              .collect(
-                  Collectors.toMap(
-                      Entry::getKey,
-                      e -> e.getValue().future().handle((o, throwable) -> throwable).getNow(null)));
-      resultFuture.completeExceptionally(new MandatoryDependencyFailureException(reasons));
-    } else {
-      decoratedLogic()
-          .apply(
-              dependencyResults.entrySet().stream()
-                  .collect(toImmutableMap(Entry::getKey, e -> e.getValue().future().getNow(null))))
+    for (Request request : requests) {
+      List<Result<T>> resultsForRequest = new ArrayList<>();
+      if (request.asMap().values().stream().anyMatch(Result::isFailure)) {
+        ImmutableMap<String, Throwable> reasons =
+            request.asMap().entrySet().stream()
+                .filter(e -> e.getValue().isFailure())
+                .collect(
+                    toImmutableMap(
+                        Entry::getKey,
+                        e ->
+                            e.getValue()
+                                .future()
+                                .handle((o, throwable) -> throwable)
+                                .getNow(null)));
+
+        resultsForRequest.add(
+            new Result<>(
+                CompletableFuture.failedFuture(new MandatoryDependencyFailureException(reasons))));
+      } else {
+        decoratedLogic()
+            .apply(request.asMap())
+            .whenComplete(
+                (t, throwable) -> {
+                  if (throwable != null) {
+                    resultsForRequest.add(new Result<>(CompletableFuture.failedFuture(throwable)));
+                  } else {
+                    resultsForRequest.addAll(
+                        t.stream()
+                            .map(
+                                response ->
+                                    new Result<>(CompletableFuture.completedFuture(response)))
+                            .collect(toImmutableList()));
+                  }
+                });
+      }
+      CompletableFuture.allOf(
+              results.values().stream()
+                  .flatMap(Collection::stream)
+                  .map(Result::future)
+                  .toArray(CompletableFuture[]::new))
           .whenComplete(
-              (t, throwable) -> {
-                if (throwable != null) {
-                  resultFuture.completeExceptionally(throwable);
+              (unused, throwable) -> {
+                if (throwable == null) {
+                  completion.complete(null);
                 } else {
-                  resultFuture.complete(t);
+                  completion.completeExceptionally(throwable);
                 }
               });
+      results.put(request, ImmutableList.copyOf(resultsForRequest));
     }
     executionTriggered = true;
   }
 
-  private Function<ImmutableMap<String, ?>, CompletableFuture<T>> decoratedLogic() {
-    Function<ImmutableMap<String, ?>, CompletableFuture<T>> logic = nodeDefinition::logic;
+  /**
+   * If input is
+   *
+   * <pre>
+   *   {
+   *     k1: {k1v1,k1v2}
+   *     k2: {k2v1,k2v2}
+   *   }
+   * </pre>
+   *
+   * Then output will be
+   *
+   * <pre>
+   *   [
+   *     {
+   *       k1:k1v1
+   *       k2:k2v1
+   *     },
+   *     {
+   *       k1:k1v1
+   *       k2:k2v2
+   *     },
+   *     {
+   *       k1:k1v2
+   *       k2:k2v1
+   *     },
+   *     {
+   *       k1:k1v2
+   *       k2:k2v2
+   *     },
+   *   ]
+   * </pre>
+   */
+  private ImmutableList<ImmutableMap<String, Result<?>>> createIndividualRequestsFromBatchResponses(
+      Map<String, ImmutableList<Result<?>>> batchResults) {
+    if (batchResults.isEmpty()) {
+      return ImmutableList.of();
+    }
+    String first = batchResults.keySet().iterator().next();
+    ImmutableList<ImmutableMap<String, Result<?>>> individualRequestsFromBatchResponses =
+        createIndividualRequestsFromBatchResponses(
+            // Create a subMapView of all keys except the first one.
+            Maps.filterKeys(
+                batchResults, key -> !Objects.equals(first, key) && batchResults.containsKey(key)));
+    ImmutableList.Builder<ImmutableMap<String, Result<?>>> answer = ImmutableList.builder();
+    for (ImmutableMap<String, Result<?>> subMap : individualRequestsFromBatchResponses) {
+      Builder<String, Result<?>> builder = ImmutableMap.builder();
+      for (Result<?> result : batchResults.get(first)) {
+        answer.add(builder.putAll(subMap).put(first, result).build());
+      }
+    }
+    return answer.build();
+  }
+
+  private Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> decoratedLogic() {
+    Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> logic =
+        nodeDefinition::logic;
     for (LogicDecorationStrategy decorationStrategy : decorationStrategies) {
       logic = decorationStrategy.decorateLogic(this, logic);
     }
@@ -87,7 +191,7 @@ public final class Node<T> {
   }
 
   boolean isDone() {
-    return result.future().isDone();
+    return completion.isDone();
   }
 
   public NodeDefinition<T> definition() {

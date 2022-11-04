@@ -1,34 +1,46 @@
 package com.flipkart.krystal.krystex;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public abstract sealed class NodeDefinition<T>
     permits BlockingNodeDefinition, NonBlockingNodeDefinition {
 
   private final String nodeId;
-  private final Set<String> inputs;
+  private final Map<String, String> inputs;
   private final Set<String> dependants = new LinkedHashSet<>();
 
-  NodeDefinition(String nodeId, Set<String> inputs) {
+  NodeDefinition(String nodeId, Map<String, String> inputs) {
     this.nodeId = nodeId;
-    this.inputs = inputs;
+    this.inputs = new LinkedHashMap<>(inputs);
   }
 
-  public void isAnInputTo(String nodeId) {
+  void isAnInputTo(String nodeId) {
     dependants.add(nodeId);
   }
 
-  public abstract CompletableFuture<T> logic(ImmutableMap<String, ?> dependencyValues);
+  public void addInputProvider(String inputName, @NonNull String nodeId) {
+    if (inputs.containsKey(inputName)) {
+      throw new IllegalArgumentException("Input %s already has a provider node registered");
+    }
+    inputs.put(inputName, nodeId);
+  }
+
+  public abstract CompletableFuture<ImmutableList<T>> logic(
+      ImmutableMap<String, ?> dependencyValues);
 
   public String nodeId() {
     return nodeId;
   }
 
-  public Set<String> inputs() {
-    return inputs;
+  public ImmutableMap<String, String> inputs() {
+    return ImmutableMap.copyOf(inputs);
   }
 
   public Set<String> dependants() {

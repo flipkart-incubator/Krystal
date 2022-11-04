@@ -1,11 +1,14 @@
 package com.flipkart.krystal.krystex;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -35,7 +38,7 @@ public final class KrystalTaskExecutor implements KrystalExecutor {
   }
 
   @Override
-  public <T> Result<T> requestExecution(NodeDefinition<T> nodeDefinition) {
+  public <T> ImmutableList<Result<T>> requestExecution(NodeDefinition<T> nodeDefinition) {
     if (shutdownRequested) {
       throw new IllegalStateException("Krystal has already been shutdown.");
     }
@@ -43,7 +46,9 @@ public final class KrystalTaskExecutor implements KrystalExecutor {
     Node<T> node = new Node<>(nodeDefinition, nodeRegistry, nodeDefinition.nodeId(), emptyList());
     this.nodeRegistry.add(node);
     enqueue(node);
-    return node.getResult();
+    return node.getResults().values().stream()
+        .flatMap(Collection::stream)
+        .collect(toImmutableList());
   }
 
   private void enqueue(Node<?> node) {
@@ -73,12 +78,13 @@ public final class KrystalTaskExecutor implements KrystalExecutor {
     NodeDefinition<?> nodeDefinition = currentNode.definition();
     boolean hasPendingInputs = false;
     List<CompletableFuture<?>> inputFutures = new ArrayList<>();
-    for (String depNodeId : nodeDefinition.inputs()) {
+    for (String depNodeId : nodeDefinition.inputs().values()) {
       Node<Object> depNode = nodeRegistry.get(depNodeId);
       if (depNode == null) {
         hasPendingInputs = true;
-        inputFutures.add(
-            requestExecution(nodeRegistry.getNodeDefinitionRegistry().get(depNodeId)).future());
+        requestExecution(nodeRegistry.getNodeDefinitionRegistry().get(depNodeId)).stream()
+            .map(Result::future)
+            .forEach(inputFutures::add);
       } else {
         if (!depNode.isDone()) {
           hasPendingInputs = true;
@@ -86,7 +92,10 @@ public final class KrystalTaskExecutor implements KrystalExecutor {
             enqueue(depNode);
           }
         }
-        inputFutures.add(depNode.getResult().future());
+        depNode.getResults().values().stream()
+            .flatMap(Collection::stream)
+            .map(Result::future)
+            .forEach(inputFutures::add);
       }
     }
     // This implementation treats all dependencies as mandatory

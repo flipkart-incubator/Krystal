@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram;
 import com.flipkart.krystal.vajram.inputs.InputCommand;
 import com.flipkart.krystal.vajram.inputs.InputResolver;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
-import com.flipkart.krystal.vajram.utils.Vajrams;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collection;
@@ -24,9 +23,9 @@ public sealed interface Vajram<T> permits AbstractVajram {
 
   boolean isBlockingVajram();
 
-  CompletableFuture<T> execute(ExecutionContext executionContext);
+  CompletableFuture<ImmutableList<T>> execute(ExecutionContext executionContext);
 
-  Object resolveInputOfDependency(
+  ImmutableList<RequestBuilder<?>> resolveInputOfDependency(
       String dependency, ImmutableSet<String> resolvableInputs, ExecutionContext executionContext);
 
   String getId();

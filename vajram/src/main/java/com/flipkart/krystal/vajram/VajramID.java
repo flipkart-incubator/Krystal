@@ -9,7 +9,7 @@ public record VajramID(String vajramId) implements DataAccessSpec {
   }
 
   @Override
-  public <T> T merge(Collection<T> responses) {
+  public <T> T adapt(Collection<T> dataObjects) {
     throw new UnsupportedOperationException("");
   }
 }

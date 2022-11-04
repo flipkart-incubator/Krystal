@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import com.flipkart.krystal.vajram.utils.Vajrams;
+import com.google.common.collect.ImmutableList;
 import java.util.concurrent.CompletableFuture;
 
 public abstract non-sealed class NonBlockingVajram<T> extends AbstractVajram<T> {
@@ -13,10 +14,10 @@ public abstract non-sealed class NonBlockingVajram<T> extends AbstractVajram<T> 
   }
 
   @Override
-  public final CompletableFuture<T> execute(ExecutionContext executionContext) {
+  public final CompletableFuture<ImmutableList<T>> execute(ExecutionContext executionContext) {
     return completedFuture(executeNonBlocking(executionContext));
   }
 
-  public abstract T executeNonBlocking(ExecutionContext executionContext);
+  public abstract ImmutableList<T> executeNonBlocking(ExecutionContext executionContext);
 
 }

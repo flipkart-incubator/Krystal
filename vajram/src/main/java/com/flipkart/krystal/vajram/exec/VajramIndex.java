@@ -4,7 +4,6 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import com.flipkart.krystal.vajram.das.GraphQl;
-import com.google.common.collect.ImmutableMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -30,7 +29,7 @@ final class VajramIndex {
         });
   }
 
-  public <T extends DataAccessSpec> ImmutableMap<T, Vajram<?>> getVajrams(T accessSpec) {
+  public <T extends DataAccessSpec> AccessSpecMatchingResult<T> getVajrams(T accessSpec) {
     //noinspection unchecked
     return ((AccessSpecIndex<T>) accessSpecIndices.get(accessSpec.getClass()))
         .getVajrams(accessSpec);

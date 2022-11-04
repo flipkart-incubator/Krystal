@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.exec;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,12 +11,14 @@ public final class VajramIDIndex implements AccessSpecIndex<VajramID> {
   private final Map<String, Vajram<?>> vajrams = new HashMap<>();
 
   @Override
-  public ImmutableMap<VajramID, Vajram<?>> getVajrams(VajramID vajramID) {
+  public AccessSpecMatchingResult<VajramID> getVajrams(VajramID vajramID) {
     Vajram<?> matchingVajram = vajrams.get(vajramID.vajramId());
     if (matchingVajram == null) {
-      return ImmutableMap.of();
+      return new AccessSpecMatchingResult<>(ImmutableMap.of(), ImmutableSet.of(vajramID));
+    } else {
+      return new AccessSpecMatchingResult<>(
+          ImmutableMap.of(vajramID, matchingVajram), ImmutableSet.of());
     }
-    return ImmutableMap.of(vajramID, matchingVajram);
   }
 
   @Override

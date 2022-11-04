@@ -4,8 +4,8 @@ import java.util.concurrent.CompletableFuture;
 
 public record Result<T>(CompletableFuture<T> future) {
 
-  public boolean isSuccess() {
-    return !isFailure();
+  public Result() {
+    this(new CompletableFuture<>());
   }
 
   public boolean isFailure() {

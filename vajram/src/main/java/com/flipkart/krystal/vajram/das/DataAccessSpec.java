@@ -9,5 +9,11 @@ import java.util.Collection;
  */
 public sealed interface DataAccessSpec permits VajramID, GraphQl {
 
-  <T> T merge(Collection<T> responses);
+  /**
+   * Returns a Data Object whose data conforms to this access spec. Only the data present in the
+   * {@code dataObjects} which conforms to this spec is merged into the returned object ignoring
+   * extra data.
+   */
+  <T> T adapt(Collection<T> dataObjects);
+
 }

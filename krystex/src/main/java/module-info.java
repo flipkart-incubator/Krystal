@@ -6,4 +6,5 @@ module flipkart.krystal.krystex {
   requires io.github.resilience4j.all;
   requires io.github.resilience4j.ratelimiter;
   requires lombok;
+  requires org.checkerframework.checker.qual;
 }
