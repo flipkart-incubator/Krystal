@@ -2,13 +2,16 @@ package com.flipkart.krystal.krystex;
 
 import java.util.concurrent.CompletableFuture;
 
-public record Result<T>(CompletableFuture<T> future) {
+public sealed interface Result permits SingleResult, BatchResult {
 
-  public Result() {
-    this(new CompletableFuture<>());
+  CompletableFuture<?> future();
+
+  default boolean isFailure() {
+    return future().isCompletedExceptionally();
   }
 
-  public boolean isFailure() {
-    return future.isCompletedExceptionally();
+  default boolean isSuccessful() {
+    return future().isDone() && !future().isCompletedExceptionally();
   }
 }
+

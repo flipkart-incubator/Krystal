@@ -2,9 +2,13 @@ package com.flipkart.krystal.krystex;
 
 import com.google.common.collect.ImmutableMap;
 
-public record Request(ImmutableMap<String, Result<?>> dependencyResults) {
+public record Request(ImmutableMap<String, SingleResult<?>> dependencyResults) {
 
-  public ImmutableMap<String, Result<?>> asMap() {
+  public Request() {
+    this(ImmutableMap.of());
+  }
+
+  public ImmutableMap<String, SingleResult<?>> asMap() {
     return dependencyResults;
   }
 }

@@ -4,6 +4,7 @@ import static java.util.Collections.emptySet;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -19,26 +20,36 @@ public final class NodeDefinitionRegistry {
   }
 
   public <T> NonBlockingNodeDefinition<T> newNonBlockingNode(
-      String nodeId, Map<String, String> inputs, Function<ImmutableMap<String, ?>, T> logic) {
-    return newNonBlockingBatchNode(nodeId, inputs, logic.andThen(ImmutableList::of));
-  }
-
-  public <T> NonBlockingNodeDefinition<T> newUnboundNonBlockingNode(
       String nodeId, Function<ImmutableMap<String, ?>, T> logic) {
-    return newNonBlockingBatchNode(nodeId, ImmutableMap.of(), logic.andThen(ImmutableList::of));
+    return newNonBlockingNode(nodeId, Set.of(), logic);
   }
 
-  public <T> NonBlockingNodeDefinition<T> newUnboundNonBlockingBatchNode(
+  public <T> NonBlockingNodeDefinition<T> newNonBlockingNode(
+      String nodeId, Set<String> inputs, Function<ImmutableMap<String, ?>, T> logic) {
+    return newNonBlockingBatchNode(
+        nodeId, inputs, ImmutableMap.of(), logic.andThen(ImmutableList::of));
+  }
+
+  public <T> NonBlockingNodeDefinition<T> newNonBlockingNode(
+      String nodeId,
+      Map<String, String> inputProviders,
+      Function<ImmutableMap<String, ?>, T> logic) {
+    return newNonBlockingBatchNode(
+        nodeId, inputProviders.keySet(), inputProviders, logic.andThen(ImmutableList::of));
+  }
+
+  public <T> NonBlockingNodeDefinition<T> newNonBlockingBatchNode(
       String nodeId, Function<ImmutableMap<String, ?>, ImmutableList<T>> logic) {
-    return newNonBlockingBatchNode(nodeId, ImmutableMap.of(), logic);
+    return newNonBlockingBatchNode(nodeId, ImmutableSet.of(), ImmutableMap.of(), logic);
   }
 
   public <T> NonBlockingNodeDefinition<T> newNonBlockingBatchNode(
       String nodeId,
-      Map<String, String> inputs,
+      Set<String> inputs,
+      Map<String, String> inputProviders,
       Function<ImmutableMap<String, ?>, ImmutableList<T>> logic) {
     NonBlockingNodeDefinition<T> def =
-        new NonBlockingNodeDefinition<>(nodeId, inputs) {
+        new NonBlockingNodeDefinition<>(nodeId, inputs, inputProviders) {
           @Override
           protected ImmutableList<T> nonBlockingLogic(ImmutableMap<String, ?> dependencyValues) {
             return logic.apply(dependencyValues);
@@ -51,7 +62,7 @@ public final class NodeDefinitionRegistry {
   public void add(NodeDefinition<?> nodeDefinition) {
     nodeDefinitions.put(nodeDefinition.nodeId(), nodeDefinition);
     nodeDefinition
-        .inputs()
+        .inputProviders()
         .values()
         .forEach(
             inputNode -> {

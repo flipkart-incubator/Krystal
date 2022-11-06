@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.utils;
+package com.flipkart.krystal.vajram;
 
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;

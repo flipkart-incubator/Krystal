@@ -11,10 +11,12 @@ import com.flipkart.krystal.vajram.ExecutionContext;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDefinitionException;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
+import com.flipkart.krystal.vajram.exec.VajramDAG.ResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.ResolutionSources;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
+import com.flipkart.krystal.vajram.utils.RandomStringGenerator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -25,32 +27,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-public final class VajramRegistry {
+/** The execution graph encompassing all registered vajrams. */
+public final class VajramGraph {
 
-  private static final String SUFFIX_CHARS = "abcdefghjkmnpqrstuvwxy3456789";
-  public static final int RANDOM_SUFFIX_LENGTH = 5;
+  private static final int NODE_ID_SUFFIX_LENGTH = 5;
 
-  private final Random random = new Random();
   private final Map<String, VajramDefinition> vajramDefinitions = new HashMap<>();
   private final VajramIndex vajramIndex = new VajramIndex();
-  private final NodeDefinitionRegistry nodeDefinitionRegistry = new NodeDefinitionRegistry();
+  private final RandomStringGenerator randomStringGenerator = RandomStringGenerator.instance();
 
-  private VajramRegistry() {}
+  private VajramGraph() {}
 
-  public static VajramRegistry loadFromClasspath(
-      String packagePrefix, Iterable<Vajram<?>> vajrams) {
-    VajramRegistry vajramRegistry = new VajramRegistry();
-    VajramLoader.loadVajramsFromClassPath(packagePrefix).forEach(vajramRegistry::registerVajram);
-    vajrams.forEach(vajramRegistry::registerVajram);
-    return vajramRegistry;
-  }
-
-  public Optional<VajramDefinition> getVajramDefinition(String vajramId) {
-    return Optional.ofNullable(vajramDefinitions.get(vajramId));
+  public static VajramGraph loadFromClasspath(String packagePrefix, Iterable<Vajram<?>> vajrams) {
+    VajramGraph vajramGraph = new VajramGraph();
+    VajramLoader.loadVajramsFromClassPath(packagePrefix).forEach(vajramGraph::registerVajram);
+    vajrams.forEach(vajramGraph::registerVajram);
+    return vajramGraph;
   }
 
   /**
@@ -68,62 +63,58 @@ public final class VajramRegistry {
   }
 
   /**
-   * Constructs a DAG that connects every Vajram with its dependencies which is a necessary step for
-   * executing vajrams.
-   *
-   * <p>This method should be called once all necessary vajrams have been registered using the
-   * {@link #registerVajram(Vajram)} method. If a dependency of a vajram is not registered before
-   * this step, this method will throw an exception.
-   *
-   * @return
-   */
-  public NodeDefinition<?> getExecutionNode(VajramDefinition vajramDefinition) {
-    return createSubGraphForVajram(vajramDefinition).vajramLogicNodeDefinition();
-  }
-
-  private SubgraphCreationResult createSubGraphForVajram(Vajram<?> vajram) {
-    return createSubGraphForVajram(vajramDefinitions.get(vajram.getId()));
-  }
-
-  /**
    * Creates the node graph for the given vajram and its dependencies (by recursively calling this
    * same method) and returns the node definitions representing the input resolvers and main
    * vajramLogic of this vajram. These returned nodes can be used by the caller of this method to
    * bind them as dependants of other input resolvers created by the caller. This way, recursively
    * the complete execution graph is constructed.
    *
-   * @param vajramDefinition
+   * <p>This method should be called once all necessary vajrams have been registered using the *
+   * {@link #registerVajram(Vajram)} method. If a dependency of a vajram is not registered before *
+   * this step, this method will throw an exception.
+   *
+   * @param vajramId
    * @return
    */
   // TODO Handle case were input resolvers bind from dependencies (sequential dependency in vajrams)
   @NonNull
-  private SubgraphCreationResult createSubGraphForVajram(VajramDefinition vajramDefinition) {
+  public <T> VajramDAG<T> createVajramDAG(String vajramId) {
+    //noinspection unchecked
+    return (VajramDAG<T>)
+        _getVajramExecutionGraph(getVajramDefinition(vajramId).orElseThrow().getVajram());
+  }
 
-    if (!vajramDefinition.getVajram().isBlockingVajram()) {
+  @NonNull
+  private VajramDAG<?> _getVajramExecutionGraph(Vajram<?> vajram) {
+    VajramDAG<?> vajramDAG = new VajramDAG<>(getVajramDefinition(vajram.getId()).orElseThrow());
+    if (!vajram.isBlockingVajram()) {
       InputResolverCreationResult inputResolverCreationResult =
-          createNodeDefinitionsForInputResolvers(vajramDefinition);
+          createNodeDefinitionsForInputResolvers(vajramDAG);
       ImmutableMap<String, ImmutableMap<String, String>> inputResolverTargets =
           inputResolverCreationResult.inputResolverTargets();
 
       ImmutableMap<String, String> depNameToProviderNode =
-          createSubGraphsForDependencies(vajramDefinition, inputResolverTargets);
+          createSubGraphsForDependencies(vajramDAG, inputResolverTargets);
 
       NonBlockingNodeDefinition<CompletableFuture<?>> vajramLogicNodeDefinition =
-          createVajramLogicNodeDefinition(vajramDefinition, depNameToProviderNode);
+          createVajramLogicNodeDefinition(vajramDAG, depNameToProviderNode);
 
-      return new SubgraphCreationResult(
-          vajramDefinition,
+      return new VajramDAG<>(
+          vajramDAG.vajramDefinition(),
           vajramLogicNodeDefinition,
-          inputResolverCreationResult.resolverDefinitions());
+          inputResolverCreationResult.resolverDefinitions(),
+          depNameToProviderNode,
+          vajramDAG.nodeDefinitionRegistry());
     } else {
       // TODO implement graph creation for blocking node
+      return null;
     }
-    // TODO return the proper value
-    return null;
   }
 
   private InputResolverCreationResult createNodeDefinitionsForInputResolvers(
-      VajramDefinition vajramDefinition) {
+      VajramDAG<?> vajramDAG) {
+    VajramDefinition vajramDefinition = vajramDAG.vajramDefinition();
+    NodeDefinitionRegistry nodeDefinitionRegistry = vajramDAG.nodeDefinitionRegistry();
     Vajram<?> vajram = vajramDefinition.getVajram();
     String vajramId = vajram.getId();
     Map</*dependency name*/ String, Map</*input name*/ String, /*node id*/ String>>
@@ -138,13 +129,13 @@ public final class VajramRegistry {
                       inputResolver.resolutionTarget().inputNames();
                   ImmutableSet<String> sources = inputResolver.sources();
                   NonBlockingNodeDefinition<?> inputResolverNode =
-                      nodeDefinitionRegistry.newUnboundNonBlockingBatchNode(
+                      nodeDefinitionRegistry.newNonBlockingBatchNode(
                           "v(%s):dep(%s):inputResolver(%s):%s"
                               .formatted(
                                   vajramId,
                                   dependencyName,
                                   String.join(":", resolvedInputNames),
-                                  generateRandomSuffix()),
+                                  generateNodeSuffix()),
                           dependencyValues -> {
                             Map<String, Object> map = new HashMap<>();
                             sources.forEach(s -> map.put(s, dependencyValues.get(s)));
@@ -165,14 +156,16 @@ public final class VajramRegistry {
   }
 
   private NonBlockingNodeDefinition<CompletableFuture<?>> createVajramLogicNodeDefinition(
-      VajramDefinition vajramDefinition, ImmutableMap<String, String> depNameToProviderNode) {
+      VajramDAG<?> vajramDAG, ImmutableMap<String, String> depNameToProviderNode) {
+    VajramDefinition vajramDefinition = vajramDAG.vajramDefinition();
+    NodeDefinitionRegistry nodeDefinitionRegistry = vajramDAG.nodeDefinitionRegistry();
     String vajramId = vajramDefinition.getVajram().getId();
     List<VajramInputDefinition> inputDefinitions =
         vajramDefinition.getVajram().getInputDefinitions();
     // Step 4: Create and register node for the main vajram logic
     NonBlockingNodeDefinition<CompletableFuture<?>> vajramLogicNodeDefinition =
         nodeDefinitionRegistry.newNonBlockingNode(
-            "n(v(%s):vajramLogic:{%s})".formatted(vajramId, generateRandomSuffix()),
+            "n(v(%s):vajramLogic:{%s})".formatted(vajramId, generateNodeSuffix()),
             depNameToProviderNode,
             dependencyValues -> {
               Map<String, Object> map = new HashMap<>();
@@ -209,8 +202,10 @@ public final class VajramRegistry {
   }
 
   private ImmutableMap<String, String> createSubGraphsForDependencies(
-      VajramDefinition vajramDefinition,
+      VajramDAG<?> vajramDAG,
       ImmutableMap<String, ImmutableMap<String, String>> inputResolverTargets) {
+    VajramDefinition vajramDefinition = vajramDAG.vajramDefinition();
+    NodeDefinitionRegistry nodeDefinitionRegistry = vajramDAG.nodeDefinitionRegistry();
     String vajramId = vajramDefinition.getVajram().getId();
     List<Dependency> dependencies = new ArrayList<>();
     for (VajramInputDefinition vajramInputDefinition :
@@ -233,10 +228,10 @@ public final class VajramRegistry {
       }
       ImmutableMap<DataAccessSpec, Vajram<?>> dependencyVajrams =
           accessSpecMatchingResult.successfulMatches();
-      Map<DataAccessSpec, SubgraphCreationResult> dependencySubGraphs = new HashMap<>();
+      Map<DataAccessSpec, VajramDAG<?>> dependencySubGraphs = new HashMap<>();
       dependencyVajrams.forEach(
           (dependencySpec, depVajram) ->
-              dependencySubGraphs.put(dependencySpec, createSubGraphForVajram(depVajram)));
+              dependencySubGraphs.put(dependencySpec, _getVajramExecutionGraph(depVajram)));
       addInputResolversAsProvidersForSubGraphNodes(
           vajramId, inputResolverTargets, dependencyName, dependencySubGraphs);
 
@@ -250,8 +245,7 @@ public final class VajramRegistry {
           accessSpecMatchingResult.needsAdaption()) {
         // Create adaptor node if vajram responses need to be adapted
         String nodeId =
-            "v(%s):dep(%s):n(adaptor):%s"
-                .formatted(vajramId, dependencyName, generateRandomSuffix());
+            "v(%s):dep(%s):n(adaptor):%s".formatted(vajramId, dependencyName, generateNodeSuffix());
         nodeDefinitionRegistry.newNonBlockingNode(
             nodeId,
             // Set all nodes powering the dependency access spec as inputs to the adaptor node.
@@ -275,10 +269,10 @@ public final class VajramRegistry {
       String vajramId,
       ImmutableMap<String, ImmutableMap<String, String>> inputResolverTargets,
       String dependencyName,
-      Map<DataAccessSpec, SubgraphCreationResult> dependencySubGraphs) {
+      Map<DataAccessSpec, VajramDAG<?>> dependencySubGraphs) {
     ImmutableMap<String, String> inputProviderNodesForThisDependency =
         requireNonNull(inputResolverTargets.getOrDefault(dependencyName, ImmutableMap.of()));
-    for (SubgraphCreationResult subGraph : dependencySubGraphs.values()) {
+    for (VajramDAG<?> subGraph : dependencySubGraphs.values()) {
       subGraph.vajramDefinition().getVajram().getInputDefinitions().stream()
           .filter(vajramInputDefinition -> vajramInputDefinition instanceof Input<?>)
           .map(VajramInputDefinition::name)
@@ -292,7 +286,7 @@ public final class VajramRegistry {
                 }
                 subGraph.vajramLogicNodeDefinition().addInputProvider(inputName, providerNodeId);
               });
-      ImmutableList<ResolverDefinition> subgraphResolvers = subGraph.resolverInputs();
+      ImmutableList<ResolverDefinition> subgraphResolvers = subGraph.resolverDefinitions();
       for (ResolverDefinition subgraphResolver : subgraphResolvers) {
         NodeDefinition<?> nodeDefinition = subgraphResolver.nodeDefinition();
         subgraphResolver
@@ -308,23 +302,15 @@ public final class VajramRegistry {
     }
   }
 
-  private String generateRandomSuffix() {
-    StringBuilder stringBuilder = new StringBuilder();
-    for (int i = 0; i < RANDOM_SUFFIX_LENGTH; i++) {
-      stringBuilder.append(SUFFIX_CHARS.charAt(random.nextInt(SUFFIX_CHARS.length())));
-    }
-    return stringBuilder.toString();
-  }
-
-  private record SubgraphCreationResult(
-      VajramDefinition vajramDefinition,
-      NodeDefinition<?> vajramLogicNodeDefinition,
-      ImmutableList<ResolverDefinition> resolverInputs) {}
-
-  private record ResolverDefinition(
-      NodeDefinition<?> nodeDefinition, ImmutableSet<String> boundFrom) {}
-
   private record InputResolverCreationResult(
       ImmutableList<ResolverDefinition> resolverDefinitions,
       ImmutableMap<String, ImmutableMap<String, String>> inputResolverTargets) {}
+
+  private String generateNodeSuffix() {
+    return randomStringGenerator.generateRandomString(NODE_ID_SUFFIX_LENGTH);
+  }
+
+  private Optional<VajramDefinition> getVajramDefinition(String vajramId) {
+    return Optional.ofNullable(vajramDefinitions.get(vajramId));
+  }
 }

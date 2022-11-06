@@ -2,7 +2,6 @@ package com.flipkart.krystal.vajram;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-import com.flipkart.krystal.vajram.utils.Vajrams;
 import com.google.common.collect.ImmutableList;
 import java.util.concurrent.CompletableFuture;
 

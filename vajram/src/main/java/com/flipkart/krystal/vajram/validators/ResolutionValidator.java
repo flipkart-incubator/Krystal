@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.validators;
 
-import static com.flipkart.krystal.vajram.utils.Vajrams.getVajramId;
+import static com.flipkart.krystal.vajram.Vajrams.getVajramId;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 

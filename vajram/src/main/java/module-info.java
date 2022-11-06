@@ -2,7 +2,6 @@ module flipkart.krystal.vajram {
   exports com.flipkart.krystal.vajram.inputs;
   exports com.flipkart.krystal.vajram;
   exports com.flipkart.krystal.datatypes;
-  exports com.flipkart.krystal.vajram.utils;
   exports com.flipkart.krystal.vajram.das;
 
   requires flipkart.krystal.krystex;

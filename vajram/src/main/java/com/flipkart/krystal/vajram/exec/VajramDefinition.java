@@ -10,7 +10,7 @@ final class VajramDefinition {
 
   @Getter private final Vajram<?> vajram;
 
-  // TODO populate input resolvers
+  // TODO populate input resolvers from vajram
   @Getter private final ImmutableCollection<InputResolver> inputResolvers;
 
   VajramDefinition(Vajram<?> vajram) {
