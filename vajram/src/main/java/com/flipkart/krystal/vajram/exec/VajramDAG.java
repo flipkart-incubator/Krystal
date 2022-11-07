@@ -13,13 +13,14 @@ public record VajramDAG<T>(
     ImmutableMap<String, String> dependencies,
     NodeDefinitionRegistry nodeDefinitionRegistry) {
 
-  public VajramDAG(VajramDefinition vajramDefinition) {
+  public VajramDAG(
+      VajramDefinition vajramDefinition, NodeDefinitionRegistry mainNodeDefinitionRegistry) {
     this(
         vajramDefinition,
         null,
         ImmutableList.of(),
         ImmutableMap.of(),
-        new NodeDefinitionRegistry());
+        new NodeDefinitionRegistry(mainNodeDefinitionRegistry));
   }
 
   record ResolverDefinition(NodeDefinition<?> nodeDefinition, ImmutableSet<String> boundFrom) {}

@@ -24,7 +24,7 @@ final class VajramIndex {
           if (VajramID.class.equals(aClass)) {
             accessSpecIndices.put(VajramID.class, new VajramIDIndex());
           } else if (GraphQl.class.equals(aClass)) {
-            accessSpecIndices.put(GraphQl.class, new VajramIDIndex());
+            accessSpecIndices.put(GraphQl.class, new GraphQlIndex());
           }
         });
   }

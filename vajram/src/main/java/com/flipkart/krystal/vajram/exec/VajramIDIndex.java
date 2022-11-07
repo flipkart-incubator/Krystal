@@ -14,10 +14,11 @@ public final class VajramIDIndex implements AccessSpecIndex<VajramID> {
   public AccessSpecMatchingResult<VajramID> getVajrams(VajramID vajramID) {
     Vajram<?> matchingVajram = vajrams.get(vajramID.vajramId());
     if (matchingVajram == null) {
-      return new AccessSpecMatchingResult<>(ImmutableMap.of(), ImmutableSet.of(vajramID));
+      return new AccessSpecMatchingResult<>(
+          ImmutableMap.of(), ImmutableMap.of(), ImmutableSet.of(vajramID));
     } else {
       return new AccessSpecMatchingResult<>(
-          ImmutableMap.of(vajramID, matchingVajram), ImmutableSet.of());
+          ImmutableMap.of(vajramID, matchingVajram), ImmutableMap.of(), ImmutableSet.of());
     }
   }
 

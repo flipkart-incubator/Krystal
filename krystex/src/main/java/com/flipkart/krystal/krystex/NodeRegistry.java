@@ -6,8 +6,8 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import lombok.Getter;
 
 public final class NodeRegistry {
@@ -29,5 +29,10 @@ public final class NodeRegistry {
 
   public <T> ImmutableMap<String, Node<?>> getAll(Collection<String> nodeIds) {
     return nodeIds.stream().collect(toImmutableMap(Function.identity(), this::get));
+  }
+
+  public <T> Node<T> createIfAbsent(String nodeId, Supplier<Node<T>> nodeCreator) {
+    //noinspection unchecked
+    return (Node<T>) this.nodes.computeIfAbsent(nodeId, k -> nodeCreator.get());
   }
 }

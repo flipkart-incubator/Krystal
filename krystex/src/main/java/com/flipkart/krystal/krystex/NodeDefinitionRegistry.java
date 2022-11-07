@@ -8,12 +8,22 @@ import com.google.common.collect.ImmutableSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class NodeDefinitionRegistry {
   private final Map<String, NodeDefinition<?>> nodeDefinitions = new HashMap<>();
   private final Map<String, Set<NodeDefinition<?>>> nodeDefinitionsByInputNodes = new HashMap<>();
+  @Nullable private NodeDefinitionRegistry backingRegistry;
+
+  public NodeDefinitionRegistry(@NonNull NodeDefinitionRegistry backingRegistry) {
+    this.backingRegistry = backingRegistry;
+  }
+
+  public NodeDefinitionRegistry() {}
 
   public NodeDefinition<?> get(String nodeId) {
     return nodeDefinitions.get(nodeId);
@@ -26,16 +36,23 @@ public final class NodeDefinitionRegistry {
 
   public <T> NonBlockingNodeDefinition<T> newNonBlockingNode(
       String nodeId, Set<String> inputs, Function<ImmutableMap<String, ?>, T> logic) {
-    return newNonBlockingBatchNode(
-        nodeId, inputs, ImmutableMap.of(), logic.andThen(ImmutableList::of));
+    return newNonBlockingNode(nodeId, inputs, ImmutableMap.of(), logic);
   }
 
   public <T> NonBlockingNodeDefinition<T> newNonBlockingNode(
       String nodeId,
       Map<String, String> inputProviders,
       Function<ImmutableMap<String, ?>, T> logic) {
+    return newNonBlockingNode(nodeId, inputProviders.keySet(), inputProviders, logic);
+  }
+
+  public <T> NonBlockingNodeDefinition<T> newNonBlockingNode(
+      String nodeId,
+      Set<String> inputs,
+      Map<String, String> inputProviders,
+      Function<ImmutableMap<String, ?>, T> logic) {
     return newNonBlockingBatchNode(
-        nodeId, inputProviders.keySet(), inputProviders, logic.andThen(ImmutableList::of));
+        nodeId, inputs, inputProviders, logic.andThen(ImmutableList::of));
   }
 
   public <T> NonBlockingNodeDefinition<T> newNonBlockingBatchNode(
@@ -77,6 +94,11 @@ public final class NodeDefinitionRegistry {
     nodeDefinitionsByInputNodes
         .getOrDefault(nodeDefinition.nodeId(), emptySet())
         .forEach(dependent -> nodeDefinition.isAnInputTo(dependent.nodeId()));
+    getBackingRegistry().ifPresent(backingRegistry -> backingRegistry.add(nodeDefinition));
+  }
+
+  private Optional<NodeDefinitionRegistry> getBackingRegistry() {
+    return Optional.ofNullable(backingRegistry);
   }
 
   public void validate() {

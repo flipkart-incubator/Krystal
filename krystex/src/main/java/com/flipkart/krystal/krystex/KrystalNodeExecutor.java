@@ -15,11 +15,12 @@ import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
+import lombok.Getter;
 
 /** Default implementation of Krystal executor which */
-public final class KrystalTaskExecutor implements KrystalExecutor, AutoCloseable {
+public final class KrystalNodeExecutor implements KrystalExecutor {
 
-  private final NodeRegistry nodeRegistry;
+  @Getter private final NodeRegistry nodeRegistry;
 
   private final BlockingQueue<NodeCommand> mainQueue = new LinkedBlockingDeque<>();
 
@@ -28,7 +29,7 @@ public final class KrystalTaskExecutor implements KrystalExecutor, AutoCloseable
   private boolean shutdownRequested;
   private boolean stopAcceptingRequests;
 
-  public KrystalTaskExecutor(NodeDefinitionRegistry nodeDefinitionRegistry, String requestId) {
+  public KrystalNodeExecutor(NodeDefinitionRegistry nodeDefinitionRegistry, String requestId) {
     this.nodeRegistry = new NodeRegistry(nodeDefinitionRegistry);
     this.mainLoopTask =
         newSingleThreadExecutor(
@@ -38,14 +39,22 @@ public final class KrystalTaskExecutor implements KrystalExecutor, AutoCloseable
             .submit(this::mainLoop);
   }
 
-  public <T> Node<T> requestExecution(NodeDefinition<T> nodeDefinition) {
+  public <T> Node<T> execute(NodeDefinition<T> nodeDefinition) {
     if (stopAcceptingRequests) {
       throw new IllegalStateException("Krystal has stopped accepting new requests for execution");
     }
     // TODO Implement caching
-    Node<T> node = createNode(nodeDefinition, emptyList());
-    this.nodeRegistry.add(node);
+    Node<T> node =
+        this.nodeRegistry.createIfAbsent(
+            nodeDefinition.nodeId(), () -> createNode(nodeDefinition, emptyList()));
     initiate(node);
+    return node;
+  }
+
+  public <T> Node<T> executeWithInputs(
+      NodeDefinition<T> nodeDefinition, Map<String, ?> inputValues) {
+    Node<T> node = execute(nodeDefinition);
+    provideInputs(node, inputValues);
     return node;
   }
 
@@ -120,7 +129,7 @@ public final class KrystalTaskExecutor implements KrystalExecutor, AutoCloseable
     for (String depNodeId : dependencyNodeIds) {
       Node<?> depNode = nodeRegistry.get(depNodeId);
       if (depNode == null) {
-        depNode = requestExecution(nodeRegistry.getNodeDefinitionRegistry().get(depNodeId));
+        depNode = execute(nodeRegistry.getNodeDefinitionRegistry().get(depNodeId));
       } else if (!depNode.wasInitiated()) {
         initiate(depNode);
       }

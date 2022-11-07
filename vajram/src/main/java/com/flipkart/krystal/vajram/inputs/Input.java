@@ -32,9 +32,13 @@ public record Input<T>(
     return resolvableBy;
   }
 
+  public static InputBuilder<String> string() {
+    return builder();
+  }
+
   public static class InputBuilder<T> {
 
-    public InputBuilder<T> isMandatory() {
+    public InputBuilder<T> mandatory() {
       this.mandatory = true;
       return this;
     }

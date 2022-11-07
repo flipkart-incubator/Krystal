@@ -23,7 +23,7 @@ public abstract class UserServiceVajram extends DefaultModulatedBlockingVajram<U
             // Data type - used for code generation
             .type(string())
             // If this input is not provided by the client, throw a build time error.
-            .isMandatory()
+            .mandatory()
             .build());
   }
 

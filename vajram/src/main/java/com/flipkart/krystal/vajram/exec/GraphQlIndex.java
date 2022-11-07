@@ -8,7 +8,7 @@ final class GraphQlIndex implements AccessSpecIndex<GraphQl> {
   @Override
   public AccessSpecMatchingResult<GraphQl> getVajrams(GraphQl accessSpec) {
     // TODO implement GraphQL matching logic and Data structures
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   @Override

@@ -1,5 +1,5 @@
 package com.flipkart.krystal.krystex;
 
-public interface KrystalExecutor {
-  <T> Node<T> requestExecution(NodeDefinition<T> nodeDefinition);
+public interface KrystalExecutor extends AutoCloseable{
+  <T> Node<T> execute(NodeDefinition<T> nodeDefinition);
 }

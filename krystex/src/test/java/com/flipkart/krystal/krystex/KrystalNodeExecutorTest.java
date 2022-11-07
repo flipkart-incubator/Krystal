@@ -16,9 +16,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class KrystalTaskExecutorTest {
+class KrystalNodeExecutorTest {
 
-  private KrystalTaskExecutor krystalTaskExecutor;
+  private KrystalNodeExecutor krystalNodeExecutor;
   private NodeDefinitionRegistry nodeDefinitionRegistry;
 
   private static ImmutableList<String> timedGet(CompletableFuture<ImmutableList<String>> allResults)
@@ -29,12 +29,12 @@ class KrystalTaskExecutorTest {
   @BeforeEach
   void setUp() {
     this.nodeDefinitionRegistry = new NodeDefinitionRegistry();
-    this.krystalTaskExecutor = new KrystalTaskExecutor(nodeDefinitionRegistry, "test");
+    this.krystalNodeExecutor = new KrystalNodeExecutor(nodeDefinitionRegistry, "test");
   }
 
   @AfterEach
   void tearDown() {
-    this.krystalTaskExecutor.close();
+    this.krystalNodeExecutor.close();
   }
 
   @Test
@@ -45,7 +45,7 @@ class KrystalTaskExecutorTest {
             dependencyValues -> "computed_value");
 
     ImmutableList<String> results =
-        timedGet(krystalTaskExecutor.requestExecution(nodeDefinition).getAllResults());
+        timedGet(krystalNodeExecutor.execute(nodeDefinition).getAllResults());
     assertEquals(List.of("computed_value"), results);
   }
 
@@ -62,8 +62,8 @@ class KrystalTaskExecutorTest {
                         dependencyValues.get("b"),
                         dependencyValues.get("c")));
 
-    Node<String> node = krystalTaskExecutor.requestExecution(nodeDefinition);
-    krystalTaskExecutor.provideInputs(node, Map.of("a", 1, "b", 2, "c", "3"));
+    Node<String> node = krystalNodeExecutor.execute(nodeDefinition);
+    krystalNodeExecutor.provideInputs(node, Map.of("a", 1, "b", 2, "c", "3"));
     ImmutableList<String> results = timedGet(node.getAllResults());
     assertEquals(List.of("computed_values: a=1;b=2;c=3"), results);
   }
@@ -77,8 +77,8 @@ class KrystalTaskExecutorTest {
 
     ImmutableList<String> results =
         timedGet(
-            krystalTaskExecutor
-                .requestExecution(
+            krystalNodeExecutor
+                .execute(
                     nodeDefinitionRegistry.newNonBlockingNode(
                         "requestExecution_singleDependency_requiredNode",
                         ImmutableMap.of("input", dependencyNodeId),
@@ -113,8 +113,8 @@ class KrystalTaskExecutorTest {
 
     ImmutableList<String> results =
         timedGet(
-            krystalTaskExecutor
-                .requestExecution(
+            krystalNodeExecutor
+                .execute(
                     nodeDefinitionRegistry.newNonBlockingNode(
                         "requestExecution_multiLevelDependencies_final",
                         ImmutableMap.of("input", l4Dep),
@@ -125,11 +125,11 @@ class KrystalTaskExecutorTest {
 
   @Test
   void stopAcceptingRequests_preventsNewExecutionRequests() {
-    krystalTaskExecutor.stopAcceptingRequests();
+    krystalNodeExecutor.stopAcceptingRequests();
     assertThrows(
         IllegalStateException.class,
         () ->
-            krystalTaskExecutor.requestExecution(
+            krystalNodeExecutor.execute(
                 nodeDefinitionRegistry.newNonBlockingNode(
                     "shutdown_preventsNewExecutionRequests",
                     ImmutableMap.of(),
@@ -138,11 +138,11 @@ class KrystalTaskExecutorTest {
 
   @Test
   void close_preventsNewExecutionRequests() {
-    krystalTaskExecutor.close();
+    krystalNodeExecutor.close();
     assertThrows(
         IllegalStateException.class,
         () ->
-            krystalTaskExecutor.requestExecution(
+            krystalNodeExecutor.execute(
                 nodeDefinitionRegistry.newNonBlockingNode(
                     "shutdown_preventsNewExecutionRequests",
                     ImmutableMap.of(),

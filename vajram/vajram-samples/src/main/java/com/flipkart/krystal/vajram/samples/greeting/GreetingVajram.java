@@ -11,6 +11,7 @@ import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.BindFrom;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.Input;
+import com.flipkart.krystal.vajram.inputs.InputCommand.Command;
 import com.flipkart.krystal.vajram.inputs.ResolutionSources;
 import com.flipkart.krystal.vajram.inputs.Resolve;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
@@ -42,7 +43,7 @@ public abstract sealed class GreetingVajram extends NonBlockingVajram<String>
             // Data type - used for code generation
             .type(string())
             // If this input is not provided by the client, throw a build time error.
-            .isMandatory()
+            .mandatory()
             .build(),
         Dependency.builder()
             // Data type of resolved dependencies is inferred from the

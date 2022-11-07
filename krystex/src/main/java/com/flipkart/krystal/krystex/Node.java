@@ -6,6 +6,7 @@ import static com.flipkart.krystal.krystex.NodeState.INITIATED;
 import static com.flipkart.krystal.krystex.NodeState.NEW;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.union;
 import static java.util.Arrays.stream;
 import static java.util.concurrent.CompletableFuture.allOf;
@@ -15,6 +16,7 @@ import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,6 +47,9 @@ public final class Node<T> {
 
   private final List<Consumer<ImmutableCollection<SingleResult<T>>>> newDataSubscriptions =
       new ArrayList<>();
+  /** Remembers whether newDataSubscriptions were notified about results of a request */
+  private final Map<Request, CompletableFuture<?>> dataTransferDone = new LinkedHashMap<>();
+
   private final List<Runnable> doneSubscriptions = new ArrayList<>();
   private final Map<String, Boolean> inputsDone = new HashMap<>();
 
@@ -164,16 +169,25 @@ public final class Node<T> {
       newResults.put(request, resultsForRequest);
     }
     // Notify dependants that new data is available from this node
-    newResults
-        .values()
-        .forEach(
-            batchResult ->
-                batchResult
-                    .future()
-                    .whenComplete(
-                        (ts, throwable) ->
+    newResults.forEach(
+        (request, batchResult) -> {
+          dataTransferDone.put(
+              request,
+              batchResult
+                  .future()
+                  .handle(
+                      (ts, throwable) -> {
+                        synchronized (newDataSubscriptions) {
+                          try {
                             newDataSubscriptions.forEach(
-                                c -> c.accept(batchResult.toSingleResults()))));
+                                c -> c.accept(batchResult.toSingleResults()));
+                          } catch (Exception e) {
+                            log.warn("Exception when notifying new Data availability", e);
+                          }
+                        }
+                        return null;
+                      }));
+        });
     resultsByRequest.putAll(newResults);
     return ImmutableMap.copyOf(newResults);
   }
@@ -266,11 +280,13 @@ public final class Node<T> {
                 allResults.complete(ts);
               }
               nodeState.set(DONE);
-              for (Runnable runnable : doneSubscriptions) {
-                try {
-                  runnable.run();
-                } catch (Exception e) {
-                  log.error("Error while notifying done subscriptions", e);
+              synchronized (doneSubscriptions) {
+                for (Runnable runnable : doneSubscriptions) {
+                  try {
+                    runnable.run();
+                  } catch (Exception e) {
+                    log.error("Error while notifying done subscriptions", e);
+                  }
                 }
               }
             });
@@ -298,11 +314,32 @@ public final class Node<T> {
   }
 
   public void whenNewDataAvailable(Consumer<ImmutableCollection<SingleResult<T>>> newDataConsumer) {
-    this.newDataSubscriptions.add(newDataConsumer);
+    synchronized (newDataSubscriptions) {
+      ImmutableSet<Request> newDataNotifiedRequests =
+          this.dataTransferDone.entrySet().stream()
+              .filter(e -> e.getValue().isDone())
+              .map(Entry::getKey)
+              .collect(toImmutableSet());
+      newDataConsumer.accept(
+          resultsByRequest.entrySet().stream()
+              .filter(e -> newDataNotifiedRequests.contains(e.getKey()))
+              .map(Entry::getValue)
+              .filter(tBatchResult -> tBatchResult.future().isDone())
+              .map(BatchResult::toSingleResults)
+              .flatMap(Collection::stream)
+              .collect(toImmutableList()));
+      this.newDataSubscriptions.add(newDataConsumer);
+    }
   }
 
   public void whenDone(Runnable onDone) {
-    this.doneSubscriptions.add(onDone);
+    synchronized (doneSubscriptions) {
+      if (DONE.equals(nodeState.get())) {
+        onDone.run();
+      } else {
+        this.doneSubscriptions.add(onDone);
+      }
+    }
   }
 
   public void markDependenciesInitiated() {
