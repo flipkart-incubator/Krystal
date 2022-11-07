@@ -9,4 +9,5 @@ module flipkart.krystal.vajram {
   requires static lombok;
   requires org.reflections;
   requires org.checkerframework.checker.qual;
+  requires com.google.errorprone.annotations;
 }

@@ -1,4 +1,6 @@
-package com.flipkart.krystal.krystex;
+package com.flipkart.krystal.krystex.commands;
+
+import com.flipkart.krystal.krystex.Node;
 
 /**
  * @param node the node whose dependency is done
