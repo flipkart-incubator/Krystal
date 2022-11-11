@@ -7,16 +7,18 @@ import com.flipkart.krystal.krystex.Node;
 import com.flipkart.krystal.krystex.NonBlockingNodeDefinition;
 import com.flipkart.krystal.krystex.RateLimitingStrategy;
 import com.flipkart.krystal.krystex.config.ConfigProvider;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.github.resilience4j.decorators.Decorators;
-import io.github.resilience4j.decorators.Decorators.DecorateCompletionStage;
+import io.github.resilience4j.decorators.Decorators.DecorateFunction;
 import io.github.resilience4j.ratelimiter.RateLimiter;
 import io.github.resilience4j.ratelimiter.RateLimiterConfig;
 import io.github.resilience4j.ratelimiter.internal.SemaphoreBasedRateLimiter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletionStage;
-import java.util.function.Supplier;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 // TODO move to a dedicated module
 public class Resilience4JStrategy implements LogicDecorationStrategy {
@@ -30,22 +32,30 @@ public class Resilience4JStrategy implements LogicDecorationStrategy {
   }
 
   @Override
-  public <T> Supplier<CompletionStage<T>> decorateLogic(Node<T> node) {
-    if (node.definition() instanceof NonBlockingNodeDefinition<?> result) {
-      return () -> node.definition().logic();
+  public <T> Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> decorateLogic(
+      Node<T> node,
+      Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> logicToDecorate) {
+    if (node.definition() instanceof NonBlockingNodeDefinition<?>) {
+      return node.definition()::logic;
     }
-    DecorateCompletionStage<T> decorateCompletionStage =
-        Decorators.ofCompletionStage(() -> node.definition().logic());
+    DecorateFunction<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>>
+        decorateCompletionStage = Decorators.ofFunction(logicToDecorate);
     decorateWithRateLimiter(node, decorateCompletionStage);
     decorateWithCircuitBreaker(node, decorateCompletionStage);
     return decorateCompletionStage.decorate();
   }
 
   private <T> void decorateWithCircuitBreaker(
-      Node<T> node, DecorateCompletionStage<T> decorateCompletionStage) {}
+      Node<T> node,
+      DecorateFunction<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>>
+          decorateFunction) {
+    // TODO Implement circuit breaker
+  }
 
   private <T> void decorateWithRateLimiter(
-      Node<T> node, DecorateCompletionStage<T> decorateCompletionStage) {
+      Node<T> node,
+      DecorateFunction<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>>
+          decorateFunction) {
     RateLimiter rateLimiter = rateLimiters.get(node.definition().nodeId());
     if (rateLimiter == null) {
       rateLimiter =
@@ -55,7 +65,7 @@ public class Resilience4JStrategy implements LogicDecorationStrategy {
       updateRateLimiter(node.definition().nodeId(), rateLimiter);
     }
     if (rateLimiter != null) {
-      decorateCompletionStage.withRateLimiter(rateLimiter);
+      decorateFunction.withRateLimiter(rateLimiter);
     }
   }
 

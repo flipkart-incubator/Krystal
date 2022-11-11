@@ -10,8 +10,11 @@ repositories {
 }
 
 dependencies {
+    implementation project(':krystex')
+
     implementation 'com.google.guava:guava:31.1-jre'
     implementation 'org.reflections:reflections:0.10.2'
+
     annotationProcessor 'org.projectlombok:lombok:1.18.24'
     compileOnly 'org.projectlombok:lombok:1.18.24'
 

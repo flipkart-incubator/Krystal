@@ -1,9 +1,8 @@
 package com.flipkart.krystal.vajram.inputs;
 
-import java.util.Set;
-import java.util.function.Function;
+import com.flipkart.krystal.vajram.inputs.InputResolver;
+import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
+import com.google.common.collect.ImmutableSet;
 
-public record DefaultInputResolver(Set<InputId> sources, QualifiedInputId resolutionTarget, Function<Object[],Object> resolutionLogic) implements InputResolver {
-
-
-}
+public record DefaultInputResolver(ImmutableSet<String> sources, QualifiedInputs resolutionTarget)
+    implements InputResolver {}
