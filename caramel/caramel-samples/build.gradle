@@ -10,6 +10,7 @@ repositories {
 }
 
 dependencies {
+    implementation project(':caramel')
     implementation 'com.google.guava:guava:31.1-jre'
 
     compileOnly 'org.projectlombok:lombok:1.18.24'
