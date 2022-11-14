@@ -6,7 +6,7 @@ import java.util.Collection;
 import java.util.List;
 
 @ImplAs("TestPayload")
-public interface TestPayloadDefinition extends WorkflowPayload {
+interface TestPayloadDefinition extends WorkflowPayload {
 
   String x1String();
 
@@ -21,6 +21,8 @@ public interface TestPayloadDefinition extends WorkflowPayload {
   String triggerUserId();
 
   Collection<Metric> metrics();
+
+  Collection<String> metricNames();
 
   boolean isEnableValidation();
 

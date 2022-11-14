@@ -29,7 +29,7 @@ public interface WorkflowBuildStage<INPUT, ROOT extends WorkflowPayload> extends
 
   ForkStage<INPUT, ROOT> fork();
 
-  <U, S> WorkflowBuildStage<INPUT, ROOT> compute(Field<U, ROOT> targetField, Supplier<U> supplier);
+  <U> WorkflowBuildStage<INPUT, ROOT> compute(Field<U, ROOT> targetField, Supplier<U> supplier);
 
   <U, S> WorkflowBuildStage<INPUT, ROOT> compute(
       Field<U, ROOT> targetField, Function<S, U> computer, Field<S, ? super ROOT> sourceField);
@@ -46,7 +46,7 @@ public interface WorkflowBuildStage<INPUT, ROOT extends WorkflowPayload> extends
       Function<ROOT, ? extends Stream<? super ITEM>> splitter,
       List<Field<?, ? super ROOT>> sourceFields);
 
-  default <T> ThenStage<INPUT, ROOT> ifTrue(
+  default ThenStage<INPUT, ROOT> ifTrue(
       Field<Boolean, ROOT> source,
       Function<WorkflowBuildStage<INPUT, ROOT>, WorkflowBuildStage<INPUT, ROOT>> thenWorkflow) {
     return ifTrue(source, aBoolean -> aBoolean, thenWorkflow);
@@ -57,7 +57,7 @@ public interface WorkflowBuildStage<INPUT, ROOT extends WorkflowPayload> extends
       Predicate<T> condition,
       Function<WorkflowBuildStage<INPUT, ROOT>, WorkflowBuildStage<INPUT, ROOT>> thenWorkflow);
 
-  default <T> WorkflowBuildStage<INPUT, ROOT> conditional(
+  default WorkflowBuildStage<INPUT, ROOT> conditional(
       Field<Boolean, ROOT> source,
       Function<WorkflowBuildStage<INPUT, ROOT>, WorkflowBuildStage<INPUT, ROOT>> ifTrue,
       @Nullable Function<WorkflowBuildStage<INPUT, ROOT>, WorkflowBuildStage<INPUT, ROOT>>
@@ -71,7 +71,7 @@ public interface WorkflowBuildStage<INPUT, ROOT extends WorkflowPayload> extends
       Function<WorkflowBuildStage<INPUT, ROOT>, WorkflowBuildStage<INPUT, ROOT>> ifTrue,
       @Nullable Function<WorkflowBuildStage<INPUT, ROOT>, WorkflowBuildStage<INPUT, ROOT>> ifFalse);
 
-  <O> WorkflowCompletionStage.TerminatedWorkflow<INPUT, ROOT, O> terminateWithOutput(
+  <O> TerminatedWorkflow<INPUT, ROOT, O> terminateWithOutput(
       Field<O, ROOT> outputField);
 
   WorkflowBuildStage<INPUT, ROOT> checkpoint(String name);

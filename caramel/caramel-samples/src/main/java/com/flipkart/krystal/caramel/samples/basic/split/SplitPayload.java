@@ -1,8 +1,11 @@
-package com.flipkart.krystal.caramel.samples.basic;
+package com.flipkart.krystal.caramel.samples.basic.split;
 
-import com.flipkart.krystal.caramel.model.AbstractValue;
 import com.flipkart.krystal.caramel.model.Field;
 import com.flipkart.krystal.caramel.model.SimpleField;
+import com.flipkart.krystal.caramel.model.Value;
+import com.flipkart.krystal.caramel.model.ValueImpl;
+import com.flipkart.krystal.caramel.samples.basic.Metric;
+import com.flipkart.krystal.caramel.samples.basic.ProductUpdateEvent;
 import java.util.Collection;
 
 class SplitPayload implements SplitPayloadDefinition {
@@ -27,11 +30,14 @@ class SplitPayload implements SplitPayloadDefinition {
             "metrics", SplitPayload.class, SplitPayload::metrics, SplitPayload::setMetrics);
   }
 
-  private final Value<String> initString = new Value<>(SplitPayloadFields.initString);
-  private final Value<Metric> metric = new Value<>(SplitPayloadFields.metric);
-  private final Value<ProductUpdateEvent> initProductEvent =
-      new Value<>(SplitPayloadFields.initProductEvent);
-  private final Value<Collection<Metric>> metrics = new Value<>(SplitPayloadFields.metrics);
+  private final Value<String, SplitPayload> initString =
+      new ValueImpl<>(SplitPayloadFields.initString, this);
+  private final Value<Metric, SplitPayload> metric =
+      new ValueImpl<>(SplitPayloadFields.metric, this);
+  private final Value<ProductUpdateEvent, SplitPayload> initProductEvent =
+      new ValueImpl<>(SplitPayloadFields.initProductEvent, this);
+  private final Value<Collection<Metric>, SplitPayload> metrics =
+      new ValueImpl<>(SplitPayloadFields.metrics, this);
 
   @Override
   public String initString() {
@@ -67,24 +73,5 @@ class SplitPayload implements SplitPayloadDefinition {
   @Override
   public Collection<Metric> metrics() {
     return metrics.getOrThrow();
-  }
-
-  private final class Value<T> extends AbstractValue<T, SplitPayload> {
-
-    private final Field<T, SplitPayload> field;
-
-    public Value(Field<T, SplitPayload> field) {
-      this.field = field;
-    }
-
-    @Override
-    public Field<T, SplitPayload> field() {
-      return field;
-    }
-
-    @Override
-    public SplitPayload getPayload() {
-      return SplitPayload.this;
-    }
   }
 }
