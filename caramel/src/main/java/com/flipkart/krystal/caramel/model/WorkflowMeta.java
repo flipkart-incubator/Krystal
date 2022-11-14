@@ -1,53 +1,42 @@
 package com.flipkart.krystal.caramel.model;
 
-import java.util.function.BiConsumer;
-import java.util.function.Supplier;
-import org.checkerframework.checker.nullness.qual.NonNull;
-
-public class WorkflowMeta<T extends WorkflowPayload> {
+public class WorkflowMeta<P extends WorkflowPayload> {
   private String version;
   private String name;
-  private final Class<T> payloadType;
+  private final Class<P> payloadType;
 
-  public WorkflowMeta(String name, Class<T> payloadType) {
+  public WorkflowMeta(String name, Class<P> payloadType) {
     this.name = name;
     this.payloadType = payloadType;
   }
 
-  public WorkflowMeta<T> workflowName(String name) {
-    if (this.name != null) {
-      throw new IllegalArgumentException("Cannot assign name twice");
-    }
-    this.name = name;
-    return this;
-  }
-
-  @NonNull
-  public static <P, T extends WorkflowPayload> WorkflowBuildStage<P, T> workflow(
-      InputChannel<P> source, BiConsumer<T, P> consumer) {
-    return null;
-  }
-
-  public static WorkflowMeta<?> workflow(String name) {
-    return new WorkflowMeta<>(name, null);
-  }
-
+  /**
+   * Creates a new workflow definition with the given name and payload type. If a workflow with the
+   * same already exists, returns the same workflow.
+   *
+   * @param name The name of the workflow.
+   * @param payloadType the payload type of the workflow
+   * @return
+   * @param <P>
+   */
   public static <P extends WorkflowPayload> WorkflowMeta<P> workflow(
       String name, Class<P> payloadType) {
     return new WorkflowMeta<>(name, payloadType);
   }
 
-  public WorkflowMeta<T> version(String version) {
+  public WorkflowMeta<P> version(String version) {
     this.version = version;
     return this;
   }
 
-  public <P, X extends WorkflowPayload> WorkflowBuildStage<P, X> from(
-      InputChannel<P> source, BiConsumer<X, P> contextInitializer) {
-    return null;
-  }
-
-  public <P> WorkflowBuildStage<P, T> take(Field<P, T> field, Supplier<P> source) {
-    return null;
+  /**
+   * This defines the starting point of a workflow. Every workflow has exactly one starting point
+   * from where the execution of the workflow begins.
+   *
+   * @param <F> the type of the received message
+   * @param field the field of the workflow payload into which the incoming message is collected.
+   */
+  public <F> WorkflowBuildStage<F, P> startWith(Field<F, P> field) {
+    throw new UnsupportedOperationException();
   }
 }

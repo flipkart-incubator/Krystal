@@ -1,10 +1,12 @@
 package com.flipkart.krystal.caramel.samples.basic;
 
+import static com.flipkart.krystal.caramel.model.OutputChannel.outputChannel;
 import static com.flipkart.krystal.caramel.model.WorkflowMeta.workflow;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.conditionalTransformedProducts;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.initProductEvent;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.initialTransformedProduct;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.isEnableValidation;
+import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.metricNames;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.metrics;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.nextProduct;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.productUpdateEvents;
@@ -12,24 +14,21 @@ import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayload
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.string;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.triggerUserId;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.x1String;
+import static com.flipkart.krystal.caramel.samples.basic.classification.ProductClassification2WorkflowBuilder.classifyProduct2;
+import static com.flipkart.krystal.caramel.samples.basic.classification.ProductClassificationWorkflowBuilder.classifyProduct;
+import static com.flipkart.krystal.caramel.samples.basic.split.SplitWorkflowBuilder.splitter;
+import static com.flipkart.krystal.caramel.samples.basic.stringconversion.StringConversionWorkflowBuilder.convertToString;
 import static java.util.Collections.emptyList;
 import static java.util.function.Function.identity;
 
-import com.flipkart.krystal.caramel.model.Bridge;
-import com.flipkart.krystal.caramel.model.InMemSyncChannelBuilder;
-import com.flipkart.krystal.caramel.model.InputChannel;
-import com.flipkart.krystal.caramel.model.WorkflowCompletionStage;
-import com.flipkart.krystal.caramel.samples.basic.SplitPayload.SplitPayloadFields;
+import com.flipkart.krystal.caramel.model.TerminatedWorkflow;
 import com.flipkart.krystal.caramel.samples.basic.StringMetricPayload.StringMetricFields;
-import com.flipkart.krystal.caramel.samples.basic.SubMetricPayload.SubMetricFields;
-import com.flipkart.krystal.caramel.samples.basic.TransformedProductPayload.TransformedProductPayloadFields;
 import com.flipkart.krystal.caramel.samples.basic.TransformedProductWfPayload.TransformedProductWfFields;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -40,113 +39,50 @@ import lombok.AllArgsConstructor;
  * the features of the caramel DSL.
  */
 @AllArgsConstructor
-public class TestWorkflowBuilder {
+public class ProductProcessingWorkflowBuilder {
 
-  private static final Logger log = Logger.getAnonymousLogger();
-  private final Bridge<TransformedProduct> productEventNotificationBridge;
-  private final Bridge<TransformedProduct> productEventNotificationBridge2;
-  private final Bridge<TransformedProduct> productEventNotificationBridge3;
-  private final Bridge<TestPayload> rootContextQueue;
-  private final Bridge<TestWorkflowContext2> nextRootContextQueue;
-  private final InMemSyncChannelBuilder inMemSyncChannel;
-  private final InputChannel<ProductUpdateEventsContainer> variantsChannel;
-  private final Bridge<Metric> metricsChannel;
-  private final ExecutorService customExecutorService;
+  private static final Logger log = Logger.getLogger("");
 
-  public WorkflowCompletionStage.TerminatedWorkflow<
-          ProductUpdateEventsContainer, TestPayload, TransformedProduct>
-      createWorkflow() {
-    return workflow("ProductClassificationWorkflow", TestPayload.class)
-        .take(productUpdateEvents, variantsChannel)
-        .compute(x1String, String::valueOf, productUpdateEvents)
+  private static TerminatedWorkflow<ProductUpdateEventsContainer, TestPayload, TransformedProduct>
+      processProduct() {
+    return workflow("ProductProcessingWorkflow", TestPayload.class)
+        .startWith(productUpdateEvents)
+        .compute(x1String, convertToString(), productUpdateEvents)
         .peek(productUpdateEvents, payload -> log.info(payload.toString()))
-        .compute(initialTransformedProduct, this::newTransformedProduct, x1String)
+        .compute(
+            initialTransformedProduct,
+            ProductProcessingWorkflowBuilder::newTransformedProduct,
+            x1String)
         .peek(() -> log.info("created Test Workflow Context"))
         .peek( // This behaves as a fire and forget since we are peeking with a workflow
-            initialTransformedProduct,
-            workflow("ProductClassificationSubWorkflow", TransformedProductPayload.class)
-                .take(
-                    TransformedProductPayloadFields.initialTransformedProduct,
-                    productEventNotificationBridge)
-                .compute(
-                    TransformedProductPayloadFields.x2String,
-                    String::valueOf,
-                    TransformedProductPayloadFields.initialTransformedProduct)
-                .peek(
-                    TransformedProductPayloadFields.initialTransformedProduct,
-                    TransformedProductPayloadFields.x2String,
-                    (itp, x2) -> {
-                      log.info(String.valueOf(itp));
-                      log.info(x2);
-                    })
-                .terminateWithOutput(TransformedProductPayloadFields.finalTransformedProduct))
+            initialTransformedProduct, classifyProduct())
         .fork()
         .withInput(initialTransformedProduct)
-        .usingWorkflow(
-            workflow("ProductClassificationSubWorkflow2", TransformedProductPayload.class)
-                .take(
-                    TransformedProductPayloadFields.initialTransformedProduct,
-                    productEventNotificationBridge)
-                .compute(
-                    TransformedProductPayloadFields.x2String,
-                    Object::toString,
-                    TransformedProductPayloadFields.initialTransformedProduct)
-                .peek(
-                    TransformedProductPayloadFields.initialTransformedProduct,
-                    TransformedProductPayloadFields.x2String,
-                    (initialTransformedProduct, x2String) ->
-                        log.info(initialTransformedProduct + x2String))
-                .compute(
-                    TransformedProductPayloadFields.finalTransformedProduct,
-                    identity(),
-                    TransformedProductPayloadFields.initialTransformedProduct)
-                .terminateWithOutput(TransformedProductPayloadFields.x2String))
+        .usingWorkflow(classifyProduct2())
         .toCompute(triggerUserId, identity())
         .splitAs(
             wf -> toProductEvents(wf.initialTransformedProduct(), wf.triggerUserId()),
             List.of(initialTransformedProduct, triggerUserId))
         .stopOnException()
         .sequentially()
-        .processEachWith(
-            workflow("splitWorkflow", SplitPayload.class)
-                .take(
-                    SplitPayloadFields.initProductEvent,
-                    inMemSyncChannel.of(ProductUpdateEvent.class))
-                .compute(
-                    SplitPayloadFields.initString,
-                    String::valueOf,
-                    SplitPayloadFields.initProductEvent)
-                .peek(SplitPayloadFields.initString, log::info)
-                .compute(
-                    SplitPayloadFields.metric, s -> new Metric(s, 2), SplitPayloadFields.initString)
-                .splitAs(Stream::of, SplitPayloadFields.metric)
-                .stopOnException()
-                .sequentially()
-                .processEachWith(
-                    workflow("subSplitWorkflow", SubMetricPayload.class)
-                        .take(SubMetricFields.init, inMemSyncChannel.of(Metric.class))
-                        .compute(SubMetricFields.metric, identity(), SubMetricFields.init)
-                        .peek(() -> log.info("subMetricWorkflowContext.getMetric().toString()"))
-                        .terminateWithOutput(SubMetricFields.metric))
-                .extractEachWith(identity())
-                .mergeInto(SplitPayloadFields.metrics, identity())
-                .terminateWithOutput(SplitPayloadFields.metrics))
-        .extractEachWith(identity())
-        .mergeInto(
-            metrics,
+        .processEachWith(splitter())
+        .extractEachWith(l -> l.stream().map(Metric::name).toList())
+        .toCompute(
+            metricNames,
             metrics -> metrics.stream().flatMap(Collection::stream).collect(Collectors.toList()))
+        .compute(metrics, names -> names.stream().map(s -> new Metric(s, 0)).toList(), metricNames)
         .splitAs(
             transformedProduct -> transformedProduct.metrics().stream().map(Objects::toString),
             List.of(metrics))
         .stopOnException()
         .processEachWith(
             workflow("subSplitWorkflow", StringMetricPayload.class)
-                .take(StringMetricFields.initString, inMemSyncChannel.of(String.class))
+                .startWith(StringMetricFields.initString)
                 .compute(
                     StringMetricFields.metric, o -> new Metric(o, 1), StringMetricFields.initString)
-                .peek(StringMetricFields.metric, metricsChannel)
+                .peek(StringMetricFields.metric, outputChannel("metrics_channel"))
                 .terminateWithOutput(StringMetricFields.metric))
-        .merge()
+        .toCompute(metrics)
         .peek(
             isEnableValidation,
             initialTransformedProduct,
@@ -162,16 +98,13 @@ public class TestWorkflowBuilder {
         .stopOnException()
         .processEachWith(
             workflow("TransformedProductWf", TransformedProductWfPayload.class)
-                .take(
-                    TransformedProductWfFields.productUpdateEvent,
-                    inMemSyncChannel.of(ProductUpdateEvent.class))
+                .startWith(TransformedProductWfFields.productUpdateEvent)
                 .compute(
                     TransformedProductWfFields.transformedProduct,
                     productUpdateEvents -> new TransformedProduct(),
                     TransformedProductWfFields.productUpdateEvent)
                 .terminateWithOutput(TransformedProductWfFields.transformedProduct))
-        .extractEachWith(identity())
-        .mergeInto(conditionalTransformedProducts, identity())
+        .toCompute(conditionalTransformedProducts)
         .ifTrue(
             isEnableValidation,
             trueCase -> trueCase.compute(conditionalTransformedProducts, ImmutableList::of))
@@ -235,7 +168,7 @@ public class TestWorkflowBuilder {
                             payload -> new TransformedProduct(),
                             emptyList())))
         .checkpoint("checkpoint1")
-        .compute(string, String::valueOf, initProductEvent)
+        .compute(string, convertToString(), initProductEvent)
         .peek(string, log::info)
         .checkpoint("checkpoint2")
         .compute(secondString, () -> "")
@@ -243,11 +176,11 @@ public class TestWorkflowBuilder {
         .terminateWithOutput(nextProduct);
   }
 
-  private TransformedProduct newTransformedProduct(String x1String) {
+  private static TransformedProduct newTransformedProduct(String x1String) {
     return null;
   }
 
-  private Stream<ProductUpdateEvent> toProductEvents(
+  private static Stream<ProductUpdateEvent> toProductEvents(
       TransformedProduct transformedProduct, String triggerUserId) {
     return Stream.of();
   }

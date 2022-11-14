@@ -2,13 +2,15 @@ package com.flipkart.krystal.caramel.model;
 
 import java.util.Optional;
 
-public interface Value<T, P extends WorkflowPayload> {
-  Field<T,P> field();
+public sealed interface Value<T, P extends WorkflowPayload> permits ValueImpl {
 
-  P getPayload();
+  Field<T, P> field();
 
-  void set(T value);
+  P payload();
 
   Optional<T> get();
 
+  T getOrThrow();
+
+  void set(T value);
 }

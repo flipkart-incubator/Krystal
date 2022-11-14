@@ -1,8 +1,10 @@
-package com.flipkart.krystal.caramel.samples.basic;
+package com.flipkart.krystal.caramel.samples.basic.split;
 
-import com.flipkart.krystal.caramel.model.AbstractValue;
 import com.flipkart.krystal.caramel.model.Field;
 import com.flipkart.krystal.caramel.model.SimpleField;
+import com.flipkart.krystal.caramel.model.Value;
+import com.flipkart.krystal.caramel.model.ValueImpl;
+import com.flipkart.krystal.caramel.samples.basic.Metric;
 
 public class SubMetricPayload implements SubMetricPayloadDefinition {
 
@@ -15,8 +17,9 @@ public class SubMetricPayload implements SubMetricPayloadDefinition {
             "metric", SubMetricPayload.class, SubMetricPayload::init, SubMetricPayload::setInit);
   }
 
-  private final Value<Metric> init = new Value<>(SubMetricFields.init);
-  private final Value<Metric> metric = new Value<>(SubMetricFields.metric);
+  private final Value<Metric, SubMetricPayload> init = new ValueImpl<>(SubMetricFields.init, this);
+  private final Value<Metric, SubMetricPayload> metric =
+      new ValueImpl<>(SubMetricFields.metric, this);
 
   @Override
   public Metric init() {
@@ -34,24 +37,5 @@ public class SubMetricPayload implements SubMetricPayloadDefinition {
 
   public void setMetric(Metric metric) {
     this.metric.set(metric);
-  }
-
-  private final class Value<T> extends AbstractValue<T, SubMetricPayload> {
-
-    private final Field<T, SubMetricPayload> field;
-
-    public Value(Field<T, SubMetricPayload> field) {
-      this.field = field;
-    }
-
-    @Override
-    public Field<T, SubMetricPayload> field() {
-      return field;
-    }
-
-    @Override
-    public SubMetricPayload getPayload() {
-      return SubMetricPayload.this;
-    }
   }
 }

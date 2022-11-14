@@ -1,5 +1,7 @@
 package com.flipkart.krystal.caramel.model;
 
-public interface WorkflowPayload {
-
-}
+/**
+ * Every payload definition class which represents the payload of a caramel workflow must implement
+ * this marker interface.
+ */
+public interface WorkflowPayload {}
