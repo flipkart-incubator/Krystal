@@ -87,7 +87,6 @@ public final class Node<T> {
       throw new IllegalStateException("This node has input");
     }
     execute(ImmutableList.of(new Request()));
-    markDone();
   }
 
   void executeWithNewDataForDependencyNode(String depNodeId, Collection<SingleResult<?>> newData) {
@@ -360,5 +359,11 @@ public final class Node<T> {
 
   private Collection<SingleResult<?>> getResultsForInput(String input) {
     return resultsForInput.computeIfAbsent(input, k -> new ArrayList<>());
+  }
+
+  public ImmutableMap<Request, BatchResult<T>> executeWithInputs(ImmutableList<Request> requestList) {
+    ImmutableMap<Request, BatchResult<T>> result = execute(requestList);
+    markDone();
+    return result;
   }
 }

@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.exec;
 import static com.flipkart.krystal.vajram.exec.VajramGraph.loadFromClasspath;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.flipkart.krystal.vajram.exec.test_vajrams.carmaker.carfactory.CarFactoryVajram;
 import com.flipkart.krystal.vajram.exec.test_vajrams.hello.HelloRequest;
 import com.flipkart.krystal.vajram.exec.test_vajrams.hello.HelloVajram;
 import java.util.concurrent.CompletableFuture;

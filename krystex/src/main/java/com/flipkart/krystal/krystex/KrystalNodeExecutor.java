@@ -5,18 +5,13 @@ import static java.util.Collections.emptyList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 
-import com.flipkart.krystal.krystex.commands.DependencyDone;
-import com.flipkart.krystal.krystex.commands.InitiateNode;
-import com.flipkart.krystal.krystex.commands.NewDataFromDependency;
-import com.flipkart.krystal.krystex.commands.NodeCommand;
-import com.flipkart.krystal.krystex.commands.ProvideInputValues;
+import com.flipkart.krystal.krystex.commands.*;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Queue;
+
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -33,6 +28,9 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
   private boolean shutdownRequested;
   private boolean stopAcceptingRequests;
+
+  /* TODO integrate with node cache */
+  private Map<String, Map<String, ?>> inputCache = new HashMap<>();
 
   public KrystalNodeExecutor(NodeDefinitionRegistry nodeDefinitionRegistry, String requestId) {
     this.nodeRegistry = new NodeRegistry(nodeDefinitionRegistry);
@@ -64,7 +62,13 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   public void provideInputs(Node<?> node, Map<String, ?> inputValues) {
+    /* Cache inputs in case there are input resolvers */
+    inputCache.put(node.getNodeId(), ImmutableMap.copyOf(inputValues));
     getCommandQueue().add(new ProvideInputValues(node, ImmutableMap.copyOf(inputValues)));
+  }
+
+  public void adaptInputs(Node<?> node, Map<String, ?> inputValues) {
+    getCommandQueue().add(new AdaptInputs(node, ImmutableMap.copyOf(inputValues)));
   }
 
   private void initiate(Node<?> node) {
@@ -92,7 +96,14 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
             // unnecessarily
             continue;
           }
-          if (!initiatePendingInputs(node)) {
+          if (!node.definition().inputAdoptionSources().isEmpty()) {
+            node.markDependenciesInitiated();
+            if (!node.definition().inputAdoptionSources().isEmpty()) {
+              for(String nodeId : node.definition().inputAdoptionSources()) {
+                adaptInputs(node, inputCache.get(nodeId));
+              }
+            }
+          } else if (!initiatePendingInputs(node)) {
             node.executeIfNoDependenciesAndMarkDone();
           }
         } else if (currentCommand instanceof NewDataFromDependency newDataFromDependency) {
@@ -100,6 +111,17 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
               newDataFromDependency.dependencyNodeId(), newDataFromDependency.newData());
         } else if (currentCommand instanceof DependencyDone dependencyDone) {
           node.markDependencyNodeDone(dependencyDone.depNodeId());
+        } else  if (currentCommand instanceof AdaptInputs inputValues) {
+          List<Request> requestList = new LinkedList<>();
+          inputValues.values().forEach(
+                  (input, value) -> {
+                    Map<String, SingleResult<?>> requestMap = new HashMap<>();
+                    requestMap.put(input, new SingleResult<>(completedFuture(value)));
+                    requestList.add(new Request(ImmutableMap.copyOf(requestMap)));
+                  });
+          if (!initiatePendingInputs(node)) {
+            node.executeWithInputs(ImmutableList.copyOf(requestList));
+          }
         } else if (currentCommand instanceof ProvideInputValues provideInputValues) {
           provideInputValues
               .values()
@@ -138,7 +160,9 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       } else if (!depNode.wasInitiated()) {
         initiate(depNode);
       }
-      depNode.whenDone(() -> markDependencyDone(node, depNodeId));
+      depNode.whenDone(() -> {
+        markDependencyDone(node, depNodeId);
+      });
       depNode.whenNewDataAvailable(
           singleResults -> executeWithNewData(node, depNodeId, singleResults));
     }

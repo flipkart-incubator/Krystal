@@ -1,0 +1,495 @@
+> Task :caramel:compileJava UP-TO-DATE
+> Task :caramel:processResources NO-SOURCE
+> Task :caramel:classes UP-TO-DATE
+> Task :caramel:jar UP-TO-DATE
+> Task :caramel:assemble UP-TO-DATE
+> Task :caramel:compileTestJava NO-SOURCE
+> Task :caramel:processTestResources NO-SOURCE
+> Task :caramel:testClasses UP-TO-DATE
+> Task :caramel:test NO-SOURCE
+> Task :caramel:check UP-TO-DATE
+> Task :caramel:build UP-TO-DATE
+> Task :krystex:compileJava UP-TO-DATE
+> Task :krystex:processResources NO-SOURCE
+> Task :krystex:classes UP-TO-DATE
+> Task :krystex:jar UP-TO-DATE
+> Task :krystex:assemble UP-TO-DATE
+> Task :krystex:compileTestJava UP-TO-DATE
+> Task :krystex:processTestResources NO-SOURCE
+> Task :krystex:testClasses UP-TO-DATE
+> Task :krystex:test UP-TO-DATE
+> Task :krystex:check UP-TO-DATE
+> Task :krystex:build UP-TO-DATE
+> Task :vajram:compileJava UP-TO-DATE
+> Task :vajram:processResources NO-SOURCE
+> Task :vajram:classes UP-TO-DATE
+> Task :vajram:jar UP-TO-DATE
+> Task :vajram:assemble UP-TO-DATE
+> Task :vajram:compileTestJava UP-TO-DATE
+> Task :vajram:processTestResources NO-SOURCE
+> Task :vajram:testClasses UP-TO-DATE
+> Task :vajram:test UP-TO-DATE
+> Task :vajram:check UP-TO-DATE
+> Task :vajram:build UP-TO-DATE
+
+> Task :caramel:caramel-samples:compileJava FAILED
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductPayload.java:3: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.AbstractValue;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductPayload.java:4: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.AccessBeforeInitializationException;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductPayload.java:5: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.Field;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductPayload.java:6: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.SimpleField;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductPayloadDefinition.java:3: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.WorkflowPayload;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductPayloadDefinition.java:5: error: cannot find symbol
+public interface TransformedProductPayloadDefinition extends WorkflowPayload {
+                                                             ^
+  symbol: class WorkflowPayload
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductPayload.java:71: error: cannot find symbol
+  private final class Value<T> extends AbstractValue<T, TransformedProductPayload> {
+                                       ^
+  symbol:   class AbstractValue
+  location: class TransformedProductPayload
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductPayload.java:73: error: cannot find symbol
+    private final Field<T, TransformedProductPayload> field;
+                  ^
+  symbol:   class Field
+  location: class TransformedProductPayload.Value<T>
+  where T is a type-variable:
+    T extends Object declared in class TransformedProductPayload.Value
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductPayload.java:75: error: cannot find symbol
+    public Value(Field<T, TransformedProductPayload> field) {
+                 ^
+  symbol:   class Field
+  location: class TransformedProductPayload.Value<T>
+  where T is a type-variable:
+    T extends Object declared in class TransformedProductPayload.Value
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductPayload.java:80: error: cannot find symbol
+    public Field<T, TransformedProductPayload> field() {
+           ^
+  symbol:   class Field
+  location: class TransformedProductPayload.Value<T>
+  where T is a type-variable:
+    T extends Object declared in class TransformedProductPayload.Value
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductPayload.java:14: error: cannot find symbol
+    Field<TransformedProduct, TransformedProductPayload> initialTransformedProduct =
+    ^
+  symbol:   class Field
+  location: interface TransformedProductPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductPayload.java:21: error: cannot find symbol
+    Field<String, TransformedProductPayload> x2String =
+    ^
+  symbol:   class Field
+  location: interface TransformedProductPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductPayload.java:28: error: cannot find symbol
+    Field<TransformedProduct, TransformedProductPayload> finalTransformedProduct =
+    ^
+  symbol:   class Field
+  location: interface TransformedProductPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestWorkflowContext2.java:3: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.WorkflowPayload;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestWorkflowContext2.java:6: error: cannot find symbol
+public interface TestWorkflowContext2 extends WorkflowPayload {
+                                              ^
+  symbol: class WorkflowPayload
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SplitPayloadDefinition.java:3: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.WorkflowPayload;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SplitPayloadDefinition.java:6: error: cannot find symbol
+interface SplitPayloadDefinition extends WorkflowPayload {
+                                         ^
+  symbol: class WorkflowPayload
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductWorkflow2Context.java:3: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.WorkflowPayload;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductWorkflow2Context.java:5: error: cannot find symbol
+public interface TransformedProductWorkflow2Context extends WorkflowPayload {
+                                                            ^
+  symbol: class WorkflowPayload
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SubMetricPayload.java:3: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.AbstractValue;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SubMetricPayload.java:4: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.Field;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SubMetricPayload.java:5: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.SimpleField;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SubMetricPayloadDefinition.java:3: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.WorkflowPayload;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SubMetricPayloadDefinition.java:5: error: cannot find symbol
+public interface SubMetricPayloadDefinition extends WorkflowPayload {
+                                                    ^
+  symbol: class WorkflowPayload
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SubMetricPayload.java:39: error: cannot find symbol
+  private final class Value<T> extends AbstractValue<T, SubMetricPayload> {
+                                       ^
+  symbol:   class AbstractValue
+  location: class SubMetricPayload
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SubMetricPayload.java:41: error: cannot find symbol
+    private final Field<T, SubMetricPayload> field;
+                  ^
+  symbol:   class Field
+  location: class SubMetricPayload.Value<T>
+  where T is a type-variable:
+    T extends Object declared in class SubMetricPayload.Value
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SubMetricPayload.java:43: error: cannot find symbol
+    public Value(Field<T, SubMetricPayload> field) {
+                 ^
+  symbol:   class Field
+  location: class SubMetricPayload.Value<T>
+  where T is a type-variable:
+    T extends Object declared in class SubMetricPayload.Value
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SubMetricPayload.java:48: error: cannot find symbol
+    public Field<T, SubMetricPayload> field() {
+           ^
+  symbol:   class Field
+  location: class SubMetricPayload.Value<T>
+  where T is a type-variable:
+    T extends Object declared in class SubMetricPayload.Value
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SubMetricPayload.java:10: error: cannot find symbol
+    Field<Metric, SubMetricPayload> init =
+    ^
+  symbol:   class Field
+  location: interface SubMetricFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SubMetricPayload.java:13: error: cannot find symbol
+    Field<Metric, SubMetricPayload> metric =
+    ^
+  symbol:   class Field
+  location: interface SubMetricFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:3: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.AbstractValue;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:4: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.AccessBeforeInitializationException;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:5: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.Field;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:6: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.SimpleField;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayloadDefinition.java:3: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.ImplAs;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayloadDefinition.java:4: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.WorkflowPayload;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayloadDefinition.java:9: error: cannot find symbol
+public interface TestPayloadDefinition extends WorkflowPayload {
+                                               ^
+  symbol: class WorkflowPayload
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayloadDefinition.java:8: error: cannot find symbol
+@ImplAs("TestPayload")
+ ^
+  symbol: class ImplAs
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:192: error: cannot find symbol
+  private final class Value<T> extends AbstractValue<T, TestPayload> {
+                                       ^
+  symbol:   class AbstractValue
+  location: class TestPayload
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:194: error: cannot find symbol
+    private final Field<T, TestPayload> field;
+                  ^
+  symbol:   class Field
+  location: class TestPayload.Value<T>
+  where T is a type-variable:
+    T extends Object declared in class TestPayload.Value
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:196: error: cannot find symbol
+    public Value(Field<T, TestPayload> field) {
+                 ^
+  symbol:   class Field
+  location: class TestPayload.Value<T>
+  where T is a type-variable:
+    T extends Object declared in class TestPayload.Value
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:201: error: cannot find symbol
+    public Field<T, TestPayload> field() {
+           ^
+  symbol:   class Field
+  location: class TestPayload.Value<T>
+  where T is a type-variable:
+    T extends Object declared in class TestPayload.Value
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:15: error: cannot find symbol
+    Field<String, TestPayload> x1String =
+    ^
+  symbol:   class Field
+  location: interface TestPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:18: error: cannot find symbol
+    Field<ProductUpdateEventsContainer, TestPayload> productUpdateEvents =
+    ^
+  symbol:   class Field
+  location: interface TestPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:24: error: cannot find symbol
+    Field<TransformedProduct, TestPayload> initialTransformedProduct =
+    ^
+  symbol:   class Field
+  location: interface TestPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:30: error: cannot find symbol
+    Field<ProductUpdateEvent, TestPayload> initProductEvent =
+    ^
+  symbol:   class Field
+  location: interface TestPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:36: error: cannot find symbol
+    Field<List<TransformedProduct>, TestPayload> conditionalTransformedProducts =
+    ^
+  symbol:   class Field
+  location: interface TestPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:42: error: cannot find symbol
+    Field<String, TestPayload> triggerUserId =
+    ^
+  symbol:   class Field
+  location: interface TestPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:49: error: cannot find symbol
+    Field<Collection<Metric>, TestPayload> metrics =
+    ^
+  symbol:   class Field
+  location: interface TestPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:53: error: cannot find symbol
+    Field<Boolean, TestPayload> isEnableValidation =
+    ^
+  symbol:   class Field
+  location: interface TestPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:59: error: cannot find symbol
+    Field<String, TestPayload> string =
+    ^
+  symbol:   class Field
+  location: interface TestPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:62: error: cannot find symbol
+    Field<String, TestPayload> secondString =
+    ^
+  symbol:   class Field
+  location: interface TestPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestPayload.java:68: error: cannot find symbol
+    Field<TransformedProduct, TestPayload> nextProduct =
+    ^
+  symbol:   class Field
+  location: interface TestPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/StringMetricPayload.java:3: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.AbstractValue;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/StringMetricPayload.java:4: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.Field;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/StringMetricPayload.java:5: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.SimpleField;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/StringMetricPayloadDefinition.java:3: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.WorkflowPayload;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/StringMetricPayloadDefinition.java:5: error: cannot find symbol
+public interface StringMetricPayloadDefinition extends WorkflowPayload {
+                                                       ^
+  symbol: class WorkflowPayload
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/StringMetricPayload.java:45: error: cannot find symbol
+  private final class Value<T> extends AbstractValue<T, StringMetricPayload> {
+                                       ^
+  symbol:   class AbstractValue
+  location: class StringMetricPayload
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/StringMetricPayload.java:47: error: cannot find symbol
+    private final Field<T, StringMetricPayload> field;
+                  ^
+  symbol:   class Field
+  location: class StringMetricPayload.Value<T>
+  where T is a type-variable:
+    T extends Object declared in class StringMetricPayload.Value
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/StringMetricPayload.java:49: error: cannot find symbol
+    public Value(Field<T, StringMetricPayload> field) {
+                 ^
+  symbol:   class Field
+  location: class StringMetricPayload.Value<T>
+  where T is a type-variable:
+    T extends Object declared in class StringMetricPayload.Value
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/StringMetricPayload.java:54: error: cannot find symbol
+    public Field<T, StringMetricPayload> field() {
+           ^
+  symbol:   class Field
+  location: class StringMetricPayload.Value<T>
+  where T is a type-variable:
+    T extends Object declared in class StringMetricPayload.Value
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/StringMetricPayload.java:9: error: cannot find symbol
+    Field<String, StringMetricPayload> initString =
+    ^
+  symbol:   class Field
+  location: interface StringMetricFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/StringMetricPayload.java:16: error: cannot find symbol
+    Field<Metric, StringMetricPayload> metric =
+    ^
+  symbol:   class Field
+  location: interface StringMetricFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SplitPayload.java:3: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.AbstractValue;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SplitPayload.java:4: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.Field;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SplitPayload.java:5: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.SimpleField;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SplitPayload.java:72: error: cannot find symbol
+  private final class Value<T> extends AbstractValue<T, SplitPayload> {
+                                       ^
+  symbol:   class AbstractValue
+  location: class SplitPayload
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SplitPayload.java:74: error: cannot find symbol
+    private final Field<T, SplitPayload> field;
+                  ^
+  symbol:   class Field
+  location: class SplitPayload.Value<T>
+  where T is a type-variable:
+    T extends Object declared in class SplitPayload.Value
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SplitPayload.java:76: error: cannot find symbol
+    public Value(Field<T, SplitPayload> field) {
+                 ^
+  symbol:   class Field
+  location: class SplitPayload.Value<T>
+  where T is a type-variable:
+    T extends Object declared in class SplitPayload.Value
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SplitPayload.java:81: error: cannot find symbol
+    public Field<T, SplitPayload> field() {
+           ^
+  symbol:   class Field
+  location: class SplitPayload.Value<T>
+  where T is a type-variable:
+    T extends Object declared in class SplitPayload.Value
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SplitPayload.java:10: error: cannot find symbol
+    Field<String, SplitPayload> initString =
+    ^
+  symbol:   class Field
+  location: interface SplitPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SplitPayload.java:16: error: cannot find symbol
+    Field<Metric, SplitPayload> metric =
+    ^
+  symbol:   class Field
+  location: interface SplitPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SplitPayload.java:19: error: cannot find symbol
+    Field<ProductUpdateEvent, SplitPayload> initProductEvent =
+    ^
+  symbol:   class Field
+  location: interface SplitPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/SplitPayload.java:25: error: cannot find symbol
+    Field<Collection<Metric>, SplitPayload> metrics =
+    ^
+  symbol:   class Field
+  location: interface SplitPayloadFields
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductWorkflow3Context.java:3: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.WorkflowPayload;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductWorkflow3Context.java:5: error: cannot find symbol
+public interface TransformedProductWorkflow3Context extends WorkflowPayload {
+                                                            ^
+  symbol: class WorkflowPayload
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestWorkflowBuilder.java:3: error: package com.flipkart.krystal.caramel.model does not exist
+import static com.flipkart.krystal.caramel.model.WorkflowMeta.workflow;
+                                                ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestWorkflowBuilder.java:3: error: static import only from classes and interfaces
+import static com.flipkart.krystal.caramel.model.WorkflowMeta.workflow;
+^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestWorkflowBuilder.java:18: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.Bridge;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestWorkflowBuilder.java:19: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.InMemSyncChannelBuilder;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestWorkflowBuilder.java:20: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.InputChannel;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestWorkflowBuilder.java:21: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.WorkflowCompletionStage;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductWfPayload.java:3: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.AbstractValue;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductWfPayload.java:4: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.Field;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductWfPayload.java:5: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.SimpleField;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductWfPayloadDefinition.java:3: error: package com.flipkart.krystal.caramel.model does not exist
+import com.flipkart.krystal.caramel.model.WorkflowPayload;
+                                         ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductWfPayloadDefinition.java:5: error: cannot find symbol
+public interface TransformedProductWfPayloadDefinition extends WorkflowPayload {
+                                                               ^
+  symbol: class WorkflowPayload
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestWorkflowBuilder.java:46: error: cannot find symbol
+  private final Bridge<TransformedProduct> productEventNotificationBridge;
+                ^
+  symbol:   class Bridge
+  location: class TestWorkflowBuilder
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestWorkflowBuilder.java:47: error: cannot find symbol
+  private final Bridge<TransformedProduct> productEventNotificationBridge2;
+                ^
+  symbol:   class Bridge
+  location: class TestWorkflowBuilder
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestWorkflowBuilder.java:48: error: cannot find symbol
+  private final Bridge<TransformedProduct> productEventNotificationBridge3;
+                ^
+  symbol:   class Bridge
+  location: class TestWorkflowBuilder
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestWorkflowBuilder.java:49: error: cannot find symbol
+  private final Bridge<TestPayload> rootContextQueue;
+                ^
+  symbol:   class Bridge
+  location: class TestWorkflowBuilder
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestWorkflowBuilder.java:50: error: cannot find symbol
+  private final Bridge<TestWorkflowContext2> nextRootContextQueue;
+                ^
+  symbol:   class Bridge
+  location: class TestWorkflowBuilder
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestWorkflowBuilder.java:51: error: cannot find symbol
+  private final InMemSyncChannelBuilder inMemSyncChannel;
+                ^
+  symbol:   class InMemSyncChannelBuilder
+  location: class TestWorkflowBuilder
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestWorkflowBuilder.java:52: error: cannot find symbol
+  private final InputChannel<ProductUpdateEventsContainer> variantsChannel;
+                ^
+  symbol:   class InputChannel
+  location: class TestWorkflowBuilder
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestWorkflowBuilder.java:53: error: cannot find symbol
+  private final Bridge<Metric> metricsChannel;
+                ^
+  symbol:   class Bridge
+  location: class TestWorkflowBuilder
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TestWorkflowBuilder.java:56: error: package WorkflowCompletionStage does not exist
+  public WorkflowCompletionStage.TerminatedWorkflow<
+                                ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductWfPayload.java:50: error: cannot find symbol
+  private final class Value<T> extends AbstractValue<T, TransformedProductWfPayload> {
+                                       ^
+  symbol:   class AbstractValue
+  location: class TransformedProductWfPayload
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductWfPayload.java:52: error: type Field does not take parameters
+    private final Field<T, TransformedProductWfPayload> field;
+                       ^
+/Users/prasad.bhat/sources/krystalos/caramel/caramel-samples/src/main/java/com/flipkart/krystal/caramel/samples/basic/TransformedProductWfPayload.java:54: error: type Field does not take parameters
+    public Value(Field<T, TransformedProductWfPayload> field) {
+                      ^
+100 errors
+only showing the first 100 errors, of 201 total; use -Xmaxerrs if you would like to see more
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':caramel:caramel-samples:compileJava'.
+> Compilation failed; see the compiler error output for details.
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+
+* Get more help at https://help.gradle.org
+
+BUILD FAILED in 1s
+11 actionable tasks: 1 executed, 10 up-to-date

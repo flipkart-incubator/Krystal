@@ -3,6 +3,6 @@ package com.flipkart.krystal.krystex.commands;
 import com.flipkart.krystal.krystex.Node;
 
 sealed public interface NodeCommand
-    permits DependencyDone, InitiateNode, NewDataFromDependency, ProvideInputValues {
+    permits DependencyDone, InitiateNode, NewDataFromDependency, ProvideInputValues, AdaptInputs {
   Node<?> node();
 }
