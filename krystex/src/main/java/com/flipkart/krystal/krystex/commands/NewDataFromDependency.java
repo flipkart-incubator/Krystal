@@ -5,5 +5,5 @@ import com.flipkart.krystal.krystex.SingleResult;
 import com.google.common.collect.ImmutableCollection;
 
 public record NewDataFromDependency(
-    Node<?> node, String dependencyNodeId, ImmutableCollection<SingleResult<?>> newData)
+    Node<?> node, String depName, String dependencyNodeId, ImmutableCollection<SingleResult<?>> newData)
     implements NodeCommand {}

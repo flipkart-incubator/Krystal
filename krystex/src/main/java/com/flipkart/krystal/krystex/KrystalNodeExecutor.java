@@ -5,22 +5,35 @@ import static java.util.Collections.emptyList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 
-import com.flipkart.krystal.krystex.commands.*;
+import com.flipkart.krystal.krystex.commands.DependencyDone;
+import com.flipkart.krystal.krystex.commands.InitiateNode;
+import com.flipkart.krystal.krystex.commands.NewDataFromDependency;
+import com.flipkart.krystal.krystex.commands.NodeCommand;
+import com.flipkart.krystal.krystex.commands.ProvideInputValues;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
 import lombok.Getter;
 
-/** Default implementation of Krystal executor which */
+/**
+ * Default implementation of Krystal executor which
+ */
 public final class KrystalNodeExecutor implements KrystalExecutor {
 
-  @Getter private final NodeRegistry nodeRegistry;
+  @Getter
+  private final NodeRegistry nodeRegistry;
 
   private final BlockingQueue<NodeCommand> mainQueue = new LinkedBlockingDeque<>();
 
@@ -29,16 +42,13 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   private boolean shutdownRequested;
   private boolean stopAcceptingRequests;
 
-  /* TODO integrate with node cache */
-  private Map<String, Map<String, ?>> inputCache = new HashMap<>();
-
   public KrystalNodeExecutor(NodeDefinitionRegistry nodeDefinitionRegistry, String requestId) {
     this.nodeRegistry = new NodeRegistry(nodeDefinitionRegistry);
     this.mainLoopTask =
         newSingleThreadExecutor(
-                new ThreadFactoryBuilder()
-                    .setNameFormat("KrystalTaskExecutorMainThread-%s".formatted(requestId))
-                    .build())
+            new ThreadFactoryBuilder()
+                .setNameFormat("KrystalTaskExecutorMainThread-%s".formatted(requestId))
+                .build())
             .submit(this::mainLoop);
   }
 
@@ -62,13 +72,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   public void provideInputs(Node<?> node, Map<String, ?> inputValues) {
-    /* Cache inputs in case there are input resolvers */
-    inputCache.put(node.getNodeId(), ImmutableMap.copyOf(inputValues));
     getCommandQueue().add(new ProvideInputValues(node, ImmutableMap.copyOf(inputValues)));
-  }
-
-  public void adaptInputs(Node<?> node, Map<String, ?> inputValues) {
-    getCommandQueue().add(new AdaptInputs(node, ImmutableMap.copyOf(inputValues)));
   }
 
   private void initiate(Node<?> node) {
@@ -76,13 +80,14 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   private void executeWithNewData(
-      Node<?> node, String depNodeId, Collection<? extends SingleResult<?>> results) {
+      Node<?> node, String depName, String depNodeId,
+      Collection<? extends SingleResult<?>> results) {
     getCommandQueue()
-        .add(new NewDataFromDependency(node, depNodeId, ImmutableList.copyOf(results)));
+        .add(new NewDataFromDependency(node, depName, depNodeId, ImmutableList.copyOf(results)));
   }
 
-  private void markDependencyDone(Node<?> node, String depNodeId) {
-    getCommandQueue().add(new DependencyDone(node, depNodeId));
+  private void markDependencyDone(Node<?> node, String depNodeId, String depName) {
+    getCommandQueue().add(new DependencyDone(node, depNodeId, depName));
   }
 
   private void mainLoop() {
@@ -96,32 +101,17 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
             // unnecessarily
             continue;
           }
-          if (!node.definition().inputAdoptionSources().isEmpty()) {
-            node.markDependenciesInitiated();
-            if (!node.definition().inputAdoptionSources().isEmpty()) {
-              for(String nodeId : node.definition().inputAdoptionSources()) {
-                adaptInputs(node, inputCache.get(nodeId));
-              }
-            }
-          } else if (!initiatePendingInputs(node)) {
-            node.executeIfNoDependenciesAndMarkDone();
+          if (!initiatePendingDependencies(node)) {
+            node.executeIfNoDependenciesAndInputsAndMarkDone();
           }
         } else if (currentCommand instanceof NewDataFromDependency newDataFromDependency) {
-          node.executeWithNewDataForDependencyNode(
+          node.executeWithNewDataFromDependencyNode(
               newDataFromDependency.dependencyNodeId(), newDataFromDependency.newData());
+          notifyInputAdaptors(newDataFromDependency.node(),
+              newDataFromDependency.depName(), newDataFromDependency.newData());
+          node.executeWithNewDataForInput(newDataFromDependency.depName(), newDataFromDependency.newData());
         } else if (currentCommand instanceof DependencyDone dependencyDone) {
           node.markDependencyNodeDone(dependencyDone.depNodeId());
-        } else  if (currentCommand instanceof AdaptInputs inputValues) {
-          List<Request> requestList = new LinkedList<>();
-          inputValues.values().forEach(
-                  (input, value) -> {
-                    Map<String, SingleResult<?>> requestMap = new HashMap<>();
-                    requestMap.put(input, new SingleResult<>(completedFuture(value)));
-                    requestList.add(new Request(ImmutableMap.copyOf(requestMap)));
-                  });
-          if (!initiatePendingInputs(node)) {
-            node.executeWithInputs(ImmutableList.copyOf(requestList));
-          }
         } else if (currentCommand instanceof ProvideInputValues provideInputValues) {
           provideInputValues
               .values()
@@ -129,6 +119,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                   (input, value) -> {
                     node.executeWithNewDataForInput(
                         input, ImmutableList.of(new SingleResult<>(completedFuture(value))));
+                    triggerAdaptor(node,
+                        input, value);
                     node.markInputDone(input);
                   });
         }
@@ -138,33 +130,68 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     }
   }
 
+  private void notifyInputAdaptors(Node<?> node, String input,
+      ImmutableCollection<SingleResult<?>> results) {
+    List<Object> values = new LinkedList<>();
+    results.forEach(result -> {
+      try {
+        values.add(result.future().get());
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      } catch (ExecutionException e) {
+        e.printStackTrace();
+      }
+    });
+    if (!node.definition().inputAdaptionTarget(input).isEmpty()) {
+      node.definition().inputAdaptionTarget(input).entrySet().forEach(inputToAdaptor -> {
+        Map<String, Object> inputValues = new HashMap<>();
+        inputValues.put(inputToAdaptor.getKey(), values.get(0));
+        executeWithInputs(inputToAdaptor.getValue(), inputValues);
+      });
+    }
+  }
+
+  private void triggerAdaptor(Node<?> node, String input,
+      Object value) {
+    if (!node.definition().inputAdaptionTarget(input).isEmpty()) {
+      node.definition().inputAdaptionTarget(input).entrySet().forEach(inputToAdaptor -> {
+        Map<String, Object> inputValues = new HashMap<>();
+        inputValues.put(inputToAdaptor.getKey(), value);
+        executeWithInputs(inputToAdaptor.getValue(), inputValues);
+      });
+    }
+  }
+
   /**
    * @param node
    * @return true if {@code node} has dependencies, false otherwise.
    */
-  private boolean initiatePendingInputs(Node<?> node) {
-    ImmutableSet<String> inputNames = node.definition().inputNames();
-    ImmutableSet<String> dependencyNodeIds =
-        ImmutableSet.copyOf(node.definition().inputProviders().values());
+  private boolean initiatePendingDependencies(Node<?> node) {
+    ImmutableSet<String> dependencyNames = node.definition().dependencyNames();
+    ImmutableMap<String, String> dependencyNameNodeIds =
+        ImmutableMap.copyOf(node.definition().dependencyProviders());
+
     if (node.wereDependenciesInitiated()) {
-      return !inputNames.isEmpty();
+      return !dependencyNames.isEmpty();
     }
-    if (inputNames.isEmpty()) {
+    if (dependencyNames.isEmpty()) {
       node.markDependenciesInitiated();
       return false;
     }
-    for (String depNodeId : dependencyNodeIds) {
-      Node<?> depNode = nodeRegistry.get(depNodeId);
+    for (Map.Entry<String, String> depNameNodeId : dependencyNameNodeIds.entrySet()) {
+      Node<?> depNode = nodeRegistry.get(depNameNodeId.getValue());
       if (depNode == null) {
-        depNode = execute(nodeRegistry.getNodeDefinitionRegistry().get(depNodeId));
+        depNode = execute(nodeRegistry.getNodeDefinitionRegistry().get(depNameNodeId.getValue()));
       } else if (!depNode.wasInitiated()) {
         initiate(depNode);
       }
-      depNode.whenDone(() -> {
-        markDependencyDone(node, depNodeId);
+      depNode.whenDone(
+          () -> markDependencyDone(node, depNameNodeId.getValue(), depNameNodeId.getKey()));
+
+      depNode.whenNewDataAvailable(singleResults -> {
+        if (!singleResults.isEmpty())
+          executeWithNewData(node, depNameNodeId.getKey(), depNameNodeId.getValue(), singleResults);
       });
-      depNode.whenNewDataAvailable(
-          singleResults -> executeWithNewData(node, depNodeId, singleResults));
     }
     node.markDependenciesInitiated();
     return true;

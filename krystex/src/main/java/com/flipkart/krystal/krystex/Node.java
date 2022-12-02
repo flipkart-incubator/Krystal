@@ -47,13 +47,19 @@ public final class Node<T> {
 
   private final List<Consumer<ImmutableCollection<SingleResult<T>>>> newDataSubscriptions =
       new ArrayList<>();
-  /** Remembers whether newDataSubscriptions were notified about results of a request */
+  /**
+   * Remembers whether newDataSubscriptions were notified about results of a request
+   */
   private final Map<Request, CompletableFuture<?>> dataTransferDone = new LinkedHashMap<>();
 
   private final List<Runnable> doneSubscriptions = new ArrayList<>();
-  private final Map<String, Boolean> inputsDone = new HashMap<>();
+  private final Map<String, Boolean> dependencyDone = new HashMap<>();
 
+  private final Map<String, Collection<SingleResult<?>>> resultsForDependency = new HashMap<>();
+
+  private final Map<String, Boolean> inputDone = new HashMap<>();
   private final Map<String, Collection<SingleResult<?>>> resultsForInput = new HashMap<>();
+
   private final Map<Request, BatchResult<T>> resultsByRequest = new HashMap<>();
   private final CompletableFuture<ImmutableList<T>> allResults = new CompletableFuture<>();
 
@@ -70,46 +76,58 @@ public final class Node<T> {
   }
 
   void markDependencyNodeDone(String nodeId) {
-    getInputsProvidedByNode(nodeId).forEach(this::markInputDone);
+    getDependencyProvidedByNode(nodeId).forEach(this::markDependencyDone);
+  }
+
+  boolean areAllInputAndDependencyDone() {
+    boolean allDependenciesDone =
+        nodeDefinition.dependencyNames().stream()
+            .allMatch(key -> dependencyDone.getOrDefault(key, false));
+    boolean allInputsDone =
+        nodeDefinition.inputNames().stream().allMatch(key -> inputDone.getOrDefault(key, false));
+    return allDependenciesDone && allInputsDone;
   }
 
   void markInputDone(String input) {
-    inputsDone.put(input, true);
-    boolean allDependenciesDone =
-        nodeDefinition.inputNames().stream().allMatch(key -> inputsDone.getOrDefault(key, false));
-    if (allDependenciesDone) {
+    inputDone.put(input, true);
+    /*
+    if (areAllInputAndDependencyDone()) {
+      markDone();
+    }
+    */
+  }
+
+  void markDependencyDone(String dependency) {
+    dependencyDone.put(dependency, true);
+    if (areAllInputAndDependencyDone()) {
       markDone();
     }
   }
 
-  public void executeIfNoDependenciesAndMarkDone() {
-    if (!nodeDefinition.inputNames().isEmpty()) {
-      throw new IllegalStateException("This node has input");
+  public void executeIfNoDependenciesAndInputsAndMarkDone() {
+    if (!nodeDefinition.dependencyNames().isEmpty() && !nodeDefinition.inputNames().isEmpty()) {
+      throw new IllegalStateException("This node has input or dependency");
     }
+    if (!nodeDefinition.inputNames().isEmpty()) {
+      return;
+    }
+
     execute(ImmutableList.of(new Request()));
   }
 
-  void executeWithNewDataForDependencyNode(String depNodeId, Collection<SingleResult<?>> newData) {
-    Set<String> inputsProvidedByNode = getInputsProvidedByNode(depNodeId);
-    inputsProvidedByNode.forEach(input -> executeWithNewDataForInput(input, newData));
+  void executeWithNewDataFromDependencyNode(String depNodeId, Collection<SingleResult<?>> newData) {
+    Set<String> dependencyProvidedByNode = getDependencyProvidedByNode(depNodeId);
+    dependencyProvidedByNode.forEach(
+        dependency -> executeWithNewDataForDependency(dependency, newData));
   }
 
-  private Set<String> getInputsProvidedByNode(String depNodeId) {
-    return nodeDefinition.inputProviders().entrySet().stream()
+  private Set<String> getDependencyProvidedByNode(String depNodeId) {
+    return nodeDefinition.dependencyProviders().entrySet().stream()
         .filter(entry -> Objects.equals(entry.getValue(), depNodeId))
         .map(Entry::getKey)
         .collect(Collectors.toSet());
   }
 
-  /**
-   * Re-execute this node as more data was made available by a input (For example because if it made
-   * two batched calls and the second call took longer).
-   *
-   * @param input The input which has made new data available
-   * @param newData the new data made available by the input
-   * @return the new results computed by this node in light of the new data presented to this
-   *     method.
-   */
   void executeWithNewDataForInput(String input, Collection<SingleResult<?>> newData) {
     if (!newData.stream().map(SingleResult::future).allMatch(CompletableFuture::isDone)) {
       throw new IllegalArgumentException(
@@ -122,17 +140,59 @@ public final class Node<T> {
     }
 
     getResultsForInput(input).addAll(newData);
-    // Check if there is data available for all other dependencies of this node except the one
-    // passed to this method.
     if (!union(Set.of(input), resultsForInput.keySet()).equals(nodeDefinition.inputNames())) {
       // Since some dependencies' data is still not received, we cannot execute this node yet.
       return;
     }
+
+    executeWithNewDataForInputOrDependency(input, newData);
+  }
+
+  /**
+   * Re-execute this node as more data was made available by a input (For example because if it made
+   * two batched calls and the second call took longer).
+   *
+   * @param dependency The input which has made new data available
+   * @param newData    the new data made available by the input
+   * @return the new results computed by this node in light of the new data presented to this
+   * method.
+   */
+  void executeWithNewDataForDependency(String dependency, Collection<SingleResult<?>> newData) {
+    if (!newData.stream().map(SingleResult::future).allMatch(CompletableFuture::isDone)) {
+      throw new IllegalArgumentException(
+          "executeWithNewDataForInput can only be called after the data is ready");
+    }
+    if (!INITIATED.equals(nodeState.get())
+        && !nodeState.compareAndSet(DEPENDENCIES_INITIATED, INITIATED)) {
+      throw new IllegalStateException(
+          "Only DEPENDENCIES_INITIATED and INITIATED nodes can be executed");
+    }
+
+    getResultsForDependency(dependency).addAll(newData);
+
+    if (!union(Set.of(dependency), resultsForDependency.keySet()).equals(
+        nodeDefinition.dependencyNames())) {
+      // Since some dependencies' data is still not received, we cannot execute this node yet.
+      return;
+    }
+
+    executeWithNewDataForInputOrDependency(dependency, newData);
+  }
+
+  private void executeWithNewDataForInputOrDependency(String inputOrDependency,
+      Collection<SingleResult<?>> newData) {
+
+    // Club both dependency and input into single map
+    Map<String, Collection<SingleResult<?>>> resultsForDependencyOrInput = new HashMap<>();
+    resultsForDependencyOrInput.putAll(resultsForDependency);
+    resultsForDependencyOrInput.putAll(resultsForInput);
+
     // Get data for all other dependencies...
     Map<String, Collection<SingleResult<?>>> newDataCombinations =
-        new LinkedHashMap<>(Maps.filterKeys(resultsForInput, k -> !Objects.equals(k, input)));
+        new LinkedHashMap<>(Maps.filterKeys(resultsForDependencyOrInput,
+            k -> !Objects.equals(k, inputOrDependency)));
     // ...and add this new data so that all new permutations of requests are executed.
-    newDataCombinations.put(input, ImmutableList.copyOf(newData));
+    newDataCombinations.put(inputOrDependency, ImmutableList.copyOf(newData));
     ImmutableList<Request> requests =
         createIndividualRequestsFromBatchResponses(newDataCombinations).stream()
             .map(Request::new)
@@ -208,7 +268,7 @@ public final class Node<T> {
    *     k2: {k2v1,k2v2}
    *   }
    * </pre>
-   *
+   * <p>
    * Then output will be
    *
    * <pre>
@@ -233,8 +293,8 @@ public final class Node<T> {
    * </pre>
    */
   private static ImmutableList<ImmutableMap<String, SingleResult<?>>>
-      createIndividualRequestsFromBatchResponses(
-          Map<String, Collection<SingleResult<?>>> batchResults) {
+  createIndividualRequestsFromBatchResponses(
+      Map<String, Collection<SingleResult<?>>> batchResults) {
     if (batchResults.isEmpty()) {
       return ImmutableList.of(ImmutableMap.of());
     }
@@ -357,13 +417,11 @@ public final class Node<T> {
     return allResults;
   }
 
-  private Collection<SingleResult<?>> getResultsForInput(String input) {
-    return resultsForInput.computeIfAbsent(input, k -> new ArrayList<>());
+  private Collection<SingleResult<?>> getResultsForDependency(String dependency) {
+    return resultsForDependency.computeIfAbsent(dependency, k -> new ArrayList<>());
   }
 
-  public ImmutableMap<Request, BatchResult<T>> executeWithInputs(ImmutableList<Request> requestList) {
-    ImmutableMap<Request, BatchResult<T>> result = execute(requestList);
-    markDone();
-    return result;
+  private Collection<SingleResult<?>> getResultsForInput(String input) {
+    return resultsForInput.computeIfAbsent(input, k -> new ArrayList<>());
   }
 }

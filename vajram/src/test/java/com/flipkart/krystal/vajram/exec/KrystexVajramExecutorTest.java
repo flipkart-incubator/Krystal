@@ -24,6 +24,9 @@ class KrystexVajramExecutorTest {
       CompletableFuture<String> result =
           krystexVajramExecutor.requestExecution(HelloVajram.ID, new HelloRequest("Suma"));
       assertEquals("Hello! Suma", result.get(5, TimeUnit.HOURS));
+      result.thenApply(abc -> {
+        return null;
+      });
     }
   }
 }

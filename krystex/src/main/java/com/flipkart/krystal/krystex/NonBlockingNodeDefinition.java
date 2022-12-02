@@ -11,8 +11,8 @@ import java.util.concurrent.CompletableFuture;
 public abstract non-sealed class NonBlockingNodeDefinition<T> extends NodeDefinition<T> {
 
   NonBlockingNodeDefinition(
-      String nodeId, Set<String> inputNames, Map<String, String> inputProviders) {
-    super(nodeId, inputNames, inputProviders);
+      String nodeId, Set<String> dependencies, Map<String, String> dependencyProviders, Set<String> inputNames) {
+    super(nodeId, dependencies, dependencyProviders, inputNames);
   }
 
   @Override

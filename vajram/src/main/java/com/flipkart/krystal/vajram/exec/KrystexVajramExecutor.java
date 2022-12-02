@@ -30,7 +30,7 @@ public class KrystexVajramExecutor implements VajramExecutor {
 
   @Override
   public <T> CompletableFuture<T> requestExecutionWithInputs(String vajramId, ImmutableMap<String, Optional<Object>> inputs) {
-    VajramDAG<T> vajramDAG = vajramGraph.createVajramDAG(vajramId, Optional.empty(), new LinkedList<>());
+    VajramDAG<T> vajramDAG = vajramGraph.createVajramDAG(vajramId, Optional.empty());
     ImmutableList<ResolverDefinition> resolverDefinitions = vajramDAG.resolverDefinitions();
     for (ResolverDefinition resolverDefinition : resolverDefinitions) {
       NodeDefinition<?> nodeDefinition = resolverDefinition.nodeDefinition();
