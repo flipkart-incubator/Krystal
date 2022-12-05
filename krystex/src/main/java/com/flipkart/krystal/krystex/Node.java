@@ -28,6 +28,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -63,6 +64,8 @@ public final class Node<T> {
   private final Map<Request, BatchResult<T>> resultsByRequest = new HashMap<>();
   private final CompletableFuture<ImmutableList<T>> allResults = new CompletableFuture<>();
 
+  private final Map<Integer, Map<Request, BatchResult<T>>> resultCache = new HashMap<>();
+
   public static <T> Node<T> createNode(
       NodeDefinition<T> nodeDefinition, List<LogicDecorationStrategy> decorationStrategies) {
     return new Node<>(nodeDefinition, decorationStrategies);
@@ -79,27 +82,14 @@ public final class Node<T> {
     getDependencyProvidedByNode(nodeId).forEach(this::markDependencyDone);
   }
 
-  boolean areAllInputAndDependencyDone() {
-    boolean allDependenciesDone =
-        nodeDefinition.dependencyNames().stream()
-            .allMatch(key -> dependencyDone.getOrDefault(key, false));
-    boolean allInputsDone =
-        nodeDefinition.inputNames().stream().allMatch(key -> inputDone.getOrDefault(key, false));
-    return allDependenciesDone && allInputsDone;
-  }
-
   void markInputDone(String input) {
     inputDone.put(input, true);
-    /*
-    if (areAllInputAndDependencyDone()) {
-      markDone();
-    }
-    */
   }
 
   void markDependencyDone(String dependency) {
     dependencyDone.put(dependency, true);
-    if (areAllInputAndDependencyDone()) {
+    if (nodeDefinition.dependencyNames().stream()
+        .allMatch(key -> dependencyDone.getOrDefault(key, false))) {
       markDone();
     }
   }
@@ -112,7 +102,7 @@ public final class Node<T> {
       return;
     }
 
-    execute(ImmutableList.of(new Request()));
+    executeOrGetFromCache(ImmutableList.of(new Request()));
   }
 
   void executeWithNewDataFromDependencyNode(String depNodeId, Collection<SingleResult<?>> newData) {
@@ -197,12 +187,10 @@ public final class Node<T> {
         createIndividualRequestsFromBatchResponses(newDataCombinations).stream()
             .map(Request::new)
             .collect(toImmutableList());
-    execute(requests);
+    executeOrGetFromCache(requests);
   }
 
-  private ImmutableMap<Request, BatchResult<T>> execute(ImmutableList<Request> requests) {
-    // The following implementation treats all dependencies as mandatory
-    // TODO add support for optional dependencies.
+  private Map<Request, BatchResult<T>> executeDecorateLogic(ImmutableList<Request> requests) {
     Map<Request, BatchResult<T>> newResults = new LinkedHashMap<>();
     for (Request request : requests) {
       BatchResult<T> resultsForRequest;
@@ -227,6 +215,19 @@ public final class Node<T> {
       }
       newResults.put(request, resultsForRequest);
     }
+    return newResults;
+  }
+
+  private ImmutableMap<Request, BatchResult<T>> executeOrGetFromCache(ImmutableList<Request> requests) {
+    // The following implementation treats all dependencies as mandatory
+    // TODO add support for optional dependencies.
+    Integer hash = getInputsAndDepdencyHash(resultsForInput.values(),
+        resultsForDependency.values());
+    if (!resultCache.containsKey(hash)) {
+      resultCache.put(hash, executeDecorateLogic(requests));
+    }
+
+    Map<Request, BatchResult<T>> newResults = resultCache.get(hash);
     // Notify dependants that new data is available from this node
     newResults.forEach(
         (request, batchResult) -> {
@@ -423,5 +424,28 @@ public final class Node<T> {
 
   private Collection<SingleResult<?>> getResultsForInput(String input) {
     return resultsForInput.computeIfAbsent(input, k -> new ArrayList<>());
+  }
+
+  private Integer getInputsAndDepdencyHash(Collection<Collection<SingleResult<?>>> inputs,
+      Collection<Collection<SingleResult<?>>> dependencies) {
+    int hash = 17;
+
+    for (Collection<SingleResult<?>> input : inputs) {
+      for (SingleResult<?> result : input) {
+        if (result.isSuccessful()) {
+          Object object = result.future();
+          hash = hash + 23 * object.hashCode();
+        }
+      }
+    }
+    for (Collection<SingleResult<?>> dependency : dependencies) {
+      for (SingleResult<?> result : dependency) {
+        if (result.isSuccessful()) {
+          Object object = result.future();
+          hash = hash + 23 * object.hashCode();
+        }
+      }
+    }
+    return hash;
   }
 }

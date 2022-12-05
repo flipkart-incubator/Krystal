@@ -33,7 +33,7 @@ class CarFactoryTests {
                             .put("driving_side", Optional.ofNullable("left"))
                             .put("tyre_brand", Optional.ofNullable("MRF")).build());
             assertNotEquals("Received following parts at Toyota car factory\n"
-                    + "Tyres: Brand - MRF | Count - 3 | size 15", result.get(5, TimeUnit.HOURS));
+                + "Chassis: color - Red | Dashboard: Driving side - left with Dashboard", result.get(5, TimeUnit.HOURS));
             result.thenApply(abc -> {
                 return null;
             });
