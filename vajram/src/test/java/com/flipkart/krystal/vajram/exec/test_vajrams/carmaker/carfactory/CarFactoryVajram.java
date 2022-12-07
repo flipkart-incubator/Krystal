@@ -44,18 +44,15 @@ public abstract class CarFactoryVajram extends NonBlockingVajram<String> {
                     .mandatory()
                     .build(),
                 Input.builder()
-                        .name("driving_side")
-                        .type(string())
-                        .mandatory()
-                        .build(),
-                /*
+                    .name("driving_side")
+                    .type(string())
+                    .mandatory()
+                    .build(),
                 Dependency.builder()
                     .name("tyre")
                     .dataAccessSpec(vajramID(TyreFactoryVajram.ID))
                     .isMandatory()
                     .build(),
-
-                 */
                 Dependency.builder()
                     .name("chassis")
                     .dataAccessSpec(vajramID(ChassisFactoryVajram.ID))
@@ -71,14 +68,11 @@ public abstract class CarFactoryVajram extends NonBlockingVajram<String> {
     @Override
     public ImmutableList<InputResolver> getSimpleInputResolvers() {
         return ImmutableList.of(
-            /*
             new ForwardingResolver(
                 "tyre_brand",
                 "tyre",
                 "tyre_request",
                 (brand) -> new TyreRequest((String) brand, 4, 14)),
-
-             */
             new ForwardingResolver(
                 "driving_side",
                 "dashboard",
@@ -99,8 +93,8 @@ public abstract class CarFactoryVajram extends NonBlockingVajram<String> {
 
     @VajramLogic
     public String makeCar(InputUtils.AllInputs inputs) {
-        String str = "Received following parts at %s car factory\n%s".formatted(inputs.carBrand(),
-            inputs.chassis().getDetails());
+        String str = "Received following parts at %s car factory\n%s And Tyre: %s".formatted(inputs.carBrand(),
+            inputs.chassis().getDetails(), inputs.tyre().getDetails());
         return str;
     }
 }

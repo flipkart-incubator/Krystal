@@ -91,13 +91,13 @@ public final class VajramGraph {
       Map<String, Map<String, NodeDefinition<?>>> vajramInputResolverTargets) {
     VajramDAG<?> vajramDAG = new VajramDAG<>(getVajramDefinition(vajram.getId()).orElseThrow(),
         nodeDefinitionRegistry);
-    if (!vajram.isBlockingVajram()) {
+//    if (!vajram.isBlockingVajram()) {
       InputResolverCreationResult inputResolverCreationResult = createNodeDefinitionsForInputResolvers(
           vajramDAG, parentVajramDAG, vajramInputResolverTargets);
 
       SubGraphCreationResult subGraphCreationResult = createSubGraphsForDependencies(vajramDAG,
           vajramInputResolverTargets);
-      NonBlockingNodeDefinition<?> vajramLogicNodeDefinition = createVajramLogicNodeDefinition(
+      NodeDefinition<?> vajramLogicNodeDefinition = createVajramLogicNodeDefinition(
           vajramDAG, subGraphCreationResult.depNameToProviderNode);
 
       updateProviderNodes(vajramDAG.vajramDefinition(), vajramLogicNodeDefinition, parentVajramDAG,
@@ -113,10 +113,10 @@ public final class VajramGraph {
           inputResolverCreationResult.inputResolverCollector(),
           ImmutableMap.copyOf(depNameToProviderNodeId),
           vajramDAG.nodeDefinitionRegistry());
-    } else {
-      // TODO implement graph creation for blocking node
-      return null;
-    }
+//    } else {
+//      // TODO implement graph creation for blocking node
+//      return null;
+//    }
   }
 
   private InputResolverCreationResult createNodeDefinitionsForInputResolvers(VajramDAG<?> vajramDAG,
@@ -201,7 +201,7 @@ public final class VajramGraph {
         ImmutableList.copyOf(inputResolverCollector));
   }
 
-  private NonBlockingNodeDefinition<?> createVajramLogicNodeDefinition(VajramDAG<?> vajramDAG,
+  private NodeDefinition<?> createVajramLogicNodeDefinition(VajramDAG<?> vajramDAG,
       ImmutableMap<String, NodeDefinition<?>> depNameToProviderNode) {
     VajramDefinition vajramDefinition = vajramDAG.vajramDefinition();
     NodeDefinitionRegistry nodeDefinitionRegistry = vajramDAG.nodeDefinitionRegistry();
@@ -249,9 +249,45 @@ public final class VajramGraph {
             }
             return nonBlockingVajram.executeNonBlocking(new ExecutionContext(map));
           });
-    } else {
-      throw new UnsupportedOperationException();
+    } else if (vajramDefinition.getVajram() instanceof BlockingVajram<?> blockingVajram) {
+      return nodeDefinitionRegistry.newBlockingBatchNode(
+          "n(v(%s):vajramLogic:%s)".formatted(vajramId, generateNodeSuffix()),
+          inputDefinitions.stream().filter(inputDefinition -> inputDefinition instanceof Dependency)
+              .map(VajramInputDefinition::name).collect(Collectors.toSet()),
+          depNameToProviderNodeId,
+          // For vajram, resolvers are added for inputs, so inputs will need to be empty.
+          ImmutableSet.of(),
+          dependencyValues -> {
+            Map<String, Object> map = new HashMap<>();
+            for (VajramInputDefinition inputDefinition : inputDefinitions) {
+              String inputName = inputDefinition.name();
+              if (inputDefinition instanceof Input<?> input) {
+                if (input.resolvableBy().contains(ResolutionSources.REQUEST)) {
+                  if (dependencyValues.get(inputName) == null || Objects.equals(
+                      dependencyValues.get(inputName), Optional.empty())) {
+                    // Input was not resolved by another node. Check if it is resolvable
+                    // by SESSION
+                    if (input.resolvableBy().contains(ResolutionSources.SESSION)) {
+                      // TODO handle session provided inputs
+                    } else {
+                      throw new VajramDefinitionException(
+                          "Input: " + input.name() + " of vajram: " + vajramId
+                              + " was not resolved by the request.");
+                    }
+                  } else {
+                    map.put(inputName, dependencyValues.get(inputName));
+                  }
+                }
+              } else if (inputDefinition instanceof Dependency) {
+                map.put(inputName, dependencyValues.get(inputName));
+              }
+            }
+            return blockingVajram.executeBlocking(new ExecutionContext(map));
+          });
     }
+
+    // throw
+    return null;
   }
 
   private SubGraphCreationResult createSubGraphsForDependencies(VajramDAG<?> vajramDAG,

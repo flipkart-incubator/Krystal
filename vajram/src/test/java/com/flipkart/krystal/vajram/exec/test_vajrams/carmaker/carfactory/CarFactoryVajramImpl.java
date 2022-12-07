@@ -25,8 +25,10 @@ public class CarFactoryVajramImpl extends CarFactoryVajram {
       Optional<String> carBrandStr = executionContext.<Optional<String>>getValue("car_brand");
       CarBrandRequest carBrandRequest = new CarBrandRequest(carBrandStr.get());
       Chassis chassis = executionContext.<Chassis>getValue("chassis");
+      Tyre tyre = executionContext.<Tyre>getValue("tyre");
+
       return ImmutableList.of(makeCar(
-          new InputUtils.AllInputs(carBrandRequest, null, chassis)));
+          new InputUtils.AllInputs(carBrandRequest, tyre, chassis)));
     } catch (Exception e) {
       String err = e.toString();
     }
@@ -40,7 +42,7 @@ public class CarFactoryVajramImpl extends CarFactoryVajram {
       case "tyre" -> {
         if (Set.of("tyre_request").equals(resolvableInputs)) {
           try {
-            Optional<String> tyreBrand = executionContext.<Optional<String>>getValue("tyre_brand");
+            Optional<String> tyreBrand = executionContext.<Optional<String>>getValue("tyre_request");
             return ImmutableList.of(TyreRequest.builder().brandName(tyreBrand.get()).count(3).size(15));
           } catch (Exception e) {
             String str = e.toString();

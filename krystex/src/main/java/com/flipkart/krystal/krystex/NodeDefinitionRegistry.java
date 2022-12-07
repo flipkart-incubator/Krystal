@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -72,6 +73,27 @@ public final class NodeDefinitionRegistry {
         new NonBlockingNodeDefinition<>(nodeId, dependencies, dependencyProviders, inputs) {
           @Override
           protected ImmutableList<T> nonBlockingLogic(ImmutableMap<String, ?> dependencyValues) {
+            return logic.apply(dependencyValues);
+          }
+        };
+    add(def);
+    return def;
+  }
+
+  public <T> BlockingNodeDefinition<T> newBlockingBatchNode(
+      String nodeId,
+      Set<String> dependencies,
+      Map<String, String> dependencyProviders,
+      Set<String> inputs,
+      Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> logic) {
+    Set<String> dependenciesAndInputs = new HashSet<>();
+    dependenciesAndInputs.addAll(dependencies);
+    dependenciesAndInputs.addAll(inputs);
+
+    BlockingNodeDefinition<T> def =
+        new BlockingNodeDefinition<>(nodeId, dependencies, dependencyProviders, inputs) {
+          @Override
+          protected CompletableFuture<ImmutableList<T>> blockingLogic(ImmutableMap<String, ?> dependencyValues) {
             return logic.apply(dependencyValues);
           }
         };

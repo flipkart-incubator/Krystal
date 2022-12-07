@@ -112,7 +112,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
           node.executeWithNewDataForInput(newDataFromDependency.depName(), newDataFromDependency.newData());
           node.markDependencyDone(newDataFromDependency.depName());
         } else if (currentCommand instanceof DependencyDone dependencyDone) {
-          node.markDependencyNodeDone(dependencyDone.depNodeId());
+          // node.markDependencyNodeDone(dependencyDone.depNodeId());
         } else if (currentCommand instanceof ProvideInputValues provideInputValues) {
           provideInputValues
               .values()

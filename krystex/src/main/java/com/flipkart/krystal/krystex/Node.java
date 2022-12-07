@@ -92,6 +92,8 @@ public final class Node<T> {
         .allMatch(key -> dependencyDone.getOrDefault(key, false))) {
       markDone();
     }
+
+    // executeAfterDependencyDone();
   }
 
   public void executeIfNoDependenciesAndInputsAndMarkDone() {
@@ -136,6 +138,33 @@ public final class Node<T> {
     }
 
     executeWithNewDataForInputOrDependency(input, newData);
+  }
+
+  void executeAfterDependencyDone() {
+    if (!INITIATED.equals(nodeState.get())
+        && !nodeState.compareAndSet(DEPENDENCIES_INITIATED, INITIATED)) {
+      throw new IllegalStateException(
+          "Only DEPENDENCIES_INITIATED and INITIATED nodes can be executed");
+    }
+
+    if (!resultsForDependency.keySet().equals(nodeDefinition.dependencyNames())) {
+      // Since some dependencies' data is still not received, we cannot execute this node yet.
+      return;
+    }
+
+    // Club both dependency and input into single map
+    Map<String, Collection<SingleResult<?>>> resultsForDependencyOrInput = new HashMap<>();
+    resultsForDependencyOrInput.putAll(resultsForDependency);
+    resultsForDependencyOrInput.putAll(resultsForInput);
+    // Get data for all other dependencies...
+    Map<String, Collection<SingleResult<?>>> newDataCombinations =
+        new LinkedHashMap<>();
+    // ...and add this new data so that all new permutations of requests are executed.
+    ImmutableList<Request> requests =
+        createIndividualRequestsFromBatchResponses(newDataCombinations).stream()
+            .map(Request::new)
+            .collect(toImmutableList());
+    executeOrGetFromCache(requests);
   }
 
   /**
