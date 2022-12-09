@@ -41,7 +41,7 @@ public final class Node<T> {
 
   private final NodeDefinition<T> nodeDefinition;
   private final String nodeId;
-  private final List<LogicDecorationStrategy> decorationStrategies;
+  private final List<NodeDecorator<T>> decorationStrategies;
 
   private final AtomicReference<NodeState> nodeState = new AtomicReference<>(NEW);
 
@@ -58,12 +58,11 @@ public final class Node<T> {
   private final CompletableFuture<ImmutableList<T>> allResults = new CompletableFuture<>();
 
   public static <T> Node<T> createNode(
-      NodeDefinition<T> nodeDefinition, List<LogicDecorationStrategy> decorationStrategies) {
+      NodeDefinition<T> nodeDefinition, List<NodeDecorator<T>> decorationStrategies) {
     return new Node<>(nodeDefinition, decorationStrategies);
   }
 
-  private Node(
-      NodeDefinition<T> nodeDefinition, List<LogicDecorationStrategy> decorationStrategies) {
+  private Node(NodeDefinition<T> nodeDefinition, List<NodeDecorator<T>> decorationStrategies) {
     this.nodeDefinition = nodeDefinition;
     this.decorationStrategies = decorationStrategies;
     this.nodeId = nodeDefinition.nodeId();
@@ -295,7 +294,7 @@ public final class Node<T> {
   private Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> decoratedLogic() {
     Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> logic =
         nodeDefinition::logic;
-    for (LogicDecorationStrategy decorationStrategy : decorationStrategies) {
+    for (NodeDecorator<T> decorationStrategy : decorationStrategies) {
       logic = decorationStrategy.decorateLogic(this, logic);
     }
     return logic;

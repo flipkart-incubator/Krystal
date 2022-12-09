@@ -35,7 +35,7 @@ final class VajramIndex {
         .getVajrams(accessSpec);
   }
 
-  public void add(Vajram<?> vajram) {
+  public void add(Vajram vajram) {
     accessSpecIndices.values().forEach(accessSpecIndex -> accessSpecIndex.add(vajram));
   }
 }

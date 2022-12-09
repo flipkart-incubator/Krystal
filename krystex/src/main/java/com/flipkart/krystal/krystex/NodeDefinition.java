@@ -3,23 +3,39 @@ package com.flipkart.krystal.krystex;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-public abstract sealed class NodeDefinition<T>
-    permits BlockingNodeDefinition, NonBlockingNodeDefinition {
+public abstract sealed class NodeDefinition<T> permits IONodeDefinition, NonBlockingNodeDefinition {
 
   private final String nodeId;
   private final Set<String> inputNames = new LinkedHashSet<>();
   private final Map<String, String> inputNamesToProvider = new LinkedHashMap<>();
   private final Set<String> dependants = new LinkedHashSet<>();
 
-  NodeDefinition(String nodeId, Set<String> inputNames, Map<String, String> inputNamesToProvider) {
+  /**
+   * Group type -> { NodeDecoratorId -> Node Decorator Supplier }.
+   *
+   * <p>This is used in the request context to create NodeDecorators
+   */
+  private final Map<String, ImmutableMap<String, Supplier<NodeDecorator<T>>>>
+      requestScopedDecoratorSuppliers = new HashMap<>();
+
+  private final ImmutableMap<String, String> groupMemberships;
+
+  NodeDefinition(
+      String nodeId,
+      Set<String> inputNames,
+      Map<String, String> inputNamesToProvider,
+      ImmutableMap<String, String> groupMemberships) {
     this.nodeId = nodeId;
+    this.groupMemberships = groupMemberships;
     this.inputNamesToProvider.putAll(inputNamesToProvider);
     this.inputNames.addAll(inputNames);
   }
@@ -56,5 +72,15 @@ public abstract sealed class NodeDefinition<T>
 
   public ImmutableSet<String> inputNames() {
     return ImmutableSet.copyOf(inputNames);
+  }
+
+  /** Group type -> { NodeDecoratorId -> Node Decorator Supplier }. */
+  public ImmutableMap<String, ImmutableMap<String, Supplier<NodeDecorator<T>>>>
+      getRequestScopedNodeDecoratorSuppliers() {
+    return ImmutableMap.copyOf(requestScopedDecoratorSuppliers);
+  }
+
+  public ImmutableMap<String, String> getGroupMemberships() {
+    return groupMemberships;
   }
 }

@@ -1,7 +1,6 @@
 package com.flipkart.krystal.krystex;
 
 import static com.flipkart.krystal.krystex.Node.createNode;
-import static java.util.Collections.emptyList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 
@@ -14,12 +13,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.function.Supplier;
 import lombok.Getter;
 
 /** Default implementation of Krystal executor which */
@@ -33,6 +36,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
   private boolean shutdownRequested;
   private boolean stopAcceptingRequests;
+
+  private final Map<DecoratorKey, NodeDecorator<?>> requestScopedNodeDecorators = new HashMap<>();
 
   public KrystalNodeExecutor(NodeDefinitionRegistry nodeDefinitionRegistry, String requestId) {
     this.nodeRegistry = new NodeRegistry(nodeDefinitionRegistry);
@@ -49,11 +54,43 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       throw new IllegalStateException("Krystal has stopped accepting new requests for execution");
     }
     // TODO Implement caching
+    ImmutableList<NodeDecorator<T>> requestScopedNodeDecorators =
+        getRequestScopedNodeDecorators(nodeDefinition);
     Node<T> node =
         this.nodeRegistry.createIfAbsent(
-            nodeDefinition.nodeId(), () -> createNode(nodeDefinition, emptyList()));
+            nodeDefinition.nodeId(), () -> createNode(nodeDefinition, requestScopedNodeDecorators));
     initiate(node);
     return node;
+  }
+
+  private <T> ImmutableList<NodeDecorator<T>> getRequestScopedNodeDecorators(
+      NodeDefinition<T> nodeDefinition) {
+    ImmutableMap<String, ImmutableMap<String, Supplier<NodeDecorator<T>>>> suppliers =
+        nodeDefinition.getRequestScopedNodeDecoratorSuppliers();
+    ImmutableMap<String, String> groupMemberships = nodeDefinition.getGroupMemberships();
+    List<NodeDecorator<T>> decorators = new ArrayList<>();
+    suppliers.forEach(
+        (groupType, supplierMap) -> {
+          String groupName = groupMemberships.get(groupType);
+          if (groupName == null) {
+            return;
+          }
+          supplierMap.forEach(
+              (decoratorId, supplier) -> {
+                DecoratorKey decoratorKey =
+                    new DecoratorKey(new NodeGroupId(groupType, groupName), decoratorId);
+                //noinspection unchecked
+                NodeDecorator<T> nodeDecorator =
+                    (NodeDecorator<T>) requestScopedNodeDecorators.get(decoratorKey);
+                if (nodeDecorator == null) {
+                  nodeDecorator = supplier.get();
+                  requestScopedNodeDecorators.put(decoratorKey, nodeDecorator);
+                }
+                decorators.add(nodeDecorator);
+              });
+        });
+
+    return ImmutableList.copyOf(decorators);
   }
 
   public <T> Node<T> executeWithInputs(
@@ -168,4 +205,6 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   private Queue<NodeCommand> getCommandQueue() {
     return mainQueue;
   }
+
+  private record DecoratorKey(NodeGroupId nodeGroupId, String nodeDecoratorId) {}
 }

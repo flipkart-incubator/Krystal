@@ -12,7 +12,7 @@ public abstract non-sealed class NonBlockingNodeDefinition<T> extends NodeDefini
 
   NonBlockingNodeDefinition(
       String nodeId, Set<String> inputNames, Map<String, String> inputProviders) {
-    super(nodeId, inputNames, inputProviders);
+    super(nodeId, inputNames, inputProviders, ImmutableMap.of());
   }
 
   @Override

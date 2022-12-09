@@ -2,8 +2,8 @@ package com.flipkart.krystal.krystex.decoration;
 
 import static com.flipkart.krystal.krystex.RateLimitingStrategy.SEMAPHORE;
 
-import com.flipkart.krystal.krystex.LogicDecorationStrategy;
 import com.flipkart.krystal.krystex.Node;
+import com.flipkart.krystal.krystex.NodeDecorator;
 import com.flipkart.krystal.krystex.NonBlockingNodeDefinition;
 import com.flipkart.krystal.krystex.RateLimitingStrategy;
 import com.flipkart.krystal.krystex.config.ConfigProvider;
@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 // TODO move to a dedicated module
-public class Resilience4JStrategy implements LogicDecorationStrategy {
+public class Resilience4JStrategy<T> implements NodeDecorator<T> {
 
   private final ConfigProvider configProvider;
 
@@ -32,7 +32,7 @@ public class Resilience4JStrategy implements LogicDecorationStrategy {
   }
 
   @Override
-  public <T> Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> decorateLogic(
+  public Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> decorateLogic(
       Node<T> node,
       Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> logicToDecorate) {
     if (node.definition() instanceof NonBlockingNodeDefinition<?>) {
@@ -45,14 +45,14 @@ public class Resilience4JStrategy implements LogicDecorationStrategy {
     return decorateCompletionStage.decorate();
   }
 
-  private <T> void decorateWithCircuitBreaker(
+  private void decorateWithCircuitBreaker(
       Node<T> node,
       DecorateFunction<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>>
           decorateFunction) {
     // TODO Implement circuit breaker
   }
 
-  private <T> void decorateWithRateLimiter(
+  private void decorateWithRateLimiter(
       Node<T> node,
       DecorateFunction<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>>
           decorateFunction) {

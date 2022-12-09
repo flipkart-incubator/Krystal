@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -104,5 +105,25 @@ public final class NodeDefinitionRegistry {
   public void validate() {
     // TODO Check if all dependencies are present - there should be no dangling node ids
     // TODO Check that there are no loops in dependencies.
+  }
+
+  public <T> IONodeDefinition<T> newIONodeDefinition(
+      String nodeId,
+      Set<String> inputs,
+      Map<String, String> inputProviders,
+      Function<
+              ImmutableList<ImmutableMap<String, ?>>,
+              ImmutableMap<ImmutableMap<String, ?>, CompletableFuture<T>>>
+          logic) {
+    IONodeDefinition<T> def =
+        new IONodeDefinition<T>(nodeId, inputs, inputProviders, ImmutableMap.of()) {
+          @Override
+          public ImmutableMap<ImmutableMap<String, ?>, CompletableFuture<T>> modulatedLogic(
+              ImmutableList<ImmutableMap<String, ?>> modulatedRequests) {
+            return logic.apply(modulatedRequests);
+          }
+        };
+    add(def);
+    return def;
   }
 }

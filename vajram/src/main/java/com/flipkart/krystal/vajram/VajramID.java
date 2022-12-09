@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram;
 
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import java.util.Collection;
+import lombok.ToString;
 
 public record VajramID(String vajramId) implements DataAccessSpec {
   public static VajramID vajramID(String id) {

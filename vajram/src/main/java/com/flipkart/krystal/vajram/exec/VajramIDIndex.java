@@ -8,11 +8,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 public final class VajramIDIndex implements AccessSpecIndex<VajramID> {
-  private final Map<String, Vajram<?>> vajrams = new HashMap<>();
+  private final Map<VajramID, Vajram> vajrams = new HashMap<>();
 
   @Override
   public AccessSpecMatchingResult<VajramID> getVajrams(VajramID vajramID) {
-    Vajram<?> matchingVajram = vajrams.get(vajramID.vajramId());
+    Vajram matchingVajram = vajrams.get(vajramID);
     if (matchingVajram == null) {
       return new AccessSpecMatchingResult<>(
           ImmutableMap.of(), ImmutableMap.of(), ImmutableSet.of(vajramID));
@@ -23,7 +23,7 @@ public final class VajramIDIndex implements AccessSpecIndex<VajramID> {
   }
 
   @Override
-  public void add(Vajram<?> vajram) {
+  public void add(Vajram vajram) {
     vajrams.put(vajram.getId(), vajram);
   }
 }

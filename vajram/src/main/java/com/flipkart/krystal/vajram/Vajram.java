@@ -7,7 +7,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 public sealed interface Vajram<T> permits AbstractVajram {
 
@@ -21,12 +20,14 @@ public sealed interface Vajram<T> permits AbstractVajram {
     return ImmutableList.of();
   }
 
-  boolean isBlockingVajram();
+  boolean isIOVajram();
 
-  CompletableFuture<ImmutableList<T>> execute(ExecutionContext executionContext);
+  default ImmutableList<RequestBuilder<?>> resolveInputOfDependency(
+      String dependency,
+      ImmutableSet<String> resolvableInputs,
+      ExecutionContextMap executionContext) {
+    return ImmutableList.of();
+  }
 
-  ImmutableList<RequestBuilder<?>> resolveInputOfDependency(
-      String dependency, ImmutableSet<String> resolvableInputs, ExecutionContext executionContext);
-
-  String getId();
+  VajramID getId();
 }
