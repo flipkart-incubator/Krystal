@@ -2,13 +2,16 @@ package com.flipkart.krystal.krystex.decoration;
 
 import static com.flipkart.krystal.krystex.RateLimitingStrategy.SEMAPHORE;
 
-import com.flipkart.krystal.krystex.Node;
+import com.flipkart.krystal.krystex.MultiResult;
 import com.flipkart.krystal.krystex.NodeDecorator;
+import com.flipkart.krystal.krystex.NodeDefinition;
 import com.flipkart.krystal.krystex.NodeInputs;
+import com.flipkart.krystal.krystex.NodeLogic;
 import com.flipkart.krystal.krystex.NonBlockingNodeDefinition;
 import com.flipkart.krystal.krystex.RateLimitingStrategy;
 import com.flipkart.krystal.krystex.config.ConfigProvider;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.github.resilience4j.decorators.Decorators;
 import io.github.resilience4j.decorators.Decorators.DecorateFunction;
 import io.github.resilience4j.ratelimiter.RateLimiter;
@@ -17,8 +20,6 @@ import io.github.resilience4j.ratelimiter.internal.SemaphoreBasedRateLimiter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 // TODO move to a dedicated module
 public class Resilience4JStrategy<T> implements NodeDecorator<T> {
@@ -32,38 +33,35 @@ public class Resilience4JStrategy<T> implements NodeDecorator<T> {
   }
 
   @Override
-  public Function<NodeInputs, CompletableFuture<ImmutableList<T>>> decorateLogic(
-      Node<T> node, Function<NodeInputs, CompletableFuture<ImmutableList<T>>> logicToDecorate) {
-    if (node.definition() instanceof NonBlockingNodeDefinition<?>) {
-      return node.definition()::logic;
+  public NodeLogic<T> decorateLogic(NodeDefinition<T> nodeDef, NodeLogic<T> logicToDecorate) {
+    if (nodeDef instanceof NonBlockingNodeDefinition<?>) {
+      return logicToDecorate;
     }
-    DecorateFunction<NodeInputs, CompletableFuture<ImmutableList<T>>> decorateCompletionStage =
-        Decorators.ofFunction(logicToDecorate);
-    decorateWithRateLimiter(node, decorateCompletionStage);
-    decorateWithCircuitBreaker(node, decorateCompletionStage);
-    return decorateCompletionStage.decorate();
-  }
-
-  private void decorateWithCircuitBreaker(
-      Node<T> node,
-      DecorateFunction<NodeInputs, CompletableFuture<ImmutableList<T>>> decorateFunction) {
-    // TODO Implement circuit breaker
+    DecorateFunction<ImmutableList<NodeInputs>, ImmutableMap<NodeInputs, MultiResult<T>>>
+        decorateCompletionStage = Decorators.ofFunction(logicToDecorate);
+    decorateWithRateLimiter(nodeDef, decorateCompletionStage);
+    decorateWithCircuitBreaker(nodeDef, decorateCompletionStage);
+    return decorateCompletionStage.decorate()::apply;
   }
 
   private void decorateWithRateLimiter(
-      Node<T> node,
-      DecorateFunction<NodeInputs, CompletableFuture<ImmutableList<T>>> decorateFunction) {
-    RateLimiter rateLimiter = rateLimiters.get(node.definition().nodeId());
+      NodeDefinition<T> nodeDef, DecorateFunction<?, ?> decorateFunction) {
+    RateLimiter rateLimiter = rateLimiters.get(nodeDef.nodeId());
     if (rateLimiter == null) {
       rateLimiter =
           rateLimiters.computeIfAbsent(
-              node.definition().nodeId(), nodeId -> createRateLimiter(nodeId).orElse(null));
+              nodeDef.nodeId(), nodeId -> createRateLimiter(nodeId).orElse(null));
     } else {
-      updateRateLimiter(node.definition().nodeId(), rateLimiter);
+      updateRateLimiter(nodeDef.nodeId(), rateLimiter);
     }
     if (rateLimiter != null) {
       decorateFunction.withRateLimiter(rateLimiter);
     }
+  }
+
+  private void decorateWithCircuitBreaker(
+      NodeDefinition<T> nodeDef, DecorateFunction<?, ?> decorateFunction) {
+    // TODO Implement circuit breaker
   }
 
   private void updateRateLimiter(String nodeId, RateLimiter rateLimiter) {

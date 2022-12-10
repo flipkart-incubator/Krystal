@@ -6,7 +6,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.krystex.IONodeDefinition;
-import com.flipkart.krystal.krystex.IoNodeAdaptor;
+import com.flipkart.krystal.krystex.MultiResult;
 import com.flipkart.krystal.krystex.NodeDefinition;
 import com.flipkart.krystal.krystex.NodeDefinitionRegistry;
 import com.flipkart.krystal.krystex.NodeInputs;
@@ -227,10 +227,9 @@ public final class VajramGraph {
                     .collect(
                         toImmutableMap(
                             e -> new NodeInputs(inputsConvertor.toMap(e.getKey()).values()),
-                            Entry::getValue));
+                            e -> new MultiResult<>(e.getValue().thenApply(ImmutableList::of))));
               });
-      //noinspection unchecked,rawtypes
-      ioNodeDefinition.setIoNodeAdaptor((IoNodeAdaptor) getAdaptor(ioVajram, inputsConvertor));
+      enableInputModulation(ioNodeDefinition, ioVajram, inputsConvertor);
       return ioNodeDefinition;
 
     } else {
@@ -238,16 +237,16 @@ public final class VajramGraph {
     }
   }
 
-  private IoNodeAdaptor<?> getAdaptor(
+  private <T> void enableInputModulation(
+      IONodeDefinition<T> nodeDefinition,
       IOVajram<?> ioVajram,
       InputsConverter<Object, Object, Object, ModulatedInput<Object, Object>> inputsConvertor) {
     //noinspection unchecked
     InputModulator<Object, Object, Object> inputModulator =
         (InputModulator<Object, Object, Object>) inputModulators.get(ioVajram.getId());
-    if (inputModulator == null) {
-      return IoNodeAdaptor.noop();
-    } else {
-      return new InputModulationAdaptor<>(inputModulator, inputsConvertor);
+    if (inputModulator != null) {
+      nodeDefinition.setInputModulationDecorator(
+          new InputModulationDecorator<>(inputModulator, inputsConvertor));
     }
   }
 

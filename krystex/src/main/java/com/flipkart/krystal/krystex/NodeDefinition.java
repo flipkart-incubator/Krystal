@@ -1,6 +1,5 @@
 package com.flipkart.krystal.krystex;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.HashMap;
@@ -8,8 +7,8 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 public abstract sealed class NodeDefinition<T> permits IONodeDefinition, NonBlockingNodeDefinition {
@@ -28,6 +27,7 @@ public abstract sealed class NodeDefinition<T> permits IONodeDefinition, NonBloc
       requestScopedDecoratorSuppliers = new HashMap<>();
 
   private final ImmutableMap<String, String> groupMemberships;
+  @MonotonicNonNull private NodeLogic<T> nodeLogic;
 
   NodeDefinition(
       String nodeId,
@@ -59,8 +59,7 @@ public abstract sealed class NodeDefinition<T> permits IONodeDefinition, NonBloc
     inputNamesToProvider.put(inputName, nodeId);
   }
 
-  public abstract CompletableFuture<ImmutableList<T>> logic(
-      NodeInputs dependencyValues);
+  public abstract NodeLogic<T> logic();
 
   public String nodeId() {
     return nodeId;

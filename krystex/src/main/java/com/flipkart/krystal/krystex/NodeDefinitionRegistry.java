@@ -10,7 +10,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -41,9 +40,7 @@ public final class NodeDefinitionRegistry {
   }
 
   public <T> NonBlockingNodeDefinition<T> newNonBlockingNode(
-      String nodeId,
-      Map<String, String> inputProviders,
-      Function<NodeInputs, T> logic) {
+      String nodeId, Map<String, String> inputProviders, Function<NodeInputs, T> logic) {
     return newNonBlockingNode(nodeId, inputProviders.keySet(), inputProviders, logic);
   }
 
@@ -67,12 +64,7 @@ public final class NodeDefinitionRegistry {
       Map<String, String> inputProviders,
       Function<NodeInputs, ImmutableList<T>> logic) {
     NonBlockingNodeDefinition<T> def =
-        new NonBlockingNodeDefinition<>(nodeId, inputs, inputProviders) {
-          @Override
-          protected ImmutableList<T> nonBlockingLogic(NodeInputs dependencyValues) {
-            return logic.apply(dependencyValues);
-          }
-        };
+        new NonBlockingNodeDefinition<>(nodeId, inputs, inputProviders, logic);
     add(def);
     return def;
   }
@@ -111,18 +103,10 @@ public final class NodeDefinitionRegistry {
       String nodeId,
       Set<String> inputs,
       Map<String, String> inputProviders,
-      Function<
-              ImmutableList<NodeInputs>,
-              ImmutableMap<NodeInputs, CompletableFuture<T>>>
-          logic) {
+      NodeLogic<T> nodeLogic) {
     IONodeDefinition<T> def =
-        new IONodeDefinition<T>(nodeId, inputs, inputProviders, ImmutableMap.of()) {
-          @Override
-          public ImmutableMap<NodeInputs, CompletableFuture<T>> modulatedLogic(
-              ImmutableList<NodeInputs> modulatedRequests) {
-            return logic.apply(modulatedRequests);
-          }
-        };
+        new IONodeDefinition<T>(nodeId, inputs, inputProviders, ImmutableMap.of(), nodeLogic);
+
     add(def);
     return def;
   }

@@ -1,33 +1,37 @@
 package com.flipkart.krystal.krystex;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
-public abstract non-sealed class IONodeDefinition<T> extends NodeDefinition<T> {
+public final class IONodeDefinition<T> extends NodeDefinition<T> {
 
-  private IoNodeAdaptor<T> ioNodeAdaptor;
+  private final NodeLogic<T> nodeLogic;
+  private NodeDecorator<T> inputModulationDecorator;
 
   IONodeDefinition(
       String nodeId,
       Set<String> inputs,
       Map<String, String> inputProviders,
-      ImmutableMap<String, String> groupMemberships) {
+      ImmutableMap<String, String> groupMemberships,
+      NodeLogic<T> nodeLogic) {
     super(nodeId, inputs, inputProviders, groupMemberships);
-    this.ioNodeAdaptor = IoNodeAdaptor.noop();
+    this.nodeLogic = nodeLogic;
   }
-
-  public abstract ImmutableMap<NodeInputs, CompletableFuture<T>> modulatedLogic(
-      ImmutableList<NodeInputs> modulatedRequests);
 
   @Override
-  public final CompletableFuture<ImmutableList<T>> logic(NodeInputs dependencyValues) {
-    return ioNodeAdaptor.adaptLogic(this::modulatedLogic).apply(dependencyValues);
+  public final NodeLogic<T> logic() {
+    return getInputModulationDecorator()
+        .map(nd -> nd.decorateLogic(this, nodeLogic))
+        .orElse(nodeLogic);
   }
 
-  public void setIoNodeAdaptor(IoNodeAdaptor<T> ioNodeAdaptor) {
-    this.ioNodeAdaptor = ioNodeAdaptor;
+  public void setInputModulationDecorator(NodeDecorator<T> inputModulationAdaptor) {
+    this.inputModulationDecorator = inputModulationAdaptor;
+  }
+
+  private Optional<NodeDecorator<T>> getInputModulationDecorator() {
+    return Optional.ofNullable(inputModulationDecorator);
   }
 }

@@ -1,10 +1,5 @@
 package com.flipkart.krystal.krystex;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-
 /**
  * @param <T> The type returned by the {@link Node} that this decorator decorates.
  */
@@ -23,7 +18,5 @@ public interface NodeDecorator<T> {
     return this.getClass().getName();
   }
 
-  Function<NodeInputs, CompletableFuture<ImmutableList<T>>> decorateLogic(
-      Node<T> node,
-      Function<NodeInputs, CompletableFuture<ImmutableList<T>>> logicToDecorate);
+  NodeLogic<T> decorateLogic(NodeDefinition<T> node, NodeLogic<T> logicToDecorate);
 }

@@ -2,7 +2,7 @@ package com.flipkart.krystal.krystex;
 
 import java.util.concurrent.CompletableFuture;
 
-public sealed interface Result permits SingleResult, BatchResult {
+public sealed interface Result permits SingleResult, MultiResult {
 
   CompletableFuture<?> future();
 

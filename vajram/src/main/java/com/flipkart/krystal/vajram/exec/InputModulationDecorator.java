@@ -1,34 +1,37 @@
 package com.flipkart.krystal.vajram.exec;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
-import com.flipkart.krystal.krystex.IoNodeAdaptor;
+import com.flipkart.krystal.krystex.MultiResult;
+import com.flipkart.krystal.krystex.NodeDecorator;
+import com.flipkart.krystal.krystex.NodeDefinition;
 import com.flipkart.krystal.krystex.NodeInputs;
+import com.flipkart.krystal.krystex.NodeLogic;
 import com.flipkart.krystal.vajram.inputs.InputValues;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
 import com.flipkart.krystal.vajram.modulation.InputModulator.ModulatedInput;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
-public class InputModulationAdaptor<
+public class InputModulationDecorator<
         Request,
         InputsNeedingModulation,
         CommonInputs,
         Modulated extends ModulatedInput<InputsNeedingModulation, CommonInputs>,
         T>
-    implements IoNodeAdaptor<T> {
+    implements NodeDecorator<T> {
 
   private final InputModulator<Request, InputsNeedingModulation, CommonInputs> inputModulator;
   private final InputsConverter<Request, InputsNeedingModulation, CommonInputs, Modulated>
       inputsConverter;
-  private final Map<Request, CompletableFuture<ImmutableList<T>>> futureCache = new HashMap<>();
+  private final Map<Request, MultiResult<T>> futureCache = new HashMap<>();
 
-  public InputModulationAdaptor(
+  public InputModulationDecorator(
       InputModulator<Request, InputsNeedingModulation, CommonInputs> inputModulator,
       InputsConverter<Request, InputsNeedingModulation, CommonInputs, Modulated> inputsConverter) {
     this.inputModulator = inputModulator;
@@ -36,27 +39,30 @@ public class InputModulationAdaptor<
   }
 
   @Override
-  public Function<NodeInputs, CompletableFuture<ImmutableList<T>>> adaptLogic(
-      Function<ImmutableList<NodeInputs>, ImmutableMap<NodeInputs, CompletableFuture<T>>>
-          logicToDecorate) {
-
+  public NodeLogic<T> decorateLogic(NodeDefinition<T> nodeDef, NodeLogic<T> logicToDecorate) {
     inputModulator.onTermination(requests -> modulateInputsList(logicToDecorate, requests));
-
-    return inputs -> {
-      Request request = inputsConverter.enrichedRequest(new InputValues(inputs.values()));
-      ImmutableList<ModulatedInput<InputsNeedingModulation, CommonInputs>> modulatedInputs =
-          inputModulator.add(request);
-      futureCache.computeIfAbsent(request, e -> new CompletableFuture<>());
+    return inputsList -> {
+      List<Request> requests =
+          inputsList.stream()
+              .map(nodeInputs -> new InputValues(nodeInputs.values()))
+              .map(inputsConverter::enrichedRequest)
+              .toList();
+      List<ModulatedInput<InputsNeedingModulation, CommonInputs>> modulatedInputs =
+          requests.stream().map(inputModulator::add).flatMap(Collection::stream).toList();
+      requests.forEach(request -> futureCache.computeIfAbsent(request, e -> new MultiResult<>()));
       for (ModulatedInput<InputsNeedingModulation, CommonInputs> modulatedInput : modulatedInputs) {
         modulateInputsList(logicToDecorate, modulatedInput);
       }
-      return futureCache.get(request);
+      return requests.stream()
+          .collect(
+              toImmutableMap(
+                  request -> new NodeInputs(inputsConverter.toMap(request).values()),
+                  futureCache::get));
     };
   }
 
   private void modulateInputsList(
-      Function<ImmutableList<NodeInputs>, ImmutableMap<NodeInputs, CompletableFuture<T>>>
-          logicToDecorate,
+      NodeLogic<T> logicToDecorate,
       ModulatedInput<InputsNeedingModulation, CommonInputs> modulatedInput) {
     ImmutableList<Request> requests =
         modulatedInput.inputsNeedingModulation().stream()
@@ -70,19 +76,21 @@ public class InputModulationAdaptor<
                         new NodeInputs(inputsConverter.toMap(enrichedRequest).values()))
                 .collect(toImmutableList()))
         .forEach(
-            (inputs, future) -> {
-              CompletableFuture<ImmutableList<T>> cachedFuture =
+            (inputs, multiResult) -> {
+              MultiResult<T> cachedResult =
                   futureCache.computeIfAbsent(
                       inputsConverter.enrichedRequest(new InputValues(inputs.values())),
-                      request -> new CompletableFuture<>());
-              future.whenComplete(
-                  (t, throwable) -> {
-                    if (t != null) {
-                      cachedFuture.complete(ImmutableList.of(t));
-                    } else {
-                      cachedFuture.completeExceptionally(throwable);
-                    }
-                  });
+                      request -> new MultiResult<>());
+              multiResult
+                  .future()
+                  .whenComplete(
+                      (values, throwable) -> {
+                        if (values != null) {
+                          cachedResult.future().complete(values);
+                        } else {
+                          cachedResult.future().completeExceptionally(throwable);
+                        }
+                      });
             });
   }
 }

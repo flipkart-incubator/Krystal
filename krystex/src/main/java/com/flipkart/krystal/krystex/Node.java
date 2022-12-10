@@ -30,7 +30,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -54,7 +53,7 @@ public final class Node<T> {
   private final Map<String, Boolean> inputsDone = new HashMap<>();
 
   private final Map<String, Collection<SingleResult<?>>> resultsForInput = new HashMap<>();
-  private final Map<Request, BatchResult<T>> resultsByRequest = new HashMap<>();
+  private final Map<Request, MultiResult<T>> resultsByRequest = new HashMap<>();
   private final CompletableFuture<ImmutableList<T>> allResults = new CompletableFuture<>();
 
   public static <T> Node<T> createNode(
@@ -140,12 +139,12 @@ public final class Node<T> {
     execute(requests);
   }
 
-  private ImmutableMap<Request, BatchResult<T>> execute(ImmutableList<Request> requests) {
+  private ImmutableMap<Request, MultiResult<T>> execute(ImmutableList<Request> requests) {
     // The following implementation treats all dependencies as mandatory
     // TODO add support for optional dependencies.
-    Map<Request, BatchResult<T>> newResults = new LinkedHashMap<>();
+    Map<Request, MultiResult<T>> newResults = new LinkedHashMap<>();
     for (Request request : requests) {
-      BatchResult<T> resultsForRequest;
+      MultiResult<T> resultsForRequest;
       if (request.asMap().values().stream().anyMatch(SingleResult::isFailure)) {
         ImmutableMap<String, Throwable> reasons =
             request.asMap().entrySet().stream()
@@ -160,26 +159,31 @@ public final class Node<T> {
                                 .getNow(null)));
 
         resultsForRequest =
-            new BatchResult<>(failedFuture(new MandatoryDependencyFailureException(reasons)));
+            new MultiResult<>(failedFuture(new MandatoryDependencyFailureException(reasons)));
       } else {
         resultsForRequest =
-            new BatchResult<>(decoratedLogic().apply(getValuesForConsumption(request)));
+            decoratedLogic()
+                .apply(ImmutableList.of(getValuesForConsumption(request)))
+                .values()
+                .stream()
+                .findFirst()
+                .orElseThrow();
       }
       newResults.put(request, resultsForRequest);
     }
     // Notify dependants that new data is available from this node
     newResults.forEach(
-        (request, batchResult) -> {
+        (request, multiResult) -> {
           dataTransferDone.put(
               request,
-              batchResult
+              multiResult
                   .future()
                   .handle(
                       (ts, throwable) -> {
                         synchronized (newDataSubscriptions) {
                           try {
                             newDataSubscriptions.forEach(
-                                c -> c.accept(batchResult.toSingleResults()));
+                                c -> c.accept(multiResult.toSingleResults()));
                           } catch (Exception e) {
                             log.warn("Exception when notifying new Data availability", e);
                           }
@@ -255,15 +259,15 @@ public final class Node<T> {
   }
 
   private void markDone() {
-    ImmutableList<BatchResult<T>> listOfBatches =
+    ImmutableList<MultiResult<T>> listOfBatches =
         resultsByRequest.values().stream().collect(toImmutableList());
-    allOf(listOfBatches.stream().map(BatchResult::future).toArray(CompletableFuture[]::new))
+    allOf(listOfBatches.stream().map(MultiResult::future).toArray(CompletableFuture[]::new))
         .thenCompose(
             void1 -> {
               //noinspection unchecked
               CompletableFuture<T>[] cfs =
                   listOfBatches.stream()
-                      .map(BatchResult::toSingleResults)
+                      .map(MultiResult::toSingleResults)
                       .flatMap(Collection::stream)
                       .map(SingleResult::future)
                       .toArray(CompletableFuture[]::new);
@@ -291,10 +295,10 @@ public final class Node<T> {
             });
   }
 
-  private Function<NodeInputs, CompletableFuture<ImmutableList<T>>> decoratedLogic() {
-    Function<NodeInputs, CompletableFuture<ImmutableList<T>>> logic = nodeDefinition::logic;
+  private NodeLogic<T> decoratedLogic() {
+    NodeLogic<T> logic = nodeDefinition.logic();
     for (NodeDecorator<T> nodeDecorator : nodeDecorators) {
-      logic = nodeDecorator.decorateLogic(this, logic);
+      logic = nodeDecorator.decorateLogic(this.nodeDefinition, logic);
     }
     return logic;
   }
@@ -322,8 +326,8 @@ public final class Node<T> {
           resultsByRequest.entrySet().stream()
               .filter(e -> newDataNotifiedRequests.contains(e.getKey()))
               .map(Entry::getValue)
-              .filter(tBatchResult -> tBatchResult.future().isDone())
-              .map(BatchResult::toSingleResults)
+              .filter(tMultiResult -> tMultiResult.future().isDone())
+              .map(MultiResult::toSingleResults)
               .flatMap(Collection::stream)
               .collect(toImmutableList()));
       this.newDataSubscriptions.add(newDataConsumer);

@@ -9,17 +9,17 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public record BatchResult<T>(CompletableFuture<ImmutableList<T>> future) implements Result {
+public record MultiResult<T>(CompletableFuture<ImmutableList<T>> future) implements Result {
 
-  public BatchResult() {
+  public MultiResult() {
     this(new CompletableFuture<>());
   }
 
-  public static <T> BatchResult<T> from(List<SingleResult<T>> resultsForRequest) {
+  public static <T> MultiResult<T> from(List<SingleResult<T>> resultsForRequest) {
     //noinspection unchecked
     CompletableFuture<T>[] futures =
         resultsForRequest.stream().map(SingleResult::future).toArray(CompletableFuture[]::new);
-    return new BatchResult<>(
+    return new MultiResult<>(
         allOf(futures)
             .thenApply(
                 unused ->
