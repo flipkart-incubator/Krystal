@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.modulation;
 
+import com.flipkart.krystal.vajram.inputs.InputValues;
 import com.flipkart.krystal.vajram.modulation.InputModulator.ModulatedInput;
 import com.google.common.collect.ImmutableMap;
 import java.util.List;
@@ -9,9 +10,9 @@ public interface InputsConverter<
     InputsNeedingModulation,
     CommonInputs,
     ModulatedRequest extends ModulatedInput<InputsNeedingModulation, CommonInputs>> {
-  ImmutableMap<String, ?> toMap(EnrichedRequest enrichedRequest);
+  InputValues toMap(EnrichedRequest enrichedRequest);
 
-  EnrichedRequest enrichedRequest(ImmutableMap<String, ?> inputs);
+  EnrichedRequest enrichedRequest(InputValues inputValues);
 
   EnrichedRequest enrichedRequest(
       InputsNeedingModulation inputsNeedingModulation, CommonInputs commonInputs);

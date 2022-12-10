@@ -9,6 +9,7 @@ import com.flipkart.krystal.krystex.IONodeDefinition;
 import com.flipkart.krystal.krystex.IoNodeAdaptor;
 import com.flipkart.krystal.krystex.NodeDefinition;
 import com.flipkart.krystal.krystex.NodeDefinitionRegistry;
+import com.flipkart.krystal.krystex.NodeInputs;
 import com.flipkart.krystal.krystex.NonBlockingNodeDefinition;
 import com.flipkart.krystal.vajram.ExecutionContextMap;
 import com.flipkart.krystal.vajram.IOVajram;
@@ -21,6 +22,7 @@ import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import com.flipkart.krystal.vajram.exec.VajramDAG.ResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.Input;
+import com.flipkart.krystal.vajram.inputs.InputValues;
 import com.flipkart.krystal.vajram.inputs.ResolutionSources;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
@@ -162,7 +164,7 @@ public final class VajramGraph {
                                   generateNodeSuffix()),
                           dependencyValues -> {
                             Map<String, Object> map = new HashMap<>();
-                            sources.forEach(s -> map.put(s, dependencyValues.get(s)));
+                            sources.forEach(s -> map.put(s, dependencyValues.values().get(s)));
                             return vajram.resolveInputOfDependency(
                                 dependencyName, resolvedInputNames, new ExecutionContextMap(map));
                           });
@@ -214,13 +216,18 @@ public final class VajramGraph {
               dependencyValues -> {
                 ModulatedInput<Object, Object> modulatedRequest =
                     inputsConvertor.toModulatedRequest(
-                        dependencyValues.stream().map(inputsConvertor::enrichedRequest).toList());
+                        dependencyValues.stream()
+                            .map(nodeInputs -> new InputValues(nodeInputs.values()))
+                            .map(inputsConvertor::enrichedRequest)
+                            .toList());
                 return ioVajram
                     .execute(new ModulatedExecutionContext(modulatedRequest))
                     .entrySet()
                     .stream()
                     .collect(
-                        toImmutableMap(e -> inputsConvertor.toMap(e.getKey()), Entry::getValue));
+                        toImmutableMap(
+                            e -> new NodeInputs(inputsConvertor.toMap(e.getKey()).values()),
+                            Entry::getValue));
               });
       //noinspection unchecked,rawtypes
       ioNodeDefinition.setIoNodeAdaptor((IoNodeAdaptor) getAdaptor(ioVajram, inputsConvertor));
@@ -247,14 +254,14 @@ public final class VajramGraph {
   private static ExecutionContextMap createExecutionContext(
       VajramID vajramId,
       List<VajramInputDefinition> inputDefinitions,
-      ImmutableMap<String, ?> dependencyValues) {
+      NodeInputs dependencyValues) {
     Map<String, Object> map = new HashMap<>();
     for (VajramInputDefinition inputDefinition : inputDefinitions) {
       String inputName = inputDefinition.name();
       if (inputDefinition instanceof Input<?> input) {
         if (input.resolvableBy().contains(ResolutionSources.REQUEST)) {
-          if (dependencyValues.get(inputName) == null
-              || Objects.equals(dependencyValues.get(inputName), Optional.empty())) {
+          if (dependencyValues.values().get(inputName) == null
+              || Objects.equals(dependencyValues.values().get(inputName), Optional.empty())) {
             // Input was not resolved by another node. Check if it is resolvable
             // by SESSION
             if (input.resolvableBy().contains(ResolutionSources.SESSION)) {
@@ -268,11 +275,11 @@ public final class VajramGraph {
                       + " was not resolved by the request.");
             }
           } else {
-            map.put(inputName, dependencyValues.get(inputName));
+            map.put(inputName, dependencyValues.values().get(inputName));
           }
         }
       } else if (inputDefinition instanceof Dependency) {
-        map.put(inputName, dependencyValues.get(inputName));
+        map.put(inputName, dependencyValues.values().get(inputName));
       }
     }
     return new ExecutionContextMap(map);
@@ -331,7 +338,7 @@ public final class VajramGraph {
                     toImmutableMap(
                         e -> e.getKey().toString(),
                         e -> e.getValue().vajramLogicNodeDefinition().nodeId())),
-            dependencyValues -> accessSpec.adapt(dependencyValues.values()));
+            dependencyValues -> accessSpec.adapt(dependencyValues.values().values()));
         depNameToProviderNode.put(dependencyName, nodeId);
       } else {
         depNameToProviderNode.put(

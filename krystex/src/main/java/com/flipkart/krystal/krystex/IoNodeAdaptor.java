@@ -7,10 +7,8 @@ import java.util.function.Function;
 
 public interface IoNodeAdaptor<T> {
 
-  Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> adaptLogic(
-      Function<
-              ImmutableList<ImmutableMap<String, ?>>,
-              ImmutableMap<ImmutableMap<String, ?>, CompletableFuture<T>>>
+  Function<NodeInputs, CompletableFuture<ImmutableList<T>>> adaptLogic(
+      Function<ImmutableList<NodeInputs>, ImmutableMap<NodeInputs, CompletableFuture<T>>>
           logicToDecorate);
 
   static <T> IoNodeAdaptor<T> noop() {

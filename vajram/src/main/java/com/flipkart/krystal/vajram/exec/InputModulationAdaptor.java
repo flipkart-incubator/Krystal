@@ -3,6 +3,8 @@ package com.flipkart.krystal.vajram.exec;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.krystex.IoNodeAdaptor;
+import com.flipkart.krystal.krystex.NodeInputs;
+import com.flipkart.krystal.vajram.inputs.InputValues;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
 import com.flipkart.krystal.vajram.modulation.InputModulator.ModulatedInput;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
@@ -34,16 +36,14 @@ public class InputModulationAdaptor<
   }
 
   @Override
-  public Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> adaptLogic(
-      Function<
-              ImmutableList<ImmutableMap<String, ?>>,
-              ImmutableMap<ImmutableMap<String, ?>, CompletableFuture<T>>>
+  public Function<NodeInputs, CompletableFuture<ImmutableList<T>>> adaptLogic(
+      Function<ImmutableList<NodeInputs>, ImmutableMap<NodeInputs, CompletableFuture<T>>>
           logicToDecorate) {
 
     inputModulator.onTermination(requests -> modulateInputsList(logicToDecorate, requests));
 
     return inputs -> {
-      Request request = inputsConverter.enrichedRequest(inputs);
+      Request request = inputsConverter.enrichedRequest(new InputValues(inputs.values()));
       ImmutableList<ModulatedInput<InputsNeedingModulation, CommonInputs>> modulatedInputs =
           inputModulator.add(request);
       futureCache.computeIfAbsent(request, e -> new CompletableFuture<>());
@@ -55,9 +55,7 @@ public class InputModulationAdaptor<
   }
 
   private void modulateInputsList(
-      Function<
-              ImmutableList<ImmutableMap<String, ?>>,
-              ImmutableMap<ImmutableMap<String, ?>, CompletableFuture<T>>>
+      Function<ImmutableList<NodeInputs>, ImmutableMap<NodeInputs, CompletableFuture<T>>>
           logicToDecorate,
       ModulatedInput<InputsNeedingModulation, CommonInputs> modulatedInput) {
     ImmutableList<Request> requests =
@@ -65,12 +63,17 @@ public class InputModulationAdaptor<
             .map(each -> inputsConverter.enrichedRequest(each, modulatedInput.commonInputs()))
             .collect(toImmutableList());
     logicToDecorate
-        .apply(requests.stream().map(inputsConverter::toMap).collect(toImmutableList()))
+        .apply(
+            requests.stream()
+                .map(
+                    enrichedRequest ->
+                        new NodeInputs(inputsConverter.toMap(enrichedRequest).values()))
+                .collect(toImmutableList()))
         .forEach(
             (inputs, future) -> {
               CompletableFuture<ImmutableList<T>> cachedFuture =
                   futureCache.computeIfAbsent(
-                      inputsConverter.enrichedRequest(inputs),
+                      inputsConverter.enrichedRequest(new InputValues(inputs.values())),
                       request -> new CompletableFuture<>());
               future.whenComplete(
                   (t, throwable) -> {

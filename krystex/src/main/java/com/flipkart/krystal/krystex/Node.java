@@ -41,7 +41,7 @@ public final class Node<T> {
 
   private final NodeDefinition<T> nodeDefinition;
   private final String nodeId;
-  private final List<NodeDecorator<T>> decorationStrategies;
+  private final List<NodeDecorator<T>> nodeDecorators;
 
   private final AtomicReference<NodeState> nodeState = new AtomicReference<>(NEW);
 
@@ -62,9 +62,9 @@ public final class Node<T> {
     return new Node<>(nodeDefinition, decorationStrategies);
   }
 
-  private Node(NodeDefinition<T> nodeDefinition, List<NodeDecorator<T>> decorationStrategies) {
+  private Node(NodeDefinition<T> nodeDefinition, List<NodeDecorator<T>> nodeDecorators) {
     this.nodeDefinition = nodeDefinition;
-    this.decorationStrategies = decorationStrategies;
+    this.nodeDecorators = nodeDecorators;
     this.nodeId = nodeDefinition.nodeId();
   }
 
@@ -192,11 +192,11 @@ public final class Node<T> {
   }
 
   // TODO Implement scenario where a mandatory input of a node is an error
-  private ImmutableMap<String, Object> getValuesForConsumption(Request request) {
+  private NodeInputs getValuesForConsumption(Request request) {
     ImmutableMap<String, SingleResult<?>> map = request.asMap();
     Map<String, Object> values = new HashMap<>();
     map.forEach((input, singleResult) -> values.put(input, singleResult.future().getNow(null)));
-    return ImmutableMap.copyOf(values);
+    return new NodeInputs(ImmutableMap.copyOf(values));
   }
 
   /**
@@ -291,11 +291,10 @@ public final class Node<T> {
             });
   }
 
-  private Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> decoratedLogic() {
-    Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> logic =
-        nodeDefinition::logic;
-    for (NodeDecorator<T> decorationStrategy : decorationStrategies) {
-      logic = decorationStrategy.decorateLogic(this, logic);
+  private Function<NodeInputs, CompletableFuture<ImmutableList<T>>> decoratedLogic() {
+    Function<NodeInputs, CompletableFuture<ImmutableList<T>>> logic = nodeDefinition::logic;
+    for (NodeDecorator<T> nodeDecorator : nodeDecorators) {
+      logic = nodeDecorator.decorateLogic(this, logic);
     }
     return logic;
   }

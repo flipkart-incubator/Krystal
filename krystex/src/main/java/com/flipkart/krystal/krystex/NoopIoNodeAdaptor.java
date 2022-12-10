@@ -10,13 +10,13 @@ final class NoopIoNodeAdaptor<T> implements IoNodeAdaptor<T> {
   static final NoopIoNodeAdaptor<?> INSTANCE = new NoopIoNodeAdaptor<>();
 
   @Override
-  public Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> adaptLogic(
+  public Function<NodeInputs, CompletableFuture<ImmutableList<T>>> adaptLogic(
       Function<
-              ImmutableList<ImmutableMap<String, ?>>,
-              ImmutableMap<ImmutableMap<String, ?>, CompletableFuture<T>>>
+              ImmutableList<NodeInputs>,
+              ImmutableMap<NodeInputs, CompletableFuture<T>>>
           logicToDecorate) {
     return stringImmutableMap -> {
-      ImmutableMap<ImmutableMap<String, ?>, CompletableFuture<T>> apply =
+      ImmutableMap<NodeInputs, CompletableFuture<T>> apply =
           logicToDecorate.apply(ImmutableList.of(stringImmutableMap));
       CompletableFuture<T> resultFuture = apply.get(stringImmutableMap);
       if (resultFuture == null) {

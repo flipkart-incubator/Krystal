@@ -16,9 +16,9 @@ public abstract non-sealed class NonBlockingNodeDefinition<T> extends NodeDefini
   }
 
   @Override
-  public final CompletableFuture<ImmutableList<T>> logic(ImmutableMap<String, ?> dependencyValues) {
+  public final CompletableFuture<ImmutableList<T>> logic(NodeInputs dependencyValues) {
     return completedFuture(nonBlockingLogic(dependencyValues));
   }
 
-  protected abstract ImmutableList<T> nonBlockingLogic(ImmutableMap<String, ?> dependencyValues);
+  protected abstract ImmutableList<T> nonBlockingLogic(NodeInputs dependencyValues);
 }

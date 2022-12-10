@@ -60,7 +60,7 @@ public abstract sealed class NodeDefinition<T> permits IONodeDefinition, NonBloc
   }
 
   public abstract CompletableFuture<ImmutableList<T>> logic(
-      ImmutableMap<String, ?> dependencyValues);
+      NodeInputs dependencyValues);
 
   public String nodeId() {
     return nodeId;

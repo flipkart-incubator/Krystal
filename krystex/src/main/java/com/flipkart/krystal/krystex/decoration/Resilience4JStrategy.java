@@ -4,11 +4,11 @@ import static com.flipkart.krystal.krystex.RateLimitingStrategy.SEMAPHORE;
 
 import com.flipkart.krystal.krystex.Node;
 import com.flipkart.krystal.krystex.NodeDecorator;
+import com.flipkart.krystal.krystex.NodeInputs;
 import com.flipkart.krystal.krystex.NonBlockingNodeDefinition;
 import com.flipkart.krystal.krystex.RateLimitingStrategy;
 import com.flipkart.krystal.krystex.config.ConfigProvider;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import io.github.resilience4j.decorators.Decorators;
 import io.github.resilience4j.decorators.Decorators.DecorateFunction;
 import io.github.resilience4j.ratelimiter.RateLimiter;
@@ -32,14 +32,13 @@ public class Resilience4JStrategy<T> implements NodeDecorator<T> {
   }
 
   @Override
-  public Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> decorateLogic(
-      Node<T> node,
-      Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> logicToDecorate) {
+  public Function<NodeInputs, CompletableFuture<ImmutableList<T>>> decorateLogic(
+      Node<T> node, Function<NodeInputs, CompletableFuture<ImmutableList<T>>> logicToDecorate) {
     if (node.definition() instanceof NonBlockingNodeDefinition<?>) {
       return node.definition()::logic;
     }
-    DecorateFunction<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>>
-        decorateCompletionStage = Decorators.ofFunction(logicToDecorate);
+    DecorateFunction<NodeInputs, CompletableFuture<ImmutableList<T>>> decorateCompletionStage =
+        Decorators.ofFunction(logicToDecorate);
     decorateWithRateLimiter(node, decorateCompletionStage);
     decorateWithCircuitBreaker(node, decorateCompletionStage);
     return decorateCompletionStage.decorate();
@@ -47,15 +46,13 @@ public class Resilience4JStrategy<T> implements NodeDecorator<T> {
 
   private void decorateWithCircuitBreaker(
       Node<T> node,
-      DecorateFunction<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>>
-          decorateFunction) {
+      DecorateFunction<NodeInputs, CompletableFuture<ImmutableList<T>>> decorateFunction) {
     // TODO Implement circuit breaker
   }
 
   private void decorateWithRateLimiter(
       Node<T> node,
-      DecorateFunction<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>>
-          decorateFunction) {
+      DecorateFunction<NodeInputs, CompletableFuture<ImmutableList<T>>> decorateFunction) {
     RateLimiter rateLimiter = rateLimiters.get(node.definition().nodeId());
     if (rateLimiter == null) {
       rateLimiter =

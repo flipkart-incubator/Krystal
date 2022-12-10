@@ -23,7 +23,7 @@ public interface NodeDecorator<T> {
     return this.getClass().getName();
   }
 
-  Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> decorateLogic(
+  Function<NodeInputs, CompletableFuture<ImmutableList<T>>> decorateLogic(
       Node<T> node,
-      Function<ImmutableMap<String, ?>, CompletableFuture<ImmutableList<T>>> logicToDecorate);
+      Function<NodeInputs, CompletableFuture<ImmutableList<T>>> logicToDecorate);
 }

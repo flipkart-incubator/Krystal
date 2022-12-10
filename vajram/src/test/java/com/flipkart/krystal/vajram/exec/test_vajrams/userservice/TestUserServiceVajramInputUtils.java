@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.exec.test_vajrams.userservice;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.flipkart.krystal.vajram.inputs.InputValues;
 import com.flipkart.krystal.vajram.modulation.InputModulator.ModulatedInput;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.google.common.collect.ImmutableList;
@@ -25,16 +26,18 @@ class TestUserServiceVajramInputUtils {
           new InputsConverter<>() {
 
             @Override
-            public EnrichedRequest enrichedRequest(ImmutableMap<String, ?> inputs) {
+            public EnrichedRequest enrichedRequest(InputValues inputs) {
               return new EnrichedRequest(
-                  new InputsNeedingModulation((String) inputs.get("user_id")), new CommonInputs());
+                  new InputsNeedingModulation((String) inputs.values().get("user_id")),
+                  new CommonInputs());
             }
 
             @Override
-            public ImmutableMap<String, ?> toMap(EnrichedRequest enrichedRequest) {
-              return ImmutableMap.<String, Object>builder()
-                  .put("user_id", enrichedRequest.request().userId())
-                  .build();
+            public InputValues toMap(EnrichedRequest enrichedRequest) {
+              return new InputValues(
+                  ImmutableMap.<String, Object>builder()
+                      .put("user_id", enrichedRequest.request().userId())
+                      .build());
             }
 
             @Override

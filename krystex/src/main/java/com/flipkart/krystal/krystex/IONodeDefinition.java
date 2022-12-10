@@ -19,11 +19,11 @@ public abstract non-sealed class IONodeDefinition<T> extends NodeDefinition<T> {
     this.ioNodeAdaptor = IoNodeAdaptor.noop();
   }
 
-  public abstract ImmutableMap<ImmutableMap<String, ?>, CompletableFuture<T>> modulatedLogic(
-      ImmutableList<ImmutableMap<String, ?>> modulatedRequests);
+  public abstract ImmutableMap<NodeInputs, CompletableFuture<T>> modulatedLogic(
+      ImmutableList<NodeInputs> modulatedRequests);
 
   @Override
-  public final CompletableFuture<ImmutableList<T>> logic(ImmutableMap<String, ?> dependencyValues) {
+  public final CompletableFuture<ImmutableList<T>> logic(NodeInputs dependencyValues) {
     return ioNodeAdaptor.adaptLogic(this::modulatedLogic).apply(dependencyValues);
   }
 

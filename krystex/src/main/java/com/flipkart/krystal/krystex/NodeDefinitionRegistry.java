@@ -31,19 +31,19 @@ public final class NodeDefinitionRegistry {
   }
 
   public <T> NonBlockingNodeDefinition<T> newNonBlockingNode(
-      String nodeId, Function<ImmutableMap<String, ?>, T> logic) {
+      String nodeId, Function<NodeInputs, T> logic) {
     return newNonBlockingNode(nodeId, Set.of(), logic);
   }
 
   public <T> NonBlockingNodeDefinition<T> newNonBlockingNode(
-      String nodeId, Set<String> inputs, Function<ImmutableMap<String, ?>, T> logic) {
+      String nodeId, Set<String> inputs, Function<NodeInputs, T> logic) {
     return newNonBlockingNode(nodeId, inputs, ImmutableMap.of(), logic);
   }
 
   public <T> NonBlockingNodeDefinition<T> newNonBlockingNode(
       String nodeId,
       Map<String, String> inputProviders,
-      Function<ImmutableMap<String, ?>, T> logic) {
+      Function<NodeInputs, T> logic) {
     return newNonBlockingNode(nodeId, inputProviders.keySet(), inputProviders, logic);
   }
 
@@ -51,13 +51,13 @@ public final class NodeDefinitionRegistry {
       String nodeId,
       Set<String> inputs,
       Map<String, String> inputProviders,
-      Function<ImmutableMap<String, ?>, T> logic) {
+      Function<NodeInputs, T> logic) {
     return newNonBlockingBatchNode(
         nodeId, inputs, inputProviders, logic.andThen(ImmutableList::of));
   }
 
   public <T> NonBlockingNodeDefinition<T> newNonBlockingBatchNode(
-      String nodeId, Function<ImmutableMap<String, ?>, ImmutableList<T>> logic) {
+      String nodeId, Function<NodeInputs, ImmutableList<T>> logic) {
     return newNonBlockingBatchNode(nodeId, ImmutableSet.of(), ImmutableMap.of(), logic);
   }
 
@@ -65,11 +65,11 @@ public final class NodeDefinitionRegistry {
       String nodeId,
       Set<String> inputs,
       Map<String, String> inputProviders,
-      Function<ImmutableMap<String, ?>, ImmutableList<T>> logic) {
+      Function<NodeInputs, ImmutableList<T>> logic) {
     NonBlockingNodeDefinition<T> def =
         new NonBlockingNodeDefinition<>(nodeId, inputs, inputProviders) {
           @Override
-          protected ImmutableList<T> nonBlockingLogic(ImmutableMap<String, ?> dependencyValues) {
+          protected ImmutableList<T> nonBlockingLogic(NodeInputs dependencyValues) {
             return logic.apply(dependencyValues);
           }
         };
@@ -112,14 +112,14 @@ public final class NodeDefinitionRegistry {
       Set<String> inputs,
       Map<String, String> inputProviders,
       Function<
-              ImmutableList<ImmutableMap<String, ?>>,
-              ImmutableMap<ImmutableMap<String, ?>, CompletableFuture<T>>>
+              ImmutableList<NodeInputs>,
+              ImmutableMap<NodeInputs, CompletableFuture<T>>>
           logic) {
     IONodeDefinition<T> def =
         new IONodeDefinition<T>(nodeId, inputs, inputProviders, ImmutableMap.of()) {
           @Override
-          public ImmutableMap<ImmutableMap<String, ?>, CompletableFuture<T>> modulatedLogic(
-              ImmutableList<ImmutableMap<String, ?>> modulatedRequests) {
+          public ImmutableMap<NodeInputs, CompletableFuture<T>> modulatedLogic(
+              ImmutableList<NodeInputs> modulatedRequests) {
             return logic.apply(modulatedRequests);
           }
         };
