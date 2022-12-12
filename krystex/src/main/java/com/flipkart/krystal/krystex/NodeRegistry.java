@@ -10,7 +10,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import lombok.Getter;
 
-public final class NodeRegistry {
+final class NodeRegistry {
   @Getter private final NodeDefinitionRegistry nodeDefinitionRegistry;
   private final Map<String, Node<?>> nodes = new HashMap<>();
 

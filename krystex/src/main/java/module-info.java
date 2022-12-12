@@ -2,6 +2,7 @@ module flipkart.krystal.krystex {
   exports com.flipkart.krystal.krystex to
       flipkart.krystal.vajram;
   exports com.flipkart.krystal.krystex.commands to flipkart.krystal.vajram;
+  exports com.flipkart.krystal.krystex.nodecluster to flipkart.krystal.vajram;
 
   requires com.google.common;
   requires org.checkerframework.checker.qual;

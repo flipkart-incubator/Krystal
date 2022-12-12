@@ -1,10 +1,10 @@
-package com.flipkart.krystal.vajram.samples.greeting;
+package com.flipkart.krystal.vajram.exec.test_vajrams.userservice;
 
 import com.flipkart.krystal.vajram.inputs.InputValues;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.google.common.collect.ImmutableMap;
 
-class UserServiceVajramInputUtils {
+class TestUserServiceInputUtils {
   record InputsNeedingModulation(String userId) {}
 
   record CommonInputs() {}

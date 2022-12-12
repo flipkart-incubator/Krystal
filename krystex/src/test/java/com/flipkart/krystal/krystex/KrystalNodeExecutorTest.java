@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -58,12 +57,13 @@ class KrystalNodeExecutorTest {
             dependencyValues ->
                 "computed_values: a=%s;b=%s;c=%s"
                     .formatted(
-                        dependencyValues.get("a"),
-                        dependencyValues.get("b"),
-                        dependencyValues.get("c")));
+                        dependencyValues.values().get("a"),
+                        dependencyValues.values().get("b"),
+                        dependencyValues.values().get("c")));
 
     Node<String> node = krystalNodeExecutor.execute(nodeDefinition);
-    krystalNodeExecutor.provideInputs(node, Map.of("a", 1, "b", 2, "c", "3"));
+    krystalNodeExecutor.provideInputsAndMarkDone(
+        nodeDefinition.nodeId(), new NodeInputs(ImmutableMap.of("a", 1, "b", 2, "c", "3")));
     ImmutableList<String> results = timedGet(node.getAllResults());
     assertEquals(List.of("computed_values: a=1;b=2;c=3"), results);
   }
@@ -83,7 +83,7 @@ class KrystalNodeExecutorTest {
                         "requestExecution_singleDependency_requiredNode",
                         ImmutableMap.of("input", dependencyNodeId),
                         dependencyValues ->
-                            dependencyValues.get("input") + ":computed_value"))
+                            dependencyValues.values().get("input") + ":computed_value"))
                 .getAllResults());
     assertEquals(List.of("dependency_value:computed_value"), results);
   }
@@ -97,19 +97,19 @@ class KrystalNodeExecutorTest {
     nodeDefinitionRegistry.newNonBlockingNode(
         l2Dep,
         ImmutableMap.of("input", l1Dep),
-        dependencyValues -> dependencyValues.get("input") + ":l2");
+        dependencyValues -> dependencyValues.values().get("input") + ":l2");
 
     String l3Dep = "requestExecution_multiLevelDependencies_level3";
     nodeDefinitionRegistry.newNonBlockingNode(
         l3Dep,
         ImmutableMap.of("input", l2Dep),
-        dependencyValues -> dependencyValues.get("input") + ":l3");
+        dependencyValues -> dependencyValues.values().get("input") + ":l3");
 
     String l4Dep = "requestExecution_multiLevelDependencies_level4";
     nodeDefinitionRegistry.newNonBlockingNode(
         l4Dep,
         ImmutableMap.of("input", l3Dep),
-        dependencyValues -> dependencyValues.get("input") + ":l4");
+        dependencyValues -> dependencyValues.values().get("input") + ":l4");
 
     ImmutableList<String> results =
         timedGet(
@@ -118,7 +118,7 @@ class KrystalNodeExecutorTest {
                     nodeDefinitionRegistry.newNonBlockingNode(
                         "requestExecution_multiLevelDependencies_final",
                         ImmutableMap.of("input", l4Dep),
-                        dependencyValues -> dependencyValues.get("input") + ":final"))
+                        dependencyValues -> dependencyValues.values().get("input") + ":final"))
                 .getAllResults());
     assertEquals(List.of("l1:l2:l3:l4:final"), results);
   }

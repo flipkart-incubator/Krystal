@@ -30,6 +30,6 @@ public final class GreetingVajramImpl extends GreetingVajram {
         }
       }
     }
-    throw new RuntimeException();
+    throw new IllegalArgumentException();
   }
 }

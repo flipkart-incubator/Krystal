@@ -16,7 +16,7 @@ public final class ExecutionContextMap implements ExecutionContext {
     return Optional.ofNullable((T) context.get(key)).orElseThrow();
   }
 
-  public ImmutableMap<String, ?> asMap() {
+  public ImmutableMap<String, Object> asMap() {
     return context;
   }
 }

@@ -29,6 +29,20 @@ public final class NodeDefinitionRegistry {
     return nodeDefinitions.get(nodeId);
   }
 
+  /**
+   * Creates a non-blocking nodeDefinition which has no logic. Any attempt to execute the logic of
+   * the returned node definition will throw an UnsupportedOperationException. The only way a node
+   * of this definition can be terminated is my setting its value explicitly from outside the node
+   * execution graph.
+   */
+  public <T> NonBlockingNodeDefinition<T> newNonBlockingNode(String nodeId) {
+    return newNonBlockingNode(
+        nodeId,
+        nodeInputs -> {
+          throw new UnsupportedOperationException();
+        });
+  }
+
   public <T> NonBlockingNodeDefinition<T> newNonBlockingNode(
       String nodeId, Function<NodeInputs, T> logic) {
     return newNonBlockingNode(nodeId, Set.of(), logic);
@@ -70,6 +84,9 @@ public final class NodeDefinitionRegistry {
   }
 
   public void add(NodeDefinition<?> nodeDefinition) {
+    if (nodeDefinitions.containsKey(nodeDefinition.nodeId())) {
+      return;
+    }
     nodeDefinitions.put(nodeDefinition.nodeId(), nodeDefinition);
     nodeDefinition
         .inputProviders()

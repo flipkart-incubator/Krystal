@@ -8,7 +8,6 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 public abstract sealed class NodeDefinition<T> permits IONodeDefinition, NonBlockingNodeDefinition {
@@ -23,11 +22,10 @@ public abstract sealed class NodeDefinition<T> permits IONodeDefinition, NonBloc
    *
    * <p>This is used in the request context to create NodeDecorators
    */
-  private final Map<String, ImmutableMap<String, Supplier<NodeDecorator<T>>>>
+  private final Map<String, Map<String, Supplier<NodeDecorator<T>>>>
       requestScopedDecoratorSuppliers = new HashMap<>();
 
   private final ImmutableMap<String, String> groupMemberships;
-  @MonotonicNonNull private NodeLogic<T> nodeLogic;
 
   NodeDefinition(
       String nodeId,
@@ -46,7 +44,7 @@ public abstract sealed class NodeDefinition<T> permits IONodeDefinition, NonBloc
 
   public void addInputWithoutProvider(String inputName) {
     if (inputNames.contains(inputName)) {
-      throw new IllegalArgumentException("Input %s has already been added");
+      throw new IllegalArgumentException("Input %s has already been added".formatted(inputName));
     }
     inputNames.add(inputName);
   }
@@ -55,7 +53,7 @@ public abstract sealed class NodeDefinition<T> permits IONodeDefinition, NonBloc
     if (inputNamesToProvider.containsKey(inputName)) {
       throw new IllegalArgumentException("Input %s already has a provider node registered");
     }
-    addInputWithoutProvider(inputName);
+    inputNames.add(inputName);
     inputNamesToProvider.put(inputName, nodeId);
   }
 
@@ -73,13 +71,20 @@ public abstract sealed class NodeDefinition<T> permits IONodeDefinition, NonBloc
     return ImmutableSet.copyOf(inputNames);
   }
 
+  public ImmutableMap<String, String> getGroupMemberships() {
+    return groupMemberships;
+  }
+
   /** Group type -> { NodeDecoratorId -> Node Decorator Supplier }. */
-  public ImmutableMap<String, ImmutableMap<String, Supplier<NodeDecorator<T>>>>
+  public ImmutableMap<String, Map<String, Supplier<NodeDecorator<T>>>>
       getRequestScopedNodeDecoratorSuppliers() {
     return ImmutableMap.copyOf(requestScopedDecoratorSuppliers);
   }
 
-  public ImmutableMap<String, String> getGroupMemberships() {
-    return groupMemberships;
+  public void registerRequestScopedNodeDecorator(
+      String groupType, Supplier<NodeDecorator<T>> decoratorFactory) {
+    requestScopedDecoratorSuppliers
+        .computeIfAbsent(groupType, g -> new LinkedHashMap<>())
+        .put(decoratorFactory.get().getId(), decoratorFactory);
   }
 }

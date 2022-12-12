@@ -1,7 +1,6 @@
 package com.flipkart.krystal.krystex.commands;
 
 import com.flipkart.krystal.krystex.Node;
-import com.google.common.collect.ImmutableMap;
+import com.flipkart.krystal.krystex.NodeInputs;
 
-public record ProvideInputValues(Node<?> node, ImmutableMap<String, Object> values)
-    implements NodeCommand {}
+public record ProvideInputValues(Node<?> node, NodeInputs nodeInputs) implements NodeCommand {}

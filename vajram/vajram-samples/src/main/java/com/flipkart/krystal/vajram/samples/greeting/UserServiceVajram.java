@@ -8,10 +8,11 @@ import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
+import com.flipkart.krystal.vajram.modulation.InputModulator.ModulatedInput;
+import com.flipkart.krystal.vajram.samples.greeting.UserServiceVajramInputUtils.CommonInputs;
 import com.flipkart.krystal.vajram.samples.greeting.UserServiceVajramInputUtils.InputsNeedingModulation;
-import com.flipkart.krystal.vajram.samples.greeting.UserServiceVajramInputUtils.ModulatedRequest;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -22,8 +23,8 @@ public abstract class UserServiceVajram extends IOVajram<UserInfo> {
   public static final String USER_ID = "user_id";
 
   @Override
-  public List<VajramInputDefinition> getInputDefinitions() {
-    return List.of(
+  public ImmutableList<VajramInputDefinition> getInputDefinitions() {
+    return ImmutableList.of(
         Input.builder()
             // Local name for this input
             .name("user_id")
@@ -37,7 +38,7 @@ public abstract class UserServiceVajram extends IOVajram<UserInfo> {
 
   @VajramLogic
   public ImmutableMap<UserServiceVajramRequest, CompletableFuture<UserInfo>> callUserService(
-      ModulatedRequest modulatedRequest) {
+      ModulatedInput<InputsNeedingModulation, CommonInputs> modulatedRequest) {
     Set<String> userIds =
         modulatedRequest.inputsNeedingModulation().stream()
             .map(InputsNeedingModulation::userId)

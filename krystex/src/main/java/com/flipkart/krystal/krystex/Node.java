@@ -4,6 +4,7 @@ import static com.flipkart.krystal.krystex.NodeState.DEPENDENCIES_INITIATED;
 import static com.flipkart.krystal.krystex.NodeState.DONE;
 import static com.flipkart.krystal.krystex.NodeState.INITIATED;
 import static com.flipkart.krystal.krystex.NodeState.NEW;
+import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -12,10 +13,10 @@ import static java.util.Arrays.stream;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import java.util.ArrayList;
@@ -40,7 +41,7 @@ public final class Node<T> {
 
   private final NodeDefinition<T> nodeDefinition;
   private final String nodeId;
-  private final List<NodeDecorator<T>> nodeDecorators;
+  private final ImmutableList<NodeDecorator<T>> nodeDecorators;
 
   private final AtomicReference<NodeState> nodeState = new AtomicReference<>(NEW);
 
@@ -57,13 +58,13 @@ public final class Node<T> {
   private final CompletableFuture<ImmutableList<T>> allResults = new CompletableFuture<>();
 
   public static <T> Node<T> createNode(
-      NodeDefinition<T> nodeDefinition, List<NodeDecorator<T>> decorationStrategies) {
-    return new Node<>(nodeDefinition, decorationStrategies);
+      NodeDefinition<T> nodeDefinition, List<NodeDecorator<T>> nodeDecorators) {
+    return new Node<>(nodeDefinition, nodeDecorators);
   }
 
   private Node(NodeDefinition<T> nodeDefinition, List<NodeDecorator<T>> nodeDecorators) {
     this.nodeDefinition = nodeDefinition;
-    this.nodeDecorators = nodeDecorators;
+    this.nodeDecorators = ImmutableList.copyOf(nodeDecorators);
     this.nodeId = nodeDefinition.nodeId();
   }
 
@@ -127,6 +128,7 @@ public final class Node<T> {
       // Since some dependencies' data is still not received, we cannot execute this node yet.
       return;
     }
+
     // Get data for all other dependencies...
     Map<String, Collection<SingleResult<?>>> newDataCombinations =
         new LinkedHashMap<>(Maps.filterKeys(resultsForInput, k -> !Objects.equals(k, input)));
@@ -139,12 +141,12 @@ public final class Node<T> {
     execute(requests);
   }
 
-  private ImmutableMap<Request, MultiResult<T>> execute(ImmutableList<Request> requests) {
+  private void execute(ImmutableList<Request> requests) {
     // The following implementation treats all dependencies as mandatory
     // TODO add support for optional dependencies.
     Map<Request, MultiResult<T>> newResults = new LinkedHashMap<>();
+    List<Request> filteredRequests = new ArrayList<>();
     for (Request request : requests) {
-      MultiResult<T> resultsForRequest;
       if (request.asMap().values().stream().anyMatch(SingleResult::isFailure)) {
         ImmutableMap<String, Throwable> reasons =
             request.asMap().entrySet().stream()
@@ -158,19 +160,25 @@ public final class Node<T> {
                                 .handle((o, throwable1) -> throwable1)
                                 .getNow(null)));
 
-        resultsForRequest =
-            new MultiResult<>(failedFuture(new MandatoryDependencyFailureException(reasons)));
+        newResults.put(
+            request,
+            new MultiResult<T>(failedFuture(new MandatoryDependencyFailureException(reasons))));
       } else {
-        resultsForRequest =
-            decoratedLogic()
-                .apply(ImmutableList.of(getValuesForConsumption(request)))
-                .values()
-                .stream()
-                .findFirst()
-                .orElseThrow();
+        filteredRequests.add(request);
       }
-      newResults.put(request, resultsForRequest);
     }
+    ImmutableBiMap<Request, NodeInputs> requestToNodeInputs =
+        filteredRequests.stream().collect(toImmutableBiMap(request -> request, this::toNodeInputs));
+    newResults.putAll(
+        decoratedLogic()
+            .apply(
+                filteredRequests.stream().map(requestToNodeInputs::get).collect(toImmutableList()))
+            .entrySet()
+            .stream()
+            .collect(
+                toImmutableMap(
+                    e -> requestToNodeInputs.inverse().get(e.getKey()), Entry::getValue)));
+
     // Notify dependants that new data is available from this node
     newResults.forEach(
         (request, multiResult) -> {
@@ -192,11 +200,10 @@ public final class Node<T> {
                       }));
         });
     resultsByRequest.putAll(newResults);
-    return ImmutableMap.copyOf(newResults);
   }
 
   // TODO Implement scenario where a mandatory input of a node is an error
-  private NodeInputs getValuesForConsumption(Request request) {
+  private NodeInputs toNodeInputs(Request request) {
     ImmutableMap<String, SingleResult<?>> map = request.asMap();
     Map<String, Object> values = new HashMap<>();
     map.forEach((input, singleResult) -> values.put(input, singleResult.future().getNow(null)));
@@ -250,9 +257,12 @@ public final class Node<T> {
                 batchResults, key -> !Objects.equals(first, key) && batchResults.containsKey(key)));
     ImmutableList.Builder<ImmutableMap<String, SingleResult<?>>> answer = ImmutableList.builder();
     for (ImmutableMap<String, SingleResult<?>> subMap : individualRequestsFromBatchResponses) {
-      Builder<String, SingleResult<?>> builder = ImmutableMap.builder();
       for (SingleResult<?> result : batchResults.get(first)) {
-        answer.add(builder.putAll(subMap).put(first, result).build());
+        answer.add(
+            ImmutableMap.<String, SingleResult<?>>builder()
+                .putAll(subMap)
+                .put(first, result)
+                .build());
       }
     }
     return answer.build();
@@ -322,14 +332,17 @@ public final class Node<T> {
               .filter(e -> e.getValue().isDone())
               .map(Entry::getKey)
               .collect(toImmutableSet());
-      newDataConsumer.accept(
+      ImmutableList<SingleResult<T>> newData =
           resultsByRequest.entrySet().stream()
               .filter(e -> newDataNotifiedRequests.contains(e.getKey()))
               .map(Entry::getValue)
               .filter(tMultiResult -> tMultiResult.future().isDone())
               .map(MultiResult::toSingleResults)
               .flatMap(Collection::stream)
-              .collect(toImmutableList()));
+              .collect(toImmutableList());
+      if (newData.size() > 0) {
+        newDataConsumer.accept(newData);
+      }
       this.newDataSubscriptions.add(newDataConsumer);
     }
   }
@@ -358,6 +371,10 @@ public final class Node<T> {
 
   public CompletableFuture<ImmutableList<T>> getAllResults() {
     return allResults;
+  }
+
+  void setResultForRequest(Request request, MultiResult<T> result) {
+    resultsByRequest.put(request, result);
   }
 
   private Collection<SingleResult<?>> getResultsForInput(String input) {

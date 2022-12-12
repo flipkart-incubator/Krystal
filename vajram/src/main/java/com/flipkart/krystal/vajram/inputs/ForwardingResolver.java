@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.inputs;
 
+import com.flipkart.krystal.vajram.ExecutionContextMap;
+import com.flipkart.krystal.vajram.RequestBuilder;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collection;
 import java.util.Collections;
@@ -8,7 +10,7 @@ import lombok.Builder;
 
 @Builder
 public record ForwardingResolver(
-    String from, String dependencyName, String targetInputName, Function<?, ?> using)
+    String from, String dependencyName, String targetInputName, Function<Object, Object> using)
     implements InputResolver {
   public static ForwardingResolverBuilder forwardResolve(
       String dependencyName, String targetInputName) {
@@ -22,7 +24,7 @@ public record ForwardingResolver(
 
   @SuppressWarnings("unchecked")
   @Override
-  public Function<?, Collection<?>> transformationLogic() {
+  public Function<Object, Collection<?>> transformationLogic() {
     return using.andThen(Collections::singleton);
   }
 
@@ -30,4 +32,5 @@ public record ForwardingResolver(
   public QualifiedInputs resolutionTarget() {
     return new QualifiedInputs(dependencyName(), null, targetInputName());
   }
+
 }

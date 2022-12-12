@@ -5,6 +5,9 @@ import com.flipkart.krystal.krystex.NodeDefinitionRegistry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
+import java.util.Map;
+import java.util.Set;
 
 public record VajramDAG<T>(
     VajramDefinition vajramDefinition,
@@ -13,15 +16,35 @@ public record VajramDAG<T>(
     ImmutableMap<String, String> dependencies,
     NodeDefinitionRegistry nodeDefinitionRegistry) {
 
-  public VajramDAG(
-      VajramDefinition vajramDefinition, NodeDefinitionRegistry mainNodeDefinitionRegistry) {
-    this(
+  public VajramDAG<T> addProviderNodes(Map<String, String> inputNameToProviderNode) {
+    inputNameToProviderNode.forEach(vajramLogicNodeDefinition()::addInputProvider);
+    resolverDefinitions()
+        .forEach(
+            resolverDefinition -> {
+              Set<String> intersection =
+                  Sets.intersection(
+                      resolverDefinition.boundFrom(), inputNameToProviderNode.keySet());
+              if (!intersection.isEmpty()) {
+                intersection.forEach(
+                    inputName ->
+                        resolverDefinition
+                            .resolverNode()
+                            .addInputProvider(inputName, inputNameToProviderNode.get(inputName)));
+              }
+            });
+    return new VajramDAG<>(
         vajramDefinition,
-        null,
-        ImmutableList.of(),
-        ImmutableMap.of(),
-        new NodeDefinitionRegistry(mainNodeDefinitionRegistry));
+        vajramLogicNodeDefinition,
+        resolverDefinitions,
+        ImmutableMap.<String, String>builder()
+            .putAll(dependencies)
+            .putAll(inputNameToProviderNode)
+            .build(),
+        nodeDefinitionRegistry);
   }
 
-  record ResolverDefinition(NodeDefinition<?> nodeDefinition, ImmutableSet<String> boundFrom) {}
+  record ResolverDefinition(
+      NodeDefinition<?> resolverNode,
+      ImmutableList<NodeDefinition<?>> extractorNodes,
+      ImmutableSet<String> boundFrom) {}
 }

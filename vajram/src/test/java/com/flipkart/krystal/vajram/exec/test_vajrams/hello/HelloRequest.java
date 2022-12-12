@@ -21,7 +21,7 @@ public record HelloRequest(String name) implements VajramRequest {
     return ImmutableMap.copyOf(Maps.filterValues(builder, Objects::nonNull));
   }
 
-  static class Builder implements RequestBuilder<HelloRequest> {
+  public static class Builder implements RequestBuilder<HelloRequest> {
 
     private String name;
 
@@ -29,7 +29,7 @@ public record HelloRequest(String name) implements VajramRequest {
       return name;
     }
 
-    Builder name(String name) {
+    public Builder name(String name) {
       this.name = name;
       return this;
     }

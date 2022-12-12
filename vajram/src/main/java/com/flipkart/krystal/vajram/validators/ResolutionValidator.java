@@ -11,7 +11,7 @@ import com.flipkart.krystal.vajram.inputs.BindFrom;
 import com.flipkart.krystal.vajram.inputs.DefaultInputResolver;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.vajram.inputs.InputResolver;
+import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
 import com.flipkart.krystal.vajram.inputs.ResolutionSources;
 import com.flipkart.krystal.vajram.inputs.Resolve;
@@ -73,7 +73,7 @@ public class ResolutionValidator {
     Vajram vajram = createVajram(vajramDefinition);
     ImmutableList<VajramInputDefinition> inputDefinitions =
         ImmutableList.copyOf(vajram.getInputDefinitions());
-    Map<QualifiedInputs, InputResolver> inputResolvers =
+    Map<QualifiedInputs, InputResolverDefinition> inputResolvers =
         getInputResolvers(vajramDefinition, vajram, inputDefinitions);
     List<String> result = new ArrayList<>();
     inputDefinitions.forEach(
@@ -127,14 +127,14 @@ public class ResolutionValidator {
     return vajram;
   }
 
-  private Map<QualifiedInputs, InputResolver> getInputResolvers(
+  private Map<QualifiedInputs, InputResolverDefinition> getInputResolvers(
       Class<? extends Vajram> vajramDefinition,
       Vajram<?> vajram,
       ImmutableList<VajramInputDefinition> inputDefinitions) {
     ImmutableMap<String, VajramInputDefinition> collect =
         inputDefinitions.stream()
             .collect(toImmutableMap(VajramInputDefinition::name, Function.identity()));
-    Map<QualifiedInputs, InputResolver> result = new HashMap<>();
+    Map<QualifiedInputs, InputResolverDefinition> result = new HashMap<>();
     vajram
         .getSimpleInputResolvers()
         .forEach(

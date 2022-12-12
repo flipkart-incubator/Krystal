@@ -27,7 +27,7 @@ public record AccessSpecMatchingResult<T extends DataAccessSpec>(
    *     object to avoid leaking unnecessary data to clients.
    * @see DataAccessSpec#adapt(Collection)
    */
-  public boolean needsAdaption() {
+  public boolean needsAdaptation() {
     return !superSetMatches().isEmpty();
   }
 }

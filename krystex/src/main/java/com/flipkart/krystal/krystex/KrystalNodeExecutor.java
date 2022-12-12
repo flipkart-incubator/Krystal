@@ -4,7 +4,8 @@ import static com.flipkart.krystal.krystex.Node.createNode;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 
-import com.flipkart.krystal.krystex.commands.DependencyDone;
+import com.flipkart.krystal.krystex.commands.DependencyInputDone;
+import com.flipkart.krystal.krystex.commands.DependencyNodeDone;
 import com.flipkart.krystal.krystex.commands.InitiateNode;
 import com.flipkart.krystal.krystex.commands.NewDataFromDependency;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
@@ -18,17 +19,17 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.function.Supplier;
-import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 /** Default implementation of Krystal executor which */
+@Slf4j
 public final class KrystalNodeExecutor implements KrystalExecutor {
 
-  @Getter private final NodeRegistry nodeRegistry;
+  private final NodeRegistry nodeRegistry;
 
   private final BlockingQueue<NodeCommand> mainQueue = new LinkedBlockingDeque<>();
 
@@ -54,18 +55,74 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       throw new IllegalStateException("Krystal has stopped accepting new requests for execution");
     }
     // TODO Implement caching
-    ImmutableList<NodeDecorator<T>> requestScopedNodeDecorators =
-        getRequestScopedNodeDecorators(nodeDefinition);
+    return initiateAndGetNode(nodeDefinition);
+  }
+
+  @Override
+  public void provideInputsAndMarkDone(String nodeId, NodeInputs nodeInputs) {
+    NodeDefinition<?> nodeDefinition = nodeRegistry.getNodeDefinitionRegistry().get(nodeId);
+    Node<?> node = initiateAndGetNode(nodeDefinition);
+    enqueueCommand(new ProvideInputValues(node, nodeInputs));
+    nodeInputs
+        .values()
+        .keySet()
+        .forEach(inputName -> enqueueCommand(new DependencyInputDone(node, inputName)));
+  }
+
+  private void mainLoop() {
+    while (!shutdownRequested) {
+      NodeCommand currentCommand;
+      try {
+        currentCommand = mainQueue.take();
+      } catch (InterruptedException ignored) {
+        continue;
+      }
+      try {
+        Node<?> node = currentCommand.node();
+        if (currentCommand instanceof InitiateNode) {
+          if (node.wasInitiated()) {
+            // TODO Emit a no-op metric that shows that a node was added to the task queue
+            // unnecessarily
+            continue;
+          }
+          if (!initiatePendingInputs(node)) {
+            node.executeIfNoDependenciesAndMarkDone();
+          }
+        } else if (currentCommand instanceof NewDataFromDependency newDataFromDependency) {
+          node.executeWithNewDataForDependencyNode(
+              newDataFromDependency.dependencyNodeId(), newDataFromDependency.newData());
+        } else if (currentCommand instanceof DependencyNodeDone dependencyNodeDone) {
+          node.markDependencyNodeDone(dependencyNodeDone.depNodeId());
+        } else if (currentCommand instanceof DependencyInputDone dependencyInputDone) {
+          node.markInputDone(dependencyInputDone.inputName());
+        } else if (currentCommand instanceof ProvideInputValues provideInputValues) {
+          provideInputValues
+              .nodeInputs()
+              .values()
+              .forEach(
+                  (input, value) -> {
+                    node.executeWithNewDataForInput(
+                        input, ImmutableList.of(new SingleResult<>(completedFuture(value))));
+                  });
+        }
+      } catch (Exception e) {
+        log.error("Error while executing node Command %s".formatted(currentCommand), e);
+      }
+    }
+  }
+
+  private <T> Node<T> initiateAndGetNode(NodeDefinition<T> nodeDefinition) {
     Node<T> node =
         this.nodeRegistry.createIfAbsent(
-            nodeDefinition.nodeId(), () -> createNode(nodeDefinition, requestScopedNodeDecorators));
+            nodeDefinition.nodeId(),
+            () -> createNode(nodeDefinition, getRequestScopedNodeDecorators(nodeDefinition)));
     initiate(node);
     return node;
   }
 
   private <T> ImmutableList<NodeDecorator<T>> getRequestScopedNodeDecorators(
       NodeDefinition<T> nodeDefinition) {
-    ImmutableMap<String, ImmutableMap<String, Supplier<NodeDecorator<T>>>> suppliers =
+    ImmutableMap<String, Map<String, Supplier<NodeDecorator<T>>>> suppliers =
         nodeDefinition.getRequestScopedNodeDecoratorSuppliers();
     ImmutableMap<String, String> groupMemberships = nodeDefinition.getGroupMemberships();
     List<NodeDecorator<T>> decorators = new ArrayList<>();
@@ -89,68 +146,20 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                 decorators.add(nodeDecorator);
               });
         });
-
     return ImmutableList.copyOf(decorators);
   }
 
-  public <T> Node<T> executeWithInputs(
-      NodeDefinition<T> nodeDefinition, Map<String, ?> inputValues) {
-    Node<T> node = execute(nodeDefinition);
-    provideInputs(node, inputValues);
-    return node;
-  }
-
-  public void provideInputs(Node<?> node, Map<String, ?> inputValues) {
-    getCommandQueue().add(new ProvideInputValues(node, ImmutableMap.copyOf(inputValues)));
-  }
-
   private void initiate(Node<?> node) {
-    getCommandQueue().add(new InitiateNode(node));
+    enqueueCommand(new InitiateNode(node));
   }
 
   private void executeWithNewData(
       Node<?> node, String depNodeId, Collection<? extends SingleResult<?>> results) {
-    getCommandQueue()
-        .add(new NewDataFromDependency(node, depNodeId, ImmutableList.copyOf(results)));
+    enqueueCommand(new NewDataFromDependency(node, depNodeId, ImmutableList.copyOf(results)));
   }
 
   private void markDependencyDone(Node<?> node, String depNodeId) {
-    getCommandQueue().add(new DependencyDone(node, depNodeId));
-  }
-
-  private void mainLoop() {
-    while (!shutdownRequested) {
-      try {
-        NodeCommand currentCommand = mainQueue.take();
-        Node<?> node = currentCommand.node();
-        if (currentCommand instanceof InitiateNode) {
-          if (node.wasInitiated()) {
-            // TODO Emit a no-op metric that shows that a node was added to the task queue
-            // unnecessarily
-            continue;
-          }
-          if (!initiatePendingInputs(node)) {
-            node.executeIfNoDependenciesAndMarkDone();
-          }
-        } else if (currentCommand instanceof NewDataFromDependency newDataFromDependency) {
-          node.executeWithNewDataForDependencyNode(
-              newDataFromDependency.dependencyNodeId(), newDataFromDependency.newData());
-        } else if (currentCommand instanceof DependencyDone dependencyDone) {
-          node.markDependencyNodeDone(dependencyDone.depNodeId());
-        } else if (currentCommand instanceof ProvideInputValues provideInputValues) {
-          provideInputValues
-              .values()
-              .forEach(
-                  (input, value) -> {
-                    node.executeWithNewDataForInput(
-                        input, ImmutableList.of(new SingleResult<>(completedFuture(value))));
-                    node.markInputDone(input);
-                  });
-        }
-      } catch (InterruptedException ignored) {
-
-      }
-    }
+    enqueueCommand(new DependencyNodeDone(node, depNodeId));
   }
 
   /**
@@ -175,9 +184,9 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       } else if (!depNode.wasInitiated()) {
         initiate(depNode);
       }
-      depNode.whenDone(() -> markDependencyDone(node, depNodeId));
       depNode.whenNewDataAvailable(
           singleResults -> executeWithNewData(node, depNodeId, singleResults));
+      depNode.whenDone(() -> markDependencyDone(node, depNodeId));
     }
     node.markDependenciesInitiated();
     return true;
@@ -202,8 +211,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     this.mainLoopTask.cancel(true);
   }
 
-  private Queue<NodeCommand> getCommandQueue() {
-    return mainQueue;
+  private void enqueueCommand(NodeCommand nodeCommand) {
+    mainQueue.add(nodeCommand);
   }
 
   private record DecoratorKey(NodeGroupId nodeGroupId, String nodeDecoratorId) {}

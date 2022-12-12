@@ -18,29 +18,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class InputModulationDecorator<
-        Request,
-        InputsNeedingModulation,
-        CommonInputs,
-        Modulated extends ModulatedInput<InputsNeedingModulation, CommonInputs>,
-        T>
+public class InputModulationDecorator<Request, InputsNeedingModulation, CommonInputs, T>
     implements NodeDecorator<T> {
 
-  private final InputModulator<Request, InputsNeedingModulation, CommonInputs> inputModulator;
-  private final InputsConverter<Request, InputsNeedingModulation, CommonInputs, Modulated>
-      inputsConverter;
+  private final InputModulator<InputsNeedingModulation, CommonInputs> inputModulator;
+  private final InputsConverter<Request, InputsNeedingModulation, CommonInputs> inputsConverter;
   private final Map<Request, MultiResult<T>> futureCache = new HashMap<>();
 
   public InputModulationDecorator(
-      InputModulator<Request, InputsNeedingModulation, CommonInputs> inputModulator,
-      InputsConverter<Request, InputsNeedingModulation, CommonInputs, Modulated> inputsConverter) {
+      InputModulator<InputsNeedingModulation, CommonInputs> inputModulator,
+      InputsConverter<Request, InputsNeedingModulation, CommonInputs> inputsConverter) {
     this.inputModulator = inputModulator;
     this.inputsConverter = inputsConverter;
   }
 
   @Override
   public NodeLogic<T> decorateLogic(NodeDefinition<T> nodeDef, NodeLogic<T> logicToDecorate) {
-    inputModulator.onTermination(requests -> modulateInputsList(logicToDecorate, requests));
+    inputModulator.onInternalTermination(requests -> modulateInputsList(logicToDecorate, requests));
     return inputsList -> {
       List<Request> requests =
           inputsList.stream()
@@ -48,7 +42,14 @@ public class InputModulationDecorator<
               .map(inputsConverter::enrichedRequest)
               .toList();
       List<ModulatedInput<InputsNeedingModulation, CommonInputs>> modulatedInputs =
-          requests.stream().map(inputModulator::add).flatMap(Collection::stream).toList();
+          requests.stream()
+              .map(
+                  request ->
+                      inputModulator.add(
+                          inputsConverter.inputsNeedingModulation(request),
+                          inputsConverter.commonInputs(request)))
+              .flatMap(Collection::stream)
+              .toList();
       requests.forEach(request -> futureCache.computeIfAbsent(request, e -> new MultiResult<>()));
       for (ModulatedInput<InputsNeedingModulation, CommonInputs> modulatedInput : modulatedInputs) {
         modulateInputsList(logicToDecorate, modulatedInput);

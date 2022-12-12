@@ -26,7 +26,7 @@ public final class NonBlockingNodeDefinition<T> extends NodeDefinition<T> {
   }
 
   @Override
-  public final NodeLogic<T> logic() {
+  public NodeLogic<T> logic() {
     if (nodeLogic == null) {
       this.nodeLogic =
           nodeInputs -> {

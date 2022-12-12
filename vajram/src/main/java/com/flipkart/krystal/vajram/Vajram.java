@@ -1,28 +1,23 @@
 package com.flipkart.krystal.vajram;
 
-import com.flipkart.krystal.vajram.inputs.InputCommand;
 import com.flipkart.krystal.vajram.inputs.InputResolver;
+import com.flipkart.krystal.vajram.inputs.InputValues;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import java.util.Collection;
-import java.util.List;
 
 public sealed interface Vajram<T> permits AbstractVajram {
 
-  List<VajramInputDefinition> getInputDefinitions();
+  ImmutableCollection<VajramInputDefinition> getInputDefinitions();
 
-  default Collection<InputResolver> getSimpleInputResolvers() {
-    return ImmutableList.of();
-  }
-
-  default Collection<InputCommand> getSimpleInputCommands() {
+  default ImmutableCollection<InputResolver> getSimpleInputResolvers() {
     return ImmutableList.of();
   }
 
   boolean isIOVajram();
 
-  default ImmutableList<RequestBuilder<?>> resolveInputOfDependency(
+  default ImmutableList<InputValues> resolveInputOfDependency(
       String dependency,
       ImmutableSet<String> resolvableInputs,
       ExecutionContextMap executionContext) {

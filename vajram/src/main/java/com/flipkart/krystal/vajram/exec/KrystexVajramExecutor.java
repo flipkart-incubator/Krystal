@@ -1,40 +1,38 @@
 package com.flipkart.krystal.vajram.exec;
 
 import com.flipkart.krystal.krystex.KrystalNodeExecutor;
-import com.flipkart.krystal.krystex.NodeDefinition;
+import com.flipkart.krystal.krystex.NodeInputs;
+import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
-import com.flipkart.krystal.vajram.exec.VajramDAG.ResolverDefinition;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
-public class KrystexVajramExecutor implements VajramExecutor {
-  private final VajramGraph vajramGraph;
+public class KrystexVajramExecutor<C extends ApplicationRequestContext>
+    implements VajramExecutor<C> {
+  private final VajramGraph<C> vajramGraph;
   private final KrystalNodeExecutor krystalExecutor;
 
-  public KrystexVajramExecutor(VajramGraph vajramGraph, String requestId) {
+  public KrystexVajramExecutor(
+      VajramGraph<C> vajramGraph, String requestId, C applicationRequestContext) {
     this.vajramGraph = vajramGraph;
     this.krystalExecutor =
         new KrystalNodeExecutor(vajramGraph.getNodeDefinitionRegistry(), requestId);
+    krystalExecutor.provideInputsAndMarkDone(
+        vajramGraph.getApplicationContextProviderNodeId(),
+        new NodeInputs(
+            ImmutableMap.of(
+                VajramGraph.APPLICATION_REQUEST_CONTEXT_KEY, applicationRequestContext)));
   }
 
   @Override
-  public <T> CompletableFuture<T> requestExecution(VajramID vajramId, VajramRequest request) {
-    VajramDAG<T> vajramDAG = vajramGraph.createVajramDAG(vajramId);
-    ImmutableList<ResolverDefinition> resolverDefinitions = vajramDAG.resolverDefinitions();
-    ImmutableMap<String, ?> inputs = request.asMap();
-    for (ResolverDefinition resolverDefinition : resolverDefinitions) {
-      NodeDefinition<?> nodeDefinition = resolverDefinition.nodeDefinition();
-      Map<String, ?> filteredInputs =
-          Maps.filterKeys(inputs, input -> resolverDefinition.boundFrom().contains(input));
-      krystalExecutor.executeWithInputs(nodeDefinition, filteredInputs);
-    }
+  public <T> CompletableFuture<T> execute(
+      VajramID vajramId, Function<C, VajramRequest> vajramRequestBuilder) {
+    VajramDAG<T> vajramDAG = vajramGraph.createVajramDAG(vajramId, vajramRequestBuilder);
 
     return krystalExecutor
-        .executeWithInputs(vajramDAG.vajramLogicNodeDefinition(), inputs)
+        .execute(vajramDAG.vajramLogicNodeDefinition())
         .getAllResults()
         .thenApply(
             results -> {

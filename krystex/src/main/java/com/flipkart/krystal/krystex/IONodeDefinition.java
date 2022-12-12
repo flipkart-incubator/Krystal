@@ -2,13 +2,19 @@ package com.flipkart.krystal.krystex;
 
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 
 public final class IONodeDefinition<T> extends NodeDefinition<T> {
 
   private final NodeLogic<T> nodeLogic;
-  private NodeDecorator<T> inputModulationDecorator;
+  /**
+   * The group type by which input modulators are grouped. All nodes with the same group id for this
+   * groupType will have the same InputModulation decorator.
+   */
+  private String inputModulatorGroupType;
+
+  private Supplier<NodeDecorator<T>> inputModulationDecorator;
 
   IONodeDefinition(
       String nodeId,
@@ -21,17 +27,7 @@ public final class IONodeDefinition<T> extends NodeDefinition<T> {
   }
 
   @Override
-  public final NodeLogic<T> logic() {
-    return getInputModulationDecorator()
-        .map(nd -> nd.decorateLogic(this, nodeLogic))
-        .orElse(nodeLogic);
-  }
-
-  public void setInputModulationDecorator(NodeDecorator<T> inputModulationAdaptor) {
-    this.inputModulationDecorator = inputModulationAdaptor;
-  }
-
-  private Optional<NodeDecorator<T>> getInputModulationDecorator() {
-    return Optional.ofNullable(inputModulationDecorator);
+  public NodeLogic<T> logic() {
+    return nodeLogic;
   }
 }

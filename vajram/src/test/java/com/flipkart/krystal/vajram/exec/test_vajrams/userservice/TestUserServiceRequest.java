@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 // Auto-generated and managed by Krystal
-public record TestUserServiceVajramRequest(String userId) implements VajramRequest {
+public record TestUserServiceRequest(String userId) implements VajramRequest {
 
   public static Builder builder() {
     return new Builder();
@@ -22,7 +22,7 @@ public record TestUserServiceVajramRequest(String userId) implements VajramReque
     return ImmutableMap.copyOf(map);
   }
 
-  public static final class Builder implements RequestBuilder<TestUserServiceVajramRequest> {
+  public static final class Builder implements RequestBuilder<TestUserServiceRequest> {
 
     private String userId;
 
@@ -32,8 +32,8 @@ public record TestUserServiceVajramRequest(String userId) implements VajramReque
     }
 
     @Override
-    public TestUserServiceVajramRequest build() {
-      return new TestUserServiceVajramRequest(this.userId);
+    public TestUserServiceRequest build() {
+      return new TestUserServiceRequest(this.userId);
     }
 
     private Builder() {}
