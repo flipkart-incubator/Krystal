@@ -10,7 +10,7 @@ import com.flipkart.krystal.vajram.inputs.SingleValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import java.util.Collection;
+import java.util.Optional;
 import java.util.Set;
 
 public class HelloFriendsVajramImpl extends HelloFriendsVajram {
@@ -20,33 +20,47 @@ public class HelloFriendsVajramImpl extends HelloFriendsVajram {
       String dependency,
       ImmutableSet<String> resolvableInputs,
       ExecutionContextMap executionContext) {
-    HelloFriendsRequest helloFriendsRequest = HelloFriendsRequest.fromMap(executionContext.asMap());
+    Optional<String> userId = executionContext.context().<String>getValue("user_id").value();
+    Optional<Integer> numberOfFriends =
+        executionContext.context().<Integer>getValue("number_of_friends").value();
     switch (dependency) {
-      case "user_service":
-        {
-          if (Set.of("user_id").equals(resolvableInputs)) {
-            return userIdsForUserService(
-                    helloFriendsRequest.userId(), helloFriendsRequest.numberOfFriends())
-                .stream()
-                .map(s -> new InputValues(ImmutableMap.of("user_id", new SingleValue<Object>(s))))
-                .collect(toImmutableList());
+      case USER_INFO:
+      {
+        if (Set.of("user_id").equals(resolvableInputs)) {
+          if (userId.isPresent()) {
+            return ImmutableList.of(
+                new InputValues(
+                    ImmutableMap.of(
+                        "user_id", new SingleValue<>(userIdForUserService(userId.get())))));
+          } else {
+            return ImmutableList.of(new InputValues());
           }
         }
+      }
+      case FRIEND_INFOS:
+      {
+        if (Set.of("user_id").equals(resolvableInputs)) {
+          if (userId.isPresent() && numberOfFriends.isPresent()) {
+            return friendIdsForUserService(userId.get(), numberOfFriends.get()).stream()
+                .map(s -> new InputValues(ImmutableMap.of("user_id", new SingleValue<Object>(s))))
+                .collect(toImmutableList());
+          } else {
+            return ImmutableList.of(new InputValues());
+          }
+        }
+      }
     }
     throw new IllegalArgumentException();
   }
 
   @Override
   public String executeNonBlocking(ExecutionContextMap executionContext) {
-    Object value = executionContext.getValue(HelloFriendsVajram.USER_SERVICE);
-    Collection<TestUserInfo> testUserInfos;
-    if (value instanceof TestUserInfo testUserInfo) {
-      testUserInfos = ImmutableList.of(testUserInfo);
-    } else {
-      //noinspection unchecked
-      testUserInfos = (Collection<TestUserInfo>) value;
-    }
+    ImmutableList<TestUserInfo> friendInfos = executionContext.getValue(FRIEND_INFOS);
+    ImmutableList<TestUserInfo> userInfo = executionContext.getValue(USER_INFO);
     return sayHellos(
-        new EnrichedRequest(HelloFriendsRequest.fromMap(executionContext.asMap()), testUserInfos));
+        new EnrichedRequest(
+            HelloFriendsRequest.fromMap(executionContext.asMap()),
+            userInfo.iterator().next(),
+            friendInfos));
   }
 }

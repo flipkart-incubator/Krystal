@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.exec.test_vajrams.hellofriends;
 import static com.flipkart.krystal.datatypes.IntegerType.integer;
 import static com.flipkart.krystal.datatypes.StringType.string;
 import static com.flipkart.krystal.vajram.exec.test_vajrams.hellofriends.HelloFriendsVajram.ID;
+import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.vajram.NonBlockingVajram;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -29,7 +30,8 @@ public abstract class HelloFriendsVajram extends NonBlockingVajram<String> {
   public static final String USER_ID = "user_id";
   public static final String NUMBER_OF_FRIENDS = "number_of_friends";
 
-  public static final String USER_SERVICE = "user_service";
+  public static final String USER_INFO = "user_infos";
+  public static final String FRIEND_INFOS = "friend_infos";
 
   @Override
   public ImmutableList<VajramInputDefinition> getInputDefinitions() {
@@ -37,27 +39,34 @@ public abstract class HelloFriendsVajram extends NonBlockingVajram<String> {
         Input.builder().name(USER_ID).type(string()).mandatory().build(),
         Input.builder().name(NUMBER_OF_FRIENDS).type(integer()).defaultValue(2).build(),
         Dependency.builder()
-            .name(USER_SERVICE)
+            .name(USER_INFO)
+            .dataAccessSpec(new VajramID(TestUserServiceVajram.ID))
+            .mandatory(true)
+            .build(),
+        Dependency.builder()
+            .name(FRIEND_INFOS)
             .dataAccessSpec(new VajramID(TestUserServiceVajram.ID))
             .mandatory(true)
             .build());
   }
 
-  @Resolve(value = USER_SERVICE, inputs = TestUserServiceVajram.USER_ID)
-  public Set<String> userIdsForUserService(
+  @Resolve(value = FRIEND_INFOS, inputs = TestUserServiceVajram.USER_ID)
+  public Set<String> friendIdsForUserService(
       @BindFrom(USER_ID) String userId, @BindFrom(NUMBER_OF_FRIENDS) int numberOfFriends) {
     return getFriendsFor(userId, numberOfFriends);
   }
 
+  @Resolve(value = USER_INFO, inputs = TestUserServiceVajram.USER_ID)
+  public String userIdForUserService(@BindFrom(USER_ID) String userId) {
+    return userId;
+  }
+
   @VajramLogic
   public String sayHellos(EnrichedRequest request) {
-    return "Hello Friends! %s"
+    return "Hello Friends of %s! %s"
         .formatted(
-            String.join(
-                ", ",
-                request.userInfos().stream()
-                    .map(TestUserInfo::userName)
-                    .collect(Collectors.toList())));
+            request.userInfo().userName(),
+            request.friendInfos().stream().map(TestUserInfo::userName).collect(joining(", ")));
   }
 
   private Set<String> getFriendsFor(String userId, int numberOfFriends) {

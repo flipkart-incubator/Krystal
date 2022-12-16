@@ -4,6 +4,6 @@ public record NodeLogicId(String asString) {
 
   @Override
   public String toString() {
-    return "n<%s>".formatted(asString());
+    return "l<%s>".formatted(asString());
   }
 }

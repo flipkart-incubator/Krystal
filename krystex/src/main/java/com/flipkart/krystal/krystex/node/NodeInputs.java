@@ -13,8 +13,9 @@ public record NodeInputs(ImmutableMap<String, SingleValue<?>> values) {
     this(ImmutableMap.of());
   }
 
-  public SingleValue<?> getValue(String inputName) {
-    return values().getOrDefault(inputName, empty());
+  public <T> SingleValue<T> getValue(String inputName) {
+    //noinspection unchecked
+    return (SingleValue<T>) values().getOrDefault(inputName, empty());
   }
 
   public <T> Optional<T> get(String inputName) {

@@ -1,9 +1,11 @@
 package com.flipkart.krystal.vajram.samples.greeting;
 
 import com.flipkart.krystal.vajram.ExecutionContextMap;
-import com.flipkart.krystal.vajram.RequestBuilder;
+import com.flipkart.krystal.vajram.inputs.InputValues;
+import com.flipkart.krystal.vajram.inputs.SingleValue;
 import com.flipkart.krystal.vajram.samples.greeting.GreetingVajramInputUtils.EnrichedRequest;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 
@@ -16,7 +18,7 @@ public final class GreetingVajramImpl extends GreetingVajram {
   }
 
   @Override
-  public ImmutableList<RequestBuilder<?>> resolveInputOfDependency(
+  public ImmutableList<InputValues> resolveInputOfDependency(
       String dependency,
       ImmutableSet<String> resolvableInputs,
       ExecutionContextMap executionContext) {
@@ -26,7 +28,8 @@ public final class GreetingVajramImpl extends GreetingVajram {
           String user_id =
               super.userIdForUserService(
                   executionContext.<GreetingVajramRequest>getValue("user_id").userId());
-          return ImmutableList.of(UserServiceVajramRequest.builder().userId(user_id));
+          return ImmutableList.of(
+              new InputValues(ImmutableMap.of("user_id", new SingleValue<>(user_id))));
         }
       }
     }

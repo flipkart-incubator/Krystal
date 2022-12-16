@@ -8,6 +8,8 @@ import com.flipkart.krystal.vajram.exec.test_vajrams.hello.HelloRequest;
 import com.flipkart.krystal.vajram.exec.test_vajrams.hello.HelloVajram;
 import com.flipkart.krystal.vajram.exec.test_vajrams.hellofriends.HelloFriendsRequest;
 import com.flipkart.krystal.vajram.exec.test_vajrams.hellofriends.HelloFriendsVajram;
+import com.flipkart.krystal.vajram.exec.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
+import com.flipkart.krystal.vajram.exec.test_vajrams.hellofriendsv2.HelloFriendsV2Vajram;
 import com.flipkart.krystal.vajram.exec.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajram.exec.test_vajrams.userservice.TestUserServiceRequest;
 import com.flipkart.krystal.vajram.exec.test_vajrams.userservice.TestUserServiceVajram;
@@ -15,6 +17,7 @@ import com.flipkart.krystal.vajram.modulation.Batcher;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +32,11 @@ class KrystexVajramExecutorTest {
             .loggedInUserId(Optional.of("user_id_1"))
             .numberOfFriends(2)
             .build();
+  }
+
+  @AfterEach
+  void tearDown() {
+    TestUserServiceVajram.CALL_COUNTER.set(0);
   }
 
   @Test
@@ -64,17 +72,39 @@ class KrystexVajramExecutorTest {
             "com.flipkart.krystal.vajram.exec.test_vajrams.userservice",
             "com.flipkart.krystal.vajram.exec.test_vajrams.hellofriends");
     vajramGraph.registerInputModulator(
-        new VajramID(TestUserServiceVajram.ID), () -> new Batcher(2));
+        new VajramID(TestUserServiceVajram.ID), () -> new Batcher(3));
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         new KrystexVajramExecutor<>(
             vajramGraph,
-            "requestExecution_ioVajramMultipleRequests_calledOnlyOnce",
+            "requestExecution_ioVajramWithModulatorMultipleRequests_calledOnlyOnce",
             requestContext)) {
       CompletableFuture<String> helloString =
           krystexVajramExecutor.execute(
               new VajramID(HelloFriendsVajram.ID), this::helloFriendsRequest);
       assertEquals(
-          "Hello Friends! Firstname Lastname (user_id_1:friend_1), Firstname Lastname (user_id_1:friend_2)",
+          "Hello Friends of Firstname Lastname (user_id_1)! Firstname Lastname (user_id_1:friend_1), Firstname Lastname (user_id_1:friend_2)",
+          helloString.get(5, TimeUnit.HOURS));
+      assertEquals(1, TestUserServiceVajram.CALL_COUNTER.get());
+    }
+  }
+
+  @Test
+  void requestExecution_sequentialDependency_success() throws Exception {
+    VajramGraph vajramGraph =
+        loadFromClasspath(
+            "com.flipkart.krystal.vajram.exec.test_vajrams.userservice",
+            "com.flipkart.krystal.vajram.exec.test_vajrams.friendsservice",
+            "com.flipkart.krystal.vajram.exec.test_vajrams.hellofriendsv2");
+    vajramGraph.registerInputModulator(
+        new VajramID(TestUserServiceVajram.ID), () -> new Batcher(2));
+    try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
+        new KrystexVajramExecutor<>(
+            vajramGraph, "requestExecution_sequentialDependency_success", requestContext)) {
+      CompletableFuture<String> helloString =
+          krystexVajramExecutor.execute(
+              new VajramID(HelloFriendsV2Vajram.ID), this::helloFriendsV2Request);
+      assertEquals(
+          "Hello Friends! Firstname Lastname (user_id_1:friend1), Firstname Lastname (user_id_1:friend2)",
           helloString.get(5, TimeUnit.HOURS));
       assertEquals(1, TestUserServiceVajram.CALL_COUNTER.get());
     }
@@ -96,6 +126,12 @@ class KrystexVajramExecutorTest {
     return HelloFriendsRequest.builder()
         .userId(testRequestContext.loggedInUserId().orElse(null))
         .numberOfFriends(testRequestContext.numberOfFriends())
+        .build();
+  }
+
+  private HelloFriendsV2Request helloFriendsV2Request(TestRequestContext testRequestContext) {
+    return HelloFriendsV2Request.builder()
+        .userId(testRequestContext.loggedInUserId().orElse(null))
         .build();
   }
 }
