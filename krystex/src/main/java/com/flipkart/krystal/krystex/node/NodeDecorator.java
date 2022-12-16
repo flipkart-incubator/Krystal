@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex;
+package com.flipkart.krystal.krystex.node;
 
 /**
  * @param <T> The type returned by the {@link Node} that this decorator decorates.
@@ -18,5 +18,5 @@ public interface NodeDecorator<T> {
     return this.getClass().getName();
   }
 
-  NodeLogic<T> decorateLogic(NodeDefinition<T> node, NodeLogic<T> logicToDecorate);
+  NodeLogic<T> decorateLogic(NodeLogicDefinition<T> node, NodeLogic<T> logicToDecorate);
 }

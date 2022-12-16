@@ -9,17 +9,20 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-public record MultiResult<T>(CompletableFuture<ImmutableList<T>> future) implements Result {
+public record MultiResultFuture<T>(CompletableFuture<ImmutableList<T>> future)
+    implements ResultFuture {
 
-  public MultiResult() {
+  public MultiResultFuture() {
     this(new CompletableFuture<>());
   }
 
-  public static <T> MultiResult<T> from(List<SingleResult<T>> resultsForRequest) {
+  public static <T> MultiResultFuture<T> from(List<SingleResultFuture<T>> resultsForRequest) {
     //noinspection unchecked
     CompletableFuture<T>[] futures =
-        resultsForRequest.stream().map(SingleResult::future).toArray(CompletableFuture[]::new);
-    return new MultiResult<>(
+        resultsForRequest.stream()
+            .map(SingleResultFuture::future)
+            .toArray(CompletableFuture[]::new);
+    return new MultiResultFuture<>(
         allOf(futures)
             .thenApply(
                 unused ->
@@ -33,7 +36,7 @@ public record MultiResult<T>(CompletableFuture<ImmutableList<T>> future) impleme
    *
    * @throws IllegalStateException if this BatchResult.future() is not done.
    */
-  public ImmutableList<SingleResult<T>> toSingleResults() {
+  public ImmutableList<SingleResultFuture<T>> toSingleResults() {
     if (!future().isDone()) {
       throw new IllegalStateException(
           "Cannot convert BatchResult which is not done into a list of single results");
@@ -41,12 +44,12 @@ public record MultiResult<T>(CompletableFuture<ImmutableList<T>> future) impleme
     if (future().isCompletedExceptionally()) {
       return ImmutableList.of(
           this.future()
-              .handle((result, throwable) -> new SingleResult<T>(failedFuture(throwable)))
+              .handle((result, throwable) -> new SingleResultFuture<T>(failedFuture(throwable)))
               .getNow(null));
     }
     return this.future().getNow(null).stream()
         .map(CompletableFuture::completedFuture)
-        .map(SingleResult::new)
+        .map(SingleResultFuture::new)
         .collect(toImmutableList());
   }
 }

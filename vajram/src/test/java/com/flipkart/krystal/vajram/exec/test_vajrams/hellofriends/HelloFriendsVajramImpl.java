@@ -6,6 +6,7 @@ import com.flipkart.krystal.vajram.ExecutionContextMap;
 import com.flipkart.krystal.vajram.exec.test_vajrams.hellofriends.HelloFriendsInputUtils.EnrichedRequest;
 import com.flipkart.krystal.vajram.exec.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajram.inputs.InputValues;
+import com.flipkart.krystal.vajram.inputs.SingleValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -27,7 +28,7 @@ public class HelloFriendsVajramImpl extends HelloFriendsVajram {
             return userIdsForUserService(
                     helloFriendsRequest.userId(), helloFriendsRequest.numberOfFriends())
                 .stream()
-                .map(s -> new InputValues(ImmutableMap.of("user_id", s)))
+                .map(s -> new InputValues(ImmutableMap.of("user_id", new SingleValue<Object>(s))))
                 .collect(toImmutableList());
           }
         }

@@ -2,12 +2,13 @@ package com.flipkart.krystal.krystex.decoration;
 
 import static com.flipkart.krystal.krystex.RateLimitingStrategy.SEMAPHORE;
 
-import com.flipkart.krystal.krystex.MultiResult;
-import com.flipkart.krystal.krystex.NodeDecorator;
-import com.flipkart.krystal.krystex.NodeDefinition;
-import com.flipkart.krystal.krystex.NodeInputs;
-import com.flipkart.krystal.krystex.NodeLogic;
-import com.flipkart.krystal.krystex.NonBlockingNodeDefinition;
+import com.flipkart.krystal.krystex.MultiResultFuture;
+import com.flipkart.krystal.krystex.node.NodeDecorator;
+import com.flipkart.krystal.krystex.node.NodeLogicDefinition;
+import com.flipkart.krystal.krystex.node.NodeLogicId;
+import com.flipkart.krystal.krystex.node.NodeInputs;
+import com.flipkart.krystal.krystex.node.NodeLogic;
+import com.flipkart.krystal.krystex.node.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.RateLimitingStrategy;
 import com.flipkart.krystal.krystex.config.ConfigProvider;
 import com.google.common.collect.ImmutableList;
@@ -26,18 +27,18 @@ public class Resilience4JStrategy<T> implements NodeDecorator<T> {
 
   private final ConfigProvider configProvider;
 
-  private final Map<String, RateLimiter> rateLimiters = new HashMap<>();
+  private final Map<NodeLogicId, RateLimiter> rateLimiters = new HashMap<>();
 
   public Resilience4JStrategy(ConfigProvider configProvider) {
     this.configProvider = configProvider;
   }
 
   @Override
-  public NodeLogic<T> decorateLogic(NodeDefinition<T> nodeDef, NodeLogic<T> logicToDecorate) {
-    if (nodeDef instanceof NonBlockingNodeDefinition<?>) {
+  public NodeLogic<T> decorateLogic(NodeLogicDefinition<T> nodeDef, NodeLogic<T> logicToDecorate) {
+    if (nodeDef instanceof ComputeLogicDefinition<?>) {
       return logicToDecorate;
     }
-    DecorateFunction<ImmutableList<NodeInputs>, ImmutableMap<NodeInputs, MultiResult<T>>>
+    DecorateFunction<ImmutableList<NodeInputs>, ImmutableMap<NodeInputs, MultiResultFuture<T>>>
         decorateCompletionStage = Decorators.ofFunction(logicToDecorate);
     decorateWithRateLimiter(nodeDef, decorateCompletionStage);
     decorateWithCircuitBreaker(nodeDef, decorateCompletionStage);
@@ -45,7 +46,7 @@ public class Resilience4JStrategy<T> implements NodeDecorator<T> {
   }
 
   private void decorateWithRateLimiter(
-      NodeDefinition<T> nodeDef, DecorateFunction<?, ?> decorateFunction) {
+      NodeLogicDefinition<T> nodeDef, DecorateFunction<?, ?> decorateFunction) {
     RateLimiter rateLimiter = rateLimiters.get(nodeDef.nodeId());
     if (rateLimiter == null) {
       rateLimiter =
@@ -60,15 +61,15 @@ public class Resilience4JStrategy<T> implements NodeDecorator<T> {
   }
 
   private void decorateWithCircuitBreaker(
-      NodeDefinition<T> nodeDef, DecorateFunction<?, ?> decorateFunction) {
+      NodeLogicDefinition<T> nodeDef, DecorateFunction<?, ?> decorateFunction) {
     // TODO Implement circuit breaker
   }
 
-  private void updateRateLimiter(String nodeId, RateLimiter rateLimiter) {
+  private void updateRateLimiter(NodeLogicId nodeLogicId, RateLimiter rateLimiter) {
     try {
-      Optional<Integer> rateLimit = configProvider.getInt(nodeId + ".concurrentExecutions");
+      Optional<Integer> rateLimit = configProvider.getInt(nodeLogicId + ".concurrentExecutions");
       configProvider
-          .getString(nodeId + ".rate_limiting_strategy")
+          .getString(nodeLogicId + ".rate_limiting_strategy")
           .map(RateLimitingStrategy::valueOf)
           .ifPresent(
               rateLimitingStrategy -> {
@@ -83,19 +84,20 @@ public class Resilience4JStrategy<T> implements NodeDecorator<T> {
     }
   }
 
-  private Optional<RateLimiter> createRateLimiter(String nodeId) {
+  private Optional<RateLimiter> createRateLimiter(NodeLogicId nodeLogicId) {
     try {
 
-      Optional<Integer> rateLimit = configProvider.getInt(nodeId + ".concurrentExecutions");
+      Optional<Integer> rateLimit = configProvider.getInt(nodeLogicId + ".concurrentExecutions");
       Optional<String> rateLimitingStrategy =
-          configProvider.getString(nodeId + ".rate_limiting_strategy");
+          configProvider.getString(nodeLogicId + ".rate_limiting_strategy");
       if (rateLimitingStrategy.isEmpty() || rateLimit.isEmpty()) {
         return Optional.empty();
       }
       if (SEMAPHORE.equals(RateLimitingStrategy.valueOf(rateLimitingStrategy.get()))) {
         return Optional.of(
             new SemaphoreBasedRateLimiter(
-                nodeId, RateLimiterConfig.custom().limitForPeriod(rateLimit.get()).build()));
+                nodeLogicId.asString(),
+                RateLimiterConfig.custom().limitForPeriod(rateLimit.get()).build()));
       }
     } catch (Exception e) {
       // TODO Log exception

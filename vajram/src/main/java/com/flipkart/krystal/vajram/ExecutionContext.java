@@ -1,5 +1,3 @@
 package com.flipkart.krystal.vajram;
 
-public interface ExecutionContext {
-
-}
+public sealed interface ExecutionContext permits ExecutionContextMap, ModulatedExecutionContext {}

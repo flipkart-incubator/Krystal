@@ -12,10 +12,7 @@ public record AccessSpecMatchingResult<T extends DataAccessSpec>(
     ImmutableCollection<T> unsuccessfulMatches) {
 
   public ImmutableMap<T, Vajram> successfulMatches() {
-    return ImmutableMap.<T, Vajram>builder()
-        .putAll(exactMatches)
-        .putAll(superSetMatches)
-        .build();
+    return ImmutableMap.<T, Vajram>builder().putAll(exactMatches).putAll(superSetMatches).build();
   }
 
   public boolean hasUnsuccessfulMatches() {

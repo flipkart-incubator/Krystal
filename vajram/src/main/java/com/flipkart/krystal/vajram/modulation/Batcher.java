@@ -12,6 +12,8 @@ import java.util.function.Consumer;
 
 public final class Batcher implements InputModulator<Object, Object> {
 
+  private final List<Consumer<ImmutableList<ModulatedInput<Object, Object>>>> terminationListeners =
+      new ArrayList<>();
   private final Map<Object, List<Object>> unModulatedRequests = new HashMap<>();
   private final int minBatchSize;
 
@@ -25,29 +27,33 @@ public final class Batcher implements InputModulator<Object, Object> {
     unModulatedRequests
         .computeIfAbsent(commonInputs, k -> new ArrayList<>())
         .add(inputsNeedingModulation);
-    return getModulatedInputs(commonInputs);
+    return getModulatedInputs(commonInputs, false);
   }
 
-  private ImmutableList<ModulatedInput<Object, Object>> getModulatedInputs(Object commonInputs) {
-    List<Object> inputsNeedingModulations = unModulatedRequests.get(commonInputs);
-    if (inputsNeedingModulations.size() >= minBatchSize) {
+  private ImmutableList<ModulatedInput<Object, Object>> getModulatedInputs(
+      Object commonInputs, boolean force) {
+    ImmutableList<Object> inputsNeedingModulations =
+        ImmutableList.copyOf(unModulatedRequests.get(commonInputs));
+    if (force || inputsNeedingModulations.size() >= minBatchSize) {
       unModulatedRequests.put(commonInputs, new ArrayList<>());
-      return ImmutableList.of(
-          new ModulatedInput<>(ImmutableList.copyOf(inputsNeedingModulations), commonInputs));
+      return ImmutableList.of(new ModulatedInput<>(inputsNeedingModulations, commonInputs));
     }
     return ImmutableList.of();
   }
 
   @Override
-  public ImmutableList<ModulatedInput<Object, Object>> terminate() {
-    return unModulatedRequests.keySet().stream()
-        .map(this::getModulatedInputs)
-        .flatMap(Collection::stream)
-        .collect(toImmutableList());
+  public void terminate() {
+    ImmutableList<ModulatedInput<Object, Object>> modulatedInputs =
+        unModulatedRequests.keySet().stream()
+            .map((Object commonInputs) -> getModulatedInputs(commonInputs, true))
+            .flatMap(Collection::stream)
+            .collect(toImmutableList());
+    terminationListeners.forEach(
+        modulatedInputConsumer -> modulatedInputConsumer.accept(modulatedInputs));
   }
 
   @Override
-  public void onInternalTermination(Consumer<ModulatedInput<Object, Object>> callback) {
-    // This batcher cannot terminate by itself. So these callbacks are not respected.
+  public void onTermination(Consumer<ImmutableList<ModulatedInput<Object, Object>>> listener) {
+    terminationListeners.add(listener);
   }
 }

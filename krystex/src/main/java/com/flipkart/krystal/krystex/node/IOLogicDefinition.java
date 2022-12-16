@@ -1,11 +1,14 @@
-package com.flipkart.krystal.krystex;
+package com.flipkart.krystal.krystex.node;
 
+import com.flipkart.krystal.krystex.node.NodeDecorator;
+import com.flipkart.krystal.krystex.node.NodeLogic;
+import com.flipkart.krystal.krystex.node.NodeLogicDefinition;
+import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.google.common.collect.ImmutableMap;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 
-public final class IONodeDefinition<T> extends NodeDefinition<T> {
+public final class IOLogicDefinition<T> extends NodeLogicDefinition<T> {
 
   private final NodeLogic<T> nodeLogic;
   /**
@@ -16,13 +19,12 @@ public final class IONodeDefinition<T> extends NodeDefinition<T> {
 
   private Supplier<NodeDecorator<T>> inputModulationDecorator;
 
-  IONodeDefinition(
-      String nodeId,
+  IOLogicDefinition(
+      NodeLogicId nodeLogicId,
       Set<String> inputs,
-      Map<String, String> inputProviders,
       ImmutableMap<String, String> groupMemberships,
       NodeLogic<T> nodeLogic) {
-    super(nodeId, inputs, inputProviders, groupMemberships);
+    super(nodeLogicId, inputs);
     this.nodeLogic = nodeLogic;
   }
 

@@ -33,7 +33,7 @@ class KrystexVajramExecutorTest {
 
   @Test
   void requestExecution_vajramWithNoDependencies_success() throws Exception {
-    VajramGraph<TestRequestContext> vajramGraph =
+    VajramGraph vajramGraph =
         loadFromClasspath("com.flipkart.krystal.vajram.exec.test_vajrams.hello");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         new KrystexVajramExecutor<>(
@@ -46,7 +46,7 @@ class KrystexVajramExecutorTest {
 
   @Test
   void requestExecution_ioVajramSingleRequestNoModulator_success() throws Exception {
-    VajramGraph<TestRequestContext> vajramGraph =
+    VajramGraph vajramGraph =
         loadFromClasspath("com.flipkart.krystal.vajram.exec.test_vajrams.userservice");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         new KrystexVajramExecutor<>(vajramGraph, "", requestContext)) {
@@ -59,7 +59,7 @@ class KrystexVajramExecutorTest {
 
   @Test
   void requestExecution_ioVajramWithModulatorMultipleRequests_calledOnlyOnce() throws Exception {
-    VajramGraph<TestRequestContext> vajramGraph =
+    VajramGraph vajramGraph =
         loadFromClasspath(
             "com.flipkart.krystal.vajram.exec.test_vajrams.userservice",
             "com.flipkart.krystal.vajram.exec.test_vajrams.hellofriends");
@@ -74,7 +74,7 @@ class KrystexVajramExecutorTest {
           krystexVajramExecutor.execute(
               new VajramID(HelloFriendsVajram.ID), this::helloFriendsRequest);
       assertEquals(
-          "Hello Friends! user_id_1:friend_1, user_id_1:friend_2",
+          "Hello Friends! Firstname Lastname (user_id_1:friend_1), Firstname Lastname (user_id_1:friend_2)",
           helloString.get(5, TimeUnit.HOURS));
       assertEquals(1, TestUserServiceVajram.CALL_COUNTER.get());
     }

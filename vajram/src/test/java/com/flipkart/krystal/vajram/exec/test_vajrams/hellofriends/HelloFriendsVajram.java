@@ -33,7 +33,7 @@ public abstract class HelloFriendsVajram extends NonBlockingVajram<String> {
 
   @Override
   public ImmutableList<VajramInputDefinition> getInputDefinitions() {
-    return ImmutableList.of(/*Ram*/ /*Prasad*/
+    return ImmutableList.of(
         Input.builder().name(USER_ID).type(string()).mandatory().build(),
         Input.builder().name(NUMBER_OF_FRIENDS).type(integer()).defaultValue(2).build(),
         Dependency.builder()
@@ -53,7 +53,11 @@ public abstract class HelloFriendsVajram extends NonBlockingVajram<String> {
   public String sayHellos(EnrichedRequest request) {
     return "Hello Friends! %s"
         .formatted(
-            request.userInfos().stream().map(TestUserInfo::userName).collect(Collectors.toList()));
+            String.join(
+                ", ",
+                request.userInfos().stream()
+                    .map(TestUserInfo::userName)
+                    .collect(Collectors.toList())));
   }
 
   private Set<String> getFriendsFor(String userId, int numberOfFriends) {

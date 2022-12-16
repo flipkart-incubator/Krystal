@@ -1,7 +1,11 @@
 package com.flipkart.krystal.krystex;
 
-public interface KrystalExecutor extends AutoCloseable {
-  <T> Node<T> execute(NodeDefinition<T> nodeDefinition);
+import com.flipkart.krystal.krystex.node.NodeId;
+import com.flipkart.krystal.krystex.node.NodeInputs;
+import java.util.concurrent.CompletableFuture;
 
-  void provideInputsAndMarkDone(String nodeId, NodeInputs nodeInputs);
+public interface KrystalExecutor extends AutoCloseable {
+
+  <T> CompletableFuture<T> executeNode(
+      NodeId nodeId, NodeInputs nodeInputs, RequestId requestId);
 }
