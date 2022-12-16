@@ -1,8 +1,11 @@
 package com.flipkart.krystal.krystex.commands;
 
-import com.flipkart.krystal.krystex.Node;
+import com.flipkart.krystal.krystex.node.NodeId;
+import com.flipkart.krystal.krystex.RequestId;
 
-sealed public interface NodeCommand
-    permits DependencyDone, InitiateNode, NewDataFromDependency, ProvideInputValues {
-  Node<?> node();
+public sealed interface NodeCommand permits ExecuteWithInput, Execute {
+
+  NodeId nodeId();
+
+  RequestId requestId();
 }

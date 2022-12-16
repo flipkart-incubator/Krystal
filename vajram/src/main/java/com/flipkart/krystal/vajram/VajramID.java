@@ -12,4 +12,9 @@ public record VajramID(String vajramId) implements DataAccessSpec {
   public <T> T adapt(Collection<T> dataObjects) {
     throw new UnsupportedOperationException("");
   }
+
+  @Override
+  public String toString() {
+    return "v<%s>".formatted(vajramId());
+  }
 }

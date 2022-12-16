@@ -16,6 +16,7 @@ import com.flipkart.krystal.vajram.inputs.ResolutionSources;
 import com.flipkart.krystal.vajram.inputs.Resolve;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.samples.greeting.GreetingVajramInputUtils.EnrichedRequest;
+import com.google.common.collect.ImmutableList;
 import java.lang.System.Logger;
 import java.util.List;
 import java.util.logging.Level;
@@ -35,8 +36,8 @@ public abstract sealed class GreetingVajram extends NonBlockingVajram<String>
   // design-time dependencies of this vajram, as well as
   // objects like loggers and metrics collectors injected by the runtime.
   @Override
-  public List<VajramInputDefinition> getInputDefinitions() {
-    return List.of(
+  public ImmutableList<VajramInputDefinition> getInputDefinitions() {
+    return ImmutableList.of(
         Input.builder()
             // Local name for this input
             .name("user_id")

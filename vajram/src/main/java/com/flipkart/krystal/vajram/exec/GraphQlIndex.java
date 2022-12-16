@@ -12,7 +12,7 @@ final class GraphQlIndex implements AccessSpecIndex<GraphQl> {
   }
 
   @Override
-  public void add(Vajram<?> vajram) {
+  public void add(Vajram vajram) {
     // TODO Implement vajram addition
   }
 }

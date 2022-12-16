@@ -1,23 +1,45 @@
 package com.flipkart.krystal.vajram.exec;
 
+import static com.flipkart.krystal.vajram.exec.Utils.toInputValues;
+import static com.flipkart.krystal.vajram.exec.Utils.toNodeInputs;
+import static com.flipkart.krystal.vajram.exec.Utils.toSingleValue;
+import static com.flipkart.krystal.vajram.exec.VajramLoader.loadVajramsFromClassPath;
+import static com.flipkart.krystal.vajram.inputs.ResolutionSources.REQUEST;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static java.util.Objects.requireNonNull;
 
-import com.flipkart.krystal.krystex.NodeDefinition;
-import com.flipkart.krystal.krystex.NodeDefinitionRegistry;
-import com.flipkart.krystal.krystex.NonBlockingNodeDefinition;
-import com.flipkart.krystal.vajram.ExecutionContext;
+import com.flipkart.krystal.krystex.node.IOLogicDefinition;
+import com.flipkart.krystal.krystex.MultiResultFuture;
+import com.flipkart.krystal.krystex.node.NodeDefinition;
+import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
+import com.flipkart.krystal.krystex.node.NodeId;
+import com.flipkart.krystal.krystex.node.NodeDecorator;
+import com.flipkart.krystal.krystex.node.NodeLogicDefinition;
+import com.flipkart.krystal.krystex.node.LogicDefinitionRegistry;
+import com.flipkart.krystal.krystex.node.NodeLogicId;
+import com.flipkart.krystal.krystex.node.NodeInputs;
+import com.flipkart.krystal.krystex.node.ComputeLogicDefinition;
+import com.flipkart.krystal.krystex.ResolverDefinition;
+import com.flipkart.krystal.krystex.SingleValue;
+import com.flipkart.krystal.vajram.ExecutionContextMap;
+import com.flipkart.krystal.vajram.IOVajram;
+import com.flipkart.krystal.vajram.ModulatedExecutionContext;
 import com.flipkart.krystal.vajram.NonBlockingVajram;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDefinitionException;
+import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
-import com.flipkart.krystal.vajram.exec.VajramDAG.ResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.Input;
+import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
+import com.flipkart.krystal.vajram.inputs.InputValues;
 import com.flipkart.krystal.vajram.inputs.ResolutionSources;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
+import com.flipkart.krystal.vajram.modulation.InputModulator;
+import com.flipkart.krystal.vajram.modulation.InputModulator.ModulatedInput;
+import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.flipkart.krystal.vajram.utils.RandomStringGenerator;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -27,8 +49,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -37,34 +60,64 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 public final class VajramGraph {
 
   private static final int NODE_ID_SUFFIX_LENGTH = 5;
+  public static final String VAJRAM_INPUT_MODULATION_GROUP = "vajram_input_modulation_group";
+  public static final String APPLICATION_REQUEST_CONTEXT_KEY = "application_request_context";
 
   @Getter
-  private final NodeDefinitionRegistry nodeDefinitionRegistry = new NodeDefinitionRegistry();
+  private final NodeDefinitionRegistry clusterDefinitionRegistry =
+      new NodeDefinitionRegistry(new LogicDefinitionRegistry());
 
-  private final Map<String, VajramDefinition> vajramDefinitions = new HashMap<>();
+  private final Map<VajramID, VajramDefinition> vajramDefinitions = new LinkedHashMap<>();
+  /** These are those call graphs of a vajram where no other vajram depends on this. */
+  private final Map<VajramID, NodeDefinition> independentVajramDags = new LinkedHashMap<>();
+  /** VajramDAGs which correspond to every call graph that vajram is part of. */
+  private final Map<VajramID, NodeDefinition> allVajramDags = new LinkedHashMap<>();
+
   private final VajramIndex vajramIndex = new VajramIndex();
   private final RandomStringGenerator randomStringGenerator = RandomStringGenerator.instance();
 
+  private final Map<VajramID, Supplier<InputModulator<Object, Object>>> inputModulators =
+      new LinkedHashMap<>();
+
   private VajramGraph() {}
 
-  public static VajramGraph loadFromClasspath(String packagePrefix) {
+  public static VajramGraph loadFromClasspath(String... packagePrefix) {
     return loadFromClasspath(packagePrefix, ImmutableList.of());
   }
 
-  public static VajramGraph loadFromClasspath(String packagePrefix, Iterable<Vajram<?>> vajrams) {
+  public static VajramGraph loadFromClasspath(
+      String[] packagePrefixes, Iterable<Vajram<?>> vajrams) {
     VajramGraph vajramGraph = new VajramGraph();
-    VajramLoader.loadVajramsFromClassPath(packagePrefix).forEach(vajramGraph::registerVajram);
+    for (String packagePrefix : packagePrefixes) {
+      loadVajramsFromClassPath(packagePrefix).forEach(vajramGraph::registerVajram);
+    }
     vajrams.forEach(vajramGraph::registerVajram);
     return vajramGraph;
   }
 
+  public void registerInputModulator(
+      VajramID vajramID, Supplier<InputModulator<Object, Object>> inputModulator) {
+    inputModulators.put(vajramID, inputModulator);
+    Vajram<?> vajram = vajramDefinitions.get(vajramID).getVajram();
+    if (vajram instanceof IOVajram<?> ioVajram) {
+      Supplier<NodeDecorator<Object>> inputModulationDecoratorSupplier =
+          getInputModulationDecoratorSupplier(ioVajram, inputModulator);
+      NodeDefinition nodeDefinition = allVajramDags.get(vajramID);
+      if (nodeDefinition != null) {
+        clusterDefinitionRegistry
+            .nodeDefinitionRegistry()
+            .get(nodeDefinition.logicNode())
+            .registerRequestScopedNodeDecorator(inputModulationDecoratorSupplier);
+      }
+    }
+  }
   /**
    * Registers vajrams that need to be executed at a later point. This is a necessary step for
    * vajram execution.
    *
    * @param vajram The vajram to be registered for future execution.
    */
-  void registerVajram(Vajram<?> vajram) {
+  void registerVajram(Vajram vajram) {
     if (vajramDefinitions.containsKey(vajram.getId())) {
       return;
     }
@@ -83,143 +136,201 @@ public final class VajramGraph {
    * {@link #registerVajram(Vajram)} method. If a dependency of a vajram is not registered before *
    * this step, this method will throw an exception.
    *
-   * @param vajramId
-   * @return
+   * @param vajramId The id of the vajram to execute.
    */
   // TODO Handle case were input resolvers bind from dependencies (sequential dependency in vajrams)
-  @NonNull
-  public <T> VajramDAG<T> createVajramDAG(String vajramId) {
-    //noinspection unchecked
-    return (VajramDAG<T>)
-        _getVajramExecutionGraph(getVajramDefinition(vajramId).orElseThrow().getVajram());
+  public NodeId getExecutable(VajramID vajramId) {
+    return independentVajramDags
+        .computeIfAbsent(
+            vajramId,
+            v -> _getVajramExecutionGraph(getVajramDefinition(v).orElseThrow().getVajram()))
+        .nodeId();
   }
 
   @NonNull
-  private VajramDAG<?> _getVajramExecutionGraph(Vajram<?> vajram) {
-    VajramDAG<?> vajramDAG =
-        new VajramDAG<>(getVajramDefinition(vajram.getId()).orElseThrow(), nodeDefinitionRegistry);
-    if (!vajram.isBlockingVajram()) {
-      InputResolverCreationResult inputResolverCreationResult =
-          createNodeDefinitionsForInputResolvers(vajramDAG);
-      ImmutableMap<String, ImmutableMap<String, String>> inputResolverTargets =
-          inputResolverCreationResult.inputResolverTargets();
+  private NodeDefinition _getVajramExecutionGraph(Vajram vajram) {
+    VajramDefinition vajramDefinition = getVajramDefinition(vajram.getId()).orElseThrow();
+    InputResolverCreationResult inputResolverCreationResult =
+        createNodeDefinitionsForInputResolvers(vajramDefinition);
 
-      ImmutableMap<String, String> depNameToProviderNode =
-          createSubGraphsForDependencies(vajramDAG, inputResolverTargets);
+    ImmutableMap<String, NodeDefinition> depNameToSubgraph =
+        createSubGraphsForDependencies(vajramDefinition);
 
-      NonBlockingNodeDefinition<?> vajramLogicNodeDefinition =
-          createVajramLogicNodeDefinition(vajramDAG, depNameToProviderNode);
+    ImmutableMap<String, NodeId> depNameToProviderNode =
+        depNameToSubgraph.entrySet().stream()
+            .collect(toImmutableMap(Entry::getKey, e -> e.getValue().nodeId()));
+    NodeLogicDefinition<?> vajramLogicNodeLogicDefinition = createVajramLogicNodeDefinition(vajramDefinition);
 
-      return new VajramDAG<>(
-          vajramDAG.vajramDefinition(),
-          vajramLogicNodeDefinition,
-          inputResolverCreationResult.resolverDefinitions(),
-          depNameToProviderNode,
-          vajramDAG.nodeDefinitionRegistry());
-    } else {
-      // TODO implement graph creation for blocking node
-      return null;
-    }
+    NodeDefinition nodeDefinition =
+        clusterDefinitionRegistry.newClusterDefinition(
+            vajram.getId().vajramId(),
+            vajramLogicNodeLogicDefinition.nodeId(),
+            depNameToProviderNode,
+            inputResolverCreationResult.resolverDefinitions());
+    allVajramDags.put(vajram.getId(), nodeDefinition);
+    return nodeDefinition;
   }
 
   private InputResolverCreationResult createNodeDefinitionsForInputResolvers(
-      VajramDAG<?> vajramDAG) {
-    VajramDefinition vajramDefinition = vajramDAG.vajramDefinition();
-    NodeDefinitionRegistry nodeDefinitionRegistry = vajramDAG.nodeDefinitionRegistry();
+      VajramDefinition vajramDefinition) {
     Vajram<?> vajram = vajramDefinition.getVajram();
-    String vajramId = vajram.getId();
-    Map</*dependency name*/ String, Map</*input name*/ String, /*node id*/ String>>
-        inputResolverTargets = new LinkedHashMap<>();
+    VajramID vajramId = vajram.getId();
+
     // Create node definitions for all input resolvers defined in this vajram
+    List<InputResolverDefinition> inputResolvers =
+        new ArrayList<>(vajramDefinition.getInputResolverDefinitions());
     ImmutableList<ResolverDefinition> resolverDefinitions =
-        vajramDefinition.getInputResolvers().stream()
+        inputResolvers.stream()
             .map(
                 inputResolver -> {
                   String dependencyName = inputResolver.resolutionTarget().dependencyName();
                   ImmutableSet<String> resolvedInputNames =
                       inputResolver.resolutionTarget().inputNames();
                   ImmutableSet<String> sources = inputResolver.sources();
-                  NonBlockingNodeDefinition<?> inputResolverNode =
-                      nodeDefinitionRegistry.newNonBlockingBatchNode(
-                          "v(%s):dep(%s):inputResolver(%s):%s"
-                              .formatted(
-                                  vajramId,
-                                  dependencyName,
-                                  String.join(":", resolvedInputNames),
-                                  generateNodeSuffix()),
-                          dependencyValues -> {
-                            Map<String, Object> map = new HashMap<>();
-                            sources.forEach(s -> map.put(s, dependencyValues.get(s)));
-                            return vajram.resolveInputOfDependency(
-                                dependencyName, resolvedInputNames, new ExecutionContext(map));
-                          });
-                  Map<String, String> inputNameToProviderNode =
-                      inputResolverTargets.computeIfAbsent(
-                          dependencyName, s -> new LinkedHashMap<>());
-                  sources.forEach(s -> inputNameToProviderNode.put(s, inputResolverNode.nodeId()));
-                  return new ResolverDefinition(inputResolverNode, sources);
+                  String resolverNodeId =
+                      "%s:dep(%s):%s(%s):%s"
+                          .formatted(
+                              vajramId,
+                              dependencyName,
+                              "inputResolver",
+                              String.join(",", resolvedInputNames),
+                              generateNodeSuffix());
+                  ComputeLogicDefinition<?> inputResolverNode =
+                      clusterDefinitionRegistry
+                          .nodeDefinitionRegistry()
+                          .newNonBlockingBatchNode(
+                              resolverNodeId,
+                              sources,
+                              dependencyValues ->
+                                  vajram
+                                      .resolveInputOfDependency(
+                                          dependencyName,
+                                          resolvedInputNames,
+                                          new ExecutionContextMap(toInputValues(dependencyValues)))
+                                      .stream()
+                                      .map(Utils::toNodeInputs)
+                                      .collect(toImmutableList()));
+                  return new ResolverDefinition(
+                      new NodeLogicId(resolverNodeId), sources, dependencyName, resolvedInputNames);
                 })
             .collect(toImmutableList());
-    return new InputResolverCreationResult(
-        resolverDefinitions,
-        inputResolverTargets.entrySet().stream()
-            .collect(toImmutableMap(Entry::getKey, o -> ImmutableMap.copyOf(o.getValue()))));
+    return new InputResolverCreationResult(resolverDefinitions);
   }
 
-  private NonBlockingNodeDefinition<?> createVajramLogicNodeDefinition(
-      VajramDAG<?> vajramDAG, ImmutableMap<String, String> depNameToProviderNode) {
-    VajramDefinition vajramDefinition = vajramDAG.vajramDefinition();
-    NodeDefinitionRegistry nodeDefinitionRegistry = vajramDAG.nodeDefinitionRegistry();
-    String vajramId = vajramDefinition.getVajram().getId();
-    List<VajramInputDefinition> inputDefinitions =
+  private NodeLogicDefinition<?> createVajramLogicNodeDefinition(VajramDefinition vajramDefinition) {
+    VajramID vajramId = vajramDefinition.getVajram().getId();
+    ImmutableCollection<VajramInputDefinition> inputDefinitions =
         vajramDefinition.getVajram().getInputDefinitions();
+    Set<String> inputs =
+        inputDefinitions.stream().map(VajramInputDefinition::name).collect(Collectors.toSet());
+    NodeLogicId vajramLogicNodeName =
+        new NodeLogicId("n(v(%s):vajramLogic:%s)".formatted(vajramId, generateNodeSuffix()));
     // Step 4: Create and register node for the main vajram logic
     if (vajramDefinition.getVajram() instanceof NonBlockingVajram<?> nonBlockingVajram) {
-      return nodeDefinitionRegistry.newNonBlockingBatchNode(
-          "n(v(%s):vajramLogic:%s)".formatted(vajramId, generateNodeSuffix()),
-          inputDefinitions.stream().map(VajramInputDefinition::name).collect(Collectors.toSet()),
-          depNameToProviderNode,
-          dependencyValues -> {
-            Map<String, Object> map = new HashMap<>();
-            for (VajramInputDefinition inputDefinition : inputDefinitions) {
-              String inputName = inputDefinition.name();
-              if (inputDefinition instanceof Input<?> input) {
-                if (input.resolvableBy().contains(ResolutionSources.REQUEST)) {
-                  if (dependencyValues.get(inputName) == null
-                      || Objects.equals(dependencyValues.get(inputName), Optional.empty())) {
-                    // Input was not resolved by another node. Check if it is resolvable
-                    // by SESSION
-                    if (input.resolvableBy().contains(ResolutionSources.SESSION)) {
-                      // TODO handle session provided inputs
-                    } else {
-                      throw new VajramDefinitionException(
-                          "Input: "
-                              + input.name()
-                              + " of vajram: "
-                              + vajramId
-                              + " was not resolved by the request.");
+      return clusterDefinitionRegistry
+          .nodeDefinitionRegistry()
+          .newNonBlockingBatchNode(
+              vajramLogicNodeName.asString(),
+              inputs,
+              dependencyValues ->
+                  ImmutableList.of(
+                      nonBlockingVajram.executeNonBlocking(
+                          createExecutionContext(vajramId, inputDefinitions, dependencyValues))));
+    } else if (vajramDefinition.getVajram() instanceof IOVajram<?> ioVajram) {
+      //noinspection unchecked
+      var inputsConvertor = (InputsConverter<Object, Object, Object>) ioVajram.getInputsConvertor();
+      IOLogicDefinition<?> ioNodeDefinition =
+          clusterDefinitionRegistry
+              .nodeDefinitionRegistry()
+              .newIONodeDefinition(
+                  vajramLogicNodeName,
+                  inputs,
+                  dependencyValues -> {
+                    List<Object> enrichedRequests =
+                        dependencyValues.stream()
+                            .map(Utils::toInputValues)
+                            .map(inputsConvertor::enrichedRequest)
+                            .toList();
+                    if (enrichedRequests.isEmpty()) {
+                      return ImmutableMap.of();
                     }
-                  } else {
-                    map.put(inputName, dependencyValues.get(inputName));
-                  }
-                }
-              } else if (inputDefinition instanceof Dependency) {
-                map.put(inputName, dependencyValues.get(inputName));
-              }
-            }
-            return nonBlockingVajram.executeNonBlocking(new ExecutionContext(map));
-          });
+                    ModulatedInput<Object, Object> modulatedRequest =
+                        new ModulatedInput<>(
+                            enrichedRequests.stream()
+                                .map(inputsConvertor::inputsNeedingModulation)
+                                .collect(toImmutableList()),
+                            inputsConvertor.commonInputs(enrichedRequests.iterator().next()));
+                    return ioVajram
+                        .execute(new ModulatedExecutionContext(modulatedRequest))
+                        .entrySet()
+                        .stream()
+                        .collect(
+                            toImmutableMap(
+                                e -> toNodeInputs(inputsConvertor.toMap(e.getKey())),
+                                e ->
+                                    new MultiResultFuture<>(
+                                        e.getValue().thenApply(ImmutableList::of))));
+                  });
+      enableInputModulation(ioNodeDefinition, ioVajram);
+      return ioNodeDefinition;
     } else {
       throw new UnsupportedOperationException();
     }
   }
 
-  private ImmutableMap<String, String> createSubGraphsForDependencies(
-      VajramDAG<?> vajramDAG,
-      ImmutableMap<String, ImmutableMap<String, String>> inputResolverTargets) {
-    VajramDefinition vajramDefinition = vajramDAG.vajramDefinition();
-    NodeDefinitionRegistry nodeDefinitionRegistry = vajramDAG.nodeDefinitionRegistry();
-    String vajramId = vajramDefinition.getVajram().getId();
+  private <T> void enableInputModulation(IOLogicDefinition<T> nodeDefinition, IOVajram<?> ioVajram) {
+    Supplier<InputModulator<Object, Object>> inputModulationDecorator =
+        inputModulators.get(ioVajram.getId());
+    if (inputModulationDecorator != null) {
+      nodeDefinition.registerRequestScopedNodeDecorator(
+          getInputModulationDecoratorSupplier(ioVajram, inputModulationDecorator));
+    }
+  }
+
+  private static <T> Supplier<NodeDecorator<T>> getInputModulationDecoratorSupplier(
+      IOVajram<?> ioVajram, Supplier<InputModulator<Object, Object>> inputModulationDecorator) {
+    @SuppressWarnings("unchecked")
+    InputsConverter<Object, Object, Object> inputsConvertor =
+        (InputsConverter<Object, Object, Object>) ioVajram.getInputsConvertor();
+    return () -> new InputModulationDecorator<>(inputModulationDecorator.get(), inputsConvertor);
+  }
+
+  private static ExecutionContextMap createExecutionContext(
+      VajramID vajramId,
+      ImmutableCollection<VajramInputDefinition> inputDefinitions,
+      NodeInputs dependencyValues) {
+    Map<String, com.flipkart.krystal.vajram.inputs.SingleValue<?>> map = new HashMap<>();
+    for (VajramInputDefinition inputDefinition : inputDefinitions) {
+      String inputName = inputDefinition.name();
+      if (inputDefinition instanceof Input<?> input) {
+        if (input.resolvableBy().contains(REQUEST)) {
+          if (dependencyValues.values().get(inputName) == null
+              || SingleValue.empty().equals(dependencyValues.getValue(inputName))) {
+            // Input was not resolved by another node. Check if it is resolvable
+            // by SESSION
+            if (input.resolvableBy().contains(ResolutionSources.SESSION)) {
+              // TODO handle session provided inputs
+            } else {
+              throw new VajramDefinitionException(
+                  "Input: "
+                      + input.name()
+                      + " of vajram: "
+                      + vajramId
+                      + " was not resolved by the request.");
+            }
+          } else {
+            map.put(inputName, toSingleValue(dependencyValues.getValue(inputName)));
+          }
+        }
+      } else if (inputDefinition instanceof Dependency) {
+        map.put(inputName, toSingleValue(dependencyValues.getValue(inputName)));
+      }
+    }
+    return new ExecutionContextMap(new InputValues(ImmutableMap.copyOf(map)));
+  }
+
+  private ImmutableMap<String, NodeDefinition> createSubGraphsForDependencies(
+      VajramDefinition vajramDefinition) {
     List<Dependency> dependencies = new ArrayList<>();
     for (VajramInputDefinition vajramInputDefinition :
         vajramDefinition.getVajram().getInputDefinitions()) {
@@ -227,7 +338,7 @@ public final class VajramGraph {
         dependencies.add(definition);
       }
     }
-    Map<String, String> depNameToProviderNode = new HashMap<>();
+    Map<String, NodeDefinition> depNameToProviderNode = new HashMap<>();
     // Create and register sub graphs for dependencies of this vajram
     for (Dependency dependency : dependencies) {
       var accessSpec = dependency.dataAccessSpec();
@@ -239,91 +350,27 @@ public final class VajramGraph {
             "Unable to find vajrams for accessSpecs %s"
                 .formatted(accessSpecMatchingResult.unsuccessfulMatches()));
       }
-      ImmutableMap<DataAccessSpec, Vajram<?>> dependencyVajrams =
+      ImmutableMap<DataAccessSpec, Vajram> dependencyVajrams =
           accessSpecMatchingResult.successfulMatches();
-      Map<DataAccessSpec, VajramDAG<?>> dependencySubGraphs = new HashMap<>();
-      dependencyVajrams.forEach(
-          (dependencySpec, depVajram) ->
-              dependencySubGraphs.put(dependencySpec, _getVajramExecutionGraph(depVajram)));
-      addInputResolversAsProvidersForSubGraphNodes(
-          vajramId, inputResolverTargets, dependencyName, dependencySubGraphs);
-
-      if (dependencySubGraphs.size() > 1
-          // Since this access spec is being powered by multiple vajrams, we will need to merge
-          // the responses
-          ||
-          // Since some vajrams are giving more data than has been requested, we will need
-          // to prune the data to prevent unnecessary data from leaking to the logic in this
-          // vajram
-          accessSpecMatchingResult.needsAdaption()) {
-        // Create adaptor node if vajram responses need to be adapted
-        String nodeId =
-            "v(%s):dep(%s):n(adaptor):%s".formatted(vajramId, dependencyName, generateNodeSuffix());
-        nodeDefinitionRegistry.newNonBlockingNode(
-            nodeId,
-            // Set all nodes powering the dependency access spec as inputs to the adaptor node.
-            dependencySubGraphs.entrySet().stream()
-                .collect(
-                    toImmutableMap(
-                        e -> e.getKey().toString(),
-                        e -> e.getValue().vajramLogicNodeDefinition().nodeId())),
-            dependencyValues -> accessSpec.adapt(dependencyValues.values()));
-        depNameToProviderNode.put(dependencyName, nodeId);
-      } else {
-        depNameToProviderNode.put(
-            dependencyName,
-            dependencySubGraphs.values().iterator().next().vajramLogicNodeDefinition().nodeId());
+      if (dependencyVajrams.size() > 1) {
+        throw new UnsupportedOperationException();
       }
+      Vajram dependencyVajram = dependencyVajrams.values().iterator().next();
+      NodeDefinition clusterDefinition = _getVajramExecutionGraph(dependencyVajram);
+
+      depNameToProviderNode.put(dependencyName, clusterDefinition);
     }
     return ImmutableMap.copyOf(depNameToProviderNode);
   }
 
-  private static void addInputResolversAsProvidersForSubGraphNodes(
-      String vajramId,
-      ImmutableMap<String, ImmutableMap<String, String>> inputResolverTargets,
-      String dependencyName,
-      Map<DataAccessSpec, VajramDAG<?>> dependencySubGraphs) {
-    ImmutableMap<String, String> inputProviderNodesForThisDependency =
-        requireNonNull(inputResolverTargets.getOrDefault(dependencyName, ImmutableMap.of()));
-    for (VajramDAG<?> subGraph : dependencySubGraphs.values()) {
-      subGraph.vajramDefinition().getVajram().getInputDefinitions().stream()
-          .filter(vajramInputDefinition -> vajramInputDefinition instanceof Input<?>)
-          .map(VajramInputDefinition::name)
-          .forEach(
-              inputName -> {
-                String providerNodeId = inputProviderNodesForThisDependency.get(inputName);
-                if (providerNodeId == null) {
-                  throw new IllegalStateException(
-                      "Input: %s of dependency: %s of vajram: %s does not have a resolver"
-                          .formatted(inputName, dependencyName, vajramId));
-                }
-                subGraph.vajramLogicNodeDefinition().addInputProvider(inputName, providerNodeId);
-              });
-      ImmutableList<ResolverDefinition> subgraphResolvers = subGraph.resolverDefinitions();
-      for (ResolverDefinition subgraphResolver : subgraphResolvers) {
-        NodeDefinition<?> nodeDefinition = subgraphResolver.nodeDefinition();
-        subgraphResolver
-            .boundFrom()
-            .forEach(
-                boundFromInput -> {
-                  String providerNode = inputProviderNodesForThisDependency.get(boundFromInput);
-                  if (providerNode != null) {
-                    nodeDefinition.addInputProvider(boundFromInput, providerNode);
-                  }
-                });
-      }
-    }
-  }
-
   private record InputResolverCreationResult(
-      ImmutableList<ResolverDefinition> resolverDefinitions,
-      ImmutableMap<String, ImmutableMap<String, String>> inputResolverTargets) {}
+      ImmutableList<ResolverDefinition> resolverDefinitions) {}
 
   private String generateNodeSuffix() {
     return randomStringGenerator.generateRandomString(NODE_ID_SUFFIX_LENGTH);
   }
 
-  private Optional<VajramDefinition> getVajramDefinition(String vajramId) {
+  private Optional<VajramDefinition> getVajramDefinition(VajramID vajramId) {
     return Optional.ofNullable(vajramDefinitions.get(vajramId));
   }
 }

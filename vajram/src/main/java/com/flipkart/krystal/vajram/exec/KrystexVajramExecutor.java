@@ -1,49 +1,40 @@
 package com.flipkart.krystal.vajram.exec;
 
-import com.flipkart.krystal.krystex.KrystalNodeExecutor;
-import com.flipkart.krystal.krystex.NodeDefinition;
-import com.flipkart.krystal.vajram.VajramRequest;
-import com.flipkart.krystal.vajram.exec.VajramDAG.ResolverDefinition;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
+import static com.flipkart.krystal.vajram.exec.Utils.toNodeInputs;
 
-public class KrystexVajramExecutor implements VajramExecutor {
+import com.flipkart.krystal.krystex.KrystalNodeExecutor;
+import com.flipkart.krystal.krystex.RequestId;
+import com.flipkart.krystal.vajram.ApplicationRequestContext;
+import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.vajram.VajramRequest;
+import com.flipkart.krystal.vajram.inputs.InputValues;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+
+public class KrystexVajramExecutor<C extends ApplicationRequestContext>
+    implements VajramExecutor<C> {
   private final VajramGraph vajramGraph;
+  private final String requestId;
+  private final C applicationRequestContext;
   private final KrystalNodeExecutor krystalExecutor;
 
-  public KrystexVajramExecutor(VajramGraph vajramGraph, String requestId) {
+  public KrystexVajramExecutor(
+      VajramGraph vajramGraph, String requestId, C applicationRequestContext) {
     this.vajramGraph = vajramGraph;
+    this.requestId = requestId;
+    this.applicationRequestContext = applicationRequestContext;
     this.krystalExecutor =
-        new KrystalNodeExecutor(vajramGraph.getNodeDefinitionRegistry(), requestId);
+        new KrystalNodeExecutor(vajramGraph.getClusterDefinitionRegistry(), requestId);
   }
 
   @Override
-  public <T> CompletableFuture<T> requestExecution(String vajramId, VajramRequest request) {
-    VajramDAG<T> vajramDAG = vajramGraph.createVajramDAG(vajramId);
-    ImmutableList<ResolverDefinition> resolverDefinitions = vajramDAG.resolverDefinitions();
-    ImmutableMap<String, Optional<Object>> inputs = request.asMap();
-    for (ResolverDefinition resolverDefinition : resolverDefinitions) {
-      NodeDefinition<?> nodeDefinition = resolverDefinition.nodeDefinition();
-      Map<String, Optional<Object>> filteredInputs =
-          Maps.filterKeys(inputs, input -> resolverDefinition.boundFrom().contains(input));
-      krystalExecutor.executeWithInputs(nodeDefinition, filteredInputs);
-    }
-
-    return krystalExecutor
-        .executeWithInputs(vajramDAG.vajramLogicNodeDefinition(), inputs)
-        .getAllResults()
-        .thenApply(
-            results -> {
-              if (results.size() != 1) {
-                // This should never happen
-                throw new AssertionError("Received incorrect number of results.");
-              }
-              return results.iterator().next();
-            });
+  public <T> CompletableFuture<T> execute(
+      VajramID vajramId, Function<C, VajramRequest> vajramRequestBuilder) {
+    return krystalExecutor.executeNode(
+        vajramGraph.getExecutable(vajramId),
+        toNodeInputs(
+            new InputValues(vajramRequestBuilder.apply(applicationRequestContext).asMap())),
+        new RequestId(requestId));
   }
 
   @Override

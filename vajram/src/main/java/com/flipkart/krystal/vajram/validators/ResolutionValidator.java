@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.validators;
 
-import static com.flipkart.krystal.vajram.Vajrams.getVajramId;
+import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
@@ -11,7 +11,7 @@ import com.flipkart.krystal.vajram.inputs.BindFrom;
 import com.flipkart.krystal.vajram.inputs.DefaultInputResolver;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.vajram.inputs.InputResolver;
+import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
 import com.flipkart.krystal.vajram.inputs.ResolutionSources;
 import com.flipkart.krystal.vajram.inputs.Resolve;
@@ -37,7 +37,7 @@ import org.reflections.Reflections;
 @Beta
 public class ResolutionValidator {
   public static void main(String[] args) {
-    Map<String, Class<? extends Vajram<?>>> vajramsById = discoverVajrams();
+    Map<String, Class<? extends Vajram>> vajramsById = discoverVajrams();
     ResolutionValidator resolutionValidator = new ResolutionValidator();
     Set<String> failures =
         vajramsById.values().stream()
@@ -64,16 +64,16 @@ public class ResolutionValidator {
   }
 
   public List<String> validateInputResolutions(
-      Class<? extends Vajram<?>> vajramDefinition, boolean valdiateOnlyMandatory) {
-    Map<String, Class<? extends Vajram<?>>> vajramsById = discoverVajrams();
+      Class<? extends Vajram> vajramDefinition, boolean valdiateOnlyMandatory) {
+    Map<String, Class<? extends Vajram>> vajramsById = discoverVajrams();
     String vajramId =
-        getVajramId(vajramDefinition)
+        getVajramIdString(vajramDefinition)
             .orElseThrow(
                 () -> new NoSuchElementException("Vajram id missing in " + vajramDefinition));
-    Vajram<?> vajram = createVajram(vajramDefinition);
+    Vajram vajram = createVajram(vajramDefinition);
     ImmutableList<VajramInputDefinition> inputDefinitions =
         ImmutableList.copyOf(vajram.getInputDefinitions());
-    Map<QualifiedInputs, InputResolver> inputResolvers =
+    Map<QualifiedInputs, InputResolverDefinition> inputResolvers =
         getInputResolvers(vajramDefinition, vajram, inputDefinitions);
     List<String> result = new ArrayList<>();
     inputDefinitions.forEach(
@@ -82,7 +82,7 @@ public class ResolutionValidator {
             DataAccessSpec dataAccessSpec = resolvedInput.dataAccessSpec();
             if (dataAccessSpec instanceof VajramID vajramID) {
               String dependencyVajramId = vajramID.vajramId();
-              Class<? extends Vajram<?>> dependency = vajramsById.get(dependencyVajramId);
+              Class<? extends Vajram> dependency = vajramsById.get(dependencyVajramId);
               @SuppressWarnings("rawtypes")
               Stream<Input> unresolvedInputsOfDependencyStream =
                   createVajram(dependency).getInputDefinitions().stream()
@@ -117,8 +117,8 @@ public class ResolutionValidator {
     return result;
   }
 
-  private Vajram<?> createVajram(Class<? extends Vajram<?>> vajramDefinition) {
-    Vajram<?> vajram;
+  private Vajram<?> createVajram(Class<? extends Vajram> vajramDefinition) {
+    Vajram vajram;
     try {
       vajram = vajramDefinition.getDeclaredConstructor().newInstance();
     } catch (Exception e) {
@@ -127,14 +127,14 @@ public class ResolutionValidator {
     return vajram;
   }
 
-  private Map<QualifiedInputs, InputResolver> getInputResolvers(
-      Class<? extends Vajram<?>> vajramDefinition,
+  private Map<QualifiedInputs, InputResolverDefinition> getInputResolvers(
+      Class<? extends Vajram> vajramDefinition,
       Vajram<?> vajram,
       ImmutableList<VajramInputDefinition> inputDefinitions) {
     ImmutableMap<String, VajramInputDefinition> collect =
         inputDefinitions.stream()
             .collect(toImmutableMap(VajramInputDefinition::name, Function.identity()));
-    Map<QualifiedInputs, InputResolver> result = new HashMap<>();
+    Map<QualifiedInputs, InputResolverDefinition> result = new HashMap<>();
     vajram
         .getSimpleInputResolvers()
         .forEach(
@@ -189,15 +189,15 @@ public class ResolutionValidator {
     return result;
   }
 
-  private static Map<String, Class<? extends Vajram<?>>> discoverVajrams() {
-    Map<String, Class<? extends Vajram<?>>> result = new HashMap<>();
+  private static Map<String, Class<? extends Vajram>> discoverVajrams() {
+    Map<String, Class<? extends Vajram>> result = new HashMap<>();
     //noinspection unchecked
     new Reflections("com.flipkart")
         .getSubTypesOf(Vajram.class)
         .forEach(
             aClass ->
-                getVajramId(aClass)
-                    .ifPresent(s -> result.put(s, (Class<? extends Vajram<?>>) aClass)));
+                getVajramIdString(aClass)
+                    .ifPresent(s -> result.put(s, (Class<? extends Vajram>) aClass)));
     return result;
   }
 }

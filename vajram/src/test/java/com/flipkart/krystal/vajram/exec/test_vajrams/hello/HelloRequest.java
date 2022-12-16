@@ -2,8 +2,10 @@ package com.flipkart.krystal.vajram.exec.test_vajrams.hello;
 
 import com.flipkart.krystal.vajram.RequestBuilder;
 import com.flipkart.krystal.vajram.VajramRequest;
+import com.flipkart.krystal.vajram.inputs.SingleValue;
 import com.google.common.collect.ImmutableMap;
-import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
 
 public record HelloRequest(String name) implements VajramRequest {
 
@@ -12,13 +14,13 @@ public record HelloRequest(String name) implements VajramRequest {
   }
 
   @Override
-  public ImmutableMap<String, Optional<Object>> asMap() {
-    return ImmutableMap.<String, Optional<Object>>builder()
-        .put("name", Optional.ofNullable(name()))
-        .build();
+  public ImmutableMap<String, SingleValue<?>> asMap() {
+    Map<String, SingleValue<?>> builder = new HashMap<>();
+    builder.put("name", new SingleValue<>(name()));
+    return ImmutableMap.copyOf(builder);
   }
 
-  static class Builder implements RequestBuilder<HelloRequest> {
+  public static class Builder implements RequestBuilder<HelloRequest> {
 
     private String name;
 
@@ -26,7 +28,7 @@ public record HelloRequest(String name) implements VajramRequest {
       return name;
     }
 
-    Builder name(String name) {
+    public Builder name(String name) {
       this.name = name;
       return this;
     }

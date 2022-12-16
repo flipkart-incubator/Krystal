@@ -1,14 +1,15 @@
 package com.flipkart.krystal.vajram;
 
-abstract sealed class AbstractVajram<T> implements Vajram<T>
-    permits NonBlockingVajram, BlockingVajram {
+import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 
-  private String id;
+abstract sealed class AbstractVajram<T> implements Vajram<T> permits NonBlockingVajram, IOVajram {
+
+  private VajramID id;
 
   @Override
-  public final String getId() {
+  public final VajramID getId() {
     if (id == null) {
-      id = Vajrams.getVajramId(getClass()).orElseThrow();
+      id = new VajramID(getVajramIdString(getClass()).orElseThrow());
     }
     return id;
   }
