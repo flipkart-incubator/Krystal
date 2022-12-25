@@ -10,13 +10,13 @@ repositories {
 }
 
 dependencies {
-    implementation project(':krystex')
-
     implementation 'com.google.guava:guava:31.1-jre'
     implementation 'org.reflections:reflections:0.10.2'
+    implementation 'com.graphql-java:graphql-java:20.0'
+
+    compileOnly 'org.projectlombok:lombok:1.18.24'
 
     annotationProcessor 'org.projectlombok:lombok:1.18.24'
-    compileOnly 'org.projectlombok:lombok:1.18.24'
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'

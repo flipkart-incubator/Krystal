@@ -6,3 +6,6 @@ include 'vajram:vajram-samples'
 include 'vajram:vajram-codegen'
 include 'krystex'
 include 'honeycomb'
+include 'vajram:vajram-krystex'
+findProject(':vajram:vajram-krystex')?.name = 'vajram-krystex'
+
