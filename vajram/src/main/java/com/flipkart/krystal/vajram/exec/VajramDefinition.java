@@ -26,14 +26,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.Getter;
 
-final class VajramDefinition {
+public final class VajramDefinition {
 
   @Getter private final Vajram<?> vajram;
 
   // TODO populate input resolvers from vajram
   @Getter private final ImmutableCollection<InputResolverDefinition> inputResolverDefinitions;
 
-  VajramDefinition(Vajram<?> vajram) {
+  public VajramDefinition(Vajram<?> vajram) {
     this.vajram = vajram;
     this.inputResolverDefinitions = ImmutableList.copyOf(parseInputResolvers(vajram));
   }
