@@ -16,6 +16,8 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.Test
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceInputUtils.InputsNeedingModulation;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.LongAdder;
@@ -30,6 +32,7 @@ public abstract class TestUserServiceVajram extends IOVajram<TestUserInfo> {
       newSingleThreadScheduledExecutor();
 
   public static final LongAdder CALL_COUNTER = new LongAdder();
+  public static final Set<TestUserServiceRequest> REQUESTS = new LinkedHashSet<>();
 
   @Override
   public ImmutableList<VajramInputDefinition> getInputDefinitions() {
@@ -49,6 +52,9 @@ public abstract class TestUserServiceVajram extends IOVajram<TestUserInfo> {
   public ImmutableMap<EnrichedRequest, CompletableFuture<TestUserInfo>> callUserService(
       ModulatedInput<InputsNeedingModulation, CommonInputs> modulatedRequest) {
     CALL_COUNTER.increment();
+    modulatedRequest.inputsNeedingModulation().stream()
+        .map(im -> TestUserServiceRequest.builder().userId(im.userId()).build())
+        .forEach(REQUESTS::add);
 
     // Make a call to user service and get user info
     return modulatedRequest.inputsNeedingModulation().stream()

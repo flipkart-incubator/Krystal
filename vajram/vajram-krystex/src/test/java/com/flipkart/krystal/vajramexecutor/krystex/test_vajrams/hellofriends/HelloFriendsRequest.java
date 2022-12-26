@@ -44,8 +44,8 @@ public record HelloFriendsRequest(String userId, int numberOfFriends) implements
       return this;
     }
 
-    public Builder numberOfFriends(int numberOfUsers) {
-      this.numberOfFriends = numberOfUsers;
+    public Builder numberOfFriends(int numberOfFriends) {
+      this.numberOfFriends = numberOfFriends;
       return this;
     }
 

@@ -11,16 +11,6 @@ import com.flipkart.krystal.krystex.SingleValue;
 import com.flipkart.krystal.krystex.commands.Execute;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInput;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
-import com.flipkart.krystal.krystex.node.Node;
-import com.flipkart.krystal.krystex.node.NodeDecorator;
-import com.flipkart.krystal.krystex.node.NodeDefinition;
-import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
-import com.flipkart.krystal.krystex.node.NodeGroupId;
-import com.flipkart.krystal.krystex.node.NodeId;
-import com.flipkart.krystal.krystex.node.NodeInputs;
-import com.flipkart.krystal.krystex.node.NodeLogicDefinition;
-import com.flipkart.krystal.krystex.node.NodeLogicId;
-import com.flipkart.krystal.krystex.node.NodeRegistry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -83,8 +73,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     for (Entry<String, SingleValue<?>> e : nodeInputs.values().entrySet()) {
       ExecuteWithInput executeWithInput =
           new ExecuteWithInput(nodeId, e.getKey(), e.getValue(), requestId);
-      CompletableFuture<Object> objectCompletableFuture = enqueueCommand(executeWithInput);
-      list.add(objectCompletableFuture);
+      list.add(enqueueCommand(executeWithInput));
     }
     return (CompletableFuture<T>) list.stream().findAny().orElseThrow();
   }
@@ -102,7 +91,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
               NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(n);
               ImmutableMap<NodeLogicId, ImmutableList<NodeDecorator<Object>>> nodeDecorators =
                   Stream.concat(
-                          Stream.of(nodeDefinition.logicNode()),
+                          Stream.of(nodeDefinition.mainLogicNode()),
                           nodeDefinition.resolverDefinitions().stream()
                               .map(ResolverDefinition::resolverNodeLogicId))
                       .collect(toImmutableMap(identity(), this::getRequestScopedNodeDecorators));

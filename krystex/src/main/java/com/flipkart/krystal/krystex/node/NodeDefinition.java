@@ -6,7 +6,7 @@ import com.google.common.collect.ImmutableMap;
 
 public record NodeDefinition(
     NodeId nodeId,
-    NodeLogicId logicNode,
+    NodeLogicId mainLogicNode,
     ImmutableMap<String, NodeId> dependencyNodes,
     ImmutableList<ResolverDefinition> resolverDefinitions,
     NodeDefinitionRegistry nodeDefinitionRegistry) {}

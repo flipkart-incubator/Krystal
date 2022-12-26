@@ -38,7 +38,14 @@ public class Node {
   /** Single Result for inputs. MultiResult for dependencies */
   private final Map<RequestId, Map<String, SingleValue<?>>> inputsValueCollector = new HashMap<>();
 
-  private final Map<RequestId, SingleResultFuture<Object>> resultFuture = new LinkedHashMap<>();
+  /** A unique Result future for every requestId. */
+  private final Map<RequestId, SingleResultFuture<Object>> resultsByRequest = new LinkedHashMap<>();
+
+  /**
+   * A unique {@link ResultFuture} for every new set of NodeInputs. This acts as a cache so that the
+   * same computation is not repeated multiple times .
+   */
+  private final Map<NodeInputs, SingleResultFuture<Object>> resultsCache = new LinkedHashMap<>();
 
   private final Map<RequestId, Map<NodeLogicId, ResultFuture>> nodeResults = new LinkedHashMap<>();
 
@@ -56,17 +63,17 @@ public class Node {
 
   public SingleResultFuture<Object> executeCommand(NodeCommand nodeCommand) {
     RequestId requestId = nodeCommand.requestId();
-    final SingleResultFuture<Object> result =
-        resultFuture.computeIfAbsent(requestId, r -> new SingleResultFuture<>());
+    final SingleResultFuture<Object> resultForRequest =
+        resultsByRequest.computeIfAbsent(requestId, r -> new SingleResultFuture<>());
     try {
-      NodeLogicId logicNode = nodeDefinition.logicNode();
-      NodeLogicDefinition<Object> logicNodeLogicDefinition =
-          nodeDefinition.nodeDefinitionRegistry().logicDefinitionRegistry().get(logicNode);
-      boolean executeLogic = false;
+      NodeLogicId mainLogicNode = nodeDefinition.mainLogicNode();
+      NodeLogicDefinition<Object> mainLogicNodeDefinition =
+          nodeDefinition.nodeDefinitionRegistry().logicDefinitionRegistry().get(mainLogicNode);
+      boolean executeMainLogic = false;
       if (nodeCommand instanceof Execute) {
-        ImmutableSet<String> inputNames = logicNodeLogicDefinition.inputNames();
+        ImmutableSet<String> inputNames = mainLogicNodeDefinition.inputNames();
         if (inputNames.isEmpty()) {
-          executeLogic = true;
+          executeMainLogic = true;
         } else {
           nodeDefinition
               .dependencyNodes()
@@ -78,14 +85,13 @@ public class Node {
                       krystalNodeExecutor
                           .executeNode(nodeId, new NodeInputs(), requestId.append(nodeId))
                           .whenComplete(
-                              (o, throwable) -> {
-                                krystalNodeExecutor.enqueueCommand(
-                                    new ExecuteWithInput(
-                                        nodeCommand.nodeId(),
-                                        depName,
-                                        new SingleValue<>(o, throwable),
-                                        requestId));
-                              });
+                              (o, throwable) ->
+                                  krystalNodeExecutor.enqueueCommand(
+                                      new ExecuteWithInput(
+                                          nodeCommand.nodeId(),
+                                          depName,
+                                          new SingleValue<>(o, throwable),
+                                          requestId)));
                     }
                   });
         }
@@ -94,11 +100,19 @@ public class Node {
             this.nodeResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
         String input = executeWithInput.input();
         SingleValue<?> inputValue = executeWithInput.inputValue();
-        resultFuture.computeIfAbsent(requestId, r -> new SingleResultFuture<>());
+        resultsByRequest.computeIfAbsent(requestId, r -> new SingleResultFuture<>());
         Map<String, SingleValue<?>> inputs =
             inputsValueCollector.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
-        if (inputs.putIfAbsent(input, inputValue) != null) {
-          throw new IllegalArgumentException("Duplicate input data for a request");
+        {
+          Object oldValue;
+          if ((oldValue = inputs.putIfAbsent(input, inputValue)) != null) {
+            if (oldValue.equals(inputValue)) {
+              return resultForRequest;
+            } else {
+              throw new DuplicateInputForRequestException(
+                  "Duplicate input data for a request %s".formatted(requestId));
+            }
+          }
         }
         ImmutableList<ResolverDefinition> pendingResolvers =
             resolverDefinitionsByInput.getOrDefault(input, ImmutableList.of()).stream()
@@ -169,40 +183,62 @@ public class Node {
           }
         }
         if (pendingResolvers.isEmpty()) {
-          ImmutableSet<String> inputNames = logicNodeLogicDefinition.inputNames();
+          ImmutableSet<String> inputNames = mainLogicNodeDefinition.inputNames();
           if (inputsValueCollector
               .getOrDefault(requestId, ImmutableMap.of())
               .keySet()
               .containsAll(inputNames)) { // All the inputs of the logic node have data present
-            executeLogic = true;
+            executeMainLogic = true;
           }
         }
       }
-      if (executeLogic) {
-        executeNodeLogic(
-                new NodeInputs(
-                    ImmutableMap.copyOf(
-                        inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()))),
-                logicNodeLogicDefinition,
-                nodeDecorators.getOrDefault(logicNode, ImmutableList.of()))
+      if (executeMainLogic) {
+        NodeInputs inputs =
+            new NodeInputs(
+                ImmutableMap.copyOf(
+                    inputsValueCollector.getOrDefault(requestId, ImmutableMap.of())));
+        // Retrieve existing result from cache if result for this set of inputs has already been
+        // calculated
+        resultsCache
+            .computeIfAbsent(
+                inputs,
+                i -> {
+                  SingleResultFuture<Object> newResult = new SingleResultFuture<>();
+                  executeNodeLogic(
+                          inputs,
+                          mainLogicNodeDefinition,
+                          nodeDecorators.getOrDefault(mainLogicNode, ImmutableList.of()))
+                      .future()
+                      .whenComplete(
+                          (o, t) -> {
+                            if (t != null) {
+                              newResult.future().completeExceptionally(t);
+                            } else {
+                              if (o.size() != 1) {
+                                throw new AssertionError(
+                                    "This should not be possible. Logic node should always return exactly one result");
+                              }
+                              newResult.future().complete(o.stream().iterator().next());
+                            }
+                          });
+                  return newResult;
+                })
             .future()
             .whenComplete(
                 (o, t) -> {
                   if (t != null) {
-                    result.future().completeExceptionally(t);
+                    resultForRequest.future().completeExceptionally(t);
                   } else {
-                    if (o.size() != 1) {
-                      throw new AssertionError(
-                          "This should not be possible. Logic node should always return exactly one result");
-                    }
-                    result.future().complete(o.stream().iterator().next());
+                    resultForRequest.future().complete(o);
                   }
                 });
       }
+    } catch (DuplicateInputForRequestException e) {
+      throw e;
     } catch (Exception e) {
-      result.future().completeExceptionally(e);
+      resultForRequest.future().obtrudeException(e);
     }
-    return result;
+    return resultForRequest;
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})

@@ -19,6 +19,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.Test
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceVajram;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -39,6 +40,7 @@ class KrystexVajramExecutorTest {
   @AfterEach
   void tearDown() {
     TestUserServiceVajram.CALL_COUNTER.reset();
+    TestUserServiceVajram.REQUESTS.clear();
     HelloVajram.CALL_COUNTER.reset();
   }
 
@@ -140,18 +142,62 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  void executeCompute_caching_success() throws Exception {
+  void execute_multiRequestNoInputModulator_cacheHitSuccess() throws Exception {
     VajramNodeGraph graph =
-        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello");
+        loadFromClasspath(
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
-        graph.createExecutor(requestContext.requestId("vajramWithNoDependencies").build())) {
-      CompletableFuture<String> result1 =
-          krystexVajramExecutor.execute(new VajramID(HelloVajram.ID), this::helloRequest);
-      CompletableFuture<String> result2 =
-          krystexVajramExecutor.execute(new VajramID(HelloVajram.ID), this::helloRequest);
-      assertEquals("Hello! user_id_1", result1.get(5, TimeUnit.HOURS));
-      assertEquals("Hello! user_id_1", result2.get(5, TimeUnit.HOURS));
-      assertThat(HelloVajram.CALL_COUNTER.sum()).isEqualTo(1);
+        graph.createExecutor(
+            requestContext.requestId("multiRequestNoInputModulator_cacheHitSuccess").build())) {
+      CompletableFuture<TestUserInfo> userInfo =
+          krystexVajramExecutor.execute(
+              new VajramID(TestUserServiceVajram.ID),
+              testRequestContext -> TestUserServiceRequest.builder().userId("user_id_1").build());
+      CompletableFuture<String> helloFriends =
+          krystexVajramExecutor.execute(
+              new VajramID(HelloFriendsVajram.ID),
+              testRequestContext ->
+                  HelloFriendsRequest.builder().userId("user_id_1").numberOfFriends(0).build());
+      assertThat(userInfo.get(5, TimeUnit.HOURS).userName())
+          .isEqualTo("Firstname Lastname (user_id_1)");
+      assertThat(helloFriends.get(5, TimeUnit.HOURS))
+          .isEqualTo("Hello Friends of Firstname Lastname (user_id_1)! ");
+      assertThat(TestUserServiceVajram.CALL_COUNTER.sum()).isEqualTo(1);
+    }
+  }
+
+  @Test
+  void execute_multiRequestWithModulator_cacheHitSuccess() throws Exception {
+    VajramNodeGraph graph =
+        loadFromClasspath(
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends");
+    graph.registerInputModulator(new VajramID(TestUserServiceVajram.ID), () -> new Batcher(2));
+    try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
+        graph.createExecutor(
+            requestContext.requestId("ioVajramSingleRequestNoModulator").build())) {
+      CompletableFuture<TestUserInfo> userInfo =
+          krystexVajramExecutor.execute(
+              new VajramID(TestUserServiceVajram.ID),
+              testRequestContext ->
+                  TestUserServiceRequest.builder().userId("user_id_1:friend_1").build());
+      CompletableFuture<String> helloFriends =
+          krystexVajramExecutor.execute(
+              new VajramID(HelloFriendsVajram.ID),
+              testRequestContext ->
+                  HelloFriendsRequest.builder().userId("user_id_1").numberOfFriends(1).build());
+      assertThat(userInfo.get(5, TimeUnit.HOURS).userName())
+          .isEqualTo("Firstname Lastname (user_id_1:friend_1)");
+      assertThat(helloFriends.get(5, TimeUnit.HOURS))
+          .isEqualTo(
+              "Hello Friends of Firstname Lastname (user_id_1)! Firstname Lastname (user_id_1:friend_1)");
+      assertThat(TestUserServiceVajram.CALL_COUNTER.sum()).isEqualTo(1);
+      assertThat(TestUserServiceVajram.REQUESTS)
+          .isEqualTo(
+              Set.of(
+                  TestUserServiceRequest.builder().userId("user_id_1:friend_1").build(),
+                  TestUserServiceRequest.builder().userId("user_id_1").build()));
     }
   }
 
