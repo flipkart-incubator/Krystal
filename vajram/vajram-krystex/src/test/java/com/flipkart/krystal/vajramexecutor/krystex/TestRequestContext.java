@@ -5,5 +5,6 @@ import java.util.Optional;
 import lombok.Builder;
 
 @Builder
-public record TestRequestContext(Optional<String> loggedInUserId, int numberOfFriends)
+public record TestRequestContext(
+    String requestId, Optional<String> loggedInUserId, int numberOfFriends)
     implements ApplicationRequestContext {}

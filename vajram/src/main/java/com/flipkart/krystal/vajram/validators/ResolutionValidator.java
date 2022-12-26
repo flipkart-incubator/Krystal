@@ -96,7 +96,7 @@ public class ResolutionValidator {
                 unresolvedInputsOfDependencyStream =
                     unresolvedInputsOfDependencyStream
                         .filter(unresolvedInput -> unresolvedInput.defaultValue() == null)
-                        .filter(Input::mandatory);
+                        .filter(Input::isMandatory);
               }
               for (Input<?> unresolvedInput : unresolvedInputsOfDependencyStream.toList()) {
                 if (inputResolvers.get(

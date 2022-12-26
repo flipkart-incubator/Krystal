@@ -47,13 +47,13 @@ public class Resilience4JStrategy<T> implements NodeDecorator<T> {
 
   private void decorateWithRateLimiter(
       NodeLogicDefinition<T> nodeDef, DecorateFunction<?, ?> decorateFunction) {
-    RateLimiter rateLimiter = rateLimiters.get(nodeDef.nodeId());
+    RateLimiter rateLimiter = rateLimiters.get(nodeDef.nodeLogicId());
     if (rateLimiter == null) {
       rateLimiter =
           rateLimiters.computeIfAbsent(
-              nodeDef.nodeId(), nodeId -> createRateLimiter(nodeId).orElse(null));
+              nodeDef.nodeLogicId(), nodeId -> createRateLimiter(nodeId).orElse(null));
     } else {
-      updateRateLimiter(nodeDef.nodeId(), rateLimiter);
+      updateRateLimiter(nodeDef.nodeLogicId(), rateLimiter);
     }
     if (rateLimiter != null) {
       decorateFunction.withRateLimiter(rateLimiter);

@@ -1,10 +1,10 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2;
 
-import static com.flipkart.krystal.vajram.inputs.SingleValue.empty;
+import static com.flipkart.krystal.vajram.inputs.ValueOrError.empty;
 
 import com.flipkart.krystal.vajram.RequestBuilder;
 import com.flipkart.krystal.vajram.VajramRequest;
-import com.flipkart.krystal.vajram.inputs.SingleValue;
+import com.flipkart.krystal.vajram.inputs.ValueOrError;
 import com.google.common.collect.ImmutableMap;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,13 +17,13 @@ public record HelloFriendsV2Request(String userId) implements VajramRequest {
   }
 
   @Override
-  public ImmutableMap<String, SingleValue<?>> asMap() {
-    Map<String, SingleValue<?>> map = new HashMap<>();
-    map.put("user_id", new SingleValue<>(userId()));
+  public ImmutableMap<String, ValueOrError<?>> asMap() {
+    Map<String, ValueOrError<?>> map = new HashMap<>();
+    map.put("user_id", new ValueOrError<>(userId()));
     return ImmutableMap.copyOf(map);
   }
 
-  static HelloFriendsV2Request fromMap(ImmutableMap<String, SingleValue<?>> values) {
+  static HelloFriendsV2Request fromMap(ImmutableMap<String, ValueOrError<?>> values) {
     return HelloFriendsV2Request.builder()
         .userId((String) values.getOrDefault("user_id", empty()).value().orElse(null))
         .build();

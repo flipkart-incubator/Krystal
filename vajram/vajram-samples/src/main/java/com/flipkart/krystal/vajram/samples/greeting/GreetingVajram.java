@@ -5,20 +5,18 @@ import static com.flipkart.krystal.datatypes.StringType.string;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.samples.greeting.GreetingVajram.ID;
 
-import com.flipkart.krystal.vajram.NonBlockingVajram;
+import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.BindFrom;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.vajram.inputs.InputCommand.Command;
 import com.flipkart.krystal.vajram.inputs.ResolutionSources;
 import com.flipkart.krystal.vajram.inputs.Resolve;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.samples.greeting.GreetingVajramInputUtils.EnrichedRequest;
 import com.google.common.collect.ImmutableList;
 import java.lang.System.Logger;
-import java.util.List;
 import java.util.logging.Level;
 
 /**
@@ -27,7 +25,7 @@ import java.util.logging.Level;
  */
 @VajramDef(ID) // Unique Id of this Vajram
 // SyncVajram means that this Vajram does not directly perform any blocking operations.
-public abstract sealed class GreetingVajram extends NonBlockingVajram<String>
+public abstract sealed class GreetingVajram extends ComputeVajram<String>
     permits GreetingVajramImpl {
   public static final String ID = "com.flipkart.greetingVajram";
 
@@ -44,7 +42,7 @@ public abstract sealed class GreetingVajram extends NonBlockingVajram<String>
             // Data type - used for code generation
             .type(string())
             // If this input is not provided by the client, throw a build time error.
-            .mandatory()
+            .isMandatory()
             .build(),
         Dependency.builder()
             // Data type of resolved dependencies is inferred from the

@@ -4,7 +4,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.vajram.ExecutionContextMap;
 import com.flipkart.krystal.vajram.inputs.InputValues;
-import com.flipkart.krystal.vajram.inputs.SingleValue;
+import com.flipkart.krystal.vajram.inputs.ValueOrError;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2InputUtils.EnrichedRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.google.common.collect.ImmutableList;
@@ -34,7 +34,7 @@ public class HelloFriendsV2VajramImpl extends HelloFriendsV2Vajram {
             if (friendIds.isPresent()) {
               Set<String> userIdsForUserService = userIdsForUserService(friendIds.get());
               return userIdsForUserService.stream()
-                  .map(s -> new InputValues(ImmutableMap.of("user_id", new SingleValue<>(s))))
+                  .map(s -> new InputValues(ImmutableMap.of("user_id", new ValueOrError<>(s))))
                   .collect(toImmutableList());
             } else {
               return ImmutableList.of(new InputValues());
@@ -49,7 +49,7 @@ public class HelloFriendsV2VajramImpl extends HelloFriendsV2Vajram {
                   new InputValues(
                       ImmutableMap.of(
                           "user_id",
-                          new SingleValue<Object>(userIdForFriendService(userId.get())))));
+                          new ValueOrError<Object>(userIdForFriendService(userId.get())))));
             } else {
               return ImmutableList.of(new InputValues());
             }

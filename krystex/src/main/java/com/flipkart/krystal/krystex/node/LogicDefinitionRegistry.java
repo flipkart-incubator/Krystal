@@ -17,28 +17,29 @@ public final class LogicDefinitionRegistry {
     return (NodeLogicDefinition<T>) nodeDefinitions.get(nodeLogicId);
   }
 
-  public <T> ComputeLogicDefinition<T> newNonBlockingNode(
+  public <T> ComputeLogicDefinition<T> newComputeLogic(
       String nodeId, Function<NodeInputs, T> logic) {
-    return newNonBlockingNode(nodeId, Set.of(), logic);
+    return newComputeLogic(nodeId, Set.of(), logic);
   }
 
-  public <T> ComputeLogicDefinition<T> newNonBlockingNode(
+  public <T> ComputeLogicDefinition<T> newComputeLogic(
       String nodeId, Set<String> inputs, Function<NodeInputs, T> logic) {
-    return newNonBlockingBatchNode(nodeId, inputs, logic.andThen(ImmutableList::of));
+    return newBatchComputeLogic(nodeId, inputs, logic.andThen(ImmutableList::of));
   }
 
-  public <T> ComputeLogicDefinition<T> newNonBlockingBatchNode(
+  public <T> ComputeLogicDefinition<T> newBatchComputeLogic(
       String nodeId, Set<String> inputs, Function<NodeInputs, ImmutableList<T>> logic) {
-    ComputeLogicDefinition<T> def = new ComputeLogicDefinition<>(new NodeLogicId(nodeId), inputs, logic);
+    ComputeLogicDefinition<T> def =
+        new ComputeLogicDefinition<>(new NodeLogicId(nodeId), inputs, logic);
     add(def);
     return def;
   }
 
   public void add(NodeLogicDefinition<?> nodeLogicDefinition) {
-    if (nodeDefinitions.containsKey(nodeLogicDefinition.nodeId())) {
+    if (nodeDefinitions.containsKey(nodeLogicDefinition.nodeLogicId())) {
       return;
     }
-    nodeDefinitions.put(nodeLogicDefinition.nodeId(), nodeLogicDefinition);
+    nodeDefinitions.put(nodeLogicDefinition.nodeLogicId(), nodeLogicDefinition);
   }
 
   public void validate() {
@@ -46,11 +47,10 @@ public final class LogicDefinitionRegistry {
     // TODO Check that there are no loops in dependencies.
   }
 
-  public <T> IOLogicDefinition<T> newIONodeDefinition(
+  public <T> IOLogicDefinition<T> newIOLogic(
       NodeLogicId nodeLogicId, Set<String> inputs, NodeLogic<T> nodeLogic) {
     IOLogicDefinition<T> def =
         new IOLogicDefinition<T>(nodeLogicId, inputs, ImmutableMap.of(), nodeLogic);
-
     add(def);
     return def;
   }

@@ -31,7 +31,7 @@ public abstract class UserServiceVajram extends IOVajram<UserInfo> {
             // Data type - used for code generation
             .type(string())
             // If this input is not provided by the client, throw a build time error.
-            .mandatory()
+            .isMandatory()
             .needsModulation()
             .build());
   }

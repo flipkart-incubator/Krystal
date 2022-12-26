@@ -3,7 +3,6 @@ package com.flipkart.krystal.krystex.node;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.concurrent.CompletableFuture.allOf;
 
-import com.flipkart.krystal.krystex.KrystalNodeExecutor;
 import com.flipkart.krystal.krystex.MultiResultFuture;
 import com.flipkart.krystal.krystex.RequestId;
 import com.flipkart.krystal.krystex.ResolverDefinition;
@@ -26,7 +25,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class Node {
 
-  private final NodeId clusterId;
+  private final NodeId nodeId;
 
   private final NodeDefinition nodeDefinition;
 
@@ -47,7 +46,7 @@ public class Node {
       NodeDefinition nodeDefinition,
       KrystalNodeExecutor krystalNodeExecutor,
       ImmutableMap<NodeLogicId, ImmutableList<NodeDecorator<Object>>> nodeDecorators) {
-    this.clusterId = nodeDefinition.nodeId();
+    this.nodeId = nodeDefinition.nodeId();
     this.nodeDefinition = nodeDefinition;
     this.krystalNodeExecutor = krystalNodeExecutor;
     this.nodeDecorators = nodeDecorators;
@@ -62,7 +61,7 @@ public class Node {
     try {
       NodeLogicId logicNode = nodeDefinition.logicNode();
       NodeLogicDefinition<Object> logicNodeLogicDefinition =
-          nodeDefinition.nodeDefinitionRegistry().nodeDefinitionRegistry().get(logicNode);
+          nodeDefinition.nodeDefinitionRegistry().logicDefinitionRegistry().get(logicNode);
       boolean executeLogic = false;
       if (nodeCommand instanceof Execute) {
         ImmutableSet<String> inputNames = logicNodeLogicDefinition.inputNames();
@@ -116,7 +115,7 @@ public class Node {
             NodeInputs inputResolverInputs =
                 new NodeInputs(ImmutableMap.copyOf(Maps.filterKeys(inputs, boundFrom::contains)));
             NodeLogicDefinition<Object> definition =
-                nodeDefinition.nodeDefinitionRegistry().nodeDefinitionRegistry().get(nodeLogicId);
+                nodeDefinition.nodeDefinitionRegistry().logicDefinitionRegistry().get(nodeLogicId);
             MultiResultFuture<NodeInputs> results =
                 executeNodeLogic(
                     inputResolverInputs,
@@ -163,7 +162,7 @@ public class Node {
                       }
                       krystalNodeExecutor.enqueueCommand(
                           new ExecuteWithInput(
-                              this.clusterId,
+                              this.nodeId,
                               dependencyName,
                               new SingleValue<>(aggregate, throwable),
                               requestId));

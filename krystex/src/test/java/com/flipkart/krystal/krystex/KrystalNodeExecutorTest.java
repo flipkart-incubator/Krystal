@@ -3,6 +3,7 @@ package com.flipkart.krystal.krystex;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
 import com.flipkart.krystal.krystex.node.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
@@ -44,12 +45,12 @@ class KrystalNodeExecutorTest {
   @Test
   void requestExecution_noDependencies_success() throws Exception {
     NodeDefinition nodeDefinition =
-        nodeDefinitionRegistry.newClusterDefinition(
+        nodeDefinitionRegistry.newNodeDefinition(
             "node",
             nodeDefinitionRegistry
-                .nodeDefinitionRegistry()
-                .newNonBlockingNode("nodeLogic", dependencyValues -> "computed_value")
-                .nodeId());
+                .logicDefinitionRegistry()
+                .newComputeLogic("nodeLogic", dependencyValues -> "computed_value")
+                .nodeLogicId());
 
     String result =
         timedGet(
@@ -63,11 +64,11 @@ class KrystalNodeExecutorTest {
     String logicId = "requestExecution_noDependencies_success_nodeName";
     NodeId nodeId =
         nodeDefinitionRegistry
-            .newClusterDefinition(
+            .newNodeDefinition(
                 logicId,
                 nodeDefinitionRegistry
-                    .nodeDefinitionRegistry()
-                    .newNonBlockingNode(
+                    .logicDefinitionRegistry()
+                    .newComputeLogic(
                         logicId,
                         Set.of("a", "b", "c"),
                         dependencyValues ->
@@ -76,7 +77,7 @@ class KrystalNodeExecutorTest {
                                     dependencyValues.getValue("a").value().orElseThrow(),
                                     dependencyValues.getValue("b").value().orElseThrow(),
                                     dependencyValues.getValue("c").value().orElseThrow()))
-                    .nodeId(),
+                    .nodeLogicId(),
                 ImmutableMap.of(),
                 ImmutableList.of())
             .nodeId();
@@ -99,24 +100,24 @@ class KrystalNodeExecutorTest {
   @Test
   void requestExecution_singleDependency_success() throws Exception {
     LogicDefinitionRegistry logicDefinitionRegistry =
-        nodeDefinitionRegistry.nodeDefinitionRegistry();
+        nodeDefinitionRegistry.logicDefinitionRegistry();
     NodeDefinition n1 =
-        nodeDefinitionRegistry.newClusterDefinition(
+        nodeDefinitionRegistry.newNodeDefinition(
             "n1",
             logicDefinitionRegistry
-                .newNonBlockingNode("n1_logic", dependencyValues -> "dependency_value")
-                .nodeId());
+                .newComputeLogic("n1_logic", dependencyValues -> "dependency_value")
+                .nodeLogicId());
 
     NodeDefinition n2 =
-        nodeDefinitionRegistry.newClusterDefinition(
+        nodeDefinitionRegistry.newNodeDefinition(
             "n2",
             logicDefinitionRegistry
-                .newNonBlockingNode(
+                .newComputeLogic(
                     "n2_logic",
                     ImmutableSet.of("dep"),
                     dependencyValues ->
                         dependencyValues.get("dep").orElseThrow() + ":computed_value")
-                .nodeId(),
+                .nodeLogicId(),
             ImmutableMap.of("dep", n1.nodeId()),
             ImmutableList.of());
 
@@ -130,57 +131,57 @@ class KrystalNodeExecutorTest {
   @Test
   void requestExecution_multiLevelDependencies_success() throws Exception {
     LogicDefinitionRegistry logicDefinitionRegistry =
-        nodeDefinitionRegistry.nodeDefinitionRegistry();
+        nodeDefinitionRegistry.logicDefinitionRegistry();
     String l1Dep = "requestExecution_multiLevelDependencies_level1";
-    nodeDefinitionRegistry.newClusterDefinition(
+    nodeDefinitionRegistry.newNodeDefinition(
         l1Dep,
-        logicDefinitionRegistry.newNonBlockingNode(l1Dep, dependencyValues -> "l1").nodeId());
+        logicDefinitionRegistry.newComputeLogic(l1Dep, dependencyValues -> "l1").nodeLogicId());
 
     String l2Dep = "requestExecution_multiLevelDependencies_level2";
-    nodeDefinitionRegistry.newClusterDefinition(
+    nodeDefinitionRegistry.newNodeDefinition(
         l2Dep,
         logicDefinitionRegistry
-            .newNonBlockingNode(
+            .newComputeLogic(
                 l2Dep,
                 ImmutableSet.of("input"),
                 dependencyValues -> dependencyValues.getOrThrow("input") + ":l2")
-            .nodeId(),
+            .nodeLogicId(),
         ImmutableMap.of("input", new NodeId(l1Dep)));
 
     String l3Dep = "requestExecution_multiLevelDependencies_level3";
-    nodeDefinitionRegistry.newClusterDefinition(
+    nodeDefinitionRegistry.newNodeDefinition(
         l3Dep,
         logicDefinitionRegistry
-            .newNonBlockingNode(
+            .newComputeLogic(
                 l3Dep,
                 ImmutableSet.of("input"),
                 dependencyValues -> dependencyValues.getOrThrow("input") + ":l3")
-            .nodeId(),
+            .nodeLogicId(),
         ImmutableMap.of("input", new NodeId(l2Dep)));
 
     String l4Dep = "requestExecution_multiLevelDependencies_level4";
-    nodeDefinitionRegistry.newClusterDefinition(
+    nodeDefinitionRegistry.newNodeDefinition(
         l4Dep,
         logicDefinitionRegistry
-            .newNonBlockingNode(
+            .newComputeLogic(
                 l4Dep,
                 ImmutableSet.of("input"),
                 dependencyValues -> dependencyValues.getOrThrow("input") + ":l4")
-            .nodeId(),
+            .nodeLogicId(),
         ImmutableMap.of("input", new NodeId(l3Dep)));
 
     String results =
         timedGet(
             krystalNodeExecutor.executeNode(
                 nodeDefinitionRegistry
-                    .newClusterDefinition(
+                    .newNodeDefinition(
                         "requestExecution_multiLevelDependencies_final",
                         logicDefinitionRegistry
-                            .newNonBlockingNode(
+                            .newComputeLogic(
                                 "requestExecution_multiLevelDependencies_final",
                                 ImmutableSet.of("input"),
                                 dependencyValues -> dependencyValues.getOrThrow("input") + ":final")
-                            .nodeId(),
+                            .nodeLogicId(),
                         ImmutableMap.of("input", new NodeId(l4Dep)))
                     .nodeId(),
                 new NodeInputs(),
@@ -196,15 +197,15 @@ class KrystalNodeExecutorTest {
         () ->
             krystalNodeExecutor.executeNode(
                 nodeDefinitionRegistry
-                    .newClusterDefinition(
+                    .newNodeDefinition(
                         "shutdown_preventsNewExecutionRequests",
                         nodeDefinitionRegistry
-                            .nodeDefinitionRegistry()
-                            .newNonBlockingNode(
+                            .logicDefinitionRegistry()
+                            .newComputeLogic(
                                 "shutdown_preventsNewExecutionRequests",
                                 ImmutableSet.of(),
                                 dependencyValues -> ImmutableList.of(""))
-                            .nodeId())
+                            .nodeLogicId())
                     .nodeId(),
                 new NodeInputs(),
                 new RequestId("")));

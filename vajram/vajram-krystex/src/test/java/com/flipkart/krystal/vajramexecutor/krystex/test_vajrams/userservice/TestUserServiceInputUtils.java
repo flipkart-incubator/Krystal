@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice;
 
-import static com.flipkart.krystal.vajram.inputs.SingleValue.empty;
+import static com.flipkart.krystal.vajram.inputs.ValueOrError.empty;
 
 import com.flipkart.krystal.vajram.inputs.InputValues;
-import com.flipkart.krystal.vajram.inputs.SingleValue;
+import com.flipkart.krystal.vajram.inputs.ValueOrError;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.google.common.collect.ImmutableMap;
 
@@ -28,8 +28,8 @@ class TestUserServiceInputUtils {
         @Override
         public InputValues toMap(EnrichedRequest enrichedRequest) {
           return new InputValues(
-              ImmutableMap.<String, SingleValue<?>>builder()
-                  .put("user_id", new SingleValue<>(enrichedRequest.request().userId()))
+              ImmutableMap.<String, ValueOrError<?>>builder()
+                  .put("user_id", new ValueOrError<>(enrichedRequest.request().userId()))
                   .build());
         }
 

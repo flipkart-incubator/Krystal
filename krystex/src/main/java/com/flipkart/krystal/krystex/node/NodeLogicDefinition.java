@@ -24,7 +24,7 @@ public abstract sealed class NodeLogicDefinition<T>
 
   public abstract NodeLogic<T> logic();
 
-  public NodeLogicId nodeId() {
+  public NodeLogicId nodeLogicId() {
     return nodeLogicId;
   }
 

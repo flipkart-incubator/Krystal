@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice;
 
 import com.flipkart.krystal.vajram.RequestBuilder;
 import com.flipkart.krystal.vajram.VajramRequest;
-import com.flipkart.krystal.vajram.inputs.SingleValue;
+import com.flipkart.krystal.vajram.inputs.ValueOrError;
 import com.google.common.collect.ImmutableMap;
 
 public record FriendsServiceRequest(String userId) implements VajramRequest {
@@ -12,8 +12,8 @@ public record FriendsServiceRequest(String userId) implements VajramRequest {
   }
 
   @Override
-  public ImmutableMap<String, SingleValue<?>> asMap() {
-    return ImmutableMap.of("user_id", new SingleValue<>(userId()));
+  public ImmutableMap<String, ValueOrError<?>> asMap() {
+    return ImmutableMap.of("user_id", new ValueOrError<>(userId()));
   }
 
   public static class FriendsServiceRequestBuilder implements RequestBuilder {

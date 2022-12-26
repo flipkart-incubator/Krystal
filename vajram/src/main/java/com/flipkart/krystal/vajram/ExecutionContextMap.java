@@ -1,19 +1,24 @@
 package com.flipkart.krystal.vajram;
 
-import static com.flipkart.krystal.vajram.inputs.SingleValue.empty;
+import static com.flipkart.krystal.vajram.inputs.ValueOrError.empty;
 
 import com.flipkart.krystal.vajram.inputs.InputValues;
-import com.flipkart.krystal.vajram.inputs.SingleValue;
+import com.flipkart.krystal.vajram.inputs.ValueOrError;
 import com.google.common.collect.ImmutableMap;
+import java.util.Optional;
 
 public record ExecutionContextMap(InputValues context) implements ExecutionContext {
 
   public <T> T getValue(String key) {
-    //noinspection unchecked
-    return (T) context().values().getOrDefault(key, empty()).value().orElseThrow();
+    return this.<T>optValue(key).orElseThrow();
   }
 
-  public ImmutableMap<String, SingleValue<?>> asMap() {
+  public <T> Optional<T> optValue(String key) {
+    //noinspection unchecked
+    return (Optional<T>) context().values().getOrDefault(key, empty()).value();
+  }
+
+  public ImmutableMap<String, ValueOrError<?>> asMap() {
     return context.values();
   }
 }

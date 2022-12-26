@@ -8,15 +8,9 @@ public class HelloVajramImpl extends HelloVajram {
 
   @Override
   public String executeNonBlocking(ExecutionContextMap executionContext) {
-    Object nameValue = executionContext.getValue("name");
-    String name;
-    if (nameValue instanceof String string) {
-      name = string;
-    } else {
-      throw new IllegalArgumentException(
-          "Unsupported type %s for input %s in vajram %s"
-              .formatted(nameValue.getClass(), "name", "GreetVajram"));
-    }
-    return super.greet(new EnrichedRequest(new HelloRequest(name)));
+    return super.greet(
+        new EnrichedRequest(
+            new HelloRequest(
+                executionContext.getValue("name"), executionContext.optValue("greeting"))));
   }
 }

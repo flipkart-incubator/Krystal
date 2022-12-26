@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice;
 
 import com.flipkart.krystal.vajram.RequestBuilder;
 import com.flipkart.krystal.vajram.VajramRequest;
-import com.flipkart.krystal.vajram.inputs.SingleValue;
+import com.flipkart.krystal.vajram.inputs.ValueOrError;
 import com.google.common.collect.ImmutableMap;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,10 +15,10 @@ public record TestUserServiceRequest(String userId) implements VajramRequest {
   }
 
   @Override
-  public ImmutableMap<String, SingleValue<?>> asMap() {
-    Map<String, SingleValue<?>> map = new HashMap<>();
+  public ImmutableMap<String, ValueOrError<?>> asMap() {
+    Map<String, ValueOrError<?>> map = new HashMap<>();
     if (userId() != null) {
-      map.put("user_id", new SingleValue<>(userId()));
+      map.put("user_id", new ValueOrError<>(userId()));
     }
     return ImmutableMap.copyOf(map);
   }

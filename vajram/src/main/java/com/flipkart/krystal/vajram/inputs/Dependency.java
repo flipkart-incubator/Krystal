@@ -4,7 +4,7 @@ import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import lombok.Builder;
 
 @Builder
-public record Dependency(String name, DataAccessSpec dataAccessSpec, boolean mandatory)
+public record Dependency(String name, DataAccessSpec dataAccessSpec, boolean isMandatory)
     implements VajramInputDefinition {
 
   @Override
@@ -14,7 +14,11 @@ public record Dependency(String name, DataAccessSpec dataAccessSpec, boolean man
 
   public static class DependencyBuilder<T> {
     public DependencyBuilder<T> isMandatory() {
-      this.mandatory = true;
+      return isMandatory(true);
+    }
+
+    public DependencyBuilder<T> isMandatory(boolean isMandatory) {
+      this.isMandatory = isMandatory;
       return this;
     }
   }

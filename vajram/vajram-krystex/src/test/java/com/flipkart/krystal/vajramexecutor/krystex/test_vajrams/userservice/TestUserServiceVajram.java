@@ -40,7 +40,7 @@ public abstract class TestUserServiceVajram extends IOVajram<TestUserInfo> {
             // Data type - used for code generation
             .type(string())
             // If this input is not provided by the client, throw a build time error.
-            .mandatory()
+            .isMandatory()
             .needsModulation()
             .build());
   }

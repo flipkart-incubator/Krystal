@@ -15,7 +15,7 @@ public final class NodeDefinitionRegistry {
     this.logicDefinitionRegistry = logicDefinitionRegistry;
   }
 
-  public LogicDefinitionRegistry nodeDefinitionRegistry() {
+  public LogicDefinitionRegistry logicDefinitionRegistry() {
     return logicDefinitionRegistry;
   }
 
@@ -27,16 +27,16 @@ public final class NodeDefinitionRegistry {
     return node;
   }
 
-  public NodeDefinition newClusterDefinition(String nodeId, NodeLogicId logicNode) {
-    return newClusterDefinition(nodeId, logicNode, ImmutableMap.of());
+  public NodeDefinition newNodeDefinition(String nodeId, NodeLogicId logicNode) {
+    return newNodeDefinition(nodeId, logicNode, ImmutableMap.of());
   }
 
-  public NodeDefinition newClusterDefinition(
+  public NodeDefinition newNodeDefinition(
       String nodeId, NodeLogicId logicNode, ImmutableMap<String, NodeId> dependencyNodes) {
-    return newClusterDefinition(nodeId, logicNode, dependencyNodes, ImmutableList.of());
+    return newNodeDefinition(nodeId, logicNode, dependencyNodes, ImmutableList.of());
   }
 
-  public NodeDefinition newClusterDefinition(
+  public NodeDefinition newNodeDefinition(
       String nodeId,
       NodeLogicId logicNode,
       ImmutableMap<String, NodeId> dependencyNodes,
