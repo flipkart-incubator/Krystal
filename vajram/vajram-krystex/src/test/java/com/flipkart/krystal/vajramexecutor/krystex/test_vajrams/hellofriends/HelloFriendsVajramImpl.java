@@ -54,7 +54,7 @@ public class HelloFriendsVajramImpl extends HelloFriendsVajram {
   }
 
   @Override
-  public String executeNonBlocking(ExecutionContextMap executionContext) {
+  public String executeCompute(ExecutionContextMap executionContext) {
     ImmutableList<TestUserInfo> friendInfos = executionContext.getValue(FRIEND_INFOS);
     ImmutableList<TestUserInfo> userInfo = executionContext.getValue(USER_INFO);
     return sayHellos(

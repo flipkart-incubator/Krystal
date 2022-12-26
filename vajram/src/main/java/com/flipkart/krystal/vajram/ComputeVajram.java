@@ -7,5 +7,5 @@ public abstract non-sealed class ComputeVajram<T> extends AbstractVajram<T> {
     return false;
   }
 
-  public abstract T executeNonBlocking(ExecutionContextMap executionContext);
+  public abstract T executeCompute(ExecutionContextMap executionContext);
 }

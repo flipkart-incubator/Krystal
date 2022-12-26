@@ -13,7 +13,7 @@ import java.util.Set;
 public final class GreetingVajramImpl extends GreetingVajram {
 
   @Override
-  public String executeNonBlocking(ExecutionContextMap executionContext) {
+  public String executeCompute(ExecutionContextMap executionContext) {
     return createGreetingMessage(EnrichedRequest.from(executionContext));
   }
 
