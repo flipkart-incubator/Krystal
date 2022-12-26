@@ -2,8 +2,7 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.vajramexecutor.krystex.Utils.toNodeInputs;
 
-import com.flipkart.krystal.krystex.KrystalNodeExecutor;
-import com.flipkart.krystal.krystex.RequestId;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
@@ -14,28 +13,26 @@ import java.util.function.Function;
 
 public class KrystexVajramExecutor<C extends ApplicationRequestContext>
     implements VajramExecutor<C> {
-  private final VajramGraph vajramGraph;
-  private final String requestId;
+  private final VajramNodeGraph vajramNodeGraph;
   private final C applicationRequestContext;
   private final KrystalNodeExecutor krystalExecutor;
 
-  public KrystexVajramExecutor(
-      VajramGraph vajramGraph, String requestId, C applicationRequestContext) {
-    this.vajramGraph = vajramGraph;
-    this.requestId = requestId;
+  KrystexVajramExecutor(
+      VajramNodeGraph vajramNodeGraph, C applicationRequestContext) {
+    this.vajramNodeGraph = vajramNodeGraph;
     this.applicationRequestContext = applicationRequestContext;
     this.krystalExecutor =
-        new KrystalNodeExecutor(vajramGraph.getClusterDefinitionRegistry(), requestId);
+        new KrystalNodeExecutor(
+            vajramNodeGraph.getNodeDefinitionRegistry(), applicationRequestContext.requestId());
   }
 
   @Override
   public <T> CompletableFuture<T> execute(
       VajramID vajramId, Function<C, VajramRequest> vajramRequestBuilder) {
     return krystalExecutor.executeNode(
-        vajramGraph.getExecutable(vajramId),
+        vajramNodeGraph.getExecutable(vajramId),
         toNodeInputs(
-            new InputValues(vajramRequestBuilder.apply(applicationRequestContext).asMap())),
-        new RequestId(requestId));
+            new InputValues(vajramRequestBuilder.apply(applicationRequestContext).asMap())));
   }
 
   @Override

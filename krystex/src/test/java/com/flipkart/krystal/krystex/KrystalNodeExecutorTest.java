@@ -3,6 +3,7 @@ package com.flipkart.krystal.krystex;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
 import com.flipkart.krystal.krystex.node.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;

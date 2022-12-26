@@ -1,9 +1,13 @@
-package com.flipkart.krystal.krystex;
+package com.flipkart.krystal.krystex.node;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.function.Function.identity;
 
+import com.flipkart.krystal.krystex.KrystalExecutor;
+import com.flipkart.krystal.krystex.RequestId;
+import com.flipkart.krystal.krystex.ResolverDefinition;
+import com.flipkart.krystal.krystex.SingleValue;
 import com.flipkart.krystal.krystex.commands.Execute;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInput;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
@@ -38,6 +42,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
   private final NodeDefinitionRegistry nodeDefinitionRegistry;
   private final ExecutorService commandQueue;
+  private final RequestId requestId;
 
   private final Map<DecoratorKey, NodeDecorator<?>> requestScopedNodeDecorators = new HashMap<>();
   private final NodeRegistry nodeRegistry = new NodeRegistry();
@@ -49,6 +54,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
             new ThreadFactoryBuilder()
                 .setNameFormat("KrystalTaskExecutorMainThread-%s".formatted(requestId))
                 .build());
+    this.requestId = new RequestId(requestId);
   }
 
   private <T> ImmutableList<NodeDecorator<T>> getRequestScopedNodeDecorators(
@@ -63,10 +69,13 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     return (ImmutableList<NodeDecorator<T>>) ImmutableList.copyOf(decorators);
   }
 
-  @SuppressWarnings("unchecked")
   @Override
-  public <T> CompletableFuture<T> executeNode(
-      NodeId nodeId, NodeInputs nodeInputs, RequestId requestId) {
+  public <T> CompletableFuture<T> executeNode(NodeId nodeId, NodeInputs nodeInputs) {
+    return executeNode(nodeId, nodeInputs, requestId);
+  }
+
+  @SuppressWarnings("unchecked")
+  <T> CompletableFuture<T> executeNode(NodeId nodeId, NodeInputs nodeInputs, RequestId requestId) {
     if (nodeInputs.values().isEmpty()) {
       return (CompletableFuture<T>) this.enqueueCommand(new Execute(nodeId, requestId));
     }

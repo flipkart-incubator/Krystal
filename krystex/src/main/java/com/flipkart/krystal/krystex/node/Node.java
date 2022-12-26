@@ -3,7 +3,6 @@ package com.flipkart.krystal.krystex.node;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.concurrent.CompletableFuture.allOf;
 
-import com.flipkart.krystal.krystex.KrystalNodeExecutor;
 import com.flipkart.krystal.krystex.MultiResultFuture;
 import com.flipkart.krystal.krystex.RequestId;
 import com.flipkart.krystal.krystex.ResolverDefinition;

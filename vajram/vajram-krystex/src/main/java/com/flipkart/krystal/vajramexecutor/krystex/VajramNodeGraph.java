@@ -20,6 +20,7 @@ import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeInputs;
 import com.flipkart.krystal.krystex.node.NodeLogicDefinition;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
+import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.ExecutionContextMap;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.ModulatedExecutionContext;
@@ -31,6 +32,7 @@ import com.flipkart.krystal.vajram.das.AccessSpecMatchingResult;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import com.flipkart.krystal.vajram.das.VajramIndex;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
+import com.flipkart.krystal.vajram.exec.VajramExecutableGraph;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
@@ -58,40 +60,35 @@ import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** The execution graph encompassing all registered vajrams. */
-public final class VajramGraph {
-
-  private static final int NODE_ID_SUFFIX_LENGTH = 5;
+public final class VajramNodeGraph implements VajramExecutableGraph {
 
   @Getter
-  private final NodeDefinitionRegistry clusterDefinitionRegistry =
+  private final NodeDefinitionRegistry nodeDefinitionRegistry =
       new NodeDefinitionRegistry(new LogicDefinitionRegistry());
 
   private final Map<VajramID, VajramDefinition> vajramDefinitions = new LinkedHashMap<>();
   /** These are those call graphs of a vajram where no other vajram depends on this. */
-  private final Map<VajramID, NodeDefinition> independentVajramDags = new LinkedHashMap<>();
-  /** VajramDAGs which correspond to every call graph that vajram is part of. */
-  private final Map<VajramID, NodeDefinition> allVajramDags = new LinkedHashMap<>();
+  private final Map<VajramID, NodeDefinition> vajramExecutables = new LinkedHashMap<>();
 
   private final VajramIndex vajramIndex = new VajramIndex();
-  private final RandomStringGenerator randomStringGenerator = RandomStringGenerator.instance();
 
   private final Map<VajramID, Supplier<InputModulator<Object, Object>>> inputModulators =
       new LinkedHashMap<>();
 
-  private VajramGraph() {}
+  private VajramNodeGraph() {}
 
-  public static VajramGraph loadFromClasspath(String... packagePrefix) {
+  public static VajramNodeGraph loadFromClasspath(String... packagePrefix) {
     return loadFromClasspath(packagePrefix, ImmutableList.of());
   }
 
-  public static VajramGraph loadFromClasspath(
+  public static VajramNodeGraph loadFromClasspath(
       String[] packagePrefixes, Iterable<Vajram<?>> vajrams) {
-    VajramGraph vajramGraph = new VajramGraph();
+    VajramNodeGraph vajramNodeGraph = new VajramNodeGraph();
     for (String packagePrefix : packagePrefixes) {
-      loadVajramsFromClassPath(packagePrefix).forEach(vajramGraph::registerVajram);
+      loadVajramsFromClassPath(packagePrefix).forEach(vajramNodeGraph::registerVajram);
     }
-    vajrams.forEach(vajramGraph::registerVajram);
-    return vajramGraph;
+    vajrams.forEach(vajramNodeGraph::registerVajram);
+    return vajramNodeGraph;
   }
 
   public void registerInputModulator(
@@ -101,15 +98,22 @@ public final class VajramGraph {
     if (vajram instanceof IOVajram<?> ioVajram) {
       Supplier<NodeDecorator<Object>> inputModulationDecoratorSupplier =
           getInputModulationDecoratorSupplier(ioVajram, inputModulator);
-      NodeDefinition nodeDefinition = allVajramDags.get(vajramID);
+      NodeDefinition nodeDefinition = vajramExecutables.get(vajramID);
       if (nodeDefinition != null) {
-        clusterDefinitionRegistry
+        nodeDefinitionRegistry
             .logicDefinitionRegistry()
             .get(nodeDefinition.logicNode())
             .registerRequestScopedNodeDecorator(inputModulationDecoratorSupplier);
       }
     }
   }
+
+  @Override
+  public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
+      C requestContext) {
+    return new KrystexVajramExecutor<>(this, requestContext);
+  }
+
   /**
    * Registers vajrams that need to be executed at a later point. This is a necessary step for
    * vajram execution.
@@ -137,18 +141,17 @@ public final class VajramGraph {
    *
    * @param vajramId The id of the vajram to execute.
    */
-  // TODO Handle case were input resolvers bind from dependencies (sequential dependency in vajrams)
-  public NodeId getExecutable(VajramID vajramId) {
-    return independentVajramDags
-        .computeIfAbsent(
-            vajramId,
-            v -> _getVajramExecutionGraph(getVajramDefinition(v).orElseThrow().getVajram()))
-        .nodeId();
+  NodeId getExecutable(VajramID vajramId) {
+    return _getVajramExecutionGraph(vajramId).nodeId();
   }
 
   @NonNull
-  private NodeDefinition _getVajramExecutionGraph(Vajram vajram) {
-    VajramDefinition vajramDefinition = getVajramDefinition(vajram.getId()).orElseThrow();
+  private NodeDefinition _getVajramExecutionGraph(VajramID vajramId) {
+    NodeDefinition nodeDefinition = vajramExecutables.get(vajramId);
+    if (nodeDefinition != null) {
+      return nodeDefinition;
+    }
+    VajramDefinition vajramDefinition = getVajramDefinition(vajramId).orElseThrow();
     InputResolverCreationResult inputResolverCreationResult =
         createNodeDefinitionsForInputResolvers(vajramDefinition);
 
@@ -161,13 +164,13 @@ public final class VajramGraph {
     NodeLogicDefinition<?> vajramLogicNodeLogicDefinition =
         createVajramLogicNodeDefinition(vajramDefinition);
 
-    NodeDefinition nodeDefinition =
-        clusterDefinitionRegistry.newClusterDefinition(
-            vajram.getId().vajramId(),
+    nodeDefinition =
+        nodeDefinitionRegistry.newClusterDefinition(
+            vajramId.vajramId(),
             vajramLogicNodeLogicDefinition.nodeLogicId(),
             depNameToProviderNode,
             inputResolverCreationResult.resolverDefinitions());
-    allVajramDags.put(vajram.getId(), nodeDefinition);
+    vajramExecutables.put(vajramId, nodeDefinition);
     return nodeDefinition;
   }
 
@@ -188,16 +191,14 @@ public final class VajramGraph {
                       inputResolver.resolutionTarget().inputNames();
                   ImmutableSet<String> sources = inputResolver.sources();
                   ComputeLogicDefinition<?> inputResolverNode =
-                      clusterDefinitionRegistry
+                      nodeDefinitionRegistry
                           .logicDefinitionRegistry()
                           .newBatchComputeLogic(
-                              "%s:dep(%s):%s(%s):%s"
+                              "%s:dep(%s):inputResolver(%s)"
                                   .formatted(
                                       vajramId,
                                       dependencyName,
-                                      "inputResolver",
-                                      String.join(",", resolvedInputNames),
-                                      generateNodeSuffix()),
+                                      String.join(",", resolvedInputNames)),
                               sources,
                               dependencyValues ->
                                   vajram
@@ -222,11 +223,10 @@ public final class VajramGraph {
         vajramDefinition.getVajram().getInputDefinitions();
     Set<String> inputs =
         inputDefinitions.stream().map(VajramInputDefinition::name).collect(Collectors.toSet());
-    NodeLogicId vajramLogicNodeName =
-        new NodeLogicId("n(v(%s):vajramLogic:%s)".formatted(vajramId, generateNodeSuffix()));
+    NodeLogicId vajramLogicNodeName = new NodeLogicId("%s:vajramLogic".formatted(vajramId));
     // Step 4: Create and register node for the main vajram logic
     if (vajramDefinition.getVajram() instanceof NonBlockingVajram<?> nonBlockingVajram) {
-      return clusterDefinitionRegistry
+      return nodeDefinitionRegistry
           .logicDefinitionRegistry()
           .newBatchComputeLogic(
               vajramLogicNodeName.asString(),
@@ -239,7 +239,7 @@ public final class VajramGraph {
       //noinspection unchecked
       var inputsConvertor = (InputsConverter<Object, Object, Object>) ioVajram.getInputsConvertor();
       IOLogicDefinition<?> ioNodeDefinition =
-          clusterDefinitionRegistry
+          nodeDefinitionRegistry
               .logicDefinitionRegistry()
               .newIOLogic(
                   vajramLogicNodeName,
@@ -356,7 +356,7 @@ public final class VajramGraph {
         throw new UnsupportedOperationException();
       }
       Vajram dependencyVajram = dependencyVajrams.values().iterator().next();
-      NodeDefinition clusterDefinition = _getVajramExecutionGraph(dependencyVajram);
+      NodeDefinition clusterDefinition = _getVajramExecutionGraph(dependencyVajram.getId());
 
       depNameToProviderNode.put(dependencyName, clusterDefinition);
     }
@@ -365,10 +365,6 @@ public final class VajramGraph {
 
   private record InputResolverCreationResult(
       ImmutableList<ResolverDefinition> resolverDefinitions) {}
-
-  private String generateNodeSuffix() {
-    return randomStringGenerator.generateRandomString(NODE_ID_SUFFIX_LENGTH);
-  }
 
   private Optional<VajramDefinition> getVajramDefinition(VajramID vajramId) {
     return Optional.ofNullable(vajramDefinitions.get(vajramId));
