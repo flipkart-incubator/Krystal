@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram;
 
 import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 
-abstract sealed class AbstractVajram<T> implements Vajram<T> permits NonBlockingVajram, IOVajram {
+abstract sealed class AbstractVajram<T> implements Vajram<T> permits ComputeVajram, IOVajram {
 
   private VajramID id;
 

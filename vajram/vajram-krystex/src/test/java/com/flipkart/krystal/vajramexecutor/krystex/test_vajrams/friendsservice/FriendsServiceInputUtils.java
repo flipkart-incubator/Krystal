@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice;
 
 import com.flipkart.krystal.vajram.inputs.InputValues;
-import com.flipkart.krystal.vajram.inputs.SingleValue;
+import com.flipkart.krystal.vajram.inputs.ValueOrError;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.google.common.collect.ImmutableMap;
 
@@ -19,7 +19,7 @@ class FriendsServiceInputUtils {
           return new InputValues(
               ImmutableMap.of(
                   "user_id",
-                  new SingleValue<>(enrichedRequest.inputsNeedingModulation().userId())));
+                  new ValueOrError<>(enrichedRequest.inputsNeedingModulation().userId())));
         }
 
         @Override

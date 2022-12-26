@@ -4,7 +4,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.flipkart.krystal.krystex.node.NodeInputs;
 import com.flipkart.krystal.vajram.inputs.InputValues;
-import com.flipkart.krystal.vajram.inputs.SingleValue;
+import com.flipkart.krystal.vajram.inputs.ValueOrError;
 import java.util.Map.Entry;
 
 public class Utils {
@@ -15,7 +15,7 @@ public class Utils {
             .collect(
                 toImmutableMap(
                     Entry::getKey,
-                    e -> new SingleValue<>(e.getValue().value(), e.getValue().failureReason()))));
+                    e -> new ValueOrError<>(e.getValue().value(), e.getValue().failureReason()))));
   }
 
   static NodeInputs toNodeInputs(InputValues inputValues) {
@@ -26,11 +26,11 @@ public class Utils {
                     Entry::getKey,
                     e ->
                         new com.flipkart.krystal.krystex.SingleValue<>(
-                            e.getValue().value(), e.getValue().failureReason()))));
+                            e.getValue().value(), e.getValue().error()))));
   }
 
-  public static SingleValue<?> toSingleValue(
+  public static ValueOrError<?> toSingleValue(
       com.flipkart.krystal.krystex.SingleValue<?> singleValue) {
-    return new SingleValue<>(singleValue.value(), singleValue.failureReason());
+    return new ValueOrError<>(singleValue.value(), singleValue.failureReason());
   }
 }

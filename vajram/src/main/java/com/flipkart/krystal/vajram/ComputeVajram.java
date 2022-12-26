@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram;
 
-public abstract non-sealed class NonBlockingVajram<T> extends AbstractVajram<T> {
+public abstract non-sealed class ComputeVajram<T> extends AbstractVajram<T> {
 
   @Override
   public final boolean isIOVajram() {

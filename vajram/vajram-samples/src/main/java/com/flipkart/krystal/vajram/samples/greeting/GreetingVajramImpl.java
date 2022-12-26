@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.samples.greeting;
 
 import com.flipkart.krystal.vajram.ExecutionContextMap;
 import com.flipkart.krystal.vajram.inputs.InputValues;
-import com.flipkart.krystal.vajram.inputs.SingleValue;
+import com.flipkart.krystal.vajram.inputs.ValueOrError;
 import com.flipkart.krystal.vajram.samples.greeting.GreetingVajramInputUtils.EnrichedRequest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -29,7 +29,7 @@ public final class GreetingVajramImpl extends GreetingVajram {
               super.userIdForUserService(
                   executionContext.<GreetingVajramRequest>getValue("user_id").userId());
           return ImmutableList.of(
-              new InputValues(ImmutableMap.of("user_id", new SingleValue<>(user_id))));
+              new InputValues(ImmutableMap.of("user_id", new ValueOrError<>(user_id))));
         }
       }
     }

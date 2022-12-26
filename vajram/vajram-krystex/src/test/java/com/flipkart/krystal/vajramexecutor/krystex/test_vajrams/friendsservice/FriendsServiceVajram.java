@@ -29,7 +29,7 @@ public abstract class FriendsServiceVajram extends IOVajram<Set<String>> {
   @Override
   public ImmutableCollection<VajramInputDefinition> getInputDefinitions() {
     return ImmutableList.of(
-        Input.builder().name(USER_ID).type(string()).mandatory().needsModulation().build());
+        Input.builder().name(USER_ID).type(string()).isMandatory().needsModulation().build());
   }
 
   public ImmutableMap<EnrichedRequest, CompletableFuture<Set<String>>> call(

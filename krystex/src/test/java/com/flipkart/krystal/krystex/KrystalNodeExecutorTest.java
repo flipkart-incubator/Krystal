@@ -45,7 +45,7 @@ class KrystalNodeExecutorTest {
   @Test
   void requestExecution_noDependencies_success() throws Exception {
     NodeDefinition nodeDefinition =
-        nodeDefinitionRegistry.newClusterDefinition(
+        nodeDefinitionRegistry.newNodeDefinition(
             "node",
             nodeDefinitionRegistry
                 .logicDefinitionRegistry()
@@ -64,7 +64,7 @@ class KrystalNodeExecutorTest {
     String logicId = "requestExecution_noDependencies_success_nodeName";
     NodeId nodeId =
         nodeDefinitionRegistry
-            .newClusterDefinition(
+            .newNodeDefinition(
                 logicId,
                 nodeDefinitionRegistry
                     .logicDefinitionRegistry()
@@ -102,14 +102,14 @@ class KrystalNodeExecutorTest {
     LogicDefinitionRegistry logicDefinitionRegistry =
         nodeDefinitionRegistry.logicDefinitionRegistry();
     NodeDefinition n1 =
-        nodeDefinitionRegistry.newClusterDefinition(
+        nodeDefinitionRegistry.newNodeDefinition(
             "n1",
             logicDefinitionRegistry
                 .newComputeLogic("n1_logic", dependencyValues -> "dependency_value")
                 .nodeLogicId());
 
     NodeDefinition n2 =
-        nodeDefinitionRegistry.newClusterDefinition(
+        nodeDefinitionRegistry.newNodeDefinition(
             "n2",
             logicDefinitionRegistry
                 .newComputeLogic(
@@ -133,12 +133,12 @@ class KrystalNodeExecutorTest {
     LogicDefinitionRegistry logicDefinitionRegistry =
         nodeDefinitionRegistry.logicDefinitionRegistry();
     String l1Dep = "requestExecution_multiLevelDependencies_level1";
-    nodeDefinitionRegistry.newClusterDefinition(
+    nodeDefinitionRegistry.newNodeDefinition(
         l1Dep,
         logicDefinitionRegistry.newComputeLogic(l1Dep, dependencyValues -> "l1").nodeLogicId());
 
     String l2Dep = "requestExecution_multiLevelDependencies_level2";
-    nodeDefinitionRegistry.newClusterDefinition(
+    nodeDefinitionRegistry.newNodeDefinition(
         l2Dep,
         logicDefinitionRegistry
             .newComputeLogic(
@@ -149,7 +149,7 @@ class KrystalNodeExecutorTest {
         ImmutableMap.of("input", new NodeId(l1Dep)));
 
     String l3Dep = "requestExecution_multiLevelDependencies_level3";
-    nodeDefinitionRegistry.newClusterDefinition(
+    nodeDefinitionRegistry.newNodeDefinition(
         l3Dep,
         logicDefinitionRegistry
             .newComputeLogic(
@@ -160,7 +160,7 @@ class KrystalNodeExecutorTest {
         ImmutableMap.of("input", new NodeId(l2Dep)));
 
     String l4Dep = "requestExecution_multiLevelDependencies_level4";
-    nodeDefinitionRegistry.newClusterDefinition(
+    nodeDefinitionRegistry.newNodeDefinition(
         l4Dep,
         logicDefinitionRegistry
             .newComputeLogic(
@@ -174,7 +174,7 @@ class KrystalNodeExecutorTest {
         timedGet(
             krystalNodeExecutor.executeNode(
                 nodeDefinitionRegistry
-                    .newClusterDefinition(
+                    .newNodeDefinition(
                         "requestExecution_multiLevelDependencies_final",
                         logicDefinitionRegistry
                             .newComputeLogic(
@@ -197,7 +197,7 @@ class KrystalNodeExecutorTest {
         () ->
             krystalNodeExecutor.executeNode(
                 nodeDefinitionRegistry
-                    .newClusterDefinition(
+                    .newNodeDefinition(
                         "shutdown_preventsNewExecutionRequests",
                         nodeDefinitionRegistry
                             .logicDefinitionRegistry()

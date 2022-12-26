@@ -10,7 +10,7 @@ import lombok.Builder;
 public record Input<T>(
     String name,
     DataType<? extends T> type,
-    boolean mandatory,
+    boolean isMandatory,
     T defaultValue,
     String documentation,
     boolean needsModulation,
@@ -21,7 +21,7 @@ public record Input<T>(
       Set.of(ResolutionSources.REQUEST);
 
   public boolean isOptional() {
-    return !mandatory();
+    return !isMandatory();
   }
 
   @Override
@@ -34,8 +34,8 @@ public record Input<T>(
 
   public static class InputBuilder<T> {
 
-    public InputBuilder<T> mandatory() {
-      this.mandatory = true;
+    public InputBuilder<T> isMandatory() {
+      this.isMandatory = true;
       return this;
     }
 

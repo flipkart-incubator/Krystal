@@ -25,7 +25,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class Node {
 
-  private final NodeId clusterId;
+  private final NodeId nodeId;
 
   private final NodeDefinition nodeDefinition;
 
@@ -46,7 +46,7 @@ public class Node {
       NodeDefinition nodeDefinition,
       KrystalNodeExecutor krystalNodeExecutor,
       ImmutableMap<NodeLogicId, ImmutableList<NodeDecorator<Object>>> nodeDecorators) {
-    this.clusterId = nodeDefinition.nodeId();
+    this.nodeId = nodeDefinition.nodeId();
     this.nodeDefinition = nodeDefinition;
     this.krystalNodeExecutor = krystalNodeExecutor;
     this.nodeDecorators = nodeDecorators;
@@ -162,7 +162,7 @@ public class Node {
                       }
                       krystalNodeExecutor.enqueueCommand(
                           new ExecuteWithInput(
-                              this.clusterId,
+                              this.nodeId,
                               dependencyName,
                               new SingleValue<>(aggregate, throwable),
                               requestId));

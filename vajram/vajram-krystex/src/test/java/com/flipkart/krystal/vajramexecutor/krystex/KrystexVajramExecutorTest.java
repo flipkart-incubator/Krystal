@@ -1,8 +1,10 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.loadFromClasspath;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.modulation.Batcher;
 import com.flipkart.krystal.vajramexecutor.krystex.TestRequestContext.TestRequestContextBuilder;
@@ -17,6 +19,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.Test
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceVajram;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,7 +41,7 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  void requestExecution_vajramWithNoDependencies_success() throws Exception {
+  void execute_computeNoDependencies_success() throws Exception {
     VajramNodeGraph graph =
         loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
@@ -50,7 +53,22 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  void requestExecution_ioVajramSingleRequestNoModulator_success() throws Exception {
+  void execute_computeOptionalInputProvided_success() throws Exception {
+    VajramNodeGraph graph =
+        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello");
+    try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
+        graph.createExecutor(requestContext.requestId("vajramWithNoDependencies").build())) {
+      CompletableFuture<String> result =
+          krystexVajramExecutor.execute(
+              new VajramID(HelloVajram.ID),
+              applicationRequestContext ->
+                  helloRequestBuilder(applicationRequestContext).greeting("Namaste").build());
+      assertEquals("Namaste! user_id_1", result.get(5, TimeUnit.HOURS));
+    }
+  }
+
+  @Test
+  void execute_ioSingleRequestNoModulator_success() throws Exception {
     VajramNodeGraph graph =
         loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
@@ -64,7 +82,7 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  void requestExecution_ioVajramWithModulatorMultipleRequests_calledOnlyOnce() throws Exception {
+  void execute_ioVajramWithModulatorMultipleRequests_calledOnlyOnce() throws Exception {
     VajramNodeGraph graph =
         loadFromClasspath(
             "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
@@ -84,7 +102,7 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  void requestExecution_sequentialDependency_success() throws Exception {
+  void execute_sequentialDependency_success() throws Exception {
     VajramNodeGraph graph =
         loadFromClasspath(
             "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
@@ -103,10 +121,32 @@ class KrystexVajramExecutorTest {
     }
   }
 
+  @Test
+  void requestExecution_missingMandatoryInput_throwsException() {
+    VajramNodeGraph graph =
+        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello");
+    try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
+        graph.createExecutor(requestContext.requestId("vajramWithNoDependencies").build())) {
+      CompletableFuture<String> result =
+          krystexVajramExecutor.execute(new VajramID(HelloVajram.ID), this::incompleteHelloRequest);
+      assertThatThrownBy(() -> result.get(5, TimeUnit.HOURS))
+          .isInstanceOf(ExecutionException.class)
+          .hasCauseExactlyInstanceOf(MandatoryInputsMissingException.class)
+          .hasMessageContaining(
+              "Vajram v<" + HelloVajram.ID + "> did not receive these mandatory inputs: [ name");
+    }
+  }
+
   private HelloRequest helloRequest(TestRequestContext applicationRequestContext) {
-    return HelloRequest.builder()
-        .name(applicationRequestContext.loggedInUserId().orElse(null))
-        .build();
+    return helloRequestBuilder(applicationRequestContext).build();
+  }
+
+  private HelloRequest.Builder helloRequestBuilder(TestRequestContext applicationRequestContext) {
+    return HelloRequest.builder().name(applicationRequestContext.loggedInUserId().orElseThrow());
+  }
+
+  private HelloRequest incompleteHelloRequest(TestRequestContext applicationRequestContext) {
+    return HelloRequest.builder().build();
   }
 
   private TestUserServiceRequest testUserServiceRequest(TestRequestContext testRequestContext) {

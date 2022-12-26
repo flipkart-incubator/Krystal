@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2;
 import static com.flipkart.krystal.datatypes.StringType.string;
 import static java.util.stream.Collectors.joining;
 
-import com.flipkart.krystal.vajram.NonBlockingVajram;
+import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramLogic;
@@ -20,7 +20,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.Set;
 
 @VajramDef(HelloFriendsV2Vajram.ID)
-public abstract class HelloFriendsV2Vajram extends NonBlockingVajram<String> {
+public abstract class HelloFriendsV2Vajram extends ComputeVajram<String> {
 
   public static final String ID = "HelloFriendsV2Vajram";
 
@@ -32,16 +32,16 @@ public abstract class HelloFriendsV2Vajram extends NonBlockingVajram<String> {
   @Override
   public ImmutableList<VajramInputDefinition> getInputDefinitions() {
     return ImmutableList.of(
-        Input.builder().name(USER_ID).type(string()).mandatory().build(),
+        Input.builder().name(USER_ID).type(string()).isMandatory().build(),
         Dependency.builder()
             .name(FRIEND_IDS)
             .dataAccessSpec(new VajramID(FriendsServiceVajram.ID))
-            .mandatory(true)
+            .isMandatory(true)
             .build(),
         Dependency.builder()
             .name(USER_INFO)
             .dataAccessSpec(new VajramID(TestUserServiceVajram.ID))
-            .mandatory(true)
+            .isMandatory(true)
             .build());
   }
 
