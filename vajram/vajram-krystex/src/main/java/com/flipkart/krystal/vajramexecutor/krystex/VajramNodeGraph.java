@@ -21,11 +21,11 @@ import com.flipkart.krystal.krystex.node.NodeInputs;
 import com.flipkart.krystal.krystex.node.NodeLogicDefinition;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
+import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.ExecutionContextMap;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
 import com.flipkart.krystal.vajram.ModulatedExecutionContext;
-import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDefinitionException;
 import com.flipkart.krystal.vajram.VajramID;
@@ -80,8 +80,8 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
 
   private VajramNodeGraph() {}
 
-  public static VajramNodeGraph loadFromClasspath(String... packagePrefix) {
-    return loadFromClasspath(packagePrefix, ImmutableList.of());
+  public static VajramNodeGraph loadFromClasspath(String... packagePrefixes) {
+    return loadFromClasspath(packagePrefixes, ImmutableList.of());
   }
 
   public static VajramNodeGraph loadFromClasspath(
