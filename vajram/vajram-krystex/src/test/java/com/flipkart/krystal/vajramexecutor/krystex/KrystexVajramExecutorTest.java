@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.loadFromClasspath;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -37,11 +38,12 @@ class KrystexVajramExecutorTest {
 
   @AfterEach
   void tearDown() {
-    TestUserServiceVajram.CALL_COUNTER.set(0);
+    TestUserServiceVajram.CALL_COUNTER.reset();
+    HelloVajram.CALL_COUNTER.reset();
   }
 
   @Test
-  void execute_computeNoDependencies_success() throws Exception {
+  void executeCompute_noDependencies_success() throws Exception {
     VajramNodeGraph graph =
         loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
@@ -53,7 +55,7 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  void execute_computeOptionalInputProvided_success() throws Exception {
+  void executeCompute_optionalInputProvided_success() throws Exception {
     VajramNodeGraph graph =
         loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
@@ -68,7 +70,7 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  void execute_ioSingleRequestNoModulator_success() throws Exception {
+  void executeIo_singleRequestNoModulator_success() throws Exception {
     VajramNodeGraph graph =
         loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
@@ -82,7 +84,7 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  void execute_ioVajramWithModulatorMultipleRequests_calledOnlyOnce() throws Exception {
+  void executeIo_withModulatorMultipleRequests_calledOnlyOnce() throws Exception {
     VajramNodeGraph graph =
         loadFromClasspath(
             "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
@@ -97,12 +99,12 @@ class KrystexVajramExecutorTest {
       assertEquals(
           "Hello Friends of Firstname Lastname (user_id_1)! Firstname Lastname (user_id_1:friend_1), Firstname Lastname (user_id_1:friend_2)",
           helloString.get(5, TimeUnit.HOURS));
-      assertEquals(1, TestUserServiceVajram.CALL_COUNTER.get());
+      assertEquals(1, TestUserServiceVajram.CALL_COUNTER.sum());
     }
   }
 
   @Test
-  void execute_sequentialDependency_success() throws Exception {
+  void executeCompute_sequentialDependency_success() throws Exception {
     VajramNodeGraph graph =
         loadFromClasspath(
             "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
@@ -117,12 +119,12 @@ class KrystexVajramExecutorTest {
       assertEquals(
           "Hello Friends! Firstname Lastname (user_id_1:friend1), Firstname Lastname (user_id_1:friend2)",
           helloString.get(5, TimeUnit.HOURS));
-      assertEquals(1, TestUserServiceVajram.CALL_COUNTER.get());
+      assertEquals(1, TestUserServiceVajram.CALL_COUNTER.sum());
     }
   }
 
   @Test
-  void requestExecution_missingMandatoryInput_throwsException() {
+  void executeCompute_missingMandatoryInput_throwsException() {
     VajramNodeGraph graph =
         loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
@@ -134,6 +136,22 @@ class KrystexVajramExecutorTest {
           .hasCauseExactlyInstanceOf(MandatoryInputsMissingException.class)
           .hasMessageContaining(
               "Vajram v<" + HelloVajram.ID + "> did not receive these mandatory inputs: [ name");
+    }
+  }
+
+  @Test
+  void executeCompute_caching_success() throws Exception {
+    VajramNodeGraph graph =
+        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello");
+    try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
+        graph.createExecutor(requestContext.requestId("vajramWithNoDependencies").build())) {
+      CompletableFuture<String> result1 =
+          krystexVajramExecutor.execute(new VajramID(HelloVajram.ID), this::helloRequest);
+      CompletableFuture<String> result2 =
+          krystexVajramExecutor.execute(new VajramID(HelloVajram.ID), this::helloRequest);
+      assertEquals("Hello! user_id_1", result1.get(5, TimeUnit.HOURS));
+      assertEquals("Hello! user_id_1", result2.get(5, TimeUnit.HOURS));
+      assertThat(HelloVajram.CALL_COUNTER.sum()).isEqualTo(1);
     }
   }
 

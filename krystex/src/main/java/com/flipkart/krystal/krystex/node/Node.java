@@ -76,8 +76,7 @@ public class Node {
                         .getOrDefault(requestId, ImmutableMap.of())
                         .containsKey(depName)) {
                       krystalNodeExecutor
-                          .executeNode(
-                              nodeId, new NodeInputs(), requestId.append("%s".formatted(nodeId)))
+                          .executeNode(nodeId, new NodeInputs(), requestId.append(nodeId))
                           .whenComplete(
                               (o, throwable) -> {
                                 krystalNodeExecutor.enqueueCommand(
