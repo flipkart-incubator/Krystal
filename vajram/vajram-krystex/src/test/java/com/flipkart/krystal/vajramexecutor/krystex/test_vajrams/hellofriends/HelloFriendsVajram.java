@@ -70,7 +70,7 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
 
   private Set<String> getFriendsFor(String userId, int numberOfFriends) {
     return IntStream.range(1, numberOfFriends + 1)
-        .mapToObj(operand -> userId + ":friend_" + operand)
+        .mapToObj(i -> userId + ":friend_" + i)
         .collect(Collectors.toSet());
   }
 }

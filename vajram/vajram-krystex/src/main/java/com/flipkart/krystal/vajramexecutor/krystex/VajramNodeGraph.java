@@ -105,7 +105,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
       if (nodeDefinition != null) {
         nodeDefinitionRegistry
             .logicDefinitionRegistry()
-            .get(nodeDefinition.logicNode())
+            .get(nodeDefinition.mainLogicNode())
             .registerRequestScopedNodeDecorator(inputModulationDecoratorSupplier);
       }
     }

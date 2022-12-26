@@ -51,8 +51,8 @@ public abstract class HelloFriendsV2Vajram extends ComputeVajram<String> {
   }
 
   @Resolve(value = USER_INFO, inputs = TestUserServiceVajram.USER_ID)
-  public Set<String> userIdsForUserService(@BindFrom(FRIEND_IDS) Set<String> userIds) {
-    return userIds;
+  public Set<String> userIdsForUserService(@BindFrom(FRIEND_IDS) Set<String> friendIds) {
+    return friendIds;
   }
 
   @VajramLogic

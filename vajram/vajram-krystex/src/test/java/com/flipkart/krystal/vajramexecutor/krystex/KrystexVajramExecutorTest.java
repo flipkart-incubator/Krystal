@@ -140,18 +140,28 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  void executeCompute_caching_success() throws Exception {
+  void execute_multiRequestNoInputModulator_cacheHitSuccess() throws Exception {
     VajramNodeGraph graph =
-        loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello");
+        loadFromClasspath(
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+            "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
-        graph.createExecutor(requestContext.requestId("vajramWithNoDependencies").build())) {
-      CompletableFuture<String> result1 =
-          krystexVajramExecutor.execute(new VajramID(HelloVajram.ID), this::helloRequest);
-      CompletableFuture<String> result2 =
-          krystexVajramExecutor.execute(new VajramID(HelloVajram.ID), this::helloRequest);
-      assertEquals("Hello! user_id_1", result1.get(5, TimeUnit.HOURS));
-      assertEquals("Hello! user_id_1", result2.get(5, TimeUnit.HOURS));
-      assertThat(HelloVajram.CALL_COUNTER.sum()).isEqualTo(1);
+        graph.createExecutor(
+            requestContext.requestId("ioVajramSingleRequestNoModulator").build())) {
+      CompletableFuture<TestUserInfo> userInfo =
+          krystexVajramExecutor.execute(
+              new VajramID(TestUserServiceVajram.ID),
+              testRequestContext -> TestUserServiceRequest.builder().userId("user_id_1").build());
+      CompletableFuture<String> helloFriends =
+          krystexVajramExecutor.execute(
+              new VajramID(HelloFriendsVajram.ID),
+              testRequestContext ->
+                  HelloFriendsRequest.builder().userId("user_id_1").numberOfFriends(0).build());
+      assertThat(userInfo.get(5, TimeUnit.HOURS).userName())
+          .isEqualTo("Firstname Lastname (user_id_1)");
+      assertThat(helloFriends.get(5, TimeUnit.HOURS))
+          .isEqualTo("Hello Friends of Firstname Lastname (user_id_1)! ");
+      assertThat(TestUserServiceVajram.CALL_COUNTER.sum()).isEqualTo(1);
     }
   }
 
