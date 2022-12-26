@@ -62,7 +62,7 @@ public class Node {
     try {
       NodeLogicId logicNode = nodeDefinition.logicNode();
       NodeLogicDefinition<Object> logicNodeLogicDefinition =
-          nodeDefinition.nodeDefinitionRegistry().nodeDefinitionRegistry().get(logicNode);
+          nodeDefinition.nodeDefinitionRegistry().logicDefinitionRegistry().get(logicNode);
       boolean executeLogic = false;
       if (nodeCommand instanceof Execute) {
         ImmutableSet<String> inputNames = logicNodeLogicDefinition.inputNames();
@@ -116,7 +116,7 @@ public class Node {
             NodeInputs inputResolverInputs =
                 new NodeInputs(ImmutableMap.copyOf(Maps.filterKeys(inputs, boundFrom::contains)));
             NodeLogicDefinition<Object> definition =
-                nodeDefinition.nodeDefinitionRegistry().nodeDefinitionRegistry().get(nodeLogicId);
+                nodeDefinition.nodeDefinitionRegistry().logicDefinitionRegistry().get(nodeLogicId);
             MultiResultFuture<NodeInputs> results =
                 executeNodeLogic(
                     inputResolverInputs,

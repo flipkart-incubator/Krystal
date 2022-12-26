@@ -15,7 +15,7 @@ public final class NodeDefinitionRegistry {
     this.logicDefinitionRegistry = logicDefinitionRegistry;
   }
 
-  public LogicDefinitionRegistry nodeDefinitionRegistry() {
+  public LogicDefinitionRegistry logicDefinitionRegistry() {
     return logicDefinitionRegistry;
   }
 

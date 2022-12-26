@@ -54,7 +54,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   private <T> ImmutableList<NodeDecorator<T>> getRequestScopedNodeDecorators(
       NodeLogicId nodeLogicId) {
     NodeLogicDefinition<?> nodeLogicDefinition =
-        nodeDefinitionRegistry.nodeDefinitionRegistry().get(nodeLogicId);
+        nodeDefinitionRegistry.logicDefinitionRegistry().get(nodeLogicId);
     List<? extends NodeDecorator<?>> decorators =
         nodeLogicDefinition.getRequestScopedNodeDecoratorFactories().values().stream()
             .map(Supplier::get)

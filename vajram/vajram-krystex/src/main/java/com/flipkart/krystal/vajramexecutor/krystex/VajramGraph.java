@@ -104,7 +104,7 @@ public final class VajramGraph {
       NodeDefinition nodeDefinition = allVajramDags.get(vajramID);
       if (nodeDefinition != null) {
         clusterDefinitionRegistry
-            .nodeDefinitionRegistry()
+            .logicDefinitionRegistry()
             .get(nodeDefinition.logicNode())
             .registerRequestScopedNodeDecorator(inputModulationDecoratorSupplier);
       }
@@ -164,7 +164,7 @@ public final class VajramGraph {
     NodeDefinition nodeDefinition =
         clusterDefinitionRegistry.newClusterDefinition(
             vajram.getId().vajramId(),
-            vajramLogicNodeLogicDefinition.nodeId(),
+            vajramLogicNodeLogicDefinition.nodeLogicId(),
             depNameToProviderNode,
             inputResolverCreationResult.resolverDefinitions());
     allVajramDags.put(vajram.getId(), nodeDefinition);
@@ -189,7 +189,7 @@ public final class VajramGraph {
                   ImmutableSet<String> sources = inputResolver.sources();
                   ComputeLogicDefinition<?> inputResolverNode =
                       clusterDefinitionRegistry
-                          .nodeDefinitionRegistry()
+                          .logicDefinitionRegistry()
                           .newBatchComputeLogic(
                               "%s:dep(%s):%s(%s):%s"
                                   .formatted(
@@ -209,7 +209,7 @@ public final class VajramGraph {
                                       .map(Utils::toNodeInputs)
                                       .collect(toImmutableList()));
                   return new ResolverDefinition(
-                      inputResolverNode.nodeId(), sources, dependencyName, resolvedInputNames);
+                      inputResolverNode.nodeLogicId(), sources, dependencyName, resolvedInputNames);
                 })
             .collect(toImmutableList());
     return new InputResolverCreationResult(resolverDefinitions);
@@ -227,7 +227,7 @@ public final class VajramGraph {
     // Step 4: Create and register node for the main vajram logic
     if (vajramDefinition.getVajram() instanceof NonBlockingVajram<?> nonBlockingVajram) {
       return clusterDefinitionRegistry
-          .nodeDefinitionRegistry()
+          .logicDefinitionRegistry()
           .newBatchComputeLogic(
               vajramLogicNodeName.asString(),
               inputs,
@@ -240,7 +240,7 @@ public final class VajramGraph {
       var inputsConvertor = (InputsConverter<Object, Object, Object>) ioVajram.getInputsConvertor();
       IOLogicDefinition<?> ioNodeDefinition =
           clusterDefinitionRegistry
-              .nodeDefinitionRegistry()
+              .logicDefinitionRegistry()
               .newIOLogic(
                   vajramLogicNodeName,
                   inputs,

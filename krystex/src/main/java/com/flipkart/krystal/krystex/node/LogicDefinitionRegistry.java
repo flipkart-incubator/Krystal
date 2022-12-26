@@ -36,10 +36,10 @@ public final class LogicDefinitionRegistry {
   }
 
   public void add(NodeLogicDefinition<?> nodeLogicDefinition) {
-    if (nodeDefinitions.containsKey(nodeLogicDefinition.nodeId())) {
+    if (nodeDefinitions.containsKey(nodeLogicDefinition.nodeLogicId())) {
       return;
     }
-    nodeDefinitions.put(nodeLogicDefinition.nodeId(), nodeLogicDefinition);
+    nodeDefinitions.put(nodeLogicDefinition.nodeLogicId(), nodeLogicDefinition);
   }
 
   public void validate() {
