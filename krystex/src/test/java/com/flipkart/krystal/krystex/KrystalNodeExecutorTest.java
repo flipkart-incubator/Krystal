@@ -48,7 +48,7 @@ class KrystalNodeExecutorTest {
             "node",
             nodeDefinitionRegistry
                 .nodeDefinitionRegistry()
-                .newNonBlockingNode("nodeLogic", dependencyValues -> "computed_value")
+                .newComputeLogic("nodeLogic", dependencyValues -> "computed_value")
                 .nodeId());
 
     String result =
@@ -67,7 +67,7 @@ class KrystalNodeExecutorTest {
                 logicId,
                 nodeDefinitionRegistry
                     .nodeDefinitionRegistry()
-                    .newNonBlockingNode(
+                    .newComputeLogic(
                         logicId,
                         Set.of("a", "b", "c"),
                         dependencyValues ->
@@ -104,14 +104,14 @@ class KrystalNodeExecutorTest {
         nodeDefinitionRegistry.newClusterDefinition(
             "n1",
             logicDefinitionRegistry
-                .newNonBlockingNode("n1_logic", dependencyValues -> "dependency_value")
+                .newComputeLogic("n1_logic", dependencyValues -> "dependency_value")
                 .nodeId());
 
     NodeDefinition n2 =
         nodeDefinitionRegistry.newClusterDefinition(
             "n2",
             logicDefinitionRegistry
-                .newNonBlockingNode(
+                .newComputeLogic(
                     "n2_logic",
                     ImmutableSet.of("dep"),
                     dependencyValues ->
@@ -134,13 +134,13 @@ class KrystalNodeExecutorTest {
     String l1Dep = "requestExecution_multiLevelDependencies_level1";
     nodeDefinitionRegistry.newClusterDefinition(
         l1Dep,
-        logicDefinitionRegistry.newNonBlockingNode(l1Dep, dependencyValues -> "l1").nodeId());
+        logicDefinitionRegistry.newComputeLogic(l1Dep, dependencyValues -> "l1").nodeId());
 
     String l2Dep = "requestExecution_multiLevelDependencies_level2";
     nodeDefinitionRegistry.newClusterDefinition(
         l2Dep,
         logicDefinitionRegistry
-            .newNonBlockingNode(
+            .newComputeLogic(
                 l2Dep,
                 ImmutableSet.of("input"),
                 dependencyValues -> dependencyValues.getOrThrow("input") + ":l2")
@@ -151,7 +151,7 @@ class KrystalNodeExecutorTest {
     nodeDefinitionRegistry.newClusterDefinition(
         l3Dep,
         logicDefinitionRegistry
-            .newNonBlockingNode(
+            .newComputeLogic(
                 l3Dep,
                 ImmutableSet.of("input"),
                 dependencyValues -> dependencyValues.getOrThrow("input") + ":l3")
@@ -162,7 +162,7 @@ class KrystalNodeExecutorTest {
     nodeDefinitionRegistry.newClusterDefinition(
         l4Dep,
         logicDefinitionRegistry
-            .newNonBlockingNode(
+            .newComputeLogic(
                 l4Dep,
                 ImmutableSet.of("input"),
                 dependencyValues -> dependencyValues.getOrThrow("input") + ":l4")
@@ -176,7 +176,7 @@ class KrystalNodeExecutorTest {
                     .newClusterDefinition(
                         "requestExecution_multiLevelDependencies_final",
                         logicDefinitionRegistry
-                            .newNonBlockingNode(
+                            .newComputeLogic(
                                 "requestExecution_multiLevelDependencies_final",
                                 ImmutableSet.of("input"),
                                 dependencyValues -> dependencyValues.getOrThrow("input") + ":final")
@@ -200,7 +200,7 @@ class KrystalNodeExecutorTest {
                         "shutdown_preventsNewExecutionRequests",
                         nodeDefinitionRegistry
                             .nodeDefinitionRegistry()
-                            .newNonBlockingNode(
+                            .newComputeLogic(
                                 "shutdown_preventsNewExecutionRequests",
                                 ImmutableSet.of(),
                                 dependencyValues -> ImmutableList.of(""))

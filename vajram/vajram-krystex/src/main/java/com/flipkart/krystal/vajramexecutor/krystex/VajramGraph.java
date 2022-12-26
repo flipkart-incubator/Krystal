@@ -4,6 +4,8 @@ import static com.flipkart.krystal.vajram.VajramLoader.loadVajramsFromClassPath;
 import static com.flipkart.krystal.vajramexecutor.krystex.Utils.toInputValues;
 import static com.flipkart.krystal.vajramexecutor.krystex.Utils.toNodeInputs;
 import static com.flipkart.krystal.vajramexecutor.krystex.Utils.toSingleValue;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.flipkart.krystal.krystex.MultiResultFuture;
 import com.flipkart.krystal.krystex.ResolverDefinition;
@@ -155,7 +157,7 @@ public final class VajramGraph {
 
     ImmutableMap<String, NodeId> depNameToProviderNode =
         depNameToSubgraph.entrySet().stream()
-            .collect(ImmutableMap.toImmutableMap(Entry::getKey, e -> e.getValue().nodeId()));
+            .collect(toImmutableMap(Entry::getKey, e -> e.getValue().nodeId()));
     NodeLogicDefinition<?> vajramLogicNodeLogicDefinition =
         createVajramLogicNodeDefinition(vajramDefinition);
 
@@ -185,19 +187,17 @@ public final class VajramGraph {
                   ImmutableSet<String> resolvedInputNames =
                       inputResolver.resolutionTarget().inputNames();
                   ImmutableSet<String> sources = inputResolver.sources();
-                  String resolverNodeId =
-                      "%s:dep(%s):%s(%s):%s"
-                          .formatted(
-                              vajramId,
-                              dependencyName,
-                              "inputResolver",
-                              String.join(",", resolvedInputNames),
-                              generateNodeSuffix());
                   ComputeLogicDefinition<?> inputResolverNode =
                       clusterDefinitionRegistry
                           .nodeDefinitionRegistry()
-                          .newNonBlockingBatchNode(
-                              resolverNodeId,
+                          .newBatchComputeLogic(
+                              "%s:dep(%s):%s(%s):%s"
+                                  .formatted(
+                                      vajramId,
+                                      dependencyName,
+                                      "inputResolver",
+                                      String.join(",", resolvedInputNames),
+                                      generateNodeSuffix()),
                               sources,
                               dependencyValues ->
                                   vajram
@@ -207,11 +207,11 @@ public final class VajramGraph {
                                           new ExecutionContextMap(toInputValues(dependencyValues)))
                                       .stream()
                                       .map(Utils::toNodeInputs)
-                                      .collect(ImmutableList.toImmutableList()));
+                                      .collect(toImmutableList()));
                   return new ResolverDefinition(
-                      new NodeLogicId(resolverNodeId), sources, dependencyName, resolvedInputNames);
+                      inputResolverNode.nodeId(), sources, dependencyName, resolvedInputNames);
                 })
-            .collect(ImmutableList.toImmutableList());
+            .collect(toImmutableList());
     return new InputResolverCreationResult(resolverDefinitions);
   }
 
@@ -228,7 +228,7 @@ public final class VajramGraph {
     if (vajramDefinition.getVajram() instanceof NonBlockingVajram<?> nonBlockingVajram) {
       return clusterDefinitionRegistry
           .nodeDefinitionRegistry()
-          .newNonBlockingBatchNode(
+          .newBatchComputeLogic(
               vajramLogicNodeName.asString(),
               inputs,
               dependencyValues ->
@@ -241,7 +241,7 @@ public final class VajramGraph {
       IOLogicDefinition<?> ioNodeDefinition =
           clusterDefinitionRegistry
               .nodeDefinitionRegistry()
-              .newIONodeDefinition(
+              .newIOLogic(
                   vajramLogicNodeName,
                   inputs,
                   dependencyValues -> {
@@ -257,14 +257,14 @@ public final class VajramGraph {
                         new ModulatedInput<>(
                             enrichedRequests.stream()
                                 .map(inputsConvertor::inputsNeedingModulation)
-                                .collect(ImmutableList.toImmutableList()),
+                                .collect(toImmutableList()),
                             inputsConvertor.commonInputs(enrichedRequests.iterator().next()));
                     return ioVajram
                         .execute(new ModulatedExecutionContext(modulatedRequest))
                         .entrySet()
                         .stream()
                         .collect(
-                            ImmutableMap.toImmutableMap(
+                            toImmutableMap(
                                 e -> toNodeInputs(inputsConvertor.toMap(e.getKey())),
                                 e ->
                                     new MultiResultFuture<>(
