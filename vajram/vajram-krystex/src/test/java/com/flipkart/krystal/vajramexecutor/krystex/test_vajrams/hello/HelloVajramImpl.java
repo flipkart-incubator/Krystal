@@ -7,7 +7,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloInput
 public class HelloVajramImpl extends HelloVajram {
 
   @Override
-  public String executeNonBlocking(ExecutionContextMap executionContext) {
+  public String executeCompute(ExecutionContextMap executionContext) {
     return super.greet(
         new EnrichedRequest(
             new HelloRequest(

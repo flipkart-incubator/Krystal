@@ -271,7 +271,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                 validateMandatory(
                     vajramId, nodeInputs, vajramDefinition.getVajram().getInputDefinitions());
                 return ImmutableList.of(
-                    computeVajram.executeNonBlocking(
+                    computeVajram.executeCompute(
                         createExecutionContext(vajramId, inputDefinitions, nodeInputs)));
               });
     } else if (vajramDefinition.getVajram() instanceof IOVajram<?> ioVajram) {
