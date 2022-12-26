@@ -129,19 +129,17 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   }
 
   /**
-   * Creates the node graph for the given vajram and its dependencies (by recursively calling this
-   * same method) and returns the node definitions representing the input resolvers and main
-   * vajramLogic of this vajram. These returned nodes can be used by the caller of this method to
-   * bind them as dependants of other input resolvers created by the caller. This way, recursively
-   * the complete execution graph is constructed.
+   * If necessary, creates the nodes for the given vajram and, recursively for its dependencies, and
+   * returns the {@link NodeId} of the {@link NodeDefinition} corresponding to this vajram.
    *
-   * <p>This method should be called once all necessary vajrams have been registered using the *
-   * {@link #registerVajram(Vajram)} method. If a dependency of a vajram is not registered before *
+   * <p>This method should be called once all necessary vajrams have been registered using the
+   * {@link #registerVajram(Vajram)} method. If a dependency of a vajram is not registered before
    * this step, this method will throw an exception.
    *
    * @param vajramId The id of the vajram to execute.
+   * @return {@link NodeId} of the {@link NodeDefinition} corresponding to this given vajramId
    */
-  NodeId getExecutable(VajramID vajramId) {
+  NodeId getNodeId(VajramID vajramId) {
     return _getVajramExecutionGraph(vajramId).nodeId();
   }
 

@@ -30,7 +30,7 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
   public <T> CompletableFuture<T> execute(
       VajramID vajramId, Function<C, VajramRequest> vajramRequestBuilder) {
     return krystalExecutor.executeNode(
-        vajramNodeGraph.getExecutable(vajramId),
+        vajramNodeGraph.getNodeId(vajramId),
         toNodeInputs(
             new InputValues(vajramRequestBuilder.apply(applicationRequestContext).asMap())));
   }
