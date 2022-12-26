@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice;
 
 import static com.flipkart.krystal.datatypes.StringType.string;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.flipkart.krystal.vajram.IOVajram;
@@ -16,9 +17,8 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.Test
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 
 @VajramDef(TestUserServiceVajram.ID)
 public abstract class TestUserServiceVajram extends IOVajram<TestUserInfo> {
@@ -27,9 +27,9 @@ public abstract class TestUserServiceVajram extends IOVajram<TestUserInfo> {
   public static final String USER_ID = "user_id";
 
   private static final ScheduledExecutorService LATENCY_INDUCER =
-      Executors.newSingleThreadScheduledExecutor();
+      newSingleThreadScheduledExecutor();
 
-  public static final AtomicInteger CALL_COUNTER = new AtomicInteger();
+  public static final LongAdder CALL_COUNTER = new LongAdder();
 
   @Override
   public ImmutableList<VajramInputDefinition> getInputDefinitions() {
@@ -48,7 +48,7 @@ public abstract class TestUserServiceVajram extends IOVajram<TestUserInfo> {
   @VajramLogic
   public ImmutableMap<EnrichedRequest, CompletableFuture<TestUserInfo>> callUserService(
       ModulatedInput<InputsNeedingModulation, CommonInputs> modulatedRequest) {
-    CALL_COUNTER.incrementAndGet();
+    CALL_COUNTER.increment();
 
     // Make a call to user service and get user info
     return modulatedRequest.inputsNeedingModulation().stream()
@@ -64,7 +64,7 @@ public abstract class TestUserServiceVajram extends IOVajram<TestUserInfo> {
                               future.complete(
                                   new TestUserInfo(
                                       "Firstname Lastname (%s)".formatted(modInputs.userId()))),
-                      100,
+                      50,
                       MILLISECONDS);
                   return future;
                 }));

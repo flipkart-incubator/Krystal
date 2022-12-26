@@ -9,11 +9,14 @@ import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloInputUtils.EnrichedRequest;
 import com.google.common.collect.ImmutableList;
+import java.util.concurrent.atomic.LongAdder;
 
 @VajramDef(HelloVajram.ID)
 public abstract class HelloVajram extends ComputeVajram<String> {
 
   public static final String ID = "flipkart.krystal.test_vajrams.HelloVajram";
+
+  public static final LongAdder CALL_COUNTER = new LongAdder();
 
   @Override
   public ImmutableList<VajramInputDefinition> getInputDefinitions() {
@@ -24,6 +27,7 @@ public abstract class HelloVajram extends ComputeVajram<String> {
 
   @VajramLogic
   public String greet(EnrichedRequest inputs) {
+    CALL_COUNTER.increment();
     return "%s! %s"
         .formatted(inputs._request().greeting().orElse("Hello"), inputs._request().name());
   }
