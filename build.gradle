@@ -1,0 +1,4 @@
+ext {
+    clojarsusername = project.properties['clojarsusername'] ?: ""
+    clojarspassword = project.properties['clojarspassword'] ?: ""
+}
