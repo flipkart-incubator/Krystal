@@ -1,19 +1,21 @@
 plugins {
     id 'java'
+    id 'idea'
+    id 'maven-publish'
 }
 
-
-group 'org.example'
-version 'unspecified'
+group 'com.flipkart.krystal'
+version '1.0-SNAPSHOT'
 description 'An implementation of a vajram executor powered by the Krystex module.'
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
 dependencies {
-    implementation project(':vajram')
-    implementation project(':krystex')
+    implementation 'com.flipkart.krystal:vajram:0.1-SNAPSHOT'
+    implementation 'com.flipkart.krystal:krystex:0.1-SNAPSHOT'
     implementation 'com.google.guava:guava:31.1-jre'
     implementation 'org.checkerframework:checker-qual:3.21.3'
 
@@ -26,6 +28,26 @@ dependencies {
     testImplementation 'org.assertj:assertj-core:3.23.1'
     testCompileOnly 'org.projectlombok:lombok:1.18.24'
     testAnnotationProcessor 'org.projectlombok:lombok:1.18.24'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.flipkart.krystal'
+            artifactId = 'vajram-krystex'
+            version = '0.1-SNAPSHOT'
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "https://clojars.org/repo"
+            credentials {
+                username = rootProject.ext.clojarsusername
+                password = rootProject.ext.clojarspassword
+            }
+        }
+    }
 }
 
 test {

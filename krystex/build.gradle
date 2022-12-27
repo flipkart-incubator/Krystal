@@ -1,9 +1,11 @@
 plugins {
     id 'java'
+    id 'idea'
+    id 'maven-publish'
 }
 
-group 'org.example'
-version 'unspecified'
+group 'com.flipkart.krystal'
+version '0.1-SNAPSHOT'
 
 repositories {
     mavenCentral()
@@ -23,6 +25,31 @@ dependencies {
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+}
+
+ext {
+    clojarsusername = project.properties['clojarsusername'] ?: ""
+    clojarspassword = project.properties['clojarspassword'] ?: ""
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.flipkart.krystal'
+            artifactId = 'krystex'
+            version = '0.1-SNAPSHOT'
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "https://clojars.org/repo"
+            credentials {
+                username = rootProject.ext.clojarsusername
+                password = rootProject.ext.clojarspassword
+            }
+        }
+    }
 }
 
 test {
