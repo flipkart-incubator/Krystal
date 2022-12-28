@@ -11,7 +11,7 @@ import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.BindFrom;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.vajram.inputs.ResolutionSources;
+import com.flipkart.krystal.vajram.inputs.InputSources;
 import com.flipkart.krystal.vajram.inputs.Resolve;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.samples.greeting.GreetingVajramInputUtils.EnrichedRequest;
@@ -60,14 +60,14 @@ public abstract sealed class GreetingVajram extends ComputeVajram<String>
             .type(java(Logger.class))
             // This is not expected from clients
             // This is expected to be injected by the runtime
-            .resolvableBy(ResolutionSources.SESSION)
+            .resolvableBy(InputSources.SESSION)
             .build(),
         Input.builder()
             // Data type of resolved dependencies is inferred from the
             // dependency Vajram's Definition
             .name("analytics_event_sink")
             .type(java(AnalyticsEventSink.class))
-            .resolvableBy(ResolutionSources.SESSION)
+            .resolvableBy(InputSources.SESSION)
             .build());
   }
 

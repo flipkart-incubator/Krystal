@@ -1,7 +1,5 @@
 package com.flipkart.krystal.vajram.inputs;
 
-import com.flipkart.krystal.vajram.ExecutionContextMap;
-import com.flipkart.krystal.vajram.RequestBuilder;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collection;
 import java.util.Collections;
@@ -32,5 +30,4 @@ public record ForwardingResolver(
   public QualifiedInputs resolutionTarget() {
     return new QualifiedInputs(dependencyName(), null, targetInputName());
   }
-
 }

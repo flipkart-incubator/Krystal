@@ -14,20 +14,19 @@ public record Input<T>(
     T defaultValue,
     String documentation,
     boolean needsModulation,
-    Set<ResolutionSources> resolvableBy)
+    Set<InputSources> resolvableBy)
     implements VajramInputDefinition {
 
-  private static final Set<ResolutionSources> DEFAULT_RESOLUTION_SOURCES =
-      Set.of(ResolutionSources.REQUEST);
+  private static final Set<InputSources> DEFAULT_INPUT_SOURCES = Set.of(InputSources.CLIENT);
 
   public boolean isOptional() {
     return !isMandatory();
   }
 
   @Override
-  public Set<ResolutionSources> resolvableBy() {
+  public Set<InputSources> resolvableBy() {
     if (resolvableBy == null || resolvableBy.isEmpty()) {
-      return DEFAULT_RESOLUTION_SOURCES;
+      return DEFAULT_INPUT_SOURCES;
     }
     return resolvableBy;
   }
@@ -44,8 +43,8 @@ public record Input<T>(
       return this;
     }
 
-    public InputBuilder<T> resolvableBy(ResolutionSources... resolutionSources) {
-      this.resolvableBy = newHashSet(resolutionSources);
+    public InputBuilder<T> resolvableBy(InputSources... inputSources) {
+      this.resolvableBy = newHashSet(inputSources);
       return this;
     }
   }

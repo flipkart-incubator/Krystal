@@ -9,7 +9,9 @@ import com.google.common.collect.ImmutableSet;
 
 public sealed interface Vajram<T> permits AbstractVajram {
 
-  ImmutableCollection<VajramInputDefinition> getInputDefinitions();
+  default ImmutableCollection<VajramInputDefinition> getInputDefinitions() {
+    return ImmutableList.of();
+  }
 
   default ImmutableCollection<InputResolver> getSimpleInputResolvers() {
     return ImmutableList.of();

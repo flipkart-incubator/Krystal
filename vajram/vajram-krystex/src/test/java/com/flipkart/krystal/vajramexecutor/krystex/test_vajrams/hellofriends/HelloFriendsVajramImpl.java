@@ -20,35 +20,30 @@ public class HelloFriendsVajramImpl extends HelloFriendsVajram {
       String dependency,
       ImmutableSet<String> resolvableInputs,
       ExecutionContextMap executionContext) {
-    Optional<String> userId = executionContext.context().<String>getValue("user_id").value();
-    Optional<Integer> numberOfFriends =
-        executionContext.context().<Integer>getValue("number_of_friends").value();
+    String userId = executionContext.getValue("user_id");
+    Optional<Integer> numberOfFriends = executionContext.optValue("number_of_friends");
     switch (dependency) {
       case USER_INFO:
-      {
-        if (Set.of("user_id").equals(resolvableInputs)) {
-          if (userId.isPresent()) {
+        {
+          if (Set.of("user_id").equals(resolvableInputs)) {
             return ImmutableList.of(
                 new InputValues(
-                    ImmutableMap.of(
-                        "user_id", new ValueOrError<>(userIdForUserService(userId.get())))));
-          } else {
-            return ImmutableList.of(new InputValues());
+                    ImmutableMap.of("user_id", new ValueOrError<>(userIdForUserService(userId)))));
           }
         }
-      }
       case FRIEND_INFOS:
-      {
-        if (Set.of("user_id").equals(resolvableInputs)) {
-          if (userId.isPresent() && numberOfFriends.isPresent()) {
-            return friendIdsForUserService(userId.get(), numberOfFriends.get()).stream()
-                .map(s -> new InputValues(ImmutableMap.of("user_id", new ValueOrError<Object>(s))))
-                .collect(toImmutableList());
-          } else {
-            return ImmutableList.of(new InputValues());
+        {
+          if (Set.of("user_id").equals(resolvableInputs)) {
+            if (numberOfFriends.isPresent()) {
+              return friendIdsForUserService(userId, numberOfFriends.get()).stream()
+                  .map(
+                      s -> new InputValues(ImmutableMap.of("user_id", new ValueOrError<Object>(s))))
+                  .collect(toImmutableList());
+            } else {
+              return ImmutableList.of(new InputValues());
+            }
           }
         }
-      }
     }
     throw new IllegalArgumentException();
   }

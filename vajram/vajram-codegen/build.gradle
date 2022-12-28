@@ -1,0 +1,65 @@
+plugins {
+    id 'java'
+    id 'idea'
+    id 'maven-publish'
+    id 'java-gradle-plugin'
+    id 'groovy'
+    id 'org.flipkart.krystal.vajram' version '0.1-SNAPSHOT'
+}
+
+group 'com.flipkart.krystal'
+version '0.1-SNAPSHOT'
+description 'Code generator for Vajrams'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+
+gradlePlugin {
+    plugins {
+        simplePlugin {
+            id = 'org.flipkart.krystal.vajram'
+            implementationClass = 'com.flipkart.krystal.vajram.VajramPlugin'
+        }
+    }
+}
+
+
+dependencies {
+    implementation 'com.flipkart.krystal:vajram:0.1-SNAPSHOT'
+    implementation 'com.google.guava:guava:31.1-jre'
+    implementation 'com.squareup:javapoet:1.13.0'
+    implementation 'commons-cli:commons-cli:1.5.0'
+    implementation 'org.projectlombok:lombok:1.18.24'
+    annotationProcessor 'org.projectlombok:lombok:1.18.24'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    testImplementation 'org.assertj:assertj-core:3.23.1'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.flipkart.krystal'
+            artifactId = 'vajram-codegen'
+            version = '0.1-SNAPSHOT'
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "https://clojars.org/repo"
+            credentials {
+                username = rootProject.ext.clojarsusername
+                password = rootProject.ext.clojarspassword
+            }
+        }
+    }
+}
+
+test {
+    useJUnitPlatform()
+}

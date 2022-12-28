@@ -37,8 +37,8 @@ import com.flipkart.krystal.vajram.exec.VajramExecutableGraph;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
+import com.flipkart.krystal.vajram.inputs.InputSources;
 import com.flipkart.krystal.vajram.inputs.InputValues;
-import com.flipkart.krystal.vajram.inputs.ResolutionSources;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.inputs.ValueOrError;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
@@ -348,12 +348,12 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     for (VajramInputDefinition inputDefinition : inputDefinitions) {
       String inputName = inputDefinition.name();
       if (inputDefinition instanceof Input<?> input) {
-        if (input.resolvableBy().contains(ResolutionSources.REQUEST)) {
+        if (input.resolvableBy().contains(InputSources.CLIENT)) {
           if (dependencyValues.values().get(inputName) == null
               || SingleValue.empty().equals(dependencyValues.getValue(inputName))) {
             // Input was not resolved by another node. Check if it is resolvable
             // by SESSION
-            if (input.resolvableBy().contains(ResolutionSources.SESSION)) {
+            if (input.resolvableBy().contains(InputSources.CLIENT)) {
               // TODO handle session provided inputs
             }
           } else {

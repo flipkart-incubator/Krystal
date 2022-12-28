@@ -10,7 +10,9 @@ public class HelloVajramImpl extends HelloVajram {
   public String executeCompute(ExecutionContextMap executionContext) {
     return super.greet(
         new EnrichedRequest(
-            new HelloRequest(
-                executionContext.getValue("name"), executionContext.optValue("greeting"))));
+            HelloRequest.builder()
+                .name(executionContext.getValue("name"))
+                .greeting(executionContext.<String>optValue("greeting").orElse(null))
+                .build()));
   }
 }

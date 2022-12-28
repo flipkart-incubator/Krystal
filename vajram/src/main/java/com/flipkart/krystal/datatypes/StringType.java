@@ -1,6 +1,8 @@
 package com.flipkart.krystal.datatypes;
 
-public final class StringType implements DataType<String> {
+import java.lang.reflect.Type;
+
+public final class StringType extends AbstractDataType<String> {
 
   private static final StringType INSTANCE = new StringType();
 
@@ -9,4 +11,9 @@ public final class StringType implements DataType<String> {
   }
 
   private StringType() {}
+
+  @Override
+  Type javaType() {
+    return String.class;
+  }
 }

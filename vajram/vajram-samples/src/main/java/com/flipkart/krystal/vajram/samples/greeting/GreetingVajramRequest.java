@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.samples.greeting;
 
 import com.flipkart.krystal.vajram.RequestBuilder;
 import com.flipkart.krystal.vajram.VajramRequest;
+import com.flipkart.krystal.vajram.inputs.ValueOrError;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import java.util.HashMap;
@@ -16,10 +17,10 @@ public record GreetingVajramRequest(String userId) implements VajramRequest {
   }
 
   @Override
-  public ImmutableMap<String, ?> asMap() {
-    Map<String, Object> map = new HashMap<>();
-    map.put("user_id", userId());
-    return ImmutableMap.copyOf(Maps.filterValues(map, Objects::nonNull));
+  public ImmutableMap<String, ValueOrError<?>> asMap() {
+    Map<String, ValueOrError<?>> builder = new HashMap<>();
+    builder.put("user_id", new ValueOrError<>(userId()));
+    return ImmutableMap.copyOf(Maps.filterValues(builder, Objects::nonNull));
   }
 
   public static class Builder implements RequestBuilder<GreetingVajramRequest> {

@@ -1,3 +1,9 @@
+pluginManagement {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+}
 rootProject.name = 'krystal'
 include 'caramel'
 include 'caramel:caramel-samples'
@@ -7,3 +13,5 @@ include 'vajram:vajram-codegen'
 include 'krystex'
 include 'honeycomb'
 include 'vajram:vajram-krystex'
+
+

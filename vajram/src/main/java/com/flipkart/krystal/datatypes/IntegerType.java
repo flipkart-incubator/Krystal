@@ -1,6 +1,8 @@
 package com.flipkart.krystal.datatypes;
 
-public final class IntegerType implements DataType<Integer> {
+import java.lang.reflect.Type;
+
+public final class IntegerType extends AbstractDataType<Integer> {
 
   private static final IntegerType INSTANCE = new IntegerType();
 
@@ -9,4 +11,9 @@ public final class IntegerType implements DataType<Integer> {
   }
 
   private IntegerType() {}
+
+  @Override
+  Type javaType() {
+    return Integer.TYPE;
+  }
 }
