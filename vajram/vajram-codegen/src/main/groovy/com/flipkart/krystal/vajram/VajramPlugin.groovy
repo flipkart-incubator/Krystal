@@ -23,7 +23,9 @@ class VajramPlugin implements Plugin<Project> {
         project.tasks.register('codegenModels') {
             dependsOn project.tasks.classes
             doLast {
-                VajramCodeGenTask.codeGenModels(project.tasks.compileJava.destinationDirectory.asFile.get().getPath(), generatedSrcDir)
+                VajramCodeGenTask.codeGenModels(
+                        project.tasks.compileJava.destinationDirectory.asFile.get().getPath(),
+                        generatedSrcDir)
             }
         }
 
@@ -36,5 +38,7 @@ class VajramPlugin implements Plugin<Project> {
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
         }
+
+        project.tasks.jar.dependsOn project.tasks.compileGeneratedModels
     }
 }

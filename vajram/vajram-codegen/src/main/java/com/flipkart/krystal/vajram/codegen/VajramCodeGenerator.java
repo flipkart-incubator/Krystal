@@ -196,7 +196,9 @@ public class VajramCodeGenerator {
             .addModifiers(FINAL)
             .addMethod(constructorBuilder().addModifiers(PRIVATE).build());
     TypeSpec.Builder allInputsClass =
-        classBuilder(allInputsClassName).addModifiers(FINAL).addAnnotation(EqualsAndHashCode.class);
+        classBuilder(allInputsClassName)
+            .addModifiers(FINAL, STATIC)
+            .addAnnotation(EqualsAndHashCode.class);
     MethodSpec.Builder allInputsConstructor = constructorBuilder();
 
     vajram
