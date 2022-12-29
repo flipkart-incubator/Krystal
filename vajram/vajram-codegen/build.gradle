@@ -4,7 +4,6 @@ plugins {
     id 'maven-publish'
     id 'java-gradle-plugin'
     id 'groovy'
-    id 'org.flipkart.krystal.vajram' version '0.1-SNAPSHOT'
 }
 
 group 'com.flipkart.krystal'
@@ -15,7 +14,6 @@ repositories {
     mavenLocal()
     mavenCentral()
 }
-
 
 gradlePlugin {
     plugins {

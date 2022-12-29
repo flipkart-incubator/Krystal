@@ -15,6 +15,7 @@ import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.inputs.Input;
+import com.flipkart.krystal.vajram.inputs.InputSources;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.inputs.ValueOrError;
 import com.google.common.collect.ImmutableCollection;
@@ -56,7 +57,7 @@ public class VajramCodeGenerator {
     this.vajramName = vajram.getClass().getSimpleName();
     this.classLoader = classLoader;
     this.requestClassName = getRequestClassName(vajramName);
-    this.inputUtilClassName = "InputUtil";
+    this.inputUtilClassName = getInputUtilName(vajramName);
     this.allInputsClassName = "AllInputs";
   }
 
@@ -67,11 +68,19 @@ public class VajramCodeGenerator {
         + "Request";
   }
 
+  private static String getInputUtilName(String vajramName) {
+    return (vajramName.toLowerCase().endsWith("vajram")
+            ? vajramName.substring(0, vajramName.length() - 6)
+            : vajramName)
+        + "InputUtil";
+  }
+
   public String codeGenVajramRequest() {
     List<? extends Input<?>> inputs =
         vajram.getInputDefinitions().stream()
             .filter(vajramInputDefinition -> vajramInputDefinition instanceof Input<?>)
             .map(vajramInputDefinition -> (Input<?>) vajramInputDefinition)
+            .filter(input -> input.resolvableBy().contains(InputSources.CLIENT))
             .toList();
     MethodSpec.Builder requestConstructor = constructorBuilder().addModifiers(PRIVATE);
     ClassName builderClassType = ClassName.get(packageName + "." + requestClassName, "Builder");
@@ -229,7 +238,7 @@ public class VajramCodeGenerator {
   }
 
   private String codeGenModulatedInputUtil() {
-    return null;
+    return "";
   }
 
   public String getRequestClassName() {

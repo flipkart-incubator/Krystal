@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -31,6 +32,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+@Slf4j
 public class VajramCodeGenTask {
 
   private final Path classesDir;
@@ -56,7 +58,7 @@ public class VajramCodeGenTask {
     try {
       cmd = parser.parse(options, args);
     } catch (ParseException e) {
-      System.out.println(e.getMessage());
+      log.error("Command line options could not be parsed", e);
       formatter.printHelp("Vajram Code Generator", options);
       System.exit(1);
     }
@@ -114,18 +116,17 @@ public class VajramCodeGenTask {
     List<Vajram<?>> vajrams = new ArrayList<>();
     Set<String> classNames = getClassNames();
     for (String className : classNames) {
-      Class<?> clazz;
       try {
-        clazz = urlClassLoader.loadClass(className);
-      } catch (Throwable ignored) {
-        continue;
-      }
-      if (Vajram.class.isAssignableFrom(clazz)) {
-        if (IOVajram.class.equals(clazz.getSuperclass())
-            || ComputeVajram.class.equals(clazz.getSuperclass())) {
-          Vajram<?> vajram = (Vajram<?>) clazz.getConstructor().newInstance();
-          vajrams.add(vajram);
+        Class<?> clazz = urlClassLoader.loadClass(className);
+        if (Vajram.class.isAssignableFrom(clazz)) {
+          if (IOVajram.class.equals(clazz.getSuperclass())
+              || ComputeVajram.class.equals(clazz.getSuperclass())) {
+            Vajram<?> vajram = (Vajram<?>) clazz.getConstructor().newInstance();
+            vajrams.add(vajram);
+          }
         }
+      } catch (Throwable e) {
+        log.warn("Could not load class file.", e);
       }
     }
     return ImmutableList.copyOf(vajrams);

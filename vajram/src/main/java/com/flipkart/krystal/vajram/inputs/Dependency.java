@@ -7,7 +7,7 @@ import lombok.Builder;
 @Builder
 public record Dependency<T>(
     String name, DataAccessSpec dataAccessSpec, DataType<? extends T> type, boolean isMandatory)
-    implements VajramInputDefinition<T> {
+    implements VajramInputDefinition {
 
   @Override
   public boolean needsModulation() {
