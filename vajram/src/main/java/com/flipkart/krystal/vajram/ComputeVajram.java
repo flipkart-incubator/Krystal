@@ -7,5 +7,8 @@ public abstract non-sealed class ComputeVajram<T> extends AbstractVajram<T> {
     return false;
   }
 
-  public abstract T executeCompute(ExecutionContextMap executionContext);
+  public T executeCompute(ExecutionContextMap executionContext) {
+    throw new UnsupportedOperationException(
+        "executeCompute method should be implemented by a ComputeVajram");
+  }
 }

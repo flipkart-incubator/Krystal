@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.samples.greeting;
 
 import com.flipkart.krystal.vajram.inputs.InputValues;
+import com.flipkart.krystal.vajram.inputs.ValueOrError;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.google.common.collect.ImmutableMap;
 
@@ -17,15 +18,21 @@ class UserServiceVajramInputUtils {
         @Override
         public EnrichedRequest enrichedRequest(InputValues inputs) {
           return new EnrichedRequest(
-              new InputsNeedingModulation((String) inputs.values().get("user_id")),
+              new InputsNeedingModulation(
+                  (String)
+                      inputs
+                          .values()
+                          .getOrDefault("user_id", ValueOrError.empty())
+                          .value()
+                          .orElseThrow()),
               new CommonInputs());
         }
 
         @Override
         public InputValues toMap(EnrichedRequest enrichedRequest) {
           return new InputValues(
-              ImmutableMap.<String, Object>builder()
-                  .put("user_id", enrichedRequest.request().userId())
+              ImmutableMap.<String, ValueOrError<?>>builder()
+                  .put("user_id", new ValueOrError<>(enrichedRequest.request().userId()))
                   .build());
         }
 

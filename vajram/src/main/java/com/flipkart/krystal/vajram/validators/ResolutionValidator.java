@@ -13,7 +13,7 @@ import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
-import com.flipkart.krystal.vajram.inputs.ResolutionSources;
+import com.flipkart.krystal.vajram.inputs.InputSources;
 import com.flipkart.krystal.vajram.inputs.Resolve;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.google.common.annotations.Beta;
@@ -64,7 +64,7 @@ public class ResolutionValidator {
   }
 
   public List<String> validateInputResolutions(
-      Class<? extends Vajram> vajramDefinition, boolean valdiateOnlyMandatory) {
+      Class<? extends Vajram> vajramDefinition, boolean validateOnlyMandatory) {
     Map<String, Class<? extends Vajram>> vajramsById = discoverVajrams();
     String vajramId =
         getVajramIdString(vajramDefinition)
@@ -90,9 +90,9 @@ public class ResolutionValidator {
                       .map(i -> (Input) i)
                       .filter(
                           unresolvedInput ->
-                              Set.of(ResolutionSources.REQUEST)
+                              Set.of(InputSources.CLIENT)
                                   .equals(unresolvedInput.resolvableBy()));
-              if (valdiateOnlyMandatory) {
+              if (validateOnlyMandatory) {
                 unresolvedInputsOfDependencyStream =
                     unresolvedInputsOfDependencyStream
                         .filter(unresolvedInput -> unresolvedInput.defaultValue() == null)

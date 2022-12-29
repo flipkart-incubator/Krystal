@@ -23,7 +23,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.LongAdder;
 
 @VajramDef(TestUserServiceVajram.ID)
-public abstract class TestUserServiceVajram extends IOVajram<TestUserInfo> {
+public class TestUserServiceVajram extends IOVajram<TestUserInfo> {
 
   public static final String ID = "testUserServiceVajram";
   public static final String USER_ID = "user_id";

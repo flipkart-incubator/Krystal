@@ -2,15 +2,15 @@ package com.flipkart.krystal.vajram.modulation;
 
 import com.flipkart.krystal.vajram.inputs.InputValues;
 
-public interface InputsConverter<EnrichedRequest, InputsNeedingModulation, CommonInputs> {
-  InputValues toMap(EnrichedRequest enrichedRequest);
+public interface InputsConverter<AllInputs, InputsNeedingModulation, CommonInputs> {
+  InputValues toMap(AllInputs allInputs);
 
-  EnrichedRequest enrichedRequest(InputValues inputValues);
+  AllInputs enrichedRequest(InputValues inputValues);
 
-  EnrichedRequest enrichedRequest(
+  AllInputs enrichedRequest(
       InputsNeedingModulation inputsNeedingModulation, CommonInputs commonInputs);
 
-  CommonInputs commonInputs(EnrichedRequest request);
+  CommonInputs commonInputs(AllInputs request);
 
-  InputsNeedingModulation inputsNeedingModulation(EnrichedRequest request);
+  InputsNeedingModulation inputsNeedingModulation(AllInputs request);
 }

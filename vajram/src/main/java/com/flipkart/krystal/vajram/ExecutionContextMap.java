@@ -13,6 +13,10 @@ public record ExecutionContextMap(InputValues context) implements ExecutionConte
     return this.<T>optValue(key).orElseThrow();
   }
 
+  public <T> T getValue(String key, T defaultValue) {
+    return this.<T>optValue(key).orElse(defaultValue);
+  }
+
   public <T> Optional<T> optValue(String key) {
     //noinspection unchecked
     return (Optional<T>) context().values().getOrDefault(key, empty()).value();
