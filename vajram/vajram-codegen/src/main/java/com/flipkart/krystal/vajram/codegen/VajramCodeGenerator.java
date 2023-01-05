@@ -24,6 +24,7 @@ import com.flipkart.krystal.vajram.codegen.models.InputDef;
 import com.flipkart.krystal.vajram.codegen.models.VajramDependencyDef;
 import com.flipkart.krystal.vajram.codegen.models.VajramInputFile;
 import com.flipkart.krystal.vajram.codegen.models.VajramInputsDef;
+import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.InputValues;
@@ -83,13 +84,6 @@ public class VajramCodeGenerator {
             .collect(Collectors.joining("."));
     this.requestClassName = getRequestClassName(vajramName);
     this.allInputsClassName = "AllInputs";
-  }
-
-  private static String getRequestClassName(String vajramName) {
-    return (vajramName.toLowerCase().endsWith("vajram")
-            ? vajramName.substring(0, vajramName.length() - 6)
-            : vajramName)
-        + "Request";
   }
 
   public String codeGenVajramRequest() {
@@ -183,6 +177,34 @@ public class VajramCodeGenerator {
 
     }
     return writer.toString();
+  }
+
+  private void codeGenVajramImpl() {
+    ImmutableCollection<VajramInputDefinition> inputDefinitions =
+        vajramInputFile.vajramInputsDef().allInputsDefinitions();
+    CodeBlock.Builder inputBuilder = CodeBlock.builder().beginControlFlow("return $T.of(").indent();
+    inputDefinitions.forEach(
+        inputDefinition -> {
+          if (inputDefinition instanceof Input<?>) {
+            inputBuilder.add("$T.builder()", Input.class);
+          } else {
+            inputBuilder.add("$T.builder()", Dependency.class);
+          }
+          inputBuilder.add(".name($S)", inputDefinition.name());
+          if (inputDefinition.isMandatory()) {
+            inputBuilder.add(".isMandatory()");
+          }
+
+        });
+    MethodSpec.Builder getInputDefinitions =
+        MethodSpec.methodBuilder("getInputDefinitions")
+            .addAnnotation(Override.class)
+            .returns(new TypeToken<ImmutableList<VajramInputDefinition>>() {}.getType())
+            .addStatement(inputBuilder.endControlFlow(")").build());
+
+    JavaFile.builder(
+        packageName,
+        TypeSpec.classBuilder(vajramName + "Impl").addMethod(getInputDefinitions.build()).build());
   }
 
   private static TypeAndName wrapPrimitive(TypeAndName javaType) {
@@ -489,23 +511,6 @@ public class VajramCodeGenerator {
     return null;
   }
 
-  private MethodSpec vajramLogic(Vajram<?> vajram) {
-    String packageName = vajram.getClass().getPackageName();
-    String vajramName = vajram.getClass().getSimpleName();
-    JavaFile.builder(
-        packageName,
-        classBuilder(vajramName)
-            .addMethod(resolveInputOfDependency(vajram))
-            .addMethod(vajramLogic(vajram))
-            .build());
-    return null;
-  }
-
-  private void codeGenVajramImpl() {
-    ImmutableCollection<VajramInputDefinition> inputDefinitions =
-        vajramInputFile.vajramInputsDef().allInputsDefinitions();
-  }
-
   private record FromAndTo(MethodSpec from, MethodSpec to) {}
 
   private record TypeAndName(TypeName typeName, Optional<Type> type) {
@@ -513,5 +518,12 @@ public class VajramCodeGenerator {
     public TypeAndName(TypeName typeName) {
       this(typeName, Optional.empty());
     }
+  }
+
+  private static String getRequestClassName(String vajramName) {
+    return (vajramName.toLowerCase().endsWith("vajram")
+            ? vajramName.substring(0, vajramName.length() - 6)
+            : vajramName)
+        + "Request";
   }
 }

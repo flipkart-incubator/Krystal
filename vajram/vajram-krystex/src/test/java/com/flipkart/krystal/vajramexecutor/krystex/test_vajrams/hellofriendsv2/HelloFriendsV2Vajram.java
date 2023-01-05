@@ -35,7 +35,7 @@ public abstract class HelloFriendsV2Vajram extends ComputeVajram<String> {
   }
 
   @Resolve(value = FRIEND_INFOS, inputs = TestUserServiceVajram.USER_ID)
-  public Set<String> userIdsForUserService(
+  public static Set<String> userIdsForUserService(
       @BindFrom(FRIEND_IDS) DependencyResponse<FriendsServiceRequest, Set<String>> friendIds) {
     return friendIds.values().stream()
         .map(ValueOrError::value)
@@ -46,7 +46,7 @@ public abstract class HelloFriendsV2Vajram extends ComputeVajram<String> {
   }
 
   @VajramLogic
-  public String sayHellos(AllInputs request) {
+  public static String sayHellos(AllInputs request) {
     return "Hello Friends! %s"
         .formatted(
             request.friendInfos().values().stream()

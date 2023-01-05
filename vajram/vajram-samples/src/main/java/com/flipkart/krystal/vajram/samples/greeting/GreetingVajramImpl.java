@@ -95,7 +95,7 @@ public final class GreetingVajramImpl extends GreetingVajram {
     switch (dependency) {
       case "user_info" -> {
         if (Set.of("user_id").equals(resolvableInputs)) {
-          String userId = super.userIdForUserService(executionContext.getValue("user_id"));
+          String userId = userIdForUserService(executionContext.getValue("user_id"));
           return ImmutableList.of(
               new InputValues(ImmutableMap.of("user_id", new ValueOrError<>(userId))));
         }

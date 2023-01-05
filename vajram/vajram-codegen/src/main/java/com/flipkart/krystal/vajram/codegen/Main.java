@@ -27,7 +27,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 @Slf4j
-public class VajramModelsCodeGen {
+public class Main {
 
   public static final String INPUTS_FILE_EXTENSION = ".vajram.yaml";
   private final List<Path> srcDirs;
@@ -61,11 +61,11 @@ public class VajramModelsCodeGen {
   }
 
   public static void codeGenModels(Set<File> srcDirs, String destinationDir) throws Exception {
-    new VajramModelsCodeGen(srcDirs.stream().map(File::toPath).toList(), Path.of(destinationDir))
+    new Main(srcDirs.stream().map(File::toPath).toList(), Path.of(destinationDir))
         .codeGenModels();
   }
 
-  public VajramModelsCodeGen(List<Path> srcDirs, Path javaDir) {
+  public Main(List<Path> srcDirs, Path javaDir) {
     this.srcDirs = srcDirs;
     this.javaDir = javaDir;
   }
