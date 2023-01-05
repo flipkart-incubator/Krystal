@@ -3,7 +3,7 @@ package com.flipkart.krystal.krystex.node;
 /**
  * @param <T> The type returned by the {@link Node} that this decorator decorates.
  */
-public interface NodeDecorator<T> {
+public interface  NodeDecorator<T> {
 
   /**
    * The identifier for this {@link NodeDecorator} which is used to prevent duplicate node

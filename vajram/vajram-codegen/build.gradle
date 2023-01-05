@@ -26,11 +26,18 @@ gradlePlugin {
 
 
 dependencies {
-    implementation 'com.flipkart.krystal:vajram:0.1-SNAPSHOT'
+    implementation project(':vajram')
     implementation 'com.google.guava:guava:31.1-jre'
     implementation 'com.squareup:javapoet:1.13.0'
     implementation 'commons-cli:commons-cli:1.5.0'
+
+    def jacksonVersion = '2.14.1'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:' + jacksonVersion
+    implementation 'com.fasterxml.jackson.core:jackson-databind:' + jacksonVersion
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:' + jacksonVersion
+
     implementation 'org.projectlombok:lombok:1.18.24'
+
     annotationProcessor 'org.projectlombok:lombok:1.18.24'
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'

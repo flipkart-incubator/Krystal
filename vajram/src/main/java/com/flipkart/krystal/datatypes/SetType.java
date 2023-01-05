@@ -1,21 +1,45 @@
 package com.flipkart.krystal.datatypes;
 
-import com.google.common.reflect.TypeToken;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.LinkedHashSet;
+import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class SetType<T> extends AbstractDataType<LinkedHashSet<T>> {
-  private final DataType<T> type;
+public class SetType<T> implements JavaDataType<LinkedHashSet<T>> {
+  private final DataType type;
 
-  public static <T> SetType<T> set(DataType<T> type) {
+  public static <T> SetType<T> set(DataType type) {
     return new SetType<>(type);
   }
 
   @Override
-  Type javaType() {
-    return new TypeToken<LinkedHashSet<T>>() {}.getType();
+  public Optional<Type> javaType() {
+    if (type instanceof JavaDataType<?> javaDataType) {
+      return javaDataType
+          .javaType()
+          .map(
+              t ->
+                  new ParameterizedType() {
+                    @Override
+                    public Type[] getActualTypeArguments() {
+                      return new Type[] {t};
+                    }
+
+                    @Override
+                    public Type getRawType() {
+                      return LinkedHashSet.class;
+                    }
+
+                    @Override
+                    public Type getOwnerType() {
+                      return null;
+                    }
+                  });
+    } else {
+      return Optional.empty();
+    }
   }
 }

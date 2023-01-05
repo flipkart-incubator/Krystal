@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram;
 
-import com.flipkart.krystal.vajram.modulation.InputModulator.ModulatedInput;
+import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 
 public final class ModulatedExecutionContext implements ExecutionContext {
   private final ModulatedInput<?, ?> modulatedInput;

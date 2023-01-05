@@ -1,7 +1,18 @@
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.flipkart.krystal:vajram:0.1-SNAPSHOT'
+    }
+}
+
 plugins {
     id 'java'
     id 'idea'
     id 'maven-publish'
+    id 'org.flipkart.krystal.vajram' version '0.1-SNAPSHOT'
 }
 
 group 'com.flipkart.krystal'
@@ -14,8 +25,8 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.flipkart.krystal:vajram:0.1-SNAPSHOT'
-    implementation 'com.flipkart.krystal:krystex:0.1-SNAPSHOT'
+    implementation project(':vajram')
+    implementation project(':krystex')
     implementation 'com.google.guava:guava:31.1-jre'
     implementation 'org.checkerframework:checker-qual:3.21.3'
 

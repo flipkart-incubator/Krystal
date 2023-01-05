@@ -3,6 +3,10 @@ package com.flipkart.krystal.krystex.node;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import com.flipkart.krystal.krystex.MultiResultFuture;
+import com.flipkart.krystal.krystex.node.NodeInputs;
+import com.flipkart.krystal.krystex.node.NodeLogic;
+import com.flipkart.krystal.krystex.node.NodeLogicDefinition;
+import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashMap;
@@ -17,7 +21,7 @@ public final class ComputeLogicDefinition<T> extends NodeLogicDefinition<T> {
 
   @MonotonicNonNull private NodeLogic<T> nodeLogic;
 
-  ComputeLogicDefinition(
+  public ComputeLogicDefinition(
       NodeLogicId nodeLogicId,
       Set<String> inputNames,
       Function<NodeInputs, ImmutableList<T>> nodeLogic) {

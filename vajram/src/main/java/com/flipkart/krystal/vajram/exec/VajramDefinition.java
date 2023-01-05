@@ -21,9 +21,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.Getter;
 
 public final class VajramDefinition {
@@ -41,10 +39,10 @@ public final class VajramDefinition {
   private static Collection<InputResolverDefinition> parseInputResolvers(Vajram<?> vajram) {
     List<InputResolverDefinition> inputResolvers =
         new ArrayList<>(vajram.getSimpleInputResolvers());
-    Set<Method> resolverMethods =
+    ImmutableSet<Method> resolverMethods =
         Arrays.stream(vajram.getClass().getMethods())
             .filter(method -> method.isAnnotationPresent(Resolve.class))
-            .collect(Collectors.toSet());
+            .collect(toImmutableSet());
 
     ImmutableMap<String, Dependency> inputDefinitions =
         vajram.getInputDefinitions().stream()

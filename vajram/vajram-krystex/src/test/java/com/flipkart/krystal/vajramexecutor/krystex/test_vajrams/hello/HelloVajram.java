@@ -1,14 +1,9 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello;
 
-import static com.flipkart.krystal.datatypes.StringType.string;
-
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloInputUtils.EnrichedRequest;
-import com.google.common.collect.ImmutableList;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloInputUtil.AllInputs;
 import java.util.concurrent.atomic.LongAdder;
 
 @VajramDef(HelloVajram.ID)
@@ -18,17 +13,9 @@ public abstract class HelloVajram extends ComputeVajram<String> {
 
   public static final LongAdder CALL_COUNTER = new LongAdder();
 
-  @Override
-  public ImmutableList<VajramInputDefinition> getInputDefinitions() {
-    return ImmutableList.of(
-        Input.builder().name("name").type(string()).isMandatory().build(),
-        Input.builder().name("greeting").type(string()).build());
-  }
-
   @VajramLogic
-  public String greet(EnrichedRequest inputs) {
+  public String greet(AllInputs inputs) {
     CALL_COUNTER.increment();
-    return "%s! %s"
-        .formatted(inputs._request().greeting().orElse("Hello"), inputs._request().name());
+    return "%s! %s".formatted(inputs.greeting().orElse("Hello"), inputs.name());
   }
 }

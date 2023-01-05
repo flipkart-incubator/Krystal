@@ -12,12 +12,12 @@ import com.flipkart.krystal.vajram.inputs.DefaultInputResolver;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
+import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
-import com.flipkart.krystal.vajram.inputs.InputSources;
 import com.flipkart.krystal.vajram.inputs.Resolve;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.google.common.annotations.Beta;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
@@ -30,7 +30,6 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.reflections.Reflections;
 
@@ -39,18 +38,18 @@ public class ResolutionValidator {
   public static void main(String[] args) {
     Map<String, Class<? extends Vajram>> vajramsById = discoverVajrams();
     ResolutionValidator resolutionValidator = new ResolutionValidator();
-    Set<String> failures =
+    ImmutableSet<String> failures =
         vajramsById.values().stream()
             .map(aClass -> resolutionValidator.validateInputResolutions(aClass, true))
             .flatMap(Collection::stream)
-            .collect(Collectors.toSet());
+            .collect(toImmutableSet());
     if (failures.isEmpty()) {
       System.out.println("No errors in mandatory dependencies");
       failures =
           vajramsById.values().stream()
               .map(aClass -> resolutionValidator.validateInputResolutions(aClass, false))
               .flatMap(Collection::stream)
-              .collect(Collectors.toSet());
+              .collect(toImmutableSet());
       if (failures.isEmpty()) {
         System.out.println("No errors in optional dependencies");
       } else {
@@ -64,17 +63,16 @@ public class ResolutionValidator {
   }
 
   public List<String> validateInputResolutions(
-      Class<? extends Vajram> vajramDefinition, boolean validateOnlyMandatory) {
+      Class<? extends Vajram> vajramClass, boolean validateOnlyMandatory) {
     Map<String, Class<? extends Vajram>> vajramsById = discoverVajrams();
     String vajramId =
-        getVajramIdString(vajramDefinition)
-            .orElseThrow(
-                () -> new NoSuchElementException("Vajram id missing in " + vajramDefinition));
-    Vajram vajram = createVajram(vajramDefinition);
-    ImmutableList<VajramInputDefinition> inputDefinitions =
-        ImmutableList.copyOf(vajram.getInputDefinitions());
+        getVajramIdString(vajramClass)
+            .orElseThrow(() -> new NoSuchElementException("Vajram id missing in " + vajramClass));
+    Vajram vajram = createVajram(vajramClass);
+    @SuppressWarnings("unchecked")
+    ImmutableCollection<VajramInputDefinition> inputDefinitions = vajram.getInputDefinitions();
     Map<QualifiedInputs, InputResolverDefinition> inputResolvers =
-        getInputResolvers(vajramDefinition, vajram, inputDefinitions);
+        getInputResolvers(vajramClass, vajram, inputDefinitions);
     List<String> result = new ArrayList<>();
     inputDefinitions.forEach(
         input -> {
@@ -85,13 +83,12 @@ public class ResolutionValidator {
               Class<? extends Vajram> dependency = vajramsById.get(dependencyVajramId);
               @SuppressWarnings("rawtypes")
               Stream<Input> unresolvedInputsOfDependencyStream =
-                  createVajram(dependency).getInputDefinitions().stream()
+                  inputDefinitions.stream()
                       .filter(i -> i instanceof Input<?>)
                       .map(i -> (Input) i)
                       .filter(
                           unresolvedInput ->
-                              Set.of(InputSources.CLIENT)
-                                  .equals(unresolvedInput.resolvableBy()));
+                              Set.of(InputSource.CLIENT).equals(unresolvedInput.sources()));
               if (validateOnlyMandatory) {
                 unresolvedInputsOfDependencyStream =
                     unresolvedInputsOfDependencyStream
@@ -128,9 +125,9 @@ public class ResolutionValidator {
   }
 
   private Map<QualifiedInputs, InputResolverDefinition> getInputResolvers(
-      Class<? extends Vajram> vajramDefinition,
+      Class<? extends Vajram> vajramClass,
       Vajram<?> vajram,
-      ImmutableList<VajramInputDefinition> inputDefinitions) {
+      ImmutableCollection<VajramInputDefinition> inputDefinitions) {
     ImmutableMap<String, VajramInputDefinition> collect =
         inputDefinitions.stream()
             .collect(toImmutableMap(VajramInputDefinition::name, Function.identity()));
@@ -157,7 +154,7 @@ public class ResolutionValidator {
               result.put(qualifiedInputs, inputResolver);
             });
 
-    Arrays.stream(vajramDefinition.getMethods())
+    Arrays.stream(vajramClass.getMethods())
         .forEach(
             method -> {
               Resolve resolveDef = method.getAnnotation(Resolve.class);

@@ -1,12 +1,14 @@
 package com.flipkart.krystal.vajram.inputs;
 
-import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import lombok.Builder;
 
 @Builder
 public record Dependency<T>(
-    String name, DataAccessSpec dataAccessSpec, DataType<? extends T> type, boolean isMandatory)
+    String name,
+    DataAccessSpec dataAccessSpec,
+    boolean isMandatory,
+    String documentation)
     implements VajramInputDefinition {
 
   @Override

@@ -1,8 +1,9 @@
 package com.flipkart.krystal.datatypes;
 
 import java.lang.reflect.Type;
+import java.util.Optional;
 
-public final class BooleanType extends AbstractDataType<Boolean> {
+public final class BooleanType implements JavaDataType<Boolean>, DataType {
   private static final BooleanType INSTANCE = new BooleanType();
 
   public static BooleanType bool() {
@@ -12,7 +13,7 @@ public final class BooleanType extends AbstractDataType<Boolean> {
   private BooleanType() {}
 
   @Override
-  Type javaType() {
-    return Boolean.class;
+  public Optional<Type> javaType() {
+    return Optional.of(Boolean.class);
   }
 }

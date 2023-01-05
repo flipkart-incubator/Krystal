@@ -1,12 +1,12 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
+import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.loadFromClasspath;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
-import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.modulation.Batcher;
 import com.flipkart.krystal.vajramexecutor.krystex.TestRequestContext.TestRequestContextBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloRequest;
@@ -51,7 +51,7 @@ class KrystexVajramExecutorTest {
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(requestContext.requestId("vajramWithNoDependencies").build())) {
       CompletableFuture<String> result =
-          krystexVajramExecutor.execute(new VajramID(HelloVajram.ID), this::helloRequest);
+          krystexVajramExecutor.execute(vajramID(HelloVajram.ID), this::helloRequest);
       assertEquals("Hello! user_id_1", result.get(5, TimeUnit.HOURS));
     }
   }
@@ -64,7 +64,7 @@ class KrystexVajramExecutorTest {
         graph.createExecutor(requestContext.requestId("vajramWithNoDependencies").build())) {
       CompletableFuture<String> result =
           krystexVajramExecutor.execute(
-              new VajramID(HelloVajram.ID),
+              vajramID(HelloVajram.ID),
               applicationRequestContext ->
                   helloRequestBuilder(applicationRequestContext).greeting("Namaste").build());
       assertEquals("Namaste! user_id_1", result.get(5, TimeUnit.HOURS));
@@ -80,7 +80,7 @@ class KrystexVajramExecutorTest {
             requestContext.requestId("ioVajramSingleRequestNoModulator").build())) {
       CompletableFuture<TestUserInfo> userInfo123 =
           krystexVajramExecutor.execute(
-              new VajramID(TestUserServiceVajram.ID), this::testUserServiceRequest);
+              vajramID(TestUserServiceVajram.ID), this::testUserServiceRequest);
       assertEquals("Firstname Lastname (user_id_1)", userInfo123.get(5, TimeUnit.HOURS).userName());
     }
   }
@@ -91,13 +91,13 @@ class KrystexVajramExecutorTest {
         loadFromClasspath(
             "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
             "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends");
-    graph.registerInputModulator(new VajramID(TestUserServiceVajram.ID), () -> new Batcher(3));
+    graph.registerInputModulator(vajramID(TestUserServiceVajram.ID), () -> new Batcher(3));
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
             requestContext.requestId("ioVajramWithModulatorMultipleRequests").build())) {
       CompletableFuture<String> helloString =
           krystexVajramExecutor.execute(
-              new VajramID(HelloFriendsVajram.ID), this::helloFriendsRequest);
+              vajramID(HelloFriendsVajram.ID), this::helloFriendsRequest);
       assertEquals(
           "Hello Friends of Firstname Lastname (user_id_1)! Firstname Lastname (user_id_1:friend_1), Firstname Lastname (user_id_1:friend_2)",
           helloString.get(5, TimeUnit.HOURS));
@@ -112,12 +112,12 @@ class KrystexVajramExecutorTest {
             "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
             "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
             "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2");
-    graph.registerInputModulator(new VajramID(TestUserServiceVajram.ID), () -> new Batcher(2));
+    graph.registerInputModulator(vajramID(TestUserServiceVajram.ID), () -> new Batcher(2));
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(requestContext.requestId("sequentialDependency").build())) {
       CompletableFuture<String> helloString =
           krystexVajramExecutor.execute(
-              new VajramID(HelloFriendsV2Vajram.ID), this::helloFriendsV2Request);
+              vajramID(HelloFriendsV2Vajram.ID), this::helloFriendsV2Request);
       assertEquals(
           "Hello Friends! Firstname Lastname (user_id_1:friend1), Firstname Lastname (user_id_1:friend2)",
           helloString.get(5, TimeUnit.HOURS));
@@ -132,7 +132,7 @@ class KrystexVajramExecutorTest {
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(requestContext.requestId("vajramWithNoDependencies").build())) {
       CompletableFuture<String> result =
-          krystexVajramExecutor.execute(new VajramID(HelloVajram.ID), this::incompleteHelloRequest);
+          krystexVajramExecutor.execute(vajramID(HelloVajram.ID), this::incompleteHelloRequest);
       assertThatThrownBy(() -> result.get(5, TimeUnit.HOURS))
           .isInstanceOf(ExecutionException.class)
           .hasCauseExactlyInstanceOf(MandatoryInputsMissingException.class)
@@ -152,11 +152,11 @@ class KrystexVajramExecutorTest {
             requestContext.requestId("multiRequestNoInputModulator_cacheHitSuccess").build())) {
       CompletableFuture<TestUserInfo> userInfo =
           krystexVajramExecutor.execute(
-              new VajramID(TestUserServiceVajram.ID),
+              vajramID(TestUserServiceVajram.ID),
               testRequestContext -> TestUserServiceRequest.builder().userId("user_id_1").build());
       CompletableFuture<String> helloFriends =
           krystexVajramExecutor.execute(
-              new VajramID(HelloFriendsVajram.ID),
+              vajramID(HelloFriendsVajram.ID),
               testRequestContext ->
                   HelloFriendsRequest.builder().userId("user_id_1").numberOfFriends(0).build());
       assertThat(userInfo.get(5, TimeUnit.HOURS).userName())
@@ -173,18 +173,18 @@ class KrystexVajramExecutorTest {
         loadFromClasspath(
             "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
             "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends");
-    graph.registerInputModulator(new VajramID(TestUserServiceVajram.ID), () -> new Batcher(2));
+    graph.registerInputModulator(vajramID(TestUserServiceVajram.ID), () -> new Batcher(2));
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
             requestContext.requestId("ioVajramSingleRequestNoModulator").build())) {
       CompletableFuture<TestUserInfo> userInfo =
           krystexVajramExecutor.execute(
-              new VajramID(TestUserServiceVajram.ID),
+              vajramID(TestUserServiceVajram.ID),
               testRequestContext ->
                   TestUserServiceRequest.builder().userId("user_id_1:friend_1").build());
       CompletableFuture<String> helloFriends =
           krystexVajramExecutor.execute(
-              new VajramID(HelloFriendsVajram.ID),
+              vajramID(HelloFriendsVajram.ID),
               testRequestContext ->
                   HelloFriendsRequest.builder().userId("user_id_1").numberOfFriends(1).build());
       assertThat(userInfo.get(5, TimeUnit.HOURS).userName())

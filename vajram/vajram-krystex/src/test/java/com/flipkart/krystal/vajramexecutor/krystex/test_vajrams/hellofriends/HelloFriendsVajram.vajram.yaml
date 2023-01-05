@@ -1,0 +1,19 @@
+inputs:
+  - name: user_id
+    mandatory: true
+    dataType: string
+  - name: number_of_friends
+    dataType: integer
+dependencies:
+  - name: user_infos
+    mandatory: true
+    depType: vajram
+    vajramClass: com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceVajram
+    dataType: custom_java
+    customDataType: com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo
+  - name: friend_infos
+    mandatory: true
+    depType: vajram
+    vajramClass: com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceVajram
+    dataType: custom_java
+    customDataType: com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo
