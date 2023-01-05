@@ -1,7 +1,5 @@
 package com.flipkart.krystal.vajram.inputs;
 
-import com.flipkart.krystal.datatypes.DataType;
-
 public sealed interface VajramInputDefinition permits Dependency, Input {
   String name();
 
@@ -13,5 +11,5 @@ public sealed interface VajramInputDefinition permits Dependency, Input {
 
   boolean needsModulation();
 
-  DataType<?> type();
+  String documentation();
 }

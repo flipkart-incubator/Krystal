@@ -1,21 +1,45 @@
 package com.flipkart.krystal.datatypes;
 
-import com.google.common.reflect.TypeToken;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class ListType<T> extends AbstractDataType<ArrayList<T>> {
-  private final DataType<T> type;
+public class ListType<T> implements JavaDataType<ArrayList<T>> {
+  private final DataType typeParam;
 
-  public static <T> ListType<T> list(DataType<T> type) {
+  public static <T> ListType<T> list(DataType type) {
     return new ListType<>(type);
   }
 
   @Override
-  Type javaType() {
-    return new TypeToken<ArrayList<T>>() {}.getType();
+  public Optional<Type> javaType() {
+    if (typeParam instanceof JavaDataType<?> javaDataType) {
+      return javaDataType
+          .javaType()
+          .map(
+              t ->
+                  new ParameterizedType() {
+                    @Override
+                    public Type[] getActualTypeArguments() {
+                      return new Type[] {t};
+                    }
+
+                    @Override
+                    public Type getRawType() {
+                      return ArrayList.class;
+                    }
+
+                    @Override
+                    public Type getOwnerType() {
+                      return null;
+                    }
+                  });
+    } else {
+      return Optional.empty();
+    }
   }
 }

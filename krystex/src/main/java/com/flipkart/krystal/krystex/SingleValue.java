@@ -1,10 +1,6 @@
 package com.flipkart.krystal.krystex;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.concurrent.CompletableFuture.failedFuture;
-
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 public record SingleValue<T>(Optional<T> value, Optional<Throwable> failureReason)
     implements Value {
@@ -28,10 +24,11 @@ public record SingleValue<T>(Optional<T> value, Optional<Throwable> failureReaso
     return new SingleValue<>(Optional.empty(), Optional.empty());
   }
 
-  @Override
-  public CompletableFuture<T> toFuture() {
-    return isSuccessful()
-        ? completedFuture(value().orElse(null))
-        : failedFuture(failureReason().orElseThrow(IllegalStateException::new));
+  public boolean isFailure() {
+    return !isSuccessful();
+  }
+
+  public boolean isSuccessful() {
+    return failureReason().isEmpty();
   }
 }

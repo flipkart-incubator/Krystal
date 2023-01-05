@@ -16,7 +16,4 @@ public interface InputModulator<InputsNeedingModulation, CommonInputs> {
    */
   void onTermination(
       Consumer<ImmutableList<ModulatedInput<InputsNeedingModulation, CommonInputs>>> callback);
-
-  record ModulatedInput<InputsNeedingModulation, CommonInputs>(
-      ImmutableList<InputsNeedingModulation> inputsNeedingModulation, CommonInputs commonInputs) {}
 }

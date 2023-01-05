@@ -7,7 +7,7 @@ import static java.util.function.Function.identity;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.RequestId;
 import com.flipkart.krystal.krystex.ResolverDefinition;
-import com.flipkart.krystal.krystex.SingleValue;
+import com.flipkart.krystal.krystex.Value;
 import com.flipkart.krystal.krystex.commands.Execute;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInput;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
@@ -61,28 +61,51 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
   @Override
   public <T> CompletableFuture<T> executeNode(NodeId nodeId, NodeInputs nodeInputs) {
-    return executeNode(nodeId, nodeInputs, requestId);
+    //noinspection unchecked
+    return (CompletableFuture<T>) executeNode(nodeId, nodeInputs, requestId).responseFuture();
   }
 
-  @SuppressWarnings("unchecked")
-  <T> CompletableFuture<T> executeNode(NodeId nodeId, NodeInputs nodeInputs, RequestId requestId) {
+  NodeResponseFuture executeNode(NodeId nodeId, NodeInputs nodeInputs, RequestId requestId) {
     if (nodeInputs.values().isEmpty()) {
-      return (CompletableFuture<T>) this.enqueueCommand(new Execute(nodeId, requestId));
+      return this.enqueueCommand(new Execute(nodeId, requestId));
     }
-    List<CompletableFuture<Object>> list = new ArrayList<>();
-    for (Entry<String, SingleValue<?>> e : nodeInputs.values().entrySet()) {
+    List<NodeResponseFuture> list = new ArrayList<>();
+    for (Entry<String, Value> e : nodeInputs.values().entrySet()) {
       ExecuteWithInput executeWithInput =
           new ExecuteWithInput(nodeId, e.getKey(), e.getValue(), requestId);
       list.add(enqueueCommand(executeWithInput));
     }
-    return (CompletableFuture<T>) list.stream().findAny().orElseThrow();
+    return list.stream().findAny().orElseThrow();
   }
 
-  public CompletableFuture<Object> enqueueCommand(NodeCommand nodeCommand) {
-    return supplyAsync(() -> execute(nodeCommand), commandQueue).thenCompose(identity());
+  public NodeResponseFuture enqueueCommand(NodeCommand nodeCommand) {
+    NodeResponseFuture result = new NodeResponseFuture();
+    CompletableFuture<NodeResponseFuture> nodeResponseFutureCompletableFuture =
+        supplyAsync(() -> execute(nodeCommand), commandQueue);
+    nodeResponseFutureCompletableFuture.whenComplete(
+        (nodeResponseFuture, e) -> {
+          if (e == null) {
+            nodeResponseFuture
+                .responseFuture()
+                .whenComplete(
+                    (o, t) -> {
+                      result
+                          .inputsFuture()
+                          .complete(nodeResponseFuture.inputsFuture().getNow(null));
+                      if (t == null) {
+                        result.responseFuture().complete(o);
+                      } else {
+                        result.responseFuture().completeExceptionally(t);
+                      }
+                    });
+          } else {
+            result.responseFuture().completeExceptionally(e);
+          }
+        });
+    return result;
   }
 
-  private CompletableFuture<Object> execute(NodeCommand nodeCommand) {
+  private NodeResponseFuture execute(NodeCommand nodeCommand) {
     NodeId nodeId = nodeCommand.nodeId();
     Node node =
         nodeRegistry.createIfAbsent(
@@ -97,7 +120,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                       .collect(toImmutableMap(identity(), this::getRequestScopedNodeDecorators));
               return new Node(nodeDefinition, this, nodeDecorators);
             });
-    return node.executeCommand(nodeCommand).future();
+    return node.executeCommand(nodeCommand);
   }
 
   private record DecoratorKey(NodeGroupId nodeGroupId, String nodeDecoratorId) {}

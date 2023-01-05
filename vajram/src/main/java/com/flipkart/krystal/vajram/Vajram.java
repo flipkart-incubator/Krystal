@@ -5,19 +5,15 @@ import com.flipkart.krystal.vajram.inputs.InputValues;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.concurrent.CompletableFuture;
 
 public sealed interface Vajram<T> permits AbstractVajram {
-
-  default ImmutableCollection<VajramInputDefinition> getInputDefinitions() {
-    return ImmutableList.of();
-  }
 
   default ImmutableCollection<InputResolver> getSimpleInputResolvers() {
     return ImmutableList.of();
   }
-
-  boolean isIOVajram();
 
   default ImmutableList<InputValues> resolveInputOfDependency(
       String dependency,
@@ -27,4 +23,9 @@ public sealed interface Vajram<T> permits AbstractVajram {
   }
 
   VajramID getId();
+
+  ImmutableCollection<VajramInputDefinition> getInputDefinitions();
+
+  ImmutableMap<InputValues, CompletableFuture<ImmutableList<T>>> execute(
+      ImmutableList<InputValues> inputs);
 }

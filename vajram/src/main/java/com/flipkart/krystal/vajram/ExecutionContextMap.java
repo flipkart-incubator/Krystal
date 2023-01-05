@@ -1,9 +1,8 @@
 package com.flipkart.krystal.vajram;
 
-import static com.flipkart.krystal.vajram.inputs.ValueOrError.empty;
+import static com.flipkart.krystal.vajram.ValueOrError.empty;
 
 import com.flipkart.krystal.vajram.inputs.InputValues;
-import com.flipkart.krystal.vajram.inputs.ValueOrError;
 import com.google.common.collect.ImmutableMap;
 import java.util.Optional;
 

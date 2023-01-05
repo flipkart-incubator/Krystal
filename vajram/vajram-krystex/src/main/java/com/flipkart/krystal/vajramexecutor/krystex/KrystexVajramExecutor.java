@@ -7,7 +7,6 @@ import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.exec.VajramExecutor;
-import com.flipkart.krystal.vajram.inputs.InputValues;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -17,8 +16,7 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
   private final C applicationRequestContext;
   private final KrystalNodeExecutor krystalExecutor;
 
-  KrystexVajramExecutor(
-      VajramNodeGraph vajramNodeGraph, C applicationRequestContext) {
+  KrystexVajramExecutor(VajramNodeGraph vajramNodeGraph, C applicationRequestContext) {
     this.vajramNodeGraph = vajramNodeGraph;
     this.applicationRequestContext = applicationRequestContext;
     this.krystalExecutor =
@@ -29,10 +27,11 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
   @Override
   public <T> CompletableFuture<T> execute(
       VajramID vajramId, Function<C, VajramRequest> vajramRequestBuilder) {
-    return krystalExecutor.executeNode(
-        vajramNodeGraph.getNodeId(vajramId),
-        toNodeInputs(
-            new InputValues(vajramRequestBuilder.apply(applicationRequestContext).asMap())));
+    CompletableFuture<T> tCompletableFuture =
+        krystalExecutor.executeNode(
+            vajramNodeGraph.getNodeId(vajramId),
+            toNodeInputs(vajramRequestBuilder.apply(applicationRequestContext).toInputValues()));
+    return tCompletableFuture;
   }
 
   @Override

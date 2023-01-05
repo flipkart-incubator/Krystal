@@ -1,24 +1,19 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends;
 
-import static com.flipkart.krystal.datatypes.IntegerType.integer;
-import static com.flipkart.krystal.datatypes.StringType.string;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.BindFrom;
-import com.flipkart.krystal.vajram.inputs.Dependency;
-import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.Resolve;
-import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsInputUtils.EnrichedRequest;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsInputUtil.AllInputs;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceVajram;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @VajramDef(HelloFriendsVajram.ID)
@@ -29,24 +24,12 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
   public static final String USER_ID = "user_id";
   public static final String NUMBER_OF_FRIENDS = "number_of_friends";
 
-  public static final String USER_INFO = "user_infos";
+  public static final String USER_INFOS = "user_infos";
   public static final String FRIEND_INFOS = "friend_infos";
 
-  @Override
-  public ImmutableList<VajramInputDefinition> getInputDefinitions() {
-    return ImmutableList.of(
-        Input.builder().name(USER_ID).type(string()).isMandatory().build(),
-        Input.builder().name(NUMBER_OF_FRIENDS).type(integer()).defaultValue(2).build(),
-        Dependency.builder()
-            .name(USER_INFO)
-            .dataAccessSpec(new VajramID(TestUserServiceVajram.ID))
-            .isMandatory()
-            .build(),
-        Dependency.builder()
-            .name(FRIEND_INFOS)
-            .dataAccessSpec(new VajramID(TestUserServiceVajram.ID))
-            .isMandatory()
-            .build());
+  @Resolve(value = USER_INFOS, inputs = TestUserServiceVajram.USER_ID)
+  public String userIdForUserService(@BindFrom(USER_ID) String userId) {
+    return userId;
   }
 
   @Resolve(value = FRIEND_INFOS, inputs = TestUserServiceVajram.USER_ID)
@@ -55,22 +38,28 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
     return getFriendsFor(userId, numberOfFriends);
   }
 
-  @Resolve(value = USER_INFO, inputs = TestUserServiceVajram.USER_ID)
-  public String userIdForUserService(@BindFrom(USER_ID) String userId) {
-    return userId;
-  }
-
   @VajramLogic
-  public String sayHellos(EnrichedRequest request) {
+  public String sayHellos(AllInputs request) throws Exception {
     return "Hello Friends of %s! %s"
         .formatted(
-            request.userInfo().userName(),
-            request.friendInfos().stream().map(TestUserInfo::userName).collect(joining(", ")));
+            request
+                .userInfos()
+                .getOrThrow(
+                    TestUserServiceRequest.builder().userId(request.userId()).build(),
+                    () ->
+                        new IllegalArgumentException(
+                            "Did not receive userInfo of user %s".formatted(request.userId())))
+                .userName(),
+            request.friendInfos().values().stream()
+                .filter(voe -> voe.value().isPresent())
+                .map(voe -> voe.value().get())
+                .map(TestUserInfo::userName)
+                .collect(joining(", ")));
   }
 
-  private Set<String> getFriendsFor(String userId, int numberOfFriends) {
+  private ImmutableSet<String> getFriendsFor(String userId, int numberOfFriends) {
     return IntStream.range(1, numberOfFriends + 1)
         .mapToObj(i -> userId + ":friend_" + i)
-        .collect(Collectors.toSet());
+        .collect(toImmutableSet());
   }
 }

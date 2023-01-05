@@ -2,6 +2,7 @@ package com.flipkart.krystal.krystex;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.concurrent.CompletableFuture.allOf;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 
 import com.google.common.collect.ImmutableList;

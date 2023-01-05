@@ -3,14 +3,13 @@ package com.flipkart.krystal.krystex.decoration;
 import static com.flipkart.krystal.krystex.RateLimitingStrategy.SEMAPHORE;
 
 import com.flipkart.krystal.krystex.MultiResultFuture;
-import com.flipkart.krystal.krystex.node.NodeDecorator;
-import com.flipkart.krystal.krystex.node.NodeLogicDefinition;
-import com.flipkart.krystal.krystex.node.NodeLogicId;
-import com.flipkart.krystal.krystex.node.NodeInputs;
-import com.flipkart.krystal.krystex.node.NodeLogic;
-import com.flipkart.krystal.krystex.node.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.RateLimitingStrategy;
 import com.flipkart.krystal.krystex.config.ConfigProvider;
+import com.flipkart.krystal.krystex.node.NodeDecorator;
+import com.flipkart.krystal.krystex.node.NodeInputs;
+import com.flipkart.krystal.krystex.node.NodeLogic;
+import com.flipkart.krystal.krystex.node.NodeLogicDefinition;
+import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.github.resilience4j.decorators.Decorators;
@@ -35,9 +34,6 @@ public class Resilience4JStrategy<T> implements NodeDecorator<T> {
 
   @Override
   public NodeLogic<T> decorateLogic(NodeLogicDefinition<T> nodeDef, NodeLogic<T> logicToDecorate) {
-    if (nodeDef instanceof ComputeLogicDefinition<?>) {
-      return logicToDecorate;
-    }
     DecorateFunction<ImmutableList<NodeInputs>, ImmutableMap<NodeInputs, MultiResultFuture<T>>>
         decorateCompletionStage = Decorators.ofFunction(logicToDecorate);
     decorateWithRateLimiter(nodeDef, decorateCompletionStage);

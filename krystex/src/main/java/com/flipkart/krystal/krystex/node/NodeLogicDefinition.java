@@ -8,8 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 
-public abstract sealed class NodeLogicDefinition<T>
-    permits IOLogicDefinition, ComputeLogicDefinition {
+public abstract class NodeLogicDefinition<T> {
 
   private final NodeLogicId nodeLogicId;
   private final Set<String> inputNames = new LinkedHashSet<>();
@@ -17,7 +16,7 @@ public abstract sealed class NodeLogicDefinition<T>
   private final Map<String, Supplier<NodeDecorator<T>>> requestScopedNodeDecoratorFactories =
       new HashMap<>();
 
-  NodeLogicDefinition(NodeLogicId nodeLogicId, Set<String> inputNames) {
+  protected NodeLogicDefinition(NodeLogicId nodeLogicId, Set<String> inputNames) {
     this.nodeLogicId = nodeLogicId;
     this.inputNames.addAll(inputNames);
   }
