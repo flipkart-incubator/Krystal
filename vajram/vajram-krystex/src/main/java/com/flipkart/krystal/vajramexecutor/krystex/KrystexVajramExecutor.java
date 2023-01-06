@@ -27,11 +27,18 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
   @Override
   public <T> CompletableFuture<T> execute(
       VajramID vajramId, Function<C, VajramRequest> vajramRequestBuilder) {
-    CompletableFuture<T> tCompletableFuture =
-        krystalExecutor.executeNode(
-            vajramNodeGraph.getNodeId(vajramId),
-            toNodeInputs(vajramRequestBuilder.apply(applicationRequestContext).toInputValues()));
-    return tCompletableFuture;
+    return krystalExecutor.executeNode(
+        vajramNodeGraph.getNodeId(vajramId),
+        toNodeInputs(vajramRequestBuilder.apply(applicationRequestContext).toInputValues()));
+  }
+
+  @Override
+  public <T> CompletableFuture<T> execute(
+      VajramID vajramId, Function<C, VajramRequest> vajramRequestBuilder, String requesId) {
+    return krystalExecutor.executeNode(
+        vajramNodeGraph.getNodeId(vajramId),
+        toNodeInputs(vajramRequestBuilder.apply(applicationRequestContext).toInputValues()),
+        requesId);
   }
 
   @Override

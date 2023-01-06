@@ -65,6 +65,13 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     return (CompletableFuture<T>) executeNode(nodeId, nodeInputs, requestId).responseFuture();
   }
 
+  public <T> CompletableFuture<T> executeNode(
+      NodeId nodeId, NodeInputs nodeInputs, String requestId) {
+    //noinspection unchecked
+    return (CompletableFuture<T>)
+        executeNode(nodeId, nodeInputs, new RequestId(requestId)).responseFuture();
+  }
+
   NodeResponseFuture executeNode(NodeId nodeId, NodeInputs nodeInputs, RequestId requestId) {
     if (nodeInputs.values().isEmpty()) {
       return this.enqueueCommand(new Execute(nodeId, requestId));
