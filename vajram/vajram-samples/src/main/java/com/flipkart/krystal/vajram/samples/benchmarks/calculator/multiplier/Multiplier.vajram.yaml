@@ -1,0 +1,6 @@
+inputs:
+  - name: number_one
+    dataType: integer
+    mandatory: true
+  - name: number_two
+    dataType: integer
