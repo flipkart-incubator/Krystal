@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 
 class FormulaTest {
 
-  public static final int LOOP_COUNT = 50000;
+  public static final int LOOP_COUNT = 50_000;
 
   @Test
   void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
@@ -27,8 +27,8 @@ class FormulaTest {
     long javaNativeTime = javaMethod_benchmark(value -> divide(value, Adder.add(20, 5)));
     try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
         graph.createExecutor(formulaTest)) {
-      long startTime = System.nanoTime();
       CompletableFuture<Integer>[] futures = new CompletableFuture[LOOP_COUNT];
+      long startTime = System.nanoTime();
       for (int value = 0; value < LOOP_COUNT; value++) {
         CompletableFuture<Integer> result =
             krystexVajramExecutor.execute(
