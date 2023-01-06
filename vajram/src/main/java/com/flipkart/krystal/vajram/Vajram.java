@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram;
 
+import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.InputResolver;
 import com.flipkart.krystal.vajram.inputs.InputValues;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
@@ -15,17 +16,14 @@ public sealed interface Vajram<T> permits AbstractVajram {
     return ImmutableList.of();
   }
 
-  default ImmutableList<InputValues> resolveInputOfDependency(
-      String dependency,
-      ImmutableSet<String> resolvableInputs,
-      ExecutionContextMap executionContext) {
-    return ImmutableList.of();
+  default DependencyCommand<InputValues> resolveInputOfDependency(
+      String dependency, ImmutableSet<String> resolvableInputs, InputValues inputValues) {
+    return DependencyCommand.multiExecuteWith(ImmutableList.of());
   }
 
   VajramID getId();
 
   ImmutableCollection<VajramInputDefinition> getInputDefinitions();
 
-  ImmutableMap<InputValues, CompletableFuture<ImmutableList<T>>> execute(
-      ImmutableList<InputValues> inputs);
+  ImmutableMap<InputValues, CompletableFuture<T>> execute(ImmutableList<InputValues> inputs);
 }

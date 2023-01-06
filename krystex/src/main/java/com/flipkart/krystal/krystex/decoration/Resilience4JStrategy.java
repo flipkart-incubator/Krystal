@@ -2,13 +2,12 @@ package com.flipkart.krystal.krystex.decoration;
 
 import static com.flipkart.krystal.krystex.RateLimitingStrategy.SEMAPHORE;
 
-import com.flipkart.krystal.krystex.MultiResultFuture;
 import com.flipkart.krystal.krystex.RateLimitingStrategy;
 import com.flipkart.krystal.krystex.config.ConfigProvider;
-import com.flipkart.krystal.krystex.node.NodeDecorator;
+import com.flipkart.krystal.krystex.node.MainLogic;
+import com.flipkart.krystal.krystex.node.MainLogicDefinition;
+import com.flipkart.krystal.krystex.node.MainLogicDecorator;
 import com.flipkart.krystal.krystex.node.NodeInputs;
-import com.flipkart.krystal.krystex.node.NodeLogic;
-import com.flipkart.krystal.krystex.node.NodeLogicDefinition;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -20,9 +19,10 @@ import io.github.resilience4j.ratelimiter.internal.SemaphoreBasedRateLimiter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 // TODO move to a dedicated module
-public class Resilience4JStrategy<T> implements NodeDecorator<T> {
+public class Resilience4JStrategy<T> implements MainLogicDecorator<T> {
 
   private final ConfigProvider configProvider;
 
@@ -33,16 +33,16 @@ public class Resilience4JStrategy<T> implements NodeDecorator<T> {
   }
 
   @Override
-  public NodeLogic<T> decorateLogic(NodeLogicDefinition<T> nodeDef, NodeLogic<T> logicToDecorate) {
-    DecorateFunction<ImmutableList<NodeInputs>, ImmutableMap<NodeInputs, MultiResultFuture<T>>>
-        decorateCompletionStage = Decorators.ofFunction(logicToDecorate);
+  public MainLogic<T> decorateLogic(MainLogicDefinition<T> nodeDef, MainLogic<T> logicToDecorate) {
+    DecorateFunction<ImmutableList<NodeInputs>, ImmutableMap<NodeInputs, CompletableFuture<T>>>
+        decorateCompletionStage = Decorators.ofFunction(logicToDecorate::execute);
     decorateWithRateLimiter(nodeDef, decorateCompletionStage);
     decorateWithCircuitBreaker(nodeDef, decorateCompletionStage);
-    return decorateCompletionStage.decorate()::apply;
+    return decorateCompletionStage::apply;
   }
 
   private void decorateWithRateLimiter(
-      NodeLogicDefinition<T> nodeDef, DecorateFunction<?, ?> decorateFunction) {
+      MainLogicDefinition<T> nodeDef, DecorateFunction<?, ?> decorateFunction) {
     RateLimiter rateLimiter = rateLimiters.get(nodeDef.nodeLogicId());
     if (rateLimiter == null) {
       rateLimiter =
@@ -57,7 +57,7 @@ public class Resilience4JStrategy<T> implements NodeDecorator<T> {
   }
 
   private void decorateWithCircuitBreaker(
-      NodeLogicDefinition<T> nodeDef, DecorateFunction<?, ?> decorateFunction) {
+      MainLogicDefinition<T> nodeDef, DecorateFunction<?, ?> decorateFunction) {
     // TODO Implement circuit breaker
   }
 

@@ -19,17 +19,15 @@ public class MultiplierImpl extends Multiplier {
   }
 
   @Override
-  public ImmutableMap<InputValues, ImmutableList<Integer>> executeCompute(
-      ImmutableList<InputValues> inputsList) {
-    Map<InputValues, ImmutableList<Integer>> result = new HashMap<>();
+  public ImmutableMap<InputValues, Integer> executeCompute(ImmutableList<InputValues> inputsList) {
+    Map<InputValues, Integer> result = new HashMap<>();
     for (InputValues inputValues : inputsList) {
       result.put(
           inputValues,
-          ImmutableList.of(
-              multiply(
-                  new MultiplierInputUtil.AllInputs(
-                      inputValues.getOrThrow("number_one"),
-                      inputValues.getOrDefault("number_two", null)))));
+          multiply(
+              new MultiplierInputUtil.AllInputs(
+                  inputValues.getOrThrow("number_one"),
+                  inputValues.getOrDefault("number_two", null))));
     }
     return ImmutableMap.copyOf(result);
   }

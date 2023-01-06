@@ -4,10 +4,10 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.flipkart.krystal.datatypes.IntegerType;
 import com.flipkart.krystal.vajram.DependencyResponse;
-import com.flipkart.krystal.vajram.ExecutionContextMap;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.ValueOrError;
 import com.flipkart.krystal.vajram.inputs.Dependency;
+import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputValues;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
@@ -43,52 +43,50 @@ public class FormulaImpl extends Formula {
   }
 
   @Override
-  public ImmutableList<InputValues> resolveInputOfDependency(
-      String dependency,
-      ImmutableSet<String> resolvableInputs,
-      ExecutionContextMap executionContext) {
+  public DependencyCommand<InputValues> resolveInputOfDependency(
+      String dependency, ImmutableSet<String> resolvableInputs, InputValues inputValues) {
     switch (dependency) {
       case "sum" -> {
         if (Set.of("number_one").equals(resolvableInputs)) {
-          return ImmutableList.of(
+          return DependencyCommand.executeWith(
               new InputValues(
                   ImmutableMap.of(
                       "number_one",
-                      new ValueOrError<>(adderNumberOne(executionContext.getValue("p"))))));
+                      new ValueOrError<>(adderNumberOne(inputValues.getOrThrow("p"))))));
         }
         if (Set.of("number_two").equals(resolvableInputs)) {
-          return ImmutableList.of(
+          return DependencyCommand.executeWith(
               new InputValues(
                   ImmutableMap.of(
                       "number_two",
-                      new ValueOrError<>(adderNumberOne(executionContext.getValue("q"))))));
+                      new ValueOrError<>(adderNumberOne(inputValues.getOrThrow("q"))))));
         }
       }
       case "quotient" -> {
         if (Set.of("number_one").equals(resolvableInputs)) {
-          return ImmutableList.of(
+          return DependencyCommand.executeWith(
               new InputValues(
                   ImmutableMap.of(
                       "number_one",
-                      new ValueOrError<>(quotientNumberOne(executionContext.getValue("a"))))));
+                      new ValueOrError<>(quotientNumberOne(inputValues.getOrThrow("a"))))));
         }
         if (Set.of("number_two").equals(resolvableInputs)) {
           DependencyResponse<AdderRequest, Integer> sumResponses =
               new DependencyResponse<>(
-                  executionContext
-                      .context()
+                  inputValues
                       .<ImmutableMap<InputValues, ValueOrError<Integer>>>getOrThrow("sum")
                       .entrySet()
                       .stream()
                       .collect(
                           toImmutableMap(e -> AdderRequest.from(e.getKey()), Entry::getValue)));
-          return sumResponses.values().stream()
-              .filter(voe -> voe.value().isPresent())
-              .map(voe -> voe.value().get())
-              .map(Formula::quotientNumberTwo)
-              .map(ValueOrError::new)
-              .map(voe -> new InputValues(ImmutableMap.of("number_two", voe)))
-              .collect(ImmutableList.toImmutableList());
+          return DependencyCommand.multiExecuteWith(
+              sumResponses.values().stream()
+                  .filter(voe -> voe.value().isPresent())
+                  .map(voe -> voe.value().get())
+                  .map(Formula::quotientNumberTwo)
+                  .map(ValueOrError::new)
+                  .map(voe -> new InputValues(ImmutableMap.of("number_two", voe)))
+                  .collect(ImmutableList.toImmutableList()));
         }
       }
     }
@@ -96,8 +94,7 @@ public class FormulaImpl extends Formula {
   }
 
   @Override
-  public ImmutableMap<InputValues, ImmutableList<Integer>> executeCompute(
-      ImmutableList<InputValues> inputsList) {
+  public ImmutableMap<InputValues, Integer> executeCompute(ImmutableList<InputValues> inputsList) {
     return inputsList.stream()
         .collect(
             toImmutableMap(
@@ -122,14 +119,13 @@ public class FormulaImpl extends Formula {
                               .collect(
                                   toImmutableMap(
                                       e -> DividerRequest.from(e.getKey()), Entry::getValue)));
-                  return ImmutableList.of(
-                      result(
-                          new AllInputs(
-                              iv.getOrThrow("a"),
-                              iv.getOrThrow("p"),
-                              iv.getOrThrow("q"),
-                              sumResponses,
-                              quotientResponse)));
+                  return result(
+                      new AllInputs(
+                          iv.getOrThrow("a"),
+                          iv.getOrThrow("p"),
+                          iv.getOrThrow("q"),
+                          sumResponses,
+                          quotientResponse));
                 }));
   }
 }

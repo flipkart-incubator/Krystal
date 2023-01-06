@@ -41,7 +41,7 @@ public class UserServiceVajramImpl extends UserServiceVajram {
   }
 
   @Override
-  public ImmutableMap<InputValues, CompletableFuture<ImmutableList<UserInfo>>> execute(
+  public ImmutableMap<InputValues, CompletableFuture<UserInfo>> execute(
       ImmutableList<InputValues> inputsList) {
     Map<InputsNeedingModulation, InputValues> mapping = new HashMap<>();
     List<InputsNeedingModulation> ims = new ArrayList<>();
@@ -54,13 +54,11 @@ public class UserServiceVajramImpl extends UserServiceVajram {
       mapping.put(im, inputs);
       ims.add(im);
     }
-    Map<InputValues, CompletableFuture<ImmutableList<UserInfo>>> returnValue =
-        new LinkedHashMap<>();
+    Map<InputValues, CompletableFuture<UserInfo>> returnValue = new LinkedHashMap<>();
 
     if (commonInputs != null) {
       var results = callUserService(new ModulatedInput<>(ImmutableList.copyOf(ims), commonInputs));
-      results.forEach(
-          (im, future) -> returnValue.put(mapping.get(im), future.thenApply(ImmutableList::of)));
+      results.forEach((im, future) -> returnValue.put(mapping.get(im), future));
     }
     return ImmutableMap.copyOf(returnValue);
   }

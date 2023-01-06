@@ -7,9 +7,9 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.flipkart.krystal.vajram.DependencyResponse;
-import com.flipkart.krystal.vajram.ExecutionContextMap;
 import com.flipkart.krystal.vajram.ValueOrError;
 import com.flipkart.krystal.vajram.inputs.Dependency;
+import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputValues;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
@@ -44,17 +44,15 @@ public class HelloFriendsVajramImpl extends HelloFriendsVajram {
   }
 
   @Override
-  public ImmutableList<InputValues> resolveInputOfDependency(
-      String dependency,
-      ImmutableSet<String> resolvableInputs,
-      ExecutionContextMap executionContext) {
-    String userId = executionContext.getValue("user_id");
-    Optional<Integer> numberOfFriends = executionContext.optValue("number_of_friends");
+  public DependencyCommand<InputValues> resolveInputOfDependency(
+      String dependency, ImmutableSet<String> resolvableInputs, InputValues inputValues) {
+    String userId = inputValues.getOrThrow("user_id");
+    Optional<Integer> numberOfFriends = inputValues.getOpt("number_of_friends");
     switch (dependency) {
       case USER_INFOS:
         {
           if (Set.of("user_id").equals(resolvableInputs)) {
-            return ImmutableList.of(
+            return DependencyCommand.executeWith(
                 new InputValues(
                     ImmutableMap.of("user_id", new ValueOrError<>(userIdForUserService(userId)))));
           }
@@ -63,12 +61,13 @@ public class HelloFriendsVajramImpl extends HelloFriendsVajram {
         {
           if (Set.of("user_id").equals(resolvableInputs)) {
             if (numberOfFriends.isPresent()) {
-              return friendIdsForUserService(userId, numberOfFriends.get()).stream()
-                  .map(
-                      s -> new InputValues(ImmutableMap.of("user_id", new ValueOrError<Object>(s))))
-                  .collect(toImmutableList());
-            } else {
-              return ImmutableList.of(new InputValues());
+              return DependencyCommand.multiExecuteWith(
+                  friendIdsForUserService(userId, numberOfFriends.get()).stream()
+                      .map(
+                          s ->
+                              new InputValues(
+                                  ImmutableMap.of("user_id", new ValueOrError<Object>(s))))
+                      .collect(toImmutableList()));
             }
           }
         }
@@ -77,8 +76,7 @@ public class HelloFriendsVajramImpl extends HelloFriendsVajram {
   }
 
   @Override
-  public ImmutableMap<InputValues, ImmutableList<String>> executeCompute(
-      ImmutableList<InputValues> inputsList) {
+  public ImmutableMap<InputValues, String> executeCompute(ImmutableList<InputValues> inputsList) {
     return inputsList.stream()
         .collect(
             toImmutableMap(
@@ -105,13 +103,12 @@ public class HelloFriendsVajramImpl extends HelloFriendsVajram {
                                       Entry::getValue)));
 
                   try {
-                    return ImmutableList.of(
-                        sayHellos(
-                            new AllInputs(
-                                i.getOrThrow("user_id"),
-                                i.getOrDefault("number_of_friends", null),
-                                userInfoResponse,
-                                friendInfosResponse)));
+                    return sayHellos(
+                        new AllInputs(
+                            i.getOrThrow("user_id"),
+                            i.getOrDefault("number_of_friends", null),
+                            userInfoResponse,
+                            friendInfosResponse));
                   } catch (Exception e) {
                     throw new RuntimeException(e);
                   }

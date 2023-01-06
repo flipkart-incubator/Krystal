@@ -8,23 +8,22 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
-import com.flipkart.krystal.krystex.MultiResultFuture;
 import com.flipkart.krystal.krystex.ResolverDefinition;
 import com.flipkart.krystal.krystex.SingleValue;
 import com.flipkart.krystal.krystex.Value;
-import com.flipkart.krystal.krystex.node.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.node.IOLogicDefinition;
 import com.flipkart.krystal.krystex.node.LogicDefinitionRegistry;
-import com.flipkart.krystal.krystex.node.NodeDecorator;
+import com.flipkart.krystal.krystex.node.MainLogicDefinition;
+import com.flipkart.krystal.krystex.node.MainLogicDecorator;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
 import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeInputs;
-import com.flipkart.krystal.krystex.node.NodeLogicDefinition;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
+import com.flipkart.krystal.krystex.node.ResolverCommand;
+import com.flipkart.krystal.krystex.node.ResolverLogicDefinition;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.ExecutionContextMap;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
 import com.flipkart.krystal.vajram.Vajram;
@@ -37,6 +36,7 @@ import com.flipkart.krystal.vajram.das.VajramIndex;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.exec.VajramExecutableGraph;
 import com.flipkart.krystal.vajram.inputs.Dependency;
+import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.InputSource;
@@ -103,13 +103,13 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     inputModulators.put(vajramID, inputModulator);
     Vajram<?> vajram = vajramDefinitions.get(vajramID).getVajram();
     if (vajram instanceof IOVajram<?> ioVajram) {
-      Supplier<NodeDecorator<Object>> inputModulationDecoratorSupplier =
+      Supplier<MainLogicDecorator<Object>> inputModulationDecoratorSupplier =
           getInputModulationDecoratorSupplier(ioVajram, inputModulator);
       NodeDefinition nodeDefinition = vajramExecutables.get(vajramID);
       if (nodeDefinition != null) {
         nodeDefinitionRegistry
             .logicDefinitionRegistry()
-            .get(nodeDefinition.mainLogicNode())
+            .getMain(nodeDefinition.mainLogicNode())
             .registerRequestScopedNodeDecorator(inputModulationDecoratorSupplier);
       }
     }
@@ -164,7 +164,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     ImmutableMap<String, NodeDefinition> depNameToSubgraph =
         createNodeDefinitionsForDependencies(vajramDefinition);
 
-    NodeLogicDefinition<?> vajramLogicNodeLogicDefinition = createVajramNodeLogic(vajramDefinition);
+    MainLogicDefinition<?> vajramLogicMainLogicDefinition = createVajramNodeLogic(vajramDefinition);
 
     ImmutableMap<String, NodeId> depNameToProviderNode =
         depNameToSubgraph.entrySet().stream()
@@ -173,7 +173,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     nodeDefinition =
         nodeDefinitionRegistry.newNodeDefinition(
             vajramId.vajramId(),
-            vajramLogicNodeLogicDefinition.nodeLogicId(),
+            vajramLogicMainLogicDefinition.nodeLogicId(),
             depNameToProviderNode,
             inputResolverCreationResult.resolverDefinitions());
     vajramExecutables.put(vajramId, nodeDefinition);
@@ -201,22 +201,25 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                       vajram.getInputDefinitions().stream()
                           .filter(i -> sources.contains(i.name()))
                           .collect(toImmutableList());
-                  ComputeLogicDefinition<?> inputResolverNode =
-                      logicRegistry.newOneToManyComputeLogic(
+                  ResolverLogicDefinition inputResolverNode =
+                      logicRegistry.newResolverLogic(
                           "%s:dep(%s):inputResolver(%s)"
                               .formatted(
                                   vajramId, dependencyName, String.join(",", resolvedInputNames)),
                           sources,
                           nodeInputs -> {
                             validateMandatory(vajramId, nodeInputs, requiredInputs);
-                            return vajram
-                                .resolveInputOfDependency(
-                                    dependencyName,
-                                    resolvedInputNames,
-                                    new ExecutionContextMap(toInputValues(nodeInputs)))
-                                .stream()
-                                .map(Utils::toNodeInputs)
-                                .collect(toImmutableList());
+                            DependencyCommand<InputValues> dependencyCommand =
+                                vajram.resolveInputOfDependency(
+                                    dependencyName, resolvedInputNames, toInputValues(nodeInputs));
+                            if (dependencyCommand
+                                instanceof DependencyCommand.Skip<InputValues> skipCommand) {
+                              return ResolverCommand.skip(skipCommand.reason());
+                            }
+                            return ResolverCommand.multiExecuteWith(
+                                dependencyCommand.inputs().stream()
+                                    .map(Utils::toNodeInputs)
+                                    .collect(toImmutableList()));
                           });
                   return new ResolverDefinition(
                       inputResolverNode.nodeLogicId(), sources, dependencyName, resolvedInputNames);
@@ -255,7 +258,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     throw new MandatoryInputsMissingException(vajramID, missingMandatoryValues);
   }
 
-  private NodeLogicDefinition<?> createVajramNodeLogic(VajramDefinition vajramDefinition) {
+  private MainLogicDefinition<?> createVajramNodeLogic(VajramDefinition vajramDefinition) {
     VajramID vajramId = vajramDefinition.getVajram().getId();
     ImmutableCollection<VajramInputDefinition> inputDefinitions =
         vajramDefinition.getVajram().getInputDefinitions();
@@ -264,7 +267,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     NodeLogicId vajramLogicNodeName = new NodeLogicId("%s:vajramLogic".formatted(vajramId));
     // Step 4: Create and register node for the main vajram logic
     if (vajramDefinition.getVajram() instanceof ComputeVajram<?> computeVajram) {
-      return logicRegistry.newOneToManyComputeLogic(
+      return logicRegistry.newComputeLogic(
           vajramLogicNodeName.asString(),
           inputs,
           nodeInputs -> {
@@ -290,10 +293,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                         .map(nodeInputs -> inputValues(inputDefinitions, nodeInputs))
                         .collect(toImmutableList());
                 return ioVajram.execute(inputValues).entrySet().stream()
-                    .collect(
-                        toImmutableMap(
-                            e -> toNodeInputs(e.getKey()),
-                            e -> new MultiResultFuture<>(e.getValue())));
+                    .collect(toImmutableMap(e -> toNodeInputs(e.getKey()), Entry::getValue));
               });
       enableInputModulation(ioNodeDefinition, ioVajram);
       return ioNodeDefinition;
@@ -312,7 +312,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     }
   }
 
-  private static <T> Supplier<NodeDecorator<T>> getInputModulationDecoratorSupplier(
+  private static <T> Supplier<MainLogicDecorator<T>> getInputModulationDecoratorSupplier(
       IOVajram<?> ioVajram,
       Supplier<InputModulator<InputValuesAdaptor, InputValuesAdaptor>> inputModulationDecorator) {
     @SuppressWarnings("unchecked")

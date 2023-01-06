@@ -1,13 +1,14 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
+import static com.flipkart.krystal.utils.Futures.propagateCancellation;
 import static com.flipkart.krystal.vajramexecutor.krystex.Utils.toNodeInputs;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
-import com.flipkart.krystal.krystex.MultiResultFuture;
-import com.flipkart.krystal.krystex.node.NodeDecorator;
-import com.flipkart.krystal.krystex.node.NodeLogic;
-import com.flipkart.krystal.krystex.node.NodeLogicDefinition;
+import com.flipkart.krystal.krystex.node.MainLogic;
+import com.flipkart.krystal.krystex.node.MainLogicDecorator;
+import com.flipkart.krystal.krystex.node.MainLogicDefinition;
+import com.flipkart.krystal.krystex.node.NodeInputs;
 import com.flipkart.krystal.vajram.inputs.InputValues;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
@@ -15,20 +16,22 @@ import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajram.modulation.UnmodulatedInput;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 public class InputModulationDecorator<
         InputsNeedingModulation extends InputValuesAdaptor,
         CommonInputs extends InputValuesAdaptor,
         T>
-    implements NodeDecorator<T> {
+    implements MainLogicDecorator<T> {
 
   private final InputModulator<InputsNeedingModulation, CommonInputs> inputModulator;
   private final InputsConverter<InputsNeedingModulation, CommonInputs> inputsConverter;
-  private final Map<InputValues, MultiResultFuture<T>> futureCache = new HashMap<>();
+  private final Map<InputValues, CompletableFuture<T>> futureCache = new HashMap<>();
 
   public InputModulationDecorator(
       InputModulator<InputsNeedingModulation, CommonInputs> inputModulator,
@@ -38,7 +41,7 @@ public class InputModulationDecorator<
   }
 
   @Override
-  public NodeLogic<T> decorateLogic(NodeLogicDefinition<T> nodeDef, NodeLogic<T> logicToDecorate) {
+  public MainLogic<T> decorateLogic(MainLogicDefinition<T> nodeDef, MainLogic<T> logicToDecorate) {
     inputModulator.onTermination(
         requests -> requests.forEach(request -> modulateInputsList(logicToDecorate, request)));
     return inputsList -> {
@@ -55,7 +58,7 @@ public class InputModulationDecorator<
               .toList();
       requests.forEach(
           request ->
-              futureCache.computeIfAbsent(request.toInputValues(), e -> new MultiResultFuture<>()));
+              futureCache.computeIfAbsent(request.toInputValues(), e -> new CompletableFuture<>()));
       for (ModulatedInput<InputsNeedingModulation, CommonInputs> modulatedInput : modulatedInputs) {
         modulateInputsList(logicToDecorate, modulatedInput);
       }
@@ -66,32 +69,31 @@ public class InputModulationDecorator<
   }
 
   private void modulateInputsList(
-      NodeLogic<T> logicToDecorate,
+      MainLogic<T> logicToDecorate,
       ModulatedInput<InputsNeedingModulation, CommonInputs> modulatedInput) {
     ImmutableList<UnmodulatedInput<InputsNeedingModulation, CommonInputs>> requests =
         modulatedInput.inputsNeedingModulation().stream()
             .map(each -> new UnmodulatedInput<>(each, modulatedInput.commonInputs()))
             .collect(toImmutableList());
-    logicToDecorate
-        .apply(
+    ImmutableMap<NodeInputs, CompletableFuture<T>> originalFutures =
+        logicToDecorate.execute(
             requests.stream()
                 .map(enrichedRequest -> toNodeInputs(enrichedRequest.toInputValues()))
-                .collect(toImmutableList()))
-        .forEach(
-            (inputs, multiResult) -> {
-              MultiResultFuture<T> cachedResult =
-                  futureCache.computeIfAbsent(
-                      Utils.toInputValues(inputs), request -> new MultiResultFuture<>());
-              multiResult
-                  .future()
-                  .whenComplete(
-                      (values, throwable) -> {
-                        if (values != null) {
-                          cachedResult.future().complete(values);
-                        } else {
-                          cachedResult.future().completeExceptionally(throwable);
-                        }
-                      });
-            });
+                .collect(toImmutableList()));
+    originalFutures.forEach(
+        (inputs, resultFuture) -> {
+          CompletableFuture<T> cachedResult =
+              futureCache.computeIfAbsent(
+                  Utils.toInputValues(inputs), request -> new CompletableFuture<>());
+          resultFuture.whenComplete(
+              (values, throwable) -> {
+                if (values != null) {
+                  cachedResult.complete(values);
+                } else {
+                  cachedResult.completeExceptionally(throwable);
+                }
+              });
+          propagateCancellation(cachedResult, resultFuture);
+        });
   }
 }

@@ -1,48 +1,28 @@
 package com.flipkart.krystal.krystex.node;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-import com.flipkart.krystal.krystex.MultiResultFuture;
-import com.flipkart.krystal.krystex.node.NodeInputs;
-import com.flipkart.krystal.krystex.node.NodeLogic;
-import com.flipkart.krystal.krystex.node.NodeLogicDefinition;
-import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-public final class ComputeLogicDefinition<T> extends NodeLogicDefinition<T> {
+public final class ComputeLogicDefinition<T> extends MainLogicDefinition<T> {
 
-  private final Function<NodeInputs, ImmutableList<T>> computeLogic;
-
-  @MonotonicNonNull private NodeLogic<T> nodeLogic;
+  private final Function<NodeInputs, T> computeLogic;
 
   public ComputeLogicDefinition(
-      NodeLogicId nodeLogicId,
-      Set<String> inputNames,
-      Function<NodeInputs, ImmutableList<T>> nodeLogic) {
+      NodeLogicId nodeLogicId, Set<String> inputNames, Function<NodeInputs, T> nodeLogic) {
     super(nodeLogicId, inputNames);
-    computeLogic = nodeLogic;
+    this.computeLogic = nodeLogic;
   }
 
-  @Override
-  public NodeLogic<T> logic() {
-    if (nodeLogic == null) {
-      this.nodeLogic =
-          nodeInputs -> {
-            Map<NodeInputs, MultiResultFuture<T>> adaptedResult = new LinkedHashMap<>();
-            for (NodeInputs nodeInput : nodeInputs) {
-              adaptedResult.put(
-                  nodeInput,
-                  new MultiResultFuture<>(completedFuture(computeLogic.apply(nodeInput))));
-            }
-            return ImmutableMap.copyOf(adaptedResult);
-          };
-    }
-    return nodeLogic;
+  public ImmutableMap<NodeInputs, CompletableFuture<T>> execute(ImmutableList<NodeInputs> inputs) {
+    return inputs.stream()
+        .collect(
+            toImmutableMap(
+                Function.identity(), (NodeInputs t) -> completedFuture(computeLogic.apply(t))));
   }
 }
