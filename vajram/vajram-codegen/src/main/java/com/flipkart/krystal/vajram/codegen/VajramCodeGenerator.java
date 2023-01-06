@@ -478,6 +478,9 @@ public class VajramCodeGenerator {
   }
 
   private static String toJavaName(String inputName) {
+    if (!inputName.contains("_")) {
+      return inputName;
+    }
     return LOWER_UNDERSCORE.to(LOWER_CAMEL, inputName);
   }
 

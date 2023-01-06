@@ -1,21 +1,20 @@
 package com.flipkart.krystal.krystex.node;
 
-import com.flipkart.krystal.krystex.node.NodeLogic;
-import com.flipkart.krystal.krystex.node.NodeLogicDefinition;
-import com.flipkart.krystal.krystex.node.NodeLogicId;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
-public final class IOLogicDefinition<T> extends NodeLogicDefinition<T> {
+public final class IOLogicDefinition<T> extends MainLogicDefinition<T> {
 
-  private final NodeLogic<T> nodeLogic;
+  private final MainLogic<T> nodeLogic;
 
-  public IOLogicDefinition(NodeLogicId nodeLogicId, Set<String> inputs, NodeLogic<T> nodeLogic) {
+  public IOLogicDefinition(NodeLogicId nodeLogicId, Set<String> inputs, MainLogic<T> nodeLogic) {
     super(nodeLogicId, inputs);
     this.nodeLogic = nodeLogic;
   }
 
-  @Override
-  public NodeLogic<T> logic() {
-    return nodeLogic;
+  public ImmutableMap<NodeInputs, CompletableFuture<T>> execute(ImmutableList<NodeInputs> inputs) {
+    return nodeLogic.execute(inputs);
   }
 }

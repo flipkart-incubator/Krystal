@@ -21,16 +21,11 @@ public class HelloVajramImpl extends HelloVajram {
   }
 
   @Override
-  public ImmutableMap<InputValues, ImmutableList<String>> executeCompute(
-      ImmutableList<InputValues> inputsList) {
+  public ImmutableMap<InputValues, String> executeCompute(ImmutableList<InputValues> inputsList) {
     return inputsList.stream()
         .collect(
             toImmutableMap(
                 i -> i,
-                i ->
-                    ImmutableList.of(
-                        greet(
-                            new AllInputs(
-                                i.getOrThrow("name"), i.getOrDefault("greeting", null))))));
+                i -> greet(new AllInputs(i.getOrThrow("name"), i.getOrDefault("greeting", null)))));
   }
 }

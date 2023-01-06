@@ -6,9 +6,9 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.flipkart.krystal.vajram.DependencyResponse;
-import com.flipkart.krystal.vajram.ExecutionContextMap;
 import com.flipkart.krystal.vajram.ValueOrError;
 import com.flipkart.krystal.vajram.inputs.Dependency;
+import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputValues;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
@@ -44,23 +44,19 @@ public class HelloFriendsV2VajramImpl extends HelloFriendsV2Vajram {
   }
 
   @Override
-  public ImmutableList<InputValues> resolveInputOfDependency(
-      String dependency,
-      ImmutableSet<String> resolvableInputs,
-      ExecutionContextMap executionContext) {
-    Optional<String> userId = executionContext.context().<String>getValue("user_id").value();
+  public DependencyCommand<InputValues> resolveInputOfDependency(
+      String dependency, ImmutableSet<String> resolvableInputs, InputValues inputValues) {
+    Optional<String> userId = inputValues.<String>getValue("user_id").value();
     switch (dependency) {
       case FRIEND_IDS:
         {
           if (Set.of("user_id").equals(resolvableInputs)) {
             if (userId.isPresent()) {
-              return ImmutableList.of(
+              return DependencyCommand.executeWith(
                   new InputValues(
                       ImmutableMap.of(
                           "user_id",
                           new ValueOrError<Object>(userIdForFriendService(userId.get())))));
-            } else {
-              return ImmutableList.of(new InputValues());
             }
           }
         }
@@ -69,8 +65,7 @@ public class HelloFriendsV2VajramImpl extends HelloFriendsV2Vajram {
           if (Set.of("user_id").equals(resolvableInputs)) {
             DependencyResponse<FriendsServiceRequest, Set<String>> friendIds =
                 new DependencyResponse<>(
-                    executionContext
-                        .context()
+                    inputValues
                         .<ImmutableMap<InputValues, ValueOrError<Set<String>>>>getOrThrow(
                             FRIEND_IDS)
                         .entrySet()
@@ -79,9 +74,10 @@ public class HelloFriendsV2VajramImpl extends HelloFriendsV2Vajram {
                             toImmutableMap(
                                 e -> FriendsServiceRequest.from(e.getKey()), Entry::getValue)));
             Set<String> userIdsForUserService = userIdsForUserService(friendIds);
-            return userIdsForUserService.stream()
-                .map(s -> new InputValues(ImmutableMap.of("user_id", new ValueOrError<>(s))))
-                .collect(toImmutableList());
+            return DependencyCommand.multiExecuteWith(
+                userIdsForUserService.stream()
+                    .map(s -> new InputValues(ImmutableMap.of("user_id", new ValueOrError<>(s))))
+                    .collect(toImmutableList()));
           }
         }
     }
@@ -89,8 +85,7 @@ public class HelloFriendsV2VajramImpl extends HelloFriendsV2Vajram {
   }
 
   @Override
-  public ImmutableMap<InputValues, ImmutableList<String>> executeCompute(
-      ImmutableList<InputValues> inputsList) {
+  public ImmutableMap<InputValues, String> executeCompute(ImmutableList<InputValues> inputsList) {
     return inputsList.stream()
         .collect(
             toImmutableMap(
@@ -116,10 +111,9 @@ public class HelloFriendsV2VajramImpl extends HelloFriendsV2Vajram {
                                       e -> TestUserServiceRequest.from(e.getKey()),
                                       Entry::getValue)));
 
-                  return ImmutableList.of(
-                      sayHellos(
-                          new AllInputs(
-                              i.getOrThrow("user_id"), friendIdsResponse, friendInfosResponse)));
+                  return sayHellos(
+                      new AllInputs(
+                          i.getOrThrow("user_id"), friendIdsResponse, friendInfosResponse));
                 }));
   }
 }

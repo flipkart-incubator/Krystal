@@ -49,9 +49,7 @@ class KrystalNodeExecutorTest {
         nodeDefinitionRegistry.newNodeDefinition(
             "node",
             newComputeLogic(
-                    "nodeLogic",
-                    Collections.emptySet(),
-                    dependencyValues -> ImmutableList.of("computed_value"))
+                    "nodeLogic", Collections.emptySet(), dependencyValues -> "computed_value")
                 .nodeLogicId());
 
     Object result =
@@ -73,18 +71,17 @@ class KrystalNodeExecutorTest {
                         logicId,
                         Set.of("a", "b", "c"),
                         dependencyValues ->
-                            ImmutableList.of(
-                                "computed_values: a=%s;b=%s;c=%s"
-                                    .formatted(
-                                        singleValue(dependencyValues.getValue("a"))
-                                            .value()
-                                            .orElseThrow(),
-                                        singleValue(dependencyValues.getValue("b"))
-                                            .value()
-                                            .orElseThrow(),
-                                        singleValue(dependencyValues.getValue("c"))
-                                            .value()
-                                            .orElseThrow())))
+                            "computed_values: a=%s;b=%s;c=%s"
+                                .formatted(
+                                    singleValue(dependencyValues.getValue("a"))
+                                        .value()
+                                        .orElseThrow(),
+                                    singleValue(dependencyValues.getValue("b"))
+                                        .value()
+                                        .orElseThrow(),
+                                    singleValue(dependencyValues.getValue("c"))
+                                        .value()
+                                        .orElseThrow()))
                     .nodeLogicId(),
                 ImmutableMap.of(),
                 ImmutableList.of())
@@ -113,9 +110,7 @@ class KrystalNodeExecutorTest {
         nodeDefinitionRegistry.newNodeDefinition(
             "n1",
             newComputeLogic(
-                    "n1_logic",
-                    Collections.emptySet(),
-                    dependencyValues -> ImmutableList.of("dependency_value"))
+                    "n1_logic", Collections.emptySet(), dependencyValues -> "dependency_value")
                 .nodeLogicId());
 
     NodeDefinition n2 =
@@ -125,9 +120,8 @@ class KrystalNodeExecutorTest {
                     "n2_logic",
                     ImmutableSet.of("dep"),
                     dependencyValues ->
-                        ImmutableList.of(
-                            singleValue(dependencyValues.getValue("dep")).value().orElseThrow()
-                                + ":computed_value"))
+                        singleValue(dependencyValues.getValue("dep")).value().orElseThrow()
+                            + ":computed_value")
                 .nodeLogicId(),
             ImmutableMap.of("dep", n1.nodeId()),
             ImmutableList.of());
@@ -150,8 +144,7 @@ class KrystalNodeExecutorTest {
     String l1Dep = "requestExecution_multiLevelDependencies_level1";
     nodeDefinitionRegistry.newNodeDefinition(
         l1Dep,
-        newComputeLogic(l1Dep, Collections.emptySet(), dependencyValues -> ImmutableList.of("l1"))
-            .nodeLogicId());
+        newComputeLogic(l1Dep, Collections.emptySet(), dependencyValues -> "l1").nodeLogicId());
 
     String l2Dep = "requestExecution_multiLevelDependencies_level2";
     nodeDefinitionRegistry.newNodeDefinition(
@@ -160,9 +153,7 @@ class KrystalNodeExecutorTest {
                 l2Dep,
                 ImmutableSet.of("input"),
                 dependencyValues ->
-                    ImmutableList.of(
-                        singleValue(dependencyValues.getValue("input")).value().orElseThrow()
-                            + ":l2"))
+                    singleValue(dependencyValues.getValue("input")).value().orElseThrow() + ":l2")
             .nodeLogicId(),
         ImmutableMap.of("input", new NodeId(l1Dep)));
 
@@ -173,9 +164,7 @@ class KrystalNodeExecutorTest {
                 l3Dep,
                 ImmutableSet.of("input"),
                 dependencyValues ->
-                    ImmutableList.of(
-                        singleValue(dependencyValues.getValue("input")).value().orElseThrow()
-                            + ":l3"))
+                    singleValue(dependencyValues.getValue("input")).value().orElseThrow() + ":l3")
             .nodeLogicId(),
         ImmutableMap.of("input", new NodeId(l2Dep)));
 
@@ -186,9 +175,7 @@ class KrystalNodeExecutorTest {
                 l4Dep,
                 ImmutableSet.of("input"),
                 dependencyValues ->
-                    ImmutableList.of(
-                        singleValue(dependencyValues.getValue("input")).value().orElseThrow()
-                            + ":l4"))
+                    singleValue(dependencyValues.getValue("input")).value().orElseThrow() + ":l4")
             .nodeLogicId(),
         ImmutableMap.of("input", new NodeId(l3Dep)));
 
@@ -203,11 +190,10 @@ class KrystalNodeExecutorTest {
                                     "requestExecution_multiLevelDependencies_final",
                                     ImmutableSet.of("input"),
                                     dependencyValues ->
-                                        ImmutableList.of(
-                                            singleValue(dependencyValues.getValue("input"))
-                                                    .value()
-                                                    .orElseThrow()
-                                                + ":final"))
+                                        singleValue(dependencyValues.getValue("input"))
+                                                .value()
+                                                .orElseThrow()
+                                            + ":final")
                                 .nodeLogicId(),
                             ImmutableMap.of("input", new NodeId(l4Dep)))
                         .nodeId(),
@@ -230,18 +216,18 @@ class KrystalNodeExecutorTest {
                         newComputeLogic(
                                 "shutdown_preventsNewExecutionRequests",
                                 ImmutableSet.of(),
-                                dependencyValues -> ImmutableList.of(""))
+                                dependencyValues -> "")
                             .nodeLogicId())
                     .nodeId(),
                 new NodeInputs(),
                 new RequestId("")));
   }
 
-  private <T> NodeLogicDefinition<T> newComputeLogic(
-      String nodeId, Set<String> inputs, Function<NodeInputs, ImmutableList<T>> logic) {
+  private <T> MainLogicDefinition<T> newComputeLogic(
+      String nodeId, Set<String> inputs, Function<NodeInputs, T> logic) {
     ComputeLogicDefinition<T> def =
         new ComputeLogicDefinition<>(new NodeLogicId(nodeId), inputs, logic);
-    logicDefinitionRegistry.add(def);
+    logicDefinitionRegistry.addMainLogic(def);
     return def;
   }
 }
