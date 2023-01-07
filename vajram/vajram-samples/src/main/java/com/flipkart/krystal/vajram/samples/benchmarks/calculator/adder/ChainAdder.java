@@ -20,7 +20,7 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
   public static final String ID = "chainAdder";
 
   @Resolve(value = "chain_sum", inputs = "numbers")
-  DependencyCommand<ArrayList<Integer>> numbersForSubChainer(
+  static DependencyCommand<ArrayList<Integer>> numbersForSubChainer(
       @BindFrom("numbers") List<Integer> numbers) {
     if (numbers.size() < 3) {
       return skip("Skipping chainer as count of numbers is less than 3. Will call adder instead");
@@ -33,7 +33,7 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
   }
 
   @Resolve(value = "sum", inputs = "number_one")
-  DependencyCommand<Integer> adderNumberOne(@BindFrom("numbers") List<Integer> numbers) {
+  static DependencyCommand<Integer> adderNumberOne(@BindFrom("numbers") List<Integer> numbers) {
     if (numbers.isEmpty()) {
       return skip("No numbers provided. Skipping adder call");
     } else if (numbers.size() > 2) {
@@ -44,7 +44,7 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
   }
 
   @Resolve(value = "sum", inputs = "number_two")
-  DependencyCommand<Integer> adderNumberTwo(@BindFrom("numbers") List<Integer> numbers) {
+  static DependencyCommand<Integer> adderNumberTwo(@BindFrom("numbers") List<Integer> numbers) {
     if (numbers.isEmpty()) {
       return skip("No numbers provided. Skipping adder call");
     } else if (numbers.size() > 2) {
@@ -52,12 +52,12 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
     } else if (numbers.size() == 1) {
       return null;
     } else {
-      return executeWith(numbers.get(0));
+      return executeWith(numbers.get(1));
     }
   }
 
   @VajramLogic
-  Integer sum(ChainAdderInputUtil.AllInputs allInputs) {
+  static Integer add(ChainAdderInputUtil.AllInputs allInputs) {
     return allInputs.sum().values().stream().mapToInt(value -> value.value().orElse(0)).sum()
         + allInputs.chainSum().values().stream().mapToInt(value -> value.value().orElse(0)).sum();
   }

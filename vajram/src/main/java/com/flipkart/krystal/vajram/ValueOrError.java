@@ -13,7 +13,7 @@ public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error) {
   }
 
   public ValueOrError(T value) {
-    //noinspection rawtypes
+    //noinspection rawtypes,unchecked
     this((value instanceof Optional o) ? o : Optional.ofNullable(value), Optional.empty());
   }
 
