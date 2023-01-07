@@ -73,8 +73,13 @@ public class Main {
   private void codeGenModels() throws Exception {
     ImmutableList<VajramInputFile> inputFiles = getInputDefinitions();
     for (VajramInputFile inputFile : inputFiles) {
-      codeGenRequest(inputFile);
-      codeGenUtil(inputFile);
+      try {
+        codeGenRequest(inputFile);
+        codeGenUtil(inputFile);
+      } catch (Exception e) {
+        throw new RuntimeException(
+            "Could not generate code for file %s".formatted(inputFile.srcRelativeFilePath()), e);
+      }
     }
   }
 

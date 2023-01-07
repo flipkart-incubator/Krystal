@@ -3,10 +3,10 @@ package com.flipkart.krystal.krystex.node;
 /**
  * @param <T> The type returned by the {@link Node} that this decorator decorates.
  */
-public interface  NodeDecorator<T> {
+public interface MainLogicDecorator<T> {
 
   /**
-   * The identifier for this {@link NodeDecorator} which is used to prevent duplicate node
+   * The identifier for this {@link MainLogicDecorator} which is used to prevent duplicate node
    * decorators decorating the same node. This means one node can never be decorated by two
    * NodeDecorators whose return value from this method is the same.
    *
@@ -18,5 +18,5 @@ public interface  NodeDecorator<T> {
     return this.getClass().getName();
   }
 
-  NodeLogic<T> decorateLogic(NodeLogicDefinition<T> node, NodeLogic<T> logicToDecorate);
+  MainLogic<T> decorateLogic(MainLogicDefinition<T> node, MainLogic<T> logicToDecorate);
 }

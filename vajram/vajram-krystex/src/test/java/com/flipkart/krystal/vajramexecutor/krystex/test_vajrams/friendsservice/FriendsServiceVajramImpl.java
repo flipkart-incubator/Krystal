@@ -31,7 +31,7 @@ public class FriendsServiceVajramImpl extends FriendsServiceVajram {
   }
 
   @Override
-  public ImmutableMap<InputValues, CompletableFuture<ImmutableList<Set<String>>>> execute(
+  public ImmutableMap<InputValues, CompletableFuture<Set<String>>> execute(
       ImmutableList<InputValues> inputsList) {
     Map<InputsNeedingModulation, InputValues> mapping = new HashMap<>();
     List<InputsNeedingModulation> ims = new ArrayList<>();
@@ -44,14 +44,12 @@ public class FriendsServiceVajramImpl extends FriendsServiceVajram {
       mapping.put(im, inputs);
       ims.add(im);
     }
-    Map<InputValues, CompletableFuture<ImmutableList<Set<String>>>> returnValue =
-        new LinkedHashMap<>();
+    Map<InputValues, CompletableFuture<Set<String>>> returnValue = new LinkedHashMap<>();
 
     if (commonInputs != null) {
       ImmutableMap<InputsNeedingModulation, CompletableFuture<Set<String>>> results =
           call(new ModulatedInput<>(ImmutableList.copyOf(ims), commonInputs));
-      results.forEach(
-          (im, future) -> returnValue.put(mapping.get(im), future.thenApply(ImmutableList::of)));
+      results.forEach((im, future) -> returnValue.put(mapping.get(im), future));
     }
     return ImmutableMap.copyOf(returnValue);
   }

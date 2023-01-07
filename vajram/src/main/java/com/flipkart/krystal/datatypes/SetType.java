@@ -1,5 +1,6 @@
 package com.flipkart.krystal.datatypes;
 
+import com.google.common.primitives.Primitives;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.LinkedHashSet;
@@ -20,6 +21,14 @@ public class SetType<T> implements JavaDataType<LinkedHashSet<T>> {
     if (type instanceof JavaDataType<?> javaDataType) {
       return javaDataType
           .javaType()
+          .map(
+              t -> {
+                if (t instanceof Class<?> clazz) {
+                  return Primitives.wrap(clazz);
+                } else {
+                  return t;
+                }
+              })
           .map(
               t ->
                   new ParameterizedType() {
