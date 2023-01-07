@@ -230,10 +230,8 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
       VajramID vajramID,
       NodeInputs nodeInputs,
       ImmutableCollection<VajramInputDefinition> requiredInputs) {
-    ImmutableCollection<VajramInputDefinition> mandatoryInputs =
-        requiredInputs.stream()
-            .filter(VajramInputDefinition::isMandatory)
-            .collect(toImmutableList());
+    Iterable<VajramInputDefinition> mandatoryInputs =
+        requiredInputs.stream().filter(VajramInputDefinition::isMandatory)::iterator;
     Map<String, Throwable> missingMandatoryValues = new HashMap<>();
     for (VajramInputDefinition mandatoryInput : mandatoryInputs) {
       Value value = nodeInputs.getValue(mandatoryInput.name());
@@ -326,8 +324,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
       String inputName = inputDefinition.name();
       if (inputDefinition instanceof Input<?> input) {
         if (input.sources().contains(InputSource.CLIENT)) {
-          if (dependencyValues.values().get(inputName) == null
-              || SingleValue.empty().equals(dependencyValues.getValue(inputName))) {
+          if (SingleValue.empty().equals(dependencyValues.getValue(inputName))) {
             // Input was not resolved by another vajram. Check if it is resolvable
             // by SESSION
             if (input.sources().contains(InputSource.SESSION)) {
