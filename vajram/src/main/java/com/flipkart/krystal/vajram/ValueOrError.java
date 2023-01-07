@@ -5,6 +5,9 @@ import java.util.concurrent.Callable;
 
 public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error) {
 
+  private static final ValueOrError<?> EMPTY =
+      new ValueOrError<>(Optional.empty(), Optional.empty());
+
   public ValueOrError {
     if ((value.isPresent() && error.isPresent())) {
       throw new IllegalArgumentException(
@@ -26,6 +29,7 @@ public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error) {
   }
 
   public static <T> ValueOrError<T> empty() {
-    return new ValueOrError<>(Optional.empty(), Optional.empty());
+    //noinspection unchecked
+    return (ValueOrError<T>) EMPTY;
   }
 }

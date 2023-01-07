@@ -5,6 +5,8 @@ import java.util.Optional;
 public record SingleValue<T>(Optional<T> value, Optional<Throwable> failureReason)
     implements Value {
 
+  private static final SingleValue<?> EMPTY = new SingleValue<>(Optional.empty(), Optional.empty());
+
   public SingleValue {
     if ((value.isPresent() && failureReason.isPresent())) {
       throw new IllegalArgumentException(
@@ -21,7 +23,8 @@ public record SingleValue<T>(Optional<T> value, Optional<Throwable> failureReaso
   }
 
   public static <T> SingleValue<T> empty() {
-    return new SingleValue<>(Optional.empty(), Optional.empty());
+    //noinspection unchecked
+    return (SingleValue<T>) EMPTY;
   }
 
   public boolean isFailure() {

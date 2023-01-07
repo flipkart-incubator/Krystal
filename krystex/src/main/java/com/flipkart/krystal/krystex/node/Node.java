@@ -1,6 +1,5 @@
 package com.flipkart.krystal.krystex.node;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Maps.filterKeys;
 import static java.util.concurrent.CompletableFuture.allOf;
 
@@ -88,9 +87,7 @@ public class Node {
       }
       if (executeMainLogic) {
         NodeInputs inputs =
-            new NodeInputs(
-                ImmutableMap.copyOf(
-                    inputsValueCollector.getOrDefault(requestId, ImmutableMap.of())));
+            new NodeInputs(inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()));
         // Retrieve existing result from cache if result for this set of inputs has already been
         // calculated
         NodeResponseFuture mainLogicResponse =
@@ -108,13 +105,12 @@ public class Node {
                                 .inputsFuture()
                                 .complete(
                                     new NodeInputs(
-                                        ImmutableMap.copyOf(
-                                            filterKeys(
-                                                inputs.values(),
-                                                input ->
-                                                    !nodeDefinition
-                                                        .dependencyNodes()
-                                                        .containsKey(input)))));
+                                        filterKeys(
+                                            inputs.values(),
+                                            input ->
+                                                !nodeDefinition
+                                                    .dependencyNodes()
+                                                    .containsKey(input))));
                             if (t != null) {
                               newResult.responseFuture().completeExceptionally(t);
                             } else {
@@ -207,21 +203,22 @@ public class Node {
     resultsByRequest.computeIfAbsent(requestId, r -> new NodeResponseFuture());
     Map<NodeLogicId, ResolverCommand> nodeResults =
         this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
-    ImmutableList<ResolverDefinition> pendingResolvers =
+    Iterable<ResolverDefinition> pendingResolvers =
         resolverDefinitionsByInput
-            .getOrDefault(Optional.ofNullable(input), ImmutableList.of())
-            .stream()
-            .filter(
-                resolverDefinition ->
-                    !nodeResults.containsKey(resolverDefinition.resolverNodeLogicId()))
-            .collect(toImmutableList());
+                .getOrDefault(Optional.ofNullable(input), ImmutableList.of())
+                .stream()
+                .filter(
+                    resolverDefinition1 ->
+                        !nodeResults.containsKey(resolverDefinition1.resolverNodeLogicId()))
+            ::iterator;
+    int pendingResolverCount = 0;
     for (ResolverDefinition resolverDefinition : pendingResolvers) {
+      pendingResolverCount++;
       String dependencyName = resolverDefinition.dependencyName();
       ImmutableSet<String> boundFrom = resolverDefinition.boundFrom();
       NodeLogicId nodeLogicId = resolverDefinition.resolverNodeLogicId();
       if (boundFrom.stream().allMatch(inputs::containsKey)) {
-        NodeInputs inputResolverInputs =
-            new NodeInputs(ImmutableMap.copyOf(filterKeys(inputs, boundFrom::contains)));
+        NodeInputs inputResolverInputs = new NodeInputs(filterKeys(inputs, boundFrom::contains));
         ResolverCommand resolverCommand =
             nodeDefinition
                 .nodeDefinitionRegistry()
@@ -283,7 +280,7 @@ public class Node {
       }
     }
     boolean executeMainLogic = false;
-    if (pendingResolvers.isEmpty()) {
+    if (pendingResolverCount == 0) {
       ImmutableSet<String> inputNames = mainLogicNodeDefinition.inputNames();
       if (inputsValueCollector
           .getOrDefault(requestId, ImmutableMap.of())

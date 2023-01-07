@@ -24,7 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ChainAdderTest {
-  public static final int LOOP_COUNT = 10;
+  public static final int LOOP_COUNT = 1000;
   private VajramNodeGraph graph;
 
   @BeforeEach
@@ -48,7 +48,6 @@ class ChainAdderTest {
                   .numbers(new ArrayList<>(List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)))
                   .build(),
           "chainAdderTest");
-      Thread.sleep(10000);
       long startTime = System.nanoTime();
       for (int value = 0; value < LOOP_COUNT; value++) {
         int localValue = value;
@@ -102,7 +101,7 @@ class ChainAdderTest {
     }
   }
 
-  private CompletableFuture<?> chainAddAsync(Integer value) {
+  private CompletableFuture<Integer> chainAddAsync(Integer value) {
     return chainAddAsync(
         new ArrayList<>(
             Stream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)

@@ -1,7 +1,6 @@
 package com.flipkart.krystal.krystex.node;
 
 import com.google.common.collect.ImmutableList;
-import java.util.Collection;
 
 public interface ResolverCommand {
 
@@ -15,7 +14,7 @@ public interface ResolverCommand {
     return new ExecuteDependency(input);
   }
 
-  static MultiExecuteDependency multiExecuteWith(Collection<NodeInputs> inputs) {
+  static MultiExecuteDependency multiExecuteWith(ImmutableList<NodeInputs> inputs) {
     return new MultiExecuteDependency(inputs);
   }
 
@@ -31,9 +30,9 @@ public interface ResolverCommand {
     }
   }
 
-  record MultiExecuteDependency(Collection<NodeInputs> inputs) implements ResolverCommand {
+  record MultiExecuteDependency(ImmutableList<NodeInputs> inputs) implements ResolverCommand {
     public ImmutableList<NodeInputs> getInputs() {
-      return ImmutableList.copyOf(inputs);
+      return inputs;
     }
   }
 }
