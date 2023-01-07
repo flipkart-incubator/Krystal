@@ -2,6 +2,8 @@ package com.flipkart.krystal.vajram.exec;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import com.flipkart.krystal.vajram.ComputeVajram;
+import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.inputs.BindFrom;
 import com.flipkart.krystal.vajram.inputs.DefaultInputResolver;
@@ -40,7 +42,7 @@ public final class VajramDefinition {
     List<InputResolverDefinition> inputResolvers =
         new ArrayList<>(vajram.getSimpleInputResolvers());
     ImmutableSet<Method> resolverMethods =
-        Arrays.stream(vajram.getClass().getMethods())
+        Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
             .filter(method -> method.isAnnotationPresent(Resolve.class))
             .collect(toImmutableSet());
 
@@ -83,5 +85,16 @@ public final class VajramDefinition {
                   ImmutableSet.copyOf(targetInputs))));
     }
     return inputResolvers;
+  }
+
+  private static Class<?> getVajramSourceClass(Class<?> vajramClass) {
+    Class<?> superclass = vajramClass.getSuperclass();
+    if (Object.class.equals(superclass)) {
+      throw new IllegalArgumentException();
+    }
+    if (IOVajram.class.equals(superclass) || ComputeVajram.class.equals(superclass)) {
+      return vajramClass;
+    }
+    return getVajramSourceClass(superclass);
   }
 }

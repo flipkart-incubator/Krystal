@@ -17,7 +17,7 @@ public class AdderImpl extends Adder {
   public ImmutableCollection<VajramInputDefinition> getInputDefinitions() {
     return ImmutableList.of(
         Input.builder().name("number_one").type(IntegerType.integer()).isMandatory().build(),
-        Input.builder().name("number_two").type(IntegerType.integer()).isMandatory().build());
+        Input.builder().name("number_two").type(IntegerType.integer()).build());
   }
 
   @Override

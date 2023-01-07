@@ -11,10 +11,8 @@ import java.util.concurrent.CompletableFuture;
 
 public abstract non-sealed class ComputeVajram<T> extends AbstractVajram<T> {
 
-  public ImmutableMap<InputValues, T> executeCompute(ImmutableList<InputValues> inputsList) {
-    throw new UnsupportedOperationException(
-        "executeCompute method should be implemented by a ComputeVajram");
-  }
+  public abstract ImmutableMap<InputValues, T> executeCompute(
+      ImmutableList<InputValues> inputsList);
 
   @Override
   public final ImmutableMap<InputValues, CompletableFuture<T>> execute(

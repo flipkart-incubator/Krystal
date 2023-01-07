@@ -62,6 +62,21 @@ public final class GreetingVajramImpl extends GreetingVajram {
   }
 
   @Override
+  public DependencyCommand<InputValues> resolveInputOfDependency(
+      String dependency, ImmutableSet<String> resolvableInputs, InputValues inputValues) {
+    switch (dependency) {
+      case "user_info" -> {
+        if (Set.of("user_id").equals(resolvableInputs)) {
+          String userId = super.userIdForUserService(inputValues.getOrThrow("user_id"));
+          return DependencyCommand.executeWith(
+              new InputValues(ImmutableMap.of("user_id", new ValueOrError<>(userId))));
+        }
+      }
+    }
+    throw new IllegalArgumentException();
+  }
+
+  @Override
   public ImmutableMap<InputValues, String> executeCompute(ImmutableList<InputValues> inputsList) {
     return inputsList.stream()
         .collect(
@@ -83,20 +98,5 @@ public final class GreetingVajramImpl extends GreetingVajram {
                           i.getOrDefault("analytics_event_sink", null),
                           userInfoResponse));
                 }));
-  }
-
-  @Override
-  public DependencyCommand<InputValues> resolveInputOfDependency(
-      String dependency, ImmutableSet<String> resolvableInputs, InputValues inputValues) {
-    switch (dependency) {
-      case "user_info" -> {
-        if (Set.of("user_id").equals(resolvableInputs)) {
-          String userId = super.userIdForUserService(inputValues.getOrThrow("user_id"));
-          return DependencyCommand.executeWith(
-              new InputValues(ImmutableMap.of("user_id", new ValueOrError<>(userId))));
-        }
-      }
-    }
-    throw new IllegalArgumentException();
   }
 }
