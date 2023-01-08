@@ -4,4 +4,5 @@ module flipkart.krystal.vajramexecutor.krystex {
   requires com.google.common;
   requires org.checkerframework.checker.qual;
   requires lombok;
+  requires flipkart.krystal.common;
 }

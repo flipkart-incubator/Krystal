@@ -12,12 +12,12 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
+import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramRequest;
-import com.flipkart.krystal.vajram.ValueOrError;
 import com.flipkart.krystal.vajram.codegen.models.AbstractInput;
 import com.flipkart.krystal.vajram.codegen.models.DependencyDef;
 import com.flipkart.krystal.vajram.codegen.models.InputDef;

@@ -21,4 +21,5 @@ project(':vajram-codegen').projectDir = file('vajram/vajram-codegen')
 
 include 'vajram-krystex'
 project(':vajram-krystex').projectDir = file('vajram/vajram-krystex')
+include 'common'
 

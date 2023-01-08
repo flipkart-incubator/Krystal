@@ -2,10 +2,10 @@ package com.flipkart.krystal.vajram.samples.greeting;
 
 import static com.flipkart.krystal.vajram.samples.greeting.GreetingVajram.ID;
 
+import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.ValueOrError;
 import com.flipkart.krystal.vajram.inputs.BindFrom;
 import com.flipkart.krystal.vajram.inputs.Resolve;
 import com.flipkart.krystal.vajram.samples.greeting.GreetingInputUtil.AllInputs;

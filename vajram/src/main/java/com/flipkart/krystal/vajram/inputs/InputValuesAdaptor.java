@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.inputs;
 
-import com.flipkart.krystal.vajram.ValueOrError;
+import com.flipkart.krystal.data.ValueOrError;
 
 public interface InputValuesAdaptor {
 

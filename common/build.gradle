@@ -5,21 +5,14 @@ plugins {
 }
 
 group 'com.flipkart.krystal'
-version '0.1-SNAPSHOT'
+version '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation project(':common')
-    implementation 'io.github.resilience4j:resilience4j-all:1.7.1'
-    implementation 'io.github.resilience4j:resilience4j-circuitbreaker:1.7.1'
-    implementation 'io.github.resilience4j:resilience4j-ratelimiter:1.7.1'
     implementation 'com.google.guava:guava:31.1-jre'
-    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
-    implementation 'org.slf4j:slf4j-api:2.0.3'
-
 
     compileOnly 'org.projectlombok:lombok:1.18.24'
     annotationProcessor 'org.projectlombok:lombok:1.18.24'
@@ -28,16 +21,11 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
 }
 
-ext {
-    clojarsusername = project.properties['clojarsusername'] ?: ""
-    clojarspassword = project.properties['clojarspassword'] ?: ""
-}
-
 publishing {
     publications {
         maven(MavenPublication) {
             groupId = 'com.flipkart.krystal'
-            artifactId = 'krystex'
+            artifactId = 'vajram-common'
             version = '0.1-SNAPSHOT'
             from components.java
         }
