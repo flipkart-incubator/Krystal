@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram;
+package com.flipkart.krystal.data;
 
 import java.util.Optional;
 import java.util.concurrent.Callable;

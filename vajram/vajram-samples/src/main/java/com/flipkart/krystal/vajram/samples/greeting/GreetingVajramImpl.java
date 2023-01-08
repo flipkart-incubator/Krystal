@@ -5,8 +5,8 @@ import static com.flipkart.krystal.datatypes.StringType.string;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
+import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.DependencyResponse;
-import com.flipkart.krystal.vajram.ValueOrError;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;

@@ -29,7 +29,7 @@ import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDefinitionException;
 import com.flipkart.krystal.vajram.VajramID;
-import com.flipkart.krystal.vajram.ValueOrError;
+import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.das.AccessSpecMatchingResult;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import com.flipkart.krystal.vajram.das.VajramIndex;

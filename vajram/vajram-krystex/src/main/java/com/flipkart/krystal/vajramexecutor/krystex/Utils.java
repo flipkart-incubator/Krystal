@@ -6,7 +6,7 @@ import com.flipkart.krystal.krystex.MultiValue;
 import com.flipkart.krystal.krystex.SingleValue;
 import com.flipkart.krystal.krystex.Value;
 import com.flipkart.krystal.krystex.node.NodeInputs;
-import com.flipkart.krystal.vajram.ValueOrError;
+import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.inputs.InputValues;
 import java.util.Map.Entry;
 

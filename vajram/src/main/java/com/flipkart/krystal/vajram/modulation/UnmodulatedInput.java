@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.modulation;
 
-import com.flipkart.krystal.vajram.ValueOrError;
+import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.inputs.InputValues;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.google.common.collect.ImmutableMap;

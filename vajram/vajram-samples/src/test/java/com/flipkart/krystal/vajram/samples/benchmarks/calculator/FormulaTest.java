@@ -56,6 +56,7 @@ class FormulaTest {
       System.out.printf(
           "Platform overhead over reactive code: %,.0f ns per request",
           (1.0 * vajramTime - javaFuturesTime) / LOOP_COUNT);
+      System.out.println();
     }
   }
 

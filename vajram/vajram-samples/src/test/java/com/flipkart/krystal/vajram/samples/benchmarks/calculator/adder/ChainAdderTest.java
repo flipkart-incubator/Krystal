@@ -40,7 +40,6 @@ class ChainAdderTest {
       long javaNativeTime = javaMethodBenchmark(this::chainAdd, LOOP_COUNT);
       long javaFuturesTime = javaFuturesBenchmark(this::chainAddAsync, LOOP_COUNT);
       CompletableFuture<Integer>[] futures = new CompletableFuture[LOOP_COUNT];
-      System.out.println(ProcessHandle.current().pid());
       krystexVajramExecutor.execute(
           vajramID(ChainAdder.ID),
           rc ->
@@ -77,6 +76,7 @@ class ChainAdderTest {
       System.out.printf(
           "Platform overhead over reactive code: %,.0f ns per request",
           (1.0 * vajramTime - javaFuturesTime) / LOOP_COUNT);
+      System.out.println();
     }
   }
 
