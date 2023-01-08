@@ -5,7 +5,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.datatypes.IntegerType;
-import com.flipkart.krystal.utils.ImmutableMapView;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.inputs.Dependency;
@@ -51,31 +50,26 @@ public class FormulaImpl extends Formula {
         if (Set.of("number_one").equals(resolvableInputs)) {
           return DependencyCommand.executeWith(
               new Inputs(
-                  ImmutableMapView.copyOf(
-                      ImmutableMap.of(
-                          "number_one",
-                          ValueOrError.withValue(
-                              adderNumberOne(inputs.getInputValueOrThrow("p")))))));
+                  ImmutableMap.of(
+                      "number_one",
+                      ValueOrError.withValue(adderNumberOne(inputs.getInputValueOrThrow("p"))))));
         }
         if (Set.of("number_two").equals(resolvableInputs)) {
           return DependencyCommand.executeWith(
               new Inputs(
-                  ImmutableMapView.copyOf(
-                      ImmutableMap.of(
-                          "number_two",
-                          ValueOrError.withValue(
-                              adderNumberOne(inputs.getInputValueOrThrow("q")))))));
+                  ImmutableMap.of(
+                      "number_two",
+                      ValueOrError.withValue(adderNumberOne(inputs.getInputValueOrThrow("q"))))));
         }
       }
       case "quotient" -> {
         if (Set.of("number_one").equals(resolvableInputs)) {
           return DependencyCommand.executeWith(
               new Inputs(
-                  ImmutableMapView.copyOf(
-                      ImmutableMap.of(
-                          "number_one",
-                          ValueOrError.withValue(
-                              quotientNumberOne(inputs.getInputValueOrThrow("a")))))));
+                  ImmutableMap.of(
+                      "number_one",
+                      ValueOrError.withValue(
+                          quotientNumberOne(inputs.getInputValueOrThrow("a"))))));
         }
         if (Set.of("number_two").equals(resolvableInputs)) {
           DependencyResponse<AdderRequest, Integer> sumResponses =
@@ -89,9 +83,7 @@ public class FormulaImpl extends Formula {
                   .map(voe -> voe.value().get())
                   .map(Formula::quotientNumberTwo)
                   .map(ValueOrError::withValue)
-                  .map(
-                      voe ->
-                          new Inputs(ImmutableMapView.copyOf(ImmutableMap.of("number_two", voe))))
+                  .map(voe -> new Inputs(ImmutableMap.of("number_two", voe)))
                   .collect(ImmutableList.toImmutableList()));
         }
       }

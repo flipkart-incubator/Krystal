@@ -1,8 +1,9 @@
 package com.flipkart.krystal.krystex.node;
 
 import static com.flipkart.krystal.data.ValueOrError.error;
-import static com.flipkart.krystal.data.ValueOrError.withValue;
 import static com.flipkart.krystal.data.ValueOrError.valueOrError;
+import static com.flipkart.krystal.data.ValueOrError.withValue;
+import static com.google.common.collect.Maps.filterKeys;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.data.InputValue;
@@ -16,7 +17,6 @@ import com.flipkart.krystal.krystex.commands.ExecuteInputless;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInput;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
 import com.flipkart.krystal.krystex.commands.SkipNode;
-import com.flipkart.krystal.utils.ImmutableMapView;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -91,10 +91,7 @@ public class Node {
             "Unknown type of nodeCommand: %s".formatted(nodeCommand));
       }
       if (executeMainLogic) {
-        Inputs inputs =
-            new Inputs(
-                ImmutableMapView.copyOf(
-                    inputsValueCollector.getOrDefault(requestId, ImmutableMap.of())));
+        Inputs inputs = new Inputs(inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()));
         // Retrieve existing result from cache if result for this set of inputs has already been
         // calculated
         NodeResponseFuture mainLogicResponse =
@@ -113,7 +110,7 @@ public class Node {
                                 .inputsFuture()
                                 .complete(
                                     new Inputs(
-                                        ImmutableMapView.filteredCopyOf(
+                                        filterKeys(
                                             inputs.values(),
                                             input ->
                                                 !nodeDefinition
@@ -227,8 +224,7 @@ public class Node {
       ImmutableSet<String> boundFrom = resolverDefinition.boundFrom();
       NodeLogicId nodeLogicId = resolverDefinition.resolverNodeLogicId();
       if (boundFrom.stream().allMatch(inputs::containsKey)) {
-        Inputs inputResolverInputs =
-            new Inputs(ImmutableMapView.filteredCopyOf(inputs, boundFrom::contains));
+        Inputs inputResolverInputs = new Inputs(filterKeys(inputs, boundFrom::contains));
         ResolverCommand resolverCommand =
             nodeDefinition
                 .nodeDefinitionRegistry()

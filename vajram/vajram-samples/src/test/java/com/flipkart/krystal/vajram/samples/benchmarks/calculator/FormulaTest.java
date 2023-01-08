@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 
 class FormulaTest {
 
-  public static final int LOOP_COUNT = 50_000;
+  public static final int LOOP_COUNT = 60_000;
   private VajramNodeGraph graph;
 
   @BeforeEach

@@ -7,7 +7,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
-import com.flipkart.krystal.utils.ImmutableMapView;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.inputs.Dependency;
@@ -54,8 +53,7 @@ public final class ChainAdderImpl extends ChainAdder {
                     .map(
                         integers ->
                             new Inputs(
-                                ImmutableMapView.copyOf(
-                                    ImmutableMap.of("numbers", ValueOrError.withValue(integers)))))
+                                ImmutableMap.of("numbers", ValueOrError.withValue(integers))))
                     .toList());
           }
         }
@@ -72,9 +70,7 @@ public final class ChainAdderImpl extends ChainAdder {
                     .map(
                         integer ->
                             new Inputs(
-                                ImmutableMapView.copyOf(
-                                    ImmutableMap.of(
-                                        "number_one", ValueOrError.withValue(integer)))))
+                                ImmutableMap.of("number_one", ValueOrError.withValue(integer))))
                     .toList());
           }
         }
@@ -91,9 +87,7 @@ public final class ChainAdderImpl extends ChainAdder {
                     .map(
                         integer ->
                             new Inputs(
-                                ImmutableMapView.copyOf(
-                                    ImmutableMap.of(
-                                        "number_two", ValueOrError.withValue(integer)))))
+                                ImmutableMap.of("number_two", ValueOrError.withValue(integer))))
                     .toList());
           }
         }
