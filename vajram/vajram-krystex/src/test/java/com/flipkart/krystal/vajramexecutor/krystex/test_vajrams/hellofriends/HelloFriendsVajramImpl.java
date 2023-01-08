@@ -6,12 +6,14 @@ import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
-import com.flipkart.krystal.vajram.DependencyResponse;
+import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.utils.ImmutableMapView;
+import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.data.InputValues;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsInputUtil.AllInputs;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
@@ -44,17 +46,19 @@ public class HelloFriendsVajramImpl extends HelloFriendsVajram {
   }
 
   @Override
-  public DependencyCommand<InputValues> resolveInputOfDependency(
-      String dependency, ImmutableSet<String> resolvableInputs, InputValues inputValues) {
-    String userId = inputValues.getOrThrow("user_id");
-    Optional<Integer> numberOfFriends = inputValues.getOpt("number_of_friends");
+  public DependencyCommand<Inputs> resolveInputOfDependency(
+      String dependency, ImmutableSet<String> resolvableInputs, Inputs inputs) {
+    String userId = inputs.getInputValueOrThrow("user_id");
+    Optional<Integer> numberOfFriends = inputs.getInputValueOpt("number_of_friends");
     switch (dependency) {
       case USER_INFOS:
         {
           if (Set.of("user_id").equals(resolvableInputs)) {
             return DependencyCommand.executeWith(
-                new InputValues(
-                    ImmutableMap.of("user_id", new ValueOrError<>(userIdForUserService(userId)))));
+                new Inputs(
+                    ImmutableMapView.copyOf(
+                        ImmutableMap.of(
+                            "user_id", ValueOrError.withValue(userIdForUserService(userId))))));
           }
         }
       case FRIEND_INFOS:
@@ -65,8 +69,9 @@ public class HelloFriendsVajramImpl extends HelloFriendsVajram {
                   friendIdsForUserService(userId, numberOfFriends.get()).stream()
                       .map(
                           s ->
-                              new InputValues(
-                                  ImmutableMap.of("user_id", new ValueOrError<Object>(s))))
+                              new Inputs(
+                                  ImmutableMapView.copyOf(
+                                      ImmutableMap.of("user_id", ValueOrError.withValue(s)))))
                       .collect(toImmutableList()));
             }
           }
@@ -76,27 +81,25 @@ public class HelloFriendsVajramImpl extends HelloFriendsVajram {
   }
 
   @Override
-  public ImmutableMap<InputValues, String> executeCompute(ImmutableList<InputValues> inputsList) {
+  public ImmutableMap<Inputs, String> executeCompute(ImmutableList<Inputs> inputsList) {
     return inputsList.stream()
         .collect(
             toImmutableMap(
                 i -> i,
                 i -> {
-                  ImmutableMap<InputValues, ValueOrError<TestUserInfo>> userInfo =
-                      i.getOrThrow("user_infos");
+                  Results<TestUserInfo> userInfo = i.getDepValue("user_infos");
                   DependencyResponse<TestUserServiceRequest, TestUserInfo> userInfoResponse =
                       new DependencyResponse<>(
-                          userInfo.entrySet().stream()
+                          userInfo.values().entrySet().stream()
                               .collect(
                                   toImmutableMap(
                                       e -> TestUserServiceRequest.from(e.getKey()),
                                       Entry::getValue)));
 
-                  ImmutableMap<InputValues, ValueOrError<TestUserInfo>> friendInfos =
-                      i.getOrThrow("friend_infos");
+                  Results<TestUserInfo> friendInfos = i.getDepValue("friend_infos");
                   DependencyResponse<TestUserServiceRequest, TestUserInfo> friendInfosResponse =
                       new DependencyResponse<>(
-                          friendInfos.entrySet().stream()
+                          friendInfos.values().entrySet().stream()
                               .collect(
                                   toImmutableMap(
                                       e -> TestUserServiceRequest.from(e.getKey()),
@@ -105,8 +108,8 @@ public class HelloFriendsVajramImpl extends HelloFriendsVajram {
                   try {
                     return sayHellos(
                         new AllInputs(
-                            i.getOrThrow("user_id"),
-                            i.getOrDefault("number_of_friends", null),
+                            i.<String>getInputValue("user_id").value().orElseThrow(),
+                            i.<Integer>getInputValue("number_of_friends").value().orElse(null),
                             userInfoResponse,
                             friendInfosResponse));
                   } catch (Exception e) {

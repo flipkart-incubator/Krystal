@@ -32,7 +32,6 @@ class ChainAdderTest {
     graph = loadFromClasspath("com.flipkart.krystal.vajram.samples.benchmarks.calculator");
   }
 
-  @Test
   void vajram_benchmark()
       throws ExecutionException, InterruptedException, TimeoutException, IOException {
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =

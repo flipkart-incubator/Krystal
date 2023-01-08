@@ -5,13 +5,14 @@ import static com.flipkart.krystal.datatypes.StringType.string;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
+import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.utils.ImmutableMapView;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputSource;
-import com.flipkart.krystal.data.InputValues;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.samples.greeting.GreetingInputUtil.AllInputs;
 import com.google.common.collect.ImmutableList;
@@ -62,14 +63,16 @@ public final class GreetingVajramImpl extends GreetingVajram {
   }
 
   @Override
-  public DependencyCommand<InputValues> resolveInputOfDependency(
-      String dependency, ImmutableSet<String> resolvableInputs, InputValues inputValues) {
+  public DependencyCommand<Inputs> resolveInputOfDependency(
+      String dependency, ImmutableSet<String> resolvableInputs, Inputs inputs) {
     switch (dependency) {
       case "user_info" -> {
         if (Set.of("user_id").equals(resolvableInputs)) {
-          String userId = super.userIdForUserService(inputValues.getOrThrow("user_id"));
+          String userId = super.userIdForUserService(inputs.getInputValueOrThrow("user_id"));
           return DependencyCommand.executeWith(
-              new InputValues(ImmutableMap.of("user_id", new ValueOrError<>(userId))));
+              new Inputs(
+                  ImmutableMapView.copyOf(
+                      ImmutableMap.of("user_id", ValueOrError.withValue(userId)))));
         }
       }
     }
@@ -77,14 +80,14 @@ public final class GreetingVajramImpl extends GreetingVajram {
   }
 
   @Override
-  public ImmutableMap<InputValues, String> executeCompute(ImmutableList<InputValues> inputsList) {
+  public ImmutableMap<Inputs, String> executeCompute(ImmutableList<Inputs> inputsList) {
     return inputsList.stream()
         .collect(
             toImmutableMap(
                 i -> i,
                 i -> {
-                  ImmutableMap<InputValues, ValueOrError<UserInfo>> userInfo =
-                      i.getOrThrow("user_info");
+                  ImmutableMap<Inputs, ValueOrError<UserInfo>> userInfo =
+                      i.getInputValueOrThrow("user_info");
                   DependencyResponse<UserServiceRequest, UserInfo> userInfoResponse =
                       new DependencyResponse<>(
                           userInfo.entrySet().stream()
@@ -93,9 +96,9 @@ public final class GreetingVajramImpl extends GreetingVajram {
                                       e -> UserServiceRequest.from(e.getKey()), Entry::getValue)));
                   return createGreetingMessage(
                       new AllInputs(
-                          i.getOrThrow("user_id"),
-                          i.getOrDefault("log", null),
-                          i.getOrDefault("analytics_event_sink", null),
+                          i.getInputValueOrThrow("user_id"),
+                          i.getInputValueOrDefault("log", null),
+                          i.getInputValueOrDefault("analytics_event_sink", null),
                           userInfoResponse));
                 }));
   }

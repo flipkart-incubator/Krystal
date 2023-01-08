@@ -12,9 +12,12 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
+import com.flipkart.krystal.data.InputValue;
+import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
+import com.flipkart.krystal.utils.ImmutableMapView;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramRequest;
@@ -26,14 +29,12 @@ import com.flipkart.krystal.vajram.codegen.models.VajramInputFile;
 import com.flipkart.krystal.vajram.codegen.models.VajramInputsDef;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputSource;
-import com.flipkart.krystal.data.InputValues;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.flipkart.krystal.vajram.modulation.UnmodulatedInput;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Primitives;
 import com.google.common.reflect.TypeToken;
 import com.squareup.javapoet.AnnotationSpec;
@@ -206,32 +207,32 @@ public class VajramCodeGenerator {
     @SuppressWarnings("rawtypes")
     Builder toInputValues =
         methodBuilder("toInputValues")
-            .returns(InputValues.class)
+            .returns(Inputs.class)
             .addModifiers(PUBLIC)
             .addAnnotation(Override.class)
             .addStatement(
                 "$T builder = new $T<>()",
-                new TypeToken<Map<String, ValueOrError<?>>>() {}.getType(),
+                new TypeToken<Map<String, InputValue<?>>>() {}.getType(),
                 new TypeToken<HashMap>() {}.getType());
     MethodSpec.Builder fromInputValues =
         methodBuilder("from")
             .returns(enclosingClass)
             .addModifiers(PUBLIC, STATIC)
-            .addParameter(InputValues.class, "values");
+            .addParameter(Inputs.class, "values");
     for (AbstractInput input : inputDefs) {
       String inputJavaName = toJavaName(input.getName());
       toInputValues.addStatement(
-          "builder.put($S, new $T<>($L()))", input.getName(), ValueOrError.class, inputJavaName);
+          "builder.put($S, $T.withValue($L()))", input.getName(), ValueOrError.class, inputJavaName);
     }
     toInputValues.addStatement(
-        "return new $T($T.copyOf(builder))", InputValues.class, ImmutableMap.class);
+        "return new $T($T.copyOf(builder))", Inputs.class, ImmutableMapView.class);
 
     List<String> inputNames = inputDefs.stream().map(AbstractInput::getName).toList();
     fromInputValues.addStatement(
         "return new $T(%s)"
             .formatted(
                 inputNames.stream()
-                    .map(s -> "values.getOrDefault($S, null)")
+                    .map(s -> "values.getInputValueOrDefault($S, null)")
                     .collect(Collectors.joining(", "))),
         Stream.concat(Stream.of(enclosingClass), inputNames.stream()).toArray());
     return new FromAndTo(fromInputValues.build(), toInputValues.build());
@@ -421,7 +422,7 @@ public class VajramCodeGenerator {
                               .returns(
                                   ParameterizedTypeName.get(
                                       ClassName.get(UnmodulatedInput.class), imType, ciType))
-                              .addParameter(InputValues.class, "inputValues")
+                              .addParameter(Inputs.class, "inputValues")
                               .addStatement(
                                   "return new $T<>($T.from(inputValues),$T.from(inputValues))",
                                   UnmodulatedInput.class,

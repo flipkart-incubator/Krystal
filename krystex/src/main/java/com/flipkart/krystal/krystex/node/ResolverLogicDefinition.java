@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.node;
 
+import com.flipkart.krystal.data.Inputs;
 import java.util.Set;
 
 public final class ResolverLogicDefinition extends LogicDefinition {
@@ -12,7 +13,7 @@ public final class ResolverLogicDefinition extends LogicDefinition {
     this.resolverLogic = nodeLogic;
   }
 
-  ResolverCommand resolve(NodeInputs nodeInputs) {
+  ResolverCommand resolve(Inputs nodeInputs) {
     return resolverLogic.resolve(nodeInputs);
   }
 }

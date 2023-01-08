@@ -1,7 +1,5 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
-import static com.flipkart.krystal.vajramexecutor.krystex.Utils.toNodeInputs;
-
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.VajramID;
@@ -29,7 +27,7 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
       VajramID vajramId, Function<C, VajramRequest> vajramRequestBuilder) {
     return krystalExecutor.executeNode(
         vajramNodeGraph.getNodeId(vajramId),
-        toNodeInputs(vajramRequestBuilder.apply(applicationRequestContext).toInputValues()));
+        vajramRequestBuilder.apply(applicationRequestContext).toInputValues());
   }
 
   @Override
@@ -37,7 +35,7 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
       VajramID vajramId, Function<C, VajramRequest> vajramRequestBuilder, String requesId) {
     return krystalExecutor.executeNode(
         vajramNodeGraph.getNodeId(vajramId),
-        toNodeInputs(vajramRequestBuilder.apply(applicationRequestContext).toInputValues()),
+        vajramRequestBuilder.apply(applicationRequestContext).toInputValues(),
         requesId);
   }
 

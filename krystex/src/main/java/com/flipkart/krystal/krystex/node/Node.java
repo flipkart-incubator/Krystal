@@ -1,18 +1,22 @@
 package com.flipkart.krystal.krystex.node;
 
-import static com.google.common.collect.Maps.filterKeys;
+import static com.flipkart.krystal.data.ValueOrError.error;
+import static com.flipkart.krystal.data.ValueOrError.withValue;
+import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static java.util.concurrent.CompletableFuture.allOf;
 
-import com.flipkart.krystal.krystex.MultiValue;
+import com.flipkart.krystal.data.InputValue;
+import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.Results;
+import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.RequestId;
 import com.flipkart.krystal.krystex.ResolverDefinition;
 import com.flipkart.krystal.krystex.ResultFuture;
-import com.flipkart.krystal.krystex.SingleValue;
-import com.flipkart.krystal.krystex.Value;
 import com.flipkart.krystal.krystex.commands.ExecuteInputless;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInput;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
 import com.flipkart.krystal.krystex.commands.SkipNode;
+import com.flipkart.krystal.utils.ImmutableMapView;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -36,8 +40,9 @@ public class Node {
 
   private final ImmutableMap<Optional<String>, List<ResolverDefinition>> resolverDefinitionsByInput;
 
-  /** Single Result for inputs. MultiResult for dependencies */
-  private final Map<RequestId, Map<String, Value>> inputsValueCollector = new LinkedHashMap<>();
+  /** {@link ValueOrError} for inputs. {@link Results} for dependencies */
+  private final Map<RequestId, Map<String, InputValue<?>>> inputsValueCollector =
+      new LinkedHashMap<>();
 
   /** A unique Result future for every requestId. */
   private final Map<RequestId, NodeResponseFuture> resultsByRequest = new LinkedHashMap<>();
@@ -46,7 +51,7 @@ public class Node {
    * A unique {@link ResultFuture} for every new set of NodeInputs. This acts as a cache so that the
    * same computation is not repeated multiple times .
    */
-  private final Map<NodeInputs, NodeResponseFuture> resultsCache = new LinkedHashMap<>();
+  private final Map<Inputs, NodeResponseFuture> resultsCache = new LinkedHashMap<>();
 
   private final Map<RequestId, Map<NodeLogicId, ResolverCommand>> resolverResults =
       new LinkedHashMap<>();
@@ -86,8 +91,10 @@ public class Node {
             "Unknown type of nodeCommand: %s".formatted(nodeCommand));
       }
       if (executeMainLogic) {
-        NodeInputs inputs =
-            new NodeInputs(inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()));
+        Inputs inputs =
+            new Inputs(
+                ImmutableMapView.copyOf(
+                    inputsValueCollector.getOrDefault(requestId, ImmutableMap.of())));
         // Retrieve existing result from cache if result for this set of inputs has already been
         // calculated
         NodeResponseFuture mainLogicResponse =
@@ -101,11 +108,12 @@ public class Node {
                           nodeDecorators.getOrDefault(mainLogicNode, ImmutableList.of()))
                       .whenComplete(
                           (r, t) -> {
+                            //noinspection SuspiciousMethodCalls
                             newResult
                                 .inputsFuture()
                                 .complete(
-                                    new NodeInputs(
-                                        filterKeys(
+                                    new Inputs(
+                                        ImmutableMapView.filteredCopyOf(
                                             inputs.values(),
                                             input ->
                                                 !nodeDefinition
@@ -162,7 +170,7 @@ public class Node {
                     .getOrDefault(requestId, ImmutableMap.of())
                     .containsKey(depName)) {
                   krystalNodeExecutor
-                      .executeNode(nodeId, new NodeInputs(), dependencyRequestId)
+                      .executeNode(nodeId, Inputs.empty(), dependencyRequestId)
                       .responseFuture()
                       .whenComplete(
                           (o, throwable) ->
@@ -170,7 +178,7 @@ public class Node {
                                   new ExecuteWithInput(
                                       executeInputless.nodeId(),
                                       depName,
-                                      new SingleValue<>(o, throwable),
+                                      valueOrError(o, throwable),
                                       requestId)));
                 }
               });
@@ -181,11 +189,12 @@ public class Node {
   }
 
   private boolean executeWithInput(RequestId requestId, ExecuteWithInput executeWithInput) {
-    String input = executeWithInput.input();
-    Value inputValue = executeWithInput.inputValue();
-    Map<String, Value> inputs =
-        inputsValueCollector.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
-    if (inputs.putIfAbsent(input, inputValue) != null) {
+    String input = executeWithInput.name();
+    InputValue<?> inputValue = executeWithInput.inputValue();
+    if (inputsValueCollector
+            .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
+            .putIfAbsent(input, inputValue)
+        != null) {
       throw new DuplicateInputForRequestException(
           "Duplicate input data for a request %s".formatted(requestId));
     }
@@ -193,7 +202,7 @@ public class Node {
   }
 
   private boolean executeWithInput(RequestId requestId, @Nullable String input) {
-    Map<String, Value> inputs =
+    Map<String, InputValue<?>> inputs =
         inputsValueCollector.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
     MainLogicDefinition<Object> mainLogicNodeDefinition =
         nodeDefinition
@@ -218,7 +227,8 @@ public class Node {
       ImmutableSet<String> boundFrom = resolverDefinition.boundFrom();
       NodeLogicId nodeLogicId = resolverDefinition.resolverNodeLogicId();
       if (boundFrom.stream().allMatch(inputs::containsKey)) {
-        NodeInputs inputResolverInputs = new NodeInputs(filterKeys(inputs, boundFrom::contains));
+        Inputs inputResolverInputs =
+            new Inputs(ImmutableMapView.filteredCopyOf(inputs, boundFrom::contains));
         ResolverCommand resolverCommand =
             nodeDefinition
                 .nodeDefinitionRegistry()
@@ -231,7 +241,7 @@ public class Node {
         // Since the node can return multiple results, we have to call the dependency Node
         // multiple times - each with a different request Id.
         Map<RequestId, NodeResponseFuture> dependencyResults = new LinkedHashMap<>();
-        for (NodeInputs nodeInputs : resolverCommand.getInputs()) {
+        for (Inputs nodeInputs : resolverCommand.getInputs()) {
           RequestId dependencyRequestId =
               requestId.append("(%s)%s[%s]".formatted(dependencyName, nodeId, counter++));
           for (String dependencyInput : resolverDefinition.resolvedInputNames()) {
@@ -241,14 +251,13 @@ public class Node {
                     new ExecuteWithInput(
                         nodeId,
                         dependencyInput,
-                        nodeInputs.getValue(dependencyInput),
+                        nodeInputs.getInputValue(dependencyInput),
                         dependencyRequestId)));
           }
         }
         if (resolverCommand instanceof ResolverCommand.SkipDependency) {
           krystalNodeExecutor.enqueueCommand(
-              new ExecuteWithInput(
-                  this.nodeId, dependencyName, new MultiValue<>(ImmutableMap.of()), requestId));
+              new ExecuteWithInput(this.nodeId, dependencyName, Results.empty(), requestId));
         } else {
           allOf(
                   dependencyResults.values().stream()
@@ -256,7 +265,7 @@ public class Node {
                       .toArray(CompletableFuture[]::new))
               .whenComplete(
                   (unused, throwable) -> {
-                    ImmutableMap<NodeInputs, SingleValue<Object>> aggregate = ImmutableMap.of();
+                    ImmutableMap<Inputs, ValueOrError<Object>> aggregate = ImmutableMap.of();
                     if (throwable == null) {
                       aggregate =
                           dependencyResults.values().stream()
@@ -265,16 +274,15 @@ public class Node {
                                       nrf -> nrf.inputsFuture().getNow(null),
                                       nrf -> {
                                         try {
-                                          return new SingleValue<>(
-                                              nrf.responseFuture().getNow(null));
+                                          return withValue(nrf.responseFuture().getNow(null));
                                         } catch (Exception e) {
-                                          return new SingleValue<>(null, e);
+                                          return error(e);
                                         }
                                       }));
                     }
                     krystalNodeExecutor.enqueueCommand(
                         new ExecuteWithInput(
-                            this.nodeId, dependencyName, new MultiValue<>(aggregate), requestId));
+                            this.nodeId, dependencyName, new Results<>(aggregate), requestId));
                   });
         }
       }
@@ -294,7 +302,7 @@ public class Node {
 
   @SuppressWarnings({"unchecked", "rawtypes"})
   private static CompletableFuture<?> executeMainLogic(
-      NodeInputs inputs,
+      Inputs inputs,
       MainLogicDefinition<Object> mainLogicDefinition,
       ImmutableList<MainLogicDecorator<Object>> mainLogicDecorators) {
     MainLogic<?> logic = mainLogicDefinition::execute;

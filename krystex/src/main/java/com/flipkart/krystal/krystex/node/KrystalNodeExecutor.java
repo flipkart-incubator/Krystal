@@ -2,9 +2,10 @@ package com.flipkart.krystal.krystex.node;
 
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 
+import com.flipkart.krystal.data.InputValue;
+import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.RequestId;
-import com.flipkart.krystal.krystex.Value;
 import com.flipkart.krystal.krystex.commands.ExecuteInputless;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInput;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
@@ -57,24 +58,23 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   @Override
-  public <T> CompletableFuture<T> executeNode(NodeId nodeId, NodeInputs nodeInputs) {
+  public <T> CompletableFuture<T> executeNode(NodeId nodeId, Inputs nodeInputs) {
     //noinspection unchecked
     return (CompletableFuture<T>) executeNode(nodeId, nodeInputs, requestId).responseFuture();
   }
 
-  public <T> CompletableFuture<T> executeNode(
-      NodeId nodeId, NodeInputs nodeInputs, String requestId) {
+  public <T> CompletableFuture<T> executeNode(NodeId nodeId, Inputs nodeInputs, String requestId) {
     //noinspection unchecked
     return (CompletableFuture<T>)
         executeNode(nodeId, nodeInputs, new RequestId(requestId)).responseFuture();
   }
 
-  NodeResponseFuture executeNode(NodeId nodeId, NodeInputs nodeInputs, RequestId requestId) {
+  NodeResponseFuture executeNode(NodeId nodeId, Inputs nodeInputs, RequestId requestId) {
     if (nodeInputs.values().isEmpty()) {
       return this.enqueueCommand(new ExecuteInputless(nodeId, requestId));
     }
     List<NodeResponseFuture> list = new ArrayList<>();
-    for (Entry<String, Value> e : nodeInputs.values().entrySet()) {
+    for (Entry<String, InputValue<?>> e : nodeInputs.values().entrySet()) {
       ExecuteWithInput executeWithInput =
           new ExecuteWithInput(nodeId, e.getKey(), e.getValue(), requestId);
       list.add(enqueueCommand(executeWithInput));
