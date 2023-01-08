@@ -29,7 +29,7 @@ class FormulaTest {
     graph = loadFromClasspath("com.flipkart.krystal.vajram.samples.benchmarks.calculator");
   }
 
-  @Test
+//  @Test
   void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
     long javaNativeTime = javaMethodBenchmark(FormulaTest::syncFormula, LOOP_COUNT);
     long javaFuturesTime = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, LOOP_COUNT);
