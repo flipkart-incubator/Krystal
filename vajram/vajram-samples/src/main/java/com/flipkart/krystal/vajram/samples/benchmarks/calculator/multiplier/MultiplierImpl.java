@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.samples.benchmarks.calculator.multiplier;
 
 import com.flipkart.krystal.datatypes.IntegerType;
 import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.vajram.inputs.InputValues;
+import com.flipkart.krystal.data.InputValues;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;

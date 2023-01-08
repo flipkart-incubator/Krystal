@@ -9,7 +9,7 @@ import com.flipkart.krystal.krystex.node.MainLogic;
 import com.flipkart.krystal.krystex.node.MainLogicDecorator;
 import com.flipkart.krystal.krystex.node.MainLogicDefinition;
 import com.flipkart.krystal.krystex.node.NodeInputs;
-import com.flipkart.krystal.vajram.inputs.InputValues;
+import com.flipkart.krystal.data.InputValues;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;

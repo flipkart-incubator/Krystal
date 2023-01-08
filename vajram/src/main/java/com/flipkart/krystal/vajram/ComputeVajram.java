@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajram;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-import com.flipkart.krystal.vajram.inputs.InputValues;
+import com.flipkart.krystal.data.InputValues;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map.Entry;

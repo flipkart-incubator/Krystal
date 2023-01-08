@@ -25,7 +25,7 @@ publishing {
     publications {
         maven(MavenPublication) {
             groupId = 'com.flipkart.krystal'
-            artifactId = 'vajram-common'
+            artifactId = 'krystal-common'
             version = '0.1-SNAPSHOT'
             from components.java
         }
