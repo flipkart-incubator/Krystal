@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.RequestId;
-import com.flipkart.krystal.utils.ImmutableMapView;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -87,8 +86,7 @@ class KrystalNodeExecutorTest {
                 .executeNode(
                     nodeId,
                     new Inputs(
-                        ImmutableMapView.copyOf(
-                            ImmutableMap.of("a", withValue(1), "b", withValue(2), "c", withValue("3")))),
+                        ImmutableMap.of("a", withValue(1), "b", withValue(2), "c", withValue("3"))),
                     new RequestId("r"))
                 .responseFuture());
     assertEquals("computed_values: a=1;b=2;c=3", result);

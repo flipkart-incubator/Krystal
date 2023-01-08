@@ -8,7 +8,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.data.ValueOrError;
-import com.flipkart.krystal.utils.ImmutableMapView;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
@@ -56,10 +55,9 @@ public class HelloFriendsV2VajramImpl extends HelloFriendsV2Vajram {
             if (userId.isPresent()) {
               return DependencyCommand.executeWith(
                   new Inputs(
-                      ImmutableMapView.copyOf(
-                          ImmutableMap.of(
-                              "user_id",
-                              ValueOrError.withValue(userIdForFriendService(userId.get()))))));
+                      ImmutableMap.of(
+                          "user_id",
+                          ValueOrError.withValue(userIdForFriendService(userId.get())))));
             }
           }
         }
@@ -75,11 +73,7 @@ public class HelloFriendsV2VajramImpl extends HelloFriendsV2Vajram {
             Set<String> userIdsForUserService = userIdsForUserService(friendIds);
             return DependencyCommand.multiExecuteWith(
                 userIdsForUserService.stream()
-                    .map(
-                        s ->
-                            new Inputs(
-                                ImmutableMapView.copyOf(
-                                    ImmutableMap.of("user_id", ValueOrError.withValue(s)))))
+                    .map(s -> new Inputs(ImmutableMap.of("user_id", ValueOrError.withValue(s))))
                     .collect(toImmutableList()));
           }
         }

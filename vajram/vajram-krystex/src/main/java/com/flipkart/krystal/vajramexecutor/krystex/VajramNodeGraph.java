@@ -18,7 +18,6 @@ import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.flipkart.krystal.krystex.node.ResolverCommand;
 import com.flipkart.krystal.krystex.node.ResolverLogicDefinition;
-import com.flipkart.krystal.utils.ImmutableMapView;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.IOVajram;
@@ -329,7 +328,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     }
     if (!newValues.isEmpty()) {
       inputs.values().forEach(newValues::putIfAbsent);
-      return new Inputs(ImmutableMapView.copyOf(newValues));
+      return new Inputs(newValues);
     } else {
       return inputs;
     }

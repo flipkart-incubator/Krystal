@@ -24,7 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ChainAdderTest {
-  public static final int LOOP_COUNT = 1000;
+  public static final int LOOP_COUNT = 3000;
   private VajramNodeGraph graph;
 
   @BeforeEach

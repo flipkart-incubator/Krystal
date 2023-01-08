@@ -71,8 +71,7 @@ public final class GreetingVajramImpl extends GreetingVajram {
           String userId = super.userIdForUserService(inputs.getInputValueOrThrow("user_id"));
           return DependencyCommand.executeWith(
               new Inputs(
-                  ImmutableMapView.copyOf(
-                      ImmutableMap.of("user_id", ValueOrError.withValue(userId)))));
+                      ImmutableMap.of("user_id", ValueOrError.withValue(userId))));
         }
       }
     }

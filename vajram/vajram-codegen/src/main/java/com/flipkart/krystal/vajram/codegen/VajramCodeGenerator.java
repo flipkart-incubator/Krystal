@@ -17,7 +17,6 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
-import com.flipkart.krystal.utils.ImmutableMapView;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramRequest;
@@ -222,10 +221,12 @@ public class VajramCodeGenerator {
     for (AbstractInput input : inputDefs) {
       String inputJavaName = toJavaName(input.getName());
       toInputValues.addStatement(
-          "builder.put($S, $T.withValue($L()))", input.getName(), ValueOrError.class, inputJavaName);
+          "builder.put($S, $T.withValue($L()))",
+          input.getName(),
+          ValueOrError.class,
+          inputJavaName);
     }
-    toInputValues.addStatement(
-        "return new $T($T.copyOf(builder))", Inputs.class, ImmutableMapView.class);
+    toInputValues.addStatement("return new $T(builder)", Inputs.class);
 
     List<String> inputNames = inputDefs.stream().map(AbstractInput::getName).toList();
     fromInputValues.addStatement(
