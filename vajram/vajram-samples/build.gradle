@@ -5,6 +5,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.flipkart.krystal:vajram:0.1-SNAPSHOT'
+        classpath 'com.flipkart.krystal:krystal-common:0.1-SNAPSHOT'
     }
 }
 plugins {
@@ -20,7 +21,7 @@ repositories {
 }
 
 dependencies {
-    implementation project(':common')
+    implementation project(':krystal-common')
     implementation project(':vajram')
     implementation 'com.google.guava:guava:31.1-jre'
 

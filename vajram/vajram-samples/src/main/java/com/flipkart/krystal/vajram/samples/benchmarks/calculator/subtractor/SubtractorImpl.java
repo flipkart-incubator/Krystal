@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.samples.benchmarks.calculator.subtractor;
 
 import com.flipkart.krystal.datatypes.IntegerType;
 import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.vajram.inputs.InputValues;
+import com.flipkart.krystal.data.InputValues;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.subtractor.SubtractorInputUtil.AllInputs;
 import com.google.common.collect.ImmutableCollection;

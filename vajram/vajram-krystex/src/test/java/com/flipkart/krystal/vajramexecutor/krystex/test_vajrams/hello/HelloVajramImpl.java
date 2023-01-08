@@ -4,7 +4,7 @@ import static com.flipkart.krystal.datatypes.StringType.string;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.vajram.inputs.InputValues;
+import com.flipkart.krystal.data.InputValues;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloInputUtil.AllInputs;
 import com.google.common.collect.ImmutableList;
