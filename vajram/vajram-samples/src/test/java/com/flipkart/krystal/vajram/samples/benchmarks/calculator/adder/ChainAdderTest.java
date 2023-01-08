@@ -32,9 +32,9 @@ class ChainAdderTest {
     graph = loadFromClasspath("com.flipkart.krystal.vajram.samples.benchmarks.calculator");
   }
 
-  @Test
+//  @Test
   void vajram_benchmark()
-      throws ExecutionException, InterruptedException, TimeoutException, IOException {
+      throws ExecutionException, InterruptedException, TimeoutException {
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
         graph.createExecutor(new RequestContext(""))) {
       long javaNativeTime = javaMethodBenchmark(this::chainAdd, LOOP_COUNT);

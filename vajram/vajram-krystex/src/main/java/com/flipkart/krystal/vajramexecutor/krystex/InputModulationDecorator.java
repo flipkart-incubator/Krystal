@@ -1,15 +1,13 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.utils.Futures.propagateCancellation;
-import static com.flipkart.krystal.vajramexecutor.krystex.Utils.toNodeInputs;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
+import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.node.MainLogic;
 import com.flipkart.krystal.krystex.node.MainLogicDecorator;
 import com.flipkart.krystal.krystex.node.MainLogicDefinition;
-import com.flipkart.krystal.krystex.node.NodeInputs;
-import com.flipkart.krystal.data.InputValues;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
@@ -22,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 public class InputModulationDecorator<
         InputsNeedingModulation extends InputValuesAdaptor,
@@ -31,7 +30,7 @@ public class InputModulationDecorator<
 
   private final InputModulator<InputsNeedingModulation, CommonInputs> inputModulator;
   private final InputsConverter<InputsNeedingModulation, CommonInputs> inputsConverter;
-  private final Map<InputValues, CompletableFuture<T>> futureCache = new HashMap<>();
+  private final Map<Inputs, CompletableFuture<T>> futureCache = new HashMap<>();
 
   public InputModulationDecorator(
       InputModulator<InputsNeedingModulation, CommonInputs> inputModulator,
@@ -46,7 +45,7 @@ public class InputModulationDecorator<
         requests -> requests.forEach(request -> modulateInputsList(logicToDecorate, request)));
     return inputsList -> {
       List<UnmodulatedInput<InputsNeedingModulation, CommonInputs>> requests =
-          inputsList.stream().map(Utils::toInputValues).map(inputsConverter).toList();
+          inputsList.stream().map(inputsConverter).toList();
       List<ModulatedInput<InputsNeedingModulation, CommonInputs>> modulatedInputs =
           requests.stream()
               .map(
@@ -64,7 +63,7 @@ public class InputModulationDecorator<
       }
       return requests.stream()
           .map(UnmodulatedInput::toInputValues)
-          .collect(toImmutableMap(Utils::toNodeInputs, futureCache::get));
+          .collect(toImmutableMap(Function.identity(), futureCache::get));
     };
   }
 
@@ -75,16 +74,13 @@ public class InputModulationDecorator<
         modulatedInput.inputsNeedingModulation().stream()
             .map(each -> new UnmodulatedInput<>(each, modulatedInput.commonInputs()))
             .collect(toImmutableList());
-    ImmutableMap<NodeInputs, CompletableFuture<T>> originalFutures =
+    ImmutableMap<Inputs, CompletableFuture<T>> originalFutures =
         logicToDecorate.execute(
-            requests.stream()
-                .map(enrichedRequest -> toNodeInputs(enrichedRequest.toInputValues()))
-                .collect(toImmutableList()));
+            requests.stream().map(UnmodulatedInput::toInputValues).collect(toImmutableList()));
     originalFutures.forEach(
         (inputs, resultFuture) -> {
           CompletableFuture<T> cachedResult =
-              futureCache.computeIfAbsent(
-                  Utils.toInputValues(inputs), request -> new CompletableFuture<>());
+              futureCache.computeIfAbsent(inputs, request -> new CompletableFuture<>());
           resultFuture.whenComplete(
               (values, throwable) -> {
                 if (values != null) {

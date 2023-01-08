@@ -5,13 +5,14 @@ import static com.flipkart.krystal.datatypes.ListType.list;
 import static com.flipkart.krystal.vajram.inputs.DependencyCommand.multiExecuteWith;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
+import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.utils.ImmutableMapView;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.data.InputValues;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderInputUtil.AllInputs;
 import com.google.common.collect.ImmutableCollection;
@@ -38,12 +39,12 @@ public final class ChainAdderImpl extends ChainAdder {
   }
 
   @Override
-  public DependencyCommand<InputValues> resolveInputOfDependency(
-      String dependency, ImmutableSet<String> resolvableInputs, InputValues inputValues) {
+  public DependencyCommand<Inputs> resolveInputOfDependency(
+      String dependency, ImmutableSet<String> resolvableInputs, Inputs inputs) {
     switch (dependency) {
       case "chain_sum" -> {
         if (Set.of("numbers").equals(resolvableInputs)) {
-          ArrayList<Integer> numbers = inputValues.getOrThrow("numbers");
+          ArrayList<Integer> numbers = inputs.getInputValueOrThrow("numbers");
           DependencyCommand<ArrayList<Integer>> depCommand = numbersForSubChainer(numbers);
           if (depCommand instanceof DependencyCommand.Skip<ArrayList<Integer>> skip) {
             return skip.cast();
@@ -52,15 +53,16 @@ public final class ChainAdderImpl extends ChainAdder {
                 depCommand.inputs().stream()
                     .map(
                         integers ->
-                            new InputValues(
-                                ImmutableMap.of("numbers", new ValueOrError<>(integers))))
+                            new Inputs(
+                                ImmutableMapView.copyOf(
+                                    ImmutableMap.of("numbers", ValueOrError.withValue(integers)))))
                     .toList());
           }
         }
       }
       case "sum" -> {
         if (Set.of("number_one").equals(resolvableInputs)) {
-          ArrayList<Integer> numbers = inputValues.getOrThrow("numbers");
+          ArrayList<Integer> numbers = inputs.getInputValueOrThrow("numbers");
           DependencyCommand<Integer> depCommand = adderNumberOne(numbers);
           if (depCommand instanceof DependencyCommand.Skip<Integer> skip) {
             return skip.cast();
@@ -69,13 +71,15 @@ public final class ChainAdderImpl extends ChainAdder {
                 depCommand.inputs().stream()
                     .map(
                         integer ->
-                            new InputValues(
-                                ImmutableMap.of("number_one", new ValueOrError<>(integer))))
+                            new Inputs(
+                                ImmutableMapView.copyOf(
+                                    ImmutableMap.of(
+                                        "number_one", ValueOrError.withValue(integer)))))
                     .toList());
           }
         }
         if (Set.of("number_two").equals(resolvableInputs)) {
-          ArrayList<Integer> numbers = inputValues.getOrThrow("numbers");
+          ArrayList<Integer> numbers = inputs.getInputValueOrThrow("numbers");
           DependencyCommand<Integer> depCommand =
               Optional.ofNullable(adderNumberTwo(numbers))
                   .orElse(DependencyCommand.executeWith(null));
@@ -86,8 +90,10 @@ public final class ChainAdderImpl extends ChainAdder {
                 depCommand.inputs().stream()
                     .map(
                         integer ->
-                            new InputValues(
-                                ImmutableMap.of("number_two", new ValueOrError<>(integer))))
+                            new Inputs(
+                                ImmutableMapView.copyOf(
+                                    ImmutableMap.of(
+                                        "number_two", ValueOrError.withValue(integer)))))
                     .toList());
           }
         }
@@ -97,23 +103,23 @@ public final class ChainAdderImpl extends ChainAdder {
   }
 
   @Override
-  public ImmutableMap<InputValues, Integer> executeCompute(ImmutableList<InputValues> inputsList) {
+  public ImmutableMap<Inputs, Integer> executeCompute(ImmutableList<Inputs> inputsList) {
     return inputsList.stream()
         .collect(
             toImmutableMap(
                 Function.identity(),
                 inputValues -> {
-                  ArrayList<Integer> numbers = inputValues.getOrThrow("numbers");
-                  ImmutableMap<InputValues, ValueOrError<Integer>> chainSumResult =
-                      inputValues.getOrThrow("chain_sum");
+                  ArrayList<Integer> numbers = inputValues.getInputValueOrThrow("numbers");
+                  ImmutableMap<Inputs, ValueOrError<Integer>> chainSumResult =
+                      inputValues.<Integer>getDepValue("chain_sum").values();
                   DependencyResponse<ChainAdderRequest, Integer> chainSum =
                       new DependencyResponse<>(
                           chainSumResult.entrySet().stream()
                               .collect(
                                   toImmutableMap(
                                       e -> ChainAdderRequest.from(e.getKey()), Entry::getValue)));
-                  ImmutableMap<InputValues, ValueOrError<Integer>> sumResult =
-                      inputValues.getOrThrow("sum");
+                  ImmutableMap<Inputs, ValueOrError<Integer>> sumResult =
+                      inputValues.<Integer>getDepValue("sum").values();
                   DependencyResponse<AdderRequest, Integer> sum =
                       new DependencyResponse<>(
                           sumResult.entrySet().stream()

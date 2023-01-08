@@ -4,7 +4,7 @@ import static com.flipkart.krystal.datatypes.StringType.string;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.data.InputValues;
+import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloInputUtil.AllInputs;
 import com.google.common.collect.ImmutableList;
@@ -21,11 +21,11 @@ public class HelloVajramImpl extends HelloVajram {
   }
 
   @Override
-  public ImmutableMap<InputValues, String> executeCompute(ImmutableList<InputValues> inputsList) {
+  public ImmutableMap<Inputs, String> executeCompute(ImmutableList<Inputs> inputsList) {
     return inputsList.stream()
         .collect(
             toImmutableMap(
                 i -> i,
-                i -> greet(new AllInputs(i.getOrThrow("name"), i.getOrDefault("greeting", null)))));
+                i -> greet(new AllInputs(i.getInputValueOrThrow("name"), i.getInputValueOrDefault("greeting", null)))));
   }
 }

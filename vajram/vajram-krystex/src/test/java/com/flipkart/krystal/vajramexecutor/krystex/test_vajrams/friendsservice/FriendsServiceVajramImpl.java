@@ -4,7 +4,7 @@ import static com.flipkart.krystal.datatypes.StringType.string;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceInputUtil.CONVERTER;
 
 import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.data.InputValues;
+import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
@@ -31,12 +31,12 @@ public class FriendsServiceVajramImpl extends FriendsServiceVajram {
   }
 
   @Override
-  public ImmutableMap<InputValues, CompletableFuture<Set<String>>> execute(
-      ImmutableList<InputValues> inputsList) {
-    Map<InputsNeedingModulation, InputValues> mapping = new HashMap<>();
+  public ImmutableMap<Inputs, CompletableFuture<Set<String>>> execute(
+      ImmutableList<Inputs> inputsList) {
+    Map<InputsNeedingModulation, Inputs> mapping = new HashMap<>();
     List<InputsNeedingModulation> ims = new ArrayList<>();
     CommonInputs commonInputs = null;
-    for (InputValues inputs : inputsList) {
+    for (Inputs inputs : inputsList) {
       UnmodulatedInput<InputsNeedingModulation, CommonInputs> allInputs =
           getInputsConvertor().apply(inputs);
       commonInputs = allInputs.commonInputs();
@@ -44,7 +44,7 @@ public class FriendsServiceVajramImpl extends FriendsServiceVajram {
       mapping.put(im, inputs);
       ims.add(im);
     }
-    Map<InputValues, CompletableFuture<Set<String>>> returnValue = new LinkedHashMap<>();
+    Map<Inputs, CompletableFuture<Set<String>>> returnValue = new LinkedHashMap<>();
 
     if (commonInputs != null) {
       ImmutableMap<InputsNeedingModulation, CompletableFuture<Set<String>>> results =

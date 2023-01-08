@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder;
 
 import com.flipkart.krystal.datatypes.IntegerType;
 import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.data.InputValues;
+import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderInputUtil.AllInputs;
 import com.google.common.collect.ImmutableCollection;
@@ -21,15 +21,15 @@ public class AdderImpl extends Adder {
   }
 
   @Override
-  public ImmutableMap<InputValues, Integer> executeCompute(ImmutableList<InputValues> inputsList) {
-    Map<InputValues, Integer> result = new HashMap<>();
-    for (InputValues inputValues : inputsList) {
+  public ImmutableMap<Inputs, Integer> executeCompute(ImmutableList<Inputs> inputsList) {
+    Map<Inputs, Integer> result = new HashMap<>();
+    for (Inputs inputs : inputsList) {
       result.put(
-          inputValues,
+          inputs,
           add(
               new AllInputs(
-                  inputValues.getOrThrow("number_one"),
-                  inputValues.getOrDefault("number_two", null))));
+                  inputs.getInputValueOrThrow("number_one"),
+                  inputs.getInputValueOrDefault("number_two", null))));
     }
     return ImmutableMap.copyOf(result);
   }

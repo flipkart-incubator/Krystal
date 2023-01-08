@@ -1,16 +1,13 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.vajram.VajramLoader.loadVajramsFromClassPath;
-import static com.flipkart.krystal.vajramexecutor.krystex.Utils.toInputValues;
-import static com.flipkart.krystal.vajramexecutor.krystex.Utils.toNodeInputs;
-import static com.flipkart.krystal.vajramexecutor.krystex.Utils.toValueOrError;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import com.flipkart.krystal.data.InputValue;
+import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.ResolverDefinition;
-import com.flipkart.krystal.krystex.SingleValue;
-import com.flipkart.krystal.krystex.Value;
 import com.flipkart.krystal.krystex.node.IOLogicDefinition;
 import com.flipkart.krystal.krystex.node.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.node.MainLogicDecorator;
@@ -18,10 +15,10 @@ import com.flipkart.krystal.krystex.node.MainLogicDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
 import com.flipkart.krystal.krystex.node.NodeId;
-import com.flipkart.krystal.krystex.node.NodeInputs;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.flipkart.krystal.krystex.node.ResolverCommand;
 import com.flipkart.krystal.krystex.node.ResolverLogicDefinition;
+import com.flipkart.krystal.utils.ImmutableMapView;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.IOVajram;
@@ -29,7 +26,6 @@ import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDefinitionException;
 import com.flipkart.krystal.vajram.VajramID;
-import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.das.AccessSpecMatchingResult;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import com.flipkart.krystal.vajram.das.VajramIndex;
@@ -40,7 +36,6 @@ import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.InputSource;
-import com.flipkart.krystal.data.InputValues;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
@@ -54,7 +49,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -203,20 +197,19 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                               .formatted(
                                   vajramId, dependencyName, String.join(",", resolvedInputNames)),
                           sources,
-                          nodeInputs -> {
-                            validateMandatory(vajramId, nodeInputs, requiredInputs);
-                            DependencyCommand<InputValues> dependencyCommand =
+                          inputValues -> {
+                            validateMandatory(vajramId, inputValues, requiredInputs);
+                            DependencyCommand<Inputs> dependencyCommand =
                                 vajram.resolveInputOfDependency(
-                                    dependencyName, resolvedInputNames, toInputValues(nodeInputs));
+                                    dependencyName, resolvedInputNames, inputValues);
                             if (dependencyCommand
-                                instanceof DependencyCommand.Skip<InputValues> skipCommand) {
+                                instanceof DependencyCommand.Skip<Inputs> skipCommand) {
                               return ResolverCommand.skip(skipCommand.reason());
                             }
                             return ResolverCommand.multiExecuteWith(
                                 dependencyCommand.inputs().stream()
                                     .filter(Optional::isPresent)
                                     .map(Optional::get)
-                                    .map(Utils::toNodeInputs)
                                     .collect(toImmutableList()));
                           });
                   return new ResolverDefinition(
@@ -228,24 +221,24 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
 
   private void validateMandatory(
       VajramID vajramID,
-      NodeInputs nodeInputs,
+      Inputs nodeInputs,
       ImmutableCollection<VajramInputDefinition> requiredInputs) {
     Iterable<VajramInputDefinition> mandatoryInputs =
-        requiredInputs.stream().filter(VajramInputDefinition::isMandatory)::iterator;
+        requiredInputs.stream()
+                .filter(inputDefinition -> inputDefinition instanceof Input<?>)
+                .filter(VajramInputDefinition::isMandatory)
+            ::iterator;
     Map<String, Throwable> missingMandatoryValues = new HashMap<>();
     for (VajramInputDefinition mandatoryInput : mandatoryInputs) {
-      Value value = nodeInputs.getValue(mandatoryInput.name());
-      if (value instanceof SingleValue<?> singleValue) {
-        if (singleValue.isFailure() || singleValue.value().isEmpty()) {
-          missingMandatoryValues.put(
-              mandatoryInput.name(),
-              singleValue
-                  .failureReason()
-                  .orElseGet(
-                      () ->
-                          new NoSuchElementException(
-                              "No value present for input %s".formatted(mandatoryInput.name()))));
-        }
+      ValueOrError<?> value = nodeInputs.getInputValue(mandatoryInput.name());
+      if (value.error().isPresent() || value.value().isEmpty()) {
+        missingMandatoryValues.put(
+            mandatoryInput.name(),
+            value
+                .error()
+                .orElse(
+                    new NoSuchElementException(
+                        "No value present for input %s".formatted(mandatoryInput.name()))));
       }
     }
     if (missingMandatoryValues.isEmpty()) {
@@ -269,7 +262,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
           nodeInputs -> {
             validateMandatory(
                 vajramId, nodeInputs, vajramDefinition.getVajram().getInputDefinitions());
-            InputValues inputValues = inputValues(inputDefinitions, nodeInputs);
+            Inputs inputValues = injectFromSession(inputDefinitions, nodeInputs);
             return computeVajram.executeCompute(ImmutableList.of(inputValues)).get(inputValues);
           });
     } else if (vajramDefinition.getVajram() instanceof IOVajram<?> ioVajram) {
@@ -284,12 +277,11 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                             vajramId,
                             nodeInputs,
                             vajramDefinition.getVajram().getInputDefinitions()));
-                ImmutableList<InputValues> inputValues =
+                ImmutableList<Inputs> inputValues =
                     dependencyValues.stream()
-                        .map(nodeInputs -> inputValues(inputDefinitions, nodeInputs))
+                        .map(nodeInputs -> injectFromSession(inputDefinitions, nodeInputs))
                         .collect(toImmutableList());
-                return ioVajram.execute(inputValues).entrySet().stream()
-                    .collect(toImmutableMap(e -> toNodeInputs(e.getKey()), Entry::getValue));
+                return ioVajram.execute(inputValues);
               });
       enableInputModulation(ioNodeDefinition, ioVajram);
       return ioNodeDefinition;
@@ -317,28 +309,30 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     return () -> new InputModulationDecorator<>(inputModulationDecorator.get(), inputsConvertor);
   }
 
-  private static InputValues inputValues(
-      ImmutableCollection<VajramInputDefinition> inputDefinitions, NodeInputs dependencyValues) {
-    Map<String, ValueOrError<?>> map = new HashMap<>();
+  private static Inputs injectFromSession(
+      ImmutableCollection<VajramInputDefinition> inputDefinitions, Inputs inputs) {
+    Map<String, InputValue<?>> newValues = new HashMap<>();
     for (VajramInputDefinition inputDefinition : inputDefinitions) {
       String inputName = inputDefinition.name();
       if (inputDefinition instanceof Input<?> input) {
         if (input.sources().contains(InputSource.CLIENT)) {
-          if (SingleValue.empty().equals(dependencyValues.getValue(inputName))) {
+          InputValue<?> value = inputs.getInputValue(inputName);
+          if (ValueOrError.empty().equals(value)) {
             // Input was not resolved by another vajram. Check if it is resolvable
             // by SESSION
             if (input.sources().contains(InputSource.SESSION)) {
               // TODO handle session provided inputs
             }
-          } else {
-            map.put(inputName, toValueOrError(dependencyValues.getValue(inputName)));
           }
         }
-      } else if (inputDefinition instanceof Dependency) {
-        map.put(inputName, toValueOrError(dependencyValues.getValue(inputName)));
       }
     }
-    return new InputValues(ImmutableMap.copyOf(map));
+    if (!newValues.isEmpty()) {
+      inputs.values().forEach(newValues::putIfAbsent);
+      return new Inputs(ImmutableMapView.copyOf(newValues));
+    } else {
+      return inputs;
+    }
   }
 
   private ImmutableMap<String, NodeId> createNodeDefinitionsForDependencies(

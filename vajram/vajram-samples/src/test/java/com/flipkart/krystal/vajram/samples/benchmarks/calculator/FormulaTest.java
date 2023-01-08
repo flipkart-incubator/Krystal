@@ -29,13 +29,18 @@ class FormulaTest {
     graph = loadFromClasspath("com.flipkart.krystal.vajram.samples.benchmarks.calculator");
   }
 
-  @Test
+//  @Test
   void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
     long javaNativeTime = javaMethodBenchmark(FormulaTest::syncFormula, LOOP_COUNT);
     long javaFuturesTime = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, LOOP_COUNT);
     try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
         graph.createExecutor(new FormulaRequestContext(100, 20, 5, "formulaTest"))) {
       CompletableFuture<Integer>[] futures = new CompletableFuture[LOOP_COUNT];
+      krystexVajramExecutor.execute(
+          vajramID(Formula.ID),
+          rc -> FormulaRequest.builder().a(LOOP_COUNT).p(rc.p).q(rc.q).build(),
+          "formulaTest" );
+//      Thread.sleep(15000);
       long startTime = System.nanoTime();
       for (int value = 0; value < LOOP_COUNT; value++) {
         CompletableFuture<Integer> result =

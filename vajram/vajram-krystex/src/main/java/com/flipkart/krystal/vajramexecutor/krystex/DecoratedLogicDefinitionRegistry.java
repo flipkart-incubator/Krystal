@@ -1,10 +1,10 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
+import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.node.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.node.IOLogicDefinition;
 import com.flipkart.krystal.krystex.node.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.node.MainLogic;
-import com.flipkart.krystal.krystex.node.NodeInputs;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.flipkart.krystal.krystex.node.ResolverLogicDefinition;
 import com.flipkart.krystal.krystex.node.ResolverNodeLogic;
@@ -22,7 +22,7 @@ public record DecoratedLogicDefinitionRegistry(LogicDefinitionRegistry delegate)
   }
 
   public <T> ComputeLogicDefinition<T> newComputeLogic(
-      String nodeId, Set<String> inputs, Function<NodeInputs, T> logic) {
+      String nodeId, Set<String> inputs, Function<Inputs, T> logic) {
     ComputeLogicDefinition<T> def =
         new ComputeLogicDefinition<>(new NodeLogicId(nodeId), inputs, logic);
     delegate.addMainLogic(def);

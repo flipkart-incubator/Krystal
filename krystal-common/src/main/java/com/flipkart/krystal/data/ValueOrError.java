@@ -3,7 +3,8 @@ package com.flipkart.krystal.data;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
-public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error) {
+public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error)
+    implements InputValue<T> {
 
   private static final ValueOrError<?> EMPTY =
       new ValueOrError<>(Optional.empty(), Optional.empty());
@@ -15,14 +16,9 @@ public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error) {
     }
   }
 
-  public ValueOrError(T value) {
-    //noinspection rawtypes,unchecked
-    this((value instanceof Optional o) ? o : Optional.ofNullable(value), Optional.empty());
-  }
-
   public static <T> ValueOrError<T> from(Callable<T> valueProvider) {
     try {
-      return new ValueOrError<>(valueProvider.call());
+      return withValue(valueProvider.call());
     } catch (Exception e) {
       return new ValueOrError<>(Optional.empty(), Optional.of(e));
     }
@@ -31,5 +27,18 @@ public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error) {
   public static <T> ValueOrError<T> empty() {
     //noinspection unchecked
     return (ValueOrError<T>) EMPTY;
+  }
+
+  public static <T> ValueOrError<T> withValue(T t) {
+    return valueOrError(t, null);
+  }
+
+  public static <T> ValueOrError<T> error(Throwable t) {
+    return valueOrError(null, t);
+  }
+
+  public static <T> ValueOrError<T> valueOrError(T t, Throwable throwable) {
+    return new ValueOrError<T>(
+        (t instanceof Optional o) ? o : Optional.ofNullable(t), Optional.ofNullable(throwable));
   }
 }

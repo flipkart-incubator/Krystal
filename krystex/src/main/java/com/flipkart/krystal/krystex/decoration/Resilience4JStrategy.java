@@ -2,12 +2,12 @@ package com.flipkart.krystal.krystex.decoration;
 
 import static com.flipkart.krystal.krystex.RateLimitingStrategy.SEMAPHORE;
 
+import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.RateLimitingStrategy;
 import com.flipkart.krystal.krystex.config.ConfigProvider;
 import com.flipkart.krystal.krystex.node.MainLogic;
 import com.flipkart.krystal.krystex.node.MainLogicDefinition;
 import com.flipkart.krystal.krystex.node.MainLogicDecorator;
-import com.flipkart.krystal.krystex.node.NodeInputs;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -34,7 +34,7 @@ public class Resilience4JStrategy<T> implements MainLogicDecorator<T> {
 
   @Override
   public MainLogic<T> decorateLogic(MainLogicDefinition<T> nodeDef, MainLogic<T> logicToDecorate) {
-    DecorateFunction<ImmutableList<NodeInputs>, ImmutableMap<NodeInputs, CompletableFuture<T>>>
+    DecorateFunction<ImmutableList<Inputs>, ImmutableMap<Inputs, CompletableFuture<T>>>
         decorateCompletionStage = Decorators.ofFunction(logicToDecorate::execute);
     decorateWithRateLimiter(nodeDef, decorateCompletionStage);
     decorateWithCircuitBreaker(nodeDef, decorateCompletionStage);
