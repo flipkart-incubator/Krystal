@@ -4,7 +4,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.flipkart.krystal:vajram:0.1-SNAPSHOT'
+        classpath 'com.flipkart.krystal:vajram:' + project.krystal_version
     }
 }
 
@@ -12,11 +12,11 @@ plugins {
     id 'java'
     id 'idea'
     id 'maven-publish'
-    id 'org.flipkart.krystal.vajram' version '0.1-SNAPSHOT'
+    id 'org.flipkart.krystal.vajram' version "${krystal_version}"
 }
 
 group 'com.flipkart.krystal'
-version '1.0-SNAPSHOT'
+version project.krystal_version
 description 'An implementation of a vajram executor powered by the Krystex module.'
 
 repositories {
@@ -47,7 +47,7 @@ publishing {
         maven(MavenPublication) {
             groupId = 'com.flipkart.krystal'
             artifactId = 'vajram-krystex'
-            version = '0.1-SNAPSHOT'
+            version = project.krystal_version
             from components.java
         }
     }
