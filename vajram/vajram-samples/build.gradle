@@ -4,19 +4,20 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.flipkart.krystal:vajram:0.1-SNAPSHOT'
-        classpath 'com.flipkart.krystal:krystal-common:0.1-SNAPSHOT'
+        classpath 'com.flipkart.krystal:vajram:' + project.krystal_version
+        classpath 'com.flipkart.krystal:krystal-common:' + project.krystal_version
     }
 }
 plugins {
     id 'java'
-    id 'org.flipkart.krystal.vajram' version '0.1-SNAPSHOT'
+    id 'org.flipkart.krystal.vajram' version "${krystal_version}"
 }
 
 group 'com.flipkart'
-version '1.0-SNAPSHOT'
+version project.krystal_version
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
