@@ -12,7 +12,7 @@ plugins {
     id 'java'
     id 'idea'
     id 'maven-publish'
-    id 'org.flipkart.krystal.vajram' version "${krystal_version}"
+    id 'com.flipkart.krystal' version "${krystal_version}"
 }
 
 group 'com.flipkart.krystal'
