@@ -10,7 +10,7 @@ buildscript {
 }
 plugins {
     id 'java'
-    id 'org.flipkart.krystal.vajram' version "${krystal_version}"
+    id 'com.flipkart.krystal' version "${krystal_version}"
 }
 
 group 'com.flipkart'

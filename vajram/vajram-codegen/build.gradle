@@ -18,7 +18,7 @@ repositories {
 gradlePlugin {
     plugins {
         simplePlugin {
-            id = 'org.flipkart.krystal.vajram'
+            id = 'com.flipkart.krystal'
             implementationClass = 'com.flipkart.krystal.vajram.VajramPlugin'
         }
     }
