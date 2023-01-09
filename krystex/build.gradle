@@ -11,6 +11,10 @@ repositories {
     mavenCentral()
 }
 
+java {
+    withSourcesJar()
+}
+
 dependencies {
     implementation project(':krystal-common')
     implementation 'io.github.resilience4j:resilience4j-all:1.7.1'

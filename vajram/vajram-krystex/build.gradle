@@ -24,6 +24,10 @@ repositories {
     mavenCentral()
 }
 
+java {
+    withSourcesJar()
+}
+
 dependencies {
     implementation project(':krystal-common')
     implementation project(':vajram')

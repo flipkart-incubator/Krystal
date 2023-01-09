@@ -15,6 +15,10 @@ repositories {
     mavenCentral()
 }
 
+java {
+    withSourcesJar()
+}
+
 gradlePlugin {
     plugins {
         simplePlugin {
@@ -47,14 +51,6 @@ dependencies {
 }
 
 publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId = 'com.flipkart.krystal'
-            artifactId = 'vajram-codegen'
-            version = project.krystal_version
-            from components.java
-        }
-    }
     repositories {
         maven {
             url "https://clojars.org/repo"
