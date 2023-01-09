@@ -11,6 +11,10 @@ repositories {
     mavenCentral()
 }
 
+java {
+    withSourcesJar()
+}
+
 dependencies {
     implementation 'com.google.guava:guava:31.1-jre'
 

@@ -1,5 +1,5 @@
 ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
-    krystal_version = '1.0'
+    krystal_version = '1.1'
 }
