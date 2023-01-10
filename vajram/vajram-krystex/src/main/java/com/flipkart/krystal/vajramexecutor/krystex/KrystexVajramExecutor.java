@@ -14,7 +14,7 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
   private final C applicationRequestContext;
   private final KrystalNodeExecutor krystalExecutor;
 
-  KrystexVajramExecutor(VajramNodeGraph vajramNodeGraph, C applicationRequestContext) {
+  public KrystexVajramExecutor(VajramNodeGraph vajramNodeGraph, C applicationRequestContext) {
     this.vajramNodeGraph = vajramNodeGraph;
     this.applicationRequestContext = applicationRequestContext;
     this.krystalExecutor =

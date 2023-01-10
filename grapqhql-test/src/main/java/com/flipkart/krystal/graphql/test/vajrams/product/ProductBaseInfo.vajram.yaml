@@ -1,0 +1,4 @@
+inputs:
+  - name: product_id
+    dataType: string
+    mandatory: true

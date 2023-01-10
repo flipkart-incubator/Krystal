@@ -1,0 +1,6 @@
+inputs:
+  - name: product_id
+    dataType: string
+    mandatory: true
+  - name: preferred_listing_id
+    dataType: string

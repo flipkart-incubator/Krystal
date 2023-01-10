@@ -1,0 +1,4 @@
+inputs:
+  - name: listing_id
+    dataType: string
+    mandatory: true

@@ -1,0 +1,17 @@
+type Query {
+    primary_product: Product @DataFetcher(type: "requestContext", id:"primary_product_id")
+}
+
+type Product{
+    product_id: ID
+    title: String @DataFetcher(type: "vajram", id: "ProductBaseInfo")
+    sub_title: String @DataFetcher(type: "vajram", id: "ProductBaseInfo")
+    preferred_listing: Listing @DataFetcher(type: "vajram", id: "PreferredListing")
+}
+
+type Listing {
+    listing_id: ID
+    price: Float @DataFetcher(type: "vajram", id: "ListingPrice")
+}
+
+directive @DataFetcher(type: String, id: String) on FIELD_DEFINITION
