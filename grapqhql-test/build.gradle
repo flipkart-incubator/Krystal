@@ -13,9 +13,9 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.flipkart.krystal:krystal-common:' + krystal_version
-    implementation 'com.flipkart.krystal:vajram:' + krystal_version
-    implementation 'com.flipkart.krystal:vajram-krystex:' + krystal_version
+    implementation project(':krystal-common')
+    implementation project(':vajram')
+    implementation project(':vajram-krystex')
     implementation 'com.graphql-java:graphql-java:20.0'
     implementation 'com.google.guava:guava:31.1-jre'
 

@@ -1,13 +1,3 @@
-buildscript {
-    repositories {
-        mavenLocal()
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.flipkart.krystal:vajram:' + project.krystal_version
-        classpath 'com.flipkart.krystal:krystal-common:' + project.krystal_version
-    }
-}
 plugins {
     id 'java'
     id 'com.flipkart.krystal' version "${krystal_version}"
