@@ -23,4 +23,5 @@ include 'vajram-krystex'
 project(':vajram-krystex').projectDir = file('vajram/vajram-krystex')
 
 include 'krystal-common'
+include 'grapqhql-test'
 
