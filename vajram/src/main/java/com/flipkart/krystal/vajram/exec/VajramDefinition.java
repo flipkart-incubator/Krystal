@@ -104,8 +104,8 @@ public final class VajramDefinition {
     Tag[] tags =
         Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
             .filter(method -> method.getAnnotation(VajramLogic.class) != null)
+            .findAny()
             .map(method -> method.getAnnotationsByType(Tag.class))
-            .findFirst()
             .orElse(new Tag[0]);
     Map<String, LogicTag> collect =
         Arrays.stream(tags).collect(toMap(Tag::name, tag -> new LogicTag(tag.name(), tag.value())));
