@@ -6,6 +6,6 @@ import java.util.concurrent.CompletableFuture;
 
 public interface KrystalExecutor extends AutoCloseable {
 
-  <T> CompletableFuture<T> executeNode(NodeId nodeId, Inputs nodeInputs);
+  <T> CompletableFuture<T> executeNode(NodeId nodeId, Inputs inputs);
 
 }

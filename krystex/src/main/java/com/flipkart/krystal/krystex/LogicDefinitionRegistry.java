@@ -1,5 +1,6 @@
-package com.flipkart.krystal.krystex.node;
+package com.flipkart.krystal.krystex;
 
+import com.flipkart.krystal.krystex.node.NodeLogicId;
 import java.util.HashMap;
 import java.util.Map;
 

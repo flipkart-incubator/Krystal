@@ -4,7 +4,6 @@ import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder.add;
-import static com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.loadFromClasspath;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -12,8 +11,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
-import java.io.IOException;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 
 class ChainAdderTest {
   public static final int LOOP_COUNT = 3000;
@@ -127,4 +126,10 @@ class ChainAdderTest {
   }
 
   record RequestContext(String requestId) implements ApplicationRequestContext {}
+
+  private static VajramNodeGraph loadFromClasspath(String... packagePrefixes) {
+    Builder builder = VajramNodeGraph.builder();
+    Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
+    return builder.build();
+  }
 }

@@ -1,10 +1,11 @@
-package com.flipkart.krystal.vajram;
+package com.flipkart.krystal.vajram.tags;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 @Retention(RetentionPolicy.RUNTIME)
-public @interface VajramDef {
+public @interface Service {
+  String TAG_KEY = "service";
 
   String value();
 }

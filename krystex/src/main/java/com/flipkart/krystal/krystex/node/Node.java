@@ -10,7 +10,12 @@ import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.krystex.LogicDecorationOrdering;
+import com.flipkart.krystal.krystex.MainLogic;
+import com.flipkart.krystal.krystex.MainLogicDecorator;
+import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.RequestId;
+import com.flipkart.krystal.krystex.ResolverCommand;
 import com.flipkart.krystal.krystex.ResolverDefinition;
 import com.flipkart.krystal.krystex.ResultFuture;
 import com.flipkart.krystal.krystex.commands.ExecuteInputless;
@@ -25,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -36,9 +42,10 @@ public class Node {
 
   private final KrystalNodeExecutor krystalNodeExecutor;
 
-  private final ImmutableMap<NodeLogicId, ImmutableList<MainLogicDecorator<Object>>> nodeDecorators;
+  private final ImmutableMap<String, MainLogicDecorator> requestScopedMainLogicDecorators;
 
   private final ImmutableMap<Optional<String>, List<ResolverDefinition>> resolverDefinitionsByInput;
+  private final LogicDecorationOrdering logicDecorationOrdering;
 
   /** {@link ValueOrError} for inputs. {@link Results} for dependencies */
   private final Map<RequestId, Map<String, InputValue<?>>> inputsValueCollector =
@@ -48,7 +55,7 @@ public class Node {
   private final Map<RequestId, NodeResponseFuture> resultsByRequest = new LinkedHashMap<>();
 
   /**
-   * A unique {@link ResultFuture} for every new set of NodeInputs. This acts as a cache so that the
+   * A unique {@link ResultFuture} for every new set of Inputs. This acts as a cache so that the
    * same computation is not repeated multiple times .
    */
   private final Map<Inputs, NodeResponseFuture> resultsCache = new LinkedHashMap<>();
@@ -59,13 +66,15 @@ public class Node {
   public Node(
       NodeDefinition nodeDefinition,
       KrystalNodeExecutor krystalNodeExecutor,
-      ImmutableMap<NodeLogicId, ImmutableList<MainLogicDecorator<Object>>> nodeDecorators) {
+      ImmutableMap<String, MainLogicDecorator> requestScopedMainLogicDecorators,
+      LogicDecorationOrdering logicDecorationOrdering) {
     this.nodeId = nodeDefinition.nodeId();
     this.nodeDefinition = nodeDefinition;
     this.krystalNodeExecutor = krystalNodeExecutor;
-    this.nodeDecorators = nodeDecorators;
+    this.requestScopedMainLogicDecorators = requestScopedMainLogicDecorators;
     this.resolverDefinitionsByInput =
         createResolverDefinitionsByInputs(nodeDefinition.resolverDefinitions());
+    this.logicDecorationOrdering = logicDecorationOrdering;
   }
 
   public NodeResponseFuture executeCommand(NodeCommand nodeCommand) {
@@ -99,13 +108,9 @@ public class Node {
                 inputs,
                 i -> {
                   NodeResponseFuture newResult = new NodeResponseFuture();
-                  executeMainLogic(
-                          inputs,
-                          mainLogicNodeDefinition,
-                          nodeDecorators.getOrDefault(mainLogicNode, ImmutableList.of()))
+                  executeMainLogic(inputs, mainLogicNodeDefinition)
                       .whenComplete(
                           (r, t) -> {
-                            //noinspection SuspiciousMethodCalls
                             newResult
                                 .inputsFuture()
                                 .complete(
@@ -237,7 +242,7 @@ public class Node {
         // Since the node can return multiple results, we have to call the dependency Node
         // multiple times - each with a different request Id.
         Map<RequestId, NodeResponseFuture> dependencyResults = new LinkedHashMap<>();
-        for (Inputs nodeInputs : resolverCommand.getInputs()) {
+        for (Inputs resolverCommandContent : resolverCommand.getInputs()) {
           RequestId dependencyRequestId =
               requestId.append("(%s)%s[%s]".formatted(dependencyName, nodeId, counter++));
           for (String dependencyInput : resolverDefinition.resolvedInputNames()) {
@@ -247,7 +252,7 @@ public class Node {
                     new ExecuteWithInput(
                         nodeId,
                         dependencyInput,
-                        nodeInputs.getInputValue(dependencyInput),
+                        resolverCommandContent.getInputValue(dependencyInput),
                         dependencyRequestId)));
           }
         }
@@ -296,14 +301,19 @@ public class Node {
     return executeMainLogic;
   }
 
-  @SuppressWarnings({"unchecked", "rawtypes"})
-  private static CompletableFuture<?> executeMainLogic(
-      Inputs inputs,
-      MainLogicDefinition<Object> mainLogicDefinition,
-      ImmutableList<MainLogicDecorator<Object>> mainLogicDecorators) {
-    MainLogic<?> logic = mainLogicDefinition::execute;
-    for (MainLogicDecorator mainLogicDecorator : mainLogicDecorators) {
-      logic = mainLogicDecorator.decorateLogic(mainLogicDefinition, logic);
+  private CompletableFuture<?> executeMainLogic(
+      Inputs inputs, MainLogicDefinition<Object> mainLogicDefinition) {
+    Map<String, MainLogicDecorator> decorators =
+        new LinkedHashMap<>(mainLogicDefinition.getSessionScopedLogicDecorators());
+    // If the same decoratorType is configured for session and request scope, request scope
+    // overrides session scope.
+    decorators.putAll(requestScopedMainLogicDecorators);
+    TreeSet<MainLogicDecorator> sortedDecorators =
+        new TreeSet<>(logicDecorationOrdering.decorationOrder());
+    sortedDecorators.addAll(decorators.values());
+    MainLogic<Object> logic = mainLogicDefinition::execute;
+    for (MainLogicDecorator mainLogicDecorator : sortedDecorators) {
+      logic = mainLogicDecorator.decorateLogic(logic);
     }
     return logic.execute(ImmutableList.of(inputs)).get(inputs);
   }

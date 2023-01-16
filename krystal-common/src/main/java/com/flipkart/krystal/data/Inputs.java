@@ -6,16 +6,9 @@ import java.util.Optional;
 import lombok.Value;
 import lombok.experimental.Accessors;
 
-@Value
-@Accessors(fluent = true)
-public class Inputs {
+public record Inputs(Map<String, InputValue<?>> values) {
+
   private static final Inputs EMPTY = new Inputs(ImmutableMap.of());
-
-  private final Map<String, InputValue<?>> values;
-
-  public Inputs(Map<String, InputValue<?>> values) {
-    this.values = values;
-  }
 
   public InputValue<?> get(String inputName) {
     return values.getOrDefault(inputName, ValueOrError.empty());

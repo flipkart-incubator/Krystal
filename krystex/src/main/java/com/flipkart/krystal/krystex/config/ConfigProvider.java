@@ -4,9 +4,5 @@ import java.util.Optional;
 
 public interface ConfigProvider {
 
-  <T> T getConfig(String key);
-
-  Optional<String> getString(String key);
-
-  Optional<Integer> getInt(String key);
+  <T> Optional<T> getConfig(String key);
 }
