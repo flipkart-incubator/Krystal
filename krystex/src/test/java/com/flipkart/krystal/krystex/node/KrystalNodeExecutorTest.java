@@ -5,8 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.krystex.ComputeLogicDefinition;
+import com.flipkart.krystal.krystex.LogicDecorationOrdering;
+import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
+import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.RequestId;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collections;
@@ -35,7 +38,9 @@ class KrystalNodeExecutorTest {
   void setUp() {
     this.logicDefinitionRegistry = new LogicDefinitionRegistry();
     this.nodeDefinitionRegistry = new NodeDefinitionRegistry(logicDefinitionRegistry);
-    this.krystalNodeExecutor = new KrystalNodeExecutor(nodeDefinitionRegistry, "test");
+    this.krystalNodeExecutor =
+        new KrystalNodeExecutor(
+            nodeDefinitionRegistry, new LogicDecorationOrdering(ImmutableSet.of()), "test");
   }
 
   @AfterEach
@@ -76,9 +81,7 @@ class KrystalNodeExecutorTest {
                                     inputs.getInputValue("a").value().orElseThrow(),
                                     inputs.getInputValue("b").value().orElseThrow(),
                                     inputs.getInputValue("c").value().orElseThrow()))
-                    .nodeLogicId(),
-                ImmutableMap.of(),
-                ImmutableList.of())
+                    .nodeLogicId())
             .nodeId();
     Object result =
         timedGet(
@@ -111,8 +114,7 @@ class KrystalNodeExecutorTest {
                         dependencyValues.getInputValue("dep").value().orElseThrow()
                             + ":computed_value")
                 .nodeLogicId(),
-            ImmutableMap.of("dep", n1.nodeId()),
-            ImmutableList.of());
+            ImmutableMap.of("dep", n1.nodeId()));
 
     Object results =
         timedGet(
@@ -211,7 +213,7 @@ class KrystalNodeExecutorTest {
   private <T> MainLogicDefinition<T> newComputeLogic(
       String nodeId, Set<String> inputs, Function<Inputs, T> logic) {
     ComputeLogicDefinition<T> def =
-        new ComputeLogicDefinition<>(new NodeLogicId(nodeId), inputs, logic);
+        new ComputeLogicDefinition<>(new NodeLogicId(nodeId), inputs, logic, ImmutableMap.of());
     logicDefinitionRegistry.addMainLogic(def);
     return def;
   }

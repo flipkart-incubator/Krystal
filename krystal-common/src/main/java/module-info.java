@@ -5,4 +5,5 @@ module flipkart.krystal.common {
   exports com.flipkart.krystal.data;
   exports com.flipkart.krystal.datatypes;
   exports com.flipkart.krystal.utils;
+  exports com.flipkart.krystal.logic;
 }

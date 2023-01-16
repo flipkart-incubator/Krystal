@@ -28,8 +28,8 @@ public final class VajramID implements DataAccessSpec {
   }
 
   public String vajramId() {
-    Optional<String> className = className();
     if (vajramId == null) {
+      Optional<String> className = className();
       if (className.isPresent()) {
         try {
           //noinspection unchecked
