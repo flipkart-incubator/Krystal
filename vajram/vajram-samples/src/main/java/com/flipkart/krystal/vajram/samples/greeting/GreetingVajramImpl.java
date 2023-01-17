@@ -38,7 +38,7 @@ public final class GreetingVajramImpl extends GreetingVajram {
         Dependency.builder()
             // Data type of resolved dependencies is inferred from the
             // dependency vajram's Definition
-            .name("")
+            .name("user_info")
             // GreetingVajram needs UserService's Response to compose the Greeting
             // which it can get from the UserServiceVajram
             // (which is an Async Vajram as it makes network calls.
@@ -69,6 +69,7 @@ public final class GreetingVajramImpl extends GreetingVajram {
       case "user_info" -> {
         if (Set.of("user_id").equals(resolvableInputs)) {
           String userId = super.userIdForUserService(inputs.getInputValueOrThrow("user_id"));
+          // Request.toInputValues() in case of object
           return DependencyCommand.executeWith(
               new Inputs(
                       ImmutableMap.of("user_id", ValueOrError.withValue(userId))));

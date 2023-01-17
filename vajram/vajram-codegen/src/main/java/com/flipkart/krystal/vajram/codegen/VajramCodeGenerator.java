@@ -17,6 +17,7 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
+import com.flipkart.krystal.datatypes.StringType;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramRequest;
@@ -26,6 +27,7 @@ import com.flipkart.krystal.vajram.codegen.models.InputDef;
 import com.flipkart.krystal.vajram.codegen.models.VajramDependencyDef;
 import com.flipkart.krystal.vajram.codegen.models.VajramInputFile;
 import com.flipkart.krystal.vajram.codegen.models.VajramInputsDef;
+import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
@@ -51,6 +53,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.reflect.Type;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -60,6 +63,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import javax.lang.model.element.Modifier;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -90,6 +94,83 @@ public class VajramCodeGenerator {
             ? vajramName.substring(0, vajramName.length() - 6)
             : vajramName)
         + "Request";
+  }
+
+  public String codeGenVajramImpl() {
+      ImmutableCollection<VajramInputDefinition> inputDefs = vajramInputFile.vajramInputsDef().allInputsDefinitions();
+      final TypeSpec.Builder vajramImplClass = createVajramImplClass();
+
+      // Add superclass
+      vajramImplClass.addModifiers(PUBLIC)
+              .superclass(ClassName.bestGuess(vajramName).box()).build();
+
+      // Method : getInputDefinitions
+      MethodSpec.Builder inputDefinitionsBuilder = methodBuilder("getInputDefinitions")
+              .addModifiers(PUBLIC)
+              .returns(ParameterizedTypeName.get(ClassName.get(ImmutableList.class),
+                      ClassName.get("com.flipkart.krystal.vajram.inputs","VajramInputDefinition")));
+
+      List<CodeBlock> codeBlocks = new ArrayList<>(inputDefs.size());
+      // Input and Dependency code block
+      inputDefs.forEach( vajramInputDefinition ->  {
+          CodeBlock.Builder inputDefBuilder = CodeBlock.builder();
+          if(vajramInputDefinition instanceof Input) {
+             inputDefBuilder.add("Input.builder()")
+                     .add(".name($S)", vajramInputDefinition.name())
+                     .add(".type($T)", getTypeName(((Input) vajramInputDefinition).type()).type().orElse(StringType.class));
+             Set<InputSource> inputSources = ((Input<?>) vajramInputDefinition).sources();
+             if (!inputSources.isEmpty()) {
+                 inputDefBuilder.add(".sources($T)",
+                         CodeBlock.join(inputSources.stream().map( inputSource -> {
+                             if (inputSource == InputSource.CLIENT) {
+                                 return CodeBlock.builder().add("$T.CLIENT", InputSource.class).build();
+                             } else if (inputSource == InputSource.SESSION) {
+                                 return CodeBlock.builder().add("$T.SESSION", InputSource.class).build();
+                             }
+                             else {
+                                 throw new IllegalArgumentException("Incorrect source defined in vajram config");
+                             }
+                        }).collect(Collectors.toList()), ","));
+             }
+             if (vajramInputDefinition.isMandatory()) {
+                 inputDefBuilder.add(".isMandatory()");
+             }
+
+             // last line
+              inputDefBuilder.add(".build()");
+          } else if (vajramInputDefinition instanceof Dependency) {
+//              inputDefBuilder.addStatement("Input.builder()")
+//                      .add(".name($S)", vajramInputDefinition.name())
+//                      .add(".type($T)", getTypeName(((Input) vajramInputDefinition).type()));
+//              if(vajramInputDefinition.isMandatory()) {
+//                  inputDefBuilder.add(".isMandatory()");
+//              }
+//
+//              // build() as last step
+//              inputDefBuilder.add(".build()");
+          }
+
+          codeBlocks.add(inputDefBuilder.build());
+      });
+      CodeBlock.Builder returnCode = CodeBlock.builder()
+              .add("return ImmutableList.of($T);", CodeBlock.join(codeBlocks, ","));
+      inputDefinitionsBuilder.addCode(returnCode.build());
+
+      MethodSpec methodSpec = inputDefinitionsBuilder.build();
+      System.out.println(methodSpec);
+      StringWriter writer = new StringWriter();
+      try {
+          JavaFile.builder(
+                          packageName,
+                          vajramImplClass
+                                  .addMethod(inputDefinitionsBuilder.build())
+                                  .build())
+                  .build()
+                  .writeTo(writer);
+      } catch (IOException ignored) {
+
+      }
+      return writer.toString();
   }
 
   public String codeGenVajramRequest() {
@@ -464,6 +545,10 @@ public class VajramCodeGenerator {
         .addMethod(constructorBuilder().addModifiers(PRIVATE).build());
   }
 
+    private TypeSpec.Builder createVajramImplClass() {
+        return classBuilder(getVajramImplClassName());
+    }
+
   public String getRequestClassName() {
     return requestClassName;
   }
@@ -478,6 +563,10 @@ public class VajramCodeGenerator {
             : vajramName)
         + "InputUtil";
   }
+
+    public String getVajramImplClassName() {
+        return vajramName + "Impl";
+    }
 
   private static String toJavaName(String inputName) {
     if (!inputName.contains("_")) {
@@ -506,10 +595,10 @@ public class VajramCodeGenerator {
     return null;
   }
 
-  private void codeGenVajramImpl() {
-    ImmutableCollection<VajramInputDefinition> inputDefinitions =
-        vajramInputFile.vajramInputsDef().allInputsDefinitions();
-  }
+//  private void codeGenVajramImpl() {
+//    ImmutableCollection<VajramInputDefinition> inputDefinitions =
+//        vajramInputFile.vajramInputsDef().allInputsDefinitions();
+//  }
 
   private record FromAndTo(MethodSpec from, MethodSpec to) {}
 

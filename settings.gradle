@@ -2,6 +2,7 @@ pluginManagement {
     repositories {
         mavenLocal()
         mavenCentral()
+        maven { url "https://clojars.org/repo" }
     }
 }
 rootProject.name = 'krystal'

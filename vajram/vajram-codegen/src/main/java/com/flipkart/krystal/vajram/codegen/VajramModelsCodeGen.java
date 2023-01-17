@@ -57,7 +57,7 @@ public class VajramModelsCodeGen {
       System.exit(1);
     }
 
-    //    codeGenModels(cmd.getOptionValue("classesDir"), cmd.getOptionValue("javaDir"));
+//        codeGenModels(cmd.getOptionValue("classesDir"), cmd.getOptionValue("javaDir"));
   }
 
   public static void codeGenModels(Set<File> srcDirs, String destinationDir) throws Exception {
@@ -76,6 +76,7 @@ public class VajramModelsCodeGen {
       try {
         codeGenRequest(inputFile);
         codeGenUtil(inputFile);
+        codeGenVajramImpl(inputFile);
       } catch (Exception e) {
         throw new RuntimeException(
             "Could not generate code for file %s".formatted(inputFile.srcRelativeFilePath()), e);
@@ -93,7 +94,19 @@ public class VajramModelsCodeGen {
           new File(vajramJavaDir, vajramCodeGenerator.getRequestClassName() + ".java");
       Files.writeString(
           vajramImplSourceFile.toPath(), vajramRequestJavaCode, CREATE, TRUNCATE_EXISTING, WRITE);
-    }
+          }
+  }
+
+  private void codeGenVajramImpl(VajramInputFile vajramInputFile) throws IOException {
+      VajramCodeGenerator vajramCodeGenerator = new VajramCodeGenerator(vajramInputFile);
+      File vajramJavaDir =
+              Paths.get(javaDir.toString(), vajramCodeGenerator.getPackageName().split("\\.")).toFile();
+      if (vajramJavaDir.isDirectory() || vajramJavaDir.mkdirs()) {
+                    String vajramImplCode = vajramCodeGenerator.codeGenVajramImpl();
+          File vajramImplSourceFile = new File(vajramJavaDir, vajramCodeGenerator.getVajramImplClassName());
+          Files.writeString(
+                  vajramImplSourceFile.toPath(), vajramImplCode, CREATE, TRUNCATE_EXISTING, WRITE);
+      }
   }
 
   private void codeGenUtil(VajramInputFile vajramInputFile) throws IOException {
@@ -107,6 +120,18 @@ public class VajramModelsCodeGen {
       Files.writeString(
           vajramImplSourceFile.toPath(), vajramRequestJavaCode, CREATE, TRUNCATE_EXISTING, WRITE);
     }
+  }
+
+
+  // TODO :
+    // 1. Input dependency code gen
+    // 2. Resolve method code gen
+    // 3. Vajram logic code gen
+    //      3.1. Compute vajram execute
+    //      3.2. IO vajram executeBlocking
+  private void codeGenVajramImpl() {
+
+
   }
 
   ImmutableList<VajramInputFile> getInputDefinitions() throws Exception {

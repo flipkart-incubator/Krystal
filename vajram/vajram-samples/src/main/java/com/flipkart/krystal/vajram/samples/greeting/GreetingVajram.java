@@ -26,8 +26,16 @@ public abstract class GreetingVajram extends ComputeVajram<String> {
   // So it's GreetingVajram's responsibility to provide that input.
   @Resolve(value = "user_info", inputs = UserServiceVajram.USER_ID)
   public String userIdForUserService(@BindFrom("user_id") String userId) {
+      UserServiceRequest userServiceRequest = UserServiceRequest.builder().userId(userId).build();
     return userId;
   }
+
+  // TODO : Iterable support for list resolution
+    @Resolve(value = "user_info", inputs = "UserServiceVajram.AccountId")
+    public String userIdForUserService1(@BindFrom("user_id") String userId) {
+        UserServiceRequest userServiceRequest = UserServiceRequest.builder().userId(userId).build();
+        return userId;
+    }
 
   // This is the core business logic of this Vajram
   // Sync vajrams can return any object. AsyncVajrams need to return {CompletableFuture}s
