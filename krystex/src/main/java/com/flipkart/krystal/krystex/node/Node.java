@@ -362,7 +362,7 @@ public class Node {
     CompletableFuture<ValueOrError<Object>> responseFuture = resultsCache.get(nonDependencyInputs);
     if (responseFuture == null) {
       result =
-          executeDecoratedMainLogic(new Inputs(allInputs), mainLogicDefinition)
+          executeDecoratedMainLogic(new Inputs(allInputs), mainLogicDefinition, requestId)
               .handle(ValueOrError::valueOrError);
       resultsCache.put(nonDependencyInputs, result);
     } else {
@@ -398,9 +398,10 @@ public class Node {
   }
 
   private CompletableFuture<Object> executeDecoratedMainLogic(
-      Inputs inputs, MainLogicDefinition<Object> mainLogicDefinition) {
+      Inputs inputs, MainLogicDefinition<Object> mainLogicDefinition, RequestId requestId) {
     Map<String, MainLogicDecorator> decorators =
-        new LinkedHashMap<>(mainLogicDefinition.getSessionScopedLogicDecorators());
+        new LinkedHashMap<>(
+            mainLogicDefinition.getSessionScopedLogicDecorators(nodeDefinition, getDependants(requestId)));
     // If the same decoratorType is configured for session and request scope, request scope
     // overrides session scope.
     decorators.putAll(requestScopedMainLogicDecorators);

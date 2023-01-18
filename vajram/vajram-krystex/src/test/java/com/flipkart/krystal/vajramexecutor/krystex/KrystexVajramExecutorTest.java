@@ -7,8 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
-import com.flipkart.krystal.krystex.decoration.NodeLogicContext;
-import com.flipkart.krystal.krystex.decoration.SessionScopedMainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.decoration.NodeExecutionContext;
+import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.decorators.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.decorators.Resilience4JCircuitBreaker;
 import com.flipkart.krystal.logic.LogicTag;
@@ -263,26 +263,15 @@ class KrystexVajramExecutorTest {
   private static VajramNodeGraph.Builder loadFromClasspath(String... packagePrefixes) {
     Builder builder = VajramNodeGraph.builder();
     Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
-    Predicate<NodeLogicContext> isIOVajram =
+    Predicate<NodeExecutionContext> isIOVajram =
         context ->
-            Optional.ofNullable(
-                    context
-                        .nodeDefinitionRegistry()
-                        .logicDefinitionRegistry()
-                        .getMain(context.nodeLogicId())
-                        .logicTags()
-                        .get(VajramTags.VAJRAM_TYPE))
+            Optional.ofNullable(context.logicTags().get(VajramTags.VAJRAM_TYPE))
                 .map(LogicTag::tagValue)
                 .map(VajramTypes.IO_VAJRAM::equals)
                 .orElse(false);
-    Function<NodeLogicContext, String> createInstanceId =
+    Function<NodeExecutionContext, String> createInstanceId =
         context -> {
-          ImmutableMap<String, LogicTag> logicTags =
-              context
-                  .nodeDefinitionRegistry()
-                  .logicDefinitionRegistry()
-                  .getMain(context.nodeLogicId())
-                  .logicTags();
+          ImmutableMap<String, LogicTag> logicTags = context.logicTags();
           LogicTag service = logicTags.get(Service.TAG_KEY);
           String instanceId;
           if (service == null) {
@@ -299,13 +288,13 @@ class KrystexVajramExecutorTest {
           return instanceId;
         };
     builder.decorateVajramLogicForSession(
-        new SessionScopedMainLogicDecoratorConfig(
+        new MainLogicDecoratorConfig(
             Resilience4JBulkhead.DECORATOR_TYPE,
             isIOVajram,
             createInstanceId,
             Resilience4JBulkhead::new));
     builder.decorateVajramLogicForSession(
-        new SessionScopedMainLogicDecoratorConfig(
+        new MainLogicDecoratorConfig(
             Resilience4JCircuitBreaker.DECORATOR_TYPE,
             isIOVajram,
             createInstanceId,
