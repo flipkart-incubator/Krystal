@@ -8,7 +8,6 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.RequestId;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -58,9 +57,7 @@ class KrystalNodeExecutorTest {
                 .nodeLogicId());
 
     Object result =
-        timedGet(
-            krystalNodeExecutor.executeNode(
-                nodeDefinition.nodeId(), Inputs.empty(), new RequestId("req_1")));
+        timedGet(krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), "req_1"));
     assertEquals("computed_value", result);
   }
 
@@ -88,7 +85,7 @@ class KrystalNodeExecutorTest {
                 nodeId,
                 new Inputs(
                     ImmutableMap.of("a", withValue(1), "b", withValue(2), "c", withValue("3"))),
-                new RequestId("r")));
+                "r"));
     assertEquals("computed_values: a=1;b=2;c=3", result);
   }
 
@@ -120,8 +117,7 @@ class KrystalNodeExecutorTest {
                 .nodeLogicId(),
             ImmutableMap.of("dep", n1.nodeId()));
 
-    Object results =
-        timedGet(krystalNodeExecutor.executeNode(n2.nodeId(), Inputs.empty(), new RequestId("r1")));
+    Object results = timedGet(krystalNodeExecutor.executeNode(n2.nodeId(), Inputs.empty(), "r1"));
 
     assertEquals("dependency_value:computed_value", results);
   }
@@ -215,7 +211,7 @@ class KrystalNodeExecutorTest {
                         ImmutableMap.of("input", new NodeId(l4Dep)))
                     .nodeId(),
                 inputs,
-                new RequestId("r")));
+                "r"));
     assertEquals("l1:l2:l3:l4:final", results);
   }
 
@@ -236,7 +232,7 @@ class KrystalNodeExecutorTest {
                             .nodeLogicId())
                     .nodeId(),
                 Inputs.empty(),
-                new RequestId("")));
+                ""));
   }
 
   private <T> MainLogicDefinition<T> newComputeLogic(

@@ -2,7 +2,7 @@ package com.flipkart.krystal.krystex;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.decoration.RequestScopedMainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.flipkart.krystal.logic.LogicTag;
 import com.google.common.collect.ImmutableList;
@@ -22,14 +22,15 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition
 
   public abstract ImmutableMap<Inputs, CompletableFuture<T>> execute(ImmutableList<Inputs> inputs);
 
-  private final Map<String, MainLogicDecoratorConfig> requestScopedLogicDecoratorConfigs =
-      new HashMap<>();
+  private final Map<String, RequestScopedMainLogicDecoratorConfig>
+      requestScopedLogicDecoratorConfigs = new HashMap<>();
 
   /** LogicDecorator Id -> LogicDecorator */
   private final Map<String, MainLogicDecorator> sessionScopedLogicDecorators = new HashMap<>();
 
   /** Tag Key -> { LogicDecorator -> Node Decorator Supplier }. */
-  public ImmutableMap<String, MainLogicDecoratorConfig> getRequestScopedLogicDecoratorConfigs() {
+  public ImmutableMap<String, RequestScopedMainLogicDecoratorConfig>
+      getRequestScopedLogicDecoratorConfigs() {
     return ImmutableMap.copyOf(requestScopedLogicDecoratorConfigs);
   }
 
@@ -37,7 +38,8 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition
     return ImmutableMap.copyOf(sessionScopedLogicDecorators);
   }
 
-  public void registerRequestScopedDecorator(MainLogicDecoratorConfig decoratorConfig) {
+  public void registerRequestScopedDecorator(
+      RequestScopedMainLogicDecoratorConfig decoratorConfig) {
     requestScopedLogicDecoratorConfigs.put(decoratorConfig.decoratorType(), decoratorConfig);
   }
 

@@ -4,6 +4,8 @@ import static com.flipkart.krystal.utils.Futures.propagateCancellation;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
+import com.flipkart.krystal.config.ConfigProvider;
+import com.flipkart.krystal.config.NestedConfig;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
@@ -22,9 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 public final class InputModulationDecorator<
-        InputsNeedingModulation extends InputValuesAdaptor,
-        CommonInputs extends InputValuesAdaptor,
-        T>
+        InputsNeedingModulation extends InputValuesAdaptor, CommonInputs extends InputValuesAdaptor>
     implements MainLogicDecorator {
 
   public static final String DECORATOR_TYPE = InputModulationDecorator.class.getName();
@@ -95,6 +95,11 @@ public final class InputModulationDecorator<
               });
           propagateCancellation(cachedResult, resultFuture);
         });
+  }
+
+  @Override
+  public void onConfigUpdate(ConfigProvider configProvider) {
+    inputModulator.onConfigUpdate(new NestedConfig("input_modulation.", configProvider));
   }
 
   @Override

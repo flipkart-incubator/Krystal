@@ -1,15 +1,13 @@
 package com.flipkart.krystal.krystex.decoration;
 
-import com.flipkart.krystal.krystex.config.ConfigProvider;
-import com.flipkart.krystal.logic.LogicTag;
-import com.google.common.collect.ImmutableMap;
+import com.flipkart.krystal.config.ConfigProvider;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
  * @param decoratorType The id of the decorator
  * @param shouldDecorate A predicate which determines whether the logic decorator should decorate a
- *     logic which has the provided tags applied to it.
+ *     logic which has the given context.
  * @param instanceIdGenerator A function which returns the instance id of the logic decorator. The instance
  *     id in conjunction with the decoratorType is used to deduplicate logic decorator instances -
  *     only one instance of a logic decorator of a given instance Id can exist in a scope of the
@@ -18,8 +16,8 @@ import java.util.function.Predicate;
  * @param factory A factory which creates an instance of the logic decorator with the given
  *     instanceId.
  */
-public record MainLogicDecoratorConfig(
+public record SessionScopedMainLogicDecoratorConfig(
     String decoratorType,
-    Predicate<ImmutableMap<String, LogicTag>> shouldDecorate,
-    Function<ImmutableMap<String, LogicTag>, String> instanceIdGenerator,
+    Predicate<NodeLogicContext> shouldDecorate,
+    Function<NodeLogicContext, String> instanceIdGenerator,
     Function<String, MainLogicDecorator> factory) {}

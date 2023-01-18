@@ -1,11 +1,10 @@
 package com.flipkart.krystal.krystex.decoration;
 
 import com.flipkart.krystal.krystex.Logic;
+import com.flipkart.krystal.config.ConfigListener;
 
-public interface LogicDecorator<T extends Logic> {
+public interface LogicDecorator<T extends Logic> extends ConfigListener {
   T decorateLogic(T t);
-
-  default void onConfigUpdate() {}
 
   /**
    * The identifier for this {@link LogicDecorator} which is used to prevent duplicate node

@@ -3,6 +3,7 @@ package com.flipkart.krystal.krystex.node;
 import static com.flipkart.krystal.data.ValueOrError.empty;
 import static com.flipkart.krystal.data.ValueOrError.error;
 import static com.flipkart.krystal.utils.Futures.propagateCompletion;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Maps.filterKeys;
 import static java.util.concurrent.CompletableFuture.allOf;
@@ -40,6 +41,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 public class Node {
 
@@ -49,6 +51,7 @@ public class Node {
 
   private final KrystalNodeExecutor krystalNodeExecutor;
 
+  /** decoratorType -> Decorator */
   private final ImmutableMap<String, MainLogicDecorator> requestScopedMainLogicDecorators;
 
   private final ImmutableMap<Optional<String>, List<ResolverDefinition>> resolverDefinitionsByInput;
@@ -61,6 +64,8 @@ public class Node {
 
   /** A unique Result future for every requestId. */
   private final Map<RequestId, NodeResponseFuture> resultsByRequest = new LinkedHashMap<>();
+
+  private final Map<RequestId, ExecuteWithAllInputs> triggerCommands = new LinkedHashMap<>();
 
   /**
    * A unique {@link ResultFuture} for every new set of Inputs. This acts as a cache so that the
@@ -101,8 +106,9 @@ public class Node {
                 new SkipNodeException(skipNode.skipDependencyCommand().reason()));
         return resultForRequest;
       } else if (nodeCommand instanceof ExecuteWithDependency executeWithInput) {
-        executeMainLogic = executeWithInput(requestId, executeWithInput);
+        executeMainLogic = executeWithDependency(requestId, executeWithInput);
       } else if (nodeCommand instanceof ExecuteWithAllInputs executeWithAllInputs) {
+        triggerCommands.putIfAbsent(requestId, executeWithAllInputs);
         executeMainLogic = executeWithInputs(requestId, executeWithAllInputs);
       } else {
         throw new UnsupportedOperationException(
@@ -136,25 +142,13 @@ public class Node {
     return executeWithInputs(requestId, inputNames, executeWithAllInputs);
   }
 
-  private boolean executeWithInput(RequestId requestId, ExecuteWithDependency executeWithInput) {
+  private boolean executeWithDependency(
+      RequestId requestId, ExecuteWithDependency executeWithInput) {
     String input = executeWithInput.dependencyName();
     ImmutableSet<String> inputNames = ImmutableSet.of(input);
     collectInputValues(
         requestId, inputNames, new Inputs(ImmutableMap.of(input, executeWithInput.results())));
     return executeWithInputs(requestId, inputNames, executeWithInput);
-  }
-
-  private void collectInputValues(
-      RequestId requestId, ImmutableSet<String> inputNames, Inputs executeWithInput) {
-    for (String inputName : inputNames) {
-      if (inputsValueCollector
-              .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
-              .putIfAbsent(inputName, executeWithInput.values().get(inputName))
-          != null) {
-        throw new DuplicateInputForRequestException(
-            "Duplicate input data for a request %s".formatted(requestId));
-      }
-    }
   }
 
   private boolean executeWithInputs(
@@ -172,6 +166,7 @@ public class Node {
         return true;
       } else if (nodeDefinition.resolverDefinitions().isEmpty()
           && !nodeDefinition.dependencyNodes().isEmpty()) {
+        List<NodeId> dependants = getDependants(requestId);
         nodeDefinition
             .dependencyNodes()
             .forEach(
@@ -183,7 +178,11 @@ public class Node {
                     NodeResponseFuture nodeResponse =
                         krystalNodeExecutor.enqueueCommand(
                             new ExecuteWithAllInputs(
-                                depNodeId, Inputs.empty(), dependencyRequestId));
+                                depNodeId,
+                                Inputs.empty(),
+                                dependencyRequestId,
+                                Stream.concat(dependants.stream(), Stream.of(nodeId))
+                                    .collect(toImmutableList())));
                     nodeResponse
                         .responseFuture()
                         .whenComplete(
@@ -245,6 +244,7 @@ public class Node {
                 .addAll(
                     resolverDefinitionsByDependency.getOrDefault(
                         resolverDefinition.dependencyName(), ImmutableList.of())));
+    List<NodeId> dependants = getDependants(requestId);
     int pendingResolverCount = 0;
     for (Entry<String, List<ResolverDefinition>> resolverDefinitions :
         pendingResolverDefinitionsByResolvedDependency.entrySet()) {
@@ -294,7 +294,12 @@ public class Node {
                 requestId.append("%s[%s]".formatted(dependencyName, counter++));
             NodeResponseFuture nodeResponseFuture =
                 krystalNodeExecutor.enqueueCommand(
-                    new ExecuteWithAllInputs(depNodeId, resolverInput, dependencyRequestId));
+                    new ExecuteWithAllInputs(
+                        depNodeId,
+                        resolverInput,
+                        dependencyRequestId,
+                        Stream.concat(dependants.stream(), Stream.of(nodeId))
+                            .collect(toImmutableList())));
             nodeResponseFutures.put(resolverInput, nodeResponseFuture);
           }
           allOf(
@@ -336,6 +341,12 @@ public class Node {
     return executeMainLogic;
   }
 
+  private List<NodeId> getDependants(RequestId requestId) {
+    return Optional.ofNullable(triggerCommands.getOrDefault(requestId, null))
+        .map(ExecuteWithAllInputs::dependants)
+        .orElse(ImmutableList.of());
+  }
+
   private void executeMainLogic(NodeResponseFuture resultForRequest, RequestId requestId) {
     NodeLogicId mainLogicNode = nodeDefinition.mainLogicNode();
     MainLogicDefinition<Object> mainLogicDefinition =
@@ -371,6 +382,19 @@ public class Node {
               });
           resultForRequest.responseFuture().complete(value);
         });
+  }
+
+  private void collectInputValues(
+      RequestId requestId, ImmutableSet<String> inputNames, Inputs executeWithInput) {
+    for (String inputName : inputNames) {
+      if (inputsValueCollector
+              .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
+              .putIfAbsent(inputName, executeWithInput.values().get(inputName))
+          != null) {
+        throw new DuplicateInputForRequestException(
+            "Duplicate input data for a request %s".formatted(requestId));
+      }
+    }
   }
 
   private CompletableFuture<Object> executeDecoratedMainLogic(

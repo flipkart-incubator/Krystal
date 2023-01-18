@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.config;
+package com.flipkart.krystal.config;
 
 import java.util.Map;
 import java.util.Optional;
