@@ -6,10 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
-import com.flipkart.krystal.krystex.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.RequestId;
+import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collections;
@@ -59,9 +59,8 @@ class KrystalNodeExecutorTest {
 
     Object result =
         timedGet(
-            krystalNodeExecutor
-                .executeNode(nodeDefinition.nodeId(), Inputs.empty(), new RequestId("req_1"))
-                .responseFuture());
+            krystalNodeExecutor.executeNode(
+                nodeDefinition.nodeId(), Inputs.empty(), new RequestId("req_1")));
     assertEquals("computed_value", result);
   }
 
@@ -85,13 +84,11 @@ class KrystalNodeExecutorTest {
             .nodeId();
     Object result =
         timedGet(
-            krystalNodeExecutor
-                .executeNode(
-                    nodeId,
-                    new Inputs(
-                        ImmutableMap.of("a", withValue(1), "b", withValue(2), "c", withValue("3"))),
-                    new RequestId("r"))
-                .responseFuture());
+            krystalNodeExecutor.executeNode(
+                nodeId,
+                new Inputs(
+                    ImmutableMap.of("a", withValue(1), "b", withValue(2), "c", withValue("3"))),
+                new RequestId("r")));
     assertEquals("computed_values: a=1;b=2;c=3", result);
   }
 
@@ -111,16 +108,20 @@ class KrystalNodeExecutorTest {
                     "n2_logic",
                     ImmutableSet.of("dep"),
                     dependencyValues ->
-                        dependencyValues.getInputValue("dep").value().orElseThrow()
+                        dependencyValues
+                                .getDepValue("dep")
+                                .values()
+                                .values()
+                                .iterator()
+                                .next()
+                                .value()
+                                .orElseThrow()
                             + ":computed_value")
                 .nodeLogicId(),
             ImmutableMap.of("dep", n1.nodeId()));
 
     Object results =
-        timedGet(
-            krystalNodeExecutor
-                .executeNode(n2.nodeId(), Inputs.empty(), new RequestId("r1"))
-                .responseFuture());
+        timedGet(krystalNodeExecutor.executeNode(n2.nodeId(), Inputs.empty(), new RequestId("r1")));
 
     assertEquals("dependency_value:computed_value", results);
   }
@@ -139,7 +140,15 @@ class KrystalNodeExecutorTest {
                 l2Dep,
                 ImmutableSet.of("input"),
                 dependencyValues ->
-                    dependencyValues.getInputValue("input").value().orElseThrow() + ":l2")
+                    dependencyValues
+                            .getDepValue("input")
+                            .values()
+                            .values()
+                            .iterator()
+                            .next()
+                            .value()
+                            .orElseThrow()
+                        + ":l2")
             .nodeLogicId(),
         ImmutableMap.of("input", new NodeId(l1Dep)));
 
@@ -149,8 +158,17 @@ class KrystalNodeExecutorTest {
         newComputeLogic(
                 l3Dep,
                 ImmutableSet.of("input"),
-                dependencyValues ->
-                    dependencyValues.getInputValue("input").value().orElseThrow() + ":l3")
+                dependencyValues -> {
+                  return dependencyValues
+                          .getDepValue("input")
+                          .values()
+                          .values()
+                          .iterator()
+                          .next()
+                          .value()
+                          .orElseThrow()
+                      + ":l3";
+                })
             .nodeLogicId(),
         ImmutableMap.of("input", new NodeId(l2Dep)));
 
@@ -161,32 +179,43 @@ class KrystalNodeExecutorTest {
                 l4Dep,
                 ImmutableSet.of("input"),
                 dependencyValues ->
-                    dependencyValues.getInputValue("input").value().orElseThrow() + ":l4")
+                    dependencyValues
+                            .getDepValue("input")
+                            .values()
+                            .values()
+                            .iterator()
+                            .next()
+                            .value()
+                            .orElseThrow()
+                        + ":l4")
             .nodeLogicId(),
         ImmutableMap.of("input", new NodeId(l3Dep)));
 
+    Inputs inputs = Inputs.empty();
     Object results =
         timedGet(
-            krystalNodeExecutor
-                .executeNode(
-                    nodeDefinitionRegistry
-                        .newNodeDefinition(
-                            "requestExecution_multiLevelDependencies_final",
-                            newComputeLogic(
-                                    "requestExecution_multiLevelDependencies_final",
-                                    ImmutableSet.of("input"),
-                                    dependencyValues ->
-                                        dependencyValues
-                                                .getInputValue("input")
-                                                .value()
-                                                .orElseThrow()
-                                            + ":final")
-                                .nodeLogicId(),
-                            ImmutableMap.of("input", new NodeId(l4Dep)))
-                        .nodeId(),
-                    Inputs.empty(),
-                    new RequestId("r"))
-                .responseFuture());
+            krystalNodeExecutor.executeNode(
+                nodeDefinitionRegistry
+                    .newNodeDefinition(
+                        "requestExecution_multiLevelDependencies_final",
+                        newComputeLogic(
+                                "requestExecution_multiLevelDependencies_final",
+                                ImmutableSet.of("input"),
+                                dependencyValues ->
+                                    dependencyValues
+                                            .getDepValue("input")
+                                            .values()
+                                            .values()
+                                            .iterator()
+                                            .next()
+                                            .value()
+                                            .orElseThrow()
+                                        + ":final")
+                            .nodeLogicId(),
+                        ImmutableMap.of("input", new NodeId(l4Dep)))
+                    .nodeId(),
+                inputs,
+                new RequestId("r")));
     assertEquals("l1:l2:l3:l4:final", results);
   }
 

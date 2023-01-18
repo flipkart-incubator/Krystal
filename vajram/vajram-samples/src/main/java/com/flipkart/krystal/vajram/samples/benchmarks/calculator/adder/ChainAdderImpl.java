@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
@@ -104,7 +105,7 @@ public final class ChainAdderImpl extends ChainAdder {
                 Function.identity(),
                 inputValues -> {
                   ArrayList<Integer> numbers = inputValues.getInputValueOrThrow("numbers");
-                  ImmutableMap<Inputs, ValueOrError<Integer>> chainSumResult =
+                  Map<Inputs, ValueOrError<Integer>> chainSumResult =
                       inputValues.<Integer>getDepValue("chain_sum").values();
                   DependencyResponse<ChainAdderRequest, Integer> chainSum =
                       new DependencyResponse<>(
@@ -112,7 +113,7 @@ public final class ChainAdderImpl extends ChainAdder {
                               .collect(
                                   toImmutableMap(
                                       e -> ChainAdderRequest.from(e.getKey()), Entry::getValue)));
-                  ImmutableMap<Inputs, ValueOrError<Integer>> sumResult =
+                  Map<Inputs, ValueOrError<Integer>> sumResult =
                       inputValues.<Integer>getDepValue("sum").values();
                   DependencyResponse<AdderRequest, Integer> sum =
                       new DependencyResponse<>(

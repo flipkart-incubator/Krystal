@@ -1,5 +1,7 @@
-package com.flipkart.krystal.krystex;
+package com.flipkart.krystal.krystex.decoration;
 
+import com.flipkart.krystal.krystex.MainLogic;
+import com.flipkart.krystal.krystex.decoration.LogicDecorator;
 import com.flipkart.krystal.krystex.node.Node;
 
 /**

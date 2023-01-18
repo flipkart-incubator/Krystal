@@ -82,7 +82,7 @@ public class FormulaImpl extends Formula {
                   .filter(voe -> voe.value().isPresent())
                   .map(voe -> voe.value().get())
                   .map(Formula::quotientNumberTwo)
-                  .map(ValueOrError::withValue)
+                  .map(t -> ValueOrError.withValue((Object) t))
                   .map(voe -> new Inputs(ImmutableMap.of("number_two", voe)))
                   .collect(ImmutableList.toImmutableList()));
         }

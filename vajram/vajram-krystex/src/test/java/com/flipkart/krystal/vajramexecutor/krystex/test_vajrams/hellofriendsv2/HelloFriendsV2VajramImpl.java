@@ -22,7 +22,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.Test
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import java.util.LinkedHashSet;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
@@ -88,15 +87,14 @@ public class HelloFriendsV2VajramImpl extends HelloFriendsV2Vajram {
             toImmutableMap(
                 i -> i,
                 i -> {
-                  Results<LinkedHashSet<String>> friendIds = i.getDepValue(FRIEND_IDS);
-                  DependencyResponse<FriendsServiceRequest, LinkedHashSet<String>>
-                      friendIdsResponse =
-                          new DependencyResponse<>(
-                              friendIds.values().entrySet().stream()
-                                  .collect(
-                                      toImmutableMap(
-                                          e -> FriendsServiceRequest.from(e.getKey()),
-                                          Entry::getValue)));
+                  Results<Set<String>> friendIds = i.getDepValue(FRIEND_IDS);
+                  DependencyResponse<FriendsServiceRequest, Set<String>> friendIdsResponse =
+                      new DependencyResponse<>(
+                          friendIds.values().entrySet().stream()
+                              .collect(
+                                  toImmutableMap(
+                                      e -> FriendsServiceRequest.from(e.getKey()),
+                                      Entry::getValue)));
                   Results<TestUserInfo> friendInfos = i.getDepValue(FRIEND_INFOS);
                   DependencyResponse<TestUserServiceRequest, TestUserInfo> friendInfosResponse =
                       new DependencyResponse<>(

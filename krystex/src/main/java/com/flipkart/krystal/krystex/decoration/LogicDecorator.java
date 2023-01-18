@@ -1,4 +1,6 @@
-package com.flipkart.krystal.krystex;
+package com.flipkart.krystal.krystex.decoration;
+
+import com.flipkart.krystal.krystex.Logic;
 
 public interface LogicDecorator<T extends Logic> {
   T decorateLogic(T t);

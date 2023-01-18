@@ -34,7 +34,7 @@ public abstract class UserServiceVajram extends IOVajram<UserInfo> {
                     .collect(
                         Collectors.toMap(
                             userInfo -> new InputsNeedingModulation(userInfo.userId()),
-                            userInfo -> userInfo)));
+                            userInfo -> userInfo )));
     return modulatedRequest.inputsNeedingModulation().stream()
         .collect(
             toImmutableMap(im -> im, im -> resultsFuture.thenApply(results -> results.get(im))));

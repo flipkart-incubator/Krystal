@@ -3,7 +3,7 @@ package com.flipkart.krystal.krystex.decorators;
 import static io.github.resilience4j.decorators.Decorators.ofFunction;
 
 import com.flipkart.krystal.krystex.MainLogic;
-import com.flipkart.krystal.krystex.MainLogicDecorator;
+import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.config.ConfigProvider;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadConfig;

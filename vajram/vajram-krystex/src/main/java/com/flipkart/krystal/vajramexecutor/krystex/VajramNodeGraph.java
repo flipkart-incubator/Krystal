@@ -8,15 +8,15 @@ import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
-import com.flipkart.krystal.krystex.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
-import com.flipkart.krystal.krystex.MainLogicDecorator;
-import com.flipkart.krystal.krystex.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.ResolverCommand;
 import com.flipkart.krystal.krystex.ResolverDefinition;
 import com.flipkart.krystal.krystex.ResolverLogicDefinition;
 import com.flipkart.krystal.krystex.config.ConfigProvider;
+import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
+import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.decorators.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
@@ -347,12 +347,12 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
 
   private static Inputs injectFromSession(
       ImmutableCollection<VajramInputDefinition> inputDefinitions, Inputs inputs) {
-    Map<String, InputValue<?>> newValues = new HashMap<>();
+    Map<String, InputValue<Object>> newValues = new HashMap<>();
     for (VajramInputDefinition inputDefinition : inputDefinitions) {
       String inputName = inputDefinition.name();
       if (inputDefinition instanceof Input<?> input) {
         if (input.sources().contains(InputSource.CLIENT)) {
-          InputValue<?> value = inputs.getInputValue(inputName);
+          ValueOrError<Object> value = inputs.getInputValue(inputName);
           if (!ValueOrError.empty().equals(value)) {
             continue;
           }

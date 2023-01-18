@@ -3,10 +3,8 @@ package com.flipkart.krystal.data;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.Optional;
-import lombok.Value;
-import lombok.experimental.Accessors;
 
-public record Inputs(Map<String, InputValue<?>> values) {
+public record Inputs(Map<String, InputValue<Object>> values) {
 
   private static final Inputs EMPTY = new Inputs(ImmutableMap.of());
 
@@ -46,5 +44,10 @@ public record Inputs(Map<String, InputValue<?>> values) {
 
   public static Inputs empty() {
     return EMPTY;
+  }
+
+  @Override
+  public String toString() {
+    return values().toString();
   }
 }
