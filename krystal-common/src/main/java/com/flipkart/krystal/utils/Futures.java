@@ -13,5 +13,16 @@ public class Futures {
         });
   }
 
+  public static <T>  void propagateCompletion(CompletableFuture<? extends T> from, CompletableFuture<T> to) {
+    from.whenComplete(
+        (result, error) -> {
+          if (error != null) {
+            to.completeExceptionally(error);
+          } else {
+            to.complete(result);
+          }
+        });
+  }
+
   private Futures() {}
 }

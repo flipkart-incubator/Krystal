@@ -325,7 +325,7 @@ public class VajramCodeGenerator {
             .addAnnotation(Override.class)
             .addStatement(
                 "$T builder = new $T<>()",
-                new TypeToken<Map<String, InputValue<?>>>() {}.getType(),
+                new TypeToken<Map<String, InputValue<Object>>>() {}.getType(),
                 new TypeToken<HashMap>() {}.getType());
     MethodSpec.Builder fromInputValues =
         methodBuilder("from")
@@ -356,17 +356,29 @@ public class VajramCodeGenerator {
   private static TypeAndName getTypeName(DataType dataType) {
     if (dataType instanceof JavaType<?> javaType) {
       Optional<String> simpleName = javaType.simpleName();
+      ClassName className;
       if (simpleName.isPresent()) {
         List<String> classNames =
             Stream.concat(javaType.enclosingClasses().stream(), Stream.of(simpleName.get()))
                 .toList();
-        return new TypeAndName(
+        className =
             ClassName.get(
                 javaType.packageName().orElse(""),
                 classNames.get(0),
-                classNames.subList(1, classNames.size()).toArray(String[]::new)));
+                classNames.subList(1, classNames.size()).toArray(String[]::new));
       } else {
-        return new TypeAndName(ClassName.bestGuess(javaType.className()));
+        className = ClassName.bestGuess(javaType.className());
+      }
+      if (javaType.typeParameters().size() > 0) {
+        return new TypeAndName(
+            ParameterizedTypeName.get(
+                className,
+                javaType.typeParameters().stream()
+                    .map(VajramCodeGenerator::getTypeName)
+                    .map(TypeAndName::typeName)
+                    .toArray(TypeName[]::new)));
+      } else {
+        return new TypeAndName(className);
       }
     } else {
       Optional<Type> javaType = getJavaType(dataType);

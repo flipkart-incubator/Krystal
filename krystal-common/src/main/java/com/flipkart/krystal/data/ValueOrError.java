@@ -37,8 +37,19 @@ public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error)
     return valueOrError(null, t);
   }
 
-  public static <T> ValueOrError<T> valueOrError(T t, Throwable throwable) {
+  public static <T> ValueOrError<T> valueOrError(Object t, Throwable throwable) {
+    //noinspection unchecked,rawtypes
     return new ValueOrError<T>(
-        (t instanceof Optional o) ? o : Optional.ofNullable(t), Optional.ofNullable(throwable));
+        (t instanceof Optional o) ? o : (Optional<T>) Optional.ofNullable(t),
+        Optional.ofNullable(throwable));
+  }
+
+  @Override
+  public String toString() {
+    if (error.isPresent()) {
+      return error.toString();
+    } else {
+      return value().toString();
+    }
   }
 }

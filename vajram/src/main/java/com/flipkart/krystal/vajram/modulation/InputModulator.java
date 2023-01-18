@@ -1,9 +1,10 @@
 package com.flipkart.krystal.vajram.modulation;
 
+import com.flipkart.krystal.config.ConfigListener;
 import com.google.common.collect.ImmutableList;
 import java.util.function.Consumer;
 
-public interface InputModulator<InputsNeedingModulation, CommonInputs> {
+public interface InputModulator<InputsNeedingModulation, CommonInputs> extends ConfigListener {
 
   ImmutableList<ModulatedInput<InputsNeedingModulation, CommonInputs>> add(
       InputsNeedingModulation inputsNeedingModulation, CommonInputs commonInputs);

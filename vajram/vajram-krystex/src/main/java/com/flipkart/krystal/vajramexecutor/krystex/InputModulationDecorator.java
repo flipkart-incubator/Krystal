@@ -4,10 +4,11 @@ import static com.flipkart.krystal.utils.Futures.propagateCancellation;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
+import com.flipkart.krystal.config.ConfigProvider;
+import com.flipkart.krystal.config.NestedConfig;
 import com.flipkart.krystal.data.Inputs;
-import com.flipkart.krystal.krystex.node.MainLogic;
-import com.flipkart.krystal.krystex.node.MainLogicDecorator;
-import com.flipkart.krystal.krystex.node.MainLogicDefinition;
+import com.flipkart.krystal.krystex.MainLogic;
+import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
@@ -22,25 +23,28 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-public class InputModulationDecorator<
-        InputsNeedingModulation extends InputValuesAdaptor,
-        CommonInputs extends InputValuesAdaptor,
-        T>
-    implements MainLogicDecorator<T> {
+public final class InputModulationDecorator<
+        InputsNeedingModulation extends InputValuesAdaptor, CommonInputs extends InputValuesAdaptor>
+    implements MainLogicDecorator {
 
+  public static final String DECORATOR_TYPE = InputModulationDecorator.class.getName();
+
+  private final String instanceId;
   private final InputModulator<InputsNeedingModulation, CommonInputs> inputModulator;
   private final InputsConverter<InputsNeedingModulation, CommonInputs> inputsConverter;
-  private final Map<Inputs, CompletableFuture<T>> futureCache = new HashMap<>();
+  private final Map<Inputs, CompletableFuture<Object>> futureCache = new HashMap<>();
 
   public InputModulationDecorator(
+      String instanceId,
       InputModulator<InputsNeedingModulation, CommonInputs> inputModulator,
       InputsConverter<InputsNeedingModulation, CommonInputs> inputsConverter) {
+    this.instanceId = instanceId;
     this.inputModulator = inputModulator;
     this.inputsConverter = inputsConverter;
   }
 
   @Override
-  public MainLogic<T> decorateLogic(MainLogicDefinition<T> nodeDef, MainLogic<T> logicToDecorate) {
+  public MainLogic<Object> decorateLogic(MainLogic<Object> logicToDecorate) {
     inputModulator.onTermination(
         requests -> requests.forEach(request -> modulateInputsList(logicToDecorate, request)));
     return inputsList -> {
@@ -68,18 +72,18 @@ public class InputModulationDecorator<
   }
 
   private void modulateInputsList(
-      MainLogic<T> logicToDecorate,
+      MainLogic<Object> logicToDecorate,
       ModulatedInput<InputsNeedingModulation, CommonInputs> modulatedInput) {
     ImmutableList<UnmodulatedInput<InputsNeedingModulation, CommonInputs>> requests =
         modulatedInput.inputsNeedingModulation().stream()
             .map(each -> new UnmodulatedInput<>(each, modulatedInput.commonInputs()))
             .collect(toImmutableList());
-    ImmutableMap<Inputs, CompletableFuture<T>> originalFutures =
+    ImmutableMap<Inputs, CompletableFuture<Object>> originalFutures =
         logicToDecorate.execute(
             requests.stream().map(UnmodulatedInput::toInputValues).collect(toImmutableList()));
     originalFutures.forEach(
         (inputs, resultFuture) -> {
-          CompletableFuture<T> cachedResult =
+          CompletableFuture<Object> cachedResult =
               futureCache.computeIfAbsent(inputs, request -> new CompletableFuture<>());
           resultFuture.whenComplete(
               (values, throwable) -> {
@@ -91,5 +95,15 @@ public class InputModulationDecorator<
               });
           propagateCancellation(cachedResult, resultFuture);
         });
+  }
+
+  @Override
+  public void onConfigUpdate(ConfigProvider configProvider) {
+    inputModulator.onConfigUpdate(new NestedConfig("input_modulation.", configProvider));
+  }
+
+  @Override
+  public String getId() {
+    return instanceId;
   }
 }

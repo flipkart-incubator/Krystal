@@ -6,7 +6,8 @@ dependencies:
   - name: friend_ids
     depType: vajram
     vajramClass: com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceVajram
-    dataType: set
+    dataType: custom_java
+    customDataType: java.util.Set
     typeParameters:
       dataType: string
   - name: friend_infos

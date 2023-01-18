@@ -12,15 +12,18 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
+@Accessors(fluent = true)
 public final class JavaType<T> implements JavaDataType<T> {
 
   private final String className;
   @MonotonicNonNull private String packageName;
   @MonotonicNonNull private String simpleName;
   private ImmutableList<String> enclosingClasses = ImmutableList.of();
-  private ImmutableList<DataType> typeParameters = ImmutableList.of();
+  @Getter private ImmutableList<DataType> typeParameters = ImmutableList.of();
 
   @MonotonicNonNull private Type clazz;
 
@@ -33,7 +36,7 @@ public final class JavaType<T> implements JavaDataType<T> {
     this.className = className;
   }
 
-  private JavaType(String className, List<DataType> typeParameters) {
+  private JavaType(String className, List<? extends DataType> typeParameters) {
     this.className = className;
     this.typeParameters = ImmutableList.copyOf(typeParameters);
   }
@@ -141,7 +144,7 @@ public final class JavaType<T> implements JavaDataType<T> {
       throw new IllegalArgumentException("At least one type name is needed for java types.");
     }
     if (typeInfo.size() == 1) {
-      return JavaType.java(typeInfo.get(0));
+      return JavaType.java(typeInfo.get(0), typeParameters);
     }
     return JavaType.java(
         typeInfo.get(0),
@@ -154,7 +157,7 @@ public final class JavaType<T> implements JavaDataType<T> {
     return new JavaType<T>(className);
   }
 
-  public static <T> JavaType<T> java(String className, List<DataType> typeParameters) {
+  public static <T> JavaType<T> java(String className, List<? extends DataType> typeParameters) {
     return new JavaType<T>(className, typeParameters);
   }
 }
