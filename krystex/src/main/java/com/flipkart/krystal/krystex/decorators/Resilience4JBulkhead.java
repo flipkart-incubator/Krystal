@@ -2,9 +2,9 @@ package com.flipkart.krystal.krystex.decorators;
 
 import static io.github.resilience4j.decorators.Decorators.ofFunction;
 
+import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
-import com.flipkart.krystal.krystex.config.ConfigProvider;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
 import io.github.resilience4j.bulkhead.BulkheadConfig.Builder;
@@ -15,19 +15,15 @@ public final class Resilience4JBulkhead implements MainLogicDecorator {
 
   public static final String DECORATOR_TYPE = Resilience4JBulkhead.class.getName();
 
-  private final ConfigProvider configProvider;
   private final String instanceId;
 
   private Bulkhead bulkhead;
 
   /**
    * @param instanceId The tag because of which this logic decorator was applied.
-   * @param configProvider The configs for this logic decorator are read from this configProvider.
    */
-  public Resilience4JBulkhead(String instanceId, ConfigProvider configProvider) {
+  public Resilience4JBulkhead(String instanceId) {
     this.instanceId = instanceId;
-    this.configProvider = configProvider;
-    init();
   }
 
   @Override
@@ -41,8 +37,8 @@ public final class Resilience4JBulkhead implements MainLogicDecorator {
   }
 
   @Override
-  public void onConfigUpdate() {
-    updateBulkhead();
+  public void onConfigUpdate(ConfigProvider configProvider) {
+    updateBulkhead(configProvider);
   }
 
   @Override
@@ -50,26 +46,26 @@ public final class Resilience4JBulkhead implements MainLogicDecorator {
     return instanceId;
   }
 
-  private void init() {
+  private void init(ConfigProvider configProvider) {
     this.bulkhead =
-        getBulkheadConfig()
+        getBulkheadConfig(configProvider)
             .map(bulkheadConfig -> new SemaphoreBulkhead(instanceId + ".bulkhead", bulkheadConfig))
             .orElse(null);
   }
 
-  private void updateBulkhead() {
+  private void updateBulkhead(ConfigProvider configProvider) {
     Bulkhead bulkhead = this.bulkhead;
-    Optional<BulkheadConfig> newBulkheadConfig = getBulkheadConfig();
+    Optional<BulkheadConfig> newBulkheadConfig = getBulkheadConfig(configProvider);
     if (!Optional.ofNullable(bulkhead).map(Bulkhead::getBulkheadConfig).equals(newBulkheadConfig)) {
       if (bulkhead != null && newBulkheadConfig.isPresent()) {
         bulkhead.changeConfig(newBulkheadConfig.get());
       } else {
-        init();
+        init(configProvider);
       }
     }
   }
 
-  private Optional<BulkheadConfig> getBulkheadConfig() {
+  private Optional<BulkheadConfig> getBulkheadConfig(ConfigProvider configProvider) {
     boolean bulkheadEnabled =
         configProvider.<Boolean>getConfig(instanceId + ".bulkhead.enabled").orElse(true);
     if (!bulkheadEnabled) {

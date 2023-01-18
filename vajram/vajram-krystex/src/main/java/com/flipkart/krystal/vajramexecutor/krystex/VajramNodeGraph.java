@@ -4,6 +4,8 @@ import static com.flipkart.krystal.vajram.VajramLoader.loadVajramsFromClassPath;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import com.flipkart.krystal.config.ConfigProvider;
+import com.flipkart.krystal.config.MapConfigProvider;
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
@@ -13,7 +15,6 @@ import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.ResolverCommand;
 import com.flipkart.krystal.krystex.ResolverDefinition;
 import com.flipkart.krystal.krystex.ResolverLogicDefinition;
-import com.flipkart.krystal.krystex.config.ConfigProvider;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
@@ -44,6 +45,7 @@ import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
+import com.flipkart.krystal.vajram.tags.VajramTags;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -57,6 +59,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Getter;
 
 /** The execution graph encompassing all registered vajrams. */
@@ -75,9 +79,11 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   private final ImmutableMap<
           VajramID, Supplier<InputModulator<InputValuesAdaptor, InputValuesAdaptor>>>
       inputModulators;
+
   private final ConfigProvider configProvider;
   /** LogicDecorator Id -> LogicDecoratorConfig */
-  private final ImmutableMap<String, MainLogicDecoratorConfig> sessionScopedDecoratorConfigs;
+  private final ImmutableMap<String, MainLogicDecoratorConfig>
+      sessionScopedDecoratorConfigs;
   /** LogicDecorator type -> {Decorator instanceId -> LogicDecorator} */
   private final Map<String, Map<String, MainLogicDecorator>> sessionScopedMainDecorators =
       new LinkedHashMap<>();
@@ -96,13 +102,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     LogicDefinitionRegistry logicDefinitionRegistry = new LogicDefinitionRegistry();
     this.nodeDefinitionRegistry = new NodeDefinitionRegistry(logicDefinitionRegistry);
     this.logicRegistry = new DecoratedLogicDefinitionRegistry(logicDefinitionRegistry);
-    this.configProvider =
-        new ConfigProvider() {
-          @Override
-          public <T> Optional<T> getConfig(String key) {
-            return Optional.empty();
-          }
-        };
+    this.configProvider = new MapConfigProvider(ImmutableMap.of());
     for (String packagePrefix : packagePrefixes) {
       loadVajramsFromClassPath(packagePrefix).forEach(this::registerVajram);
     }
@@ -159,7 +159,8 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     ImmutableMap<String, NodeId> depNameToProviderNode =
         createNodeDefinitionsForDependencies(vajramDefinition);
 
-    MainLogicDefinition<?> vajramLogicMainLogicDefinition = createVajramNodeLogic(vajramDefinition);
+    MainLogicDefinition<?> vajramLogicMainLogicDefinition =
+        createVajramNodeLogic(nodeId, vajramDefinition);
 
     NodeDefinition nodeDefinition =
         nodeDefinitionRegistry.newNodeDefinition(
@@ -177,7 +178,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
             .getOrDefault(
                 "service_api",
                 new LogicTag("service_api", vajramDefinition.getVajram().getId().vajramId()));
-    return new Resilience4JBulkhead(logicTag.tagKey() + "." + logicTag.tagValue(), configProvider);
+    return new Resilience4JBulkhead(logicTag.tagKey() + "." + logicTag.tagValue());
   }
 
   private InputResolverCreationResult createNodeLogicsForInputResolvers(
@@ -229,23 +230,6 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     return new InputResolverCreationResult(resolverDefinitions);
   }
 
-  private ImmutableList<MainLogicDecorator> getSessionScopedMainDecorators(
-      VajramDefinition vajramDefinition) {
-    ImmutableMap<String, LogicTag> mainLogicTags = vajramDefinition.getMainLogicTags();
-    List<MainLogicDecorator> list = new ArrayList<>();
-    sessionScopedDecoratorConfigs.forEach(
-        (decoratorId, decoratorConfig) -> {
-          if (decoratorConfig.shouldDecorate().test(mainLogicTags)) {
-            String instanceId = decoratorConfig.instanceIdGenerator().apply(mainLogicTags);
-            list.add(
-                sessionScopedMainDecorators
-                    .computeIfAbsent(decoratorConfig.decoratorType(), k -> new LinkedHashMap<>())
-                    .computeIfAbsent(instanceId, k -> decoratorConfig.factory().apply(k)));
-          }
-        });
-    return ImmutableList.copyOf(list);
-  }
-
   private void validateMandatory(
       VajramID vajramID, Inputs inputs, ImmutableCollection<VajramInputDefinition> requiredInputs) {
     Iterable<VajramInputDefinition> mandatoryInputs =
@@ -272,7 +256,8 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     throw new MandatoryInputsMissingException(vajramID, missingMandatoryValues);
   }
 
-  private MainLogicDefinition<?> createVajramNodeLogic(VajramDefinition vajramDefinition) {
+  private MainLogicDefinition<?> createVajramNodeLogic(
+      NodeId nodeId, VajramDefinition vajramDefinition) {
     VajramID vajramId = vajramDefinition.getVajram().getId();
     ImmutableCollection<VajramInputDefinition> inputDefinitions =
         vajramDefinition.getVajram().getInputDefinitions();
@@ -315,25 +300,44 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     } else {
       throw new UnsupportedOperationException();
     }
-    getSessionScopedMainDecorators(vajramDefinition)
+    sessionScopedDecoratorConfigs
+        .values()
         .forEach(vajramLogic::registerSessionScopedLogicDecorator);
     return vajramLogic;
   }
 
   private <T> void enableInputModulation(
-      IOLogicDefinition<T> nodeDefinition, IOVajram<?> ioVajram) {
+      IOLogicDefinition<T> logicDefinition, IOVajram<?> ioVajram) {
     Supplier<InputModulator<InputValuesAdaptor, InputValuesAdaptor>> inputModulationDecorator =
         inputModulators.get(ioVajram.getId());
     if (inputModulationDecorator != null) {
-      nodeDefinition.registerRequestScopedDecorator(
+      logicDefinition.registerRequestScopedDecorator(
           new MainLogicDecoratorConfig(
               InputModulationDecorator.DECORATOR_TYPE,
-              logicTags ->
+              nodeExecutionContext ->
                   ioVajram.getInputDefinitions().stream()
                       .filter(inputDefinition -> inputDefinition instanceof Input<?>)
                       .map(inputDefinition -> (Input<?>) inputDefinition)
                       .anyMatch(Input::needsModulation),
-              logicTags -> ioVajram.getId().vajramId(),
+              nodeExecutionContext ->
+                  Stream.concat(
+                          nodeExecutionContext.dependants().stream(),
+                          Stream.of(nodeExecutionContext.nodeId()))
+                      .map(n -> nodeExecutionContext.nodeDefinitionRegistry().get(n))
+                      .map(NodeDefinition::mainLogicNode)
+                      .map(
+                          logicId ->
+                              nodeExecutionContext
+                                  .nodeDefinitionRegistry()
+                                  .logicDefinitionRegistry()
+                                  .getMain(logicId))
+                      .map(MainLogicDefinition::logicTags)
+                      .map(
+                          logicTags ->
+                              Optional.ofNullable(logicTags.get(VajramTags.VAJRAM_ID))
+                                  .orElseThrow())
+                      .map(LogicTag::tagValue)
+                      .collect(Collectors.joining(".")),
               instanceId -> {
                 @SuppressWarnings("unchecked")
                 var inputsConvertor =
@@ -417,7 +421,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   }
 
   public static final class Builder {
-    private LinkedHashSet<String> packagePrefixes = new LinkedHashSet<>();
+    private final LinkedHashSet<String> packagePrefixes = new LinkedHashSet<>();
     private final Map<String, MainLogicDecoratorConfig> sessionScopedDecoratorConfigs =
         new HashMap<>();
     private final Map<VajramID, Supplier<InputModulator<InputValuesAdaptor, InputValuesAdaptor>>>
@@ -430,7 +434,8 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
       return this;
     }
 
-    public Builder decorateVajramLogicForSession(MainLogicDecoratorConfig logicDecoratorConfig) {
+    public Builder decorateVajramLogicForSession(
+        MainLogicDecoratorConfig logicDecoratorConfig) {
       if (sessionScopedDecoratorConfigs.putIfAbsent(
               logicDecoratorConfig.decoratorType(), logicDecoratorConfig)
           != null) {

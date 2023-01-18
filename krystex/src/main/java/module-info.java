@@ -4,7 +4,6 @@ module flipkart.krystal.krystex {
   exports com.flipkart.krystal.krystex.node to
       flipkart.krystal.vajramexecutor.krystex;
   exports com.flipkart.krystal.krystex.decorators;
-  exports com.flipkart.krystal.krystex.config;
   exports com.flipkart.krystal.krystex.decoration to flipkart.krystal.vajramexecutor.krystex;
 
   requires com.google.common;

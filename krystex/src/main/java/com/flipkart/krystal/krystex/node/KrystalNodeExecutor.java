@@ -8,11 +8,16 @@ import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.RequestId;
 import com.flipkart.krystal.krystex.commands.ExecuteWithAllInputs;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
+import com.flipkart.krystal.krystex.commands.SkipNode;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.decoration.NodeExecutionContext;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -47,17 +52,23 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   private ImmutableMap<String, MainLogicDecorator> getRequestScopedDecorators(
-      NodeLogicId nodeLogicId) {
+      NodeDefinition nodeDefinition, List<NodeId> dependants) {
     MainLogicDefinition<?> mainLogicDefinition =
-        nodeDefinitionRegistry.logicDefinitionRegistry().getMain(nodeLogicId);
+        nodeDefinitionRegistry.logicDefinitionRegistry().getMain(nodeDefinition.mainLogicNode());
     Map<String, MainLogicDecorator> decorators = new LinkedHashMap<>();
     mainLogicDefinition
         .getRequestScopedLogicDecoratorConfigs()
         .forEach(
             (s, decoratorConfig) -> {
-              if (decoratorConfig.shouldDecorate().test(mainLogicDefinition.logicTags())) {
+              NodeExecutionContext nodeExecutionContext =
+                  new NodeExecutionContext(
+                      nodeDefinition.nodeId(),
+                      mainLogicDefinition.logicTags(),
+                      dependants,
+                      nodeDefinitionRegistry);
+              if (decoratorConfig.shouldDecorate().test(nodeExecutionContext)) {
                 String instanceId =
-                    decoratorConfig.instanceIdGenerator().apply(mainLogicDefinition.logicTags());
+                    decoratorConfig.instanceIdGenerator().apply(nodeExecutionContext);
                 decorators.put(
                     s,
                     requestScopedMainDecorators
@@ -79,18 +90,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     return (CompletableFuture<T>) executeNode(nodeId, inputs, new RequestId(requestId));
   }
 
-  CompletableFuture<?> executeNode(NodeId nodeId, Inputs inputs, RequestId requestId) {
-    NodeResponseFuture responseFuture;
-    if (inputs.values().isEmpty()) {
-      responseFuture =
-          this.enqueueCommand(
-              new ExecuteWithAllInputs(nodeId, Inputs.empty(), requestId));
-    } else {
-      ExecuteWithAllInputs executeWithInputs =
-          new ExecuteWithAllInputs(nodeId, inputs, requestId);
-      responseFuture = enqueueCommand(executeWithInputs);
-    }
-    return responseFuture
+  private CompletableFuture<?> executeNode(NodeId nodeId, Inputs inputs, RequestId requestId) {
+    return enqueueCommand(new ExecuteWithAllInputs(nodeId, inputs, requestId, ImmutableList.of()))
         .responseFuture()
         .thenApply(
             valueOrError -> {
@@ -132,11 +133,19 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
         nodeRegistry.createIfAbsent(
             nodeId,
             n -> {
+              List<NodeId> dependants;
+              if (nodeCommand instanceof ExecuteWithAllInputs executeWithAllInputs) {
+                dependants = executeWithAllInputs.dependants();
+              } else if (nodeCommand instanceof SkipNode) {
+                dependants = Collections.emptyList();
+              } else {
+                throw new IllegalStateException();
+              }
               NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(n);
               return new Node(
                   nodeDefinition,
                   this,
-                  getRequestScopedDecorators(nodeDefinition.mainLogicNode()),
+                  getRequestScopedDecorators(nodeDefinition, dependants),
                   logicDecorationOrdering);
             });
     return node.executeCommand(nodeCommand);

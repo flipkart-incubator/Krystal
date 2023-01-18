@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.modulation;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
@@ -13,10 +14,15 @@ import java.util.function.Consumer;
 
 public final class Batcher implements InputModulator<InputValuesAdaptor, InputValuesAdaptor> {
 
-  private final List<Consumer<ImmutableList<ModulatedInput<InputValuesAdaptor, InputValuesAdaptor>>>> terminationListeners =
-      new ArrayList<>();
-  private final Map<InputValuesAdaptor, List<InputValuesAdaptor>> unModulatedRequests = new HashMap<>();
-  private final int minBatchSize;
+  private static final int DEFAULT_BATCH_SIZE = 1;
+  private final List<
+          Consumer<ImmutableList<ModulatedInput<InputValuesAdaptor, InputValuesAdaptor>>>>
+      terminationListeners = new ArrayList<>();
+  private final Map<InputValuesAdaptor, List<InputValuesAdaptor>> unModulatedRequests =
+      new HashMap<>();
+  private int minBatchSize = DEFAULT_BATCH_SIZE;
+
+  public Batcher() {}
 
   public Batcher(int minBatchSize) {
     this.minBatchSize = minBatchSize;
@@ -54,7 +60,14 @@ public final class Batcher implements InputModulator<InputValuesAdaptor, InputVa
   }
 
   @Override
-  public void onTermination(Consumer<ImmutableList<ModulatedInput<InputValuesAdaptor, InputValuesAdaptor>>> listener) {
+  public void onTermination(
+      Consumer<ImmutableList<ModulatedInput<InputValuesAdaptor, InputValuesAdaptor>>> listener) {
     terminationListeners.add(listener);
+  }
+
+  @Override
+  public void onConfigUpdate(ConfigProvider configProvider) {
+    this.minBatchSize =
+        configProvider.<Integer>getConfig("min_batch_size").orElse(DEFAULT_BATCH_SIZE);
   }
 }
