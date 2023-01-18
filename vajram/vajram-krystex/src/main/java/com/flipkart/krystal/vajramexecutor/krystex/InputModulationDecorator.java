@@ -6,7 +6,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.MainLogic;
-import com.flipkart.krystal.krystex.MainLogicDecorator;
+import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;

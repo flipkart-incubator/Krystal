@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex;
+package com.flipkart.krystal.krystex.decoration;
 
 import com.flipkart.krystal.krystex.config.ConfigProvider;
 import com.flipkart.krystal.logic.LogicTag;

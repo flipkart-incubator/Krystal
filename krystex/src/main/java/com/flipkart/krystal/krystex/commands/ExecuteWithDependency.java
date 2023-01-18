@@ -1,12 +1,13 @@
 package com.flipkart.krystal.krystex.commands;
 
+import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.krystex.MainLogicChain;
 import com.flipkart.krystal.krystex.RequestId;
-import com.flipkart.krystal.krystex.ResolverCommand.SkipDependency;
 import com.flipkart.krystal.krystex.node.NodeId;
 
-public record SkipNode(
+public record ExecuteWithDependency(
     NodeId nodeId,
-    RequestId requestId,
-    SkipDependency skipDependencyCommand)
+    String dependencyName,
+    Results<Object> results,
+    RequestId requestId)
     implements NodeCommand {}

@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex;
+package com.flipkart.krystal.krystex.decoration;
 
 import static java.util.Comparator.comparingInt;
 

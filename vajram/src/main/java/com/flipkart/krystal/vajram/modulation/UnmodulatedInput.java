@@ -15,9 +15,9 @@ public record UnmodulatedInput<
 
   @Override
   public Inputs toInputValues() {
-    Map<String, InputValue<?>> imValues = inputsNeedingModulation.toInputValues().values();
-    Map<String, InputValue<?>> ciValues = commonInputs.toInputValues().values();
-    Map<String, InputValue<?>> merged = new LinkedHashMap<>(imValues);
+    Map<String, InputValue<Object>> imValues = inputsNeedingModulation.toInputValues().values();
+    Map<String, InputValue<Object>> ciValues = commonInputs.toInputValues().values();
+    LinkedHashMap<String, InputValue<Object>> merged = new LinkedHashMap<>(imValues);
     merged.putAll(ciValues);
     return new Inputs(merged);
   }

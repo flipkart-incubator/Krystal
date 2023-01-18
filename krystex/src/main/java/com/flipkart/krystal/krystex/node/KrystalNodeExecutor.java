@@ -2,23 +2,19 @@ package com.flipkart.krystal.krystex.node;
 
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 
-import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.KrystalExecutor;
-import com.flipkart.krystal.krystex.LogicDecorationOrdering;
-import com.flipkart.krystal.krystex.MainLogicDecorator;
+import com.flipkart.krystal.krystex.MainLogicChain;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.RequestId;
-import com.flipkart.krystal.krystex.commands.ExecuteInputless;
-import com.flipkart.krystal.krystex.commands.ExecuteWithInput;
+import com.flipkart.krystal.krystex.commands.ExecuteWithAllInputs;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
+import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
+import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -51,7 +47,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     this.requestId = new RequestId(requestId);
   }
 
-  private <T> ImmutableMap<String, MainLogicDecorator> getRequestScopedDecorators(
+  private ImmutableMap<String, MainLogicDecorator> getRequestScopedDecorators(
       NodeLogicId nodeLogicId) {
     MainLogicDefinition<?> mainLogicDefinition =
         nodeDefinitionRegistry.logicDefinitionRegistry().getMain(nodeLogicId);
@@ -76,29 +72,38 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   @Override
   public <T> CompletableFuture<T> executeNode(NodeId nodeId, Inputs inputs) {
     //noinspection unchecked
-    return (CompletableFuture<T>) executeNode(nodeId, inputs, requestId).responseFuture();
+    return (CompletableFuture<T>) executeNode(nodeId, inputs, requestId);
   }
 
   public <T> CompletableFuture<T> executeNode(NodeId nodeId, Inputs inputs, String requestId) {
     //noinspection unchecked
-    return (CompletableFuture<T>)
-        executeNode(nodeId, inputs, new RequestId(requestId)).responseFuture();
+    return (CompletableFuture<T>) executeNode(nodeId, inputs, new RequestId(requestId));
   }
 
-  NodeResponseFuture executeNode(NodeId nodeId, Inputs inputs, RequestId requestId) {
+  CompletableFuture<?> executeNode(NodeId nodeId, Inputs inputs, RequestId requestId) {
+    NodeResponseFuture responseFuture;
     if (inputs.values().isEmpty()) {
-      return this.enqueueCommand(new ExecuteInputless(nodeId, requestId));
+      responseFuture =
+          this.enqueueCommand(
+              new ExecuteWithAllInputs(nodeId, Inputs.empty(), requestId));
+    } else {
+      ExecuteWithAllInputs executeWithInputs =
+          new ExecuteWithAllInputs(nodeId, inputs, requestId);
+      responseFuture = enqueueCommand(executeWithInputs);
     }
-    List<NodeResponseFuture> list = new ArrayList<>();
-    for (Entry<String, InputValue<?>> e : inputs.values().entrySet()) {
-      ExecuteWithInput executeWithInput =
-          new ExecuteWithInput(nodeId, e.getKey(), e.getValue(), requestId);
-      list.add(enqueueCommand(executeWithInput));
-    }
-    return list.stream().findAny().orElseThrow();
+    return responseFuture
+        .responseFuture()
+        .thenApply(
+            valueOrError -> {
+              if (valueOrError.error().isPresent()) {
+                throw new RuntimeException(valueOrError.error().get());
+              } else {
+                return valueOrError.value().orElse(null);
+              }
+            });
   }
 
-  public NodeResponseFuture enqueueCommand(NodeCommand nodeCommand) {
+  NodeResponseFuture enqueueCommand(NodeCommand nodeCommand) {
     NodeResponseFuture result = new NodeResponseFuture();
     CompletableFuture<NodeResponseFuture> nodeResponseFutureCompletableFuture =
         supplyAsync(() -> execute(nodeCommand), commandQueue);
@@ -109,9 +114,6 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                 .responseFuture()
                 .whenComplete(
                     (o, t) -> {
-                      result
-                          .inputsFuture()
-                          .complete(nodeResponseFuture.inputsFuture().getNow(null));
                       if (t == null) {
                         result.responseFuture().complete(o);
                       } else {
