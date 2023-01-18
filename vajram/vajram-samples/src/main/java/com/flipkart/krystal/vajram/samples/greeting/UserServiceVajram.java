@@ -4,6 +4,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import com.flipkart.krystal.vajram.IOVajram;
+import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajram.samples.greeting.UserServiceInputUtil.CommonInputs;
@@ -13,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-
+@VajramDef(UserServiceVajram.ID)
 public abstract class UserServiceVajram extends IOVajram<UserInfo> {
 
   public static final String ID = "userServiceVajram";

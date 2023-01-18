@@ -94,16 +94,22 @@ public class VajramModelsCodeGen {
           new File(vajramJavaDir, vajramCodeGenerator.getRequestClassName() + ".java");
       Files.writeString(
           vajramImplSourceFile.toPath(), vajramRequestJavaCode, CREATE, TRUNCATE_EXISTING, WRITE);
-          }
+    }
   }
 
+    // TODO :
+    // 1. Input dependency code gen - done
+    // 2. Resolve method code gen
+    // 3. Vajram logic code gen
+    //      3.1. Compute vajram execute
+    //      3.2. IO vajram executeBlocking
   private void codeGenVajramImpl(VajramInputFile vajramInputFile) throws IOException {
       VajramCodeGenerator vajramCodeGenerator = new VajramCodeGenerator(vajramInputFile);
       File vajramJavaDir =
               Paths.get(javaDir.toString(), vajramCodeGenerator.getPackageName().split("\\.")).toFile();
       if (vajramJavaDir.isDirectory() || vajramJavaDir.mkdirs()) {
                     String vajramImplCode = vajramCodeGenerator.codeGenVajramImpl();
-          File vajramImplSourceFile = new File(vajramJavaDir, vajramCodeGenerator.getVajramImplClassName());
+          File vajramImplSourceFile = new File(vajramJavaDir, vajramCodeGenerator.getVajramImplClassName()+ ".java");
           Files.writeString(
                   vajramImplSourceFile.toPath(), vajramImplCode, CREATE, TRUNCATE_EXISTING, WRITE);
       }
@@ -120,18 +126,6 @@ public class VajramModelsCodeGen {
       Files.writeString(
           vajramImplSourceFile.toPath(), vajramRequestJavaCode, CREATE, TRUNCATE_EXISTING, WRITE);
     }
-  }
-
-
-  // TODO :
-    // 1. Input dependency code gen
-    // 2. Resolve method code gen
-    // 3. Vajram logic code gen
-    //      3.1. Compute vajram execute
-    //      3.2. IO vajram executeBlocking
-  private void codeGenVajramImpl() {
-
-
   }
 
   ImmutableList<VajramInputFile> getInputDefinitions() throws Exception {
