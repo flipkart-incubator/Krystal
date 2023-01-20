@@ -11,12 +11,8 @@ public interface ResolverCommand {
     return new SkipDependency(reason);
   }
 
-  static ExecuteDependency executeWith(Inputs input) {
-    return new ExecuteDependency(input);
-  }
-
-  static MultiExecuteDependency multiExecuteWith(ImmutableList<Inputs> inputs) {
-    return new MultiExecuteDependency(inputs);
+  static ExecuteDependency multiExecuteWith(ImmutableList<Inputs> inputs) {
+    return new ExecuteDependency(inputs);
   }
 
   record SkipDependency(String reason) implements ResolverCommand {
@@ -25,13 +21,7 @@ public interface ResolverCommand {
     }
   }
 
-  record ExecuteDependency(Inputs input) implements ResolverCommand {
-    public ImmutableList<Inputs> getInputs() {
-      return ImmutableList.of(input);
-    }
-  }
-
-  record MultiExecuteDependency(ImmutableList<Inputs> inputs) implements ResolverCommand {
+  record ExecuteDependency(ImmutableList<Inputs> inputs) implements ResolverCommand {
     public ImmutableList<Inputs> getInputs() {
       return inputs;
     }

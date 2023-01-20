@@ -42,6 +42,13 @@ public record Inputs(Map<String, InputValue<Object>> values) {
     throw new IllegalArgumentException();
   }
 
+  public void mergeFrom(Inputs inputs) {
+    if (inputs == null) {
+      return;
+    }
+    values().putAll(inputs.values());
+  }
+
   public static Inputs empty() {
     return EMPTY;
   }

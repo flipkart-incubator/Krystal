@@ -6,6 +6,7 @@ import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Ad
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.Divider.divide;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.samples.Util;
@@ -15,14 +16,13 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class FormulaTest {
 
-  public static final int LOOP_COUNT = 60_000;
+  public static final int LOOP_COUNT = 50_000;
   private VajramNodeGraph graph;
 
   @BeforeEach
@@ -30,28 +30,32 @@ class FormulaTest {
     graph = loadFromClasspath("com.flipkart.krystal.vajram.samples.benchmarks.calculator");
   }
 
-//  @Test
+  @Test
+  void formula_success() throws ExecutionException, InterruptedException {
+    try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
+        graph.createExecutor(new FormulaRequestContext(100, 20, 5, "formulaTest"))) {
+      assertThat(executeVajram(krystexVajramExecutor, 100).get()).isEqualTo(4);
+    }
+  }
+
+  //    @Test
   void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
     long javaNativeTime = javaMethodBenchmark(FormulaTest::syncFormula, LOOP_COUNT);
     long javaFuturesTime = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, LOOP_COUNT);
     try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
         graph.createExecutor(new FormulaRequestContext(100, 20, 5, "formulaTest"))) {
+      //noinspection unchecked
       CompletableFuture<Integer>[] futures = new CompletableFuture[LOOP_COUNT];
       krystexVajramExecutor.execute(
           vajramID(Formula.ID),
           rc -> FormulaRequest.builder().a(LOOP_COUNT).p(rc.p).q(rc.q).build(),
-          "formulaTest" );
-//      Thread.sleep(15000);
+          "formulaTest");
       long startTime = System.nanoTime();
       for (int value = 0; value < LOOP_COUNT; value++) {
-        CompletableFuture<Integer> result =
-            krystexVajramExecutor.execute(
-                vajramID(Formula.ID),
-                rc -> FormulaRequest.builder().a(LOOP_COUNT).p(rc.p).q(rc.q).build(),
-                "formulaTest" + value);
+        CompletableFuture<Integer> result = executeVajram(krystexVajramExecutor, value);
         futures[value] = result;
       }
-      allOf(futures).get(5, TimeUnit.HOURS);
+      allOf(futures).join();
       long vajramTime = System.nanoTime() - startTime;
       System.out.printf("vajram: %,d ns for %,d requests", vajramTime, LOOP_COUNT);
       System.out.println();
@@ -64,6 +68,14 @@ class FormulaTest {
           (1.0 * vajramTime - javaFuturesTime) / LOOP_COUNT);
       System.out.println();
     }
+  }
+
+  private static CompletableFuture<Integer> executeVajram(
+      KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor, int value) {
+    return krystexVajramExecutor.execute(
+        vajramID(Formula.ID),
+        rc -> FormulaRequest.builder().a(value).p(rc.p).q(rc.q).build(),
+        "formulaTest" + value);
   }
 
   private static void syncFormula(Integer value) {
