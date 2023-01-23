@@ -39,7 +39,9 @@ class KrystalNodeExecutorTest {
     this.nodeDefinitionRegistry = new NodeDefinitionRegistry(logicDefinitionRegistry);
     this.krystalNodeExecutor =
         new KrystalNodeExecutor(
-            nodeDefinitionRegistry, new LogicDecorationOrdering(ImmutableSet.of()), "test");
+            nodeDefinitionRegistry,
+            new LogicDecorationOrdering(ImmutableSet.of()),
+            "test");
   }
 
   @AfterEach

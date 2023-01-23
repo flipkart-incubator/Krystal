@@ -33,41 +33,47 @@ class FormulaTest {
   @Test
   void formula_success() throws ExecutionException, InterruptedException {
     try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
-        graph.createExecutor(new FormulaRequestContext(100, 20, 5, "formulaTest"))) {
+        graph.createExecutor(
+            new FormulaRequestContext(100, 20, 5, "formulaTest")
+        )) {
       assertThat(executeVajram(krystexVajramExecutor, 100).get()).isEqualTo(4);
     }
   }
 
-  //    @Test
+//  @Test
   void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
     long javaNativeTime = javaMethodBenchmark(FormulaTest::syncFormula, LOOP_COUNT);
     long javaFuturesTime = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, LOOP_COUNT);
-    try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
-        graph.createExecutor(new FormulaRequestContext(100, 20, 5, "formulaTest"))) {
-      //noinspection unchecked
-      CompletableFuture<Integer>[] futures = new CompletableFuture[LOOP_COUNT];
-      krystexVajramExecutor.execute(
-          vajramID(Formula.ID),
-          rc -> FormulaRequest.builder().a(LOOP_COUNT).p(rc.p).q(rc.q).build(),
-          "formulaTest");
-      long startTime = System.nanoTime();
-      for (int value = 0; value < LOOP_COUNT; value++) {
-        CompletableFuture<Integer> result = executeVajram(krystexVajramExecutor, value);
-        futures[value] = result;
+    //noinspection unchecked
+    CompletableFuture<Integer>[] futures = new CompletableFuture[LOOP_COUNT];
+    long startTime = System.nanoTime();
+    for (int value = 0; value < LOOP_COUNT; value++) {
+      try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
+          graph.createExecutor(
+              new FormulaRequestContext(100, 20, 5, "formulaTest")
+          )) {
+        futures[value] = executeVajram(krystexVajramExecutor, value);
       }
-      allOf(futures).join();
-      long vajramTime = System.nanoTime() - startTime;
-      System.out.printf("vajram: %,d ns for %,d requests", vajramTime, LOOP_COUNT);
-      System.out.println();
-      System.out.printf(
-          "Platform overhead over native code: %,.0f ns per request",
-          (1.0 * vajramTime - javaNativeTime) / LOOP_COUNT);
-      System.out.println();
-      System.out.printf(
-          "Platform overhead over reactive code: %,.0f ns per request",
-          (1.0 * vajramTime - javaFuturesTime) / LOOP_COUNT);
-      System.out.println();
     }
+    allOf(futures).join();
+    long vajramTime = System.nanoTime() - startTime;
+    allOf(futures)
+        .whenComplete(
+            (unused, throwable) -> {
+              for (CompletableFuture<Integer> future : futures) {
+                assertThat(future.getNow(0)).isEqualTo(4);
+              }
+            });
+    System.out.printf("vajram: %,d ns for %,d requests", vajramTime, LOOP_COUNT);
+    System.out.println();
+    System.out.printf(
+        "Platform overhead over native code: %,.0f ns per request",
+        (1.0 * vajramTime - javaNativeTime) / LOOP_COUNT);
+    System.out.println();
+    System.out.printf(
+        "Platform overhead over reactive code: %,.0f ns per request",
+        (1.0 * vajramTime - javaFuturesTime) / LOOP_COUNT);
+    System.out.println();
   }
 
   private static CompletableFuture<Integer> executeVajram(
