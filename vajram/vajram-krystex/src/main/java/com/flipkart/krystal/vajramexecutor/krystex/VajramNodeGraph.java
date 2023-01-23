@@ -82,8 +82,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
 
   private final ConfigProvider configProvider;
   /** LogicDecorator Id -> LogicDecoratorConfig */
-  private final ImmutableMap<String, MainLogicDecoratorConfig>
-      sessionScopedDecoratorConfigs;
+  private final ImmutableMap<String, MainLogicDecoratorConfig> sessionScopedDecoratorConfigs;
   /** LogicDecorator type -> {Decorator instanceId -> LogicDecorator} */
   private final Map<String, Map<String, MainLogicDecorator>> sessionScopedMainDecorators =
       new LinkedHashMap<>();
@@ -111,7 +110,8 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   @Override
   public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
       C requestContext) {
-    return new KrystexVajramExecutor<>(this, logicDecorationOrdering, requestContext);
+    return new KrystexVajramExecutor<>(
+        this, logicDecorationOrdering, requestContext);
   }
 
   /**
@@ -434,8 +434,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
       return this;
     }
 
-    public Builder decorateVajramLogicForSession(
-        MainLogicDecoratorConfig logicDecoratorConfig) {
+    public Builder decorateVajramLogicForSession(MainLogicDecoratorConfig logicDecoratorConfig) {
       if (sessionScopedDecoratorConfigs.putIfAbsent(
               logicDecoratorConfig.decoratorType(), logicDecoratorConfig)
           != null) {

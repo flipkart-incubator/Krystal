@@ -423,7 +423,7 @@ public class Node {
           new Inputs(
               new LinkedHashMap<>(
                   dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of())));
-      allInputsAndDependencies.mergeFrom(nonDependencyInput);
+      allInputsAndDependencies = Inputs.union(allInputsAndDependencies, nonDependencyInput);
       resultFuture =
           executeDecoratedMainLogic(allInputsAndDependencies, mainLogicDefinition, requestId);
       resultsCache.put(nonDependencyInput, resultFuture);

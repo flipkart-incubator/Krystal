@@ -1,6 +1,7 @@
 package com.flipkart.krystal.data;
 
 import com.google.common.collect.ImmutableMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -42,11 +43,10 @@ public record Inputs(Map<String, InputValue<Object>> values) {
     throw new IllegalArgumentException();
   }
 
-  public void mergeFrom(Inputs inputs) {
-    if (inputs == null) {
-      return;
-    }
-    values().putAll(inputs.values());
+  public static Inputs union(Inputs inputs1, Inputs inputs2) {
+    Map<String, InputValue<Object>> v = new LinkedHashMap<>(inputs1.values());
+    v.putAll(inputs2.values());
+    return new Inputs(v);
   }
 
   public static Inputs empty() {
