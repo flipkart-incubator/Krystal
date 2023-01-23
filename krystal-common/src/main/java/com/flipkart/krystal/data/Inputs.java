@@ -5,7 +5,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
-public record Inputs(Map<String, InputValue<Object>> values) {
+public record Inputs(ImmutableMap<String, InputValue<Object>> values) {
+
+  public Inputs(Map<String, InputValue<Object>> values) {
+    this(ImmutableMap.copyOf(values));
+  }
 
   private static final Inputs EMPTY = new Inputs(ImmutableMap.of());
 

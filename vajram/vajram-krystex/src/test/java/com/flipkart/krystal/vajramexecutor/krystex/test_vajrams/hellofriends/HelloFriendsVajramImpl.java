@@ -48,21 +48,21 @@ public class HelloFriendsVajramImpl extends HelloFriendsVajram {
   public DependencyCommand<Inputs> resolveInputOfDependency(
       String dependency, ImmutableSet<String> resolvableInputs, Inputs inputs) {
     String userId = inputs.getInputValueOrThrow("user_id");
-    Optional<Integer> numberOfFriends = inputs.getInputValueOpt("number_of_friends");
     switch (dependency) {
       case USER_INFOS:
-        {
-          if (Set.of("user_id").equals(resolvableInputs)) {
-            return DependencyCommand.executeWith(
+      {
+        if (Set.of("user_id").equals(resolvableInputs)) {
+          return DependencyCommand.executeWith(
                 new Inputs(
                     ImmutableMap.of(
                         "user_id", ValueOrError.withValue(userIdForUserService(userId)))));
-          }
         }
+      }
       case FRIEND_INFOS:
-        {
-          if (Set.of("user_id").equals(resolvableInputs)) {
-            if (numberOfFriends.isPresent()) {
+      {
+        if (Set.of("user_id").equals(resolvableInputs)) {
+          Optional<Integer> numberOfFriends = inputs.getInputValueOpt("number_of_friends");
+          if (numberOfFriends.isPresent()) {
               return DependencyCommand.multiExecuteWith(
                   friendIdsForUserService(userId, numberOfFriends.get()).stream()
                       .map(s -> new Inputs(ImmutableMap.of("user_id", ValueOrError.withValue(s))))

@@ -180,8 +180,12 @@ public class Node {
     Map<String, Results<Object>> allDependencies =
         dependencyValuesCollector.computeIfAbsent(requestId, k -> new LinkedHashMap<>());
     ImmutableSet<String> allInputNames = mainLogicNodeDefinition.inputNames();
-    if (allInputs.keySet().stream().mapToLong(Collection::size).sum() == 0
-        && allDependencies.keySet().isEmpty()) {
+    Set<String> availableInputs =
+        Stream.concat(
+                allInputs.keySet().stream().flatMap(Collection::stream),
+                allDependencies.keySet().stream())
+            .collect(Collectors.toSet());
+    if (availableInputs.isEmpty()) {
       if (allInputNames.isEmpty()) {
         return true;
       } else if (nodeDefinition.resolverDefinitions().isEmpty()
@@ -199,6 +203,9 @@ public class Node {
                   .stream()
                   .filter(
                       resolverDefinition ->
+                          availableInputs.containsAll(resolverDefinition.boundFrom()))
+                  .filter(
+                      resolverDefinition ->
                           !nodeResults.containsKey(resolverDefinition.resolverNodeLogicId()))
               ::iterator;
     } else {
@@ -209,6 +216,9 @@ public class Node {
                           resolverDefinitionsByInput
                               .getOrDefault(Optional.ofNullable(input), ImmutableList.of())
                               .stream()
+                              .filter(
+                                  resolverDefinition ->
+                                      availableInputs.containsAll(resolverDefinition.boundFrom()))
                               .filter(
                                   resolverDefinition ->
                                       !nodeResults.containsKey(
@@ -281,15 +291,43 @@ public class Node {
       // the size of the fan-out triggered by this resolver
       ImmutableList<Inputs> inputList = resolverCommand.getInputs();
       long executionsInProgress = dependencyNodeExecutions.executionCounter().longValue();
+      Map<RequestId, Inputs> oldInputs = new LinkedHashMap<>();
+      for (int i = 0; i < executionsInProgress; i++) {
+        RequestId rid = requestId.append("%s[%s]".formatted(dependencyName, i));
+        oldInputs.put(
+            rid,
+            new Inputs(
+                dependencyNodeExecutions
+                    .individualCallInputs()
+                    .getOrDefault(rid, new Inputs(new LinkedHashMap<>()))
+                    .values()));
+      }
+
+      long batchSize = max(executionsInProgress, 1);
       int requestCounter = 0;
       for (int j = 0; j < inputList.size(); j++) {
-        for (int i = requestCounter; i < requestCounter + max(executionsInProgress, 1); i++) {
+        Inputs inputs = inputList.get(j);
+        for (int i = 0; i < batchSize; i++) {
           RequestId dependencyRequestId =
-              requestId.append("%s[%s]".formatted(dependencyName, requestCounter + i));
+              requestId.append("%s[%s]".formatted(dependencyName, j * batchSize + i));
+          RequestId inProgressRequestId;
+          if (executionsInProgress > 0) {
+            inProgressRequestId = requestId.append("%s[%s]".formatted(dependencyName, i));
+          } else {
+            inProgressRequestId = dependencyRequestId;
+          }
+          Inputs oldInput =
+              oldInputs.getOrDefault(inProgressRequestId, new Inputs(new LinkedHashMap<>()));
           if (requestCounter >= executionsInProgress) {
             dependencyNodeExecutions.executionCounter().increment();
           }
-          Inputs inputs = inputList.get(j);
+          Inputs newInputs;
+          if (j == 0) {
+            newInputs = inputs;
+          } else {
+            newInputs = Inputs.union(oldInput, inputs);
+          }
+          dependencyNodeExecutions.individualCallInputs().put(inProgressRequestId, newInputs);
           dependencyNodeExecutions
               .individualCallResponses()
               .putIfAbsent(
@@ -297,13 +335,13 @@ public class Node {
                   krystalNodeExecutor.enqueueCommand(
                       new ExecuteWithInputs(
                           depNodeId,
-                          resolverDefinition.resolvedInputNames(),
-                          inputs,
+                          newInputs.values().keySet(),
+                          newInputs,
                           dependencyRequestId,
                           Stream.concat(dependants.stream(), Stream.of(nodeId))
                               .collect(toImmutableList()))));
         }
-        requestCounter += max(executionsInProgress, 1);
+        requestCounter += batchSize;
       }
       if (resolverDefinitionsByDependencies
           .get(dependencyName)
@@ -441,7 +479,7 @@ public class Node {
             .putIfAbsent(inputNames, inputs)
         != null) {
       throw new DuplicateInputForRequestException(
-          "Duplicate input data for a request %s".formatted(requestId));
+          "Duplicate data for inputs %s for request %s".formatted(inputNames, requestId));
     }
   }
 
@@ -490,10 +528,11 @@ public class Node {
   private record DependencyNodeExecutions(
       LongAdder executionCounter,
       List<ResolverDefinition> executedResolvers,
+      Map<RequestId, Inputs> individualCallInputs,
       Map<RequestId, CompletableFuture<NodeResponse>> individualCallResponses) {
 
     public DependencyNodeExecutions() {
-      this(new LongAdder(), new ArrayList<>(), new LinkedHashMap<>());
+      this(new LongAdder(), new ArrayList<>(), new LinkedHashMap<>(), new LinkedHashMap<>());
     }
   }
 }
