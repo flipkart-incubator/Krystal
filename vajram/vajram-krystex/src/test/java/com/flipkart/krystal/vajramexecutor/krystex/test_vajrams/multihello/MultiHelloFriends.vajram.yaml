@@ -1,0 +1,12 @@
+inputs:
+  - name: user_ids
+    mandatory: true
+    dataType: list
+    typeParameters:
+      dataType: string
+dependencies:
+  - name: hellos
+    mandatory: true
+    depType: vajram
+    vajramClass: com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsVajram
+    dataType: string
