@@ -28,8 +28,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -62,7 +62,7 @@ public class Node {
   private final Map<RequestId, Map<String, DependencyNodeExecutions>> dependencyExecutions =
       new LinkedHashMap<>();
 
-  private final Map<RequestId, Map<ImmutableSet<String>, Inputs>> inputsValueCollector =
+  private final Map<RequestId, Map<String, InputValue<Object>>> inputsValueCollector =
       new LinkedHashMap<>();
 
   private final Map<RequestId, Map<String, Results<Object>>> dependencyValuesCollector =
@@ -175,15 +175,13 @@ public class Node {
             .logicDefinitionRegistry()
             .getMain(nodeDefinition.mainLogicNode());
 
-    Map<ImmutableSet<String>, Inputs> allInputs =
+    Map<String, InputValue<Object>> allInputs =
         inputsValueCollector.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
     Map<String, Results<Object>> allDependencies =
         dependencyValuesCollector.computeIfAbsent(requestId, k -> new LinkedHashMap<>());
     ImmutableSet<String> allInputNames = mainLogicNodeDefinition.inputNames();
     Set<String> availableInputs =
-        Stream.concat(
-                allInputs.keySet().stream().flatMap(Collection::stream),
-                allDependencies.keySet().stream())
+        Stream.concat(allInputs.keySet().stream(), allDependencies.keySet().stream())
             .collect(Collectors.toSet());
     if (availableInputs.isEmpty()) {
       if (allInputNames.isEmpty()) {
@@ -240,9 +238,7 @@ public class Node {
     if (pendingResolverCount == 0) {
       ImmutableSet<String> inputNames = mainLogicNodeDefinition.inputNames();
       Set<String> collect =
-          inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()).keySet().stream()
-              .flatMap(Collection::stream)
-              .collect(Collectors.toSet());
+          new HashSet<>(inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
       collect.addAll(dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
       if (collect.containsAll(inputNames)) { // All the inputs of the logic node have data present
         executeMainLogic = true;
@@ -372,27 +368,20 @@ public class Node {
   }
 
   private Inputs getInputsForResolver(ResolverDefinition resolverDefinition, RequestId requestId) {
-    Map<ImmutableSet<String>, Inputs> allInputs =
+    Map<String, InputValue<Object>> allInputs =
         inputsValueCollector.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
     ImmutableSet<String> boundFrom = resolverDefinition.boundFrom();
-    Map<String, ImmutableSet<String>> inputMappedToInputSet = new LinkedHashMap<>();
-    for (ImmutableSet<String> strings : allInputs.keySet()) {
-      for (String string : strings) {
-        inputMappedToInputSet.put(string, strings);
-      }
-    }
     Map<String, InputValue<Object>> inputValues = new LinkedHashMap<>();
     for (String boundFromInput : boundFrom) {
-      ImmutableSet<String> set = inputMappedToInputSet.get(boundFromInput);
-      if (set == null) {
+      InputValue<Object> voe = allInputs.get(boundFromInput);
+      if (voe == null) {
         inputValues.put(
             boundFromInput,
             dependencyValuesCollector
                 .computeIfAbsent(requestId, k -> new LinkedHashMap<>())
                 .get(boundFromInput));
       } else {
-        Inputs inputs = allInputs.get(set);
-        inputValues.put(boundFromInput, inputs.values().get(boundFromInput));
+        inputValues.put(boundFromInput, voe);
       }
     }
     return new Inputs(inputValues);
@@ -446,15 +435,12 @@ public class Node {
     NodeLogicId mainLogicNode = nodeDefinition.mainLogicNode();
     MainLogicDefinition<Object> mainLogicDefinition =
         nodeDefinition.nodeDefinitionRegistry().logicDefinitionRegistry().getMain(mainLogicNode);
-    Map<ImmutableSet<String>, Inputs> allInputs =
+    Map<String, InputValue<Object>> allInputs =
         inputsValueCollector.getOrDefault(requestId, ImmutableMap.of());
+    Inputs nonDependencyInput = new Inputs(allInputs);
+
     // Retrieve existing result from cache if result for this set of inputs has already been
     // calculated
-    Map<String, InputValue<Object>> inputsMap = new LinkedHashMap<>();
-    allInputs.forEach(
-        (strings, inputs) -> strings.forEach(s -> inputsMap.put(s, inputs.values().get(s))));
-    Inputs nonDependencyInput = new Inputs(inputsMap);
-
     CompletableFuture<Object> resultFuture = resultsCache.get(nonDependencyInput);
     if (resultFuture == null) {
       Inputs allInputsAndDependencies =
@@ -474,12 +460,14 @@ public class Node {
 
   private void collectInputValues(
       RequestId requestId, ImmutableSet<String> inputNames, Inputs inputs) {
-    if (inputsValueCollector
-            .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
-            .putIfAbsent(inputNames, inputs)
-        != null) {
-      throw new DuplicateInputForRequestException(
-          "Duplicate data for inputs %s for request %s".formatted(inputNames, requestId));
+    for (String inputName : inputNames) {
+      if (inputsValueCollector
+              .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
+              .putIfAbsent(inputName, inputs.getInputValue(inputName))
+          != null) {
+        throw new DuplicateInputForRequestException(
+            "Duplicate data for inputs %s for request %s".formatted(inputNames, requestId));
+      }
     }
   }
 
