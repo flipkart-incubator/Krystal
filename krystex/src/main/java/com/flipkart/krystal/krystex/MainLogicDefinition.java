@@ -2,7 +2,7 @@ package com.flipkart.krystal.krystex;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
-import com.flipkart.krystal.krystex.decoration.NodeExecutionContext;
+import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeId;
@@ -48,14 +48,14 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition
     Map<String, MainLogicDecorator> decorators = new LinkedHashMap<>();
     sessionScopedLogicDecoratorConfigs.forEach(
         (s, decoratorConfig) -> {
-          NodeExecutionContext nodeExecutionContext =
-              new NodeExecutionContext(
+          LogicExecutionContext logicExecutionContext =
+              new LogicExecutionContext(
                   nodeDefinition.nodeId(),
                   logicTags(),
                   dependants,
                   nodeDefinition.nodeDefinitionRegistry());
-          if (decoratorConfig.shouldDecorate().test(nodeExecutionContext)) {
-            String instanceId = decoratorConfig.instanceIdGenerator().apply(nodeExecutionContext);
+          if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
+            String instanceId = decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
             decorators.put(
                 s,
                 sessionScopedDecorators

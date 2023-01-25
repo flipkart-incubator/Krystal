@@ -21,21 +21,26 @@ import com.flipkart.krystal.krystex.commands.ExecuteWithDependency;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
 import com.flipkart.krystal.krystex.commands.SkipNode;
+import com.flipkart.krystal.krystex.commands.Terminate;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.decoration.TerminateDecoration;
 import com.flipkart.krystal.utils.ImmutableMapView;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
@@ -64,6 +69,8 @@ public class Node {
 
   private final Map<RequestId, Map<String, InputValue<Object>>> inputsValueCollector =
       new LinkedHashMap<>();
+
+  private final Map<RequestId, Map<String, Boolean>> terminationRequests = new LinkedHashMap<>();
 
   private final Map<RequestId, Map<String, Results<Object>>> dependencyValuesCollector =
       new LinkedHashMap<>();
@@ -107,6 +114,7 @@ public class Node {
         resultsByRequest.computeIfAbsent(requestId, r -> new CompletableFuture<>());
     try {
       boolean executeMainLogic;
+      collectTerminationRequests(nodeCommand, requestId);
       if (nodeCommand instanceof SkipNode skipNode) {
         resultForRequest.completeExceptionally(
             new SkipNodeException(skipNode.skipDependencyCommand().reason()));
@@ -119,6 +127,9 @@ public class Node {
       } else if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
         triggerCommands.putIfAbsent(requestId, executeWithInputs);
         executeMainLogic = executeWithInputs(requestId, executeWithInputs);
+      } else if (nodeCommand instanceof Terminate) {
+        terminateInputs(requestId);
+        executeMainLogic = false;
       } else {
         throw new UnsupportedOperationException(
             "Unknown type of nodeCommand: %s".formatted(nodeCommand));
@@ -130,6 +141,75 @@ public class Node {
       resultForRequest.completeExceptionally(e);
     }
     return resultForRequest;
+  }
+
+  private void collectTerminationRequests(NodeCommand nodeCommand, RequestId requestId) {
+    boolean shouldTerminate = nodeCommand.shouldTerminate();
+    if (!shouldTerminate) {
+      return;
+    }
+    ImmutableSet<String> inputNames;
+    if (nodeCommand instanceof SkipNode
+        || nodeCommand instanceof Terminate
+        || nodeCommand instanceof ExecuteWithAllInputs) {
+      inputNames =
+          nodeDefinition
+              .nodeDefinitionRegistry()
+              .logicDefinitionRegistry()
+              .getMain(nodeDefinition.mainLogicNode())
+              .inputNames();
+    } else if (nodeCommand instanceof ExecuteWithDependency executeWithDependency) {
+      inputNames = ImmutableSet.of(executeWithDependency.dependencyName());
+    } else if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
+      inputNames = executeWithInputs.inputNames();
+    } else {
+      throw new UnsupportedOperationException();
+    }
+    inputNames.forEach(
+        inputName ->
+            terminationRequests
+                .computeIfAbsent(requestId, k -> new LinkedHashMap<>())
+                .put(inputName, true));
+  }
+
+  private boolean terminateInputs(RequestId requestId) {
+    ImmutableMap<String, NodeId> dependencyNodes = nodeDefinition.dependencyNodes();
+    if (dependencyNodes.isEmpty()) {
+      MainLogicInputs mainLogicInputs = getInputsForMainLogic(requestId);
+      if (shouldTerminate(
+          mainLogicInputs.allInputsAndDependencies().values().keySet(), requestId)) {
+        Iterable<MainLogicDecorator> reverseSortedDecorators =
+            getSortedDecorators(requestId)::descendingIterator;
+        for (MainLogicDecorator decorator : reverseSortedDecorators) {
+          decorator.executeCommand(
+              mainLogicInputs.allInputsAndDependencies(), TerminateDecoration.instance());
+        }
+      }
+      return true;
+    } else {
+      Map<String, DependencyNodeExecutions> dependencyNodeExecutions =
+          dependencyExecutions.getOrDefault(requestId, ImmutableMap.of());
+      dependencyNodeExecutions.forEach(
+          (dependencyName, executionInfo) -> {
+            executionInfo
+                .individualCallInputs()
+                .keySet()
+                .forEach(
+                    depRequestId -> {
+                      krystalNodeExecutor.enqueueCommand(
+                          new Terminate(
+                              nodeDefinition.dependencyNodes().get(dependencyName), depRequestId));
+                    });
+          });
+      if (dependencyNodeExecutions.values().stream()
+          .allMatch(
+              executions ->
+                  executions.individualCallResponses().values().stream()
+                      .allMatch(CompletableFuture::isDone))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private boolean executeWithAllInputs(
@@ -162,8 +242,9 @@ public class Node {
             .computeIfAbsent(requestId, k -> new LinkedHashMap<>())
             .putIfAbsent(dependencyName, executeWithInput.results())
         != null) {
-      throw new DuplicateInputForRequestException(
-          "Duplicate data for dependency %s for a request %s".formatted(dependencyName, requestId));
+      throw new DuplicateRequestException(
+          "Duplicate data for dependency %s of node %s in request %s"
+              .formatted(dependencyName, nodeId, requestId));
     }
     return execute(requestId, inputNames);
   }
@@ -254,6 +335,15 @@ public class Node {
     String dependencyName = resolverDefinition.dependencyName();
     NodeId depNodeId = nodeDefinition.dependencyNodes().get(dependencyName);
     Inputs inputsForResolver = getInputsForResolver(resolverDefinition, requestId);
+    boolean shouldTerminate =
+        shouldTerminate(
+            resolverDefinitionsByDependencies
+                .getOrDefault(dependencyName, ImmutableList.of())
+                .stream()
+                .map(ResolverDefinition::boundFrom)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toSet()),
+            requestId);
     NodeLogicId nodeLogicId = resolverDefinition.resolverNodeLogicId();
     ResolverCommand resolverCommand =
         nodeDefinition
@@ -277,7 +367,7 @@ public class Node {
                 (SkipDependency) resolverCommand));
         this.executeCommand(
             new ExecuteWithDependency(
-                this.nodeId, dependencyName, new Results<>(ImmutableMap.of()), requestId));
+                this.nodeId, dependencyName, Results.empty(), shouldTerminate, requestId));
       }
     } else {
       // Since the resolver can return multiple inputs, we have to call the dependency Node
@@ -323,7 +413,7 @@ public class Node {
           } else {
             newInputs = Inputs.union(oldInput, inputs);
           }
-          dependencyNodeExecutions.individualCallInputs().put(inProgressRequestId, newInputs);
+          dependencyNodeExecutions.individualCallInputs().put(dependencyRequestId, newInputs);
           dependencyNodeExecutions
               .individualCallResponses()
               .putIfAbsent(
@@ -339,9 +429,9 @@ public class Node {
         }
         requestCounter += batchSize;
       }
-      if (resolverDefinitionsByDependencies
-          .get(dependencyName)
-          .equals(dependencyNodeExecutions.executedResolvers)) {
+      List<ResolverDefinition> resolverDefinitionsByDependencies =
+          this.resolverDefinitionsByDependencies.get(dependencyName);
+      if (resolverDefinitionsByDependencies.equals(dependencyNodeExecutions.executedResolvers())) {
         CompletableFuture.allOf(
                 dependencyNodeExecutions
                     .individualCallResponses()
@@ -361,10 +451,20 @@ public class Node {
                                     toImmutableMap(NodeResponse::inputs, NodeResponse::response)));
                   }
                   krystalNodeExecutor.enqueueCommand(
-                      new ExecuteWithDependency(this.nodeId, dependencyName, results, requestId));
+                      new ExecuteWithDependency(
+                          this.nodeId, dependencyName, results, shouldTerminate, requestId));
                 });
       }
     }
+  }
+
+  private boolean shouldTerminate(Set<String> inputNames, RequestId requestId) {
+    return inputNames.stream()
+        .allMatch(
+            input ->
+                terminationRequests
+                    .getOrDefault(requestId, ImmutableMap.of())
+                    .getOrDefault(input, false));
   }
 
   private Inputs getInputsForResolver(ResolverDefinition resolverDefinition, RequestId requestId) {
@@ -417,6 +517,13 @@ public class Node {
                                   this.nodeId,
                                   depName,
                                   new Results<>(ImmutableMap.of(Inputs.empty(), valueOrError)),
+                                  shouldTerminate(
+                                      nodeDefinition
+                                          .nodeDefinitionRegistry()
+                                          .logicDefinitionRegistry()
+                                          .getMain(nodeDefinition.mainLogicNode())
+                                          .inputNames(),
+                                      requestId),
                                   requestId));
                         });
               }
@@ -424,38 +531,63 @@ public class Node {
     return false;
   }
 
-  private List<NodeId> getDependants(RequestId requestId) {
-    return Optional.ofNullable(triggerCommands.getOrDefault(requestId, null))
-        .map(NodeCommand::dependants)
-        .orElse(ImmutableList.of());
-  }
-
   private void executeMainLogic(
       CompletableFuture<NodeResponse> resultForRequest, RequestId requestId) {
-    NodeLogicId mainLogicNode = nodeDefinition.mainLogicNode();
     MainLogicDefinition<Object> mainLogicDefinition =
-        nodeDefinition.nodeDefinitionRegistry().logicDefinitionRegistry().getMain(mainLogicNode);
-    Map<String, InputValue<Object>> allInputs =
-        inputsValueCollector.getOrDefault(requestId, ImmutableMap.of());
-    Inputs nonDependencyInput = new Inputs(allInputs);
-
+        nodeDefinition
+            .nodeDefinitionRegistry()
+            .logicDefinitionRegistry()
+            .getMain(nodeDefinition.mainLogicNode());
+    MainLogicInputs mainLogicInputs = getInputsForMainLogic(requestId);
     // Retrieve existing result from cache if result for this set of inputs has already been
     // calculated
-    CompletableFuture<Object> resultFuture = resultsCache.get(nonDependencyInput);
+    CompletableFuture<Object> resultFuture =
+        resultsCache.get(mainLogicInputs.nonDependencyInputs());
     if (resultFuture == null) {
-      Inputs allInputsAndDependencies =
-          new Inputs(
-              new LinkedHashMap<>(
-                  dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of())));
-      allInputsAndDependencies = Inputs.union(allInputsAndDependencies, nonDependencyInput);
       resultFuture =
-          executeDecoratedMainLogic(allInputsAndDependencies, mainLogicDefinition, requestId);
-      resultsCache.put(nonDependencyInput, resultFuture);
+          executeDecoratedMainLogic(
+              mainLogicInputs.allInputsAndDependencies(), mainLogicDefinition, requestId);
+      resultsCache.put(mainLogicInputs.nonDependencyInputs(), resultFuture);
     }
     resultFuture
         .handle(ValueOrError::valueOrError)
         .thenAccept(
-            value -> resultForRequest.complete(new NodeResponse(nonDependencyInput, value)));
+            value ->
+                resultForRequest.complete(
+                    new NodeResponse(
+                        mainLogicInputs.nonDependencyInputs(),
+                        value,
+                        shouldTerminate(
+                            mainLogicInputs.allInputsAndDependencies().values().keySet(),
+                            requestId))));
+  }
+
+  private CompletableFuture<Object> executeDecoratedMainLogic(
+      Inputs inputs, MainLogicDefinition<Object> mainLogicDefinition, RequestId requestId) {
+    SortedSet<MainLogicDecorator> sortedDecorators = getSortedDecorators(requestId);
+    MainLogic<Object> logic = mainLogicDefinition::execute;
+    for (MainLogicDecorator mainLogicDecorator : sortedDecorators) {
+      logic = mainLogicDecorator.decorateLogic(logic);
+    }
+    return logic.execute(ImmutableList.of(inputs)).get(inputs);
+  }
+
+  private MainLogicInputs getInputsForMainLogic(RequestId requestId) {
+    Map<String, InputValue<Object>> allInputs =
+        inputsValueCollector.getOrDefault(requestId, ImmutableMap.of());
+    Inputs nonDependencyInputs = new Inputs(allInputs);
+    Inputs dependencyValues =
+        new Inputs(
+            new LinkedHashMap<>(
+                dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of())));
+    Inputs allInputsAndDependencies = Inputs.union(dependencyValues, nonDependencyInputs);
+    return new MainLogicInputs(nonDependencyInputs, allInputsAndDependencies);
+  }
+
+  private List<NodeId> getDependants(RequestId requestId) {
+    return Optional.ofNullable(triggerCommands.getOrDefault(requestId, null))
+        .map(NodeCommand::dependants)
+        .orElse(ImmutableList.of());
   }
 
   private void collectInputValues(
@@ -465,14 +597,19 @@ public class Node {
               .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
               .putIfAbsent(inputName, inputs.getInputValue(inputName))
           != null) {
-        throw new DuplicateInputForRequestException(
-            "Duplicate data for inputs %s for request %s".formatted(inputNames, requestId));
+        throw new DuplicateRequestException(
+            "Duplicate data for inputs %s of node %s in request %s"
+                .formatted(inputNames, nodeId, requestId));
       }
     }
   }
 
-  private CompletableFuture<Object> executeDecoratedMainLogic(
-      Inputs inputs, MainLogicDefinition<Object> mainLogicDefinition, RequestId requestId) {
+  private NavigableSet<MainLogicDecorator> getSortedDecorators(RequestId requestId) {
+    MainLogicDefinition<Object> mainLogicDefinition =
+        nodeDefinition
+            .nodeDefinitionRegistry()
+            .logicDefinitionRegistry()
+            .getMain(nodeDefinition.mainLogicNode());
     Map<String, MainLogicDecorator> decorators =
         new LinkedHashMap<>(
             mainLogicDefinition.getSessionScopedLogicDecorators(
@@ -483,11 +620,7 @@ public class Node {
     TreeSet<MainLogicDecorator> sortedDecorators =
         new TreeSet<>(logicDecorationOrdering.decorationOrder());
     sortedDecorators.addAll(decorators.values());
-    MainLogic<Object> logic = mainLogicDefinition::execute;
-    for (MainLogicDecorator mainLogicDecorator : sortedDecorators) {
-      logic = mainLogicDecorator.decorateLogic(logic);
-    }
-    return logic.execute(ImmutableList.of(inputs)).get(inputs);
+    return sortedDecorators;
   }
 
   private static ImmutableMapView<Optional<String>, List<ResolverDefinition>>
@@ -523,4 +656,6 @@ public class Node {
       this(new LongAdder(), new ArrayList<>(), new LinkedHashMap<>(), new LinkedHashMap<>());
     }
   }
+
+  private record MainLogicInputs(Inputs nonDependencyInputs, Inputs allInputsAndDependencies) {}
 }

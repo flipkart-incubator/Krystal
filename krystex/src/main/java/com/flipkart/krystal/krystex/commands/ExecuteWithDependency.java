@@ -8,5 +8,6 @@ public record ExecuteWithDependency(
     NodeId nodeId,
     String dependencyName,
     Results<Object> results,
+    boolean shouldTerminate,
     RequestId requestId)
     implements NodeCommand {}

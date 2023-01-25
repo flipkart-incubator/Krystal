@@ -8,4 +8,8 @@ public interface KrystalExecutor extends AutoCloseable {
 
   <T> CompletableFuture<T> executeNode(NodeId nodeId, Inputs inputs);
 
+  <T> CompletableFuture<T> executeNode(NodeId nodeId, Inputs inputs, String requestId);
+
+  @Override
+  void close();
 }

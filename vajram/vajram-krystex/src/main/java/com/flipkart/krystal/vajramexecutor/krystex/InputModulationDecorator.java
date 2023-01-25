@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
-import static com.flipkart.krystal.utils.Futures.propagateCancellation;
+import static com.flipkart.krystal.utils.Futures.linkEndStates;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
@@ -8,7 +8,9 @@ import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.config.NestedConfig;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.MainLogic;
+import com.flipkart.krystal.krystex.decoration.LogicDecoratorCommand;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.decoration.TerminateDecoration;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
@@ -71,6 +73,15 @@ public final class InputModulationDecorator<
     };
   }
 
+  @Override
+  public void executeCommand(Inputs inputs, LogicDecoratorCommand logicDecoratorCommand) {
+    if (logicDecoratorCommand instanceof TerminateDecoration) {
+      var unmodulatedInput = inputsConverter.apply(inputs);
+      inputModulator.terminate(
+          unmodulatedInput.inputsNeedingModulation(), unmodulatedInput.commonInputs());
+    }
+  }
+
   private void modulateInputsList(
       MainLogic<Object> logicToDecorate,
       ModulatedInput<InputsNeedingModulation, CommonInputs> modulatedInput) {
@@ -85,15 +96,7 @@ public final class InputModulationDecorator<
         (inputs, resultFuture) -> {
           CompletableFuture<Object> cachedResult =
               futureCache.computeIfAbsent(inputs, request -> new CompletableFuture<>());
-          resultFuture.whenComplete(
-              (values, throwable) -> {
-                if (values != null) {
-                  cachedResult.complete(values);
-                } else {
-                  cachedResult.completeExceptionally(throwable);
-                }
-              });
-          propagateCancellation(cachedResult, resultFuture);
+          linkEndStates(resultFuture, cachedResult);
         });
   }
 

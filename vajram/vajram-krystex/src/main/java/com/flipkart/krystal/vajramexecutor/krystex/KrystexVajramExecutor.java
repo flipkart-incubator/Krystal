@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
+import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
@@ -13,7 +14,7 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
     implements VajramExecutor<C> {
   private final VajramNodeGraph vajramNodeGraph;
   private final C applicationRequestContext;
-  private final KrystalNodeExecutor krystalExecutor;
+  private final KrystalExecutor krystalExecutor;
 
   public KrystexVajramExecutor(
       VajramNodeGraph vajramNodeGraph,
