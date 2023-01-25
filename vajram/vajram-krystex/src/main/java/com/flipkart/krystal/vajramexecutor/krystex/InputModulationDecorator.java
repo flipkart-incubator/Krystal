@@ -35,6 +35,7 @@ public final class InputModulationDecorator<
   private final InputModulator<InputsNeedingModulation, CommonInputs> inputModulator;
   private final InputsConverter<InputsNeedingModulation, CommonInputs> inputsConverter;
   private final Map<Inputs, CompletableFuture<Object>> futureCache = new HashMap<>();
+  private boolean terminated;
 
   public InputModulationDecorator(
       String instanceId,
@@ -48,7 +49,12 @@ public final class InputModulationDecorator<
   @Override
   public MainLogic<Object> decorateLogic(MainLogic<Object> logicToDecorate) {
     inputModulator.onTermination(
-        requests -> requests.forEach(request -> modulateInputsList(logicToDecorate, request)));
+        requests -> {
+          if (!terminated) {
+            requests.forEach(request -> modulateInputsList(logicToDecorate, request));
+          }
+          terminated = true;
+        });
     return inputsList -> {
       List<UnmodulatedInput<InputsNeedingModulation, CommonInputs>> requests =
           inputsList.stream().map(inputsConverter).toList();

@@ -172,20 +172,10 @@ public class Node {
                 .put(inputName, true));
   }
 
-  private boolean terminateInputs(RequestId requestId) {
+  private void terminateInputs(RequestId requestId) {
     ImmutableMap<String, NodeId> dependencyNodes = nodeDefinition.dependencyNodes();
     if (dependencyNodes.isEmpty()) {
-      MainLogicInputs mainLogicInputs = getInputsForMainLogic(requestId);
-      if (shouldTerminate(
-          mainLogicInputs.allInputsAndDependencies().values().keySet(), requestId)) {
-        Iterable<MainLogicDecorator> reverseSortedDecorators =
-            getSortedDecorators(requestId)::descendingIterator;
-        for (MainLogicDecorator decorator : reverseSortedDecorators) {
-          decorator.executeCommand(
-              mainLogicInputs.allInputsAndDependencies(), TerminateDecoration.instance());
-        }
-      }
-      return true;
+      terminateDecorators(requestId);
     } else {
       Map<String, DependencyNodeExecutions> dependencyNodeExecutions =
           dependencyExecutions.getOrDefault(requestId, ImmutableMap.of());
@@ -206,10 +196,21 @@ public class Node {
               executions ->
                   executions.individualCallResponses().values().stream()
                       .allMatch(CompletableFuture::isDone))) {
-        return true;
+        terminateDecorators(requestId);
       }
     }
-    return false;
+  }
+
+  private void terminateDecorators(RequestId requestId) {
+    MainLogicInputs mainLogicInputs = getInputsForMainLogic(requestId);
+    if (shouldTerminate(mainLogicInputs.allInputsAndDependencies().values().keySet(), requestId)) {
+      Iterable<MainLogicDecorator> reverseSortedDecorators =
+          getSortedDecorators(requestId)::descendingIterator;
+      for (MainLogicDecorator decorator : reverseSortedDecorators) {
+        decorator.executeCommand(
+            mainLogicInputs.allInputsAndDependencies(), TerminateDecoration.instance());
+      }
+    }
   }
 
   private boolean executeWithAllInputs(
