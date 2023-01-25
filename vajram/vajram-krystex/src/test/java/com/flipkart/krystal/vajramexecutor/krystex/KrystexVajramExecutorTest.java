@@ -7,8 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
-import com.flipkart.krystal.krystex.decoration.NodeExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.decoration.NodeExecutionContext;
 import com.flipkart.krystal.krystex.decorators.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.decorators.Resilience4JCircuitBreaker;
 import com.flipkart.krystal.logic.LogicTag;
@@ -26,16 +26,23 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.Hel
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsVajram;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Vajram;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceVajram;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -54,11 +61,17 @@ class KrystexVajramExecutorTest {
       };
 
   private TestRequestContextBuilder requestContext;
+  private ExecutorService executorService;
 
   @BeforeEach
   void setUp() {
     requestContext =
         TestRequestContext.builder().loggedInUserId(Optional.of("user_id_1")).numberOfFriends(2);
+    executorService =
+        Executors.newSingleThreadExecutor(
+            new ThreadFactoryBuilder()
+                .setNameFormat("KrystalExecutor-KrystexVajramExecutorTest")
+                .build());
   }
 
   @AfterEach
@@ -226,6 +239,36 @@ class KrystexVajramExecutorTest {
               Set.of(
                   TestUserServiceRequest.builder().userId("user_id_1:friend_1").build(),
                   TestUserServiceRequest.builder().userId("user_id_1").build()));
+    }
+  }
+
+  @Test
+  void execute_multiResolverFanouts_permutesTheFanouts()
+      throws ExecutionException, InterruptedException {
+    VajramNodeGraph graph =
+        loadFromClasspath(
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello")
+            .registerInputModulator(vajramID(TestUserServiceVajram.ID), () -> new Batcher(1))
+            .build();
+    try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
+        graph.createExecutor(
+            requestContext.requestId("execute_multiResolverFanouts_permutesTheFanouts").build())) {
+      CompletableFuture<String> multiHellos =
+          krystexVajramExecutor.execute(
+              vajramID(MultiHelloFriends.ID),
+              testRequestContext ->
+                  MultiHelloFriendsRequest.builder()
+                      .userIds(new ArrayList<>(List.of("user_id_1", "user_id_2")))
+                      .build());
+      assertThat(multiHellos.get())
+          .isEqualTo(
+              """
+            Hello Friends of Firstname Lastname (user_id_1)! Firstname Lastname (user_id_1:friend_1)
+            Hello Friends of Firstname Lastname (user_id_1)! Firstname Lastname (user_id_1:friend_1), Firstname Lastname (user_id_1:friend_2)
+            Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1)
+            Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1), Firstname Lastname (user_id_2:friend_2)""");
     }
   }
 

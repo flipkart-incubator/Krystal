@@ -1,0 +1,20 @@
+inputs:
+  - name: numbers
+    mandatory: true
+    dataType: list
+    typeParameters:
+      - dataType: integer
+dependencies:
+  - name: split_sum_1
+    depType: vajram
+    vajramClass: com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdder
+    dataType: integer
+  - name: split_sum_2
+    depType: vajram
+    vajramClass: com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdder
+    dataType: integer
+  - name: sum
+    depType: vajram
+    vajramClass: com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder
+    dataType: integer
+

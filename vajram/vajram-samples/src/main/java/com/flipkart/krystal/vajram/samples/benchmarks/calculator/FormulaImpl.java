@@ -59,7 +59,7 @@ public class FormulaImpl extends Formula {
               new Inputs(
                   ImmutableMap.of(
                       "number_two",
-                      ValueOrError.withValue(adderNumberOne(inputs.getInputValueOrThrow("q"))))));
+                      ValueOrError.withValue(adderNumberTwo(inputs.getInputValueOrThrow("q"))))));
         }
       }
       case "quotient" -> {

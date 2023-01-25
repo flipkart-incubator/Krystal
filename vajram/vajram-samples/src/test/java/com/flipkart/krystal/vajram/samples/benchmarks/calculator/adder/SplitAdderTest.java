@@ -8,7 +8,7 @@ import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flipkart.krystal.vajram.ApplicationRequestContext;
+import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderTest.RequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
@@ -22,7 +22,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class ChainAdderTest {
+class SplitAdderTest {
   public static final int LOOP_COUNT = 50_000;
   private VajramNodeGraph graph;
 
@@ -32,7 +32,7 @@ class ChainAdderTest {
   }
 
   @Test
-  void chainer_success() throws ExecutionException, InterruptedException {
+  void splitAdder_success() throws ExecutionException, InterruptedException {
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
         graph.createExecutor(
             new RequestContext("")
@@ -43,8 +43,8 @@ class ChainAdderTest {
 
 //  @Test
   void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
-    long javaNativeTime = javaMethodBenchmark(this::chainAdd, LOOP_COUNT);
-    long javaFuturesTime = javaFuturesBenchmark(this::chainAddAsync, LOOP_COUNT);
+    long javaNativeTime = javaMethodBenchmark(this::splitAdd, LOOP_COUNT);
+    long javaFuturesTime = javaFuturesBenchmark(this::splitAddAsync, LOOP_COUNT);
     CompletableFuture<Integer>[] futures = new CompletableFuture[LOOP_COUNT];
     if (LOOP_COUNT > 0) {
       long startTime = System.nanoTime();
@@ -53,7 +53,8 @@ class ChainAdderTest {
             graph.createExecutor(
                 new RequestContext("")
             )) {
-          futures[value] = executeVajram(krystexVajramExecutor, value);
+          CompletableFuture<Integer> result = executeVajram(krystexVajramExecutor, value);
+          futures[value] = result;
         }
       }
       allOf(futures).join();
@@ -83,9 +84,9 @@ class ChainAdderTest {
   private static CompletableFuture<Integer> executeVajram(
       KrystexVajramExecutor<RequestContext> krystexVajramExecutor, int multiplier) {
     return krystexVajramExecutor.execute(
-        vajramID(ChainAdder.ID),
+        vajramID(SplitAdder.ID),
         rc ->
-            ChainAdderRequest.builder()
+            SplitAdderRequest.builder()
                 .numbers(
                     new ArrayList<>(
                         Stream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
@@ -95,53 +96,49 @@ class ChainAdderTest {
         "chainAdderTest" + multiplier);
   }
 
-  private void chainAdd(Integer value) {
-    chainAdd(
+  private void splitAdd(Integer value) {
+    splitAdd(
         new ArrayList<>(
             Stream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
                 .map(integer -> integer + value * 10)
                 .toList()));
   }
 
-  private int chainAdd(List<Integer> numbers) {
+  private int splitAdd(List<Integer> numbers) {
     if (numbers.size() == 0) {
       return 0;
     } else if (numbers.size() == 1) {
       return add(numbers.get(0), 0);
-    } else if (numbers.size() == 2) {
-      return add(numbers.get(0), numbers.get(1));
     } else {
-      return chainAdd(numbers.subList(0, numbers.size() - 1))
-          + add(numbers.get(numbers.size() - 1), 0);
+      int subListSize = numbers.size() / 2;
+      return splitAdd(numbers.subList(0, subListSize))
+          + splitAdd(numbers.subList(subListSize, numbers.size()));
     }
   }
 
-  private CompletableFuture<Integer> chainAddAsync(Integer value) {
-    return chainAddAsync(
+  private CompletableFuture<Integer> splitAddAsync(Integer value) {
+    return splitAddAsync(
         new ArrayList<>(
             Stream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
                 .map(integer -> integer + value * 10)
                 .toList()));
   }
 
-  private CompletableFuture<Integer> chainAddAsync(List<Integer> numbers) {
+  private CompletableFuture<Integer> splitAddAsync(List<Integer> numbers) {
     if (numbers.size() == 0) {
       return completedFuture(0);
     } else if (numbers.size() == 1) {
       return addAsync(numbers.get(0), 0);
-    } else if (numbers.size() == 2) {
-      return addAsync(numbers.get(0), numbers.get(1));
     } else {
-      return chainAddAsync(numbers.subList(0, numbers.size() - 1))
-          .thenCombine(addAsync(numbers.get(numbers.size() - 1), 0), Integer::sum);
+      int subListSize = numbers.size() / 2;
+      return splitAddAsync(numbers.subList(0, subListSize))
+          .thenCombine(splitAddAsync(numbers.subList(subListSize, numbers.size())), Integer::sum);
     }
   }
 
   private CompletableFuture<Integer> addAsync(int a, int b) {
     return completedFuture(a + b);
   }
-
-  record RequestContext(String requestId) implements ApplicationRequestContext {}
 
   private static VajramNodeGraph loadFromClasspath(String... packagePrefixes) {
     Builder builder = VajramNodeGraph.builder();

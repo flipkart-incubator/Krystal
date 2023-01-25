@@ -1,10 +1,15 @@
 package com.flipkart.krystal.data;
 
 import com.google.common.collect.ImmutableMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
-public record Inputs(Map<String, InputValue<Object>> values) {
+public record Inputs(ImmutableMap<String, InputValue<Object>> values) {
+
+  public Inputs(Map<String, InputValue<Object>> values) {
+    this(ImmutableMap.copyOf(values));
+  }
 
   private static final Inputs EMPTY = new Inputs(ImmutableMap.of());
 
@@ -40,6 +45,12 @@ public record Inputs(Map<String, InputValue<Object>> values) {
       return (Results<T>) voe;
     }
     throw new IllegalArgumentException();
+  }
+
+  public static Inputs union(Inputs inputs1, Inputs inputs2) {
+    Map<String, InputValue<Object>> v = new LinkedHashMap<>(inputs1.values());
+    v.putAll(inputs2.values());
+    return new Inputs(v);
   }
 
   public static Inputs empty() {
