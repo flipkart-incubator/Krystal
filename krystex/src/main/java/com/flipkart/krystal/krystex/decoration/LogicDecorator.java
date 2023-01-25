@@ -1,9 +1,10 @@
 package com.flipkart.krystal.krystex.decoration;
 
-import com.flipkart.krystal.krystex.Logic;
 import com.flipkart.krystal.config.ConfigListener;
+import com.flipkart.krystal.krystex.Logic;
 
-public interface LogicDecorator<T extends Logic> extends ConfigListener {
+public sealed interface LogicDecorator<T extends Logic> extends ConfigListener
+    permits MainLogicDecorator {
   T decorateLogic(T t);
 
   /**

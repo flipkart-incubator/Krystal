@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.node;
 
+import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 
 import com.flipkart.krystal.data.Inputs;
@@ -8,14 +9,14 @@ import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.RequestId;
 import com.flipkart.krystal.krystex.commands.ExecuteWithAllInputs;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
+import com.flipkart.krystal.krystex.commands.Terminate;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
+import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
-import com.flipkart.krystal.krystex.decoration.NodeExecutionContext;
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       new LinkedHashMap<>();
   private final NodeRegistry nodeRegistry = new NodeRegistry();
   private volatile boolean closed;
+  private final Map<RequestId, List<NodeExecutionInfo>> requests = new LinkedHashMap<>();
 
   public KrystalNodeExecutor(
       NodeDefinitionRegistry nodeDefinitionRegistry,
@@ -63,15 +65,15 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
         .getRequestScopedLogicDecoratorConfigs()
         .forEach(
             (s, decoratorConfig) -> {
-              NodeExecutionContext nodeExecutionContext =
-                  new NodeExecutionContext(
+              LogicExecutionContext logicExecutionContext =
+                  new LogicExecutionContext(
                       nodeDefinition.nodeId(),
                       mainLogicDefinition.logicTags(),
                       dependants,
                       nodeDefinitionRegistry);
-              if (decoratorConfig.shouldDecorate().test(nodeExecutionContext)) {
+              if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
                 String instanceId =
-                    decoratorConfig.instanceIdGenerator().apply(nodeExecutionContext);
+                    decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
                 decorators.put(
                     s,
                     requestScopedMainDecorators
@@ -88,6 +90,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     return (CompletableFuture<T>) executeNode(nodeId, inputs, requestId);
   }
 
+  @Override
   public <T> CompletableFuture<T> executeNode(NodeId nodeId, Inputs inputs, String requestId) {
     //noinspection unchecked
     return (CompletableFuture<T>) executeNode(nodeId, inputs, new RequestId(requestId));
@@ -108,6 +111,9 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                     return valueOrError.value().orElse(null);
                   }
                 });
+    requests
+        .computeIfAbsent(requestId, r -> new ArrayList<>())
+        .add(new NodeExecutionInfo(nodeId, inputs, future));
     return future;
   }
 
@@ -139,5 +145,21 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   @Override
   public void close() {
     this.closed = true;
+    requests.forEach(
+        (requestId, nodeExecutionInfos) -> {
+          nodeExecutionInfos.forEach(
+              nodeExecutionInfo -> {
+                enqueueCommand(new Terminate(nodeExecutionInfo.nodeId, requestId));
+              });
+        });
+    allOf(
+            requests.values().stream()
+                .flatMap(
+                    nodeExecutionInfos ->
+                        nodeExecutionInfos.stream().map(NodeExecutionInfo::future))
+                .toArray(CompletableFuture[]::new))
+        .whenComplete((unused, throwable) -> commandQueue.shutdown());
   }
+
+  private record NodeExecutionInfo(NodeId nodeId, Inputs inputs, CompletableFuture<?> future) {}
 }

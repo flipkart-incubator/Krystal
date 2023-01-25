@@ -6,7 +6,7 @@ import com.flipkart.krystal.logic.LogicTag;
 import com.google.common.collect.ImmutableMap;
 import java.util.List;
 
-public record NodeExecutionContext(
+public record LogicExecutionContext(
     NodeId nodeId,
     ImmutableMap<String, LogicTag> logicTags,
     List<NodeId> dependants,

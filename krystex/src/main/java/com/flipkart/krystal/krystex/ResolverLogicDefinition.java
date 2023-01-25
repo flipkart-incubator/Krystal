@@ -20,6 +20,6 @@ public final class ResolverLogicDefinition extends LogicDefinition {
   }
 
   public ResolverCommand resolve(Inputs inputs) {
-    return resolverLogic.resolve(inputs);
+    return resolverLogic.execute(inputs);
   }
 }
