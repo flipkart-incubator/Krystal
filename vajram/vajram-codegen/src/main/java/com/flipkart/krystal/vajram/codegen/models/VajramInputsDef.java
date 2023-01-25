@@ -25,6 +25,7 @@ public record VajramInputsDef(
   @JsonCreator
   @ConstructorProperties({"inputs", "dependencies"})
   public VajramInputsDef(
+
       @JsonSetter(nulls = Nulls.AS_EMPTY) List<InputDef> inputs,
       @JsonSetter(nulls = Nulls.AS_EMPTY) List<DependencyDef> dependencies) {
     this(ImmutableList.copyOf(inputs), ImmutableList.copyOf(dependencies));

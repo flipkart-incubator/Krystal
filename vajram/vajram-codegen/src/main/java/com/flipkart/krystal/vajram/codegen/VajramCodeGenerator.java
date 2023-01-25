@@ -24,14 +24,18 @@ import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.codegen.models.AbstractInput;
 import com.flipkart.krystal.vajram.codegen.models.DependencyDef;
 import com.flipkart.krystal.vajram.codegen.models.InputDef;
+import com.flipkart.krystal.vajram.codegen.models.VajramDef;
 import com.flipkart.krystal.vajram.codegen.models.VajramDependencyDef;
 import com.flipkart.krystal.vajram.codegen.models.VajramInputFile;
 import com.flipkart.krystal.vajram.codegen.models.VajramInputsDef;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
+import com.flipkart.krystal.vajram.inputs.BindFrom;
 import com.flipkart.krystal.vajram.inputs.Dependency;
+import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
+import com.flipkart.krystal.vajram.inputs.Resolve;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.flipkart.krystal.vajram.modulation.UnmodulatedInput;
@@ -52,6 +56,9 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedType;
+import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -59,6 +66,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -70,15 +78,18 @@ import lombok.ToString;
 
 public class VajramCodeGenerator {
 
+    private static final List<Class> SIMPLE_TYPES = ImmutableList.of(String.class, Integer.class, Double.class);
   private final String packageName;
   private final String requestClassName;
   private final VajramInputFile vajramInputFile;
   private final String allInputsClassName;
   private final String vajramName;
 
-  public VajramCodeGenerator(VajramInputFile vajramInputFile) {
+  private final VajramDef vajramDef;
+
+  public VajramCodeGenerator(VajramInputFile vajramInputFile, VajramDef vajramDef) {
     this.vajramInputFile = vajramInputFile;
-    Path filePath = vajramInputFile.srcRelativeFilePath();
+    Path filePath = vajramInputFile.inputFilePath().relativeFilePath();
     Path parentDir = filePath.getParent();
     this.vajramName = vajramInputFile.vajramName();
     this.packageName =
@@ -87,6 +98,7 @@ public class VajramCodeGenerator {
             .collect(Collectors.joining("."));
     this.requestClassName = getRequestClassName(vajramName);
     this.allInputsClassName = "AllInputs";
+    this.vajramDef = vajramDef;
   }
 
   private static String getRequestClassName(String vajramName) {
@@ -104,98 +116,18 @@ public class VajramCodeGenerator {
       vajramImplClass.addModifiers(PUBLIC)
               .superclass(ClassName.bestGuess(vajramName).box()).build();
 
-      // Method : getInputDefinitions
-      MethodSpec.Builder inputDefinitionsBuilder = methodBuilder("getInputDefinitions")
-              .addModifiers(PUBLIC)
-              .returns(ParameterizedTypeName.get(ClassName.get(ImmutableList.class),
-                      ClassName.get(VajramInputDefinition.class)));
+      MethodSpec inputDefinitions = createInputDefinitions(inputDefs);
 
-      List<CodeBlock> codeBlocks = new ArrayList<>(inputDefs.size());
-      // Input and Dependency code block
-      inputDefs.forEach( vajramInputDefinition ->  {
+      MethodSpec inputResolver = createResolvers();
 
-          CodeBlock.Builder inputDefBuilder = CodeBlock.builder();
-          if(vajramInputDefinition instanceof Input) {
-              Input input = (Input) vajramInputDefinition;
-              inputDefBuilder.add("Input.builder()")
-                     .add(".name($S)", vajramInputDefinition.name());
-
-            // handle input type
-             Set<InputSource> inputSources = input.sources();
-             if (!inputSources.isEmpty()) {
-                 inputDefBuilder.add(".sources(");
-                 ClassName className = ClassName.get(InputSource.class);
-                 String sources = inputSources.stream().map( inputSource -> {
-                     if (inputSource == InputSource.CLIENT) {
-                         return "InputSource.CLIENT";
-                     } else if (inputSource == InputSource.SESSION) {
-                         return "InputSource.SESSION";
-                     }
-                     else {
-                         throw new IllegalArgumentException("Incorrect source defined in vajram config");
-                     }
-                 }).collect(Collectors.joining(","));
-                 inputDefBuilder.add(sources).add(")");
-             }
-             // handle data type
-              DataType dataType = input.type();
-              inputDefBuilder.add(".type(");
-              if (dataType instanceof JavaType<?>) {
-                  // custom handling
-                  JavaType javaType = (JavaType) dataType;
-                  ClassName className ;
-                  if (!javaType.enclosingClasses().isEmpty() || javaType.simpleName().isPresent()) {
-                      className =
-                              ClassName.get((String) javaType.packageName().get(),
-                                      (String) javaType.enclosingClasses().stream().collect(Collectors.joining(".")),
-                                      (String) javaType.simpleName().get());
-                  } else {
-                      className= ClassName.bestGuess(javaType.className());
-                  }
-                  inputDefBuilder.add("$1T.java($2T.class)", ClassName.get(JavaType.class), className);
-              } else {
-                  String simpleName  = dataType.getClass().getSimpleName();
-                  String name = simpleName.substring(0, simpleName.length()-4).toLowerCase();
-                  inputDefBuilder.add("$T.$L()", ClassName.get(dataType.getClass().getPackageName(), dataType.getClass().getSimpleName()), name);
-              }
-              inputDefBuilder.add(")");
-              if (vajramInputDefinition.isMandatory()) {
-                 inputDefBuilder.add(".isMandatory()");
-             }
-
-             // last line
-              inputDefBuilder.add(".build()");
-          } else if (vajramInputDefinition instanceof Dependency) {
-              Dependency dependency = (Dependency) vajramInputDefinition;
-              inputDefBuilder.add("Dependency.builder()")
-                      .add(".name($S)", dependency.name());
-              DataAccessSpec dataAccessSpec = dependency.dataAccessSpec();
-              if (dataAccessSpec instanceof VajramID) {
-                  VajramID vajramID = (VajramID) dataAccessSpec;
-                  inputDefBuilder.add(".dataAccessSpec(").add(
-                                  CodeBlock.builder().add("$1T.vajramID($2S)",
-                                          ClassName.get(VajramID.class),
-                                                  vajramID.vajramId()).build())
-                          .add(")");
-              }
-              if(vajramInputDefinition.isMandatory()) {
-                  inputDefBuilder.add(".isMandatory()");
-              }
-              // build() as last step
-              inputDefBuilder.add(".build()");
-          }
-          codeBlocks.add(inputDefBuilder.build());
-      });
-      CodeBlock.Builder returnCode = CodeBlock.builder()
-              .add("return ImmutableList.of(\n").add(CodeBlock.join(codeBlocks, ",\n\t")).add("\n);");
-      inputDefinitionsBuilder.addCode(returnCode.build());
 
       StringWriter writer = new StringWriter();
       try {
           JavaFile.builder(
                           packageName,
                           vajramImplClass
-                                  .addMethod(inputDefinitionsBuilder.build())
+                                  .addMethod(inputDefinitions)
+                                  .addMethod(inputResolver)
                                   .build())
                   .indent("  ")
                   .build()
@@ -206,7 +138,144 @@ public class VajramCodeGenerator {
       return writer.toString();
   }
 
-  public String codeGenVajramRequest() {
+  public MethodSpec createResolvers() {
+      String dependency = "dependency";
+      MethodSpec.Builder resolveInputDefintionBuilder = methodBuilder("resolveInputOfDependency").addModifiers(
+                      PUBLIC).addParameter(String.class, dependency)
+              .addParameter(ParameterizedTypeName.get(ImmutableList.class, String.class), "resolvableInputs").addParameter(Inputs.class, "inputs").returns(
+                      ParameterizedTypeName.get(ClassName.get(DependencyCommand.class), ClassName.get(Inputs.class)));
+
+      if (Objects.nonNull(vajramDef)) {
+          resolveInputDefintionBuilder.beginControlFlow("switch ($L) ", dependency);
+          vajramDef.resolveMethods().forEach(method -> {
+              Resolve resolve = method.getAnnotation(Resolve.class);
+              CodeBlock.Builder caseBuilder = CodeBlock.builder().beginControlFlow("case $S -> ", resolve.value());
+              String[] inputs = resolve.inputs();
+              if (inputs.length == 1) {
+                  Parameter parameter = stream(method.getParameters()).filter(
+                          param -> param.getAnnotation(BindFrom.class).value().equals(inputs[0])).findFirst().orElse(null);
+                  if (Objects.isNull(parameter)) {
+                      throw new RuntimeException("Parameter binding incorrect for input - " + inputs[0]);
+                  }
+                  CodeBlock.Builder ifBlockBuilder = CodeBlock.builder();
+                  ifBlockBuilder.beginControlFlow("if ($T.of($S).equals(resolvableInputs))", Set.class,
+                          parameter.getAnnotation(BindFrom.class).value());
+                  ifBlockBuilder.addStatement("$T $L = super.$L(inputs.getInputValueOrThrow($S)", parameter.getType(),
+                          parameter.getName(), method.getName(), parameter.getAnnotation(BindFrom.class).value());
+                  if (SIMPLE_TYPES.contains(parameter.getType())) {
+                      // return DependencyCommand.executeWith(new Inputs(
+                      //                      ImmutableMap.of("user_id", ValueOrError.withValue(userId))))
+                      ifBlockBuilder.addStatement("return DependencyCommand.executeWith(new Inputs(\n" + "ImmutableMap.of($S, ValueOrError.withValue($L))))",
+                              parameter.getAnnotation(BindFrom.class).value(), parameter.getName());
+                  } else {
+                      // handle the object return type
+                      ifBlockBuilder.addStatement("return DependencyCommand.executeWith($L.toInputValues())", parameter.getName());
+                  }
+                  ifBlockBuilder.endControlFlow();
+                  caseBuilder.add(ifBlockBuilder.build());
+              }
+              caseBuilder.endControlFlow();
+              resolveInputDefintionBuilder.addCode(caseBuilder.build());
+          });
+          resolveInputDefintionBuilder.endControlFlow();
+          resolveInputDefintionBuilder.addStatement("throw new IllegalArgumentException()");
+      } else {
+          resolveInputDefintionBuilder.addStatement("throw new IllegalArgumentException()");
+      }
+      return resolveInputDefintionBuilder.build();
+  }
+
+
+    private MethodSpec createInputDefinitions(ImmutableCollection<VajramInputDefinition> inputDefs) {
+        // Method : getInputDefinitions
+        Builder inputDefinitionsBuilder = methodBuilder("getInputDefinitions")
+                .addModifiers(PUBLIC)
+                .returns(ParameterizedTypeName.get(ClassName.get(ImmutableList.class),
+                        ClassName.get(VajramInputDefinition.class)));
+
+        List<CodeBlock> codeBlocks = new ArrayList<>(inputDefs.size());
+        // Input and Dependency code block
+        inputDefs.forEach( vajramInputDefinition ->  {
+
+            CodeBlock.Builder inputDefBuilder = CodeBlock.builder();
+            if(vajramInputDefinition instanceof Input) {
+                Input input = (Input) vajramInputDefinition;
+                inputDefBuilder.add("Input.builder()")
+                       .add(".name($S)", vajramInputDefinition.name());
+
+              // handle input type
+               Set<InputSource> inputSources = input.sources();
+               if (!inputSources.isEmpty()) {
+                   inputDefBuilder.add(".sources(");
+                   ClassName className = ClassName.get(InputSource.class);
+                   String sources = inputSources.stream().map( inputSource -> {
+                       if (inputSource == InputSource.CLIENT) {
+                           return "InputSource.CLIENT";
+                       } else if (inputSource == InputSource.SESSION) {
+                           return "InputSource.SESSION";
+                       }
+                       else {
+                           throw new IllegalArgumentException("Incorrect source defined in vajram config");
+                       }
+                   }).collect(Collectors.joining(","));
+                   inputDefBuilder.add(sources).add(")");
+               }
+               // handle data type
+                DataType dataType = input.type();
+                inputDefBuilder.add(".type(");
+                if (dataType instanceof JavaType<?>) {
+                    // custom handling
+                    JavaType javaType = (JavaType) dataType;
+                    ClassName className ;
+                    if (!javaType.enclosingClasses().isEmpty() || javaType.simpleName().isPresent()) {
+                        className =
+                                ClassName.get((String) javaType.packageName().get(),
+                                        (String) javaType.enclosingClasses().stream().collect(Collectors.joining(".")),
+                                        (String) javaType.simpleName().get());
+                    } else {
+                        className= ClassName.bestGuess(javaType.className());
+                    }
+                    inputDefBuilder.add("$1T.java($2T.class)", ClassName.get(JavaType.class), className);
+                } else {
+                    String simpleName  = dataType.getClass().getSimpleName();
+                    String name = simpleName.substring(0, simpleName.length()-4).toLowerCase();
+                    inputDefBuilder.add("$T.$L()", ClassName.get(dataType.getClass().getPackageName(), dataType.getClass().getSimpleName()), name);
+                }
+                inputDefBuilder.add(")");
+                if (vajramInputDefinition.isMandatory()) {
+                   inputDefBuilder.add(".isMandatory()");
+               }
+
+               // last line
+                inputDefBuilder.add(".build()");
+            } else if (vajramInputDefinition instanceof Dependency) {
+                Dependency dependency = (Dependency) vajramInputDefinition;
+                inputDefBuilder.add("Dependency.builder()")
+                        .add(".name($S)", dependency.name());
+                DataAccessSpec dataAccessSpec = dependency.dataAccessSpec();
+                if (dataAccessSpec instanceof VajramID) {
+                    VajramID vajramID = (VajramID) dataAccessSpec;
+                    inputDefBuilder.add(".dataAccessSpec(").add(
+                                    CodeBlock.builder().add("$1T.vajramID($2S)",
+                                            ClassName.get(VajramID.class),
+                                                    vajramID.vajramId()).build())
+                            .add(")");
+                }
+                if(vajramInputDefinition.isMandatory()) {
+                    inputDefBuilder.add(".isMandatory()");
+                }
+                // build() as last step
+                inputDefBuilder.add(".build()");
+            }
+            codeBlocks.add(inputDefBuilder.build());
+        });
+        CodeBlock.Builder returnCode = CodeBlock.builder()
+                .add("return ImmutableList.of(\n").add(CodeBlock.join(codeBlocks, ",\n\t")).add("\n);");
+        inputDefinitionsBuilder.addCode(returnCode.build());
+        return inputDefinitionsBuilder.build();
+    }
+
+    public String codeGenVajramRequest() {
     VajramInputsDef vajramInputsDef = vajramInputFile.vajramInputsDef();
     ImmutableList<InputDef> inputDefs = vajramInputsDef.inputs();
     MethodSpec.Builder requestConstructor = constructorBuilder().addModifiers(PRIVATE);

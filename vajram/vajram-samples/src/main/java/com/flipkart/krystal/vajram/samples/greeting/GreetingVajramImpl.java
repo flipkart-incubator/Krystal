@@ -14,11 +14,13 @@ import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
+import com.flipkart.krystal.vajram.modulation.UnmodulatedInput;
 import com.flipkart.krystal.vajram.samples.greeting.GreetingInputUtil.AllInputs;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.lang.System.Logger;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -68,11 +70,14 @@ public final class GreetingVajramImpl extends GreetingVajram {
     switch (dependency) {
       case "user_info" -> {
         if (Set.of("user_id").equals(resolvableInputs)) {
+            // handle collection response type
           String userId = super.userIdForUserService(inputs.getInputValueOrThrow("user_id"));
           // Request.toInputValues() in case of object
-          return DependencyCommand.executeWith(
-              new Inputs(
-                      ImmutableMap.of("user_id", ValueOrError.withValue(userId))));
+          return DependencyCommand.multiExecuteWith(
+              List.of(new Inputs(
+                      ImmutableMap.of("user_id", ValueOrError.withValue(userId)))));
+//        } else if (){
+
         }
       }
     }
