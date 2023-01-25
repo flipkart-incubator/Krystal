@@ -282,6 +282,7 @@ class KrystexVajramExecutorTest {
             Hello Friends of Firstname Lastname (user_id_1)! Firstname Lastname (user_id_1:friend_1), Firstname Lastname (user_id_1:friend_2)
             Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1)
             Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1), Firstname Lastname (user_id_2:friend_2)""");
+    assertThat(TestUserServiceVajram.CALL_COUNTER.sum()).isEqualTo(1);
   }
 
   private HelloRequest helloRequest(TestRequestContext applicationRequestContext) {
