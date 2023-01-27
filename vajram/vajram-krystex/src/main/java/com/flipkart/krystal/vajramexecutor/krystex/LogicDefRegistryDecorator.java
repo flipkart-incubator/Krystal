@@ -13,7 +13,7 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Set;
 import java.util.function.Function;
 
-public record DecoratedLogicDefinitionRegistry(LogicDefinitionRegistry delegate) {
+public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
 
   public <T> ResolverLogicDefinition newResolverLogic(
       String nodeId, Set<String> inputs, ResolverLogic logic) {

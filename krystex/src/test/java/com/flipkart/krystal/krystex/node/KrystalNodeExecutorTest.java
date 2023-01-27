@@ -8,6 +8,7 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.SingleThreadExecutorPool;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -41,6 +42,7 @@ class KrystalNodeExecutorTest {
         new KrystalNodeExecutor(
             nodeDefinitionRegistry,
             new LogicDecorationOrdering(ImmutableSet.of()),
+            new SingleThreadExecutorPool(1),
             "test");
   }
 

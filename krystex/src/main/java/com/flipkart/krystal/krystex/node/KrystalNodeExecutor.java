@@ -7,6 +7,7 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.RequestId;
+import com.flipkart.krystal.krystex.SingleThreadExecutorPool;
 import com.flipkart.krystal.krystex.commands.ExecuteWithAllInputs;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
 import com.flipkart.krystal.krystex.commands.Terminate;
@@ -15,14 +16,11 @@ import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +31,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
   private final NodeDefinitionRegistry nodeDefinitionRegistry;
   private final LogicDecorationOrdering logicDecorationOrdering;
-  private final ExecutorService commandQueue;
+  private final SingleThreadExecutorPool.Lease commandQueue;
   private final RequestId requestId;
 
   private final Map<String, Map<String, MainLogicDecorator>> requestScopedMainDecorators =
@@ -45,14 +43,11 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   public KrystalNodeExecutor(
       NodeDefinitionRegistry nodeDefinitionRegistry,
       LogicDecorationOrdering logicDecorationOrdering,
+      SingleThreadExecutorPool commandQueuePool,
       String requestId) {
     this.nodeDefinitionRegistry = nodeDefinitionRegistry;
     this.logicDecorationOrdering = logicDecorationOrdering;
-    this.commandQueue =
-        Executors.newSingleThreadExecutor(
-            new ThreadFactoryBuilder()
-                .setNameFormat("KrystalNodeExecutor-%s".formatted(requestId))
-                .build());
+    this.commandQueue = commandQueuePool.lease();
     this.requestId = new RequestId(requestId);
   }
 
@@ -134,7 +129,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                       });
               return node.executeCommand(nodeCommand);
             },
-            commandQueue)
+            commandQueue.get())
         .thenCompose(Function.identity());
   }
 
@@ -158,7 +153,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                     nodeExecutionInfos ->
                         nodeExecutionInfos.stream().map(NodeExecutionInfo::future))
                 .toArray(CompletableFuture[]::new))
-        .whenComplete((unused, throwable) -> commandQueue.shutdown());
+        .whenComplete((unused, throwable) -> commandQueue.close());
   }
 
   private record NodeExecutionInfo(NodeId nodeId, Inputs inputs, CompletableFuture<?> future) {}
