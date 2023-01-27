@@ -14,4 +14,5 @@ module flipkart.krystal.krystex {
   requires static lombok;
   requires static org.slf4j;
   requires flipkart.krystal.common;
+  requires org.apache.commons.pool2;
 }

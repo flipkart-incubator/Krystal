@@ -343,24 +343,24 @@ class KrystexVajramExecutorTest {
           }
           return instanceId;
         };
-    builder.decorateVajramLogicForSession(
-        new MainLogicDecoratorConfig(
-            Resilience4JBulkhead.DECORATOR_TYPE,
-            isIOVajram,
-            createInstanceId,
-            Resilience4JBulkhead::new));
-    builder.decorateVajramLogicForSession(
-        new MainLogicDecoratorConfig(
-            Resilience4JCircuitBreaker.DECORATOR_TYPE,
-            isIOVajram,
-            createInstanceId,
-            Resilience4JCircuitBreaker::new));
-    builder.logicDecorationOrdering(
-        new LogicDecorationOrdering(
-            ImmutableSet.of(
-                Resilience4JCircuitBreaker.DECORATOR_TYPE,
+    return builder
+        .decorateVajramLogicForSession(
+            new MainLogicDecoratorConfig(
                 Resilience4JBulkhead.DECORATOR_TYPE,
-                InputModulationDecorator.DECORATOR_TYPE)));
-    return builder;
+                isIOVajram,
+                createInstanceId,
+                Resilience4JBulkhead::new))
+        .decorateVajramLogicForSession(
+            new MainLogicDecoratorConfig(
+                Resilience4JCircuitBreaker.DECORATOR_TYPE,
+                isIOVajram,
+                createInstanceId,
+                Resilience4JCircuitBreaker::new))
+        .logicDecorationOrdering(
+            new LogicDecorationOrdering(
+                ImmutableSet.of(
+                    Resilience4JCircuitBreaker.DECORATOR_TYPE,
+                    Resilience4JBulkhead.DECORATOR_TYPE,
+                    InputModulationDecorator.DECORATOR_TYPE)));
   }
 }
