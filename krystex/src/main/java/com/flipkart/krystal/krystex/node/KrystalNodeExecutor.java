@@ -7,13 +7,13 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.RequestId;
+import com.flipkart.krystal.krystex.SingleThreadExecutorPool;
 import com.flipkart.krystal.krystex.commands.ExecuteWithAllInputs;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
 import com.flipkart.krystal.krystex.commands.Terminate;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
-import com.flipkart.krystal.utils.MultiLeasePool;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
@@ -21,7 +21,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +31,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
   private final NodeDefinitionRegistry nodeDefinitionRegistry;
   private final LogicDecorationOrdering logicDecorationOrdering;
-  private MultiLeasePool<ExecutorService>.Lease commandQueue;
+  private final SingleThreadExecutorPool.Lease commandQueue;
   private final RequestId requestId;
 
   private final Map<String, Map<String, MainLogicDecorator>> requestScopedMainDecorators =
@@ -44,7 +43,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   public KrystalNodeExecutor(
       NodeDefinitionRegistry nodeDefinitionRegistry,
       LogicDecorationOrdering logicDecorationOrdering,
-      MultiLeasePool<ExecutorService> commandQueuePool,
+      SingleThreadExecutorPool commandQueuePool,
       String requestId) {
     this.nodeDefinitionRegistry = nodeDefinitionRegistry;
     this.logicDecorationOrdering = logicDecorationOrdering;

@@ -8,16 +8,14 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.SingleThreadExecutorPool;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
-import com.flipkart.krystal.utils.MultiLeasePool;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
@@ -44,13 +42,7 @@ class KrystalNodeExecutorTest {
         new KrystalNodeExecutor(
             nodeDefinitionRegistry,
             new LogicDecorationOrdering(ImmutableSet.of()),
-            new MultiLeasePool<>(
-                () ->
-                    Executors.newSingleThreadExecutor(
-                        new ThreadFactoryBuilder()
-                            .setNameFormat("KrystalNodeExecutor-test")
-                            .build()),
-                Runtime.getRuntime().availableProcessors() - 1),
+            new SingleThreadExecutorPool(1),
             "test");
   }
 

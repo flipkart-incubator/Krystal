@@ -23,6 +23,7 @@ import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
 import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.flipkart.krystal.logic.LogicTag;
+import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.IOVajram;
@@ -57,6 +58,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -87,7 +89,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
       new LinkedHashMap<>();
 
   private final LogicDecorationOrdering logicDecorationOrdering;
-  @Getter private final SingleThreadExecutorPool executorPool;
+  private final SingleThreadExecutorPool executorPool;
 
   private VajramNodeGraph(
       String[] packagePrefixes,
@@ -106,6 +108,10 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     for (String packagePrefix : packagePrefixes) {
       loadVajramsFromClassPath(packagePrefix).forEach(this::registerVajram);
     }
+  }
+
+  public MultiLeasePool<ExecutorService> getExecutorPool() {
+    return executorPool;
   }
 
   @Override

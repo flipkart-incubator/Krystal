@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
+import com.flipkart.krystal.krystex.SingleThreadExecutorPool;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
@@ -22,7 +23,7 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
   public KrystexVajramExecutor(
       VajramNodeGraph vajramNodeGraph,
       LogicDecorationOrdering logicDecorationOrdering,
-      MultiLeasePool<ExecutorService> executorServicePool,
+      SingleThreadExecutorPool executorServicePool,
       C applicationRequestContext) {
     this.vajramNodeGraph = vajramNodeGraph;
     this.applicationRequestContext = applicationRequestContext;
