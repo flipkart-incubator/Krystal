@@ -4,9 +4,9 @@ import com.flipkart.krystal.krystex.node.DependantChain;
 import com.flipkart.krystal.krystex.node.DependantChainStart;
 import com.flipkart.krystal.krystex.node.NodeId;
 
-public record Terminate(NodeId nodeId, DependantChain nodeDependants) implements NodeCommand {
+public record Flush(NodeId nodeId, DependantChain nodeDependants) implements NodeCommand {
 
-  public Terminate(NodeId nodeId) {
+  public Flush(NodeId nodeId) {
     this(nodeId, DependantChainStart.instance());
   }
 }

@@ -51,6 +51,7 @@ import java.util.function.Predicate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 class KrystexVajramExecutorTest {
 
@@ -278,8 +279,8 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  void flush_singleDepthParallelDependencyDefaultInputModulatorConfig_flushes2Batchers()
-      throws Exception {
+  void flush_singleDepthParallelDependencyDefaultInputModulatorConfig_flushes2Batchers(
+      TestInfo testInfo) throws Exception {
     VajramNodeGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
@@ -291,8 +292,7 @@ class KrystexVajramExecutorTest {
             .build();
     CompletableFuture<String> multiHellos;
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
-        graph.createExecutor(
-            requestContext.requestId("close_singleDependency_causesBatcherToTerminate").build())) {
+        graph.createExecutor(requestContext.requestId(testInfo.getDisplayName()).build())) {
       multiHellos =
           krystexVajramExecutor.execute(
               vajramID(MultiHelloFriends.ID),
@@ -319,8 +319,8 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  void flush_singleDepthParallelDependencySharedInputModulatorConfig_flushes1Batcher()
-      throws Exception {
+  void flush_singleDepthParallelDependencySharedInputModulatorConfig_flushes1Batcher(
+      TestInfo testInfo) throws Exception {
     VajramNodeGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
@@ -338,8 +338,7 @@ class KrystexVajramExecutorTest {
             .build();
     CompletableFuture<String> multiHellos;
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
-        graph.createExecutor(
-            requestContext.requestId("close_singleDependency_causesBatcherToTerminate").build())) {
+        graph.createExecutor(requestContext.requestId(testInfo.getDisplayName()).build())) {
       multiHellos =
           krystexVajramExecutor.execute(
               vajramID(MultiHelloFriends.ID),
@@ -366,7 +365,7 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  void close_sequentialDependency_causesBatcherToTerminate() throws Exception {
+  void close_sequentialDependency_flushesBatcher(TestInfo testInfo) throws Exception {
     VajramNodeGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
@@ -382,10 +381,7 @@ class KrystexVajramExecutorTest {
             .build();
     CompletableFuture<String> multiHellos;
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
-        graph.createExecutor(
-            requestContext
-                .requestId("close_sequentialDependency_causesBatcherToTerminate")
-                .build())) {
+        graph.createExecutor(requestContext.requestId(testInfo.getDisplayName()).build())) {
       multiHellos =
           krystexVajramExecutor.execute(
               vajramID(MultiHelloFriendsV2.ID),

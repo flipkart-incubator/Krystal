@@ -12,8 +12,8 @@ import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.RequestId;
 import com.flipkart.krystal.krystex.SingleThreadExecutorPool;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
+import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.NodeRequestCommand;
-import com.flipkart.krystal.krystex.commands.Terminate;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
@@ -171,10 +171,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
         .thenCompose(Function.identity());
   }
 
-  void terminate(Terminate terminate) {
-    runAsync(
-        () -> nodeRegistry.get(terminate.nodeId()).executeCommand(terminate),
-        commandQueueLease.get());
+  void enqueueCommand(Flush flush) {
+    runAsync(() -> nodeRegistry.get(flush.nodeId()).executeCommand(flush), commandQueueLease.get());
   }
 
   public void flush() {
@@ -216,7 +214,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     unFlushedRequests.forEach(
         (requestId, nodeExecutionInfos) ->
             nodeExecutionInfos.forEach(
-                nodeExecutionInfo -> terminate(new Terminate(nodeExecutionInfo.nodeId()))));
+                nodeExecutionInfo -> enqueueCommand(new Flush(nodeExecutionInfo.nodeId()))));
     unFlushedRequests.clear();
   }
 
