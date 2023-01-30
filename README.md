@@ -156,3 +156,6 @@ Components of the Krystal Project try to adhere to the following design goals:
 1. Programming language agnostic spec definitions: Although the project currently supports the java programming language, keeping
     the programming-model spec language-agnostic allows the programming model to have implementations in different
     languages and allows application owners/feature-developers to choose a language of their choice.
+
+## Latest Releases
+[![Clojars Project](https://img.shields.io/clojars/v/com.flipkart.krystal/krystal-common.svg)](https://clojars.org/com.flipkart.krystal/krystal-common)
