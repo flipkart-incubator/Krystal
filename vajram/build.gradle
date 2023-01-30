@@ -7,10 +7,6 @@ plugins {
 group 'com.flipkart.krystal'
 version project.krystal_version
 
-repositories {
-    mavenCentral()
-}
-
 java {
     withSourcesJar()
 }
