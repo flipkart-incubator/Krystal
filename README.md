@@ -1,5 +1,14 @@
 # The Krystal Project
 
+## Latest Releases
+[![Clojars Project](https://img.shields.io/clojars/v/com.flipkart.krystal/krystal-common.svg)](https://clojars.org/com.flipkart.krystal/krystal-common)
+[![Clojars Project](https://img.shields.io/clojars/v/com.flipkart.krystal/krystex.svg)](https://clojars.org/com.flipkart.krystal/krystex)
+[![Clojars Project](https://img.shields.io/clojars/v/com.flipkart.krystal/vajram.svg)](https://clojars.org/com.flipkart.krystal/vajram)
+[![Clojars Project](https://img.shields.io/clojars/v/com.flipkart.krystal/vajram-codegen.svg)](https://clojars.org/com.flipkart.krystal/vajram-codegen)
+[![Clojars Project](https://img.shields.io/clojars/v/com.flipkart.krystal/vajram-krystex.svg)](https://clojars.org/com.flipkart.krystal/vajram-krystex)
+[![Clojars Project](https://img.shields.io/clojars/v/com.flipkart.krystal/com.flipkart.krystal.gradle.plugin.svg)](https://clojars.org
+/com.flipkart.krystal/com.flipkart.krystal.gradle.plugin)
+
 ///// This doc is a WIP
 
 Super-charging the development of synchronous and asynchronous business workflows.
@@ -156,3 +165,4 @@ Components of the Krystal Project try to adhere to the following design goals:
 1. Programming language agnostic spec definitions: Although the project currently supports the java programming language, keeping
     the programming-model spec language-agnostic allows the programming model to have implementations in different
     languages and allows application owners/feature-developers to choose a language of their choice.
+
