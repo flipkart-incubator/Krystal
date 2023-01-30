@@ -2,12 +2,16 @@
 
 ## Latest Releases
 [![Clojars Project](https://img.shields.io/clojars/v/com.flipkart.krystal/krystal-common.svg)](https://clojars.org/com.flipkart.krystal/krystal-common)
+
 [![Clojars Project](https://img.shields.io/clojars/v/com.flipkart.krystal/krystex.svg)](https://clojars.org/com.flipkart.krystal/krystex)
+
 [![Clojars Project](https://img.shields.io/clojars/v/com.flipkart.krystal/vajram.svg)](https://clojars.org/com.flipkart.krystal/vajram)
+
 [![Clojars Project](https://img.shields.io/clojars/v/com.flipkart.krystal/vajram-codegen.svg)](https://clojars.org/com.flipkart.krystal/vajram-codegen)
+
 [![Clojars Project](https://img.shields.io/clojars/v/com.flipkart.krystal/vajram-krystex.svg)](https://clojars.org/com.flipkart.krystal/vajram-krystex)
-[![Clojars Project](https://img.shields.io/clojars/v/com.flipkart.krystal/com.flipkart.krystal.gradle.plugin.svg)](https://clojars.org
-/com.flipkart.krystal/com.flipkart.krystal.gradle.plugin)
+
+[![Clojars Project](https://img.shields.io/clojars/v/com.flipkart.krystal/com.flipkart.krystal.gradle.plugin.svg)](https://clojars.org/com.flipkart.krystal/com.flipkart.krystal.gradle.plugin)
 
 ///// This doc is a WIP
 
