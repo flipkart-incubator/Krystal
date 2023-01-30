@@ -17,9 +17,9 @@ import com.flipkart.krystal.krystex.ResolverDefinition;
 import com.flipkart.krystal.krystex.ResultFuture;
 import com.flipkart.krystal.krystex.commands.ExecuteWithDependency;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
+import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.NodeRequestCommand;
 import com.flipkart.krystal.krystex.commands.SkipNode;
-import com.flipkart.krystal.krystex.commands.Terminate;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
@@ -87,7 +87,7 @@ public class Node {
   private final Map<RequestId, Map<NodeLogicId, ResolverCommand>> resolverResults =
       new LinkedHashMap<>();
 
-  private final Map<DependantChain, Boolean> terminatedDependantChain = new LinkedHashMap<>();
+  private final Map<DependantChain, Boolean> flushedDependantChain = new LinkedHashMap<>();
   private final Map<DependantChain, Set<RequestId>> requestsByDependantChain =
       new LinkedHashMap<>();
   private final Map<RequestId, DependantChain> dependantChainByRequest = new LinkedHashMap<>();
@@ -111,10 +111,10 @@ public class Node {
                 .collect(Collectors.groupingBy(ResolverDefinition::dependencyName)));
   }
 
-  void executeCommand(Terminate nodeCommand) {
-    terminatedDependantChain.put(nodeCommand.nodeDependants(), true);
-    terminateAllDependenciesIfNeeded(nodeCommand.nodeDependants());
-    terminateDecoratorsIfNeeded(nodeCommand.nodeDependants());
+  void executeCommand(Flush nodeCommand) {
+    flushedDependantChain.put(nodeCommand.nodeDependants(), true);
+    flushAllDependenciesIfNeeded(nodeCommand.nodeDependants());
+    flushDecoratorsIfNeeded(nodeCommand.nodeDependants());
   }
 
   CompletableFuture<NodeResponse> executeRequestCommand(NodeRequestCommand nodeCommand) {
@@ -148,8 +148,8 @@ public class Node {
     return resultForRequest;
   }
 
-  private void terminateDecoratorsIfNeeded(DependantChain dependantChain) {
-    if (!terminatedDependantChain.getOrDefault(dependantChain, false)) {
+  private void flushDecoratorsIfNeeded(DependantChain dependantChain) {
+    if (!flushedDependantChain.getOrDefault(dependantChain, false)) {
       return;
     }
     Set<RequestId> requestIds = requestsByDependantChain.get(dependantChain);
@@ -380,21 +380,21 @@ public class Node {
                 });
       }
 
-      terminateDependencyIfNeeded(
+      flushDependencyIfNeeded(
           dependencyName,
           dependantChainByRequest.getOrDefault(requestId, DependantChainStart.instance()));
     }
   }
 
-  private void terminateAllDependenciesIfNeeded(DependantChain dependantChain) {
+  private void flushAllDependenciesIfNeeded(DependantChain dependantChain) {
     nodeDefinition
         .dependencyNodes()
         .keySet()
-        .forEach(dependencyName -> terminateDependencyIfNeeded(dependencyName, dependantChain));
+        .forEach(dependencyName -> flushDependencyIfNeeded(dependencyName, dependantChain));
   }
 
-  private void terminateDependencyIfNeeded(String dependencyName, DependantChain dependantChain) {
-    if (!terminatedDependantChain.getOrDefault(dependantChain, false)) {
+  private void flushDependencyIfNeeded(String dependencyName, DependantChain dependantChain) {
+    if (!flushedDependantChain.getOrDefault(dependantChain, false)) {
       return;
     }
     Set<RequestId> requestsForDependantChain =
@@ -412,8 +412,8 @@ public class Node {
                             .getOrDefault(dependencyName, new DependencyNodeExecutions())
                             .executedResolvers()))) {
 
-      krystalNodeExecutor.terminate(
-          new Terminate(depNodeId, DependantChain.from(nodeId, dependencyName, dependantChain)));
+      krystalNodeExecutor.enqueueCommand(
+          new Flush(depNodeId, DependantChain.from(nodeId, dependencyName, dependantChain)));
     }
   }
 
@@ -499,7 +499,7 @@ public class Node {
                 resultForRequest.complete(
                     new NodeResponse(mainLogicInputs.nonDependencyInputs(), value)));
     mainLogicExecuted.put(requestId, true);
-    terminateDecoratorsIfNeeded(dependantChainByRequest.get(requestId));
+    flushDecoratorsIfNeeded(dependantChainByRequest.get(requestId));
   }
 
   private CompletableFuture<Object> executeDecoratedMainLogic(

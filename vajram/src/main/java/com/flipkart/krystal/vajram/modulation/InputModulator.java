@@ -23,15 +23,12 @@ public interface InputModulator<InputsNeedingModulation, CommonInputs> extends C
   ImmutableList<ModulatedInput<InputsNeedingModulation, CommonInputs>> add(
       InputsNeedingModulation inputsNeedingModulation, CommonInputs commonInputs);
 
-  /**
-   * Mark the given inputs as needing termination. If all the inputs passed to this modulator are
-   * terminated, then this modulator should forcefully terminate.
-   */
+  /** Externally trigger modulation */
   void modulate();
 
   /**
-   * When this InputModulator decides to terminate (due to some internal state like a timer), or
-   * when the {@link #modulate()} method is called, execute the given callback.
+   * When this InputModulator decides to modulate (due to some internal state like a timer), or when
+   * the {@link #modulate()} method is called, execute the given callback.
    */
   void onModulation(
       Consumer<ImmutableList<ModulatedInput<InputsNeedingModulation, CommonInputs>>> callback);
