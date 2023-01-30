@@ -14,10 +14,8 @@ import java.util.function.Consumer;
 public final class Batcher<I, C> implements InputModulator<I, C> {
 
   private static final int DEFAULT_BATCH_SIZE = 1;
-  private final List<Consumer<ImmutableList<ModulatedInput<I, C>>>> terminationListeners =
-      new ArrayList<>();
+  private Consumer<ImmutableList<ModulatedInput<I, C>>> modulationListener;
   private final Map<C, List<I>> unModulatedRequests = new HashMap<>();
-  private final Map<InputTuple<I, C>, Boolean> terminationRequests = new HashMap<>();
   private int minBatchSize = DEFAULT_BATCH_SIZE;
 
   public Batcher() {}
@@ -45,29 +43,20 @@ public final class Batcher<I, C> implements InputModulator<I, C> {
   }
 
   @Override
-  public void terminate(I inputsNeedingModulation, C commonInputs) {
-    this.terminationRequests.put(new InputTuple<>(inputsNeedingModulation, commonInputs), true);
-    if (unModulatedRequests.entrySet().stream()
-        .allMatch(
-            e ->
-                e.getValue().stream()
-                    .allMatch(
-                        i ->
-                            terminationRequests.getOrDefault(
-                                new InputTuple<>(i, e.getKey()), false)))) {
-      ImmutableList<ModulatedInput<I, C>> modulatedInputs =
-          unModulatedRequests.keySet().stream()
-              .map(c -> getModulatedInputs(c, true))
-              .flatMap(Collection::stream)
-              .collect(toImmutableList());
-      terminationListeners.forEach(
-          modulatedInputConsumer -> modulatedInputConsumer.accept(modulatedInputs));
+  public void modulate() {
+    ImmutableList<ModulatedInput<I, C>> modulatedInputs =
+        unModulatedRequests.keySet().stream()
+            .map(c -> getModulatedInputs(c, true))
+            .flatMap(Collection::stream)
+            .collect(toImmutableList());
+    if (modulationListener != null) {
+      modulationListener.accept(modulatedInputs);
     }
   }
 
   @Override
-  public void onTermination(Consumer<ImmutableList<ModulatedInput<I, C>>> listener) {
-    terminationListeners.add(listener);
+  public void onModulation(Consumer<ImmutableList<ModulatedInput<I, C>>> listener) {
+    modulationListener = listener;
   }
 
   @Override
@@ -75,6 +64,4 @@ public final class Batcher<I, C> implements InputModulator<I, C> {
     this.minBatchSize =
         configProvider.<Integer>getConfig("min_batch_size").orElse(DEFAULT_BATCH_SIZE);
   }
-
-  private record InputTuple<I, C>(I inputsNeedingModulation, C commonInputs) {}
 }

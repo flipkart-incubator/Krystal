@@ -1,6 +1,5 @@
 package com.flipkart.krystal.utils;
 
-import com.flipkart.krystal.data.ValueOrError;
 import java.util.concurrent.CompletableFuture;
 
 public class Futures {
@@ -27,7 +26,7 @@ public class Futures {
   }
 
   /**
-   * Set's up completable Futures such that
+   * Sets up completable Futures such that
    *
    * <ul>
    *   when {@code sourceFuture} completes, its completion is propagated to {@code
@@ -41,9 +40,9 @@ public class Futures {
    * Calling this method is equivalent to calling {@link #propagateCompletion(CompletableFuture,
    * CompletableFuture) propagateCompletion(sourceFuture, destinationFuture)} and {@link
    * #propagateCancellation(CompletableFuture, CompletableFuture)
-   * propagateCancellation(destinationFuture, sourceFuture}
+   * propagateCancellation(destinationFuture, sourceFuture)}
    */
-  public static <T> void linkEndStates(
+  public static <T> void linkFutures(
       CompletableFuture<? extends T> sourceFuture, CompletableFuture<T> destinationFuture) {
     propagateCompletion(sourceFuture, destinationFuture);
     propagateCancellation(destinationFuture, sourceFuture);

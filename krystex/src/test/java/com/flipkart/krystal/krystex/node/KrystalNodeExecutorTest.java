@@ -29,11 +29,6 @@ class KrystalNodeExecutorTest {
   private NodeDefinitionRegistry nodeDefinitionRegistry;
   private LogicDefinitionRegistry logicDefinitionRegistry;
 
-  private static <T> T timedGet(CompletableFuture<T> future)
-      throws InterruptedException, ExecutionException, TimeoutException {
-    return future.get(5, TimeUnit.HOURS);
-  }
-
   @BeforeEach
   void setUp() {
     this.logicDefinitionRegistry = new LogicDefinitionRegistry();
@@ -60,9 +55,10 @@ class KrystalNodeExecutorTest {
                     "nodeLogic", Collections.emptySet(), dependencyValues -> "computed_value")
                 .nodeLogicId());
 
-    Object result =
-        timedGet(krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), "req_1"));
-    assertEquals("computed_value", result);
+    CompletableFuture<Object> future =
+        krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), "req_1");
+    krystalNodeExecutor.flush();
+    assertEquals("computed_value", timedGet(future));
   }
 
   @Test
@@ -83,14 +79,13 @@ class KrystalNodeExecutorTest {
                                     inputs.getInputValue("c").value().orElseThrow()))
                     .nodeLogicId())
             .nodeId();
-    Object result =
-        timedGet(
-            krystalNodeExecutor.executeNode(
-                nodeId,
-                new Inputs(
-                    ImmutableMap.of("a", withValue(1), "b", withValue(2), "c", withValue("3"))),
-                "r"));
-    assertEquals("computed_values: a=1;b=2;c=3", result);
+    CompletableFuture<Object> future =
+        krystalNodeExecutor.executeNode(
+            nodeId,
+            new Inputs(ImmutableMap.of("a", withValue(1), "b", withValue(2), "c", withValue("3"))),
+            "r");
+    krystalNodeExecutor.flush();
+    assertEquals("computed_values: a=1;b=2;c=3", timedGet(future));
   }
 
   @Test
@@ -121,9 +116,10 @@ class KrystalNodeExecutorTest {
                 .nodeLogicId(),
             ImmutableMap.of("dep", n1.nodeId()));
 
-    Object results = timedGet(krystalNodeExecutor.executeNode(n2.nodeId(), Inputs.empty(), "r1"));
-
-    assertEquals("dependency_value:computed_value", results);
+    CompletableFuture<Object> future =
+        krystalNodeExecutor.executeNode(n2.nodeId(), Inputs.empty(), "r1");
+    krystalNodeExecutor.flush();
+    assertEquals("dependency_value:computed_value", timedGet(future));
   }
 
   @Test
@@ -192,31 +188,31 @@ class KrystalNodeExecutorTest {
         ImmutableMap.of("input", new NodeId(l3Dep)));
 
     Inputs inputs = Inputs.empty();
-    Object results =
-        timedGet(
-            krystalNodeExecutor.executeNode(
-                nodeDefinitionRegistry
-                    .newNodeDefinition(
-                        "requestExecution_multiLevelDependencies_final",
-                        newComputeLogic(
-                                "requestExecution_multiLevelDependencies_final",
-                                ImmutableSet.of("input"),
-                                dependencyValues ->
-                                    dependencyValues
-                                            .getDepValue("input")
-                                            .values()
-                                            .values()
-                                            .iterator()
-                                            .next()
-                                            .value()
-                                            .orElseThrow()
-                                        + ":final")
-                            .nodeLogicId(),
-                        ImmutableMap.of("input", new NodeId(l4Dep)))
-                    .nodeId(),
-                inputs,
-                "r"));
-    assertEquals("l1:l2:l3:l4:final", results);
+    CompletableFuture<Object> future =
+        krystalNodeExecutor.executeNode(
+            nodeDefinitionRegistry
+                .newNodeDefinition(
+                    "requestExecution_multiLevelDependencies_final",
+                    newComputeLogic(
+                            "requestExecution_multiLevelDependencies_final",
+                            ImmutableSet.of("input"),
+                            dependencyValues ->
+                                dependencyValues
+                                        .getDepValue("input")
+                                        .values()
+                                        .values()
+                                        .iterator()
+                                        .next()
+                                        .value()
+                                        .orElseThrow()
+                                    + ":final")
+                        .nodeLogicId(),
+                    ImmutableMap.of("input", new NodeId(l4Dep)))
+                .nodeId(),
+            inputs,
+            "r");
+    krystalNodeExecutor.flush();
+    assertEquals("l1:l2:l3:l4:final", timedGet(future));
   }
 
   @Test
@@ -237,6 +233,12 @@ class KrystalNodeExecutorTest {
                     .nodeId(),
                 Inputs.empty(),
                 ""));
+  }
+
+  /* So that bad testcases do not hang indefinitely.*/
+  private static <T> T timedGet(CompletableFuture<T> future)
+      throws InterruptedException, ExecutionException, TimeoutException {
+    return future.get(1, TimeUnit.SECONDS);
   }
 
   private <T> MainLogicDefinition<T> newComputeLogic(

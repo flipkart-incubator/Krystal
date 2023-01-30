@@ -32,13 +32,15 @@ class ChainAdderTest {
 
   @Test
   void chainer_success() throws ExecutionException, InterruptedException {
+    CompletableFuture<Integer> future;
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
         graph.build().createExecutor(new RequestContext(""))) {
-      assertThat(executeVajram(krystexVajramExecutor, 0).get()).isEqualTo(55);
+      future = executeVajram(krystexVajramExecutor, 0);
     }
+    assertThat(future.get()).isEqualTo(55);
   }
 
-//  @Test
+  // @Test
   void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
     int loopCount = 50_000;
     VajramNodeGraph graph = this.graph.maxRequestsPerThread(1).build();

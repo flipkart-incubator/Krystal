@@ -10,6 +10,10 @@ public interface KrystalExecutor extends AutoCloseable {
 
   <T> CompletableFuture<T> executeNode(NodeId nodeId, Inputs inputs, String requestId);
 
+  /** Flushes any pending requests. */
+  void flush();
+
+  // Override to suppress "throws Exception"
   @Override
   void close();
 }
