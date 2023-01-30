@@ -31,13 +31,15 @@ class FormulaTest {
 
   @Test
   void formula_success() throws ExecutionException, InterruptedException {
+    CompletableFuture<Integer> future;
     try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
         graph.build().createExecutor(new FormulaRequestContext(100, 20, 5, "formulaTest"))) {
-      assertThat(executeVajram(krystexVajramExecutor, 100).get()).isEqualTo(4);
+      future = executeVajram(krystexVajramExecutor, 100);
     }
+    assertThat(future.get()).isEqualTo(4);
   }
 
-//  @Test
+  // @Test
   void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
     int loopCount = 1_000_000;
     VajramNodeGraph graph = this.graph.maxRequestsPerThread(128).build();

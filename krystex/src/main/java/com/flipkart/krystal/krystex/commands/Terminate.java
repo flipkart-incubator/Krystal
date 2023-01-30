@@ -1,12 +1,12 @@
 package com.flipkart.krystal.krystex.commands;
 
-import com.flipkart.krystal.krystex.RequestId;
+import com.flipkart.krystal.krystex.node.DependantChain;
+import com.flipkart.krystal.krystex.node.DependantChainStart;
 import com.flipkart.krystal.krystex.node.NodeId;
 
-public record Terminate(NodeId nodeId, RequestId requestId) implements NodeCommand {
+public record Terminate(NodeId nodeId, DependantChain nodeDependants) implements NodeCommand {
 
-  @Override
-  public boolean shouldTerminate() {
-    return true;
+  public Terminate(NodeId nodeId) {
+    this(nodeId, DependantChainStart.instance());
   }
 }

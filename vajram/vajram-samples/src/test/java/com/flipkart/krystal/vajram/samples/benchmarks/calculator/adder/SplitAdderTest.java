@@ -33,13 +33,15 @@ class SplitAdderTest {
 
   @Test
   void splitAdder_success() throws ExecutionException, InterruptedException {
+    CompletableFuture<Integer> future;
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
         graph.build().createExecutor(new RequestContext(""))) {
-      assertThat(executeVajram(krystexVajramExecutor, 0).get()).isEqualTo(55);
+      future = executeVajram(krystexVajramExecutor, 0);
     }
+    assertThat(future.get()).isEqualTo(55);
   }
 
-//  @Test
+  // @Test
   void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
     VajramNodeGraph graph = this.graph.maxRequestsPerThread(2).build();
     long javaNativeTime = javaMethodBenchmark(this::splitAdd, LOOP_COUNT);

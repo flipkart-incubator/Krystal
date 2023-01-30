@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2;
 
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Vajram.ID;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 
@@ -14,13 +15,13 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.F
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceVajram;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2InputUtil.AllInputs;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceVajram;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-@VajramDef(HelloFriendsV2Vajram.ID)
+@VajramDef(ID)
 public abstract class HelloFriendsV2Vajram extends ComputeVajram<String> {
 
   public static final String ID = "HelloFriendsV2Vajram";
@@ -51,8 +52,8 @@ public abstract class HelloFriendsV2Vajram extends ComputeVajram<String> {
     return "Hello Friends! %s"
         .formatted(
             request.friendInfos().values().stream()
-                .filter(voe -> voe.value().isPresent())
-                .map(voe -> voe.value().get())
+                .map(voe -> voe.value().orElse(null))
+                .filter(Objects::nonNull)
                 .map(TestUserInfo::userName)
                 .collect(joining(", ")));
   }

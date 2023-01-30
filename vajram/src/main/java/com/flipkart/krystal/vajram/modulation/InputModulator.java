@@ -14,8 +14,9 @@ import java.util.function.Consumer;
  * them by squashing/merging these when some condition is met. For example, {@link Batcher} keeps
  * collecting inputs until a minimum batch size is reached.
  *
- * @param <InputsNeedingModulation>
- * @param <CommonInputs>
+ * @param <InputsNeedingModulation> Those inputs which can to be modulated into a single request.
+ * @param <CommonInputs> Those inputs which need do not vary within a single request. Meaning, two
+ *     requests with differing CommonInputs can never be modulated into a single request.
  */
 public interface InputModulator<InputsNeedingModulation, CommonInputs> extends ConfigListener {
 
@@ -26,12 +27,12 @@ public interface InputModulator<InputsNeedingModulation, CommonInputs> extends C
    * Mark the given inputs as needing termination. If all the inputs passed to this modulator are
    * terminated, then this modulator should forcefully terminate.
    */
-  void terminate(InputsNeedingModulation inputsNeedingModulation, CommonInputs commonInputs);
+  void modulate();
 
   /**
    * When this InputModulator decides to terminate (due to some internal state like a timer), or
-   * when the {@link #terminate(Object, Object)} method is called, execute the given callback.
+   * when the {@link #modulate()} method is called, execute the given callback.
    */
-  void onTermination(
+  void onModulation(
       Consumer<ImmutableList<ModulatedInput<InputsNeedingModulation, CommonInputs>>> callback);
 }
