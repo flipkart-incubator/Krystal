@@ -5,10 +5,6 @@ plugins {
 group 'org.example'
 version 'unspecified'
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     implementation project(':caramel')
     implementation 'com.google.guava:guava:31.1-jre'

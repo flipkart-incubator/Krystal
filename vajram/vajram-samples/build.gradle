@@ -6,11 +6,6 @@ plugins {
 group 'com.flipkart'
 version project.krystal_version
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-}
-
 dependencies {
     implementation project(':krystal-common')
     implementation project(':vajram')
