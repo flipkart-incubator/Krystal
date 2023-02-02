@@ -116,13 +116,6 @@ Every Vajram is defined by the following properties
 * Documentation: Describing in detail what this Vajram does, and how to use it - and how not to. This documentation is
   indexed and will facilitate the discovery of this Vajram across the company.
 * Permissions: RESTRICTED/PRIVATE - Vajram owners can decide who can declare a dependency on the Vajram.
-* Vajrams can be of two types: STANDALONE and GENERATORs.
-
-* STANDALONE Vajrams work as functions which take inputs and outputs. Their output does not have any direct impact on
-  the structure of the Krystal.
-* GENERATOR Vajrams have the ability to modify the Krystal by adding more Vajrams into the Krystal. The Brahmastra
-  Orchestration platform makes use of these Vajrams. Application developers developing widgets will normally not have to
-  interact with GENERATOR Vajrams
 
 ### Programming Spec
 
