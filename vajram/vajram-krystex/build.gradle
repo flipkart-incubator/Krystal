@@ -12,6 +12,7 @@ description 'An implementation of a vajram executor powered by the Krystex modul
 repositories {
     mavenLocal()
     mavenCentral()
+    maven { url "https://clojars.org/repo" }
 }
 
 java {

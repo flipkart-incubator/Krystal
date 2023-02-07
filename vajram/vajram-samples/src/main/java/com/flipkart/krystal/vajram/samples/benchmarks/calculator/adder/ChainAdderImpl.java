@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -45,8 +46,8 @@ public final class ChainAdderImpl extends ChainAdder {
       case "chain_sum" -> {
         if (Set.of("numbers").equals(resolvableInputs)) {
           ArrayList<Integer> numbers = inputs.getInputValueOrThrow("numbers");
-          DependencyCommand<ArrayList<Integer>> depCommand = numbersForSubChainer(numbers);
-          if (depCommand instanceof DependencyCommand.Skip<ArrayList<Integer>> skip) {
+          DependencyCommand<List<Integer>> depCommand = numbersForSubChainer(numbers);
+          if (depCommand instanceof DependencyCommand.Skip<List<Integer>> skip) {
             return skip.cast();
           } else {
             return multiExecuteWith(
@@ -61,7 +62,7 @@ public final class ChainAdderImpl extends ChainAdder {
       }
       case "sum" -> {
         if (Set.of("number_one").equals(resolvableInputs)) {
-          ArrayList<Integer> numbers = inputs.getInputValueOrThrow("numbers");
+          List<Integer> numbers = inputs.getInputValueOrThrow("numbers");
           DependencyCommand<Integer> depCommand = adderNumberOne(numbers);
           if (depCommand instanceof DependencyCommand.Skip<Integer> skip) {
             return skip.cast();

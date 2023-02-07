@@ -81,7 +81,7 @@ public class FormulaImpl extends Formula {
               sumResponses.values().stream()
                   .filter(voe -> voe.value().isPresent())
                   .map(voe -> voe.value().get())
-                  .map(Formula::quotientNumberTwo)
+                  .map(super::quotientNumberTwo)
                   .map(t -> ValueOrError.withValue((Object) t))
                   .map(voe -> new Inputs(ImmutableMap.of("number_two", voe)))
                   .collect(ImmutableList.toImmutableList()));

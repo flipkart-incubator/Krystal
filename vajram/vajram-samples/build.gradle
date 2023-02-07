@@ -9,6 +9,7 @@ version project.krystal_version
 repositories {
     mavenLocal()
     mavenCentral()
+    maven { url "https://clojars.org/repo" }
 }
 
 dependencies {

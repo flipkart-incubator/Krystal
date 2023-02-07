@@ -1,33 +1,37 @@
 package com.flipkart.krystal.vajram.codegen.models;
 
+import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.codegen.utils.CodegenUtils;
 import com.flipkart.krystal.vajram.inputs.Resolve;
-import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Method;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
 
-public record VajramDef(String vajramName, List<Method> resolveMethods, Method vajramLogic) {
+public record VajramDef(String vajramName, List<Method> resolveMethods, Method vajramLogic, Class vajramClass, String packageName) {
 
-    public static VajramDef fromVajram(VajramInputFile inputFile)  {
+    public static final String DOT_SEPARATOR = ".";
+
+    public static VajramDef fromVajram(ClassLoader classLoader, VajramInputFile inputFile)  {
         String packageName = CodegenUtils.getPackageFromPath(inputFile.inputFilePath().relativeFilePath());
         Class<? extends Vajram> result = null;
-
+        ClassLoader systemClassLoader = VajramID.class.getClassLoader();
         try {
-            File f = new File("/Users/prateek.kumar/Projects/flipkart/Krystal/vajram/vajram-samples/");
-            URL[] cp = {f.toURI().toURL()};
-            try (URLClassLoader urlcl = new URLClassLoader(cp)) {
-                result = (Class<? extends Vajram>) urlcl.loadClass(packageName + "." + inputFile.vajramName());
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            result = (Class<? extends Vajram>) classLoader.loadClass(packageName + DOT_SEPARATOR + inputFile.vajramName());
+            String inputUtilClass = packageName + DOT_SEPARATOR + CodegenUtils.getInputUtilClassName(inputFile.vajramName());
+            classLoader.loadClass(inputUtilClass);
+            String requestClass = packageName + DOT_SEPARATOR + CodegenUtils.getRequestClassName(inputFile.vajramName());
+            classLoader.loadClass(requestClass);
+            if (result.getSuperclass() == IOVajram.class) {
+                classLoader.loadClass(inputUtilClass + "$CommonInputs");
+                classLoader.loadClass(inputUtilClass + "$InputsNeedingModulation");
+            } else {
+                classLoader.loadClass(inputUtilClass + "$AllInputs");
             }
-        } catch (ClassNotFoundException | MalformedURLException e) {
+
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
 
@@ -44,6 +48,6 @@ public record VajramDef(String vajramName, List<Method> resolveMethods, Method v
                 }
             }
         }
-        return new VajramDef(inputFile.vajramName(), resolveMethods, vajramLogic);
+        return new VajramDef(inputFile.vajramName(), resolveMethods, vajramLogic, result, packageName);
     }
 }

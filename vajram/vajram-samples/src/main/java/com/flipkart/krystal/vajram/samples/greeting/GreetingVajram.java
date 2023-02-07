@@ -8,7 +8,6 @@ import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.BindFrom;
 import com.flipkart.krystal.vajram.inputs.Resolve;
-import com.flipkart.krystal.vajram.samples.greeting.GreetingInputUtil.AllInputs;
 import java.lang.System.Logger.Level;
 
 /**
@@ -40,7 +39,7 @@ public abstract class GreetingVajram extends ComputeVajram<String> {
   // This is the core business logic of this Vajram
   // Sync vajrams can return any object. AsyncVajrams need to return {CompletableFuture}s
   @VajramLogic
-  public String createGreetingMessage(AllInputs request) {
+  public String createGreetingMessage(GreetingInputUtil.AllInputs request) {
     String userId = request.userId();
     ValueOrError<UserInfo> userInfo =
         request.userInfo().get(UserServiceRequest.builder().userId(userId).build());

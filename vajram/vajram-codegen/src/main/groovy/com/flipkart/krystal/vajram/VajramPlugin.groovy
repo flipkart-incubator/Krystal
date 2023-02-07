@@ -24,6 +24,8 @@ class VajramPlugin implements Plugin<Project> {
             }
         }
 
+        project.sourceSets.main.java.srcDirs += project.buildDir.getPath() + '/classes/java/main/'
+
         project.tasks.register('codeGenVajramModels') {
             group = 'krystal'
             doLast {
@@ -39,12 +41,27 @@ class VajramPlugin implements Plugin<Project> {
             //Compile the generatedCode
             source project.sourceSets.main.allSource.srcDirs
             classpath = project.configurations.compileClasspath
+            print "classpath " + classpath
             destinationDirectory = project.tasks.compileJava.destinationDirectory
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
         }
 
-        project.tasks.compileJava.dependsOn 'compileVajramModels'
+        // add a new task to generate vajram impl as this step needs to run after model generation
+        // and compile
+        project.tasks.register('codeGenVajramImpl') {
+            group = 'krystal'
+
+            dependsOn it.project.tasks.compileVajramModels
+//            dependsOn 'cleanCompileJava'
+            doLast {
+                VajramModelsCodeGen.codeGenVajramImpl(
+                        project.sourceSets.main.java.srcDirs,
+                        mainGeneratedSrcDir)
+            }
+        }
+
+        project.tasks.compileJava.dependsOn 'codeGenVajramImpl'
 
         project.tasks.register('testCodeGenVajramModels') {
             group = 'krystal'
