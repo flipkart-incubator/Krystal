@@ -12,4 +12,11 @@ public interface VajramExecutor<C extends ApplicationRequestContext> extends Aut
 
   <T> CompletableFuture<T> execute(
       VajramID vajramId, Function<C, VajramRequest> vajramInputProviders, String requestId);
+
+  /** Flushes any pending requests */
+  void flush();
+
+  // Override to suppress "throws Exception"
+  @Override
+  void close();
 }

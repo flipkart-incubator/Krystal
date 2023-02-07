@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram.modulation;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.config.ConfigProvider;
-import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,14 +11,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-public final class Batcher implements InputModulator<InputValuesAdaptor, InputValuesAdaptor> {
+public final class Batcher<I, C> implements InputModulator<I, C> {
 
   private static final int DEFAULT_BATCH_SIZE = 1;
-  private final List<
-          Consumer<ImmutableList<ModulatedInput<InputValuesAdaptor, InputValuesAdaptor>>>>
-      terminationListeners = new ArrayList<>();
-  private final Map<InputValuesAdaptor, List<InputValuesAdaptor>> unModulatedRequests =
-      new HashMap<>();
+  private Consumer<ImmutableList<ModulatedInput<I, C>>> modulationListener;
+  private final Map<C, List<I>> unModulatedRequests = new HashMap<>();
   private int minBatchSize = DEFAULT_BATCH_SIZE;
 
   public Batcher() {}
@@ -29,17 +25,15 @@ public final class Batcher implements InputModulator<InputValuesAdaptor, InputVa
   }
 
   @Override
-  public ImmutableList<ModulatedInput<InputValuesAdaptor, InputValuesAdaptor>> add(
-      InputValuesAdaptor inputsNeedingModulation, InputValuesAdaptor commonInputs) {
+  public ImmutableList<ModulatedInput<I, C>> add(I inputsNeedingModulation, C commonInputs) {
     unModulatedRequests
         .computeIfAbsent(commonInputs, k -> new ArrayList<>())
         .add(inputsNeedingModulation);
     return getModulatedInputs(commonInputs, false);
   }
 
-  private ImmutableList<ModulatedInput<InputValuesAdaptor, InputValuesAdaptor>> getModulatedInputs(
-      InputValuesAdaptor commonInputs, boolean force) {
-    ImmutableList<InputValuesAdaptor> inputsNeedingModulations =
+  private ImmutableList<ModulatedInput<I, C>> getModulatedInputs(C commonInputs, boolean force) {
+    ImmutableList<I> inputsNeedingModulations =
         ImmutableList.copyOf(unModulatedRequests.get(commonInputs));
     if (force || inputsNeedingModulations.size() >= minBatchSize) {
       unModulatedRequests.put(commonInputs, new ArrayList<>());
@@ -49,20 +43,20 @@ public final class Batcher implements InputModulator<InputValuesAdaptor, InputVa
   }
 
   @Override
-  public void terminate() {
-    ImmutableList<ModulatedInput<InputValuesAdaptor, InputValuesAdaptor>> modulatedInputs =
+  public void modulate() {
+    ImmutableList<ModulatedInput<I, C>> modulatedInputs =
         unModulatedRequests.keySet().stream()
-            .map(commonInputs -> getModulatedInputs(commonInputs, true))
+            .map(c -> getModulatedInputs(c, true))
             .flatMap(Collection::stream)
             .collect(toImmutableList());
-    terminationListeners.forEach(
-        modulatedInputConsumer -> modulatedInputConsumer.accept(modulatedInputs));
+    if (modulationListener != null) {
+      modulationListener.accept(modulatedInputs);
+    }
   }
 
   @Override
-  public void onTermination(
-      Consumer<ImmutableList<ModulatedInput<InputValuesAdaptor, InputValuesAdaptor>>> listener) {
-    terminationListeners.add(listener);
+  public void onModulation(Consumer<ImmutableList<ModulatedInput<I, C>>> listener) {
+    modulationListener = listener;
   }
 
   @Override

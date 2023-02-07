@@ -9,4 +9,4 @@ public record ExecuteWithDependency(
     String dependencyName,
     Results<Object> results,
     RequestId requestId)
-    implements NodeCommand {}
+    implements NodeRequestCommand {}

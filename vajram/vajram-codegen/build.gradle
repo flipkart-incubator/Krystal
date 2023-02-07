@@ -20,11 +20,6 @@ group 'com.flipkart.krystal'
 version project.krystal_version
 description 'Code generator for Vajrams'
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-}
-
 java {
     withSourcesJar()
 }

@@ -7,10 +7,6 @@ plugins {
 group 'com.flipkart.krystal'
 version project.krystal_version
 
-repositories {
-    mavenCentral()
-}
-
 java {
     withSourcesJar()
 }
@@ -23,7 +19,6 @@ dependencies {
     implementation 'io.github.resilience4j:resilience4j-circuitbreaker:' + r4j_version
     implementation 'io.github.resilience4j:resilience4j-bulkhead:' + r4j_version
     implementation 'com.google.guava:guava:31.1-jre'
-    // https://mvnrepository.com/artifact/org.slf4j/slf4j-api
     implementation 'org.slf4j:slf4j-api:2.0.3'
 
 

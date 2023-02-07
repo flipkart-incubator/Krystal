@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 
 class SplitAdderTest {
   public static final int LOOP_COUNT = 50_000;
-  private VajramNodeGraph graph;
+  private Builder graph;
 
   @BeforeEach
   void setUp() {
@@ -33,30 +33,38 @@ class SplitAdderTest {
 
   @Test
   void splitAdder_success() throws ExecutionException, InterruptedException {
+    CompletableFuture<Integer> future;
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-        graph.createExecutor(
-            new RequestContext("")
-        )) {
-      assertThat(executeVajram(krystexVajramExecutor, 0).get()).isEqualTo(55);
+        graph.build().createExecutor(new RequestContext(""))) {
+      future = executeVajram(krystexVajramExecutor, 0);
     }
+    assertThat(future.get()).isEqualTo(55);
   }
 
-//  @Test
+  // @Test
   void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
+    VajramNodeGraph graph = this.graph.maxRequestsPerThread(2).build();
     long javaNativeTime = javaMethodBenchmark(this::splitAdd, LOOP_COUNT);
     long javaFuturesTime = javaFuturesBenchmark(this::splitAddAsync, LOOP_COUNT);
     CompletableFuture<Integer>[] futures = new CompletableFuture[LOOP_COUNT];
     if (LOOP_COUNT > 0) {
       long startTime = System.nanoTime();
+      long timeToCreateExecutors = 0;
+      long timeToEnqueueVajram = 0;
       for (int value = 0; value < LOOP_COUNT; value++) {
+        long iterStartTime = System.nanoTime();
         try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-            graph.createExecutor(
-                new RequestContext("")
-            )) {
-          CompletableFuture<Integer> result = executeVajram(krystexVajramExecutor, value);
-          futures[value] = result;
+            graph.createExecutor(new RequestContext(""))) {
+          timeToCreateExecutors += System.nanoTime() - iterStartTime;
+          long enqueueStart = System.nanoTime();
+          futures[value] = executeVajram(krystexVajramExecutor, value);
+          timeToEnqueueVajram += System.nanoTime() - enqueueStart;
         }
       }
+      System.out.printf("Avg. time to Create Executors:%,d %n", timeToCreateExecutors / LOOP_COUNT);
+      System.out.printf("Avg. time to Enqueue vajrams:%,d %n", timeToEnqueueVajram / LOOP_COUNT);
+      System.out.printf(
+          "Avg. time to execute vajrams:%,d %n", (System.nanoTime() - startTime) / LOOP_COUNT);
       allOf(futures).join();
       long vajramTime = System.nanoTime() - startTime;
       System.out.printf("vajram: %,d ns for %,d requests", vajramTime, LOOP_COUNT);
@@ -65,6 +73,15 @@ class SplitAdderTest {
           "Platform overhead over native code: %,.0f ns per request",
           (1.0 * vajramTime - javaNativeTime) / LOOP_COUNT);
       System.out.println();
+      /*
+       * Benchmark config:
+       *    loopCount = 50_000
+       *    maxRequestsPerThread = 2
+       *    Processor: 2.6 GHz 6-Core Intel Core i7
+       * Benchmark result:
+       *    platform overhead = ~370 µs per request
+       *    maxPoolSize = ~300
+       */
       System.out.printf(
           "Platform overhead over reactive code: %,.0f ns per request",
           (1.0 * vajramTime - javaFuturesTime) / LOOP_COUNT);
@@ -78,6 +95,11 @@ class SplitAdderTest {
                 }
               })
           .get();
+      System.out.printf(
+          "maxActiveLeasesPerObject: %s, peakAvgActiveLeasesPerObject: %s, maxPoolSize: %s",
+          graph.getExecutorPool().maxActiveLeasesPerObject(),
+          graph.getExecutorPool().peakAvgActiveLeasesPerObject(),
+          graph.getExecutorPool().maxPoolSize());
     }
   }
 
@@ -140,9 +162,9 @@ class SplitAdderTest {
     return completedFuture(a + b);
   }
 
-  private static VajramNodeGraph loadFromClasspath(String... packagePrefixes) {
+  private static Builder loadFromClasspath(String... packagePrefixes) {
     Builder builder = VajramNodeGraph.builder();
     Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
-    return builder.build();
+    return builder;
   }
 }

@@ -1,18 +1,33 @@
 pluginManagement {
     repositories {
         mavenLocal()
+        maven {
+            url 'https://clojars.org/repo'
+        }
         mavenCentral()
         maven { url "https://clojars.org/repo" }
     }
 }
+
+
+dependencyResolutionManagement {
+    repositories {
+        mavenLocal()
+        maven {
+            url 'https://clojars.org/repo'
+        }
+        mavenCentral()
+    }
+}
+
+
 rootProject.name = 'krystal'
 include 'caramel'
 include 'caramel-samples'
 include 'krystex'
 include 'honeycomb'
-
-
 include 'vajram'
+include 'krystal-common'
 
 include 'vajram-samples'
 project(':vajram-samples').projectDir = file('vajram/vajram-samples')
@@ -23,5 +38,4 @@ project(':vajram-codegen').projectDir = file('vajram/vajram-codegen')
 include 'vajram-krystex'
 project(':vajram-krystex').projectDir = file('vajram/vajram-krystex')
 
-include 'krystal-common'
 

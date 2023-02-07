@@ -18,6 +18,8 @@ import java.util.function.Predicate;
  */
 public record MainLogicDecoratorConfig(
     String decoratorType,
-    Predicate<NodeExecutionContext> shouldDecorate,
-    Function<NodeExecutionContext, String> instanceIdGenerator,
-    Function<String, MainLogicDecorator> factory) {}
+    Predicate<LogicExecutionContext> shouldDecorate,
+    Function<LogicExecutionContext, String> instanceIdGenerator,
+    Function<DecoratorContext, MainLogicDecorator> factory) {
+  public record DecoratorContext(String instanceId, LogicExecutionContext logicExecutionContext) {}
+}
