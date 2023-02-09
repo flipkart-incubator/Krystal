@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-public class TestUserServiceVajramImpl extends TestUserServiceVajram {
+public final class TestUserServiceVajramImpl extends TestUserServiceVajram {
   @Override
   public ImmutableList<VajramInputDefinition> getInputDefinitions() {
     return ImmutableList.of(

@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-public class FriendsServiceVajramImpl extends FriendsServiceVajram {
+public final class FriendsServiceVajramImpl extends FriendsServiceVajram {
 
   @Override
   public ImmutableCollection<VajramInputDefinition> getInputDefinitions() {

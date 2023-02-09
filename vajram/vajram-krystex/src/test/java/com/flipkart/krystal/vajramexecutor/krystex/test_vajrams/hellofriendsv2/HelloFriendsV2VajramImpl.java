@@ -26,7 +26,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 
-public class HelloFriendsV2VajramImpl extends HelloFriendsV2Vajram {
+public final class HelloFriendsV2VajramImpl extends HelloFriendsV2Vajram {
   @Override
   public ImmutableList<VajramInputDefinition> getInputDefinitions() {
     return ImmutableList.of(
@@ -81,34 +81,21 @@ public class HelloFriendsV2VajramImpl extends HelloFriendsV2Vajram {
   }
 
   @Override
-  public ImmutableMap<Inputs, String> executeCompute(ImmutableList<Inputs> inputsList) {
-    return inputsList.stream()
-        .collect(
-            toImmutableMap(
-                i -> i,
-                i -> {
-                  Results<Set<String>> friendIds = i.getDepValue(FRIEND_IDS);
-                  DependencyResponse<FriendsServiceRequest, Set<String>> friendIdsResponse =
-                      new DependencyResponse<>(
-                          friendIds.values().entrySet().stream()
-                              .collect(
-                                  toImmutableMap(
-                                      e -> FriendsServiceRequest.from(e.getKey()),
-                                      Entry::getValue)));
-                  Results<TestUserInfo> friendInfos = i.getDepValue(FRIEND_INFOS);
-                  DependencyResponse<TestUserServiceRequest, TestUserInfo> friendInfosResponse =
-                      new DependencyResponse<>(
-                          friendInfos.values().entrySet().stream()
-                              .collect(
-                                  toImmutableMap(
-                                      e -> TestUserServiceRequest.from(e.getKey()),
-                                      Entry::getValue)));
+  public String executeCompute(Inputs i) {
+    Results<Set<String>> friendIds = i.getDepValue(FRIEND_IDS);
+    DependencyResponse<FriendsServiceRequest, Set<String>> friendIdsResponse =
+        new DependencyResponse<>(
+            friendIds.values().entrySet().stream()
+                .collect(
+                    toImmutableMap(e -> FriendsServiceRequest.from(e.getKey()), Entry::getValue)));
+    Results<TestUserInfo> friendInfos = i.getDepValue(FRIEND_INFOS);
+    DependencyResponse<TestUserServiceRequest, TestUserInfo> friendInfosResponse =
+        new DependencyResponse<>(
+            friendInfos.values().entrySet().stream()
+                .collect(
+                    toImmutableMap(e -> TestUserServiceRequest.from(e.getKey()), Entry::getValue)));
 
-                  return sayHellos(
-                      new AllInputs(
-                          i.getInputValueOrThrow("user_id"),
-                          friendIdsResponse,
-                          friendInfosResponse));
-                }));
+    return sayHellos(
+        new AllInputs(i.getInputValueOrThrow("user_id"), friendIdsResponse, friendInfosResponse));
   }
 }

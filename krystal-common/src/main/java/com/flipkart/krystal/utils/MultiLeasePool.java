@@ -2,47 +2,56 @@ package com.flipkart.krystal.utils;
 
 import static java.lang.Math.max;
 
+import java.util.Deque;
 import java.util.LinkedList;
-import java.util.Queue;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class MultiLeasePool<T> {
+public class MultiLeasePool<T> implements AutoCloseable {
 
   private final Supplier<T> factory;
 
   private final int maxActiveLeasesPerObject;
+  private final Consumer<T> destroyer;
   private double peakAvgActiveLeasesPerObject;
   private int maxPoolSize;
 
-  private final Queue<PooledObject> stack = new LinkedList<>();
+  private final Deque<PooledObject> queue = new LinkedList<>();
+  private volatile boolean closed;
 
-  public MultiLeasePool(Supplier<T> factory, int maxActiveLeasesPerObject) {
+  public MultiLeasePool(Supplier<T> factory, int maxActiveLeasesPerObject, Consumer<T> destroyer) {
     this.factory = factory;
     this.maxActiveLeasesPerObject = maxActiveLeasesPerObject;
+    this.destroyer = destroyer;
   }
 
   public final synchronized Lease lease() {
-    PooledObject pooledObject = stack.poll();
-    int count = stack.size();
+    if (closed) {
+      throw new IllegalStateException("MultiLeasePool already closed");
+    }
+    PooledObject pooledObject = queue.poll();
+    int count = queue.size();
     while (pooledObject != null
         && count-- > 0
         && (pooledObject.shouldDelete()
             || pooledObject.activeLeases() == maxActiveLeasesPerObject)) {
       if (!pooledObject.shouldDelete()) {
-        stack.add(pooledObject);
+        queue.add(pooledObject);
+      } else {
+        destroyer.accept(pooledObject.ref());
       }
-      pooledObject = stack.poll();
+      pooledObject = queue.poll();
     }
     if (pooledObject == null || pooledObject.activeLeases() == maxActiveLeasesPerObject) {
       pooledObject = addNewForLeasing();
     } else {
       pooledObject.incrementActiveLeases();
     }
-    stack.add(pooledObject);
+    queue.add(pooledObject);
     peakAvgActiveLeasesPerObject =
         max(
             peakAvgActiveLeasesPerObject,
-            stack.stream().mapToInt(PooledObject::activeLeases).average().orElse(0));
+            queue.stream().mapToInt(PooledObject::activeLeases).average().orElse(0));
     return new Lease(pooledObject);
   }
 
@@ -54,8 +63,8 @@ public class MultiLeasePool<T> {
     T t = factory.get();
     PooledObject pooledObject = new PooledObject(t);
     pooledObject.incrementActiveLeases();
-    stack.add(pooledObject);
-    maxPoolSize = max(maxPoolSize, stack.size());
+    queue.add(pooledObject);
+    maxPoolSize = max(maxPoolSize, queue.size());
     return pooledObject;
   }
 
@@ -69,6 +78,15 @@ public class MultiLeasePool<T> {
 
   public final int maxPoolSize() {
     return maxPoolSize;
+  }
+
+  @Override
+  public void close() {
+    this.closed = true;
+    PooledObject pooledObject;
+    while ((pooledObject = queue.pollLast()) != null) {
+      destroyer.accept(pooledObject.ref());
+    }
   }
 
   public final class Lease implements AutoCloseable {

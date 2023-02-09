@@ -20,9 +20,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.function.Function;
 
-public class FormulaImpl extends Formula {
+public final class FormulaImpl extends Formula {
 
   @Override
   public ImmutableCollection<VajramInputDefinition> getInputDefinitions() {
@@ -92,31 +91,21 @@ public class FormulaImpl extends Formula {
   }
 
   @Override
-  public ImmutableMap<Inputs, Integer> executeCompute(ImmutableList<Inputs> inputsList) {
-    return inputsList.stream()
-        .collect(
-            toImmutableMap(
-                Function.identity(),
-                iv -> {
-                  DependencyResponse<AdderRequest, Integer> sumResponses =
-                      new DependencyResponse<>(
-                          iv.<Integer>getDepValue("sum").values().entrySet().stream()
-                              .collect(
-                                  toImmutableMap(
-                                      e -> AdderRequest.from(e.getKey()), Entry::getValue)));
-                  DependencyResponse<DividerRequest, Integer> quotientResponse =
-                      new DependencyResponse<>(
-                          iv.<Integer>getDepValue("quotient").values().entrySet().stream()
-                              .collect(
-                                  toImmutableMap(
-                                      e -> DividerRequest.from(e.getKey()), Entry::getValue)));
-                  return result(
-                      new AllInputs(
-                          iv.getInputValueOrThrow("a"),
-                          iv.getInputValueOrThrow("p"),
-                          iv.getInputValueOrThrow("q"),
-                          sumResponses,
-                          quotientResponse));
-                }));
+  public Integer executeCompute(Inputs iv) {
+    DependencyResponse<AdderRequest, Integer> sumResponses =
+        new DependencyResponse<>(
+            iv.<Integer>getDepValue("sum").values().entrySet().stream()
+                .collect(toImmutableMap(e -> AdderRequest.from(e.getKey()), Entry::getValue)));
+    DependencyResponse<DividerRequest, Integer> quotientResponse =
+        new DependencyResponse<>(
+            iv.<Integer>getDepValue("quotient").values().entrySet().stream()
+                .collect(toImmutableMap(e -> DividerRequest.from(e.getKey()), Entry::getValue)));
+    return result(
+        new AllInputs(
+            iv.getInputValueOrThrow("a"),
+            iv.getInputValueOrThrow("p"),
+            iv.getInputValueOrThrow("q"),
+            sumResponses,
+            quotientResponse));
   }
 }

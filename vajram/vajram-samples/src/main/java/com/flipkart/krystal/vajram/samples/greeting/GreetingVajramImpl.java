@@ -7,7 +7,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
-import com.flipkart.krystal.utils.ImmutableMapView;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
@@ -70,8 +69,7 @@ public final class GreetingVajramImpl extends GreetingVajram {
         if (Set.of("user_id").equals(resolvableInputs)) {
           String userId = super.userIdForUserService(inputs.getInputValueOrThrow("user_id"));
           return DependencyCommand.executeWith(
-              new Inputs(
-                      ImmutableMap.of("user_id", ValueOrError.withValue(userId))));
+              new Inputs(ImmutableMap.of("user_id", ValueOrError.withValue(userId))));
         }
       }
     }
@@ -79,26 +77,18 @@ public final class GreetingVajramImpl extends GreetingVajram {
   }
 
   @Override
-  public ImmutableMap<Inputs, String> executeCompute(ImmutableList<Inputs> inputsList) {
-    return inputsList.stream()
-        .collect(
-            toImmutableMap(
-                i -> i,
-                i -> {
-                  ImmutableMap<Inputs, ValueOrError<UserInfo>> userInfo =
-                      i.getInputValueOrThrow("user_info");
-                  DependencyResponse<UserServiceRequest, UserInfo> userInfoResponse =
-                      new DependencyResponse<>(
-                          userInfo.entrySet().stream()
-                              .collect(
-                                  toImmutableMap(
-                                      e -> UserServiceRequest.from(e.getKey()), Entry::getValue)));
-                  return createGreetingMessage(
-                      new AllInputs(
-                          i.getInputValueOrThrow("user_id"),
-                          i.getInputValueOrDefault("log", null),
-                          i.getInputValueOrDefault("analytics_event_sink", null),
-                          userInfoResponse));
-                }));
+  public String executeCompute(Inputs i) {
+    ImmutableMap<Inputs, ValueOrError<UserInfo>> userInfo = i.getInputValueOrThrow("user_info");
+    DependencyResponse<UserServiceRequest, UserInfo> userInfoResponse =
+        new DependencyResponse<>(
+            userInfo.entrySet().stream()
+                .collect(
+                    toImmutableMap(e -> UserServiceRequest.from(e.getKey()), Entry::getValue)));
+    return createGreetingMessage(
+        new AllInputs(
+            i.getInputValueOrThrow("user_id"),
+            i.getInputValueOrDefault("log", null),
+            i.getInputValueOrDefault("analytics_event_sink", null),
+            userInfoResponse));
   }
 }

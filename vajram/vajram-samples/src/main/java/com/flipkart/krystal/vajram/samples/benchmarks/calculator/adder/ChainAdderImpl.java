@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 
 public final class ChainAdderImpl extends ChainAdder {
 
@@ -98,30 +97,19 @@ public final class ChainAdderImpl extends ChainAdder {
   }
 
   @Override
-  public ImmutableMap<Inputs, Integer> executeCompute(ImmutableList<Inputs> inputsList) {
-    return inputsList.stream()
-        .collect(
-            toImmutableMap(
-                Function.identity(),
-                inputValues -> {
-                  ArrayList<Integer> numbers = inputValues.getInputValueOrThrow("numbers");
-                  Map<Inputs, ValueOrError<Integer>> chainSumResult =
-                      inputValues.<Integer>getDepValue("chain_sum").values();
-                  DependencyResponse<ChainAdderRequest, Integer> chainSum =
-                      new DependencyResponse<>(
-                          chainSumResult.entrySet().stream()
-                              .collect(
-                                  toImmutableMap(
-                                      e -> ChainAdderRequest.from(e.getKey()), Entry::getValue)));
-                  Map<Inputs, ValueOrError<Integer>> sumResult =
-                      inputValues.<Integer>getDepValue("sum").values();
-                  DependencyResponse<AdderRequest, Integer> sum =
-                      new DependencyResponse<>(
-                          sumResult.entrySet().stream()
-                              .collect(
-                                  toImmutableMap(
-                                      e -> AdderRequest.from(e.getKey()), Entry::getValue)));
-                  return add(new AllInputs(numbers, chainSum, sum));
-                }));
+  public Integer executeCompute(Inputs inputValues) {
+    ArrayList<Integer> numbers = inputValues.getInputValueOrThrow("numbers");
+    Map<Inputs, ValueOrError<Integer>> chainSumResult =
+        inputValues.<Integer>getDepValue("chain_sum").values();
+    DependencyResponse<ChainAdderRequest, Integer> chainSum =
+        new DependencyResponse<>(
+            chainSumResult.entrySet().stream()
+                .collect(toImmutableMap(e -> ChainAdderRequest.from(e.getKey()), Entry::getValue)));
+    Map<Inputs, ValueOrError<Integer>> sumResult = inputValues.<Integer>getDepValue("sum").values();
+    DependencyResponse<AdderRequest, Integer> sum =
+        new DependencyResponse<>(
+            sumResult.entrySet().stream()
+                .collect(toImmutableMap(e -> AdderRequest.from(e.getKey()), Entry::getValue)));
+    return add(new AllInputs(numbers, chainSum, sum));
   }
 }

@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram;
 
-import static java.lang.reflect.Modifier.isAbstract;
+import static java.lang.reflect.Modifier.isFinal;
 
 import java.util.List;
 import org.reflections.Reflections;
@@ -10,8 +10,7 @@ public final class VajramLoader {
   public static List<? extends Vajram> loadVajramsFromClassPath(String packagePrefix) {
     return new Reflections(packagePrefix)
         .getSubTypesOf(Vajram.class).stream()
-            .filter(aClass -> !isAbstract(aClass.getModifiers()))
-            .filter(aClass -> aClass.getAnnotationsByType(VajramDef.class).length == 0)
+            .filter(aClass -> isFinal(aClass.getModifiers()))
             .map(
                 aClass -> {
                   try {

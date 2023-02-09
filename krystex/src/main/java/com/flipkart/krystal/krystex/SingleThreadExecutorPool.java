@@ -5,7 +5,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public final class SingleThreadExecutorPool extends MultiLeasePool<ExecutorService> {
+public final class SingleThreadExecutorPool extends MultiLeasePool<ExecutorService>
+    implements AutoCloseable {
   public static int EXECUTOR_SERVICE_COUNTER = 0;
 
   public SingleThreadExecutorPool(int maxActiveLeasesPerObject) {
@@ -15,6 +16,7 @@ public final class SingleThreadExecutorPool extends MultiLeasePool<ExecutorServi
                 new ThreadFactoryBuilder()
                     .setNameFormat("KrystalNodeExecutor-%s".formatted(EXECUTOR_SERVICE_COUNTER++))
                     .build()),
-        maxActiveLeasesPerObject);
+        maxActiveLeasesPerObject,
+        ExecutorService::shutdown);
   }
 }

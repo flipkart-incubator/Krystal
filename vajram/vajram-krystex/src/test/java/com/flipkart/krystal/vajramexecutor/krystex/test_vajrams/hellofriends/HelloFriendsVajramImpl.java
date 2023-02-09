@@ -25,7 +25,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 
-public class HelloFriendsVajramImpl extends HelloFriendsVajram {
+public final class HelloFriendsVajramImpl extends HelloFriendsVajram {
 
   @Override
   public ImmutableList<VajramInputDefinition> getInputDefinitions() {
@@ -75,40 +75,25 @@ public class HelloFriendsVajramImpl extends HelloFriendsVajram {
   }
 
   @Override
-  public ImmutableMap<Inputs, String> executeCompute(ImmutableList<Inputs> inputsList) {
-    return inputsList.stream()
-        .collect(
-            toImmutableMap(
-                i -> i,
-                i -> {
-                  Results<TestUserInfo> userInfo = i.getDepValue("user_infos");
-                  DependencyResponse<TestUserServiceRequest, TestUserInfo> userInfoResponse =
-                      new DependencyResponse<>(
-                          userInfo.values().entrySet().stream()
-                              .collect(
-                                  toImmutableMap(
-                                      e -> TestUserServiceRequest.from(e.getKey()),
-                                      Entry::getValue)));
+  public String executeCompute(Inputs inputs) throws Exception {
+    Results<TestUserInfo> userInfo = inputs.getDepValue("user_infos");
+    DependencyResponse<TestUserServiceRequest, TestUserInfo> userInfoResponse =
+        new DependencyResponse<>(
+            userInfo.values().entrySet().stream()
+                .collect(
+                    toImmutableMap(e -> TestUserServiceRequest.from(e.getKey()), Entry::getValue)));
 
-                  Results<TestUserInfo> friendInfos = i.getDepValue("friend_infos");
-                  DependencyResponse<TestUserServiceRequest, TestUserInfo> friendInfosResponse =
-                      new DependencyResponse<>(
-                          friendInfos.values().entrySet().stream()
-                              .collect(
-                                  toImmutableMap(
-                                      e -> TestUserServiceRequest.from(e.getKey()),
-                                      Entry::getValue)));
-
-                  try {
-                    return sayHellos(
-                        new AllInputs(
-                            i.<String>getInputValue("user_id").value().orElseThrow(),
-                            i.<Integer>getInputValue("number_of_friends").value().orElse(null),
-                            userInfoResponse,
-                            friendInfosResponse));
-                  } catch (Exception e) {
-                    throw new RuntimeException(e);
-                  }
-                }));
+    Results<TestUserInfo> friendInfos = inputs.getDepValue("friend_infos");
+    DependencyResponse<TestUserServiceRequest, TestUserInfo> friendInfosResponse =
+        new DependencyResponse<>(
+            friendInfos.values().entrySet().stream()
+                .collect(
+                    toImmutableMap(e -> TestUserServiceRequest.from(e.getKey()), Entry::getValue)));
+    return sayHellos(
+        new AllInputs(
+            inputs.<String>getInputValue("user_id").value().orElseThrow(),
+            inputs.<Integer>getInputValue("number_of_friends").value().orElse(null),
+            userInfoResponse,
+            friendInfosResponse));
   }
 }

@@ -23,9 +23,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 
-public class SplitAdderImpl extends SplitAdder {
+public final class SplitAdderImpl extends SplitAdder {
 
   @Override
   public ImmutableCollection<VajramInputDefinition> getInputDefinitions() {
@@ -117,38 +116,25 @@ public class SplitAdderImpl extends SplitAdder {
   }
 
   @Override
-  public ImmutableMap<Inputs, Integer> executeCompute(ImmutableList<Inputs> inputsList) {
-    return inputsList.stream()
-        .collect(
-            toImmutableMap(
-                Function.identity(),
-                inputValues -> {
-                  ArrayList<Integer> numbers = inputValues.getInputValueOrThrow("numbers");
-                  Map<Inputs, ValueOrError<Integer>> splitSum1Result =
-                      inputValues.<Integer>getDepValue("split_sum_1").values();
-                  DependencyResponse<SplitAdderRequest, Integer> splitSum1 =
-                      new DependencyResponse<>(
-                          splitSum1Result.entrySet().stream()
-                              .collect(
-                                  toImmutableMap(
-                                      e -> SplitAdderRequest.from(e.getKey()), Entry::getValue)));
-                  Map<Inputs, ValueOrError<Integer>> splitSum2Result =
-                      inputValues.<Integer>getDepValue("split_sum_2").values();
-                  DependencyResponse<SplitAdderRequest, Integer> splitSum2 =
-                      new DependencyResponse<>(
-                          splitSum2Result.entrySet().stream()
-                              .collect(
-                                  toImmutableMap(
-                                      e -> SplitAdderRequest.from(e.getKey()), Entry::getValue)));
-                  Map<Inputs, ValueOrError<Integer>> sumResult =
-                      inputValues.<Integer>getDepValue("sum").values();
-                  DependencyResponse<AdderRequest, Integer> sum =
-                      new DependencyResponse<>(
-                          sumResult.entrySet().stream()
-                              .collect(
-                                  toImmutableMap(
-                                      e -> AdderRequest.from(e.getKey()), Entry::getValue)));
-                  return add(new AllInputs(numbers, splitSum1, splitSum2, sum));
-                }));
+  public Integer executeCompute(Inputs inputValues) {
+    ArrayList<Integer> numbers = inputValues.getInputValueOrThrow("numbers");
+    Map<Inputs, ValueOrError<Integer>> splitSum1Result =
+        inputValues.<Integer>getDepValue("split_sum_1").values();
+    DependencyResponse<SplitAdderRequest, Integer> splitSum1 =
+        new DependencyResponse<>(
+            splitSum1Result.entrySet().stream()
+                .collect(toImmutableMap(e -> SplitAdderRequest.from(e.getKey()), Entry::getValue)));
+    Map<Inputs, ValueOrError<Integer>> splitSum2Result =
+        inputValues.<Integer>getDepValue("split_sum_2").values();
+    DependencyResponse<SplitAdderRequest, Integer> splitSum2 =
+        new DependencyResponse<>(
+            splitSum2Result.entrySet().stream()
+                .collect(toImmutableMap(e -> SplitAdderRequest.from(e.getKey()), Entry::getValue)));
+    Map<Inputs, ValueOrError<Integer>> sumResult = inputValues.<Integer>getDepValue("sum").values();
+    DependencyResponse<AdderRequest, Integer> sum =
+        new DependencyResponse<>(
+            sumResult.entrySet().stream()
+                .collect(toImmutableMap(e -> AdderRequest.from(e.getKey()), Entry::getValue)));
+    return add(new AllInputs(numbers, splitSum1, splitSum2, sum));
   }
 }
