@@ -1,16 +1,14 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator.multiplier;
 
+import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.datatypes.IntegerType;
 import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
+import com.flipkart.krystal.vajram.samples.benchmarks.calculator.multiplier.MultiplierInputUtil.AllInputs;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import java.util.HashMap;
-import java.util.Map;
 
-public class MultiplierImpl extends Multiplier {
+public final class MultiplierImpl extends Multiplier {
   @Override
   public ImmutableCollection<VajramInputDefinition> getInputDefinitions() {
     return ImmutableList.of(
@@ -19,16 +17,10 @@ public class MultiplierImpl extends Multiplier {
   }
 
   @Override
-  public ImmutableMap<Inputs, Integer> executeCompute(ImmutableList<Inputs> inputsList) {
-    Map<Inputs, Integer> result = new HashMap<>();
-    for (Inputs inputs : inputsList) {
-      result.put(
-          inputs,
-          multiply(
-              new MultiplierInputUtil.AllInputs(
-                  inputs.getInputValueOrThrow("number_one"),
-                  inputs.getInputValueOrDefault("number_two", null))));
-    }
-    return ImmutableMap.copyOf(result);
+  public Integer executeCompute(Inputs inputs) {
+    return multiply(
+        new AllInputs(
+            inputs.getInputValueOrThrow("number_one"),
+            inputs.getInputValueOrDefault("number_two", null)));
   }
 }

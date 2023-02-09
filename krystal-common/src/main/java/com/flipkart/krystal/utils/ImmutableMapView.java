@@ -4,6 +4,9 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public final class ImmutableMapView<K, V> implements Map<K, V> {
 
@@ -23,6 +26,8 @@ public final class ImmutableMapView<K, V> implements Map<K, V> {
     //noinspection unchecked
     return (ImmutableMapView<K, V>) EMPTY;
   }
+
+  /*--------------------------Overridden delegation methods------------------------*/
 
   @Override
   public int size() {
@@ -50,20 +55,26 @@ public final class ImmutableMapView<K, V> implements Map<K, V> {
   }
 
   @Override
+  @NonNull
   public Set<K> keySet() {
     return delegate.keySet();
   }
 
   @Override
+  @NonNull
   public Set<Entry<K, V>> entrySet() {
     return delegate.entrySet();
   }
 
   @Override
+  @NonNull
   public Collection<V> values() {
     return delegate.values();
   }
 
+  /*--------------------------Unsupported methods throw exceptions------------------------*/
+
+  @Deprecated
   @Override
   public V put(K key, V value) {
     throw uoe();
@@ -84,6 +95,65 @@ public final class ImmutableMapView<K, V> implements Map<K, V> {
   @Override
   @Deprecated
   public void clear() {
+    throw uoe();
+  }
+
+  @Deprecated
+  @Override
+  public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
+    throw uoe();
+  }
+
+  @Deprecated
+  @Override
+  public V putIfAbsent(K key, V value) {
+    throw uoe();
+  }
+
+  @Override
+  @Deprecated
+  public boolean remove(Object key, Object value) {
+    throw uoe();
+  }
+
+  @Override
+  @Deprecated
+  public boolean replace(K key, V oldValue, V newValue) {
+    throw uoe();
+  }
+
+  @Override
+  @Deprecated
+  public V replace(K key, V value) {
+    throw uoe();
+  }
+
+  @Override
+  @Deprecated
+  public V computeIfAbsent(K key, @NonNull Function<? super K, ? extends V> mappingFunction) {
+    throw uoe();
+  }
+
+  @Override
+  @Deprecated
+  public V computeIfPresent(
+      K key, @NonNull BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+    throw uoe();
+  }
+
+  @Override
+  @Deprecated
+  public V compute(
+      K key, @NonNull BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+    throw uoe();
+  }
+
+  @Override
+  @Deprecated
+  public V merge(
+      K key,
+      @NonNull V value,
+      @NonNull BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
     throw uoe();
   }
 

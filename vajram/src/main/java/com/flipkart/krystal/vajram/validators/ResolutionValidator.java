@@ -8,7 +8,7 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import com.flipkart.krystal.vajram.inputs.BindFrom;
-import com.flipkart.krystal.vajram.inputs.DefaultInputResolver;
+import com.flipkart.krystal.vajram.inputs.DefaultInputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
@@ -176,7 +176,7 @@ public class ResolutionValidator {
                                       .filter(Objects::nonNull)
                                       .map(BindFrom::value)
                                       .collect(toImmutableSet());
-                              result.put(target, new DefaultInputResolver(sources, target));
+                              result.put(target, new DefaultInputResolverDefinition(sources, target));
                             }
                           }
                         });

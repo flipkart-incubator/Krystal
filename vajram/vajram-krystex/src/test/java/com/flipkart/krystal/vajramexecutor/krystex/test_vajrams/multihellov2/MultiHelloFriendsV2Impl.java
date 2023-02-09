@@ -14,7 +14,6 @@ import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsVajram;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Vajram;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2InputUtil.AllInputs;
@@ -25,9 +24,8 @@ import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashSet;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.function.Function;
 
-public class MultiHelloFriendsV2Impl extends MultiHelloFriendsV2 {
+public final class MultiHelloFriendsV2Impl extends MultiHelloFriendsV2 {
 
   @Override
   public ImmutableCollection<VajramInputDefinition> getInputDefinitions() {
@@ -56,22 +54,14 @@ public class MultiHelloFriendsV2Impl extends MultiHelloFriendsV2 {
   }
 
   @Override
-  public ImmutableMap<Inputs, String> executeCompute(ImmutableList<Inputs> inputsList) {
-    return inputsList.stream()
-        .collect(
-            toImmutableMap(
-                Function.identity(),
-                inputValues -> {
-                  LinkedHashSet<String> userIds = inputValues.getInputValueOrThrow("user_ids");
-                  Results<String> hellosResult = inputValues.getDepValue("hellos");
-                  DependencyResponse<HelloFriendsV2Request, String> hellos =
-                      new DependencyResponse<>(
-                          hellosResult.values().entrySet().stream()
-                              .collect(
-                                  toImmutableMap(
-                                      e -> HelloFriendsV2Request.from(e.getKey()),
-                                      Entry::getValue)));
-                  return sayHellos(new AllInputs(userIds, hellos));
-                }));
+  public String executeCompute(Inputs inputs) {
+    LinkedHashSet<String> userIds = inputs.getInputValueOrThrow("user_ids");
+    Results<String> hellosResult = inputs.getDepValue("hellos");
+    DependencyResponse<HelloFriendsV2Request, String> hellos =
+        new DependencyResponse<>(
+            hellosResult.values().entrySet().stream()
+                .collect(
+                    toImmutableMap(e -> HelloFriendsV2Request.from(e.getKey()), Entry::getValue)));
+    return sayHellos(new AllInputs(userIds, hellos));
   }
 }

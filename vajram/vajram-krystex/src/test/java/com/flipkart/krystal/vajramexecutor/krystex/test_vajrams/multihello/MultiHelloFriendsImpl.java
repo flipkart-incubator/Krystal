@@ -25,9 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.function.Function;
 
-public class MultiHelloFriendsImpl extends MultiHelloFriends {
+public final class MultiHelloFriendsImpl extends MultiHelloFriends {
 
   @Override
   public ImmutableCollection<VajramInputDefinition> getInputDefinitions() {
@@ -64,21 +63,14 @@ public class MultiHelloFriendsImpl extends MultiHelloFriends {
   }
 
   @Override
-  public ImmutableMap<Inputs, String> executeCompute(ImmutableList<Inputs> inputsList) {
-    return inputsList.stream()
-        .collect(
-            toImmutableMap(
-                Function.identity(),
-                inputValues -> {
-                  ArrayList<String> userIds = inputValues.getInputValueOrThrow("user_ids");
-                  Results<String> hellosResult = inputValues.getDepValue("hellos");
-                  DependencyResponse<HelloFriendsRequest, String> hellos =
-                      new DependencyResponse<>(
-                          hellosResult.values().entrySet().stream()
-                              .collect(
-                                  toImmutableMap(
-                                      e -> HelloFriendsRequest.from(e.getKey()), Entry::getValue)));
-                  return sayHellos(new AllInputs(userIds, hellos));
-                }));
+  public String executeCompute(Inputs inputs) {
+    ArrayList<String> userIds = inputs.getInputValueOrThrow("user_ids");
+    Results<String> hellosResult = inputs.getDepValue("hellos");
+    DependencyResponse<HelloFriendsRequest, String> hellos =
+        new DependencyResponse<>(
+            hellosResult.values().entrySet().stream()
+                .collect(
+                    toImmutableMap(e -> HelloFriendsRequest.from(e.getKey()), Entry::getValue)));
+    return sayHellos(new AllInputs(userIds, hellos));
   }
 }

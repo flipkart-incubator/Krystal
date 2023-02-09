@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.node;
 
-import static com.flipkart.krystal.data.ValueOrError.error;
+import static com.flipkart.krystal.data.ValueOrError.withError;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.lang.Math.max;
 
@@ -366,7 +366,7 @@ public class Node {
                 (unused, throwable) -> {
                   Results<Object> results;
                   if (throwable != null) {
-                    results = new Results<>(ImmutableMap.of(Inputs.empty(), error(throwable)));
+                    results = new Results<>(ImmutableMap.of(Inputs.empty(), withError(throwable)));
                   } else {
                     results =
                         new Results<>(
@@ -460,7 +460,7 @@ public class Node {
                     .whenComplete(
                         (valueOrError, throwable) -> {
                           if (throwable != null) {
-                            valueOrError = error(throwable);
+                            valueOrError = withError(throwable);
                           }
                           krystalNodeExecutor.enqueueCommand(
                               new ExecuteWithDependency(

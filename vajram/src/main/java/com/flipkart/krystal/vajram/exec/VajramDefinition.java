@@ -11,7 +11,7 @@ import com.flipkart.krystal.vajram.Tag;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.BindFrom;
-import com.flipkart.krystal.vajram.inputs.DefaultInputResolver;
+import com.flipkart.krystal.vajram.inputs.DefaultInputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
@@ -90,7 +90,7 @@ public final class VajramDefinition {
               .map(BindFrom::value)
               .collect(toImmutableSet());
       inputResolvers.add(
-          new DefaultInputResolver(
+          new DefaultInputResolverDefinition(
               sources,
               new QualifiedInputs(
                   targetDependency,

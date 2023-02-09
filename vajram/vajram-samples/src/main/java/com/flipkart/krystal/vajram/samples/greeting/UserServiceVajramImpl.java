@@ -3,8 +3,8 @@ package com.flipkart.krystal.vajram.samples.greeting;
 import static com.flipkart.krystal.datatypes.StringType.string;
 import static com.flipkart.krystal.vajram.samples.greeting.UserServiceInputUtil.CONVERTER;
 
-import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-public class UserServiceVajramImpl extends UserServiceVajram {
+public final class UserServiceVajramImpl extends UserServiceVajram {
   @Override
   public ImmutableList<VajramInputDefinition> getInputDefinitions() {
     return ImmutableList.of(
