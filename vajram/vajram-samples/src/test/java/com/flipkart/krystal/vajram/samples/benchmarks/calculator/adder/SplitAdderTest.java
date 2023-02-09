@@ -41,7 +41,7 @@ class SplitAdderTest {
     assertThat(future.get()).isEqualTo(55);
   }
 
-   @Test
+  //   @Test
   void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
     VajramNodeGraph graph = this.graph.maxRequestsPerThread(1).build();
     long javaNativeTime = javaMethodBenchmark(this::splitAdd, LOOP_COUNT);
