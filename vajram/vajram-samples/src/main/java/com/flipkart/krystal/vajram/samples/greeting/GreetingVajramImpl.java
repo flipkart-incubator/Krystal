@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.samples.greeting;
 
+import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static com.flipkart.krystal.datatypes.JavaType.java;
 import static com.flipkart.krystal.datatypes.StringType.string;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
@@ -77,18 +78,29 @@ public final class GreetingVajramImpl extends GreetingVajram {
   }
 
   @Override
-  public String executeCompute(Inputs i) {
-    ImmutableMap<Inputs, ValueOrError<UserInfo>> userInfo = i.getInputValueOrThrow("user_info");
-    DependencyResponse<UserServiceRequest, UserInfo> userInfoResponse =
-        new DependencyResponse<>(
-            userInfo.entrySet().stream()
-                .collect(
-                    toImmutableMap(e -> UserServiceRequest.from(e.getKey()), Entry::getValue)));
-    return createGreetingMessage(
-        new AllInputs(
-            i.getInputValueOrThrow("user_id"),
-            i.getInputValueOrDefault("log", null),
-            i.getInputValueOrDefault("analytics_event_sink", null),
-            userInfoResponse));
+  public ImmutableMap<Inputs, ValueOrError<String>> executeCompute(
+      ImmutableList<Inputs> inputsList) {
+    return inputsList.stream()
+        .collect(
+            toImmutableMap(
+                i -> i,
+                i -> {
+                  ImmutableMap<Inputs, ValueOrError<UserInfo>> userInfo =
+                      i.getInputValueOrThrow("user_info");
+                  DependencyResponse<UserServiceRequest, UserInfo> userInfoResponse =
+                      new DependencyResponse<>(
+                          userInfo.entrySet().stream()
+                              .collect(
+                                  toImmutableMap(
+                                      e -> UserServiceRequest.from(e.getKey()), Entry::getValue)));
+                  return valueOrError(
+                      () ->
+                          createGreetingMessage(
+                              new AllInputs(
+                                  i.getInputValueOrThrow("user_id"),
+                                  i.getInputValueOrDefault("log", null),
+                                  i.getInputValueOrDefault("analytics_event_sink", null),
+                                  userInfoResponse)));
+                }));
   }
 }

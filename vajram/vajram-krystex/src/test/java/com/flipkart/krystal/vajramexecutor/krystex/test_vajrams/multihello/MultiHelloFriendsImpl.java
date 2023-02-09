@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Function;
 
 public final class MultiHelloFriendsImpl extends MultiHelloFriends {
 
@@ -62,15 +63,22 @@ public final class MultiHelloFriendsImpl extends MultiHelloFriends {
     throw new UnsupportedOperationException();
   }
 
-  @Override
-  public String executeCompute(Inputs inputs) {
-    ArrayList<String> userIds = inputs.getInputValueOrThrow("user_ids");
-    Results<String> hellosResult = inputs.getDepValue("hellos");
-    DependencyResponse<HelloFriendsRequest, String> hellos =
-        new DependencyResponse<>(
-            hellosResult.values().entrySet().stream()
-                .collect(
-                    toImmutableMap(e -> HelloFriendsRequest.from(e.getKey()), Entry::getValue)));
-    return sayHellos(new AllInputs(userIds, hellos));
+  public ImmutableMap<Inputs, ValueOrError<String>> executeCompute(
+      ImmutableList<Inputs> inputsList) {
+    return inputsList.stream()
+        .collect(
+            toImmutableMap(
+                Function.identity(),
+                inputValues -> {
+                  ArrayList<String> userIds = inputValues.getInputValueOrThrow("user_ids");
+                  Results<String> hellosResult = inputValues.getDepValue("hellos");
+                  DependencyResponse<HelloFriendsRequest, String> hellos =
+                      new DependencyResponse<>(
+                          hellosResult.values().entrySet().stream()
+                              .collect(
+                                  toImmutableMap(
+                                      e -> HelloFriendsRequest.from(e.getKey()), Entry::getValue)));
+                  return ValueOrError.valueOrError(() -> sayHellos(new AllInputs(userIds, hellos)));
+                }));
   }
 }

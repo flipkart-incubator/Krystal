@@ -2,6 +2,8 @@ package com.flipkart.krystal.krystex.node;
 
 import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static com.flipkart.krystal.data.ValueOrError.withValue;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -246,7 +248,11 @@ class KrystalNodeExecutorTest {
       String nodeId, Set<String> inputs, Function<Inputs, T> logic) {
     ComputeLogicDefinition<T> def =
         new ComputeLogicDefinition<>(
-            new NodeLogicId(nodeId), inputs, valueOrError(logic), ImmutableMap.of());
+            new NodeLogicId(nodeId),
+            inputs,
+            inputsList ->
+                inputsList.stream().collect(toImmutableMap(identity(), valueOrError(logic))),
+            ImmutableMap.of());
     logicDefinitionRegistry.addMainLogic(def);
     return def;
   }
