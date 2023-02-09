@@ -1,6 +1,8 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator;
 
+import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
@@ -91,21 +93,34 @@ public final class FormulaImpl extends Formula {
   }
 
   @Override
-  public Integer executeCompute(Inputs iv) {
-    DependencyResponse<AdderRequest, Integer> sumResponses =
-        new DependencyResponse<>(
-            iv.<Integer>getDepValue("sum").values().entrySet().stream()
-                .collect(toImmutableMap(e -> AdderRequest.from(e.getKey()), Entry::getValue)));
-    DependencyResponse<DividerRequest, Integer> quotientResponse =
-        new DependencyResponse<>(
-            iv.<Integer>getDepValue("quotient").values().entrySet().stream()
-                .collect(toImmutableMap(e -> DividerRequest.from(e.getKey()), Entry::getValue)));
-    return result(
-        new AllInputs(
-            iv.getInputValueOrThrow("a"),
-            iv.getInputValueOrThrow("p"),
-            iv.getInputValueOrThrow("q"),
-            sumResponses,
-            quotientResponse));
+  public ImmutableMap<Inputs, ValueOrError<Integer>> executeCompute(
+      ImmutableList<Inputs> inputsList) {
+    return inputsList.stream()
+        .collect(
+            toImmutableMap(
+                identity(),
+                iv -> {
+                  DependencyResponse<AdderRequest, Integer> sumResponses =
+                      new DependencyResponse<>(
+                          iv.<Integer>getDepValue("sum").values().entrySet().stream()
+                              .collect(
+                                  toImmutableMap(
+                                      e -> AdderRequest.from(e.getKey()), Entry::getValue)));
+                  DependencyResponse<DividerRequest, Integer> quotientResponse =
+                      new DependencyResponse<>(
+                          iv.<Integer>getDepValue("quotient").values().entrySet().stream()
+                              .collect(
+                                  toImmutableMap(
+                                      e -> DividerRequest.from(e.getKey()), Entry::getValue)));
+                  return valueOrError(
+                      () ->
+                          result(
+                              new AllInputs(
+                                  iv.getInputValueOrThrow("a"),
+                                  iv.getInputValueOrThrow("p"),
+                                  iv.getInputValueOrThrow("q"),
+                                  sumResponses,
+                                  quotientResponse)));
+                }));
   }
 }

@@ -8,7 +8,7 @@ import com.flipkart.krystal.krystex.node.DependantChain;
 import com.flipkart.krystal.krystex.node.DependantChainFirstNode;
 import com.flipkart.krystal.krystex.node.DependantChainStart;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
-import com.flipkart.krystal.vajram.IOVajram;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
@@ -49,7 +49,7 @@ public record InputModulatorConfig(
           @SuppressWarnings("unchecked")
           var inputsConvertor =
               (InputsConverter<InputValuesAdaptor, InputValuesAdaptor>)
-                  modulatorContext.ioVajram().getInputsConvertor();
+                  modulatorContext.vajram().getInputsConvertor();
           return new InputModulationDecorator<>(
               modulatorContext.decoratorContext().instanceId(),
               inputModulatorSupplier.get(),
@@ -79,7 +79,7 @@ public record InputModulatorConfig(
           @SuppressWarnings("unchecked")
           var inputsConvertor =
               (InputsConverter<InputValuesAdaptor, InputValuesAdaptor>)
-                  modulatorContext.ioVajram().getInputsConvertor();
+                  modulatorContext.vajram().getInputsConvertor();
           return new InputModulationDecorator<>(
               instanceId, inputModulatorSupplier.get(), inputsConvertor, dependantChains::contains);
         });
@@ -125,5 +125,5 @@ public record InputModulatorConfig(
     throw new UnsupportedOperationException();
   }
 
-  public record ModulatorContext(IOVajram<?> ioVajram, DecoratorContext decoratorContext) {}
+  public record ModulatorContext(Vajram<?> vajram, DecoratorContext decoratorContext) {}
 }

@@ -1,10 +1,12 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2;
 
+import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static com.flipkart.krystal.datatypes.ListType.list;
 import static com.flipkart.krystal.datatypes.StringType.string;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.Results;
@@ -54,14 +56,23 @@ public final class MultiHelloFriendsV2Impl extends MultiHelloFriendsV2 {
   }
 
   @Override
-  public String executeCompute(Inputs inputs) {
-    LinkedHashSet<String> userIds = inputs.getInputValueOrThrow("user_ids");
-    Results<String> hellosResult = inputs.getDepValue("hellos");
-    DependencyResponse<HelloFriendsV2Request, String> hellos =
-        new DependencyResponse<>(
-            hellosResult.values().entrySet().stream()
-                .collect(
-                    toImmutableMap(e -> HelloFriendsV2Request.from(e.getKey()), Entry::getValue)));
-    return sayHellos(new AllInputs(userIds, hellos));
+  public ImmutableMap<Inputs, ValueOrError<String>> executeCompute(
+      ImmutableList<Inputs> inputsList) {
+    return inputsList.stream()
+        .collect(
+            toImmutableMap(
+                identity(),
+                inputValues -> {
+                  LinkedHashSet<String> userIds = inputValues.getInputValueOrThrow("user_ids");
+                  Results<String> hellosResult = inputValues.getDepValue("hellos");
+                  DependencyResponse<HelloFriendsV2Request, String> hellos =
+                      new DependencyResponse<>(
+                          hellosResult.values().entrySet().stream()
+                              .collect(
+                                  toImmutableMap(
+                                      e -> HelloFriendsV2Request.from(e.getKey()),
+                                      Entry::getValue)));
+                  return valueOrError(() -> sayHellos(new AllInputs(userIds, hellos)));
+                }));
   }
 }

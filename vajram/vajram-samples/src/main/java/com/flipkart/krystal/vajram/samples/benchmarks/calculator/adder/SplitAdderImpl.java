@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder;
 
+import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static com.flipkart.krystal.datatypes.IntegerType.integer;
 import static com.flipkart.krystal.datatypes.ListType.list;
 import static com.flipkart.krystal.vajram.inputs.DependencyCommand.multiExecuteWith;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 
 public final class SplitAdderImpl extends SplitAdder {
 
@@ -116,25 +118,39 @@ public final class SplitAdderImpl extends SplitAdder {
   }
 
   @Override
-  public Integer executeCompute(Inputs inputValues) {
-    ArrayList<Integer> numbers = inputValues.getInputValueOrThrow("numbers");
-    Map<Inputs, ValueOrError<Integer>> splitSum1Result =
-        inputValues.<Integer>getDepValue("split_sum_1").values();
-    DependencyResponse<SplitAdderRequest, Integer> splitSum1 =
-        new DependencyResponse<>(
-            splitSum1Result.entrySet().stream()
-                .collect(toImmutableMap(e -> SplitAdderRequest.from(e.getKey()), Entry::getValue)));
-    Map<Inputs, ValueOrError<Integer>> splitSum2Result =
-        inputValues.<Integer>getDepValue("split_sum_2").values();
-    DependencyResponse<SplitAdderRequest, Integer> splitSum2 =
-        new DependencyResponse<>(
-            splitSum2Result.entrySet().stream()
-                .collect(toImmutableMap(e -> SplitAdderRequest.from(e.getKey()), Entry::getValue)));
-    Map<Inputs, ValueOrError<Integer>> sumResult = inputValues.<Integer>getDepValue("sum").values();
-    DependencyResponse<AdderRequest, Integer> sum =
-        new DependencyResponse<>(
-            sumResult.entrySet().stream()
-                .collect(toImmutableMap(e -> AdderRequest.from(e.getKey()), Entry::getValue)));
-    return add(new AllInputs(numbers, splitSum1, splitSum2, sum));
+  public ImmutableMap<Inputs, ValueOrError<Integer>> executeCompute(
+      ImmutableList<Inputs> inputsList) {
+    return inputsList.stream()
+        .collect(
+            toImmutableMap(
+                Function.identity(),
+                inputValues -> {
+                  ArrayList<Integer> numbers = inputValues.getInputValueOrThrow("numbers");
+                  Map<Inputs, ValueOrError<Integer>> splitSum1Result =
+                      inputValues.<Integer>getDepValue("split_sum_1").values();
+                  DependencyResponse<SplitAdderRequest, Integer> splitSum1 =
+                      new DependencyResponse<>(
+                          splitSum1Result.entrySet().stream()
+                              .collect(
+                                  toImmutableMap(
+                                      e -> SplitAdderRequest.from(e.getKey()), Entry::getValue)));
+                  Map<Inputs, ValueOrError<Integer>> splitSum2Result =
+                      inputValues.<Integer>getDepValue("split_sum_2").values();
+                  DependencyResponse<SplitAdderRequest, Integer> splitSum2 =
+                      new DependencyResponse<>(
+                          splitSum2Result.entrySet().stream()
+                              .collect(
+                                  toImmutableMap(
+                                      e -> SplitAdderRequest.from(e.getKey()), Entry::getValue)));
+                  Map<Inputs, ValueOrError<Integer>> sumResult =
+                      inputValues.<Integer>getDepValue("sum").values();
+                  DependencyResponse<AdderRequest, Integer> sum =
+                      new DependencyResponse<>(
+                          sumResult.entrySet().stream()
+                              .collect(
+                                  toImmutableMap(
+                                      e -> AdderRequest.from(e.getKey()), Entry::getValue)));
+                  return valueOrError(() -> add(new AllInputs(numbers, splitSum1, splitSum2, sum)));
+                }));
   }
 }
