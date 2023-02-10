@@ -52,3 +52,5 @@ out/
 
 # SonarLint plugin
 .idea/sonarlint/
+
+lib/
