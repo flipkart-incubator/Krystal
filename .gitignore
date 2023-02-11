@@ -42,6 +42,7 @@
 .idea/modules
 *.iml
 *.ipr
+.idea/inspectionProfiles/Project_Default.xml
 
 # File-based project format
 *.iws
