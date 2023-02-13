@@ -64,7 +64,7 @@ The remaining part of this document focuses on the KrystalNodeExecutor and its i
 ### Node
 
 A node is the atomic unit of work in a krystex. It
-has [inputs](#node-input), [dependencies](#node-dependency), [resolvers](#dependency-input-resolver)
+has [inputs](#node-input), [dependencies](#node-dependency), [resolvers](#dependency-input-resolver-logic)
 
 ### NodeDefinition
 
@@ -77,7 +77,7 @@ information
   the [main logic](#node-main-logic) of the node
 * references to other node definitions which are [dependencies](#node-dependency) of this node
   definition
-* references to [resolver functions](#dependency-input-resolver)
+* references to [resolver functions](#dependency-input-resolver-logic)
 
 As you can see, none of the above information is request-specific, since there are no references to
 inputs and outputs. For this reason, node definitions are created once and cached for the lifecycle
@@ -105,7 +105,8 @@ considered to have failed with the same exception.
 * A node can be executed multiple times with different sets of inputs.
 * All the inputs need not be provided to a node together. Different input values can be provided to
   the node at different points in time. The node will greedily perform any intermediate operations (
-  See [resolvers](#dependency-input-resolver)) that it can with the provided inputs. The node will
+  See [resolvers](#dependency-input-resolver-logic)) that it can with the provided inputs. The node
+  will
   complete execution only once values for all the inputs are provided. Till then the node will
   remain in an intermediate (semi-executed) state.
 
@@ -124,19 +125,38 @@ considered to have failed with the same exception.
 (or just **resolver**)
 
 * A resolver in a node is a function that is responsible for computing (resolving) the inputs of a
-  dependency of a node.
+  dependency of the node.
 * One resolver can resolve the inputs of exactly one dependency.
-* One resolver can resolve one or more inputs of a dependency. A resolver can resolve a subset of
-  the inputs of a dependency. In such a scenario, more than one resolver is needed to completely
+* One resolver can resolve one or more inputs of a dependency - this might be all the inputs of a
+  dependency or a subset of those inputs. In case a resolver resolves only a subset of a
+  dependency's inputs, more than one resolver is needed to completely
   resolve that dependency.
-* A node which has `N` dependencies, must have at least `N` resolvers - one for each dependency of
-  the node (This happens when every resolver resolves all the inputs of its corresponding
-  dependency).
+* A node which has `N` dependencies each with at least one input, must have at least `N` resolvers -
+  one for each dependency of the node.
 * Every input of every dependency must be resolved by exactly one resolver. In other words, all the
   resolvers of a node must together resolve ALL the inputs of all the dependencies of the
-  node. Any input of any dependency must not be left unresolved.
+  node. Any input of any dependency must not be left unresolved - Krystex will wait indefinitely if
+  this happens. It is the responsibility of the clients of krystex to perform necessary checks at
+  development/build time to prevent this scenario from happening.
 
 ### Logic Decorator
+
+Logic decorators are a simple yet powerful way to extend Krystex. Krystex allows clients to define
+and plug-in decorators which wrap the main logic of nodes. In this wrapped logic, clients are free
+to add functionality to the framework. The decisions like which logic decorators should decorate
+which nodes, in which order and how a logic decorator instance is shared across hoe many nodes, etc.
+are completely left to clients, making this a very powerful feature.
+
+Example use-cases include:
+
+1. Implementing rate-limiters
+2. Adding logging
+3. Implementing metric collectors
+4. Wrapping blocking operations inside a thread-pool etc.
+
+* Logic decorators can be uniquer per node, or can be shared across nodes.
+* Logic decorators can be request-scoped or session-scoped (last for the application lifetime.)
+* Logic decorators, unlike node logics (like resolvers and main logics) can be stateful.
 
 <!--TODO-->
 
@@ -144,21 +164,87 @@ considered to have failed with the same exception.
 
 ### Command Queue - (SingleThreadExecutor)
 
-The KrystalNodeExecutor executes all the required nodes in a single thread using an event loop
-model. This means that none of the resolver logics or main logics of any node are allowed to block
+The KrystalNodeExecutor executes all the required nodes in a single thread using the event loop
+pattern. This means that none of the resolver logics or main logics of any node are allowed to block
+for
 any amount of time. They are expected to return instantly after wrapping any long-running operation
-in a `CompletableFuture`.
+in a `CompletableFuture`. All long-running operations like I/O should either be performed using
+models like non-blocking async IO, or should be wrapped in their own threadPoolExecutors, which
+instantly return a `CompletableFuture` after submitting the long-running operation to the
+threadPool.
 <!-- TODO add link to workflow diagram -->
 
 ### Common data structures
 
-<!--TODO add links to krystal-common data structures-->
+All data transfers in the Krystal Programming model are performed via a few standard Type-agnostic
+data structures which act as the common low-level interaction mechanism across programming models (
+like vajrams) and execution engines (like krystex). Because of this standardization, objects created
+by programming models can be directly used by the execution engine.
+The data structures are as follows:
+
+1. [`CompletableFuture`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html) -
+   standard java data structures to represent a value or error which is being computed but not yet
+   ready
+2. [`ValueOrError`](../krystal-common/src/main/java/com/flipkart/krystal/data/ValueOrError.java) - a
+   wrapper data structure encapsulating either a value or an error. This can be thought of as a
+   completed version of a `CompletedFuture`. All empty values are supposed to be represented
+   by `ValueOrError#emtpty()`. krystex assumes `null`s are never returned.
+3. [`Inputs`](../krystal-common/src/main/java/com/flipkart/krystal/data/Inputs.java) - A container
+   object which can holds input and dependency values of a node.
+4. [`Results`](../krystal-common/src/main/java/com/flipkart/krystal/data/Results.java) - A container
+   object which holds the results of executing a given dependency of a node multiple times in a
+   '[fanout](#dependency-fanouts)' pattern.
 
 ### Example execution
+
+Following is a logic view of a representative krystex node `N`:
+
+![Krystal_Node.png](assets/Krystal_Node.png)
+
+* Node `N` has four inputs `i1`, `i2`, `i3` and `i4`.
+* It also has three dependencies `d1`,`d2`, and `d3`.
+* Dependency `d1` is on node `N1`, `d2` is on node `N2` and `d3` is again on `N1`. This means that
+  this node can call node `N1` twice.
+* Both `N1` and `N2` have one input each.
+* `N` has three resolvers:
+    * `r1` resolves the input of `d1` using inputs `i1` and `i2`.
+    * `r2` resolves the input of `d2` using inputs `i3` and the result of dependency `d1`.
+    * `r3` resolves the input of `d3` using inputs `i3` and `i4` and the result of dependency `d2`.
+* The main logic has access to all the four input values and three dependency results.
+
+For the purpose of this example, let us assume `N1`, and `N2` themselves have no other dependencies.
+When we trigger the node `N` with a set of inputs (all inputs need not be provided at the same
+time). This is how the execution proceeds:
+
+1. Wait for `i1` and `i2` to be provided.
+2. Execute `r1` (Do not wait for `i3` and `i4`). `r1` finishes immediately since resolvers are not
+   allowed to make blocking calls.
+3. Take the output of `r1` and provide it to node `N1`
+4. `N1` has no resolvers/dependencies. Execute main logic of `N1`
+5. Wait for main logic of `N1` to finish.
+6. Wait for `i3` to be provided.
+7. Execute `r2` with `i3` and results of `d1` (`N1`). `r2` finishes immediately.
+8. Take the output of `r2` and provide it to node `N2`
+9. `N2` has no resolvers/dependencies. Execute main logic on `N1`. Wait for this to complete.
+10. Wait for `i4` to be provided.
+11. Execute `r3` with `i3`, `i4` and the results of `d2`(`N2`). `r3` finishes immediately.
+12. Take output of `r3` and provide it to node `N1`.
+13. `N1` has no resolvers/dependencies. Execute main logic of `N1` with the provided input. Wait for
+    this to complete.
+14. Execute the main logic of `N`
+
+Here is the shorter-form of the execution sequence:
+
+`r1` -> `N1` -> `r2` -> `N2` -> `r3` -> `N1` -> `N`
+
+The result of executing the main logic of `N` is considered the final result of the computation.
 
 <!-- TODO add execution animation -->
 
 ## Capabilities
 
+### Dependency fanouts
+
 ### Recursive dependencies
+
 
