@@ -2,6 +2,7 @@ package com.flipkart.krystal.krystex.node;
 
 import static com.flipkart.krystal.data.ValueOrError.withError;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.lang.Math.max;
 
 import com.flipkart.krystal.data.InputValue;
@@ -59,7 +60,7 @@ public class Node {
 
   private final ImmutableMapView<Optional<String>, List<ResolverDefinition>>
       resolverDefinitionsByInput;
-  private final ImmutableMapView<String, List<ResolverDefinition>>
+  private final ImmutableMapView<String, ImmutableSet<ResolverDefinition>>
       resolverDefinitionsByDependencies;
   private final LogicDecorationOrdering logicDecorationOrdering;
 
@@ -108,7 +109,8 @@ public class Node {
     this.resolverDefinitionsByDependencies =
         ImmutableMapView.viewOf(
             nodeDefinition.resolverDefinitions().stream()
-                .collect(Collectors.groupingBy(ResolverDefinition::dependencyName)));
+                .collect(
+                    Collectors.groupingBy(ResolverDefinition::dependencyName, toImmutableSet())));
   }
 
   void executeCommand(Flush nodeCommand) {
@@ -354,7 +356,7 @@ public class Node {
         }
         requestCounter += batchSize;
       }
-      List<ResolverDefinition> resolverDefinitionsForDependency =
+      ImmutableSet<ResolverDefinition> resolverDefinitionsForDependency =
           this.resolverDefinitionsByDependencies.get(dependencyName);
       if (resolverDefinitionsForDependency.equals(dependencyNodeExecutions.executedResolvers())) {
         CompletableFuture.allOf(
@@ -400,7 +402,7 @@ public class Node {
     Set<RequestId> requestsForDependantChain =
         requestsByDependantChain.getOrDefault(dependantChain, ImmutableSet.of());
     NodeId depNodeId = nodeDefinition.dependencyNodes().get(dependencyName);
-    List<ResolverDefinition> resolverDefinitionsForDependency =
+    ImmutableSet<ResolverDefinition> resolverDefinitionsForDependency =
         this.resolverDefinitionsByDependencies.get(dependencyName);
     if (!requestsForDependantChain.isEmpty()
         && requestsForDependantChain.stream()
@@ -588,12 +590,12 @@ public class Node {
 
   private record DependencyNodeExecutions(
       LongAdder executionCounter,
-      List<ResolverDefinition> executedResolvers,
+      Set<ResolverDefinition> executedResolvers,
       Map<RequestId, Inputs> individualCallInputs,
       Map<RequestId, CompletableFuture<NodeResponse>> individualCallResponses) {
 
     public DependencyNodeExecutions() {
-      this(new LongAdder(), new ArrayList<>(), new LinkedHashMap<>(), new LinkedHashMap<>());
+      this(new LongAdder(), new LinkedHashSet<>(), new LinkedHashMap<>(), new LinkedHashMap<>());
     }
   }
 
