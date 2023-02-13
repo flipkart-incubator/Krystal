@@ -117,12 +117,11 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
             () -> {
               createDependantNodes(nodeId, DependantChainStart.instance());
               CompletableFuture<Object> future = new CompletableFuture<>();
-              allRequests
-                  .computeIfAbsent(requestId, r -> new ArrayList<>())
-                  .add(new NodeExecutionInfo(nodeId, inputs, future));
+              NodeExecutionInfo nodeExecutionInfo = new NodeExecutionInfo(nodeId, inputs, future);
+              allRequests.computeIfAbsent(requestId, r -> new ArrayList<>()).add(nodeExecutionInfo);
               unFlushedRequests
                   .computeIfAbsent(requestId, r -> new ArrayList<>())
-                  .add(new NodeExecutionInfo(nodeId, inputs, future));
+                  .add(nodeExecutionInfo);
               return future;
             },
             commandQueueLease.get())
