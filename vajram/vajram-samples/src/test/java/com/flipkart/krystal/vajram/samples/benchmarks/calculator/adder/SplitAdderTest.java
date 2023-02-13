@@ -23,7 +23,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class SplitAdderTest {
-  public static final int LOOP_COUNT = 50_000;
   private Builder graph;
 
   @BeforeEach
@@ -41,66 +40,65 @@ class SplitAdderTest {
     assertThat(future.get()).isEqualTo(55);
   }
 
-  //   @Test
+  //  @Test
   void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
+    int loopCount = 50_000;
     VajramNodeGraph graph = this.graph.maxRequestsPerThread(1).build();
-    long javaNativeTime = javaMethodBenchmark(this::splitAdd, LOOP_COUNT);
-    long javaFuturesTime = javaFuturesBenchmark(this::splitAddAsync, LOOP_COUNT);
-    CompletableFuture<Integer>[] futures = new CompletableFuture[LOOP_COUNT];
-    if (LOOP_COUNT > 0) {
-      long startTime = System.nanoTime();
-      long timeToCreateExecutors = 0;
-      long timeToEnqueueVajram = 0;
-      for (int value = 0; value < LOOP_COUNT; value++) {
-        long iterStartTime = System.nanoTime();
-        try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-            graph.createExecutor(new RequestContext(""))) {
-          timeToCreateExecutors += System.nanoTime() - iterStartTime;
-          long enqueueStart = System.nanoTime();
-          futures[value] = executeVajram(krystexVajramExecutor, value);
-          timeToEnqueueVajram += System.nanoTime() - enqueueStart;
-        }
+    long javaNativeTime = javaMethodBenchmark(this::splitAdd, loopCount);
+    long javaFuturesTime = javaFuturesBenchmark(this::splitAddAsync, loopCount);
+    CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
+    long startTime = System.nanoTime();
+    long timeToCreateExecutors = 0;
+    long timeToEnqueueVajram = 0;
+    for (int value = 0; value < loopCount; value++) {
+      long iterStartTime = System.nanoTime();
+      try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
+          graph.createExecutor(new RequestContext(""))) {
+        timeToCreateExecutors += System.nanoTime() - iterStartTime;
+        long enqueueStart = System.nanoTime();
+        futures[value] = executeVajram(krystexVajramExecutor, value);
+        timeToEnqueueVajram += System.nanoTime() - enqueueStart;
       }
-      System.out.printf("Avg. time to Create Executors:%,d %n", timeToCreateExecutors / LOOP_COUNT);
-      System.out.printf("Avg. time to Enqueue vajrams:%,d %n", timeToEnqueueVajram / LOOP_COUNT);
-      System.out.printf(
-          "Avg. time to execute vajrams:%,d %n", (System.nanoTime() - startTime) / LOOP_COUNT);
-      allOf(futures).join();
-      long vajramTime = System.nanoTime() - startTime;
-      System.out.printf("vajram: %,d ns for %,d requests", vajramTime, LOOP_COUNT);
-      System.out.println();
-      System.out.printf(
-          "Platform overhead over native code: %,.0f ns per request",
-          (1.0 * vajramTime - javaNativeTime) / LOOP_COUNT);
-      System.out.println();
-      /*
-       * Benchmark config:
-       *    loopCount = 50_000
-       *    maxRequestsPerThread = 2
-       *    Processor: 2.6 GHz 6-Core Intel Core i7
-       * Benchmark result:
-       *    platform overhead = ~370 µs per request
-       *    maxPoolSize = ~300
-       */
-      System.out.printf(
-          "Platform overhead over reactive code: %,.0f ns per request",
-          (1.0 * vajramTime - javaFuturesTime) / LOOP_COUNT);
-      System.out.println();
-      allOf(futures)
-          .whenComplete(
-              (unused, throwable) -> {
-                for (int i = 0; i < futures.length; i++) {
-                  CompletableFuture<Integer> future = futures[i];
-                  assertThat(future.getNow(0)).isEqualTo((i * 100) + 55);
-                }
-              })
-          .get();
-      System.out.printf(
-          "maxActiveLeasesPerObject: %s, peakAvgActiveLeasesPerObject: %s, maxPoolSize: %s",
-          graph.getExecutorPool().maxActiveLeasesPerObject(),
-          graph.getExecutorPool().peakAvgActiveLeasesPerObject(),
-          graph.getExecutorPool().maxPoolSize());
     }
+    System.out.printf("Avg. time to Create Executors:%,d %n", timeToCreateExecutors / loopCount);
+    System.out.printf("Avg. time to Enqueue vajrams:%,d %n", timeToEnqueueVajram / loopCount);
+    System.out.printf(
+        "Avg. time to execute vajrams:%,d %n", (System.nanoTime() - startTime) / loopCount);
+    allOf(futures).join();
+    long vajramTime = System.nanoTime() - startTime;
+    System.out.printf("vajram: %,d ns for %,d requests", vajramTime, loopCount);
+    System.out.println();
+    System.out.printf(
+        "Platform overhead over native code: %,.0f ns per request",
+        (1.0 * vajramTime - javaNativeTime) / loopCount);
+    System.out.println();
+    /*
+     * Benchmark config:
+     *    loopCount = 50_000
+     *    maxRequestsPerThread = 2
+     *    Processor: 2.6 GHz 6-Core Intel Core i7
+     * Benchmark result:
+     *    platform overhead = ~370 µs per request
+     *    maxPoolSize = ~300
+     */
+    System.out.printf(
+        "Platform overhead over reactive code: %,.0f ns per request",
+        (1.0 * vajramTime - javaFuturesTime) / loopCount);
+    System.out.println();
+    allOf(futures)
+        .whenComplete(
+            (unused, throwable) -> {
+              for (int i = 0; i < futures.length; i++) {
+                CompletableFuture<Integer> future = futures[i];
+                assertThat(future.getNow(0)).isEqualTo((i * 100) + 55);
+              }
+            })
+        .get();
+    System.out.printf(
+        "maxActiveLeasesPerObject: %s, peakAvgActiveLeasesPerObject: %s, maxPoolSize: %s",
+        graph.getExecutorPool().maxActiveLeasesPerObject(),
+        graph.getExecutorPool().peakAvgActiveLeasesPerObject(),
+        graph.getExecutorPool().maxPoolSize());
   }
 
   private static CompletableFuture<Integer> executeVajram(
