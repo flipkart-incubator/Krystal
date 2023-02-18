@@ -15,7 +15,6 @@ import com.flipkart.krystal.krystex.RequestId;
 import com.flipkart.krystal.krystex.ResolverCommand;
 import com.flipkart.krystal.krystex.ResolverCommand.SkipDependency;
 import com.flipkart.krystal.krystex.ResolverDefinition;
-import com.flipkart.krystal.krystex.ResultFuture;
 import com.flipkart.krystal.krystex.commands.ExecuteWithDependency;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
 import com.flipkart.krystal.krystex.commands.Flush;
@@ -78,8 +77,8 @@ public class Node {
       new LinkedHashMap<>();
 
   /**
-   * A unique {@link ResultFuture} for every new set of Inputs. This acts as a cache so that the
-   * same computation is not repeated multiple times .
+   * A unique {@link CompletableFuture} for every new set of Inputs. This acts as a cache so that
+   * the same computation is not repeated multiple times .
    */
   private final Map<Inputs, CompletableFuture<Object>> resultsCache = new LinkedHashMap<>();
 
