@@ -53,7 +53,7 @@ class Resilience4JBulkheadTest {
 
   @Test
   void bulkhead_restrictsConcurrency() {
-    CountDownLatch countDownLatch = new CountDownLatch(2);
+    CountDownLatch countDownLatch = new CountDownLatch(1);
     MainLogicDefinition<String> mainLogic =
         newAsyncLogic(
             "nodeLogic",
@@ -95,7 +95,7 @@ class Resilience4JBulkheadTest {
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         krystalNodeExecutor.executeNode(
             nodeDefinition.nodeId(), new Inputs(ImmutableMap.of("input", withValue(1))), "req_1");
-    CompletableFuture<Object> call2AfterBulkheadExhaustion =
+    CompletableFuture<Object> call2BeforeBulkheadExhaustion =
         krystalNodeExecutor.executeNode(
             nodeDefinition.nodeId(), new Inputs(ImmutableMap.of("input", withValue(2))), "req_2");
     CompletableFuture<Object> callAfterBulkheadExhaustion =
@@ -106,14 +106,14 @@ class Resilience4JBulkheadTest {
         .failsWithin(1, SECONDS)
         .withThrowableOfType(Exception.class)
         .withRootCauseInstanceOf(BulkheadFullException.class)
-        .withMessageContaining(
-            "Bulkhead '%s' is full and does not permit further calls".formatted(".bulkhead"));
-    countDownLatch.countDown();
+        .withMessageContaining("Bulkhead '.bulkhead' is full and does not permit further calls");
     countDownLatch.countDown();
     assertThat(call1BeforeBulkheadExhaustion)
         .succeedsWithin(1, SECONDS)
         .isEqualTo("computed_value");
-    assertThat(call2AfterBulkheadExhaustion).succeedsWithin(1, SECONDS).isEqualTo("computed_value");
+    assertThat(call2BeforeBulkheadExhaustion)
+        .succeedsWithin(1, SECONDS)
+        .isEqualTo("computed_value");
   }
 
   private <T> MainLogicDefinition<T> newAsyncLogic(
