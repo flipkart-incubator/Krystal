@@ -11,7 +11,6 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.RequestId;
-import com.flipkart.krystal.krystex.SingleThreadExecutorPool;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.NodeRequestCommand;
@@ -21,6 +20,7 @@ import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig.DecoratorContext;
 import com.flipkart.krystal.utils.MultiLeasePool;
+import com.flipkart.krystal.utils.MultiLeasePool.Lease;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
@@ -40,7 +40,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
   private final NodeDefinitionRegistry nodeDefinitionRegistry;
   private final LogicDecorationOrdering logicDecorationOrdering;
-  private final MultiLeasePool.Lease<ExecutorService> commandQueueLease;
+  private final Lease<? extends ExecutorService> commandQueueLease;
   private final RequestId requestId;
 
   /** DecoratorType -> {InstanceId -> Decorator} */
@@ -56,7 +56,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   public KrystalNodeExecutor(
       NodeDefinitionRegistry nodeDefinitionRegistry,
       LogicDecorationOrdering logicDecorationOrdering,
-      SingleThreadExecutorPool commandQueuePool,
+      MultiLeasePool<? extends ExecutorService> commandQueuePool,
       String requestId) {
     this.nodeDefinitionRegistry = nodeDefinitionRegistry;
     this.logicDecorationOrdering = logicDecorationOrdering;

@@ -7,10 +7,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.SingleThreadExecutorPool;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
@@ -46,7 +46,7 @@ class Resilience4JBulkheadTest {
         new KrystalNodeExecutor(
             nodeDefinitionRegistry,
             new LogicDecorationOrdering(ImmutableSet.of()),
-            new SingleThreadExecutorPool(1),
+            new ForkJoinExecutorPool(1),
             "test");
     this.executorService = Executors.newSingleThreadExecutor();
   }

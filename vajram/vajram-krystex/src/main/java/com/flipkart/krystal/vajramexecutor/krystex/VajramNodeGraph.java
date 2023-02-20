@@ -7,12 +7,12 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.ResolverCommand;
 import com.flipkart.krystal.krystex.ResolverDefinition;
 import com.flipkart.krystal.krystex.ResolverLogicDefinition;
-import com.flipkart.krystal.krystex.SingleThreadExecutorPool;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
@@ -72,18 +72,18 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   private final ImmutableMap<String, MainLogicDecoratorConfig> sessionScopedDecoratorConfigs;
 
   private final LogicDecorationOrdering logicDecorationOrdering;
-  private SingleThreadExecutorPool executorPool;
+  private MultiLeasePool<? extends ExecutorService> executorPool;
 
   private VajramNodeGraph(
       String[] packagePrefixes,
       ImmutableMap<VajramID, InputModulatorConfig> inputModulatorConfigs,
       ImmutableMap<String, MainLogicDecoratorConfig> sessionScopedDecorators,
       LogicDecorationOrdering logicDecorationOrdering,
-      int executorPool) {
+      double maxParallelismPerCore) {
     this.inputModulatorConfigs = inputModulatorConfigs;
     this.sessionScopedDecoratorConfigs = sessionScopedDecorators;
     this.logicDecorationOrdering = logicDecorationOrdering;
-    this.executorPool = new SingleThreadExecutorPool(executorPool);
+    this.executorPool = new ForkJoinExecutorPool(maxParallelismPerCore);
     LogicDefinitionRegistry logicDefinitionRegistry = new LogicDefinitionRegistry();
     this.nodeDefinitionRegistry = new NodeDefinitionRegistry(logicDefinitionRegistry);
     this.logicRegistryDecorator = new LogicDefRegistryDecorator(logicDefinitionRegistry);
@@ -92,7 +92,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     }
   }
 
-  public MultiLeasePool<ExecutorService> getExecutorPool() {
+  public MultiLeasePool<? extends ExecutorService> getExecutorPool() {
     return executorPool;
   }
 
@@ -381,7 +381,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     private final Map<VajramID, InputModulatorConfig> inputModulators = new LinkedHashMap<>();
     private LogicDecorationOrdering logicDecorationOrdering =
         new LogicDecorationOrdering(ImmutableSet.of());
-    private int maxRequestsPerThread = 1;
+    private double maxParallelismPerCore = 1;
 
     public Builder loadFromPackage(String packagePrefix) {
       packagePrefixes.add(packagePrefix);
@@ -399,8 +399,8 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
       return this;
     }
 
-    public Builder maxRequestsPerThread(int maxRequestsPerThread) {
-      this.maxRequestsPerThread = maxRequestsPerThread;
+    public Builder maxParallelismPerCore(double maxParallelismPerCore) {
+      this.maxParallelismPerCore = maxParallelismPerCore;
       return this;
     }
 
@@ -420,7 +420,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
           ImmutableMap.copyOf(inputModulators),
           ImmutableMap.copyOf(sessionScopedDecoratorConfigs),
           logicDecorationOrdering,
-          maxRequestsPerThread);
+          maxParallelismPerCore);
     }
   }
 }
