@@ -6,64 +6,115 @@ import java.util.Deque;
 import java.util.LinkedList;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class MultiLeasePool<T> implements AutoCloseable {
 
-  private final Supplier<T> factory;
+  private final Supplier<T> creator;
+  private final MultiLeasePolicy leasePolicy;
 
-  private final int maxActiveLeasesPerObject;
   private final Consumer<T> destroyer;
   private double peakAvgActiveLeasesPerObject;
   private int maxPoolSize;
 
-  private final Deque<PooledObject> queue = new LinkedList<>();
+  private final Deque<PooledObject<T>> queue = new LinkedList<>();
   private volatile boolean closed;
+  private int maxActiveLeasesPerObject;
 
-  public MultiLeasePool(Supplier<T> factory, int maxActiveLeasesPerObject, Consumer<T> destroyer) {
-    this.factory = factory;
-    this.maxActiveLeasesPerObject = maxActiveLeasesPerObject;
+  public MultiLeasePool(Supplier<T> creator, MultiLeasePolicy leasePolicy, Consumer<T> destroyer) {
+    this.creator = creator;
+    this.leasePolicy = leasePolicy;
     this.destroyer = destroyer;
   }
 
-  public final synchronized Lease lease() {
+  public final synchronized Lease<T> lease() {
     if (closed) {
       throw new IllegalStateException("MultiLeasePool already closed");
     }
-    PooledObject pooledObject = queue.poll();
     int count = queue.size();
-    while (pooledObject != null
-        && count-- > 0
-        && (pooledObject.shouldDelete()
-            || pooledObject.activeLeases() == maxActiveLeasesPerObject)) {
-      if (!pooledObject.shouldDelete()) {
-        queue.add(pooledObject);
-      } else {
-        destroyer.accept(pooledObject.ref());
+    PooledObject<T> head;
+    do {
+      head = queue.peek();
+      if (head == null) {
+        continue;
       }
-      pooledObject = queue.poll();
-    }
-    if (pooledObject == null || pooledObject.activeLeases() == maxActiveLeasesPerObject) {
-      pooledObject = addNewForLeasing();
+      processNonNullHead();
+    } while (head != null && --count > 0 && !canLeaseOut(head));
+    PooledObject<T> leasable;
+    if (head == null || !canLeaseOut(head)) {
+      leasable = createNewForLeasing();
     } else {
-      pooledObject.incrementActiveLeases();
+      leasable = head;
+      leasable.incrementActiveLeases();
     }
-    queue.add(pooledObject);
+    maxActiveLeasesPerObject = max(maxActiveLeasesPerObject, leasable.activeLeases());
     peakAvgActiveLeasesPerObject =
         max(
             peakAvgActiveLeasesPerObject,
             queue.stream().mapToInt(PooledObject::activeLeases).average().orElse(0));
-    return new Lease(pooledObject);
+    return new Lease<>(leasable, this::giveBack);
   }
 
-  private synchronized void giveBack(PooledObject pooledObject) {
-    pooledObject.decrementActiveLeases();
+  private void processNonNullHead() {
+    PooledObject<T> head = queue.peek();
+    boolean shouldPushToLast =
+        !canLeaseOut(head)
+            || (leasePolicy instanceof DistributeLeases distributeLeases
+                && distributeLeases.maxActiveObjects() == queue.size());
+    if (shouldPushToLast) {
+      head = queue.poll();
+      if (!shouldDelete(head)) {
+        queue.add(head);
+      }
+    }
   }
 
-  private PooledObject addNewForLeasing() {
-    T t = factory.get();
-    PooledObject pooledObject = new PooledObject(t);
+  private boolean shouldDelete(@Nullable PooledObject<T> pooledObject) {
+    if (pooledObject == null) {
+      return false;
+    }
+    return pooledObject.markForDeletion
+        > 100; // This number is a bit random - need to find a better way to calibrate this.
+  }
+
+  private void addLeasedToQueue(PooledObject<T> pooledObject) {
+    if (leasePolicy instanceof PreferObjectReuse) {
+      // Since object reuse is preferred, add the pooledObject at the head so that it is used
+      // immediately for the next lease.
+      queue.addFirst(pooledObject);
+    } else if (leasePolicy instanceof DistributeLeases) {
+      // Since lease distribution is preferred, add th pooledObject at the tail so that other
+      // pooledObjects are used to subsequent leases.
+      queue.addLast(pooledObject);
+    } else {
+      throw new UnsupportedOperationException();
+    }
+  }
+
+  private boolean canLeaseOut(PooledObject<T> pooledObject) {
+    if (shouldDelete(pooledObject)) {
+      return false;
+    }
+    if (leasePolicy instanceof PreferObjectReuse preferObjectReuse) {
+      return pooledObject.activeLeases() < preferObjectReuse.maxActiveLeasesPerObject();
+    } else if (leasePolicy instanceof DistributeLeases distributeLeases) {
+      return pooledObject.activeLeases() < distributeLeases.distributionTriggerThreshold()
+          || queue.size() == distributeLeases.maxActiveObjects();
+    } else {
+      throw new UnsupportedOperationException();
+    }
+  }
+
+  private synchronized void giveBack(PooledObject<T> pooledObject) {
+    if (shouldDelete(pooledObject) && pooledObject.activeLeases() == 0) {
+      destroyer.accept(pooledObject.ref());
+    }
+  }
+
+  private PooledObject<T> createNewForLeasing() {
+    PooledObject<T> pooledObject = new PooledObject<>(creator.get(), maxActiveLeasesPerObject());
     pooledObject.incrementActiveLeases();
-    queue.add(pooledObject);
+    addLeasedToQueue(pooledObject);
     maxPoolSize = max(maxPoolSize, queue.size());
     return pooledObject;
   }
@@ -83,18 +134,20 @@ public class MultiLeasePool<T> implements AutoCloseable {
   @Override
   public void close() {
     this.closed = true;
-    PooledObject pooledObject;
+    PooledObject<T> pooledObject;
     while ((pooledObject = queue.pollLast()) != null) {
       destroyer.accept(pooledObject.ref());
     }
   }
 
-  public final class Lease implements AutoCloseable {
+  public static final class Lease<T> implements AutoCloseable {
 
-    private PooledObject pooledObject;
+    private PooledObject<T> pooledObject;
+    private final Consumer<PooledObject<T>> giveback;
 
-    private Lease(PooledObject pooledObject) {
+    private Lease(PooledObject<T> pooledObject, Consumer<PooledObject<T>> giveback) {
       this.pooledObject = pooledObject;
+      this.giveback = giveback;
     }
 
     public T get() {
@@ -107,46 +160,45 @@ public class MultiLeasePool<T> implements AutoCloseable {
     @Override
     public void close() {
       if (pooledObject != null) {
-        giveBack(pooledObject);
+        giveback.accept(pooledObject);
+        pooledObject.decrementActiveLeases();
         pooledObject = null;
       }
     }
   }
 
-  private final class PooledObject {
+  private static final class PooledObject<T> {
 
     private final T ref;
+    private final int deletionThreshold;
     private int activeLeases = 0;
     private int markForDeletion;
 
-    private PooledObject(T ref) {
+    private PooledObject(T ref, int deletionThreshold) {
       this.ref = ref;
+      this.deletionThreshold = deletionThreshold;
     }
 
-    public T ref() {
+    private T ref() {
       return ref;
     }
 
-    public int activeLeases() {
+    private int activeLeases() {
       return activeLeases;
     }
 
-    public void incrementActiveLeases() {
+    private void incrementActiveLeases() {
       activeLeases++;
-    }
-
-    public void decrementActiveLeases() {
-      activeLeases--;
-      if (activeLeases() == 0 && maxActiveLeasesPerObject() > 1) {
-        markForDeletion++;
-      } else {
+      if (activeLeases() == deletionThreshold) {
         markForDeletion = 0;
       }
     }
 
-    public boolean shouldDelete() {
-      return markForDeletion
-          > 100; // This number is a bit random - need to find a better way to calibrate this.
+    private void decrementActiveLeases() {
+      activeLeases--;
+      if (activeLeases() < deletionThreshold) {
+        markForDeletion++;
+      }
     }
   }
 }

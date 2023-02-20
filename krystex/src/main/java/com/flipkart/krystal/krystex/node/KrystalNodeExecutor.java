@@ -5,12 +5,12 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
+import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.RequestId;
-import com.flipkart.krystal.krystex.SingleThreadExecutorPool;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.NodeRequestCommand;
@@ -19,6 +19,8 @@ import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig.DecoratorContext;
+import com.flipkart.krystal.utils.MultiLeasePool;
+import com.flipkart.krystal.utils.MultiLeasePool.Lease;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
@@ -28,8 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 
 /** Default implementation of Krystal executor which */
@@ -38,7 +40,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
   private final NodeDefinitionRegistry nodeDefinitionRegistry;
   private final LogicDecorationOrdering logicDecorationOrdering;
-  private final SingleThreadExecutorPool.Lease commandQueueLease;
+  private final Lease<? extends ExecutorService> commandQueueLease;
   private final RequestId requestId;
 
   /** DecoratorType -> {InstanceId -> Decorator} */
@@ -54,7 +56,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   public KrystalNodeExecutor(
       NodeDefinitionRegistry nodeDefinitionRegistry,
       LogicDecorationOrdering logicDecorationOrdering,
-      SingleThreadExecutorPool commandQueuePool,
+      MultiLeasePool<? extends ExecutorService> commandQueuePool,
       String requestId) {
     this.nodeDefinitionRegistry = nodeDefinitionRegistry;
     this.logicDecorationOrdering = logicDecorationOrdering;
@@ -111,15 +113,19 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     if (closed) {
       throw new RejectedExecutionException("KrystalNodeExecutor is already closed");
     }
-    createDependantNodes(nodeId, DependantChainStart.instance());
-    CompletableFuture<Object> future = new CompletableFuture<>();
-    allRequests
-        .computeIfAbsent(requestId, r -> new ArrayList<>())
-        .add(new NodeExecutionInfo(nodeId, inputs, future));
-    unFlushedRequests
-        .computeIfAbsent(requestId, r -> new ArrayList<>())
-        .add(new NodeExecutionInfo(nodeId, inputs, future));
-    return future;
+    return supplyAsync(
+            () -> {
+              createDependantNodes(nodeId, DependantChainStart.instance());
+              CompletableFuture<Object> future = new CompletableFuture<>();
+              NodeExecutionInfo nodeExecutionInfo = new NodeExecutionInfo(nodeId, inputs, future);
+              allRequests.computeIfAbsent(requestId, r -> new ArrayList<>()).add(nodeExecutionInfo);
+              unFlushedRequests
+                  .computeIfAbsent(requestId, r -> new ArrayList<>())
+                  .add(nodeExecutionInfo);
+              return future;
+            },
+            commandQueueLease.get())
+        .thenCompose(identity());
   }
 
   private void createDependantNodes(NodeId nodeId, DependantChain dependantChain) {
@@ -129,7 +135,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       // dependencies nodes to avoid infinite recursion of this method.
       //
       // This means 'dependantChainsPerNode' field of this class will not contain all possible
-      // dependantChains (since there will be infinitely many of them). Instead there will be
+      // dependantChains (since there will be infinitely many of them). Instead, there will be
       // exactly one dependantChain which will have this node as a dependant, and this
       // dependantChain can be used to infer that there is a dependency recursion.
       //
@@ -138,9 +144,9 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       // 'InitiateActiveDepChains' command to initiate all possible active DependantChains might
       // not work as expected (For example, InputModulationDecorator of vajram-krystex library).
       //
-      // It is the responsibility of users of krystex library to make sure that either:
-      // 1. Nodes which recursively depend on themselves do not have such LogicDecorators configured
-      // on them
+      // It is the responsibility of users of the krystex library to make sure that either:
+      // 1. Nodes which have LogicDecorators which depend on activeDepChains to be exhaustive,
+      // should not have dependant chains containing loops, or ...
       // 2. If the above is not possible, then such LogicDecorators should gracefully handle the
       // scenario that InitiateActiveDepChains will not contain recursive active dependant
       // chains.
@@ -168,7 +174,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     return supplyAsync(
             () -> nodeRegistry.get(nodeCommand.nodeId()).executeRequestCommand(nodeCommand),
             commandQueueLease.get())
-        .thenCompose(Function.identity());
+        .thenCompose(identity());
   }
 
   void enqueueCommand(Flush flush) {
@@ -176,46 +182,51 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   public void flush() {
-    unFlushedRequests.forEach(
-        (requestId, nodeExecutionInfos) -> {
-          nodeExecutionInfos.forEach(
-              nodeExecutionInfo -> {
-                NodeId nodeId = nodeExecutionInfo.nodeId();
-                if (nodeExecutionInfo.future().isDone()) {
-                  return;
-                }
-                NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
-                CompletableFuture<Object> submissionResult =
-                    enqueueCommand(
-                            new ExecuteWithInputs(
-                                nodeId,
-                                nodeDefinitionRegistry
-                                    .logicDefinitionRegistry()
-                                    .getMain(nodeDefinition.mainLogicNode())
-                                    .inputNames()
-                                    .stream()
-                                    .filter(s -> !nodeDefinition.dependencyNodes().containsKey(s))
-                                    .collect(toImmutableSet()),
-                                nodeExecutionInfo.inputs(),
-                                DependantChainStart.instance(),
-                                requestId))
-                        .thenApply(NodeResponse::response)
-                        .thenApply(
-                            valueOrError -> {
-                              if (valueOrError.error().isPresent()) {
-                                throw new RuntimeException(valueOrError.error().get());
-                              } else {
-                                return valueOrError.value().orElse(null);
-                              }
-                            });
-                linkFutures(submissionResult, nodeExecutionInfo.future());
+    runAsync(
+        () -> {
+          unFlushedRequests.forEach(
+              (requestId, nodeExecutionInfos) -> {
+                nodeExecutionInfos.forEach(
+                    nodeExecutionInfo -> {
+                      NodeId nodeId = nodeExecutionInfo.nodeId();
+                      if (nodeExecutionInfo.future().isDone()) {
+                        return;
+                      }
+                      NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
+                      CompletableFuture<Object> submissionResult =
+                          enqueueCommand(
+                                  new ExecuteWithInputs(
+                                      nodeId,
+                                      nodeDefinitionRegistry
+                                          .logicDefinitionRegistry()
+                                          .getMain(nodeDefinition.mainLogicNode())
+                                          .inputNames()
+                                          .stream()
+                                          .filter(
+                                              s -> !nodeDefinition.dependencyNodes().containsKey(s))
+                                          .collect(toImmutableSet()),
+                                      nodeExecutionInfo.inputs(),
+                                      DependantChainStart.instance(),
+                                      requestId))
+                              .thenApply(NodeResponse::response)
+                              .thenApply(
+                                  valueOrError -> {
+                                    if (valueOrError.error().isPresent()) {
+                                      throw new RuntimeException(valueOrError.error().get());
+                                    } else {
+                                      return valueOrError.value().orElse(null);
+                                    }
+                                  });
+                      linkFutures(submissionResult, nodeExecutionInfo.future());
+                    });
               });
-        });
-    unFlushedRequests.forEach(
-        (requestId, nodeExecutionInfos) ->
-            nodeExecutionInfos.forEach(
-                nodeExecutionInfo -> enqueueCommand(new Flush(nodeExecutionInfo.nodeId()))));
-    unFlushedRequests.clear();
+          unFlushedRequests.forEach(
+              (requestId, nodeExecutionInfos) ->
+                  nodeExecutionInfos.forEach(
+                      nodeExecutionInfo -> enqueueCommand(new Flush(nodeExecutionInfo.nodeId()))));
+          unFlushedRequests.clear();
+        },
+        commandQueueLease.get());
   }
 
   /**
@@ -224,15 +235,21 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
    */
   @Override
   public void close() {
+    if (closed) {
+      return;
+    }
     this.closed = true;
     flush();
-    allOf(
-            allRequests.values().stream()
-                .flatMap(
-                    nodeExecutionInfos ->
-                        nodeExecutionInfos.stream().map(NodeExecutionInfo::future))
-                .toArray(CompletableFuture[]::new))
-        .whenComplete((unused, throwable) -> commandQueueLease.close());
+    supplyAsync(
+        () ->
+            allOf(
+                    allRequests.values().stream()
+                        .flatMap(
+                            nodeExecutionInfos ->
+                                nodeExecutionInfos.stream().map(NodeExecutionInfo::future))
+                        .toArray(CompletableFuture[]::new))
+                .whenComplete((unused, throwable) -> commandQueueLease.close()),
+        commandQueueLease.get());
   }
 
   private record NodeExecutionInfo(

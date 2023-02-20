@@ -5,6 +5,32 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+/**
+ * A wrapper object representing a value or an error. This can be seen as a 'completed' version of a
+ * {@link CompletableFuture}. This class avoids the prevalence of {@code null}s in the codebase and
+ * also allows reactive frameworks to gracefully handle scenarios where a computation led to a error
+ * because of which some value could not be computed.
+ *
+ * <p>Example states:
+ *
+ * <ul>
+ *   {@link #value()} is empty and {@link #error()} is empty - represents a null value.
+ * </ul>
+ *
+ * <ul>
+ *   {@link #value()} is empty and {@link #error()} is not empty - value could not be computed
+ *   because of the given error.
+ * </ul>
+ *
+ * <ul>
+ *   {@link #value()} is not empty and {@link #error()} is empty - successfully computed the given
+ *   value
+ * </ul>
+ *
+ * <ul>
+ *   {@link #value()} is not empty and {@link #error()} is not empty - this scenario is impossible.
+ * </ul>
+ */
 public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error)
     implements InputValue<T> {
 
