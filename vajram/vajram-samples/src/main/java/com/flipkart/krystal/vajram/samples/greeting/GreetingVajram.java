@@ -23,7 +23,7 @@ public abstract class GreetingVajram extends ComputeVajram<String> {
   // is the responsibility of this Vajram (inputs of a vajram are resolved by its client Vajrams).
   // In this case the UserServiceVajram needs a user_id to retrieve user info from User Service.
   // So it's GreetingVajram's responsibility to provide that input.
-  @Resolve(value = "user_info", inputs = UserServiceVajram.USER_ID)
+  @Resolve(value = "user_info", inputs = {"user_id"})
   public String userIdForUserService(@BindFrom("user_id") String userId) {
       UserServiceRequest userServiceRequest = UserServiceRequest.builder().userId(userId).build();
     return userId;
@@ -39,7 +39,7 @@ public abstract class GreetingVajram extends ComputeVajram<String> {
   // This is the core business logic of this Vajram
   // Sync vajrams can return any object. AsyncVajrams need to return {CompletableFuture}s
   @VajramLogic
-  public String createGreetingMessage(GreetingInputUtil.AllInputs request) {
+  public String createGreetingMessage(GreetingInputUtil.GreetingAllInputs request) {
     String userId = request.userId();
     ValueOrError<UserInfo> userInfo =
         request.userInfo().get(UserServiceRequest.builder().userId(userId).build());

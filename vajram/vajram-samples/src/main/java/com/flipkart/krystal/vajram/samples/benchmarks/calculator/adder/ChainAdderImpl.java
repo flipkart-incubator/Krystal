@@ -1,9 +1,11 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder;
 
+import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static com.flipkart.krystal.datatypes.IntegerType.integer;
 import static com.flipkart.krystal.datatypes.ListType.list;
 import static com.flipkart.krystal.vajram.inputs.DependencyCommand.multiExecuteWith;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
@@ -13,7 +15,7 @@ import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
-import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderInputUtil.AllInputs;
+import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderInputUtil.ChainAdderAllInputs;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -24,7 +26,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 
 public final class ChainAdderImpl extends ChainAdder {
 
@@ -99,11 +100,12 @@ public final class ChainAdderImpl extends ChainAdder {
   }
 
   @Override
-  public ImmutableMap<Inputs, Integer> executeCompute(ImmutableList<Inputs> inputsList) {
+  public ImmutableMap<Inputs, ValueOrError<Integer>> executeCompute(
+      ImmutableList<Inputs> inputsList) {
     return inputsList.stream()
         .collect(
             toImmutableMap(
-                Function.identity(),
+                identity(),
                 inputValues -> {
                   ArrayList<Integer> numbers = inputValues.getInputValueOrThrow("numbers");
                   Map<Inputs, ValueOrError<Integer>> chainSumResult =
@@ -122,7 +124,7 @@ public final class ChainAdderImpl extends ChainAdder {
                               .collect(
                                   toImmutableMap(
                                       e -> AdderRequest.from(e.getKey()), Entry::getValue)));
-                  return add(new AllInputs(numbers, chainSum, sum));
+                    return valueOrError(() -> add(new ChainAdderAllInputs(numbers, chainSum, sum)));
                 }));
   }
 }

@@ -8,8 +8,8 @@ import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceInputUtil.CommonInputs;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceInputUtil.InputsNeedingModulation;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceInputUtil.TestUserServiceCommonInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceInputUtil.TestUserServiceInputsNeedingModulation;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -31,8 +31,8 @@ public abstract class TestUserServiceVajram extends IOVajram<TestUserInfo> {
   public static final Set<TestUserServiceRequest> REQUESTS = new LinkedHashSet<>();
 
   @VajramLogic
-  public ImmutableMap<InputsNeedingModulation, CompletableFuture<TestUserInfo>> callUserService(
-      ModulatedInput<InputsNeedingModulation, CommonInputs> modulatedRequest) {
+  public ImmutableMap<TestUserServiceInputsNeedingModulation, CompletableFuture<TestUserInfo>> callUserService(
+      ModulatedInput<TestUserServiceInputsNeedingModulation, TestUserServiceCommonInputs> modulatedRequest) {
     CALL_COUNTER.increment();
     modulatedRequest.inputsNeedingModulation().stream()
         .map(im -> TestUserServiceRequest.builder().userId(im.userId()).build())

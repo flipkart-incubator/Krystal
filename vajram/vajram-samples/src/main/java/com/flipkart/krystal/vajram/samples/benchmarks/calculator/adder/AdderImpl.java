@@ -1,17 +1,28 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder;
 
+import static com.flipkart.krystal.data.ValueOrError.withValue;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderInputUtil.CONVERTER;
+
+import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.datatypes.IntegerType;
 import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
-import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderInputUtil.AllInputs;
+import com.flipkart.krystal.vajram.modulation.InputsConverter;
+import com.flipkart.krystal.vajram.modulation.ModulatedInput;
+import com.flipkart.krystal.vajram.modulation.UnmodulatedInput;
+import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderInputUtil.AdderCommonInputs;
+import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderInputUtil.AdderInputsNeedingModulation;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
-public class AdderImpl extends Adder {
+public final class AdderImpl extends Adder {
 
   @Override
   public ImmutableCollection<VajramInputDefinition> getInputDefinitions() {
@@ -21,16 +32,31 @@ public class AdderImpl extends Adder {
   }
 
   @Override
-  public ImmutableMap<Inputs, Integer> executeCompute(ImmutableList<Inputs> inputsList) {
-    Map<Inputs, Integer> result = new HashMap<>();
+  public InputsConverter<AdderInputUtil.AdderInputsNeedingModulation, AdderCommonInputs>
+      getInputsConvertor() {
+    return CONVERTER;
+  }
+
+  @Override
+  public ImmutableMap<Inputs, ValueOrError<Integer>> executeCompute(
+      ImmutableList<Inputs> inputsList) {
+    Map<AdderInputUtil.AdderInputsNeedingModulation, Inputs> mapping = new HashMap<>();
+    List<AdderInputsNeedingModulation> ims = new ArrayList<>();
+      AdderCommonInputs commonInputs = null;
     for (Inputs inputs : inputsList) {
-      result.put(
-          inputs,
-          add(
-              new AllInputs(
-                  inputs.getInputValueOrThrow("number_one"),
-                  inputs.getInputValueOrDefault("number_two", null))));
+      UnmodulatedInput<AdderInputsNeedingModulation, AdderCommonInputs> allInputs =
+          getInputsConvertor().apply(inputs);
+      commonInputs = allInputs.commonInputs();
+        AdderInputsNeedingModulation im = allInputs.inputsNeedingModulation();
+      mapping.put(im, inputs);
+      ims.add(im);
     }
-    return ImmutableMap.copyOf(result);
+    Map<Inputs, ValueOrError<Integer>> returnValue = new LinkedHashMap<>();
+
+    if (commonInputs != null) {
+      var results = add(new ModulatedInput<>(ImmutableList.copyOf(ims), commonInputs));
+      results.forEach((im, future) -> returnValue.put(mapping.get(im), withValue(future)));
+    }
+    return ImmutableMap.copyOf(returnValue);
   }
 }

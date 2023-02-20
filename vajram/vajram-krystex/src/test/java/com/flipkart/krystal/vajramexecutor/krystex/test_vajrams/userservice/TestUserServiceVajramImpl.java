@@ -3,14 +3,14 @@ package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice;
 import static com.flipkart.krystal.datatypes.StringType.string;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceInputUtil.CONVERTER;
 
-import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajram.modulation.UnmodulatedInput;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceInputUtil.CommonInputs;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceInputUtil.InputsNeedingModulation;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceInputUtil.TestUserServiceCommonInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceInputUtil.TestUserServiceInputsNeedingModulation;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-public class TestUserServiceVajramImpl extends TestUserServiceVajram {
+public final class TestUserServiceVajramImpl extends TestUserServiceVajram {
   @Override
   public ImmutableList<VajramInputDefinition> getInputDefinitions() {
     return ImmutableList.of(
@@ -38,21 +38,21 @@ public class TestUserServiceVajramImpl extends TestUserServiceVajram {
   @Override
   public ImmutableMap<Inputs, CompletableFuture<TestUserInfo>> execute(
       ImmutableList<Inputs> inputsList) {
-    Map<InputsNeedingModulation, Inputs> mapping = new HashMap<>();
-    List<InputsNeedingModulation> ims = new ArrayList<>();
-    CommonInputs commonInputs = null;
+    Map<TestUserServiceInputsNeedingModulation, Inputs> mapping = new HashMap<>();
+    List<TestUserServiceInputsNeedingModulation> ims = new ArrayList<>();
+    TestUserServiceCommonInputs commonInputs = null;
     for (Inputs inputs : inputsList) {
-      UnmodulatedInput<InputsNeedingModulation, CommonInputs> allInputs =
+      UnmodulatedInput<TestUserServiceInputsNeedingModulation, TestUserServiceCommonInputs> allInputs =
           getInputsConvertor().apply(inputs);
       commonInputs = allInputs.commonInputs();
-      InputsNeedingModulation im = allInputs.inputsNeedingModulation();
+        TestUserServiceInputsNeedingModulation im = allInputs.inputsNeedingModulation();
       mapping.put(im, inputs);
       ims.add(im);
     }
     Map<Inputs, CompletableFuture<TestUserInfo>> returnValue = new LinkedHashMap<>();
 
     if (commonInputs != null) {
-      ImmutableMap<InputsNeedingModulation, CompletableFuture<TestUserInfo>> results =
+      ImmutableMap<TestUserServiceInputsNeedingModulation, CompletableFuture<TestUserInfo>> results =
           callUserService(new ModulatedInput<>(ImmutableList.copyOf(ims), commonInputs));
       results.forEach((im, future) -> returnValue.put(mapping.get(im), future));
     }
@@ -60,7 +60,7 @@ public class TestUserServiceVajramImpl extends TestUserServiceVajram {
   }
 
   @Override
-  public InputsConverter<InputsNeedingModulation, CommonInputs> getInputsConvertor() {
+  public InputsConverter<TestUserServiceInputsNeedingModulation, TestUserServiceCommonInputs> getInputsConvertor() {
     return CONVERTER;
   }
 }

@@ -1,5 +1,9 @@
 package com.flipkart.krystal.vajram.codegen.utils;
 
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.ALL_INPUTS;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.COMMON_INPUTS;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_NEEDING_MODULATION;
+
 import com.google.common.base.CaseFormat;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
@@ -57,5 +61,17 @@ public final class CodegenUtils {
 
     public static String toJavaName(String input) {
         return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, input);
+    }
+
+    public static String getAllInputsClassname(String vajramName) {
+        return getVajramBaseName(vajramName) + ALL_INPUTS;
+    }
+
+    public static String getCommonInputsClassname(String vajramName) {
+        return getVajramBaseName(vajramName) + COMMON_INPUTS;
+    }
+
+    public static String getInputModulationClassname(String vajramName) {
+        return getVajramBaseName(vajramName) + INPUTS_NEEDING_MODULATION;
     }
 }

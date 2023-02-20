@@ -3,14 +3,14 @@ package com.flipkart.krystal.vajram.samples.greeting;
 import static com.flipkart.krystal.datatypes.StringType.string;
 import static com.flipkart.krystal.vajram.samples.greeting.UserServiceInputUtil.CONVERTER;
 
-import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajram.modulation.UnmodulatedInput;
-import com.flipkart.krystal.vajram.samples.greeting.UserServiceInputUtil.CommonInputs;
-import com.flipkart.krystal.vajram.samples.greeting.UserServiceInputUtil.InputsNeedingModulation;
+import com.flipkart.krystal.vajram.samples.greeting.UserServiceInputUtil.UserServiceCommonInputs;
+import com.flipkart.krystal.vajram.samples.greeting.UserServiceInputUtil.UserServiceInputsNeedingModulation;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-public class UserServiceVajramImpl extends UserServiceVajram {
+public final class UserServiceVajramImpl extends UserServiceVajram {
   @Override
   public ImmutableList<VajramInputDefinition> getInputDefinitions() {
     return ImmutableList.of(
@@ -36,21 +36,21 @@ public class UserServiceVajramImpl extends UserServiceVajram {
   }
 
   @Override
-  public InputsConverter<InputsNeedingModulation, CommonInputs> getInputsConvertor() {
+  public InputsConverter<UserServiceInputsNeedingModulation, UserServiceCommonInputs> getInputsConvertor() {
     return CONVERTER;
   }
 
   @Override
   public ImmutableMap<Inputs, CompletableFuture<UserInfo>> execute(
       ImmutableList<Inputs> inputsList) {
-    Map<InputsNeedingModulation, Inputs> mapping = new HashMap<>();
-    List<InputsNeedingModulation> ims = new ArrayList<>();
-    CommonInputs commonInputs = null;
+    Map<UserServiceInputsNeedingModulation, Inputs> mapping = new HashMap<>();
+    List<UserServiceInputsNeedingModulation> ims = new ArrayList<>();
+      UserServiceCommonInputs commonInputs = null;
     for (Inputs inputs : inputsList) {
-      UnmodulatedInput<InputsNeedingModulation, CommonInputs> allInputs =
+      UnmodulatedInput<UserServiceInputsNeedingModulation, UserServiceCommonInputs> allInputs =
           getInputsConvertor().apply(inputs);
       commonInputs = allInputs.commonInputs();
-      InputsNeedingModulation im = allInputs.inputsNeedingModulation();
+        UserServiceInputsNeedingModulation im = allInputs.inputsNeedingModulation();
       mapping.put(im, inputs);
       ims.add(im);
     }

@@ -7,7 +7,6 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
-import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.ResolverCommand;
@@ -22,8 +21,6 @@ import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
-import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDefinitionException;
@@ -36,6 +33,7 @@ import com.flipkart.krystal.vajram.exec.VajramExecutableGraph;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
+import com.flipkart.krystal.vajram.inputs.InputResolver;
 import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
@@ -74,7 +72,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   private final ImmutableMap<String, MainLogicDecoratorConfig> sessionScopedDecoratorConfigs;
 
   private final LogicDecorationOrdering logicDecorationOrdering;
-  private final SingleThreadExecutorPool executorPool;
+  private SingleThreadExecutorPool executorPool;
 
   private VajramNodeGraph(
       String[] packagePrefixes,
@@ -102,6 +100,11 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
       C requestContext) {
     return new KrystexVajramExecutor<>(this, logicDecorationOrdering, executorPool, requestContext);
+  }
+
+  @Override
+  public void close() {
+    executorPool.close();
   }
 
   /**
@@ -177,11 +180,12 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     ImmutableList<ResolverDefinition> resolverDefinitions =
         inputResolvers.stream()
             .map(
-                inputResolver -> {
-                  String dependencyName = inputResolver.resolutionTarget().dependencyName();
+                inputResolverDefinition -> {
+                  String dependencyName =
+                      inputResolverDefinition.resolutionTarget().dependencyName();
                   ImmutableSet<String> resolvedInputNames =
-                      inputResolver.resolutionTarget().inputNames();
-                  ImmutableSet<String> sources = inputResolver.sources();
+                      inputResolverDefinition.resolutionTarget().inputNames();
+                  ImmutableSet<String> sources = inputResolverDefinition.sources();
                   ImmutableCollection<VajramInputDefinition> requiredInputs =
                       vajram.getInputDefinitions().stream()
                           .filter(i -> sources.contains(i.name()))
@@ -194,9 +198,16 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                           sources,
                           inputValues -> {
                             validateMandatory(vajramId, inputValues, requiredInputs);
-                            DependencyCommand<Inputs> dependencyCommand =
-                                vajram.resolveInputOfDependency(
-                                    dependencyName, resolvedInputNames, inputValues);
+                            DependencyCommand<Inputs> dependencyCommand;
+                            if (inputResolverDefinition instanceof InputResolver inputResolver) {
+                              dependencyCommand =
+                                  inputResolver.resolve(
+                                      dependencyName, resolvedInputNames, inputValues);
+                            } else {
+                              dependencyCommand =
+                                  vajram.resolveInputOfDependency(
+                                      dependencyName, resolvedInputNames, inputValues);
+                            }
                             if (dependencyCommand
                                 instanceof DependencyCommand.Skip<Inputs> skipCommand) {
                               return ResolverCommand.skip(skipCommand.reason());
@@ -249,40 +260,23 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     NodeLogicId vajramLogicNodeName = new NodeLogicId("%s:vajramLogic".formatted(vajramId));
     MainLogicDefinition<?> vajramLogic;
     // Step 4: Create and register node for the main vajram logic
-    if (vajramDefinition.getVajram() instanceof ComputeVajram<?> computeVajram) {
-      vajramLogic =
-          logicRegistryDecorator.newComputeLogic(
-              vajramLogicNodeName.asString(),
-              inputNames,
-              inputs -> {
-                validateMandatory(
-                    vajramId, inputs, vajramDefinition.getVajram().getInputDefinitions());
-                Inputs inputValues = injectFromSession(inputDefinitions, inputs);
-                return computeVajram.executeCompute(ImmutableList.of(inputValues)).get(inputValues);
-              },
-              vajramDefinition.getMainLogicTags());
-    } else if (vajramDefinition.getVajram() instanceof IOVajram<?> ioVajram) {
-      IOLogicDefinition<?> ioNodeDefinition =
-          logicRegistryDecorator.newIOLogic(
-              vajramLogicNodeName,
-              inputNames,
-              dependencyValues -> {
-                dependencyValues.forEach(
-                    inputs ->
-                        validateMandatory(
-                            vajramId, inputs, vajramDefinition.getVajram().getInputDefinitions()));
-                ImmutableList<Inputs> inputValues =
-                    dependencyValues.stream()
-                        .map(inputs -> injectFromSession(inputDefinitions, inputs))
-                        .collect(toImmutableList());
-                return ioVajram.execute(inputValues);
-              },
-              vajramDefinition.getMainLogicTags());
-      enableInputModulation(ioNodeDefinition, ioVajram);
-      vajramLogic = ioNodeDefinition;
-    } else {
-      throw new UnsupportedOperationException();
-    }
+    vajramLogic =
+        logicRegistryDecorator.newMainLogic(
+            vajramLogicNodeName,
+            inputNames,
+            inputsList -> {
+              inputsList.forEach(
+                  inputs ->
+                      validateMandatory(
+                          vajramId, inputs, vajramDefinition.getVajram().getInputDefinitions()));
+              ImmutableList<Inputs> inputValues =
+                  inputsList.stream()
+                      .map(inputs -> injectFromSession(inputDefinitions, inputs))
+                      .collect(toImmutableList());
+              return vajramDefinition.getVajram().execute(inputValues);
+            },
+            vajramDefinition.getMainLogicTags());
+    enableInputModulation(vajramLogic, vajramDefinition.getVajram());
     sessionScopedDecoratorConfigs
         .values()
         .forEach(vajramLogic::registerSessionScopedLogicDecorator);
@@ -290,7 +284,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   }
 
   private <T> void enableInputModulation(
-      IOLogicDefinition<T> logicDefinition, IOVajram<?> ioVajram) {
+      MainLogicDefinition<T> logicDefinition, Vajram<?> ioVajram) {
     InputModulatorConfig inputModulatorConfig = inputModulatorConfigs.get(ioVajram.getId());
     if (inputModulatorConfig != null) {
       logicDefinition.registerRequestScopedDecorator(

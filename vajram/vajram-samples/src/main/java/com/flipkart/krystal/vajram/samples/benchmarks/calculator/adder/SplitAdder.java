@@ -58,7 +58,7 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
   }
 
   @VajramLogic
-  public Integer add(SplitAdderInputUtil.AllInputs allInputs) {
+  public Integer add(SplitAdderInputUtil.SplitAdderAllInputs allInputs) {
     return Stream.of(
             allInputs.splitSum1().values().stream().map(voe -> voe.value().orElseThrow()),
             allInputs.splitSum2().values().stream().map(voe -> voe.value().orElseThrow()),

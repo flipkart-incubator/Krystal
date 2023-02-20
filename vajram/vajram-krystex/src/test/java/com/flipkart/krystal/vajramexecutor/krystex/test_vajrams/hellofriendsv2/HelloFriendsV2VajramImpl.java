@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2;
 
+import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static com.flipkart.krystal.datatypes.StringType.string;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -15,7 +16,7 @@ import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceVajram;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2InputUtil.AllInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2InputUtil.HelloFriendsV2AllInputs;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceVajram;
@@ -26,7 +27,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 
-public class HelloFriendsV2VajramImpl extends HelloFriendsV2Vajram {
+public final class HelloFriendsV2VajramImpl extends HelloFriendsV2Vajram {
   @Override
   public ImmutableList<VajramInputDefinition> getInputDefinitions() {
     return ImmutableList.of(
@@ -81,7 +82,8 @@ public class HelloFriendsV2VajramImpl extends HelloFriendsV2Vajram {
   }
 
   @Override
-  public ImmutableMap<Inputs, String> executeCompute(ImmutableList<Inputs> inputsList) {
+  public ImmutableMap<Inputs, ValueOrError<String>> executeCompute(
+      ImmutableList<Inputs> inputsList) {
     return inputsList.stream()
         .collect(
             toImmutableMap(
@@ -104,11 +106,13 @@ public class HelloFriendsV2VajramImpl extends HelloFriendsV2Vajram {
                                       e -> TestUserServiceRequest.from(e.getKey()),
                                       Entry::getValue)));
 
-                  return sayHellos(
-                      new AllInputs(
-                          i.getInputValueOrThrow("user_id"),
-                          friendIdsResponse,
-                          friendInfosResponse));
+                  return valueOrError(
+                      () ->
+                          sayHellos(
+                              new HelloFriendsV2AllInputs(
+                                  i.getInputValueOrThrow("user_id"),
+                                  friendIdsResponse,
+                                  friendInfosResponse)));
                 }));
   }
 }

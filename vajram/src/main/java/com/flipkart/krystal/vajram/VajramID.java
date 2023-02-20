@@ -5,10 +5,8 @@ import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import java.util.Collection;
 import java.util.Optional;
-import lombok.EqualsAndHashCode;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-@EqualsAndHashCode
 public final class VajramID implements DataAccessSpec {
 
   private @MonotonicNonNull String vajramId;
@@ -50,6 +48,22 @@ public final class VajramID implements DataAccessSpec {
       }
     }
     return vajramId;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (!(obj instanceof VajramID)) {
+      return false;
+    }
+    return this.vajramId().equals(((VajramID) obj).vajramId());
+  }
+
+  @Override
+  public int hashCode() {
+    return vajramId().hashCode();
   }
 
   @Override

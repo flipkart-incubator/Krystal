@@ -1,10 +1,12 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends;
 
+import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static com.flipkart.krystal.datatypes.IntegerType.integer;
 import static com.flipkart.krystal.datatypes.StringType.string;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.Results;
@@ -14,7 +16,7 @@ import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsInputUtil.AllInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsInputUtil.HelloFriendsAllInputs;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceVajram;
@@ -25,7 +27,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 
-public class HelloFriendsVajramImpl extends HelloFriendsVajram {
+public final class HelloFriendsVajramImpl extends HelloFriendsVajram {
 
   @Override
   public ImmutableList<VajramInputDefinition> getInputDefinitions() {
@@ -74,14 +76,14 @@ public class HelloFriendsVajramImpl extends HelloFriendsVajram {
     throw new IllegalArgumentException();
   }
 
-  @Override
-  public ImmutableMap<Inputs, String> executeCompute(ImmutableList<Inputs> inputsList) {
+  public ImmutableMap<Inputs, ValueOrError<String>> executeCompute(
+      ImmutableList<Inputs> inputsList) {
     return inputsList.stream()
         .collect(
             toImmutableMap(
-                i -> i,
-                i -> {
-                  Results<TestUserInfo> userInfo = i.getDepValue("user_infos");
+                identity(),
+                inputs -> {
+                  Results<TestUserInfo> userInfo = inputs.getDepValue("user_infos");
                   DependencyResponse<TestUserServiceRequest, TestUserInfo> userInfoResponse =
                       new DependencyResponse<>(
                           userInfo.values().entrySet().stream()
@@ -90,7 +92,7 @@ public class HelloFriendsVajramImpl extends HelloFriendsVajram {
                                       e -> TestUserServiceRequest.from(e.getKey()),
                                       Entry::getValue)));
 
-                  Results<TestUserInfo> friendInfos = i.getDepValue("friend_infos");
+                  Results<TestUserInfo> friendInfos = inputs.getDepValue("friend_infos");
                   DependencyResponse<TestUserServiceRequest, TestUserInfo> friendInfosResponse =
                       new DependencyResponse<>(
                           friendInfos.values().entrySet().stream()
@@ -98,17 +100,17 @@ public class HelloFriendsVajramImpl extends HelloFriendsVajram {
                                   toImmutableMap(
                                       e -> TestUserServiceRequest.from(e.getKey()),
                                       Entry::getValue)));
-
-                  try {
-                    return sayHellos(
-                        new AllInputs(
-                            i.<String>getInputValue("user_id").value().orElseThrow(),
-                            i.<Integer>getInputValue("number_of_friends").value().orElse(null),
-                            userInfoResponse,
-                            friendInfosResponse));
-                  } catch (Exception e) {
-                    throw new RuntimeException(e);
-                  }
+                  return valueOrError(
+                      () ->
+                          sayHellos(
+                              new HelloFriendsAllInputs(
+                                  inputs.<String>getInputValue("user_id").value().orElseThrow(),
+                                  inputs
+                                      .<Integer>getInputValue("number_of_friends")
+                                      .value()
+                                      .orElse(null),
+                                  userInfoResponse,
+                                  friendInfosResponse)));
                 }));
   }
 }

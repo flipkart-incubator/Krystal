@@ -1,8 +1,49 @@
 package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.datatypes.TypeUtils.getJavaType;
+import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.COMMA;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.CONVERTER;
+import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.DOT;
+import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getAllInputsClassname;
+import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getCommonInputsClassname;
+import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getInputModulationClassname;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getInputUtilClassName;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.ARRAY_LIST;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.COMMON_INPUT;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.COM_FUTURE;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.DEP_COMMAND;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.DEP_RESP;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.DEP_RESPONSE;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.DOT_SEPARATOR;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.FUNCTION;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.GET_INPUT_DEFINITIONS;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.HASH_MAP;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.IM_LIST;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.IM_MAP;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_LIST;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_MODULATION;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_MODULATION_CODE_BLOCK;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_MODULATION_FUTURE_CODE_BLOCK;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_SRC;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.LINK_HASH_MAP;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.LIST;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.MAP;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.METHOD_EXECUTE;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.METHOD_EXECUTE_COMPUTE;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.METHOD_GET_INPUTS_CONVERTOR;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.METHOD_RESOLVE_INPUT_OF_DEPENDENCY;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.MOD_INPUT;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.REQUEST;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.RESOLVABLE_INPUTS;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.RESPONSE;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.RESPONSES_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.RESPONSE_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.RETURN_TYPE;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.UNMOD_INPUT;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.VAJRAM_LOGIC_METHOD;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.VAL_ERR;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.VARIABLE;
 import static com.google.common.base.CaseFormat.LOWER_CAMEL;
 import static com.google.common.base.CaseFormat.LOWER_UNDERSCORE;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
@@ -13,8 +54,6 @@ import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
-import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.DOT;
-import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.COMMA;
 
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
@@ -30,12 +69,14 @@ import com.flipkart.krystal.vajram.Vajrams;
 import com.flipkart.krystal.vajram.codegen.models.AbstractInput;
 import com.flipkart.krystal.vajram.codegen.models.DependencyDef;
 import com.flipkart.krystal.vajram.codegen.models.InputDef;
-import com.flipkart.krystal.vajram.codegen.models.VajramDef;
+import com.flipkart.krystal.vajram.codegen.models.ParsedVajramData;
 import com.flipkart.krystal.vajram.codegen.models.VajramDependencyDef;
 import com.flipkart.krystal.vajram.codegen.models.VajramInputFile;
 import com.flipkart.krystal.vajram.codegen.models.VajramInputsDef;
 import com.flipkart.krystal.vajram.codegen.utils.CodegenUtils;
+import com.flipkart.krystal.vajram.codegen.utils.Constants;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
+import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.inputs.BindFrom;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
@@ -45,8 +86,8 @@ import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.inputs.Resolve;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
+import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajram.modulation.UnmodulatedInput;
-import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -65,6 +106,7 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
@@ -100,32 +142,22 @@ public class VajramCodeGenerator {
     private static final List<Class> SIMPLE_TYPES = ImmutableList.of(String.class, Integer.class, Double.class, Boolean.class,
             Character.class, Byte.class, Float.class, Long.class, Void.class);
     private static final Pattern COMPILE = Pattern.compile("\\.");
-    public static final char DOT_SEPARATOR = '.';
-    public static final String RESPONSE = "response";
-    public static final String VARIABLE = "variable";
-    public static final String DEP_RESPONSE = "depResponse";
-    public static final String REQUEST = "request";
-    public static final String RESPONSES_SUFFIX = "Responses";
-    public static final String RESPONSE_SUFFIX = "Response";
-    public static final String METHOD_GET_INPUTS_CONVERTOR = "getInputsConvertor";
-    public static final String METHOD_EXECUTE = "execute";
-    public static final String METHOD_RESOLVE_INPUT_OF_DEPENDENCY = "resolveInputOfDependency";
-    public static final String METHOD_EXECUTE_COMPUTE = "executeCompute";
-    public static final String GET_INPUT_DEFINITIONS = "getInputDefinitions";
-    public static final String ALL_INPUTS = "AllInputs";
-    public static final String INPUTS_LIST = "inputsList";
+
     private final String packageName;
     private final String requestClassName;
     private final VajramInputFile vajramInputFile;
     private final String vajramName;
-    private final Map<String, VajramDef> vajramDefs;
-    private final ImmutableCollection<VajramInputDefinition> inputDefinitions;
+    private final Map<String, ParsedVajramData> vajramDefs;
+    private final Map<String, ImmutableList<VajramInputDefinition>> vajramInputsDef;
     private final Map<String, VajramInputDefinition> inputDefsMap;
+    private final Map<String, ClassName> clsDeps = new HashMap<>();
+    private boolean needsModulation;
 
     public String getVajramName() {
         return vajramName;
     }
-    public VajramCodeGenerator(VajramInputFile vajramInputFile, Map<String, VajramDef> vajramDefs) {
+    public VajramCodeGenerator(VajramInputFile vajramInputFile, Map<String, ParsedVajramData> vajramDefs,
+            Map<String, ImmutableList<VajramInputDefinition>> vajramInputsDef) {
         this.vajramInputFile = vajramInputFile;
         Path filePath = vajramInputFile.inputFilePath().relativeFilePath();
         Path parentDir = filePath.getParent();
@@ -135,13 +167,26 @@ public class VajramCodeGenerator {
                 .mapToObj(i -> parentDir.getName(i).toString())
                 .collect(Collectors.joining(DOT));
         this.requestClassName = CodegenUtils.getRequestClassName(vajramName);
+        // All parsed Vajram data loaded from all Vajram class files with vajram name as key
         this.vajramDefs = Collections.unmodifiableMap(vajramDefs);
-        //InputDefinitions loaded from vajram.yaml file
-        this.inputDefinitions = vajramInputFile.vajramInputsDef().allInputsDefinitions();
-        // All the VajramInputDefinitions map with name as key
-        this.inputDefsMap = inputDefinitions.stream()
+        // All InputDefinitions loaded from all vajram.yaml file with vajram name as key
+        this.vajramInputsDef = Collections.unmodifiableMap(vajramInputsDef);
+        // All the present Vajram -> VajramInputDefinitions map with name as key
+        this.inputDefsMap = vajramInputFile.vajramInputsDef().allInputsDefinitions().stream()
               .collect(Collectors.toMap(VajramInputDefinition::name, Function.identity(),
                       (o1, o2) -> o1, LinkedHashMap::new)); // need ordered map for dependencies
+        this.needsModulation = vajramInputFile.vajramInputsDef().inputs().stream()
+                .anyMatch(InputDef::isNeedsModulation);
+        clsDeps.put(INPUTS, ClassName.get(Inputs.class));
+        clsDeps.put(UNMOD_INPUT, ClassName.get(UnmodulatedInput.class));
+        clsDeps.put(MOD_INPUT, ClassName.get(ModulatedInput.class));
+        clsDeps.put(IM_MAP, ClassName.get(ImmutableMap.class));
+        clsDeps.put(IM_LIST, ClassName.get(ImmutableList.class));
+        clsDeps.put(DEP_COMMAND, ClassName.get(DependencyCommand.class));
+        clsDeps.put(FUNCTION, ClassName.get(Function.class));
+        clsDeps.put(VAL_ERR, ClassName.get(ValueOrError.class));
+        clsDeps.put(DEP_RESP, ClassName.get(DependencyResponse.class));
+        clsDeps.put(INPUT_SRC, ClassName.get(InputSource.class));
     }
 
     /**
@@ -163,19 +208,19 @@ public class VajramCodeGenerator {
 
       // Map of all the resolved variables to the methods resolving them
       Map<String, List<Method>> resolverMap = new HashMap<>();
-      VajramDef vajramDef = vajramDefs.get(vajramName);
-      vajramDef.resolveMethods().forEach(method -> resolverMap.put(method.getAnnotation(Resolve.class).value(), new ArrayList<>()));
-      for (Method resolve : vajramDef.resolveMethods()) {
+      ParsedVajramData parsedVajramData = vajramDefs.get(vajramName);
+      parsedVajramData.resolveMethods().forEach(method -> resolverMap.put(method.getAnnotation(Resolve.class).value(), new ArrayList<>()));
+      for (Method resolve : parsedVajramData.resolveMethods()) {
           String key = resolve.getAnnotation(Resolve.class).value();
           resolverMap.get(key).add(resolve);
       }
 
       // Initialize few common attributes and data structures
-      final ClassName inputsNeedingModulation = ClassName.get(vajramDef.packageName(),
-              CodegenUtils.getInputUtilClassName(vajramDef.vajramName()), "InputsNeedingModulation");
-      final ClassName commonInputs = ClassName.get(vajramDef.packageName(),
-              CodegenUtils.getInputUtilClassName(vajramDef.vajramName()), "CommonInputs");
-      final Type vajramResponseType = ((ParameterizedType) ((Class<? extends Vajram>) vajramDef.vajramClass())
+      final ClassName inputsNeedingModulation = ClassName.get(parsedVajramData.packageName(),
+              CodegenUtils.getInputUtilClassName(parsedVajramData.vajramName()), getInputModulationClassname(vajramName));
+      final ClassName commonInputs = ClassName.get(parsedVajramData.packageName(),
+              CodegenUtils.getInputUtilClassName(parsedVajramData.vajramName()), getCommonInputsClassname(vajramName));
+      final Type vajramResponseType = ((ParameterizedType) ((Class<? extends Vajram>) parsedVajramData.vajramClass())
               .getGenericSuperclass()).getActualTypeArguments()[0];
 
       MethodSpec inputDefinitionsMethod = createInputDefinitions(classLoader);
@@ -183,11 +228,13 @@ public class VajramCodeGenerator {
       Optional<MethodSpec> inputResolverMethod = createResolvers(resolverMap);
       inputResolverMethod.ifPresent(methodSpecs::add);
 
-      if (vajramDef.vajramClass().getSuperclass() == IOVajram.class) {
-          methodSpecs.add(createIOVajramExecuteMethod(inputsNeedingModulation, commonInputs, vajramResponseType));
-          methodSpecs.add(createInputConvertersMethod(inputsNeedingModulation, commonInputs));
+      if (IOVajram.class.isAssignableFrom(parsedVajramData.vajramClass())) {
+          methodSpecs.add(createIOVajramExecuteMethod(inputsNeedingModulation, commonInputs, vajramResponseType, resolverMap));
       } else {
-          methodSpecs.add(createComputeVajramExecuteMethod(vajramResponseType, resolverMap));
+          methodSpecs.add(createComputeVajramExecuteMethod(vajramResponseType, resolverMap, inputsNeedingModulation, commonInputs));
+      }
+      if (needsModulation) {
+          methodSpecs.add(createInputConvertersMethod(inputsNeedingModulation, commonInputs));
       }
 
       StringWriter writer = new StringWriter();
@@ -213,18 +260,58 @@ public class VajramCodeGenerator {
      * @return generated code for "executeCompute" {@link MethodSpec}
      */
     private MethodSpec createComputeVajramExecuteMethod(Type vajramResponseType,
-            Map<String, List<Method>> resolverMap) {
+            Map<String, ? extends Collection<Method>> resolverMap, ClassName inputsNeedingModulation,
+            ClassName commonInputs) {
         Builder executeBuilder = methodBuilder(METHOD_EXECUTE_COMPUTE).addModifiers(PUBLIC)
                 .addParameter(ParameterizedTypeName.get(ImmutableList.class, Inputs.class), INPUTS_LIST)
                 .returns(ParameterizedTypeName.get(ClassName.get(ImmutableMap.class), ClassName.get(Inputs.class),
-                        ClassName.bestGuess(vajramResponseType.getTypeName())))
+                        ParameterizedTypeName.get(clsDeps.get(VAL_ERR),
+                                ClassName.bestGuess(vajramResponseType.getTypeName()))))
                 .addAnnotation(Override.class);
-        CodeBlock.Builder returnBuilder = CodeBlock.builder()
-                .add("""
-                    return inputsList.stream().collect(
-                         ImmutableMap.toImmutableMap(java.util.function.Function.identity(),
-                         element -> {
-                    """);
+        if (needsModulation) {
+            CodeBlock.Builder codeBuilder = CodeBlock.builder();
+            Map<String, Object> valueMap =  new HashMap<>();
+            valueMap.put(INPUTS, ClassName.get(Inputs.class));
+            valueMap.put(UNMOD_INPUT, ClassName.get(UnmodulatedInput.class));
+            valueMap.put(INPUT_MODULATION, inputsNeedingModulation);
+            valueMap.put(COMMON_INPUT, commonInputs);
+            valueMap.put(RETURN_TYPE, ClassName.bestGuess(vajramResponseType.getTypeName()));
+            valueMap.put(VAJRAM_LOGIC_METHOD, vajramDefs.get(vajramName).vajramLogic().getName());
+            valueMap.put(MOD_INPUT, ClassName.get(ModulatedInput.class));
+            valueMap.put(IM_MAP, ClassName.get(ImmutableMap.class));
+            valueMap.put(IM_LIST, ClassName.get(ImmutableList.class));
+            valueMap.put(HASH_MAP, ClassName.get(HashMap.class));
+            valueMap.put(ARRAY_LIST, ClassName.get(ArrayList.class));
+            valueMap.put(COM_FUTURE, ClassName.get(CompletableFuture.class));
+            valueMap.put(LINK_HASH_MAP, ClassName.get(LinkedHashMap.class));
+            valueMap.put(MAP, ClassName.get(Map.class));
+            valueMap.put(LIST, ClassName.get(List.class));
+            valueMap.put(VAL_ERR, clsDeps.get(VAL_ERR));
+            // Any vajram supporting input modulation must return map
+            assert Map.class.isAssignableFrom(vajramDefs.get(vajramName).vajramLogic().getReturnType());
+            Type type = ((ParameterizedType) vajramDefs.get(vajramName).vajramLogic().getGenericReturnType())
+                    .getActualTypeArguments()[1];
+            // TODO : check if this is needed for compute vajrams or should throw error
+            if (type instanceof ParameterizedType &&
+                    CompletableFuture.class.isAssignableFrom((Class<?>) ((ParameterizedType) type).getRawType())) {
+                codeBuilder.addNamed(INPUT_MODULATION_FUTURE_CODE_BLOCK, valueMap);
+            } else {
+                codeBuilder.addNamed(INPUT_MODULATION_CODE_BLOCK, valueMap);
+            }
+            executeBuilder.addCode(codeBuilder.build());
+        }
+        else { // TODO : Need non modulated IO vajram to test this
+            simpleComputeMethodBuilder(resolverMap, executeBuilder);
+        }
+        return executeBuilder.build();
+    }
+
+    private void simpleComputeMethodBuilder(Map<String, ? extends Collection<Method>> resolverMap, Builder executeBuilder) {
+        CodeBlock.Builder returnBuilder = CodeBlock.builder().add("""
+                return inputsList.stream().collect(
+                     $T.toImmutableMap($T.identity(),
+                     element -> {
+                """, clsDeps.get(IM_MAP), clsDeps.get(FUNCTION));
         List<CodeBlock> inputCodeBlocks = new ArrayList<>();
         inputDefsMap.values().forEach(inputDef -> {
             if (resolverMap.containsKey(inputDef.name())) {
@@ -232,45 +319,45 @@ public class VajramCodeGenerator {
                 if (inputDef instanceof Dependency<?> inputDefDependency) {
                     DataAccessSpec dataAccessSpec = inputDefDependency.dataAccessSpec();
                     if (dataAccessSpec instanceof VajramID vajramID) {
-                        String depVajramClass = vajramID.className()
-                                .orElseThrow(() -> new RuntimeException("Vajram class missing in VajramInputDefinition"));
+                        String depVajramClass = vajramID.className().orElseThrow(() -> new VajramValidationException(
+                                "Vajram class missing in VajramInputDefinition for :" + vajramName));
                         String[] splits = COMPILE.split(depVajramClass);
-                        String depPackageName = Arrays.stream(splits, 0, splits.length - 1)
-                                .collect(Collectors.joining(DOT));
-                        String depRequestClass = CodegenUtils.getRequestClassName(splits[splits.length-1]);
-                        VajramDef vajramDef = vajramDefs.get(splits[splits.length-1]);
-                        final Type typeArgument = ((ParameterizedType) ((Class<? extends Vajram>) vajramDef.vajramClass())
-                                .getGenericSuperclass()).getActualTypeArguments()[0];
+                        String depPackageName = Arrays.stream(splits, 0, splits.length - 1).collect(Collectors.joining(DOT));
+                        String depRequestClass = CodegenUtils.getRequestClassName(splits[splits.length - 1]);
+                        ParsedVajramData parsedVajramData = vajramDefs.get(splits[splits.length - 1]);
+                        final Type typeArgument = ((ParameterizedType) ((Class<? extends Vajram>) parsedVajramData.vajramClass()).getGenericSuperclass()).getActualTypeArguments()[0];
                         final String variableName = CodegenUtils.toJavaName(inputDef.name());
                         if (resolverMap.get(inputDef.name()).size() > 1) {
                             final String depVariableName = variableName + RESPONSES_SUFFIX;
                             // handle iterable
                             codeBlock.addNamed("""
-                                 DependencyResponse<$request:T, $response:T> $depResponse:L =
-                                      new DependencyResponse<>(
-                                          element.<$response:T>getDepValue($variable:S).values().entrySet().stream()
-                                              .collect(
-                                                  ImmutableMap.toImmutableMap(
-                                                      e -> $request:T.from(e.getKey()), java.util.Map.Entry::getValue)));""",
-                                    ImmutableMap.of(REQUEST, ClassName.get(depPackageName, depRequestClass),
-                                    RESPONSE, ClassName.bestGuess(typeArgument.getTypeName()), VARIABLE, variableName,
-                                    DEP_RESPONSE, depVariableName));
+                                            $depResp:T<$request:T, $response:T> $depResponse:L =
+                                                 new $depResp:T<>(
+                                                     element.<$response:T>getDepValue($variable:S).values().entrySet().stream()
+                                                         .collect(
+                                                             $imMap:T.toImmutableMap(
+                                                                 e -> $request:T.from(e.getKey()), java.util.Map.Entry::getValue)));
+                                             """,
+                                    ImmutableMap.of(DEP_RESP, clsDeps.get(DEP_RESP), REQUEST,
+                                            ClassName.get(depPackageName, depRequestClass), RESPONSE, ClassName.bestGuess(typeArgument.getTypeName()),
+                                            VARIABLE, variableName, DEP_RESPONSE, depVariableName, IM_MAP, clsDeps.get(IM_MAP)));
                             inputCodeBlocks.add(CodeBlock.builder().add(depVariableName).build());
                         } else if (resolverMap.get(inputDef.name()).size() == 1) {
                             final String depVariableName = variableName + RESPONSE_SUFFIX;
-                            codeBlock.addStatement("ImmutableMap<Inputs, ValueOrError<$T>> $L = \n"
-                                    + " element.getInputValueOrThrow($S)", ClassName.bestGuess(typeArgument.getTypeName()),
-                                   variableName, inputDef.name());
+                            codeBlock.addStatement("$T<$T, $T<$T>> $L = \n" + " element.getInputValueOrThrow($S)",
+                                    clsDeps.get(IM_MAP), clsDeps.get(INPUTS), clsDeps.get(VAL_ERR), ClassName.bestGuess(typeArgument.getTypeName()),
+                                    variableName, inputDef.name());
                             codeBlock.addNamed("""
-                                    DependencyResponse<$request:T, $response:T> $depResponse:L =
-                                        new DependencyResponse<>(
+                                    $depResp:T<$request:T, $response:T> $depResponse:L =
+                                        new $depResp:T<>(
                                             $variable:L.entrySet().stream()
                                                 .collect(
-                                                    ImmutableMap.toImmutableMap(
+                                                    $imMap:T.toImmutableMap(
                                                         e -> $request:T.from(e.getKey()), java.util.Map.Entry::getValue)));
                                     """, ImmutableMap.of(REQUEST, ClassName.get(depPackageName, depRequestClass),
-                                    RESPONSE, ClassName.bestGuess(typeArgument.getTypeName()), VARIABLE, variableName,
-                                    DEP_RESPONSE, depVariableName));
+                                    RESPONSE, ClassName.bestGuess(typeArgument.getTypeName()), VARIABLE,
+                                    variableName, DEP_RESPONSE, depVariableName, DEP_RESP, clsDeps.get(DEP_RESP),
+                                    IM_MAP, clsDeps.get(IM_MAP)));
                             inputCodeBlocks.add(CodeBlock.builder().add(depVariableName).build());
                         }
                     }
@@ -279,28 +366,29 @@ public class VajramCodeGenerator {
             } else {
                 // call vajram logic method with all input values
                 if (inputDef.isMandatory()) {
-                    inputCodeBlocks.add(CodeBlock.builder().add("element.getInputValueOrThrow($S)", inputDef.name()).build());
+                    inputCodeBlocks.add(
+                            CodeBlock.builder().add("element.getInputValueOrThrow($S)", inputDef.name()).build());
                 } else {
-                    inputCodeBlocks.add(CodeBlock.builder().add("element.getInputValueOrDefault($S, null)", inputDef.name()).build());
+                    inputCodeBlocks.add(
+                            CodeBlock.builder().add("element.getInputValueOrDefault($S, null)", inputDef.name()).build());
                 }
             }
         });
-        returnBuilder.add("return $L(new $T.AllInputs(\n", vajramDefs.get(vajramName).vajramLogic().getName(),
-                ClassName.get(packageName, CodegenUtils.getInputUtilClassName(vajramName)));
+        returnBuilder.add("\nreturn $T.valueOrError(() -> $L(new $T(\n", clsDeps.get(VAL_ERR),
+                vajramDefs.get(vajramName).vajramLogic().getName(),
+                ClassName.get(packageName, getInputUtilClassName(vajramName), getAllInputsClassname(vajramName)));
         // merge the code blocks for inputs
-        for (int i = 0; i<inputCodeBlocks.size(); i++) {
+        for (int i = 0; i < inputCodeBlocks.size(); i++) {
             // for formatting
             returnBuilder.add("\t\t");
             returnBuilder.add(inputCodeBlocks.get(i));
-            if (i != inputCodeBlocks.size()-1) {
+            if (i != inputCodeBlocks.size() - 1) {
                 returnBuilder.add(",\n");
             }
         }
-        returnBuilder.add("));\n");
+        returnBuilder.add(")));\n");
         returnBuilder.add("}));\n");
         executeBuilder.addCode(returnBuilder.build());
-
-        return executeBuilder.build();
     }
 
     /**
@@ -326,44 +414,49 @@ public class VajramCodeGenerator {
      * @return generated code for "execute" {@link MethodSpec}
      */
     private MethodSpec createIOVajramExecuteMethod(
-            ClassName inputsNeedingModulation, ClassName commonInputs, Type vajramResponseType) {
+            ClassName inputsNeedingModulation, ClassName commonInputs, Type vajramResponseType,
+            Map<String, ? extends Collection<Method>> resolverMap) {
+        Builder executeMethodBuilder = methodBuilder(METHOD_EXECUTE).addModifiers(PUBLIC)
+        .addParameter(ParameterizedTypeName.get(ImmutableList.class, Inputs.class), INPUTS_LIST)
+        .returns(
+                ParameterizedTypeName.get(ClassName.get(ImmutableMap.class), ClassName.get(Inputs.class),
+                        ParameterizedTypeName.get(ClassName.get(CompletableFuture.class),
+                                ClassName.bestGuess(vajramResponseType.getTypeName()))))
+        .addAnnotation(Override.class);
 
-                Builder executeMethodBuilder = methodBuilder(METHOD_EXECUTE).addModifiers(PUBLIC)
-                .addParameter(ParameterizedTypeName.get(ImmutableList.class, Inputs.class), INPUTS_LIST)
-                .returns(
-                        ParameterizedTypeName.get(ClassName.get(ImmutableMap.class), ClassName.get(Inputs.class),
-                                ParameterizedTypeName.get(ClassName.get(CompletableFuture.class),
-                                        ClassName.bestGuess(vajramResponseType.getTypeName()))))
-                .addAnnotation(Override.class);
-
-        String codeBlock = """
-                    Map<$inputModulation:T, Inputs> mapping = new HashMap<>();
-                    List<$inputModulation:T> ims = new ArrayList<>();
-                    $commonInput:T commonInputs = null;
-                    for (Inputs inputs : inputsList) {
-                      UnmodulatedInput<$inputModulation:T, $commonInput:T> allInputs =
-                          getInputsConvertor().apply(inputs);
-                      commonInputs = allInputs.commonInputs();
-                      $inputModulation:T im = allInputs.inputsNeedingModulation();
-                      mapping.put(im, inputs);
-                      ims.add(im);
-                    }
-                    Map<Inputs, CompletableFuture<$returnType:T>> returnValue = new LinkedHashMap<>();
-                                
-                    if (commonInputs != null) {
-                      var results = $vajramLogicMethod:L(new ModulatedInput<>(ImmutableList.copyOf(ims), commonInputs));
-                      results.forEach((im, future) -> returnValue.put(mapping.get(im), future));
-                    }
-                    return ImmutableMap.copyOf(returnValue);
-                """;
         CodeBlock.Builder codeBuilder = CodeBlock.builder();
-        Map<String, Object> valueMap =  new HashMap<>();
-        valueMap.put("inputModulation", inputsNeedingModulation);
-        valueMap.put("commonInput", commonInputs);
-        valueMap.put("returnType", ClassName.bestGuess(vajramResponseType.getTypeName()));
-        valueMap.put("vajramLogicMethod", vajramDefs.get(vajramName).vajramLogic().getName());
-        codeBuilder.addNamed(codeBlock, valueMap);
-        executeMethodBuilder.addCode(codeBuilder.build());
+        if (needsModulation) {
+            Map<String, Object> valueMap = new HashMap<>();
+            valueMap.put(INPUTS, ClassName.get(Inputs.class));
+            valueMap.put(UNMOD_INPUT, ClassName.get(UnmodulatedInput.class));
+            valueMap.put(INPUT_MODULATION, inputsNeedingModulation);
+            valueMap.put(COMMON_INPUT, commonInputs);
+            valueMap.put(RETURN_TYPE, ClassName.bestGuess(vajramResponseType.getTypeName()));
+            valueMap.put(VAJRAM_LOGIC_METHOD, vajramDefs.get(vajramName).vajramLogic().getName());
+            valueMap.put(MOD_INPUT, ClassName.get(ModulatedInput.class));
+            valueMap.put(IM_MAP, ClassName.get(ImmutableMap.class));
+            valueMap.put(IM_LIST, ClassName.get(ImmutableList.class));
+            valueMap.put(HASH_MAP, ClassName.get(HashMap.class));
+            valueMap.put(ARRAY_LIST, ClassName.get(ArrayList.class));
+            valueMap.put(COM_FUTURE, ClassName.get(CompletableFuture.class));
+            valueMap.put(LINK_HASH_MAP, ClassName.get(LinkedHashMap.class));
+            valueMap.put(MAP, ClassName.get(Map.class));
+            valueMap.put(LIST, ClassName.get(List.class));
+            valueMap.put(VAL_ERR, clsDeps.get(VAL_ERR));
+            // Any vajram supporting input modulation must return map
+            assert Map.class.isAssignableFrom(vajramDefs.get(vajramName).vajramLogic().getReturnType());
+            Type type = ((ParameterizedType) vajramDefs.get(vajramName).vajramLogic().getGenericReturnType())
+                    .getActualTypeArguments()[1];
+            if (type instanceof ParameterizedType &&
+                    CompletableFuture.class.isAssignableFrom((Class<?>) ((ParameterizedType) type).getRawType())) {
+                codeBuilder.addNamed(INPUT_MODULATION_FUTURE_CODE_BLOCK, valueMap);
+            } else {
+                codeBuilder.addNamed(INPUT_MODULATION_CODE_BLOCK, valueMap);
+            }
+            executeMethodBuilder.addCode(codeBuilder.build());
+        } else {
+            simpleComputeMethodBuilder(resolverMap, executeMethodBuilder);
+        }
         return executeMethodBuilder.build();
     }
 
@@ -373,20 +466,21 @@ public class VajramCodeGenerator {
      * @param resolverMap Map of all the resolved variables to the methods resolving them
      * @return generated code for "resolveInputOfDependency" {@link MethodSpec}
      */
-    public Optional<MethodSpec> createResolvers(Map<String, List<Method>> resolverMap) {
+    public Optional<MethodSpec> createResolvers(Map<String, ? extends List<Method>> resolverMap) {
       String dependency = "dependency";
       Builder resolveInputsBuilder = methodBuilder(METHOD_RESOLVE_INPUT_OF_DEPENDENCY).addModifiers(
                       PUBLIC).addParameter(String.class, dependency)
-              .addParameter(ParameterizedTypeName.get(ImmutableSet.class, String.class), "resolvableInputs").addParameter(Inputs.class, "inputs").returns(
+              .addParameter(ParameterizedTypeName.get(ImmutableSet.class, String.class), RESOLVABLE_INPUTS).addParameter(Inputs.class,
+                      INPUTS).returns(
                       ParameterizedTypeName.get(ClassName.get(DependencyCommand.class), ClassName.get(Inputs.class)));
-      VajramDef vajramDef = vajramDefs.get(vajramName);
-      if (Objects.nonNull(vajramDef)) {
+      ParsedVajramData parsedVajramData = vajramDefs.get(vajramName);
+      if (Objects.nonNull(parsedVajramData)) {
           resolveInputsBuilder.beginControlFlow("switch ($L) ", dependency);
-          if (vajramDef.resolveMethods().isEmpty()) {
+          if (parsedVajramData.resolveMethods().isEmpty()) {
               return Optional.empty();
           }
           // get all resolved variable names
-          List<String> resolvedVariables = vajramDef.resolveMethods().stream()
+          List<String> resolvedVariables = parsedVajramData.resolveMethods().stream()
                   .map(method -> method.getAnnotation(Resolve.class).value()).toList();
 
           resolverMap.forEach((variable, methods) -> {
@@ -394,22 +488,22 @@ public class VajramCodeGenerator {
               methods.forEach(method -> {
                   Resolve resolve = method.getAnnotation(Resolve.class);
                   String[] inputs = resolve.inputs();
-                  // TODO : confirm if only 1 param will be there per method??
-                  Parameter methodParam = method.getParameters()[0];
-                  if (inputs.length == 1) {
-                      CodeBlock.Builder ifBlockBuilder = buildSingleInputResolver(resolvedVariables, resolverMap,
-                              method, inputs, methodParam);
+                  // TODO : confirm if this logic is correct for all parameters for a resolve method
+                  stream(method.getParameters()).forEach(parameter -> {
+                      CodeBlock.Builder ifBlockBuilder = buildInputResolver(resolvedVariables, resolverMap,
+                              method, inputs, parameter);
                       caseBuilder.add(ifBlockBuilder.build());
-                  }
-                  // TODO : handle multiple inputs
+                  });
               });
               caseBuilder.endControlFlow();
               resolveInputsBuilder.addCode(caseBuilder.build());
           });
           resolveInputsBuilder.endControlFlow();
-          resolveInputsBuilder.addStatement("throw new IllegalArgumentException()");
+          resolveInputsBuilder.addStatement("throw new $T($S)", ClassName.get(VajramValidationException.class),
+                  "Unresolvable dependency");
       } else {
-          resolveInputsBuilder.addStatement("throw new IllegalArgumentException()");
+          resolveInputsBuilder.addStatement("throw new $T($S)", ClassName.get(VajramValidationException.class),
+                  "Unresolvable dependency");
       }
       return Optional.of(resolveInputsBuilder.build());
   }
@@ -423,17 +517,17 @@ public class VajramCodeGenerator {
      * @param methodParam Resolve method parameter
      * @return {@link CodeBlock.Builder} with resolver code
      */
-    private CodeBlock.Builder buildSingleInputResolver(List<String> resolvedVariables, Map<String, ? extends List<Method>> resolverMap, Method method, String[] inputs,
-            Parameter methodParam) {
+    private CodeBlock.Builder buildInputResolver(Collection<String> resolvedVariables, Map<String, ? extends List<Method>> resolverMap, Method method, String[] inputs,
+            AnnotatedElement methodParam) {
         // check if the input is satisfied by input or other resolved variables
         String bindParamName = methodParam.getAnnotation(BindFrom.class).value();
         Parameter parameter = stream(method.getParameters()).filter(
                 param -> inputDefsMap.containsKey(bindParamName) ||
                 resolvedVariables.contains(bindParamName)).findFirst()
-                .orElseThrow(() -> new RuntimeException("Parameter binding incorrect for input - " + inputs[0]));
+                .orElseThrow(() -> new VajramValidationException("Parameter binding incorrect for input - " + inputs[0]));
         CodeBlock.Builder ifBlockBuilder = CodeBlock.builder();
-        ifBlockBuilder.beginControlFlow("if ($T.of($S).equals(resolvableInputs))", Set.class,
-                inputs[0]);
+        ifBlockBuilder.beginControlFlow("if ($T.of($S).equals(resolvableInputs))",
+                Set.class, String.join(",", inputs));
         // check if the bind param has multiple resolvers
         if (resolverMap.containsKey(bindParamName) && resolverMap.get(bindParamName).size() > 1) {
             buildResolverForMultipleBindings(method, inputs, bindParamName, ifBlockBuilder);
@@ -454,51 +548,144 @@ public class VajramCodeGenerator {
     private void buildResolverForSingleBindings(Method method, String[] inputs, Parameter parameter,
             CodeBlock.Builder ifBlockBuilder) {
         String variableName = parameter.getName();
+//        final ClassName dependencyCommandCls = ClassName.get(DependencyCommand.class);
         boolean controlFLowStarted = false;
         // Identify resolve method return type
-        final Type returnType = method.getReturnType();
-        if (method.getReturnType() == DependencyCommand.class) {
+        final Class<?> returnType = method.getReturnType();
+        if (DependencyCommand.class.isAssignableFrom(method.getReturnType())) {
             // Method returns DependencyCommand so add code block for skip() operation
-            final Type actualTypeArgument = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
-            ifBlockBuilder.addStatement("DependencyCommand<$T> $L = super.$L(inputs.getInputValueOrThrow($S))",
-                    actualTypeArgument, variableName, method.getName(), parameter.getAnnotation(BindFrom.class).value());
-            ifBlockBuilder.beginControlFlow("if($L instanceof DependencyCommand.Skip<$T> skip)",
-                    parameter.getName(), actualTypeArgument);
+            Type actualTypeArgument;
+            if (method.getGenericReturnType() instanceof ParameterizedType genericReturnType) {
+                actualTypeArgument = genericReturnType.getActualTypeArguments()[0];
+            } else {
+                actualTypeArgument = Primitives.wrap(returnType);
+            }
+            ifBlockBuilder.addStatement("$T<$T> $L = super.$L(inputs.getInputValueOrThrow($S))",
+                    clsDeps.get(DEP_COMMAND), actualTypeArgument, variableName,
+                    method.getName(), parameter.getAnnotation(BindFrom.class).value());
+
+            ifBlockBuilder.beginControlFlow("if($L instanceof $T.Skip<$T> skip)",
+                    parameter.getName(), clsDeps.get(DEP_COMMAND), actualTypeArgument);
             ifBlockBuilder.addStatement("\t return skip.cast()");
             ifBlockBuilder.add("} else {\n\t");
             controlFLowStarted = true;
         } else {
             // wrap with dependency command
             ifBlockBuilder.addStatement("$T value = super.$L(inputs.getInputValueOrThrow($S))",
-                    returnType, method.getName(), parameter.getAnnotation(BindFrom.class).value());
-            ifBlockBuilder.addStatement("""
-                    DependencyCommand<$T> $L =
-                                  Optional.ofNullable(value)
-                                      .map(DependencyCommand::executeWith)
-                                      .orElse(DependencyCommand.executeWith(null))""",
-                    returnType, variableName);
+                    Primitives.wrap(returnType), method.getName(), parameter.getAnnotation(BindFrom.class).value());
+            ifBlockBuilder.addNamed("""
+                    $depCommand:T<$returnType:T> $resultName:L =
+                          $optional:T.ofNullable(value)
+                              .map($depCommand:T::executeWith)
+                              .orElse($depCommand:T.executeWith(null));
+                    """,
+                    ImmutableMap.of(DEP_COMMAND, clsDeps.get(DEP_COMMAND), Constants.RETURN_TYPE, Primitives.wrap(returnType),
+                        "resultName", variableName, "optional", ClassName.get(Optional.class)));
         }
         Class<?> klass = Primitives.wrap(parameter.getType());
-        if (SIMPLE_TYPES.contains(klass)) {
-            // handle simple execute with primitive return types
-            ifBlockBuilder.addStatement("return DependencyCommand.executeWith(new Inputs(\n "
-                            + "ImmutableMap.of($S, ValueOrError.withValue($L))))",
-                    inputs[0], variableName);
-        } else if (((ParameterizedType) klass.getGenericInterfaces()[0]).getRawType() == Collection.class){
-             String code = """
-                return DependencyCommand.multiExecuteWith(
-                    $L.inputs().stream()
-                        .map(
-                            elements ->
-                                new Inputs(
-                                    ImmutableMap.of($S, ValueOrError.withValue(elements))))
-                    .toList())""";
-            ifBlockBuilder.addStatement(code, variableName, parameter.getAnnotation(BindFrom.class).value());
-        } else {
-            // handle the object return type
-            ifBlockBuilder.addStatement("return DependencyCommand.executeWith($L.toInputValues())",
-                    variableName);
+        // TODO : Check how inputModulation needs to be handled
+        //  handle the collection first and internally check if it is an instance of
+        //  VajramRequest else handle like simple types
+        //  in inputs size is > 1 then the response type of method should be vajramrequest or iterable<VajramReques>,
+        //  if input size==1, then we need to check the dependent vajram input type<I>
+        //  if its list return single Inputs with the list, else create list of Inputs
+
+        if (inputs.length > 1) {
+            if (Iterable.class.isAssignableFrom(klass)) {
+                if (VajramRequest.class.isAssignableFrom(
+                        (Class<?>) ((ParameterizedType) parameter.getParameterizedType()).getActualTypeArguments()[0])) {
+                    // handle the object return type
+                    ifBlockBuilder.addStatement("return $T.executeWith($L.toInputValues())",
+                            clsDeps.get(DEP_COMMAND), variableName);
+                } else {
+                    String code = """
+                        return $T.multiExecuteWith(
+                            $L.inputs().stream()
+                                .map(
+                                    elements ->
+                                        new $T(
+                                            $T.of($S, $T.withValue(elements))))
+                            .toList())""";
+                    ifBlockBuilder.addStatement(code, clsDeps.get(DEP_COMMAND), variableName, clsDeps.get(INPUTS),
+                        clsDeps.get(IM_MAP), parameter.getAnnotation(BindFrom.class).value(), clsDeps.get(VAL_ERR));
+                }
+            } else if (VajramRequest.class.isAssignableFrom(klass)) {
+                // handle the object return type
+                ifBlockBuilder.addStatement("return $T.executeWith($L.toInputValues())",
+                        clsDeps.get(DEP_COMMAND), variableName);
+            } else {
+                throw new VajramValidationException("Incorrect vajram resolver " + vajramName +
+                        ": Multiple inputs must return an iterable or VajramRequest");
+            }
+        } else if (inputs.length == 1) {
+            final VajramInputDefinition vajramInputDefinition = inputDefsMap.get(inputs[0]);
+            if (vajramInputDefinition instanceof Dependency<?> dependency &&
+                    dependency.dataAccessSpec() instanceof VajramID vajramID) {
+                final Optional<VajramInputDefinition> dependencyDef = vajramInputsDef.get(vajramID.vajramId()).stream()
+                        .filter(inputDef -> Objects.equals(inputDef.name(), inputs[0])).findFirst();
+                dependencyDef.ifPresentOrElse(dep -> {
+                    if (dep instanceof Input input) {
+                        if (Iterable.class.isAssignableFrom(input.type().getClass())) {
+                            ifBlockBuilder.addStatement("return $T.executeWith(new Inputs(\n "
+                                            + "$T.of($S, $T.withValue($L))))", clsDeps.get(DEP_COMMAND),
+                                    clsDeps.get(IM_MAP), inputs[0], clsDeps.get(VAL_ERR), variableName);
+                        } else {
+                            String code = """
+                                return $T.multiExecuteWith(
+                                    $L.inputs().stream()
+                                        .map(
+                                            elements ->
+                                                new $T(
+                                                    $T.of($S, $T.withValue(elements))))
+                                    .toList())""";
+                            ifBlockBuilder.addStatement(code, clsDeps.get(DEP_COMMAND), variableName, clsDeps.get(INPUTS),
+                                    clsDeps.get(IM_MAP), parameter.getAnnotation(BindFrom.class).value(), clsDeps.get(VAL_ERR));
+                        }
+                    }
+                }, () -> new VajramValidationException("Dependency not present as input in dependent vajram " +
+                        vajramID.vajramId()));
+            } else {
+                String code = """
+                        return $T.multiExecuteWith(
+                            $L.inputs().stream()
+                                .map(
+                                    elements ->
+                                        new $T(
+                                            $T.of($S, $T.withValue(elements))))
+                            .toList())""";
+                ifBlockBuilder.addStatement(code, clsDeps.get(DEP_COMMAND), variableName, clsDeps.get(INPUTS),
+                        clsDeps.get(IM_MAP), parameter.getAnnotation(BindFrom.class).value(), clsDeps.get(VAL_ERR));
+            }
         }
+//        if (Iterable.class.isAssignableFrom(
+//                (Class<?>) ((ParameterizedType) klass.getGenericInterfaces()[0]).getRawType())) {
+//            if (VajramRequest.class.isAssignableFrom(
+//                    (Class<?>) ((ParameterizedType) parameter.getParameterizedType()).getActualTypeArguments()[0])) {
+//                // handle the object return type
+//                ifBlockBuilder.addStatement("return DependencyCommand.executeWith($L.toInputValues())",
+//                        variableName);
+//            } else {
+//                String code = """
+//                        return DependencyCommand.multiExecuteWith(
+//                            $L.inputs().stream()
+//                                .map(
+//                                    elements ->
+//                                        new Inputs(
+//                                            ImmutableMap.of($S, ValueOrError.withValue(elements))))
+//                            .toList())""";
+//                ifBlockBuilder.addStatement(code, variableName, parameter.getAnnotation(BindFrom.class).value());
+//            }
+//        }
+//        else if (VajramRequest.class.isAssignableFrom(klass)) {
+//            // handle the object return type
+//            ifBlockBuilder.addStatement("return DependencyCommand.executeWith($L.toInputValues())",
+//                    variableName);
+//        } else {
+//            // handle simple execute with primitive return types
+//            ifBlockBuilder.addStatement("return $T.executeWith(new Inputs(\n "
+//                            + "$T.of($S, ValueOrError.withValue($L))))", dependencyCommandCls, clsDeps.get(IM_MAP),
+//                    inputs[0], variableName);
+//        }
         if (controlFLowStarted) {
             ifBlockBuilder.endControlFlow();
         }
@@ -509,7 +696,7 @@ public class VajramCodeGenerator {
      * @param method Resolve method
      * @param inputs Resolve inputs
      * @param bindParamName Resolve method parameter
-     * @param ifBlockBuilder
+     * @param ifBlockBuilder The code builder from caller
      */
     private void buildResolverForMultipleBindings(Method method, String[] inputs,
             String bindParamName, CodeBlock.Builder ifBlockBuilder) {
@@ -518,30 +705,40 @@ public class VajramCodeGenerator {
             DataAccessSpec dataAccessSpec = inputDefDependency.dataAccessSpec();
             if (dataAccessSpec instanceof VajramID vajramID) {
                 String vajramClass = vajramID.className()
-                        .orElseThrow(() -> new RuntimeException("Vajram class missing in vajram input deifinition"));
+                        .orElseThrow(() -> new VajramValidationException("Vajram class missing in vajram input deifinition"));
                 String[] splits = COMPILE.split(vajramClass);
                 String depPackageName = Arrays.stream(splits, 0, splits.length - 1)
                         .collect(Collectors.joining(DOT));
                 String requestClass = CodegenUtils.getRequestClassName(splits[splits.length-1]);
                 String variableName = "computedValues";
                 ifBlockBuilder.addStatement("""
-                                DependencyResponse<$1T, $2T> $3L =\s
-                                 new DependencyResponse<>(inputs.<$4T>getDepValue($5S)
-                                      .values().entrySet().stream()
-                                      .collect(ImmutableMap.toImmutableMap(e -> $6T.from(e.getKey()), 
-                                      java.util.Map.Entry::getValue)))""",
-                                ClassName.get(depPackageName, requestClass), ClassName.get(Primitives.wrap(method.getReturnType())), variableName,
-                                ClassName.get(Primitives.wrap(method.getReturnType())),
-                        bindParamName, ClassName.get(depPackageName, requestClass));
+                        $1T<$2T, $3T> $4L =\s
+                         new $5T<>(inputs.<$6T>getDepValue($7S)
+                              .values().entrySet().stream()
+                              .collect($8T.toImmutableMap(e -> $9T.from(e.getKey()),
+                              $10T::getValue)))""",
+                        clsDeps.get(DEP_RESP),
+                        ClassName.get(depPackageName, requestClass),
+                        ClassName.get(Primitives.wrap(method.getReturnType())),
+                        variableName,
+                        clsDeps.get(DEP_RESP),
+                        ClassName.get(Primitives.wrap(method.getReturnType())),
+                        bindParamName,
+                        clsDeps.get(IM_MAP),
+                        ClassName.get(depPackageName, requestClass), ClassName.get(Map.Entry.class));
                 ifBlockBuilder.addStatement("""
-                    return DependencyCommand.multiExecuteWith($L.values().stream()
+                    return $T.multiExecuteWith($L.values().stream()
                         .filter(element -> element.value().isPresent())
                         .map(element -> element.value().get())
                         .map(super::$L)
-                        .map(t -> ValueOrError.withValue((Object) t))
-                        .map(voe -> new Inputs(ImmutableMap.of($S, voe)))
-                        .collect(ImmutableList.toImmutableList()))""",
-                    variableName, method.getName(), inputs[0]
+                        .map(t -> $T.withValue((Object) t))
+                        .map(voe -> new $T($T.of($S, voe)))
+                        .collect($T.toImmutableList()))""",
+                    clsDeps.get(DEP_COMMAND),
+                    variableName, method.getName(),
+                    clsDeps.get(VAL_ERR), clsDeps.get(INPUTS),
+                    clsDeps.get(IM_MAP), inputs[0],
+                    clsDeps.get(IM_LIST)
                 );
             }
         }
@@ -558,7 +755,7 @@ public class VajramCodeGenerator {
                 .addModifiers(PUBLIC)
                 .returns(ParameterizedTypeName.get(ClassName.get(ImmutableList.class),
                         ClassName.get(VajramInputDefinition.class)));
-
+        ImmutableList<VajramInputDefinition> inputDefinitions = vajramInputsDef.get(vajramName);
         Collection<CodeBlock> codeBlocks = new ArrayList<>(inputDefinitions.size());
         // Input and Dependency code block
         inputDefinitions.forEach( vajramInputDefinition ->  {
@@ -586,7 +783,7 @@ public class VajramCodeGenerator {
      */
     private static void buildVajramDependency(ClassLoader classLoader,
             CodeBlock.Builder inputDefBuilder, Dependency dependency) {
-        inputDefBuilder.add("Dependency.builder()")
+        inputDefBuilder.add("$T.builder()", ClassName.get(Dependency.class))
                 .add(".name($S)", dependency.name());
         DataAccessSpec dataAccessSpec = dependency.dataAccessSpec();
         if (dataAccessSpec instanceof VajramID vajramID) {
@@ -597,7 +794,7 @@ public class VajramCodeGenerator {
                             (Class<? extends Vajram>) classLoader.loadClass(vajramID.className().get()));
                     vajramId.ifPresent(s -> inputDefBuilder.add(code, ClassName.get(VajramID.class), s));
                 } catch (ClassNotFoundException e) {
-                    throw new RuntimeException(e);
+                    throw new VajramValidationException(e);
                 }
             } else {
                 inputDefBuilder.add(code, ClassName.get(VajramID.class), vajramID.vajramId());
@@ -615,25 +812,25 @@ public class VajramCodeGenerator {
      * @param inputDefBuilder : {@link CodeBlock.Builder}
      * @param input :  Vajram Input
      */
-    private static void buildVajramInput(CodeBlock.Builder inputDefBuilder, Input input) {
-        inputDefBuilder.add("Input.builder()")
+    private void buildVajramInput(CodeBlock.Builder inputDefBuilder, Input input) {
+        inputDefBuilder.add("$T.builder()", ClassName.get(Input.class))
                .add(".name($S)", input.name());
         // handle input type
         Set<InputSource> inputSources = input.sources();
         if (!inputSources.isEmpty()) {
             inputDefBuilder.add(".sources(");
-            ClassName className = ClassName.get(InputSource.class);
+            clsDeps.get(INPUT_SRC);
             String sources = inputSources.stream().map(inputSource -> {
                 if (inputSource == InputSource.CLIENT) {
-                    return "InputSource.CLIENT";
+                    return "$inputSrc:T.CLIENT";
                 } else if (inputSource == InputSource.SESSION) {
-                    return "InputSource.SESSION";
+                    return "$inputSrc:T.SESSION";
                 }
                 else {
                     throw new IllegalArgumentException("Incorrect source defined in vajram config");
                 }
             }).collect(Collectors.joining(COMMA));
-            inputDefBuilder.add(sources).add(")");
+            inputDefBuilder.addNamed(sources, ImmutableMap.of(INPUT_SRC, clsDeps.get(INPUT_SRC))).add(")");
         }
         // handle data type
         DataType dataType = input.type();
@@ -652,9 +849,19 @@ public class VajramCodeGenerator {
             }
             inputDefBuilder.add("$1T.java($2T.class)", ClassName.get(JavaType.class), className);
         } else {
-            String simpleName  = dataType.getClass().getSimpleName();
-            String name = simpleName.substring(0, simpleName.length()-4).toLowerCase();
-            inputDefBuilder.add("$T.$L()", ClassName.get(dataType.getClass().getPackageName(), dataType.getClass().getSimpleName()), name);
+            String simpleName = dataType.getClass().getSimpleName();
+            String name = simpleName.substring(0, simpleName.length() - 4).toLowerCase();
+            final TypeAndName typeName = getTypeName(dataType);
+            if (ParameterizedTypeName.class.isAssignableFrom(typeName.typeName().getClass())) {
+                final TypeName innerType = ((ParameterizedTypeName) typeName.typeName()).typeArguments.get(0);
+                inputDefBuilder.add("$T.$L($T.$L())", ClassName.get(dataType.getClass().getPackageName(),
+                        simpleName), name, ClassName.get(dataType.getClass().getPackageName(),
+                                ((ClassName) innerType).simpleName() + "Type"),
+                        ((ClassName) innerType).simpleName().toLowerCase());
+            } else {
+                inputDefBuilder.add("$T.$L()", ClassName.get(dataType.getClass().getPackageName(),
+                        simpleName), name);
+            }
         }
         inputDefBuilder.add(")");
         if (input.isMandatory()) {
@@ -889,7 +1096,7 @@ public class VajramCodeGenerator {
   private String codeGenSimpleInputUtil() {
     TypeSpec.Builder inputUtilClass = createInputUtilClass();
     TypeSpec.Builder allInputsClass =
-        classBuilder(ALL_INPUTS)
+        classBuilder(CodegenUtils.getAllInputsClassname(vajramName))
             .addModifiers(FINAL, STATIC)
             .addAnnotations(recordAnnotations());
 
@@ -919,7 +1126,7 @@ public class VajramCodeGenerator {
     return writer.toString();
   }
 
-  private static void addDependencyOutputs(
+    private static void addDependencyOutputs(
       TypeSpec.Builder enclosingClass, DependencyDef dependencyDef) {
     String inputJavaName = toJavaName(dependencyDef.getName());
     if (dependencyDef instanceof VajramDependencyDef vajramDepSpec) {
@@ -942,10 +1149,9 @@ public class VajramCodeGenerator {
     StringWriter writer = new StringWriter();
     try {
       TypeSpec.Builder inputUtilClass = createInputUtilClass();
-
       VajramInputsDef vajramInputsDef = vajramInputFile.vajramInputsDef();
-      String imClassName = "InputsNeedingModulation";
-      String ciClassName = "CommonInputs";
+      String imClassName = getInputModulationClassname(vajramName);
+      String ciClassName = getCommonInputsClassname(vajramName);
       FromAndTo imFromAndTo =
           fromAndToMethods(
               vajramInputsDef.inputs().stream().filter(InputDef::isNeedsModulation).toList(),

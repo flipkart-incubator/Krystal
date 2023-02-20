@@ -1,13 +1,9 @@
 package com.flipkart.krystal.vajram.inputs;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.function.Function;
+import com.flipkart.krystal.data.Inputs;
+import com.google.common.collect.ImmutableSet;
 
-public sealed interface InputResolver extends InputResolverDefinition
-    permits ForwardingResolver, ForwardingResolverV2, StaticResolver {
-
-  default <S, T> Function<S, Collection<T>> transformationLogic() {
-    return s -> Collections.emptyList();
-  }
+public non-sealed interface InputResolver extends InputResolverDefinition {
+  DependencyCommand<Inputs> resolve(
+      String dependencyName, ImmutableSet<String> inputsToResolve, Inputs inputs);
 }

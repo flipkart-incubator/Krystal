@@ -10,7 +10,7 @@ import com.flipkart.krystal.vajram.inputs.BindFrom;
 import com.flipkart.krystal.vajram.inputs.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Vajram;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2InputUtil.AllInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2InputUtil.MultiHelloFriendsV2AllInputs;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -26,7 +26,7 @@ public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
   }
 
   @VajramLogic
-  public String sayHellos(AllInputs allInputs) {
+  public String sayHellos(MultiHelloFriendsV2AllInputs allInputs) {
     LinkedHashSet<String> userIds = allInputs.userIds();
     List<String> result = new ArrayList<>();
     for (String userId : userIds) {

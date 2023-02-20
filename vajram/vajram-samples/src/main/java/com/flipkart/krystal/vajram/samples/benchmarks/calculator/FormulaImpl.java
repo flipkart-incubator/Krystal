@@ -1,6 +1,8 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator;
 
+import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
@@ -11,7 +13,7 @@ import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
-import com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaInputUtil.AllInputs;
+import com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaInputUtil.FormulaAllInputs;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.DividerRequest;
 import com.google.common.collect.ImmutableCollection;
@@ -20,9 +22,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.function.Function;
 
-public class FormulaImpl extends Formula {
+public final class FormulaImpl extends Formula {
 
   @Override
   public ImmutableCollection<VajramInputDefinition> getInputDefinitions() {
@@ -92,11 +93,12 @@ public class FormulaImpl extends Formula {
   }
 
   @Override
-  public ImmutableMap<Inputs, Integer> executeCompute(ImmutableList<Inputs> inputsList) {
+  public ImmutableMap<Inputs, ValueOrError<Integer>> executeCompute(
+      ImmutableList<Inputs> inputsList) {
     return inputsList.stream()
         .collect(
             toImmutableMap(
-                Function.identity(),
+                identity(),
                 iv -> {
                   DependencyResponse<AdderRequest, Integer> sumResponses =
                       new DependencyResponse<>(
@@ -110,13 +112,15 @@ public class FormulaImpl extends Formula {
                               .collect(
                                   toImmutableMap(
                                       e -> DividerRequest.from(e.getKey()), Entry::getValue)));
-                  return result(
-                      new AllInputs(
-                          iv.getInputValueOrThrow("a"),
-                          iv.getInputValueOrThrow("p"),
-                          iv.getInputValueOrThrow("q"),
-                          sumResponses,
-                          quotientResponse));
+                  return valueOrError(
+                      () ->
+                          result(
+                              new FormulaAllInputs(
+                                  iv.getInputValueOrThrow("a"),
+                                  iv.getInputValueOrThrow("p"),
+                                  iv.getInputValueOrThrow("q"),
+                                  sumResponses,
+                                  quotientResponse)));
                 }));
   }
 }

@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder;
 
+import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static com.flipkart.krystal.datatypes.IntegerType.integer;
 import static com.flipkart.krystal.datatypes.ListType.list;
 import static com.flipkart.krystal.vajram.inputs.DependencyCommand.multiExecuteWith;
@@ -13,7 +14,7 @@ import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
-import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderInputUtil.AllInputs;
+import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderInputUtil.SplitAdderAllInputs;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -25,7 +26,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
-public class SplitAdderImpl extends SplitAdder {
+public final class SplitAdderImpl extends SplitAdder {
 
   @Override
   public ImmutableCollection<VajramInputDefinition> getInputDefinitions() {
@@ -117,7 +118,8 @@ public class SplitAdderImpl extends SplitAdder {
   }
 
   @Override
-  public ImmutableMap<Inputs, Integer> executeCompute(ImmutableList<Inputs> inputsList) {
+  public ImmutableMap<Inputs, ValueOrError<Integer>> executeCompute(
+      ImmutableList<Inputs> inputsList) {
     return inputsList.stream()
         .collect(
             toImmutableMap(
@@ -148,7 +150,7 @@ public class SplitAdderImpl extends SplitAdder {
                               .collect(
                                   toImmutableMap(
                                       e -> AdderRequest.from(e.getKey()), Entry::getValue)));
-                  return add(new AllInputs(numbers, splitSum1, splitSum2, sum));
+                  return valueOrError(() -> add(new SplitAdderAllInputs(numbers, splitSum1, splitSum2, sum)));
                 }));
   }
 }
