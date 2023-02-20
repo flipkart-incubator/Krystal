@@ -3,8 +3,8 @@ module flipkart.krystal.krystex {
       flipkart.krystal.vajramexecutor.krystex;
   exports com.flipkart.krystal.krystex.node to
       flipkart.krystal.vajramexecutor.krystex;
-  exports com.flipkart.krystal.krystex.decorators;
   exports com.flipkart.krystal.krystex.decoration to flipkart.krystal.vajramexecutor.krystex;
+  exports com.flipkart.krystal.krystex.decorators.resilience4j;
 
   requires com.google.common;
   requires org.checkerframework.checker.qual;
