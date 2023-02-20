@@ -40,10 +40,10 @@ class SplitAdderTest {
     assertThat(future.get()).isEqualTo(55);
   }
 
-  //  @Test
+  // @Test
   void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
     int loopCount = 50_000;
-    VajramNodeGraph graph = this.graph.maxRequestsPerThread(1).build();
+    VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();
     long javaNativeTime = javaMethodBenchmark(this::splitAdd, loopCount);
     long javaFuturesTime = javaFuturesBenchmark(this::splitAddAsync, loopCount);
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
@@ -62,29 +62,26 @@ class SplitAdderTest {
     }
     System.out.printf("Avg. time to Create Executors:%,d %n", timeToCreateExecutors / loopCount);
     System.out.printf("Avg. time to Enqueue vajrams:%,d %n", timeToEnqueueVajram / loopCount);
-    System.out.printf(
-        "Avg. time to execute vajrams:%,d %n", (System.nanoTime() - startTime) / loopCount);
     allOf(futures).join();
     long vajramTime = System.nanoTime() - startTime;
-    System.out.printf("vajram: %,d ns for %,d requests", vajramTime, loopCount);
-    System.out.println();
+    System.out.printf("Avg. time to execute vajrams:%,d%n", vajramTime / loopCount);
     System.out.printf(
-        "Platform overhead over native code: %,.0f ns per request",
+        "Platform overhead over native code: %,.0f ns per request%n",
         (1.0 * vajramTime - javaNativeTime) / loopCount);
-    System.out.println();
     /*
      * Benchmark config:
      *    loopCount = 50_000
-     *    maxRequestsPerThread = 2
+     *    maxParallelismPerCore = 1
      *    Processor: 2.6 GHz 6-Core Intel Core i7
      * Benchmark result:
-     *    platform overhead = ~370 µs per request
-     *    maxPoolSize = ~300
+     *    platform overhead = ~300 µs per request
+     *    maxPoolSize = 12
+     *    maxActiveLeasesPerObject: 4114
+     *    peakAvgActiveLeasesPerObject: 4110.5
      */
     System.out.printf(
-        "Platform overhead over reactive code: %,.0f ns per request",
+        "Platform overhead over reactive code: %,.0f ns per request%n",
         (1.0 * vajramTime - javaFuturesTime) / loopCount);
-    System.out.println();
     allOf(futures)
         .whenComplete(
             (unused, throwable) -> {
@@ -95,7 +92,7 @@ class SplitAdderTest {
             })
         .get();
     System.out.printf(
-        "maxActiveLeasesPerObject: %s, peakAvgActiveLeasesPerObject: %s, maxPoolSize: %s",
+        "maxActiveLeasesPerObject: %s, peakAvgActiveLeasesPerObject: %s, maxPoolSize: %s%n",
         graph.getExecutorPool().maxActiveLeasesPerObject(),
         graph.getExecutorPool().peakAvgActiveLeasesPerObject(),
         graph.getExecutorPool().maxPoolSize());

@@ -42,7 +42,7 @@ class FormulaTest {
   // @Test
   void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
     int loopCount = 1_000_000;
-    VajramNodeGraph graph = this.graph.maxRequestsPerThread(128).build();
+    VajramNodeGraph graph = this.graph.maxParallelismPerCore(5).build();
     long javaNativeTime = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
     long javaFuturesTime = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
     //noinspection unchecked
@@ -62,10 +62,9 @@ class FormulaTest {
     }
     System.out.printf("Avg. time to Create Executors:%,d %n", timeToCreateExecutors / loopCount);
     System.out.printf("Avg. time to Enqueue vajrams:%,d %n", timeToEnqueueVajram / loopCount);
-    System.out.printf(
-        "Avg. time to execute vajrams:%,d %n", (System.nanoTime() - startTime) / loopCount);
     allOf(futures).join();
     long vajramTime = System.nanoTime() - startTime;
+    System.out.printf("Avg. time to execute vajrams:%,d %n", vajramTime / loopCount);
     allOf(futures)
         .whenComplete(
             (unused, throwable) -> {
@@ -73,27 +72,25 @@ class FormulaTest {
                 assertThat(future.getNow(0)).isEqualTo(4);
               }
             });
-    System.out.printf("vajram: %,d ns for %,d requests", vajramTime, loopCount);
-    System.out.println();
     System.out.printf(
-        "Platform overhead over native code: %,.0f ns per request",
+        "Platform overhead over native code: %,.0f ns per request%n",
         (1.0 * vajramTime - javaNativeTime) / loopCount);
-    System.out.println();
     /*
      * Benchmark config:
      *    loopCount = 1_000_000
-     *    maxRequestsPerThread = 128
+     *    maxParallelismPerCore = 5
      *    Processor: 2.6 GHz 6-Core Intel Core i7
      * Benchmark result:
-     *    platform overhead = ~15 µs (15,000 ns) per request
-     *    maxPoolSize = ~77
+     *    platform overhead over reactive code = ~13 µs (13,000 ns) per request
+     *    maxPoolSize = 60
+     *    maxActiveLeasesPerObject: 234
+     *    peakAvgActiveLeasesPerObject: 140.53
      */
     System.out.printf(
-        "Platform overhead over reactive code: %,.0f ns per request",
+        "Platform overhead over reactive code: %,.0f ns per request%n",
         (1.0 * vajramTime - javaFuturesTime) / loopCount);
-    System.out.println();
     System.out.printf(
-        "maxActiveLeasesPerObject: %s, peakAvgActiveLeasesPerObject: %s, maxPoolSize: %s",
+        "maxActiveLeasesPerObject: %s, peakAvgActiveLeasesPerObject: %s, maxPoolSize: %s%n",
         graph.getExecutorPool().maxActiveLeasesPerObject(),
         graph.getExecutorPool().peakAvgActiveLeasesPerObject(),
         graph.getExecutorPool().maxPoolSize());
