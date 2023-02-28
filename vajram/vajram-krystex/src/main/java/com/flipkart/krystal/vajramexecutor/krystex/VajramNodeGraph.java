@@ -21,6 +21,7 @@ import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
+import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDefinitionException;
@@ -262,6 +263,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     // Step 4: Create and register node for the main vajram logic
     vajramLogic =
         logicRegistryDecorator.newMainLogic(
+            vajramDefinition.getVajram() instanceof IOVajram<?>,
             vajramLogicNodeName,
             inputNames,
             inputsList -> {
