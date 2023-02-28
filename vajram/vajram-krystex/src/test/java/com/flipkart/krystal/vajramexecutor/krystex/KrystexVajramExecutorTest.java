@@ -2,12 +2,17 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.krystex.node.DependantChain.fromTriggerOrder;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
+import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.flipkart.krystal.krystex.MainLogic;
+import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
+import com.flipkart.krystal.krystex.decoration.LogicDecoratorCommand;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
+import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JCircuitBreaker;
@@ -50,6 +55,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -396,6 +402,81 @@ class KrystexVajramExecutorTest {
             Hello Friends! Firstname Lastname (user_id_1:friend1), Firstname Lastname (user_id_1:friend2)
             Hello Friends! Firstname Lastname (user_id_2:friend1), Firstname Lastname (user_id_2:friend2)""");
     assertThat(TestUserServiceVajram.CALL_COUNTER.sum()).isEqualTo(1);
+  }
+
+  @Test
+  @Disabled("Fix: https://github.com/flipkart-incubator/Krystal/issues/84")
+  void flush_skippingADependency_flushesCompleteCallGraph(TestInfo testInfo) throws Exception {
+    CompletableFuture<FlushCommand> friendServiceFlushCommand = new CompletableFuture<>();
+    CompletableFuture<FlushCommand> userServiceFlushCommand = new CompletableFuture<>();
+    VajramNodeGraph graph =
+        loadFromClasspath(
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2")
+            .registerInputModulator(
+                vajramID(FriendsServiceVajram.ID),
+                new InputModulatorConfig(
+                    logicExecutionContext -> "",
+                    modulatorContext ->
+                        new MainLogicDecorator() {
+                          @Override
+                          public MainLogic<Object> decorateLogic(MainLogic<Object> mainLogic) {
+                            return mainLogic;
+                          }
+
+                          @Override
+                          public void executeCommand(LogicDecoratorCommand logicDecoratorCommand) {
+                            if (logicDecoratorCommand instanceof FlushCommand flushCommand) {
+                              friendServiceFlushCommand.complete(flushCommand);
+                            }
+                          }
+
+                          @Override
+                          public String getId() {
+                            return "friendService";
+                          }
+                        }))
+            .registerInputModulator(
+                vajramID(TestUserServiceVajram.ID),
+                new InputModulatorConfig(
+                    logicExecutionContext1 -> "",
+                    modulatorContext1 ->
+                        new MainLogicDecorator() {
+                          @Override
+                          public MainLogic<Object> decorateLogic(MainLogic<Object> mainLogic) {
+                            return mainLogic;
+                          }
+
+                          @Override
+                          public void executeCommand(LogicDecoratorCommand logicDecoratorCommand) {
+                            if (logicDecoratorCommand instanceof FlushCommand flushCommand) {
+                              userServiceFlushCommand.complete(flushCommand);
+                            }
+                          }
+
+                          @Override
+                          public String getId() {
+                            return "userService";
+                          }
+                        }))
+            .build();
+    CompletableFuture<String> multiHellos;
+    try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
+        graph.createExecutor(requestContext.requestId(testInfo.getDisplayName()).build())) {
+      multiHellos =
+          krystexVajramExecutor.execute(
+              vajramID(MultiHelloFriendsV2.ID),
+              testRequestContext ->
+                  MultiHelloFriendsV2Request.builder()
+                      .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
+                      .skip(true)
+                      .build());
+    }
+    assertThat(friendServiceFlushCommand).succeedsWithin(ofSeconds(1));
+    assertThat(userServiceFlushCommand).succeedsWithin(ofSeconds(1));
+    assertThat(timedGet(multiHellos)).isEqualTo("");
   }
 
   private HelloRequest helloRequest(TestRequestContext applicationRequestContext) {

@@ -4,6 +4,8 @@ inputs:
     dataType: set
     typeParameters:
       dataType: string
+  - name: skip
+    dataType: bool
 dependencies:
   - name: hellos
     mandatory: true
