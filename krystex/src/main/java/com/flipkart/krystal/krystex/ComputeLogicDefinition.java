@@ -15,19 +15,18 @@ import java.util.function.Function;
 
 public final class ComputeLogicDefinition<T> extends MainLogicDefinition<T> {
 
-  private final Function<ImmutableList<Inputs>, ImmutableMap<Inputs, ValueOrError<T>>> computeLogic;
+  private final MainLogic<T> nodeLogic;
 
   public ComputeLogicDefinition(
       NodeLogicId nodeLogicId,
-      Set<String> inputNames,
-      Function<ImmutableList<Inputs>, ImmutableMap<Inputs, ValueOrError<T>>> nodeLogic,
+      Set<String> inputs,
+      MainLogic<T> nodeLogic,
       ImmutableMap<String, LogicTag> logicTags) {
-    super(nodeLogicId, inputNames, logicTags);
-    this.computeLogic = nodeLogic;
+    super(nodeLogicId, inputs, logicTags);
+    this.nodeLogic = nodeLogic;
   }
 
-  public ImmutableMap<Inputs, CompletableFuture<T>> execute(ImmutableList<Inputs> inputsList) {
-    return computeLogic.apply(inputsList).entrySet().stream()
-        .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture()));
+  public ImmutableMap<Inputs, CompletableFuture<T>> execute(ImmutableList<Inputs> inputs) {
+    return nodeLogic.execute(inputs);
   }
 }
