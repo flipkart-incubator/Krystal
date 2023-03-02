@@ -16,6 +16,7 @@ public final class Constants {
     public static final String LINK_HASH_MAP = "linkHashMap";
     public static final String MAP = "map";
     public static final String LIST = "list";
+    public static final String JAVA_EXT = ".java";
 
     private Constants() {}
 

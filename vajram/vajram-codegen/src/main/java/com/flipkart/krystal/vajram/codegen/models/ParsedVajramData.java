@@ -8,13 +8,16 @@ import com.flipkart.krystal.vajram.inputs.Resolve;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public record ParsedVajramData(String vajramName, List<Method> resolveMethods,
                                Method vajramLogic, Class vajramClass, String packageName) {
 
     public static final String DOT_SEPARATOR = ".";
 
-    public static ParsedVajramData fromVajram(ClassLoader classLoader, VajramInputFile inputFile)  {
+    public static Optional<ParsedVajramData> fromVajram(ClassLoader classLoader, VajramInputFile inputFile)  {
         String packageName = CodegenUtils.getPackageFromPath(inputFile.inputFilePath().relativeFilePath());
         Class<? extends Vajram> result = null;
         ClassLoader systemClassLoader = VajramID.class.getClassLoader();
@@ -24,15 +27,9 @@ public record ParsedVajramData(String vajramName, List<Method> resolveMethods,
             classLoader.loadClass(inputUtilClass);
             String requestClass = packageName + DOT_SEPARATOR + CodegenUtils.getRequestClassName(inputFile.vajramName());
             classLoader.loadClass(requestClass);
-//            if (result.getSuperclass() == IOVajram.class) {
-//                classLoader.loadClass(inputUtilClass + "$CommonInputs");
-//                classLoader.loadClass(inputUtilClass + "$InputsNeedingModulation");
-//            } else {
-//                classLoader.loadClass(inputUtilClass + "$AllInputs");
-//            }
-
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
+            log.warn("Vajram class not found for {}", inputFile.vajramName());
+            return Optional.empty();
         }
 
         List<Method> resolveMethods = new ArrayList<>();
@@ -48,6 +45,6 @@ public record ParsedVajramData(String vajramName, List<Method> resolveMethods,
                 }
             }
         }
-        return new ParsedVajramData(inputFile.vajramName(), resolveMethods, vajramLogic, result, packageName);
+        return Optional.of(new ParsedVajramData(inputFile.vajramName(), resolveMethods, vajramLogic, result, packageName));
     }
 }

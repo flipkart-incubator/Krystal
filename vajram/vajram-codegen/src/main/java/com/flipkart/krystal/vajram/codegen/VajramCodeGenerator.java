@@ -753,14 +753,13 @@ public class VajramCodeGenerator {
         // Method : getInputDefinitions
         Builder inputDefinitionsBuilder = methodBuilder(GET_INPUT_DEFINITIONS)
                 .addModifiers(PUBLIC)
-                .returns(ParameterizedTypeName.get(ClassName.get(ImmutableList.class),
+                .returns(ParameterizedTypeName.get(clsDeps.get(IM_LIST),
                         ClassName.get(VajramInputDefinition.class)));
         ImmutableList<VajramInputDefinition> inputDefinitions = vajramInputsDef.get(vajramName);
         Collection<CodeBlock> codeBlocks = new ArrayList<>(inputDefinitions.size());
         // Input and Dependency code block
         inputDefinitions.forEach( vajramInputDefinition ->  {
             CodeBlock.Builder inputDefBuilder = CodeBlock.builder();
-
             if (vajramInputDefinition instanceof Input input) {
                 buildVajramInput(inputDefBuilder, input);
             } else if (vajramInputDefinition instanceof Dependency dependency) {
@@ -769,7 +768,7 @@ public class VajramCodeGenerator {
             codeBlocks.add(inputDefBuilder.build());
         });
         CodeBlock.Builder returnCode = CodeBlock.builder()
-                .add("return ImmutableList.of(\n").add(CodeBlock.join(codeBlocks, ",\n\t")).add("\n);");
+                .add("return $T.of(\n", clsDeps.get(IM_LIST)).add(CodeBlock.join(codeBlocks, ",\n\t")).add("\n);");
         inputDefinitionsBuilder.addCode(returnCode.build());
 
         return inputDefinitionsBuilder.build();
@@ -810,7 +809,7 @@ public class VajramCodeGenerator {
     /**
      * Method to generate VajramInput code blocks
      * @param inputDefBuilder : {@link CodeBlock.Builder}
-     * @param input :  Vajram Input
+     * @param input : Vajram Input
      */
     private void buildVajramInput(CodeBlock.Builder inputDefBuilder, Input input) {
         inputDefBuilder.add("$T.builder()", ClassName.get(Input.class))
@@ -819,7 +818,6 @@ public class VajramCodeGenerator {
         Set<InputSource> inputSources = input.sources();
         if (!inputSources.isEmpty()) {
             inputDefBuilder.add(".sources(");
-            clsDeps.get(INPUT_SRC);
             String sources = inputSources.stream().map(inputSource -> {
                 if (inputSource == InputSource.CLIENT) {
                     return "$inputSrc:T.CLIENT";
