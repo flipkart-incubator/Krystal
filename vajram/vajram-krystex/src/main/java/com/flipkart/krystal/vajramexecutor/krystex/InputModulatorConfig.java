@@ -20,7 +20,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public record InputModulatorConfig(
-    Supplier<InputModulator<InputValuesAdaptor, InputValuesAdaptor>> inputModulatorSupplier,
     Function<LogicExecutionContext, String> instanceIdGenerator,
     Function<ModulatorContext, MainLogicDecorator> decoratorFactory) {
 
@@ -39,7 +38,6 @@ public record InputModulatorConfig(
   public static InputModulatorConfig simple(
       Supplier<InputModulator<InputValuesAdaptor, InputValuesAdaptor>> inputModulatorSupplier) {
     return new InputModulatorConfig(
-        inputModulatorSupplier,
         logicExecutionContext ->
             generateInstanceId(
                     logicExecutionContext.dependants(),
@@ -73,7 +71,6 @@ public record InputModulatorConfig(
               .formatted(dependantChains.size()));
     }
     return new InputModulatorConfig(
-        inputModulatorSupplier,
         logicExecutionContext -> instanceId,
         modulatorContext -> {
           @SuppressWarnings("unchecked")

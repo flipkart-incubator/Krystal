@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2;
 
 import static com.flipkart.krystal.data.ValueOrError.valueOrError;
+import static com.flipkart.krystal.datatypes.BooleanType.bool;
 import static com.flipkart.krystal.datatypes.ListType.list;
 import static com.flipkart.krystal.datatypes.StringType.string;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
@@ -14,6 +15,7 @@ import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
+import com.flipkart.krystal.vajram.inputs.DependencyCommand.Skip;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
@@ -25,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashSet;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 
 public final class MultiHelloFriendsV2Impl extends MultiHelloFriendsV2 {
@@ -33,6 +36,7 @@ public final class MultiHelloFriendsV2Impl extends MultiHelloFriendsV2 {
   public ImmutableCollection<VajramInputDefinition> getInputDefinitions() {
     return ImmutableList.of(
         Input.builder().name("user_ids").type(list(string())).isMandatory().build(),
+        Input.builder().name("skip").type(bool()).build(),
         Dependency.builder()
             .name("hellos")
             .dataAccessSpec(vajramID(HelloFriendsV2Vajram.ID))
@@ -46,10 +50,16 @@ public final class MultiHelloFriendsV2Impl extends MultiHelloFriendsV2 {
     if (dependency.equals("hellos")) {
       if (Set.of("user_id").equals(resolvableInputs)) {
         Set<String> userIds = inputs.getInputValueOrThrow("user_ids");
-        return DependencyCommand.multiExecuteWith(
-            userIdsForHellos(userIds).stream()
-                .map(s -> new Inputs(ImmutableMap.of("user_id", ValueOrError.withValue(s))))
-                .collect(toImmutableList()));
+        Optional<Boolean> skip = inputs.getInputValueOpt("skip");
+        DependencyCommand<String> depCommand = userIdsForHellos(userIds, skip);
+        if (depCommand instanceof DependencyCommand.Skip<String>) {
+          return ((Skip<String>) depCommand).cast();
+        } else {
+          return DependencyCommand.multiExecuteWith(
+              depCommand.inputs().stream()
+                  .map(s -> new Inputs(ImmutableMap.of("user_id", ValueOrError.withValue(s))))
+                  .collect(toImmutableList()));
+        }
       }
     }
     throw new UnsupportedOperationException();
@@ -72,7 +82,7 @@ public final class MultiHelloFriendsV2Impl extends MultiHelloFriendsV2 {
                                   toImmutableMap(
                                       e -> HelloFriendsV2Request.from(e.getKey()),
                                       Entry::getValue)));
-                  return valueOrError(() -> sayHellos(new MultiHelloFriendsV2AllInputs(userIds, hellos)));
+                  return valueOrError(() -> sayHellos(new MultiHelloFriendsV2AllInputs(userIds, false, hellos)));
                 }));
   }
 }

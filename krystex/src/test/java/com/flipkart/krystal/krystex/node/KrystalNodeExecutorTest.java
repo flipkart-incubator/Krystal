@@ -16,6 +16,7 @@ import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collections;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -251,7 +252,11 @@ class KrystalNodeExecutorTest {
             new NodeLogicId(nodeId),
             inputs,
             inputsList ->
-                inputsList.stream().collect(toImmutableMap(identity(), valueOrError(logic))),
+                inputsList.stream()
+                    .collect(toImmutableMap(identity(), valueOrError(logic)))
+                    .entrySet()
+                    .stream()
+                    .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture())),
             ImmutableMap.of());
     logicDefinitionRegistry.addMainLogic(def);
     return def;
