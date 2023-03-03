@@ -59,18 +59,17 @@
         <value />
       </option>
     </inspection_tool>
-    <inspection_tool class="BadExceptionDeclared" enabled="true" level="WARNING" enabled_by_default="true">
-      <option name="exceptionsString" value="" />
-      <option name="exceptions">
-        <value />
-      </option>
-      <option name="ignoreTestCases" value="false" />
-      <option name="ignoreLibraryOverrides" value="false" />
-    </inspection_tool>
     <inspection_tool class="BadExceptionThrown" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="exceptionsString" value="" />
       <option name="exceptions">
-        <value />
+        <value>
+          <item value="java.lang.Throwable" />
+          <item value="java.lang.Exception" />
+          <item value="java.lang.Error" />
+          <item value="java.lang.NullPointerException" />
+          <item value="java.lang.ClassCastException" />
+          <item value="java.lang.ArrayIndexOutOfBoundsException" />
+        </value>
       </option>
     </inspection_tool>
     <inspection_tool class="BadOddness" enabled="true" level="WARNING" enabled_by_default="true" />
@@ -125,7 +124,7 @@
       <option name="m_includeLibraryClasses" value="false" />
       <option name="m_limit" value="15" />
     </inspection_tool>
-    <inspection_tool class="ClassHasNoToStringMethod" enabled="true" level="WARNING" enabled_by_default="true">
+    <inspection_tool class="ClassHasNoToStringMethod" enabled="false" level="WARNING" enabled_by_default="false">
       <option name="excludeClassNames" value=".*(Factory|Component|Processor|Adapter|Adaptor|Manager|Executor|Builder|Client)" />
       <option name="excludeException" value="true" />
       <option name="excludeDeprecated" value="true" />
@@ -514,7 +513,9 @@
       <option name="m_limit" value="3" />
       <option name="m_ignorePureConjunctionsDisjunctions" value="true" />
     </inspection_tool>
-    <inspection_tool class="OverlyLongLambda" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="OverlyLongLambda" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="m_limit" value="15" />
+    </inspection_tool>
     <inspection_tool class="OverlyStrongTypeCast" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="ignoreInMatchingInstanceof" value="false" />
     </inspection_tool>
@@ -680,6 +681,8 @@
       <option name="myAllowedSuppressions">
         <list>
           <option value="common-java:InsufficientBranchCoverage" />
+          <option value="CallToSystemExit" />
+          <option value="ClassLoaderInstantiation" />
         </list>
       </option>
     </inspection_tool>
@@ -744,19 +747,15 @@
       <option name="m_limit" value="3" />
     </inspection_tool>
     <inspection_tool class="TimeToString" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="TooBroadCatch" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="TooBroadThrows" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="TooBroadCatch" enabled="false" level="WARNING" enabled_by_default="false">
+      <option name="onlyWarnOnRootExceptions" value="true" />
+      <option name="ignoreThrown" value="true" />
+    </inspection_tool>
     <inspection_tool class="TransientFieldInNonSerializableClass" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="TransientFieldNotInitialized" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="TrivialIf" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="TrivialStringConcatenation" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="TryWithIdenticalCatches" enabled="true" level="ERROR" enabled_by_default="true" />
-    <inspection_tool class="TypeMayBeWeakened" enabled="true" level="WARNING" enabled_by_default="true">
-      <option name="useRighthandTypeAsWeakestTypeInAssignments" value="true" />
-      <option name="useParameterizedTypeForCollectionMethods" value="true" />
-      <option name="doNotWeakenToJavaLangObject" value="true" />
-      <option name="onlyWeakentoInterface" value="true" />
-    </inspection_tool>
     <inspection_tool class="TypeParameterExtendsFinalClass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="UnconditionalWait" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="UnknownGuard" enabled="true" level="WARNING" enabled_by_default="true" />
