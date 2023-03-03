@@ -1,11 +1,8 @@
 pluginManagement {
     repositories {
         mavenLocal()
-        maven {
-            url 'https://clojars.org/repo'
-        }
         mavenCentral()
-        maven { url "https://clojars.org/repo" }
+        maven {url 'https://clojars.org/repo'}
     }
 }
 
@@ -13,10 +10,8 @@ pluginManagement {
 dependencyResolutionManagement {
     repositories {
         mavenLocal()
-        maven {
-            url 'https://clojars.org/repo'
-        }
         mavenCentral()
+        maven {url 'https://clojars.org/repo'}
     }
 }
 
