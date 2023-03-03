@@ -228,13 +228,14 @@ public class VajramCodeGenerator {
     final ClassName inputsNeedingModulation =
         ClassName.get(
             parsedVajramData.packageName(),
-            CodegenUtils.getInputUtilClassName(parsedVajramData.vajramName()),
+            getInputUtilClassName(parsedVajramData.vajramName()),
             getInputModulationClassname(vajramName));
     final ClassName commonInputs =
         ClassName.get(
             parsedVajramData.packageName(),
-            CodegenUtils.getInputUtilClassName(parsedVajramData.vajramName()),
+            getInputUtilClassName(parsedVajramData.vajramName()),
             getCommonInputsClassname(vajramName));
+    //noinspection unchecked
     final Type vajramResponseType =
         ((ParameterizedType)
                 ((Class<? extends Vajram>) parsedVajramData.vajramClass()).getGenericSuperclass())
@@ -366,7 +367,7 @@ public class VajramCodeGenerator {
                                             + vajramName));
                     String[] splits = COMPILE.split(depVajramClass);
                     String depPackageName =
-                        Arrays.stream(splits, 0, splits.length - 1)
+                        stream(splits, 0, splits.length - 1)
                             .collect(Collectors.joining(DOT));
                     String depRequestClass =
                         CodegenUtils.getRequestClassName(splits[splits.length - 1]);
@@ -496,7 +497,7 @@ public class VajramCodeGenerator {
         CodeBlock.builder()
             .addStatement(
                 "return $T.CONVERTER",
-                ClassName.get(packageName, CodegenUtils.getInputUtilClassName(vajramName)))
+                ClassName.get(packageName, getInputUtilClassName(vajramName)))
             .build());
     return inputConvertersBuilder.build();
   }
@@ -729,7 +730,7 @@ public class VajramCodeGenerator {
           ImmutableMap.of(
               DEP_COMMAND,
               clsDeps.get(DEP_COMMAND),
-              Constants.RETURN_TYPE,
+              RETURN_TYPE,
               Primitives.wrap(returnType),
               "resultName",
               variableName,
