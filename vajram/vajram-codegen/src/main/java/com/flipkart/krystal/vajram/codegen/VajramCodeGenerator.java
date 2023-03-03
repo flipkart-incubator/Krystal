@@ -203,7 +203,7 @@ public class VajramCodeGenerator {
       final TypeSpec.Builder vajramImplClass = createVajramImplClass();
       List<MethodSpec> methodSpecs = new ArrayList<>();
       // Add superclass
-      vajramImplClass.addModifiers(PUBLIC).addModifiers(FINAL)
+      vajramImplClass.addModifiers(PUBLIC, FINAL)
               .superclass(ClassName.bestGuess(vajramName).box()).build();
 
       // Map of all the resolved variables to the methods resolving them
