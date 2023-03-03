@@ -203,7 +203,7 @@ public class VajramCodeGenerator {
       final TypeSpec.Builder vajramImplClass = createVajramImplClass();
       List<MethodSpec> methodSpecs = new ArrayList<>();
       // Add superclass
-      vajramImplClass.addModifiers(PUBLIC)
+      vajramImplClass.addModifiers(PUBLIC).addModifiers(FINAL)
               .superclass(ClassName.bestGuess(vajramName).box()).build();
 
       // Map of all the resolved variables to the methods resolving them
@@ -1252,9 +1252,9 @@ public class VajramCodeGenerator {
         .addMethod(constructorBuilder().addModifiers(PRIVATE).build());
   }
 
-    private TypeSpec.Builder createVajramImplClass() {
-        return classBuilder(CodegenUtils.getVajramImplClassName(vajramName));
-    }
+  private TypeSpec.Builder createVajramImplClass() {
+    return classBuilder(CodegenUtils.getVajramImplClassName(vajramName));
+  }
 
   public String getRequestClassName() {
     return requestClassName;
