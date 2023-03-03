@@ -1,5 +1,10 @@
 # The Krystal Project
 
+## Contribution
+All java code should be formatted using the [google-java-formatter](https://plugins.jetbrains.com/plugin/8527-google-java-format).
+* [Intellij plugin](https://github.com/google/google-java-format#intellij-android-studio-and-other-jetbrains-ides)
+* [Eclipse Plugin](https://github.com/google/google-java-format#eclipse)
+
 ## Latest Releases
 [![Clojars Project](https://img.shields.io/clojars/v/com.flipkart.krystal/krystal-common.svg)](https://clojars.org/com.flipkart.krystal/krystal-common)
 
