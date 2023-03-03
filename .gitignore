@@ -25,6 +25,7 @@
 .idea/**/dynamic.xml
 .idea/**/uiDesigner.xml
 .idea/**/dbnavigator.xml
+.idea/inspectionProfiles/Project_Default.xml
 
 # Gradle
 .idea/**/gradle.xml
@@ -42,6 +43,7 @@
 .idea/modules
 *.iml
 *.ipr
+.idea/inspectionProfiles/Project_Default.xml
 
 # File-based project format
 *.iws
@@ -51,3 +53,5 @@ out/
 
 # SonarLint plugin
 .idea/sonarlint/
+
+lib/

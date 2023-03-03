@@ -13,7 +13,7 @@ import com.flipkart.krystal.vajram.inputs.BindFrom;
 import com.flipkart.krystal.vajram.inputs.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceVajram;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2InputUtil.AllInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2InputUtil.HelloFriendsV2AllInputs;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceVajram;
 import java.util.Collection;
@@ -48,7 +48,7 @@ public abstract class HelloFriendsV2Vajram extends ComputeVajram<String> {
   }
 
   @VajramLogic
-  public String sayHellos(AllInputs request) {
+  public String sayHellos(HelloFriendsV2AllInputs request) {
     return "Hello Friends! %s"
         .formatted(
             request.friendInfos().values().stream()

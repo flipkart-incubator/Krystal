@@ -8,7 +8,7 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloInputUtil.AllInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloInputUtil.HelloAllInputs;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -33,7 +33,7 @@ public final class HelloVajramImpl extends HelloVajram {
                     valueOrError(
                         () ->
                             greet(
-                                new AllInputs(
+                                new HelloAllInputs(
                                     i.getInputValueOrThrow("name"),
                                     i.getInputValueOrDefault("greeting", null))))));
   }

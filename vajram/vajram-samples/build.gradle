@@ -6,6 +6,12 @@ plugins {
 group 'com.flipkart'
 version project.krystal_version
 
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven { url "https://clojars.org/repo" }
+}
+
 dependencies {
     implementation project(':krystal-common')
     implementation project(':vajram')

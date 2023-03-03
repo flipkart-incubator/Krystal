@@ -16,7 +16,7 @@ import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsVajram;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsInputUtil.AllInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsInputUtil.MultiHelloFriendsAllInputs;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -78,7 +78,7 @@ public final class MultiHelloFriendsImpl extends MultiHelloFriends {
                               .collect(
                                   toImmutableMap(
                                       e -> HelloFriendsRequest.from(e.getKey()), Entry::getValue)));
-                  return ValueOrError.valueOrError(() -> sayHellos(new AllInputs(userIds, hellos)));
+                  return ValueOrError.valueOrError(() -> sayHellos(new MultiHelloFriendsAllInputs(userIds, hellos)));
                 }));
   }
 }

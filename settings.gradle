@@ -5,6 +5,7 @@ pluginManagement {
             url 'https://clojars.org/repo'
         }
         mavenCentral()
+        maven { url "https://clojars.org/repo" }
     }
 }
 

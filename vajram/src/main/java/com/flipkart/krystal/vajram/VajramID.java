@@ -76,7 +76,7 @@ public final class VajramID implements DataAccessSpec {
     return "v<%s>".formatted(vajramId());
   }
 
-  private Optional<String> className() {
+  public Optional<String> className() {
     return Optional.ofNullable(className);
   }
 }

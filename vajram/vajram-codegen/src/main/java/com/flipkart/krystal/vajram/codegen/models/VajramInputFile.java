@@ -1,5 +1,5 @@
 package com.flipkart.krystal.vajram.codegen.models;
 
-import java.nio.file.Path;
+import com.flipkart.krystal.vajram.codegen.models.VajramInputsDef.InputFilePath;
 
-public record VajramInputFile(String vajramName, Path srcRelativeFilePath, VajramInputsDef vajramInputsDef) {}
+public record VajramInputFile(String vajramName, InputFilePath inputFilePath, VajramInputsDef vajramInputsDef) {}
