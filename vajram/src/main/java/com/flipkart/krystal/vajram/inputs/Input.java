@@ -1,8 +1,5 @@
 package com.flipkart.krystal.vajram.inputs;
 
-import static com.google.common.collect.Sets.newLinkedHashSet;
-import static java.util.Arrays.stream;
-
 import com.flipkart.krystal.datatypes.DataType;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
@@ -16,16 +13,17 @@ public record Input<T>(
     T defaultValue,
     String documentation,
     boolean needsModulation,
-    Set<InputSource> sources)
+    ImmutableSet<InputSource> sources)
     implements VajramInputDefinition {
 
-  private static final Set<InputSource> DEFAULT_INPUT_SOURCES = Set.of(InputSource.CLIENT);
+  private static final ImmutableSet<InputSource> DEFAULT_INPUT_SOURCES =
+      ImmutableSet.of(InputSource.CLIENT);
 
   public boolean isOptional() {
     return !isMandatory();
   }
 
-  public Set<InputSource> sources() {
+  public ImmutableSet<InputSource> sources() {
     if (sources == null || sources.isEmpty()) {
       return DEFAULT_INPUT_SOURCES;
     }
@@ -54,7 +52,7 @@ public record Input<T>(
 
     public InputBuilder<T> sources(InputSource... inputSources) {
       if (inputSources != null) {
-        this.sources = newLinkedHashSet(stream(inputSources)::iterator);
+        this.sources = ImmutableSet.copyOf(inputSources);
       }
       return this;
     }
