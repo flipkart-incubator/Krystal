@@ -15,7 +15,7 @@ public record QualifiedInputs(
     this(dependencyName, null, inputNames);
   }
 
-  public QualifiedInputs(String dependencyName,String inputName) {
+  public QualifiedInputs(String dependencyName, String inputName) {
     this(dependencyName, null, ImmutableSet.of(inputName));
   }
 }

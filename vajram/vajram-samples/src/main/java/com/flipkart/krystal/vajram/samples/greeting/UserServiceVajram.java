@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+
 @VajramDef(UserServiceVajram.ID)
 public abstract class UserServiceVajram extends IOVajram<UserInfo> {
 
@@ -21,8 +22,10 @@ public abstract class UserServiceVajram extends IOVajram<UserInfo> {
   public static final String USER_ID = "user_id";
 
   @VajramLogic
-  public ImmutableMap<UserServiceInputsNeedingModulation, CompletableFuture<UserInfo>> callUserService(
-      ModulatedInput<UserServiceInputsNeedingModulation, UserServiceCommonInputs> modulatedRequest) {
+  public ImmutableMap<UserServiceInputsNeedingModulation, CompletableFuture<UserInfo>>
+      callUserService(
+          ModulatedInput<UserServiceInputsNeedingModulation, UserServiceCommonInputs>
+              modulatedRequest) {
 
     // Make a call to user service and get user info
     CompletableFuture<List<UserInfo>> serviceResponse =
@@ -35,7 +38,7 @@ public abstract class UserServiceVajram extends IOVajram<UserInfo> {
                     .collect(
                         Collectors.toMap(
                             userInfo -> new UserServiceInputsNeedingModulation(userInfo.userId()),
-                            userInfo -> userInfo )));
+                            userInfo -> userInfo)));
     return modulatedRequest.inputsNeedingModulation().stream()
         .collect(
             toImmutableMap(im -> im, im -> resultsFuture.thenApply(results -> results.get(im))));

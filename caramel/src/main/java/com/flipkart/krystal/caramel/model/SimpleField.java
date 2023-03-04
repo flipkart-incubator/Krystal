@@ -9,7 +9,8 @@ public final class SimpleField<T, P extends WorkflowPayload> implements Field<T,
   private final Function<P, T> getter;
   private final BiConsumer<P, T> setter;
 
-  public SimpleField(String name, Class<P> payloadType, Function<P, T> getter, BiConsumer<P, T> setter) {
+  public SimpleField(
+      String name, Class<P> payloadType, Function<P, T> getter, BiConsumer<P, T> setter) {
     this.name = name;
     this.payloadType = payloadType;
     this.getter = getter;

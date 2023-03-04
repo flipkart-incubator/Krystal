@@ -71,8 +71,7 @@ public interface WorkflowBuildStage<INPUT, ROOT extends WorkflowPayload> extends
       Function<WorkflowBuildStage<INPUT, ROOT>, WorkflowBuildStage<INPUT, ROOT>> ifTrue,
       @Nullable Function<WorkflowBuildStage<INPUT, ROOT>, WorkflowBuildStage<INPUT, ROOT>> ifFalse);
 
-  <O> TerminatedWorkflow<INPUT, ROOT, O> terminateWithOutput(
-      Field<O, ROOT> outputField);
+  <O> TerminatedWorkflow<INPUT, ROOT, O> terminateWithOutput(Field<O, ROOT> outputField);
 
   WorkflowBuildStage<INPUT, ROOT> checkpoint(String name);
 

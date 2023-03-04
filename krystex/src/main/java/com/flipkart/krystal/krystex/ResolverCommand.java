@@ -5,7 +5,7 @@ import com.google.common.collect.ImmutableList;
 
 public interface ResolverCommand {
 
-    ImmutableList<Inputs> getInputs();
+  ImmutableList<Inputs> getInputs();
 
   static SkipDependency skip(String reason) {
     return new SkipDependency(reason);
