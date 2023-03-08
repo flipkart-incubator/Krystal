@@ -4,7 +4,5 @@ public class AnalyticsEventSink {
 
   public static final String ID = "analyticsEventSink";
 
-  public void pushEvent(String eventType, GreetingEvent greetingEvent) {
-
-  }
+  public void pushEvent(String eventType, GreetingEvent greetingEvent) {}
 }
