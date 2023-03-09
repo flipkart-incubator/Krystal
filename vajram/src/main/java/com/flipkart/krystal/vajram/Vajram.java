@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram;
 
+import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.InputResolver;
-import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
@@ -29,7 +29,8 @@ public sealed interface Vajram<T> permits AbstractVajram {
 
   ImmutableMap<Inputs, CompletableFuture<T>> execute(ImmutableList<Inputs> inputs);
 
-  default InputsConverter<? extends InputValuesAdaptor, ? extends InputValuesAdaptor> getInputsConvertor() {
+  default InputsConverter<? extends InputValuesAdaptor, ? extends InputValuesAdaptor>
+      getInputsConvertor() {
     throw new UnsupportedOperationException(
         "getInputsConvertor method should be implemented by an IOVajram");
   }

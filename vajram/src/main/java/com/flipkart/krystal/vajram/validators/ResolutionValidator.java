@@ -176,7 +176,8 @@ public class ResolutionValidator {
                                       .filter(Objects::nonNull)
                                       .map(BindFrom::value)
                                       .collect(toImmutableSet());
-                              result.put(target, new DefaultInputResolverDefinition(sources, target));
+                              result.put(
+                                  target, new DefaultInputResolverDefinition(sources, target));
                             }
                           }
                         });

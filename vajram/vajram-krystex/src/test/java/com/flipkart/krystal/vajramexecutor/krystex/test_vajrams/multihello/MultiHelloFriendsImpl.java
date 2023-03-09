@@ -78,7 +78,8 @@ public final class MultiHelloFriendsImpl extends MultiHelloFriends {
                               .collect(
                                   toImmutableMap(
                                       e -> HelloFriendsRequest.from(e.getKey()), Entry::getValue)));
-                  return ValueOrError.valueOrError(() -> sayHellos(new MultiHelloFriendsAllInputs(userIds, hellos)));
+                  return ValueOrError.valueOrError(
+                      () -> sayHellos(new MultiHelloFriendsAllInputs(userIds, hellos)));
                 }));
   }
 }

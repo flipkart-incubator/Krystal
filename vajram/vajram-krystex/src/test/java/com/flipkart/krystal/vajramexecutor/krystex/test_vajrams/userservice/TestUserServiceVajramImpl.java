@@ -42,25 +42,26 @@ public final class TestUserServiceVajramImpl extends TestUserServiceVajram {
     List<TestUserServiceInputsNeedingModulation> ims = new ArrayList<>();
     TestUserServiceCommonInputs commonInputs = null;
     for (Inputs inputs : inputsList) {
-      UnmodulatedInput<TestUserServiceInputsNeedingModulation, TestUserServiceCommonInputs> allInputs =
-          getInputsConvertor().apply(inputs);
+      UnmodulatedInput<TestUserServiceInputsNeedingModulation, TestUserServiceCommonInputs>
+          allInputs = getInputsConvertor().apply(inputs);
       commonInputs = allInputs.commonInputs();
-        TestUserServiceInputsNeedingModulation im = allInputs.inputsNeedingModulation();
+      TestUserServiceInputsNeedingModulation im = allInputs.inputsNeedingModulation();
       mapping.put(im, inputs);
       ims.add(im);
     }
     Map<Inputs, CompletableFuture<TestUserInfo>> returnValue = new LinkedHashMap<>();
 
     if (commonInputs != null) {
-      ImmutableMap<TestUserServiceInputsNeedingModulation, CompletableFuture<TestUserInfo>> results =
-          callUserService(new ModulatedInput<>(ImmutableList.copyOf(ims), commonInputs));
+      ImmutableMap<TestUserServiceInputsNeedingModulation, CompletableFuture<TestUserInfo>>
+          results = callUserService(new ModulatedInput<>(ImmutableList.copyOf(ims), commonInputs));
       results.forEach((im, future) -> returnValue.put(mapping.get(im), future));
     }
     return ImmutableMap.copyOf(returnValue);
   }
 
   @Override
-  public InputsConverter<TestUserServiceInputsNeedingModulation, TestUserServiceCommonInputs> getInputsConvertor() {
+  public InputsConverter<TestUserServiceInputsNeedingModulation, TestUserServiceCommonInputs>
+      getInputsConvertor() {
     return CONVERTER;
   }
 }

@@ -37,10 +37,10 @@ public final class FriendsServiceVajramImpl extends FriendsServiceVajram {
     List<FriendsServiceInputsNeedingModulation> ims = new ArrayList<>();
     FriendsServiceCommonInputs commonInputs = null;
     for (Inputs inputs : inputsList) {
-      UnmodulatedInput<FriendsServiceInputsNeedingModulation, FriendsServiceCommonInputs> allInputs =
-          getInputsConvertor().apply(inputs);
+      UnmodulatedInput<FriendsServiceInputsNeedingModulation, FriendsServiceCommonInputs>
+          allInputs = getInputsConvertor().apply(inputs);
       commonInputs = allInputs.commonInputs();
-        FriendsServiceInputsNeedingModulation im = allInputs.inputsNeedingModulation();
+      FriendsServiceInputsNeedingModulation im = allInputs.inputsNeedingModulation();
       mapping.put(im, inputs);
       ims.add(im);
     }
@@ -55,7 +55,8 @@ public final class FriendsServiceVajramImpl extends FriendsServiceVajram {
   }
 
   @Override
-  public InputsConverter<FriendsServiceInputsNeedingModulation, FriendsServiceCommonInputs> getInputsConvertor() {
+  public InputsConverter<FriendsServiceInputsNeedingModulation, FriendsServiceCommonInputs>
+      getInputsConvertor() {
     return CONVERTER;
   }
 }

@@ -20,7 +20,6 @@ import java.util.concurrent.atomic.LongAdder;
 @VajramDef(TestUserServiceVajram.ID)
 public abstract class TestUserServiceVajram extends IOVajram<TestUserInfo> {
 
-
   public static final String ID = "testUserServiceVajram";
   public static final String USER_ID = "user_id";
 
@@ -31,8 +30,10 @@ public abstract class TestUserServiceVajram extends IOVajram<TestUserInfo> {
   public static final Set<TestUserServiceRequest> REQUESTS = new LinkedHashSet<>();
 
   @VajramLogic
-  public ImmutableMap<TestUserServiceInputsNeedingModulation, CompletableFuture<TestUserInfo>> callUserService(
-      ModulatedInput<TestUserServiceInputsNeedingModulation, TestUserServiceCommonInputs> modulatedRequest) {
+  public ImmutableMap<TestUserServiceInputsNeedingModulation, CompletableFuture<TestUserInfo>>
+      callUserService(
+          ModulatedInput<TestUserServiceInputsNeedingModulation, TestUserServiceCommonInputs>
+              modulatedRequest) {
     CALL_COUNTER.increment();
     modulatedRequest.inputsNeedingModulation().stream()
         .map(im -> TestUserServiceRequest.builder().userId(im.userId()).build())

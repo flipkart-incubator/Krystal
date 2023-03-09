@@ -23,8 +23,10 @@ public abstract class FriendsServiceVajram extends IOVajram<Set<String>> {
 
   @VajramLogic
   public ImmutableMap<FriendsServiceInputsNeedingModulation, CompletableFuture<Set<String>>> call(
-      ModulatedInput<FriendsServiceInputsNeedingModulation, FriendsServiceCommonInputs> modulatedInput) {
-    Map<FriendsServiceInputsNeedingModulation, CompletableFuture<Set<String>>> result = new LinkedHashMap<>();
+      ModulatedInput<FriendsServiceInputsNeedingModulation, FriendsServiceCommonInputs>
+          modulatedInput) {
+    Map<FriendsServiceInputsNeedingModulation, CompletableFuture<Set<String>>> result =
+        new LinkedHashMap<>();
     for (FriendsServiceInputsNeedingModulation inputsNeedingModulation :
         modulatedInput.inputsNeedingModulation()) {
       String userId = inputsNeedingModulation.userId();

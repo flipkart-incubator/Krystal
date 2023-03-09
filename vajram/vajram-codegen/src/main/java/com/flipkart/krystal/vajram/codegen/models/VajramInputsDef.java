@@ -26,7 +26,6 @@ public record VajramInputsDef(
   @JsonCreator
   @ConstructorProperties({"inputs", "dependencies"})
   public VajramInputsDef(
-
       @JsonSetter(nulls = Nulls.AS_EMPTY) List<InputDef> inputs,
       @JsonSetter(nulls = Nulls.AS_EMPTY) List<DependencyDef> dependencies) {
     this(ImmutableList.copyOf(inputs), ImmutableList.copyOf(dependencies));
@@ -46,10 +45,10 @@ public record VajramInputsDef(
         .collect(toImmutableList());
   }
 
-    public static record InputFilePath(Path srcDir, Path relativeFilePath) {
+  public static record InputFilePath(Path srcDir, Path relativeFilePath) {
 
-      public Path absolutePath() {
-        return srcDir.resolve(relativeFilePath);
-      }
+    public Path absolutePath() {
+      return srcDir.resolve(relativeFilePath);
     }
+  }
 }

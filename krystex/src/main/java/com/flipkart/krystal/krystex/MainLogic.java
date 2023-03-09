@@ -6,6 +6,6 @@ import com.google.common.collect.ImmutableMap;
 import java.util.concurrent.CompletableFuture;
 
 @FunctionalInterface
-public non-sealed interface MainLogic<T> extends Logic{
+public non-sealed interface MainLogic<T> extends Logic {
   ImmutableMap<Inputs, CompletableFuture<T>> execute(ImmutableList<Inputs> inputs);
 }

@@ -34,8 +34,7 @@ public final class NodeDefinitionRegistry {
 
   public NodeDefinition newNodeDefinition(
       String nodeId, NodeLogicId logicNode, ImmutableMap<String, NodeId> dependencyNodes) {
-    return newNodeDefinition(
-        nodeId, logicNode, dependencyNodes, ImmutableList.of());
+    return newNodeDefinition(nodeId, logicNode, dependencyNodes, ImmutableList.of());
   }
 
   public NodeDefinition newNodeDefinition(
@@ -45,11 +44,7 @@ public final class NodeDefinitionRegistry {
       ImmutableList<ResolverDefinition> resolverDefinitions) {
     NodeDefinition nodeDefinition =
         new NodeDefinition(
-            new NodeId(nodeId),
-            logicNode,
-            dependencyNodes,
-            resolverDefinitions,
-            this);
+            new NodeId(nodeId), logicNode, dependencyNodes, resolverDefinitions, this);
     nodeDefinitions.put(nodeDefinition.nodeId(), nodeDefinition);
     return nodeDefinition;
   }

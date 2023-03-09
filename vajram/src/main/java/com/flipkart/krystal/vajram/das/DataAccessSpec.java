@@ -15,5 +15,4 @@ public sealed interface DataAccessSpec permits VajramID, GraphQl {
    * extra data.
    */
   <T> T adapt(Collection<T> dataObjects);
-
 }

@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.das;
 
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import java.util.Collection;
