@@ -1,7 +1,7 @@
-package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice;
+package com.flipkart.krystal.vajramexecutor.krystex.testVajrams.friendsservice;
 
 import static com.flipkart.krystal.datatypes.StringType.string;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceInputUtil.CONVERTER;
+import static com.flipkart.krystal.vajramexecutor.krystex.testVajrams.friendsservice.FriendsServiceInputUtil.CONVERTER;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.vajram.inputs.Input;
@@ -9,8 +9,8 @@ import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajram.modulation.UnmodulatedInput;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceInputUtil.FriendsServiceCommonInputs;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceInputUtil.FriendsServiceInputsNeedingModulation;
+import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.friendsservice.FriendsServiceInputUtil.FriendsServiceCommonInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.friendsservice.FriendsServiceInputUtil.FriendsServiceInputsNeedingModulation;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;

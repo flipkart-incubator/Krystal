@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello;
+package com.flipkart.krystal.vajramexecutor.krystex.testVajrams.hello;
 
 import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static com.flipkart.krystal.datatypes.StringType.string;
@@ -8,7 +8,7 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloInputUtil.HelloAllInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.hello.HelloInputUtil.HelloAllInputs;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 

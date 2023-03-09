@@ -1,15 +1,15 @@
-package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello;
+package com.flipkart.krystal.vajramexecutor.krystex.testVajrams.multihello;
 
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends.ID;
+import static com.flipkart.krystal.vajramexecutor.krystex.testVajrams.multihello.MultiHelloFriends.ID;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.BindFrom;
 import com.flipkart.krystal.vajram.inputs.Resolve;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsVajram;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsInputUtil.MultiHelloFriendsAllInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.hellofriends.HelloFriendsRequest;
+import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.hellofriends.HelloFriendsVajram;
+import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.multihello.MultiHelloFriendsInputUtil.MultiHelloFriendsAllInputs;
 import java.util.ArrayList;
 import java.util.List;
 

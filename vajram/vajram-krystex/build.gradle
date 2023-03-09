@@ -57,6 +57,12 @@ publishing {
     }
 }
 
+configurations {
+    provided
+    testRuntime.extendsFrom(provided)
+}
+
 test {
     useJUnitPlatform()
+    classpath += sourceSets.main.compileClasspath + sourceSets.main.output
 }

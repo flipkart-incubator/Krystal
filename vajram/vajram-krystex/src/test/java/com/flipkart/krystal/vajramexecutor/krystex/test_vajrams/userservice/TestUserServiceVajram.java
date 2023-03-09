@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice;
+package com.flipkart.krystal.vajramexecutor.krystex.testVajrams.userservice;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
@@ -8,8 +8,8 @@ import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceInputUtil.TestUserServiceCommonInputs;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceInputUtil.TestUserServiceInputsNeedingModulation;
+import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.userservice.TestUserServiceInputUtil.TestUserServiceCommonInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.userservice.TestUserServiceInputUtil.TestUserServiceInputsNeedingModulation;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashSet;
 import java.util.Set;

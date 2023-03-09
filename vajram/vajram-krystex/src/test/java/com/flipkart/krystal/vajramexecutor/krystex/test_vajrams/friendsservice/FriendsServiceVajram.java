@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice;
+package com.flipkart.krystal.vajramexecutor.krystex.testVajrams.friendsservice;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
@@ -6,8 +6,8 @@ import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceInputUtil.FriendsServiceCommonInputs;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceInputUtil.FriendsServiceInputsNeedingModulation;
+import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.friendsservice.FriendsServiceInputUtil.FriendsServiceCommonInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.friendsservice.FriendsServiceInputUtil.FriendsServiceInputsNeedingModulation;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;

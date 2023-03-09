@@ -12,14 +12,16 @@ class VajramPlugin implements Plugin<Project> {
         String testGeneratedSrcDir = project.buildDir.getPath() + '/generated/sources/vajrams/test/java/'
 
         project.sourceSets {
+//            main.java.srcDirs = ['src/main/java', mainGeneratedSrcDir]
+//            test.java.srcDirs = ['src/test/java', testGeneratedSrcDir]
             main {
                 java {
-                    srcDir mainGeneratedSrcDir
+                    srcDirs = ['src/main/java', mainGeneratedSrcDir]
                 }
             }
             test {
                 java {
-                    srcDir testGeneratedSrcDir
+                    srcDirs = ['src/test/java', testGeneratedSrcDir]
                 }
             }
         }
@@ -78,17 +80,16 @@ class VajramPlugin implements Plugin<Project> {
             dependsOn it.project.tasks.testCodeGenVajramModels
             //Compile the generatedCode
             source project.sourceSets.test.allSource.srcDirs
+            print "Test classpath " + project.configurations.testCompileClasspath
             classpath = project.configurations.testCompileClasspath
             destinationDirectory = project.tasks.compileTestJava.destinationDirectory
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileTestJava.options.annotationProcessorPath
         }
 
-        project.tasks.compileTestJava.dependsOn 'testCodeGenVajramModels'
-
         project.tasks.register('testCodeGenVajramImpl') {
             group = 'krystal'
-            dependsOn it.project.tasks.testCodeGenVajramModels
+            dependsOn it.project.tasks.testCompileVajramModels
             doLast {
                 VajramModelsCodeGen.codeGenVajramImpl(
                         project.sourceSets.test.java.srcDirs,
@@ -96,5 +97,7 @@ class VajramPlugin implements Plugin<Project> {
                         testGeneratedSrcDir)
             }
         }
+
+        project.tasks.compileTestJava.dependsOn 'testCodeGenVajramImpl'
     }
 }

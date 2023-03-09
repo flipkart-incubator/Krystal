@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello;
+package com.flipkart.krystal.vajramexecutor.krystex.testVajrams.multihello;
 
 import static com.flipkart.krystal.datatypes.ListType.list;
 import static com.flipkart.krystal.datatypes.StringType.string;
@@ -14,9 +14,9 @@ import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsVajram;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsInputUtil.MultiHelloFriendsAllInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.hellofriends.HelloFriendsRequest;
+import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.hellofriends.HelloFriendsVajram;
+import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.multihello.MultiHelloFriendsInputUtil.MultiHelloFriendsAllInputs;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
