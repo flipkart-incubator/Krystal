@@ -92,7 +92,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Primitives;
 import com.google.common.reflect.TypeToken;
-import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
@@ -128,9 +127,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
-import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 @SuppressWarnings("rawtypes")
@@ -1214,9 +1211,10 @@ public class VajramCodeGenerator {
             .addModifiers(PUBLIC)
             .addAnnotation(Override.class)
             .addStatement(
-                "$T builder = new $T<>()",
+                "$T builder = new $T<>($L)",
                 new TypeToken<Map<String, InputValue<Object>>>() {}.getType(),
-                new TypeToken<HashMap>() {}.getType());
+                new TypeToken<HashMap>() {}.getType(),
+                inputDefs.size());
     Builder fromInputValues =
         methodBuilder("from")
             .returns(enclosingClass)
@@ -1320,11 +1318,10 @@ public class VajramCodeGenerator {
 
   private String codeGenSimpleInputUtil() {
     TypeSpec.Builder inputUtilClass = createInputUtilClass();
-    TypeSpec.Builder allInputsClass =
-        classBuilder(getAllInputsClassname(vajramName))
-            .addModifiers(FINAL, STATIC)
-            .addAnnotations(recordAnnotations());
-
+    String className = getAllInputsClassname(vajramName);
+    TypeSpec.Builder allInputsClass = classBuilder(className).addModifiers(FINAL, STATIC);
+    //            .addAnnotations(recordAnnotations());
+    List<FieldTypeName> fieldsList = new ArrayList<>();
     VajramInputsDef vajramInputsDef = vajramInputFile.vajramInputsDef();
     vajramInputsDef
         .inputs()
@@ -1334,11 +1331,26 @@ public class VajramCodeGenerator {
               TypeAndName javaType = getTypeName(inputDef.toInputDefinition().type());
               allInputsClass.addField(javaType.typeName(), inputJavaName, PRIVATE, FINAL);
               allInputsClass.addMethod(getterCodeForInput(inputDef, inputJavaName, javaType));
+              fieldsList.add(new FieldTypeName(javaType.typeName(), inputJavaName));
             });
 
     vajramInputsDef
         .dependencies()
-        .forEach(dependencyDef -> addDependencyOutputs(allInputsClass, dependencyDef));
+        .forEach(
+            dependencyDef -> {
+              Optional<TypeName> javaType = getDependencyOutputsType(allInputsClass, dependencyDef);
+              javaType.ifPresent(
+                  type -> {
+                    String inputJavaName = toJavaName(dependencyDef.getName());
+                    allInputsClass.addField(type, inputJavaName, PRIVATE, FINAL);
+                    allInputsClass.addMethod(
+                        getterCodeForInput(dependencyDef, inputJavaName, new TypeAndName(type)));
+                    fieldsList.add(new FieldTypeName(type, inputJavaName));
+                  });
+            });
+
+    // generate all args constructor and add to class
+    generateConstructor(className, fieldsList).ifPresent(allInputsClass::addMethod);
 
     StringWriter writer = new StringWriter();
     try {
@@ -1351,7 +1363,26 @@ public class VajramCodeGenerator {
     return writer.toString();
   }
 
-  private static void addDependencyOutputs(
+  private Optional<MethodSpec> generateConstructor(
+      String className, List<FieldTypeName> fieldsList) {
+    // by default no args constructor is created so no need to generate
+    if (fieldsList.isEmpty()) {
+      return Optional.empty();
+    }
+    MethodSpec.Builder constructor = constructorBuilder();
+    fieldsList.forEach(
+        fieldTypeName -> {
+          constructor.addParameter(fieldTypeName.typeName(), fieldTypeName.name());
+          constructor.addCode(
+              CodeBlock.builder()
+                  .addStatement("this.$L = $L", fieldTypeName.name(), fieldTypeName.name())
+                  .build());
+        });
+
+    return Optional.of(constructor.build());
+  }
+
+  private static Optional<TypeName> getDependencyOutputsType(
       TypeSpec.Builder enclosingClass, DependencyDef dependencyDef) {
     String inputJavaName = toJavaName(dependencyDef.getName());
     if (dependencyDef instanceof VajramDependencyDef vajramDepSpec) {
@@ -1365,10 +1396,9 @@ public class VajramCodeGenerator {
               ClassName.get(DependencyResponse.class),
               ClassName.get(depPackageName, depRequestClass),
               getTypeName(vajramDepSpec.toDataType()).typeName());
-      enclosingClass.addField(javaType, inputJavaName, PRIVATE, FINAL);
-      enclosingClass.addMethod(
-          getterCodeForInput(dependencyDef, inputJavaName, new TypeAndName(javaType)));
+      return Optional.of(javaType);
     }
+    return Optional.empty();
   }
 
   private String codeGenModulatedInputUtil() {
@@ -1386,7 +1416,6 @@ public class VajramCodeGenerator {
           classBuilder(imClassName)
               .addModifiers(STATIC)
               .addSuperinterface(InputValuesAdaptor.class)
-              .addAnnotations(recordAnnotations())
               .addMethod(imFromAndTo.to())
               .addMethod(imFromAndTo.from());
 
@@ -1401,11 +1430,12 @@ public class VajramCodeGenerator {
           classBuilder(ciClassName)
               .addModifiers(STATIC)
               .addSuperinterface(InputValuesAdaptor.class)
-              .addAnnotations(recordAnnotations())
               .addMethod(ciFromAndTo.to())
               .addMethod(ciFromAndTo.from());
       ClassName imType = ClassName.get(packageName, getInputUtilClassName(vajramName), imClassName);
       ClassName ciType = ClassName.get(packageName, getInputUtilClassName(vajramName), ciClassName);
+      List<FieldTypeName> ciFieldsList = new ArrayList<>();
+      List<FieldTypeName> imFieldsList = new ArrayList<>();
       vajramInputsDef
           .inputs()
           .forEach(
@@ -1417,14 +1447,32 @@ public class VajramCodeGenerator {
                       javaType.typeName(), inputJavaName, PRIVATE, FINAL);
                   inputsNeedingModulation.addMethod(
                       getterCodeForInput(inputDef, inputJavaName, javaType));
+                  imFieldsList.add(new FieldTypeName(javaType.typeName(), inputJavaName));
                 } else {
                   commonInputs.addField(javaType.typeName(), inputJavaName, PRIVATE, FINAL);
                   commonInputs.addMethod(getterCodeForInput(inputDef, inputJavaName, javaType));
+                  ciFieldsList.add(new FieldTypeName(javaType.typeName(), inputJavaName));
                 }
               });
       vajramInputsDef
           .dependencies()
-          .forEach(dependencyDef -> addDependencyOutputs(commonInputs, dependencyDef));
+          .forEach(
+              dependencyDef -> {
+                Optional<TypeName> javaTypeName =
+                    getDependencyOutputsType(commonInputs, dependencyDef);
+                javaTypeName.ifPresent(
+                    type -> {
+                      String inputJavaName = toJavaName(dependencyDef.getName());
+                      commonInputs.addField(type, inputJavaName, PRIVATE, FINAL);
+                      commonInputs.addMethod(
+                          getterCodeForInput(dependencyDef, inputJavaName, new TypeAndName(type)));
+                      ciFieldsList.add(new FieldTypeName(type, inputJavaName));
+                    });
+              });
+      // create constructors
+      generateConstructor(ciClassName, ciFieldsList).ifPresent(commonInputs::addMethod);
+      generateConstructor(imClassName, imFieldsList).ifPresent(inputsNeedingModulation::addMethod);
+
       TypeName parameterizedTypeName =
           ParameterizedTypeName.get(ClassName.get(InputsConverter.class), imType, ciType);
       CodeBlock.Builder initializer =
@@ -1466,14 +1514,6 @@ public class VajramCodeGenerator {
     return writer.toString();
   }
 
-  private static List<AnnotationSpec> recordAnnotations() {
-    return annotations(EqualsAndHashCode.class, AllArgsConstructor.class, ToString.class);
-  }
-
-  private static List<AnnotationSpec> annotations(Class<?>... annotations) {
-    return stream(annotations).map(aClass -> AnnotationSpec.builder(aClass).build()).toList();
-  }
-
   private TypeSpec.Builder createInputUtilClass() {
     return classBuilder(getInputUtilClassName(vajramName))
         .addModifiers(FINAL)
@@ -1511,4 +1551,6 @@ public class VajramCodeGenerator {
       this(typeName, Optional.empty());
     }
   }
+
+  private record FieldTypeName(TypeName typeName, String name) {}
 }

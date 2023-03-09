@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajramexecutor.krystex.testVajrams.hellofriendsv2;
+package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2;
 
 import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static com.flipkart.krystal.datatypes.StringType.string;
@@ -14,12 +14,12 @@ import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
-import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.friendsservice.FriendsServiceRequest;
-import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.friendsservice.FriendsServiceVajram;
-import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.hellofriendsv2.HelloFriendsV2InputUtil.HelloFriendsV2AllInputs;
-import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.userservice.TestUserInfo;
-import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.userservice.TestUserServiceRequest;
-import com.flipkart.krystal.vajramexecutor.krystex.testVajrams.userservice.TestUserServiceVajram;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceRequest;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceVajram;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2InputUtil.HelloFriendsV2AllInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceVajram;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
