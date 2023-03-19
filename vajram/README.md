@@ -5,16 +5,13 @@ The Vajram Programming Model
 
 The Vajram Programming model is a way to design and write synchronous scatter-gather-like business
 workflows. Apart from the general goals of the Krystal Project, the vajram programming model is
-designed keeping in mind the
-following goals:
+designed keeping in mind the following goals:
 
-1. Easy self-serve programming: The Vajram programming model is designed to allow for multiple
+1. Easy self-serve development: The Vajram programming model is designed to allow for multiple
    developers from different disconnected teams to code, test and deploy business logic for which
-   they are the
-   domain expert in their own
-   CVS repo but deployed into a common runtime environment at the same time minimizing chances of
-   introducing regressions
-   in functionality and performance of the applications in which the code is being deployed.
+   they are the domain expert in their own CVS repo but deployed into a common runtime environment
+   at the same time minimizing chances of introducing regressions in functionality and performance
+   of the applications in which the code is being deployed.
 2. Cross-feature and Cross-application re-usability: The same piece of business logic can be reused
    for different
    requirements within an application and also across different application runtimes.
@@ -22,7 +19,7 @@ following goals:
    code generation tools to generative most of the mundane spaghetti logic which a developer needs
    to write to conform the to the platform interfaces.
 4. Focus on business logic: Every line of code written by a developer should strictly only have the
-   intent of expressing some functional domain logic.For example, application developers should not
+   intent of expressing some functional domain logic. For example, application developers should not
    write any logic just intended to massage data structures to conform to the platform
    requirements. Instead, the platform should have the intelligence to understand the intent of the
    business logic written by the developer, and mould around that intent seamlessly
@@ -31,139 +28,63 @@ following goals:
 
 ### Vajram
 
-The basic building block of a Krystal is a Vajram. Each vajram is responsible for one piece of
-well-defined, reusable
-business logic (possibly encapsulating a network call to an external system). Each Vajram is
-identified by its
-identifier (VajramID). This identifier is globally unique and can be used as-is by adding it as a
-dependency of another
-Vajram. This means that the business logic encapsulated within a Vajram need not be local to an
-application.. It can
-theoretically be used within any runtime which supports the Krystal programming model. For example,
-Krystex.
+The basic building block of a Krystal is a Vajram. A vajram is a function-like unit of work (
+actually a set of functions) that act as a unit of
+[structured concurrency](https://vorpus.org/blog/notes-on-structured-concurrency-or-go-statement-considered-harmful/)
+that allows developers to declare their functional requirement in a way that enables the Krystal
+platform to execute the complete request in the most optimal fashion.
+
+Each vajram is responsible for one well-defined, reusable business logic (possibly
+encapsulating a network call to an API). Each Vajram is identified by its identifier (
+VajramID). This identifier is globally unique and can be used as-is by adding it as a dependency of
+another Vajram.
 
 Every Vajram is defined by the following properties
 
-* Output Type (Schema): This is the datatype of the output of a Vajram. Each vajram has a single
-  output with a well
-  defined schema.
-  Example:
+* **Inputs**Each input has the following properties
+    * **Input Data Type**: Each input has a well-defined datatype. These data types can be one of
+      the
+      standard data types supported by the platform like string, integer, set etc. or can be a
+      custom java object.
+    * **Optionality**: Inputs can either be mandatory or optional (optional is the default). If a
+      null value is passed to a mandatory input of a vajram, the vajram is never executed, and an
+      exception is thrown instead.
+    * **Needs Modulations**: Indicates to the platform that the input needs to be modulated (
+      batched) before executing this vajram
+    * **Docmentation**: Describes this input
+* **Dependencies**:
+    * **Dependency Name**: Every dependency has a name unique within that vajram.
+    * **Dependency Vajram**: The vajram whose output is needed to execute this vajram.
+    * **Optionality**: Dependencies can either be mandatory or optional (optional is the default).
+      If a mandatory dependency fails, then this vajram automatically fails with the same exception.
+* **Output Type**: This is the datatype of the output of a Vajram. Each vajram has a single
+  output type.
+* **Dependency Resolvers**: The responsibility of providing values for the inputs of the
+  dependencies of a vajram lies with that vajram itself. This is done by functions called dependency
+  resolvers. For example, Let us say a Vajram V1 has two inputs `i1` and `i2`, and two
+  dependencies `D1` and `D2`.And let us say `D1` has one input `a`, and D2 has two inputs `b`
+  and `c`. Dependency resolvers in Vajram `V1` are pieces of business logic which take as input some
+  subset of the inputs and dependencies of `V1` and output values which are then bound to the inputs
+  of a dependency of `V1`. This means that every dependency of a vajram which has at least one input
+  needs a corresponding resolver defined by `V1`. The dependency `D2` of `V1` has 2 inputs, so the
+  resolver defined by `V1` for `D2` outputs a tuple, with value in the tuple corresponding to each
+  of the inputs of `D1`.
 
-    * Vajram1 can have output :
-      ```
-      Entity($ID){
-        name 
-        childEntity {
-          ID
-        }
-      }
-      ```
-    * Vajram2 can have output :
-      ```
-      Entity($ID){
-        childEntity{
-          owner
-        }
-      }
-      ```
-    * Vajram3 can have output :
+```
+// Pseudo-code
+vajram D1(inputs: a)
+vajram D2(inputs: b,c)
 
-      ```
-      Entity($PID){
-        type
-        children [{
-          type
-        }]
-      }
-      ```
-* List of inputs. Each input has the following properties
-
-* Input Resolution (Enum: STATIC, RUNTIME): Statically resolved inputs are other Vajrams whose
-  output is to be used as an input
-  to this Vajram - these Vajrams are dependencies of this Vajram. Runtime wired inputs on the other
-  hand are '
-  unresolved' at compile-time - meaning they do not refer to any other Vajram. These will be wired
-  dynamically at runtime
-  by the DAG executor. For example, let's say there is a Vajram which takes in a greeting Id and
-  account Id,
-  calls AccountService and then performs a transformation on the output of Account Service. In this
-  case, the productId
-  and listing Id are RUNTIME inputs, since they need to be resolved to this Vajram dynamically based
-  on the use case.
-  On the other hand the AccountService dependency is a STATIC input.
-* Input Type (Schema): Each input has a well-defined datatype. For static inputs, the datatype of
-  the input is implicit
-  and is the same as the data type of the output of the dependency Vajram. For runtime inputs, the
-  data type needs to be
-  explicitly defined.
-* Requirement Level (Enum: MANDATORY, OPTIONAL): If a mandatory input fails, then this Vajram fails.
-  If an optional
-  input fails this Vajram might still succeed.
-
-* Input Resolvers: While the runtime dependencies of this Vajram are wired by its dependents at
-  runtime, the
-  responsibility of binding the RUNTIME dependencies of its STATIC dependencies lies with this
-  Vajram. This is done by
-  input binders.
-
-* Example: Let us say a Vajram V1 has two RUNTIME inputs R1 and R2, and two STATIC inputs S1 and S2.
-  And let us say S1
-  has one RUNTIME input itself, and S2 has two RUNTIME inputs. Input binders of Vajram V1 are pieces
-  of business logic
-  which take as input some subset of the dependencies of V1 and output data which are then bound
-  to/wired into the
-  RUNTIME dependencies of a static dependency of V1. This means that every STATIC dependency of a
-  Vajram which has at
-  least one RUNTIME dependency needs a corresponding input binder defined by V1. The static
-  dependency S2 of V1 has 2
-  RUNTIME inputs, so the input binder defined by V1 corresponding to S2 outputs a list of tuples,
-  where each tuple
-  contains two values - one corresponding to each of the RUNTIME inputs of S1.
-
-* Input Modulation Strategy (For BlockingVajrams)
-
-  (Examples: LAZY, EAGER, BATCHED(batch_size), CUSTOM): Eager by default. Eager Vajrams are executed
-  the first instant
-  they are resolved as a dependency in the Krystal. Lazy Vajrams wait till the DAG has finished
-  resolving all
-  dependencies, and only then are executed. Batched Vajrams are executed when the batch\_size of
-  inputs is reached.
-  Custom
-  modulation strategy is used when more complicated requirements exist to merge multiple tuples of
-  inputs into a single
-  call. For example, if a Vajram takes as an input a parameter call "level" with possibilities LOW,
-  MEDIUM, HIGH and has
-  a
-  need to execute only the highest level among the requested levels, the Vajram can define a custom
-  input modulation
-  strategy which waits for the DAG to resolve all its dependencies and then squashes multiple tuples
-  of inputs
-  containing
-  LOW, MEDIUM and HIGH levels into a single input corresponding to the highest level.
-
-* ExecutionParameters:
-
-    * ExecutionIsolationMode(Enum: THREAD, SEMAPHORE, NONE): Vajrams performing blocking operations
-      are preferred to
-      return
-      a Promise/CompletableFuture, but if this is not possible, these Vajrams can specify the
-      parameters like threadpool
-      key
-      and threadpool size to indicate to Krystal that the node needs to be executed in its own
-      dedicated thread pool.
-    * ExecutionConcurrency(Integer): How many parallel instances of a Vajram can execute within the
-      runtime.
-    * CircuitBreakingStrategy: Optionally enabled circuit breaking behaviour.
+vajram V1(inputs: i1, i2)(dependencies: D1, D2)
+    resolve D1(a) using i1,i2 -> return i1 + i2;
+    resolve D2(b,c) using i1, D1 -> return i1 + D1;
+```
 
 * SDLC Metadata:
-
     * Owner Team:
     * POC Email:
     * Oncall alias:
-
 * Documentation: Describing in detail what this Vajram does, and how to use it - and how not to.
-  This documentation is
-  indexed and will facilitate the discovery of this Vajram across the company.
 * Permissions: RESTRICTED/PRIVATE - Vajram owners can decide who can declare a dependency on the
   Vajram.
 
@@ -176,31 +97,30 @@ import com.flipkart.userservice.UserServiceVajram;
  * Given a userId, this Vajram composes and returns a 'Hello!' greeting addressing the user by 
  * name (as declared by the user in their profile).
  */
-@VajramDef(ID) //Unique Id of this Vajram
+@VajramDef("com.flipkart.greetingVajram") //Unique Id of this Vajram
 //SyncVajram means that this Vajram does not directly perform any blocking operations.
-public class GreetingVajram extends SyncVajram {
+public abstract class GreetingVajram extends ComputeVajram {
 
-  public static final String ID = "com.flipkart.greetingVajram";
-
-  // Static declaration of all the inputs of this Vajram.
+  // Static declaration of all the inputs and dependencies of this Vajram.
   // This includes inputs provided by clients of this vajram, 
-  // design-time dependencies of this vajram, as well as
+  // dependencies of this vajram, as well as
   // objects like loggers and metrics collectors injected by the runtime.
   @Override
-  public List<VajramDependencyDefinition> getDependencyDefinitions() {
-    return Arrays.asList(
-        UnresolvedInput.builder()
+  public ImmutableList<VajramInputDefinition> getInputDefinitions() {
+    return ImmutableList.of(
+        Input.builder()
             // Local name for this input
             .name("user_id")
             // Data type - used for code generation
             .type(string())
             // If this input is not provided by the client, throw a build time error.
             .isMandatory()
+            .source(InputSources.CLIENT)
             .build(),
-        ResolvedDep.builder()
+        Dependency.builder()
             // Data type of resolved dependencies is inferred from the 
             // dependency Vajram's Definition
-            .name("user_info_fetch")
+            .name("user_info")
             // GreetingVajram needs UserService's Response to compose the Greeting
             // which it can get from the UserServiceVajram 
             // (which is an Async Vajram as it makes network calls.
@@ -208,18 +128,17 @@ public class GreetingVajram extends SyncVajram {
             // If this dependency fails, fail this Vajram
             .isMandatory()
             .build(),
-        UnresolvedInput.builder()
+        Input.builder()
             .name("log")
             .type(java(Logger.class))
             // This is not expected from clients
             // This is expected to be injected by the runtime
-            .resolvableBy(ResolutionSources.SESSION)
+            .source(InputSources.SESSION)
             .build(),
-        SideEffectDep.builder()
-            // Data type of resolved dependencies is inferred from the 
-            // dependency Vajram's Definition
-            .name("push_analytics_event")
+        Input.builder()
+            .name("event_sink")
             .dataAccessSpec(vajramID(AnalyticsEventSink.ID))
+            .source(InputSources.SESSION)
             .build());
   }
 
@@ -228,28 +147,24 @@ public class GreetingVajram extends SyncVajram {
   // this Vajram (unresolved inputs are resolved by client Vajrams).
   // In this case the UserServiceVajram needs a user Id to retrieve user info from User Service.
   // So it's GreetingVajram's responsibility to provide that input.
-  @Resolve(value = "user_info_fetch", inputs = UserServiceVajram.USER_ID)
-  public String userIdForUserService(@BindFrom("user_id") String userId) {
+  @Resolve(dep = "user_info_fetch", inputs = UserServiceVajram.USER_ID)
+  public static String userIdForUserService(@BindFrom("user_id") String userId) {
     return userId;
   }
 
   // This is the core business logic of this Vajram
-  // Sync vajrams can return any object. AsyncVajrams need to return {CompletableFuture}s
+  // Compute vajrams can return any object. 
+  // IOVajrams need to return {CompletableFuture}s
   @VajramLogic
-  public String call(String userId, UserInfo userInfo, Logger log, FdpEventSink fdpEventSink) {
+  public static String sayHello(
+      @BindFrom("user_id") String userId,
+      @BindFrom("user_info") UserInfo userInfo,
+      @BindFrom("log") Logger log,
+      @BindFrom("event_sink") AnalyticsEventSink eventSink) {
     String greeting = "Hello " + userInfo.name() + "! Hope you are doing well!";
     log.info("Greeting user " + userId);
-    fdpEventSink.pushEvent("event_type", new GreetingEvent(userId, greeting));
+    eventSink.pushEvent("event_type", new GreetingEvent(userId, greeting));
     return greeting;
-  }
-
-  @Resolve(value = "push_analytics_event")
-  public FdpEvent pushAnalyticsEvent(
-      @BindFrom("user_id") String userId,
-      @BindFrom("user_info_fetch") UserInfo userInfo,
-      //Side Effect dependency resolvers have access to output of this vajram
-      String greeting) {
-    return new AnalyticsEvent("UserGreetingEvent", new GreetingEvent(userId, greeting));
   }
 }
 ```
@@ -260,7 +175,97 @@ public class GreetingVajram extends SyncVajram {
 
 One of the core tenets of Krystal is to allow for a reactive execution environment to minimize usage
 of resources like
-threads. To achieve this Krystal
+threads. The vajram (and [krystex node](../krystex/README.md#node)) abstractions are designed to
+allow for this optimization. By requiring inputs and dependencies to be declared statically, the
+Krystal framework is able to load the complete call graph as a directed acyclic graph (DAG) *
+*without** having to execute any part of the code. This has multiple advantages:
+
+* **Catch non-functional regressions at build time**: Developers and code reviewers can reason
+  through the call graph characteristics of the application. IF a new dependency is introduced,
+  tooling can load the before and after states of the callgraph and summarize the changes in the
+  call graph and warn of potential changes in the performance characteristics of the applicaiton.
+  For example, let's say a resolver which consumes only the inputs of a vajram is changed to consume
+  a depenency value. This
+  in effect converts a parallel dependency to a sequential dependency - this can increase the
+  latency of an application. Static declarations make catching such changes very easy.
+* **Call graph optimization**: Because of these static declarations, the Krystal
+  runtime ([Krystex](../krystex)) is a bird's eye view of the state of a request execution and is
+  able to optimally achieve maximal concurrency as well as batching of IO calls. Doing this is
+  almost impossible without static input and dependency definitions.
+* Allow for extensive [code generation](#code-generation)
+
+### Code Generation
+
+The vajram library heavily used code generation as a mechanism to strike a balance between
+conflicing goals:
+
+* Provide developers a type safe mechanism to accss and manipulate domain specific data. Domain
+  specific data are objects like `User`, `Order` etc, which are functional entities and are
+  invisible to the Krystal platform.
+* Avoid the need for developers to write boilerplate code which transform generic framework
+  entites (like `Request`, `Response`, `Map`) and domain specific entities (like `User`, `Order`
+  etc.)
+* Avoid the need for the framework to use reflection to access domain entities and execute domain
+  logic allowing us to achieve maximum performance.
+
+The only way to fulfill all the above goals (short of creating a new programming language), is to
+use code generation in the language of choice (java). This allows developers to code a concise,
+type-safe manner where the code focuses on just expressing the functional requirement.
+
+The code generation corresponding to vajram happens during the build phase and is divided into two
+phases:
+
+* Model generation
+* Impl generation
+
+#### Model Generation
+
+Before the vajram code is compiled, the vajram framework (today via build plugins, in future via
+annotation
+processing) reads the input and dependency definitions and generates the following models:
+
+* `public` VajramRequest class encapsulates all the inputs which have `CLIENT` as one of their
+  input sources. This object is generated so that resolvers of client vajrams can create requests to
+  this vajram in a type safe unambiguous manner. If any inputs are optional, then their getters
+  return `java.lang.Optional`. This is the only public model class generated in this
+  phase. This class also contains a method to convert this functional entity into a framework
+  entity - this method is used by the framework.
+* `package-private` InputUtil class which contains
+    * If none of the inputs are modulated
+        * `package-private` AllInputs class which encapsulates the values of all the `CLIENT`
+          provided
+          inputs, `APPLICATION` provided inputs, and dependency outputs in a type safe manner. This
+          object is for use by the `@VajramLogic` function.
+    * If at least one of the inputs is modulated, the following classes are generated and are useful
+      for modulation by the [`InputModulator`](#inputmodulator) interface.
+        * `package-private` InputsNeedingModulation class which encapsulates the values of
+          those `CLIENT` provided inputs which have been marked as needing modulation.
+        * `package-private` CommonInputs class which encapsulates the values of those inputs which
+          do not need modulation as well as dependency values
+
+#### Impl generation
+
+After the compilation of the (abstract) vajram class written by the developer, a `final` `Impl`
+class is generated, which implements the abstract class. The Krystal framework calls methods in this
+class to execute the vajram. This class has all the boilerplate code which converts the framework
+objects into domain objects (without having to use reflection). All the resolvers and the vajram
+logic method are invoked from this Impl class. Because the impl class is generated post compilation
+by reflectively analysing the vajram class, a lot developer friendly faetures are implemented in the
+code generator to allow the developer to write their business logic in varying scenarious without
+having to confirm to any single spec. For example, let us say there is a vajram `V1` which has a
+resolver that is resolving a `string` input of a dependency :
+
+* The resolver can return a `String` indicating that value to be bound to that input
+* The resolver can return a `List<String>` or a `Set<String>` or any other `Iterable` of `String` to
+  indicate to the platform this dependency needs to be called as many times as there are strings in
+  the returned collection (this is called a dependency fanout).
+* The resolver can return a `DependencyCommand` object indicating to the framework that there are
+  scenarios where the dependency might have to be skipped altogether and so on...
+
+Irrespective of which of the above types are returned by the resolver function, the Impl class
+understands the intent of the developer and accordingly transforms these objects into relevant
+frameowrk objects. This `Impl` class is intended to be used only by the framework and not by any
+other developers.
 
 ### Input Modulation
 
@@ -387,22 +392,24 @@ Service calls and reduction in system performance.
 
 #### Design
 
-To solve the above problems, the Krystal Programming model introduces the concept called input
-modulation. Every Vajram
-which encapsulates potentially blocking logic, and can optimize its performance by merging/squashing
-multiple
-independent requests into a single request, can declare its input Modulator.
+##### InputModulator
 
-An input modulator is a data structure that presents these APIs:
+To solve the above problems, the Krystal Programming model introduces the concept called input
+modulation. Every Vajram which encapsulates potentially blocking logic, and can optimize its
+performance by merging/squashing multiple independent requests into a single request, can declare
+its inputs as needing modulation by the `InputModulator` component.
+
+An input modulator is a stateful object that presents these APIs:
 
 ```java
 interface InputModulator {
 
-  List<ModulatedRequest> add(Request request);
+  List<ModulatedRequest> add(
+      InputsNeedingModulation inputsNeedingModulation, CommonInputs commonInputs);
 
-  List<ModulatedRequest> modulate();
+  void modulate();
 
-  void register(Consumer<List<ModulatedRequest>> listener);
+  void onModulation(Consumer<List<ModulatedRequest>> listener);
 }
 ```
 
@@ -411,7 +418,7 @@ interface InputModulator {
 Whenever a client of Entity Service requests some data from Entity Service, the Krystal Runtime
 passes on this request
 object to the add method of the input modulator of Entity Service vajram which stores it in memory
-and in most cases
+and in most cases**
 returns an empty list. This is repeated for every other Vajram which depends on Entity Service.
 Every time a new request
 is added to the input modulator, it checks if the current set of requests has reached the max batch
@@ -548,4 +555,12 @@ granular dependencies
 allowing it to optimally batch and modulate requests without any additional effort from the
 application developer.
 
-## Comparison with other technologies
+# Comparison with other programming models
+
+## [CompletableFutures](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html) and [Promises](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_Promises)
+
+TBD
+
+## [Dagger Producers](https://dagger.dev/dev-guide/producers.html)
+
+TBD
