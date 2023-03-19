@@ -554,3 +554,13 @@ framework running on the reactive model, it is also works on the principle of st
 granular dependencies
 allowing it to optimally batch and modulate requests without any additional effort from the
 application developer.
+
+# Comparison with other programming models
+
+## [CompletableFutures](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html) and [Promises](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_Promises)
+
+TBD
+
+## [Dagger Producers](https://dagger.dev/dev-guide/producers.html)
+
+TBD
