@@ -1,0 +1,20 @@
+public UserInfo getUserInfo(mod string userId, app UserServiceClient svcClient)
+    permits sayHelloToFriends {
+  UserInfoBatch userInfoBatch = {
+      return svcClient.getUserInfo(
+          UserServiceClient.makeUserInfoRequest(
+              this._mod.stream()
+                  .map(_.userId())
+                  .toSet()
+          )
+      );
+  }
+  {
+    return userInfoBatch
+        .userInfos()
+        .stream()
+        .map({
+          return this.Req(_.userId(), svcClient), _;
+        });
+  }
+}
