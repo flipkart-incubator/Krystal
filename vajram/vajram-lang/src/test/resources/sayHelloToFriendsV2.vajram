@@ -1,0 +1,12 @@
+public string sayHelloToFriendsV2(string userId){
+  set<string> friendIds = getFriendIdsOfUser(userId = userId)
+  UserInfo* userInfos = getUserInfo(userId =* friendIds)
+  {
+    return "Hello Friends! %s"
+       .formatted(
+           userInfos.stream()
+               .filter(_.isPresent())
+               .map(_.userName())
+               .collect(joining(", ")));
+  }
+}

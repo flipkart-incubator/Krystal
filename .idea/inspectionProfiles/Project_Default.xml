@@ -369,8 +369,9 @@
     </inspection_tool>
     <inspection_tool class="LoggingConditionDisagreesWithLogStatement" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="LoopWithImplicitTerminationCondition" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="MagicCharacter" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="MagicNumber" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="MagicNumber" enabled="true" level="WARNING" enabled_by_default="true">
+      <scope name="Tests" level="WARNING" enabled="false" />
+    </inspection_tool>
     <inspection_tool class="MalformedSetUpTearDown" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="ManualArrayCopy" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="MapReplaceableByEnumMap" enabled="true" level="WARNING" enabled_by_default="true" />
@@ -613,7 +614,7 @@
     <inspection_tool class="SimplifiedTestNGAssertion" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SimplifyStreamApiCallChains" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="Singleton" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="SizeReplaceableByIsEmpty" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="SizeReplaceableByIsEmpty" enabled="true" level="WARNING" enabled_by_default="true" editorAttributes="WARNING_ATTRIBUTES" />
     <inspection_tool class="SleepWhileHoldingLock" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="SocketResource" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="insideTryAllowed" value="false" />
@@ -695,7 +696,9 @@
     <inspection_tool class="SystemExit" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="SystemGC" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="SystemGetenv" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="SystemOutErr" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="SystemOutErr" enabled="true" level="ERROR" enabled_by_default="true">
+      <scope name="Tests" level="ERROR" enabled="false" />
+    </inspection_tool>
     <inspection_tool class="SystemProperties" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="SystemSetSecurityManager" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="TestCaseInProductCode" enabled="true" level="WARNING" enabled_by_default="true" />
