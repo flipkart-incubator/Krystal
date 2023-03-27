@@ -32,12 +32,13 @@ public abstract class HelloFriendsV2Vajram extends ComputeVajram<String> {
   public static final String FRIEND_INFOS = "friend_infos";
 
   @Resolve(value = FRIEND_IDS, inputs = FriendsServiceVajram.USER_ID)
-  public String userIdForFriendService(@BindFrom(USER_ID) String userId) {
+  public static String userIdForFriendService(@BindFrom(USER_ID) String userId) {
+
     return userId;
   }
 
   @Resolve(value = FRIEND_INFOS, inputs = TestUserServiceVajram.USER_ID)
-  public Set<String> userIdsForUserService(
+  public static Set<String> userIdsForUserService(
       @BindFrom(FRIEND_IDS) DependencyResponse<FriendsServiceRequest, Set<String>> friendIds) {
     return friendIds.values().stream()
         .map(ValueOrError::value)

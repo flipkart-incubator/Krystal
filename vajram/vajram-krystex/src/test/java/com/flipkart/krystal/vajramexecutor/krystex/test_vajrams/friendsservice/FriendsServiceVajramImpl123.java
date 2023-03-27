@@ -22,15 +22,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-public final class FriendsServiceVajramImpl extends FriendsServiceVajram {
+public final class FriendsServiceVajramImpl123 {
 
-  @Override
   public ImmutableCollection<VajramInputDefinition> getInputDefinitions() {
     return ImmutableList.of(
-        Input.builder().name(USER_ID).type(string()).isMandatory().needsModulation().build());
+        Input.builder().name(FriendsServiceVajram.USER_ID).type(string()).isMandatory().needsModulation().build());
   }
 
-  @Override
   public ImmutableMap<Inputs, CompletableFuture<Set<String>>> execute(
       ImmutableList<Inputs> inputsList) {
     Map<FriendsServiceInputsNeedingModulation, Inputs> mapping = new HashMap<>();
@@ -48,13 +46,12 @@ public final class FriendsServiceVajramImpl extends FriendsServiceVajram {
 
     if (commonInputs != null) {
       ImmutableMap<FriendsServiceInputsNeedingModulation, CompletableFuture<Set<String>>> results =
-          call(new ModulatedInput<>(ImmutableList.copyOf(ims), commonInputs));
+          FriendsServiceVajram.call(new ModulatedInput<>(ImmutableList.copyOf(ims), commonInputs));
       results.forEach((im, future) -> returnValue.put(mapping.get(im), future));
     }
     return ImmutableMap.copyOf(returnValue);
   }
 
-  @Override
   public InputsConverter<FriendsServiceInputsNeedingModulation, FriendsServiceCommonInputs>
       getInputsConvertor() {
     return CONVERTER;

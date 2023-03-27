@@ -22,7 +22,7 @@ public abstract class FriendsServiceVajram extends IOVajram<Set<String>> {
   public static final String USER_ID = "user_id";
 
   @VajramLogic
-  public ImmutableMap<FriendsServiceInputsNeedingModulation, CompletableFuture<Set<String>>> call(
+  public static ImmutableMap<FriendsServiceInputsNeedingModulation, CompletableFuture<Set<String>>> call(
       ModulatedInput<FriendsServiceInputsNeedingModulation, FriendsServiceCommonInputs>
           modulatedInput) {
     Map<FriendsServiceInputsNeedingModulation, CompletableFuture<Set<String>>> result =
@@ -35,7 +35,7 @@ public abstract class FriendsServiceVajram extends IOVajram<Set<String>> {
     return ImmutableMap.copyOf(result);
   }
 
-  private Set<String> getFriends(String userId) {
+  private static Set<String> getFriends(String userId) {
     return ImmutableSet.of(userId + ":friend1", userId + ":friend2");
   }
 }

@@ -80,8 +80,7 @@ class VajramPlugin implements Plugin<Project> {
             dependsOn it.project.tasks.testCodeGenVajramModels
             //Compile the generatedCode
             source project.sourceSets.test.allSource.srcDirs
-            print "Test classpath " + project.configurations.testCompileClasspath
-            classpath = project.configurations.testCompileClasspath
+            classpath = project.tasks.compileTestJava.classpath
             destinationDirectory = project.tasks.compileTestJava.destinationDirectory
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileTestJava.options.annotationProcessorPath

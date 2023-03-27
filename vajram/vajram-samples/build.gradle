@@ -29,10 +29,10 @@ dependencies {
     testAnnotationProcessor 'org.projectlombok:lombok:1.18.24'
 }
 
-configurations {
-    provided
-    testRuntime.extendsFrom(provided)
-}
+//configurations {
+//    provided
+//    testRuntime.extendsFrom(provided)
+//}
 
 test {
     useJUnitPlatform()

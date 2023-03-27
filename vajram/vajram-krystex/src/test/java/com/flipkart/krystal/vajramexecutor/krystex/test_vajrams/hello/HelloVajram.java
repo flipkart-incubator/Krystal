@@ -14,7 +14,7 @@ public abstract class HelloVajram extends ComputeVajram<String> {
   public static final LongAdder CALL_COUNTER = new LongAdder();
 
   @VajramLogic
-  public String greet(HelloAllInputs inputs) {
+  public static String greet(HelloAllInputs inputs) {
     CALL_COUNTER.increment();
     return "%s! %s".formatted(inputs.greeting().orElse("Hello"), inputs.name());
   }

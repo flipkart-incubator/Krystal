@@ -33,7 +33,7 @@ public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
   }
 
   @VajramLogic
-  public String sayHellos(MultiHelloFriendsV2AllInputs allInputs) {
+  public static String sayHellos(MultiHelloFriendsV2AllInputs allInputs) {
     if (allInputs.skip().orElse(false)) {
       return "";
     }

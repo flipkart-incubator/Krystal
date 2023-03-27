@@ -17,27 +17,27 @@ public abstract class Formula extends ComputeVajram<Integer> {
   public static final String ID = "formula";
 
   @Resolve(value = "sum", inputs = "number_one")
-  public int adderNumberOne(@BindFrom("p") int p) {
+  public static int adderNumberOne(@BindFrom("p") int p) {
     return p;
   }
 
   @Resolve(value = "sum", inputs = "number_two")
-  public int adderNumberTwo(@BindFrom("q") int q) {
+  public static int adderNumberTwo(@BindFrom("q") int q) {
     return q;
   }
 
   @Resolve(value = "quotient", inputs = "number_one")
-  public int quotientNumberOne(@BindFrom("a") int a) {
+  public static int quotientNumberOne(@BindFrom("a") int a) {
     return a;
   }
 
   @Resolve(value = "quotient", inputs = "number_two")
-  public int quotientNumberTwo(@BindFrom("sum") int sum) {
+  public static int quotientNumberTwo(@BindFrom("sum") int sum) {
     return sum;
   }
 
   @VajramLogic
-  public int result(FormulaAllInputs allInputs) {
+  public static int result(FormulaAllInputs allInputs) {
     return allInputs
         .quotient()
         .get(

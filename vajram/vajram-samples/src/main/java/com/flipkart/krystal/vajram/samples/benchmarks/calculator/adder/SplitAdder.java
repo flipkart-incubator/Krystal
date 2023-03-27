@@ -20,7 +20,7 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
   public static final String ID = "splitAdder";
 
   @Resolve(value = "split_sum_1", inputs = "numbers")
-  public DependencyCommand<ArrayList<Integer>> numbersForSubSplitter1(
+  public static DependencyCommand<ArrayList<Integer>> numbersForSubSplitter1(
       @BindFrom("numbers") List<Integer> numbers) {
     if (numbers.size() < 2) {
       return skip("Skipping splitters as count of numbers is less than 2. Will call adder instead");
@@ -31,7 +31,7 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
   }
 
   @Resolve(value = "split_sum_2", inputs = "numbers")
-  public DependencyCommand<ArrayList<Integer>> numbersForSubSplitter2(
+  public static DependencyCommand<ArrayList<Integer>> numbersForSubSplitter2(
       @BindFrom("numbers") List<Integer> numbers) {
     if (numbers.size() < 2) {
       return skip("Skipping splitters as count of numbers is less than 2. Will call adder instead");
@@ -42,7 +42,8 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
   }
 
   @Resolve(value = "sum", inputs = "number_one")
-  public DependencyCommand<Integer> adderNumberOne(@BindFrom("numbers") List<Integer> numbers) {
+  public static DependencyCommand<Integer> adderNumberOne(
+      @BindFrom("numbers") List<Integer> numbers) {
     if (numbers.size() == 1) {
       return executeWith(numbers.get(0));
     } else if (numbers.isEmpty()) {
@@ -53,12 +54,12 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
   }
 
   @Resolve(value = "sum", inputs = "number_two")
-  public Integer adderNumberTwo(@BindFrom("numbers") List<Integer> numbers) {
+  public static Integer adderNumberTwo(@BindFrom("numbers") List<Integer> numbers) {
     return 0;
   }
 
   @VajramLogic
-  public Integer add(SplitAdderInputUtil.SplitAdderAllInputs allInputs) {
+  public static Integer add(SplitAdderInputUtil.SplitAdderAllInputs allInputs) {
     return Stream.of(
             allInputs.splitSum1().values().stream().map(voe -> voe.value().orElseThrow()),
             allInputs.splitSum2().values().stream().map(voe -> voe.value().orElseThrow()),

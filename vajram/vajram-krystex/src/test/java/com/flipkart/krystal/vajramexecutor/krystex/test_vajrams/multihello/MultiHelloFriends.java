@@ -18,17 +18,17 @@ public abstract class MultiHelloFriends extends ComputeVajram<String> {
   public static final String ID = "MultiHelloFriends";
 
   @Resolve(value = "hellos", inputs = HelloFriendsVajram.USER_ID)
-  public List<String> userIdsForHellos(@BindFrom("user_ids") List<String> userIds) {
+  public static List<String> userIdsForHellos(@BindFrom("user_ids") List<String> userIds) {
     return userIds;
   }
 
   @Resolve(value = "hellos", inputs = HelloFriendsVajram.NUMBER_OF_FRIENDS)
-  public List<Integer> numberOfFriendsForHellos(@BindFrom("user_ids") List<String> userIds) {
+  public static List<Integer> numberOfFriendsForHellos(@BindFrom("user_ids") List<String> userIds) {
     return List.of(1, 2);
   }
 
   @VajramLogic
-  public String sayHellos(MultiHelloFriendsAllInputs allInputs) {
+  public static String sayHellos(MultiHelloFriendsAllInputs allInputs) {
     ArrayList<String> userIds = allInputs.userIds();
     List<Integer> numberOfFriends = numberOfFriendsForHellos(userIds);
 
