@@ -1,0 +1,20 @@
+public set<string> getFriendsOfUser(mod string userId, FriendServiceClient svcClient){
+  FriendIdsBatch friendIdsBatch = {
+      return svcClient.getFriendsIds(
+          FriendServiceClient.makeFriendIdsRequest(
+              this._mod.stream()
+                  .map(_.userId())
+                  .toSet()
+          )
+      );
+    }
+
+  {
+      return friendIdsBatch
+          .friendsIds()
+          .stream()
+          .map({
+            return this.Req(_.userId(), svcClient), _.friendIds();
+          });
+    }
+}

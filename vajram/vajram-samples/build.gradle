@@ -6,17 +6,10 @@ plugins {
 group 'com.flipkart'
 version project.krystal_version
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven { url "https://clojars.org/repo" }
-}
-
 dependencies {
     implementation project(':krystal-common')
     implementation project(':vajram')
     implementation 'com.google.guava:guava:31.1-jre'
-
 
     compileOnly 'org.projectlombok:lombok:1.18.24'
     annotationProcessor 'org.projectlombok:lombok:1.18.24'
