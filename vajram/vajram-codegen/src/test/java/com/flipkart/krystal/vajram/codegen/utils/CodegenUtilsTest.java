@@ -69,48 +69,6 @@ public class CodegenUtilsTest {
     Assert.assertFalse(
         CodegenUtils.isDepResolverFanout(
             aClass, aClass.getMethod("method1"), EMPTY_INPUTS, Collections.emptyMap()));
-
-    //    final Type genericSuperclass = aClass.getGenericSuperclass();
-    //    final TypeName classGenericArgumentsType =
-    // CodegenUtils.getClassGenericArgumentsType(aClass);
-    //    Arrays.stream(aClass.getDeclaredMethods())
-    //        .forEach(
-    //            method -> {
-    //              final TypeName methodGenericReturnType =
-    // CodegenUtils.getMethodReturnType(method);
-    //              if (methodGenericReturnType.equals(classGenericArgumentsType)) {
-    //                System.out.println("no fanout");
-    //              } else if (methodGenericReturnType
-    //                  instanceof ParameterizedTypeName parameterizedTypeName) {
-    //                try {
-    //                  final Class<?> aClass1 =
-    //                      Class.forName(parameterizedTypeName.rawType.canonicalName());
-    //                  final TypeName typeName = parameterizedTypeName.typeArguments.get(0);
-    //                  if (DependencyCommand.MultiExecute.class.isAssignableFrom(aClass1)) {
-    //                    System.out.println("Fanout");
-    //                  } else if (typeName instanceof ParameterizedTypeName parameterizedTypeName1)
-    // {
-    //                    if (typeName.equals(classGenericArgumentsType)
-    //                        && Iterable.class.isAssignableFrom(aClass1)) {
-    //                      System.out.println("Fanout");
-    //                    }
-    //                  } else {
-    //                    final Class<?> typeClass =
-    //                        Class.forName(((ClassName) typeName).canonicalName());
-    //                    if (typeName.equals(classGenericArgumentsType)
-    //                        && Iterable.class.isAssignableFrom(aClass1)) {
-    //                      System.out.println("Fanout");
-    //                    } else if (VajramRequest.class.isAssignableFrom(typeClass)
-    //                        && Iterable.class.isAssignableFrom(aClass1)) {
-    //                      System.out.println("Fanout");
-    //                    }
-    //                  }
-    //
-    //                } catch (ClassNotFoundException e) {
-    //                  throw new RuntimeException(e);
-    //                }
-    //              }
-    //            });
   }
 
   @Test
