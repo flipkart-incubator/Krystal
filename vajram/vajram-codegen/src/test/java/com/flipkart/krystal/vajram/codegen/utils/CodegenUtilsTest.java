@@ -12,15 +12,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
 import lombok.SneakyThrows;
-import org.gradle.internal.impldep.org.junit.Assert;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
 
 public class CodegenUtilsTest {
 
   public static final String[] EMPTY_INPUTS = new String[0];
 
   @SneakyThrows
-  @Test
+  @org.junit.jupiter.api.Test
   public void testMethodReturnTypeComputation() throws Exception {
     Class<?> klass = Class.forName("java.util.HashMap");
     final Method getMethod = klass.getMethod("get", Object.class);
@@ -28,22 +27,19 @@ public class CodegenUtilsTest {
     final Method keySet = klass.getMethod("keySet");
     final Method entrySet = klass.getMethod("entrySet");
 
-    Assert.assertNotNull(CodegenUtils.getMethodReturnType(containsKey));
+    Assertions.assertNotNull(CodegenUtils.getMethodReturnType(containsKey));
     final TypeName methodReturnType1 = CodegenUtils.getMethodReturnType(keySet);
-    Assert.assertTrue(
-        ((ParameterizedTypeName) methodReturnType1).rawType.equals(ClassName.get(Set.class)));
+    Assertions.assertEquals(((ParameterizedTypeName) methodReturnType1).rawType,ClassName.get(Set.class));
     final TypeName methodReturnType = CodegenUtils.getMethodReturnType(entrySet);
-    Assert.assertTrue(
-        ((ParameterizedTypeName) methodReturnType).rawType.equals(ClassName.get(Set.class)));
+    Assertions.assertEquals(((ParameterizedTypeName) methodReturnType).rawType,ClassName.get(Set.class));
 
     final TypeName methodReturnType2 = CodegenUtils.getMethodReturnType(getMethod);
-    Assert.assertTrue(((ClassName) methodReturnType2).equals(ClassName.get(Object.class)));
+    Assertions.assertEquals(((ClassName) methodReturnType2),ClassName.get(Object.class));
 
     final TypeName classGenericArgumentsType =
         CodegenUtils.getClassGenericArgumentsType(ClassTest1.class);
-    Assert.assertTrue(
-        ((ParameterizedTypeName) classGenericArgumentsType)
-            .rawType.equals(ClassName.get(Set.class)));
+    Assertions.assertEquals(((ParameterizedTypeName) classGenericArgumentsType)
+            .rawType,ClassName.get(Set.class));
 
     //    final Type methodGenericType = CodegenUtils.getMethodGenericReturnType(g)
 
@@ -54,24 +50,24 @@ public class CodegenUtilsTest {
     }
   }
 
-  @Test
+  @org.junit.jupiter.api.Test
   public void testGenericTypeComparison() throws ClassNotFoundException, NoSuchMethodException {
     final Class<?> aClass = Class.forName("com.flipkart.krystal.vajram.codegen.utils.ClassTest1");
-    Assert.assertTrue(
+    Assertions.assertTrue(
         CodegenUtils.isDepResolverFanout(
             aClass, aClass.getMethod("fanoutMethod1"), EMPTY_INPUTS, Collections.emptyMap()));
-    Assert.assertTrue(
+    Assertions.assertTrue(
         CodegenUtils.isDepResolverFanout(
             aClass, aClass.getMethod("fanoutMethod2"), EMPTY_INPUTS, Collections.emptyMap()));
-    Assert.assertFalse(
+    Assertions.assertFalse(
         CodegenUtils.isDepResolverFanout(
             aClass, aClass.getMethod("fanoutMethod3"), EMPTY_INPUTS, Collections.emptyMap()));
-    Assert.assertFalse(
+    Assertions.assertFalse(
         CodegenUtils.isDepResolverFanout(
             aClass, aClass.getMethod("method1"), EMPTY_INPUTS, Collections.emptyMap()));
   }
 
-  @Test
+  @org.junit.jupiter.api.Test
   public void testFieldFetch() throws ClassNotFoundException {
     final Class<?> aClass = Class.forName("com.flipkart.krystal.vajram.codegen.utils.Test1$Test2");
     Arrays.stream(aClass.getDeclaredFields()).forEach(System.out::println);
