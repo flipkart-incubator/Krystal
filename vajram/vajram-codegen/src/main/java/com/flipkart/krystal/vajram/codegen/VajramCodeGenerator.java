@@ -793,7 +793,7 @@ public class VajramCodeGenerator {
                 .orElseThrow(
                     () ->
                         new VajramValidationException(
-                            "Vajram class missing in vajram input deifinition"));
+                            "Vajram class missing in vajram input definition"));
 
         String variableName = CodegenUtils.toJavaName(bindParamName);
         String[] splits = COMPILE.split(vajramClass);

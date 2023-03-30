@@ -55,7 +55,7 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
       return skipSingleExecute(
           "Cannot call adder for more than 2 inputs. ChainAdder will be called instead");
     } else if (numbers.size() == 1) {
-      return skipSingleExecute("Only 1 number provided. Skipping adder call");
+      return singleExecuteWith(0);
     } else {
       return singleExecuteWith(numbers.get(1));
     }
