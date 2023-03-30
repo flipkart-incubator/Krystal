@@ -17,7 +17,6 @@ import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsVajram;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsInputUtil.MultiHelloFriendsAllInputs;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -30,7 +29,7 @@ import java.util.function.Function;
 
 public final class MultiHelloFriendsImpl123 {
 
-//  @Override
+  //  @Override
   public ImmutableCollection<VajramInputDefinition> getInputDefinitions() {
     return ImmutableList.of(
         Input.builder().name("user_ids").type(list(string())).isMandatory().build(),
@@ -41,7 +40,7 @@ public final class MultiHelloFriendsImpl123 {
             .build());
   }
 
-//  @Override
+  //  @Override
   public DependencyCommand<Inputs> resolveInputOfDependency(
       String dependency, ImmutableSet<String> resolvableInputs, Inputs inputs) {
     if (dependency.equals("hellos")) {
@@ -54,7 +53,8 @@ public final class MultiHelloFriendsImpl123 {
       }
       if (Set.of("number_of_friends").equals(resolvableInputs)) {
         return DependencyCommand.multiExecuteWith(
-            MultiHelloFriends.numberOfFriendsForHellos(inputs.getInputValueOrThrow("user_ids")).stream()
+            MultiHelloFriends.numberOfFriendsForHellos(inputs.getInputValueOrThrow("user_ids"))
+                .stream()
                 .map(
                     s ->
                         new Inputs(ImmutableMap.of("number_of_friends", ValueOrError.withValue(s))))

@@ -22,9 +22,10 @@ public abstract class FriendsServiceVajram extends IOVajram<Set<String>> {
   public static final String USER_ID = "user_id";
 
   @VajramLogic
-  public static ImmutableMap<FriendsServiceInputsNeedingModulation, CompletableFuture<Set<String>>> call(
-      ModulatedInput<FriendsServiceInputsNeedingModulation, FriendsServiceCommonInputs>
-          modulatedInput) {
+  public static ImmutableMap<FriendsServiceInputsNeedingModulation, CompletableFuture<Set<String>>>
+      call(
+          ModulatedInput<FriendsServiceInputsNeedingModulation, FriendsServiceCommonInputs>
+              modulatedInput) {
     Map<FriendsServiceInputsNeedingModulation, CompletableFuture<Set<String>>> result =
         new LinkedHashMap<>();
     for (FriendsServiceInputsNeedingModulation inputsNeedingModulation :

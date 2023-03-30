@@ -15,14 +15,14 @@ import com.google.common.collect.ImmutableMap;
 // Auto generated and managed by Krystal
 public final class HelloVajramImpl123 {
 
-//  @Override
+  //  @Override
   public ImmutableList<VajramInputDefinition> getInputDefinitions() {
     return ImmutableList.of(
         Input.builder().name("name").type(string()).isMandatory().build(),
         Input.builder().name("greeting").type(string()).build());
   }
 
-//  @Override
+  //  @Override
   public ImmutableMap<Inputs, ValueOrError<String>> executeCompute(
       ImmutableList<Inputs> inputsList) {
     return inputsList.stream()

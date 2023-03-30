@@ -33,7 +33,6 @@ public abstract class HelloFriendsV2Vajram extends ComputeVajram<String> {
 
   @Resolve(value = FRIEND_IDS, inputs = FriendsServiceVajram.USER_ID)
   public static String userIdForFriendService(@BindFrom(USER_ID) String userId) {
-
     return userId;
   }
 

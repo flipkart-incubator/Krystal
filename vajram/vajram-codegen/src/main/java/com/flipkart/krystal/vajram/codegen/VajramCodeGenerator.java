@@ -9,7 +9,6 @@ import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getAllInput
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getCommonInputsClassname;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getInputModulationClassname;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getInputUtilClassName;
-import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getMethodGenericReturnType;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.ARRAY_LIST;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.COMMON_INPUT;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.COM_FUTURE;
@@ -36,11 +35,13 @@ import static com.flipkart.krystal.vajram.codegen.utils.Constants.METHOD_EXECUTE
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.METHOD_GET_INPUTS_CONVERTOR;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.METHOD_RESOLVE_INPUT_OF_DEPENDENCY;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.MOD_INPUT;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.MULTI_EXEC_CMD;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.REQUEST;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.RESOLVABLE_INPUTS;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.RESPONSE;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.RESPONSES_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.RETURN_TYPE;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.SINGLE_EXEC_CMD;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.UNMOD_INPUT;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.VAJRAM_LOGIC_METHOD;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.VAL_ERR;
@@ -79,6 +80,8 @@ import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.inputs.BindFrom;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
+import com.flipkart.krystal.vajram.inputs.DependencyCommand.MultiExecute;
+import com.flipkart.krystal.vajram.inputs.DependencyCommand.SingleExecute;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
@@ -187,6 +190,18 @@ public class VajramCodeGenerator {
     clsDeps.put(IM_MAP, ClassName.get(ImmutableMap.class));
     clsDeps.put(IM_LIST, ClassName.get(ImmutableList.class));
     clsDeps.put(DEP_COMMAND, ClassName.get(DependencyCommand.class));
+    clsDeps.put(
+        SINGLE_EXEC_CMD,
+        ClassName.get(
+            DependencyCommand.class.getPackageName(),
+            DependencyCommand.class.getSimpleName(),
+            SingleExecute.class.getSimpleName()));
+    clsDeps.put(
+        MULTI_EXEC_CMD,
+        ClassName.get(
+            DependencyCommand.class.getPackageName(),
+            DependencyCommand.class.getSimpleName(),
+            MultiExecute.class.getSimpleName()));
     clsDeps.put(FUNCTION, ClassName.get(Function.class));
     clsDeps.put(VAL_ERR, ClassName.get(ValueOrError.class));
     clsDeps.put(DEP_RESP, ClassName.get(DependencyResponse.class));
@@ -432,7 +447,7 @@ public class VajramCodeGenerator {
                             RESPONSE,
                             typeArgument,
                             VARIABLE,
-                            variableName,
+                            inputDef.name(),
                             DEP_RESPONSE,
                             depVariableName,
                             IM_MAP,
@@ -689,25 +704,45 @@ public class VajramCodeGenerator {
                                   "No input resolver found for " + bindParamName);
                             }));
               } else if (inputDefsMap.containsKey(bindParamName)) {
+                VajramInputDefinition inputDefinition = inputDefsMap.get(bindParamName);
                 String variable = toJavaName(bindParamName);
                 final TypeName parameterType =
                     CodegenUtils.getType(parameter.getParameterizedType());
-                ifBlockBuilder.add(
-                    CodeBlock.builder()
-                        .addStatement(
-                            "$T $L = $L.getInputValueOrThrow($S)",
-                            parameterType,
-                            variable,
-                            INPUTS,
-                            bindParamName)
-                        .build());
+                if (inputDefinition.isMandatory()) {
+                  ifBlockBuilder.add(
+                      CodeBlock.builder()
+                          .addStatement(
+                              "$T $L = $L.getInputValueOrThrow($S)",
+                              parameterType,
+                              variable,
+                              INPUTS,
+                              bindParamName)
+                          .build());
+                } else {
+                  if (Optional.class.isAssignableFrom(parameter.getType())) {
+                    ifBlockBuilder.add(
+                        CodeBlock.builder()
+                            .addStatement(
+                                "$T $L = $L.getInputValueOpt($S)",
+                                parameterType,
+                                variable,
+                                INPUTS,
+                                bindParamName)
+                            .build());
+                  } else {
+                    throw new VajramValidationException(
+                        String.format(
+                            "Optional input dependency %s must have type as Optional",
+                            bindParamName));
+                  }
+                }
                 paramToVariableMap.put(bindParamName, Primitives.wrap(parameter.getType()));
               } else {
                 throw new VajramValidationException("No input resolver found for " + bindParamName);
               }
             });
-    buildFinalResolvers(
-        method, inputs, paramToVariableMap, ifBlockBuilder, isParamFanoutDependency);
+    boolean isFanOut = isParamFanoutDependency || depFanoutMap.getOrDefault(resolve.value(), false);
+    buildFinalResolvers(method, inputs, paramToVariableMap, ifBlockBuilder, isFanOut);
     ifBlockBuilder.endControlFlow();
     return ifBlockBuilder;
   }
@@ -825,15 +860,14 @@ public class VajramCodeGenerator {
    * @param inputs Resolve inputs
    * @param paramToVariableMap All the input variables with key as bindParam name
    * @param ifBlockBuilder {@link CodeBlock.Builder}
-   * @param isParamFanoutDependency Variable mentioning if the resolved variable uses a fanout
-   *     dependency
+   * @param isFanOut Variable mentioning if the resolved variable uses a fanout dependency
    */
   private void buildFinalResolvers(
       Method method,
       String[] inputs,
       Map<String, Type> paramToVariableMap,
       CodeBlock.Builder ifBlockBuilder,
-      boolean isParamFanoutDependency) {
+      boolean isFanOut) {
 
     String variableName = "resolverResult";
     boolean controlFLowStarted = false;
@@ -853,28 +887,33 @@ public class VajramCodeGenerator {
     ifBlockBuilder.add(");\n");
 
     if (DependencyCommand.class.isAssignableFrom(method.getReturnType())) {
-      ifBlockBuilder.beginControlFlow(
-          "if($L instanceof $T.Skip<$T> skipCommand)",
-          variableName,
-          clsDeps.get(DEP_COMMAND),
-          getMethodGenericReturnType(method));
-      ifBlockBuilder.addStatement("\t return skipCommand.cast()");
+      ifBlockBuilder.beginControlFlow("if($L.shouldSkip())", variableName);
+      ifBlockBuilder.addStatement(
+          "\t return $T.skipSingleExecute($L.doc())", clsDeps.get(SINGLE_EXEC_CMD), variableName);
       ifBlockBuilder.add("} else {\n\t");
       controlFLowStarted = true;
     }
-
-    Class<?> klass = Primitives.wrap(method.getReturnType());
-    // Check how inputModulation needs to be handled
-    //  handle the collection first and internally check if it is an instance of
-    //  VajramRequest else handle like simple types
-    //  in inputs size is > 1 then the response type of method should be vajramrequest or
-    // iterable<VajramRequest>,
-    //  if input size==1, then we need to check the dependent vajram input type<I>
-    //  if its list return single Inputs with the list, else create list of Inputs
-
     // TODO : add missing validations if any (??)
-
-    if (isParamFanoutDependency) {
+    Class<?> klass = Primitives.wrap(method.getReturnType());
+    if (DependencyCommand.MultiExecute.class.isAssignableFrom(klass)) {
+      String code =
+          """
+              return $T.multiExecuteWith(
+                  $L.inputs().stream()
+                      .map(
+                          element ->
+                              new $T(
+                                  $T.of($S, $T.withValue(element))))
+                  .toList())""";
+      ifBlockBuilder.addStatement(
+          code,
+          clsDeps.get(DEP_COMMAND),
+          variableName,
+          clsDeps.get(INPUTS),
+          clsDeps.get(IM_MAP),
+          inputs[0],
+          clsDeps.get(VAL_ERR));
+    } else if (isFanOut) {
       if (Iterable.class.isAssignableFrom(klass)) {
         if (VajramRequest.class.isAssignableFrom(
             (Class<?>)
@@ -913,18 +952,16 @@ public class VajramCodeGenerator {
                 + vajramName
                 + ": Fanout resolvers must return an iterable");
       }
-      // TODO  : check how to handle this
-      //      else if (DependencyCommand.MultiExecute.class.isAssignableFrom(klass)) {
-      //
-      //      }
     } else {
       if (VajramRequest.class.isAssignableFrom(klass)) {
         ifBlockBuilder.addStatement(
-            "return $T.executeWith($L.toInputValues())", clsDeps.get(DEP_COMMAND), variableName);
-      } else if (DependencyCommand.class.isAssignableFrom(klass)) {
+            "return $T.singleExecuteWith($L.toInputValues())",
+            clsDeps.get(DEP_COMMAND),
+            variableName);
+      } else if (DependencyCommand.SingleExecute.class.isAssignableFrom(klass)) {
         ifBlockBuilder.addStatement(
             """
-          return $T.executeWith(new Inputs(
+          return $T.singleExecuteWith(new Inputs(
            $T.of($S, $T.withValue(
               $L.inputs().iterator().next().orElse(null)))))
         """,
@@ -936,7 +973,7 @@ public class VajramCodeGenerator {
 
       } else {
         ifBlockBuilder.addStatement(
-            "return $T.executeWith(new Inputs(\n " + "$T.of($S, $T.withValue($L))))",
+            "return $T.singleExecuteWith(new Inputs(\n " + "$T.of($S, $T.withValue($L))))",
             clsDeps.get(DEP_COMMAND),
             clsDeps.get(IM_MAP),
             inputs[0],
@@ -944,7 +981,9 @@ public class VajramCodeGenerator {
             variableName);
       }
       // TODO  : check how to handle this => if
-      // (DependencyCommand.Execute.class.isAssignableFrom(klass))
+      //      if(DependencyCommand.Execute.class.isAssignableFrom(klass)) {
+      //
+      //      }
     }
     if (controlFLowStarted) {
       ifBlockBuilder.endControlFlow();
@@ -1097,6 +1136,9 @@ public class VajramCodeGenerator {
     inputDefBuilder.add(")");
     if (input.isMandatory()) {
       inputDefBuilder.add(".isMandatory()");
+    }
+    if (input.needsModulation()) {
+      inputDefBuilder.add(".needsModulation()");
     }
     // last line
     inputDefBuilder.add(".build()");

@@ -30,7 +30,8 @@ public abstract class TestUserServiceVajram extends IOVajram<TestUserInfo> {
   public static final Set<TestUserServiceRequest> REQUESTS = new LinkedHashSet<>();
 
   @VajramLogic
-  public ImmutableMap<TestUserServiceInputsNeedingModulation, CompletableFuture<TestUserInfo>>
+  public static ImmutableMap<
+          TestUserServiceInputsNeedingModulation, CompletableFuture<TestUserInfo>>
       callUserService(
           ModulatedInput<TestUserServiceInputsNeedingModulation, TestUserServiceCommonInputs>
               modulatedRequest) {

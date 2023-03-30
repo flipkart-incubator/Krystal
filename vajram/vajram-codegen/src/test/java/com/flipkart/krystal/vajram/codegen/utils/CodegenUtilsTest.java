@@ -29,17 +29,19 @@ public class CodegenUtilsTest {
 
     Assertions.assertNotNull(CodegenUtils.getMethodReturnType(containsKey));
     final TypeName methodReturnType1 = CodegenUtils.getMethodReturnType(keySet);
-    Assertions.assertEquals(((ParameterizedTypeName) methodReturnType1).rawType,ClassName.get(Set.class));
+    Assertions.assertEquals(
+        ((ParameterizedTypeName) methodReturnType1).rawType, ClassName.get(Set.class));
     final TypeName methodReturnType = CodegenUtils.getMethodReturnType(entrySet);
-    Assertions.assertEquals(((ParameterizedTypeName) methodReturnType).rawType,ClassName.get(Set.class));
+    Assertions.assertEquals(
+        ((ParameterizedTypeName) methodReturnType).rawType, ClassName.get(Set.class));
 
     final TypeName methodReturnType2 = CodegenUtils.getMethodReturnType(getMethod);
-    Assertions.assertEquals(((ClassName) methodReturnType2),ClassName.get(Object.class));
+    Assertions.assertEquals(((ClassName) methodReturnType2), ClassName.get(Object.class));
 
     final TypeName classGenericArgumentsType =
         CodegenUtils.getClassGenericArgumentsType(ClassTest1.class);
-    Assertions.assertEquals(((ParameterizedTypeName) classGenericArgumentsType)
-            .rawType,ClassName.get(Set.class));
+    Assertions.assertEquals(
+        ((ParameterizedTypeName) classGenericArgumentsType).rawType, ClassName.get(Set.class));
 
     //    final Type methodGenericType = CodegenUtils.getMethodGenericReturnType(g)
 

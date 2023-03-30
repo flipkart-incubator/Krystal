@@ -131,6 +131,10 @@ public final class VajramModelsCodeGen {
   private void codeGenVajramImpl() throws Exception {
     ImmutableList<VajramInputFile> inputFiles = getInputDefinitions();
     ClassLoader systemClassLoader = VajramID.class.getClassLoader();
+    //    systemClassLoader.loadClass(
+    //        "com.flipkart.krystal.vajram.inputs.DependencyCommand$MultiExecute");
+    //    systemClassLoader.loadClass(
+    //        "com.flipkart.krystal.vajram.inputs.DependencyCommand$SingleExecute");
     URL[] cp = new URL[srcDirs.size() + 1];
     int i = 0;
     for (Path srcDir : srcDirs) {

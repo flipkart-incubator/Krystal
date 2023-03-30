@@ -18,6 +18,7 @@ import java.lang.reflect.Type;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -166,9 +167,20 @@ public final class CodegenUtils {
     final TypeName methodGenericReturnType = CodegenUtils.getMethodReturnType(resolverMethod);
     if (methodGenericReturnType.equals(classGenericArgumentsType)) {
       return false;
-    } else if (methodGenericReturnType instanceof ParameterizedTypeName parameterizedTypeName) {
+    }
+    // Method is of parameterized type.
+    else if (methodGenericReturnType instanceof ParameterizedTypeName parameterizedTypeName) {
       try {
-        final Class<?> methodRawType = Class.forName(parameterizedTypeName.rawType.canonicalName());
+        Class<?> methodRawType = null;
+        if (Objects.nonNull(parameterizedTypeName.rawType.enclosingClassName())) {
+          methodRawType =
+              Class.forName(
+                  parameterizedTypeName.rawType.enclosingClassName()
+                      + "$"
+                      + parameterizedTypeName.rawType.simpleName());
+        } else {
+          methodRawType = Class.forName(parameterizedTypeName.rawType.canonicalName());
+        }
         final TypeName typeName = parameterizedTypeName.typeArguments.get(0);
         if (DependencyCommand.class.isAssignableFrom(methodRawType)) {
           // TODO : return DependencyCommand.MultiExecute.class.isAssignableFrom(methodRawType);
@@ -215,34 +227,38 @@ public final class CodegenUtils {
       } catch (ClassNotFoundException e) {
         throw new RuntimeException(e);
       }
-    } else if (classGenericArgumentsType instanceof ParameterizedTypeName parameterizedType) {
-      try {
-        final Class<?> methodRawType = Class.forName(parameterizedType.rawType.canonicalName());
-        final TypeName typeName = parameterizedType.typeArguments.get(0);
-        AtomicBoolean fanout = new AtomicBoolean(false);
-        Stream.of(inputs)
-            .forEach(
-                input -> {
-                  String key = toJavaName(input);
-                  if (fields.containsKey(key)) {
-                    Field field = fields.get(toJavaName(input));
-                    if (Iterable.class.isAssignableFrom(methodRawType)
-                        && typeName.equals(getType(field.getType()))
-                        && !fanout.get()) {
-                      fanout.set(true);
-                    }
-                  } else {
-                    log.error("Field {} not found in {}", key, dependencyVajram.getName());
-                    throw new RuntimeException(
-                        String.format(
-                            "field %s not found in %s vajram", key, dependencyVajram.getName()));
-                  }
-                });
-        return fanout.get();
-      } catch (ClassNotFoundException e) {
-        throw new RuntimeException(e);
-      }
     }
+    // Dependent class response is of parameterized type
+    //    else if (classGenericArgumentsType instanceof ParameterizedTypeName parameterizedType) {
+    //      try {
+    //        final Class<?> methodRawType =
+    // Class.forName(parameterizedType.rawType.canonicalName());
+    //        final TypeName typeName = parameterizedType.typeArguments.get(0);
+    //        AtomicBoolean fanout = new AtomicBoolean(false);
+    //        Stream.of(inputs)
+    //            .forEach(
+    //                input -> {
+    //                  String key = toJavaName(input);
+    //                  if (fields.containsKey(key)) {
+    //                    Field field = fields.get(toJavaName(input));
+    //                    if (Iterable.class.isAssignableFrom(methodRawType)
+    //                        && typeName.equals(getType(field.getType()))
+    //                        && !fanout.get()) {
+    //                      fanout.set(true);
+    //                    }
+    //                  } else {
+    //                    log.error("Field {} not found in {}", key, dependencyVajram.getName());
+    //                    throw new RuntimeException(
+    //                        String.format(
+    //                            "field %s not found in %s vajram", key,
+    // dependencyVajram.getName()));
+    //                  }
+    //                });
+    //        return fanout.get();
+    //      } catch (ClassNotFoundException e) {
+    //        throw new RuntimeException(e);
+    //      }
+    //    }
     return false;
   }
 }

@@ -44,6 +44,8 @@ public final class Constants {
   public static final String IM_LIST = "imList";
   public static final String DEP_COMMAND = "depCommand";
   public static final String FUNCTION = "function";
+  public static final String SINGLE_EXEC_CMD = "singleExecCmd";
+  public static final String MULTI_EXEC_CMD = "multiExecCmd";
 
   public static final String INPUT_MODULATION_CODE_BLOCK =
       """

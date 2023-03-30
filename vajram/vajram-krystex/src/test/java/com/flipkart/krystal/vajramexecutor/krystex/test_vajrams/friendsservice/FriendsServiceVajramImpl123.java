@@ -26,7 +26,12 @@ public final class FriendsServiceVajramImpl123 {
 
   public ImmutableCollection<VajramInputDefinition> getInputDefinitions() {
     return ImmutableList.of(
-        Input.builder().name(FriendsServiceVajram.USER_ID).type(string()).isMandatory().needsModulation().build());
+        Input.builder()
+            .name(FriendsServiceVajram.USER_ID)
+            .type(string())
+            .isMandatory()
+            .needsModulation()
+            .build());
   }
 
   public ImmutableMap<Inputs, CompletableFuture<Set<String>>> execute(
