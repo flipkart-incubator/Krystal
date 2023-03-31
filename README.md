@@ -175,3 +175,21 @@ Components of the Krystal Project try to adhere to the following design goals:
     the programming-model spec language-agnostic allows the programming model to have implementations in different
     languages and allows application owners/feature-developers to choose a language of their choice.
 
+## Krystal developer FAQs
+#### Version bump up to Krystal
+Follow the below mentioned steps for the Krystal version bump -
+   1. Build and publish vajram-codegen with new version to local maven repo. Ensure the vajram-codegen dependencies version should not be updated.
+   2. Update the new version in Krystal project build.gradle file and revert the vajram-codegen version to previous version. Do a complete build and publish to local maven repo.
+   3. Update the vajram-codegen to the new version.
+
+   Example : Need to update version from 1.6 to 1.7
+   1. vajram-codegen (build.gradle) update 
+   - update version from 1.6 to 1.7
+   - Build and publish
+   2. krystal (build.gradle) update
+   - update version from 1.6 to 1.7
+   - update vajram-codegen (build.gradle) version to 1.6 (Note : This is temporary)
+   - Build and publish
+   3. vajram-codegen (build.gradle) update
+   - update version from 1.6 to 1.7
+   - Build and publish

@@ -13,6 +13,8 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.Test
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceVajram;
 import com.google.common.collect.ImmutableSet;
+import java.util.Collections;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.IntStream;
 
@@ -34,8 +36,11 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
 
   @Resolve(value = FRIEND_INFOS, inputs = TestUserServiceVajram.USER_ID)
   public Set<String> friendIdsForUserService(
-      @BindFrom(USER_ID) String userId, @BindFrom(NUMBER_OF_FRIENDS) int numberOfFriends) {
-    return getFriendsFor(userId, numberOfFriends);
+      @BindFrom(USER_ID) String userId,
+      @BindFrom(NUMBER_OF_FRIENDS) Optional<Integer> numberOfFriends) {
+    if (numberOfFriends.isPresent()) {
+      return getFriendsFor(userId, numberOfFriends.get());
+    } else return Collections.emptySet();
   }
 
   @VajramLogic

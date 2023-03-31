@@ -35,7 +35,7 @@ record ForwardingResolver(
   @Override
   public DependencyCommand<Inputs> resolve(
       String dependencyName, ImmutableSet<String> inputsToResolve, Inputs inputs) {
-    return DependencyCommand.executeWith(
+    return DependencyCommand.singleExecuteWith(
         new Inputs(ImmutableMap.of(targetInputName(), inputs.getInputValue(this.from()))));
   }
 }

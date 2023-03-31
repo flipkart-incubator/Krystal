@@ -209,9 +209,9 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                                   vajram.resolveInputOfDependency(
                                       dependencyName, resolvedInputNames, inputValues);
                             }
-                            if (dependencyCommand
-                                instanceof DependencyCommand.Skip<Inputs> skipCommand) {
-                              return ResolverCommand.skip(skipCommand.reason());
+
+                            if (dependencyCommand.shouldSkip()) {
+                              return ResolverCommand.skip(dependencyCommand.doc());
                             }
                             return ResolverCommand.multiExecuteWith(
                                 dependencyCommand.inputs().stream()
