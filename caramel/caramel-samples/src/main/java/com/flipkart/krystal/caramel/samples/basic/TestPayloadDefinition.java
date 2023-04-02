@@ -8,9 +8,9 @@ import java.util.List;
 @ImplAs("TestPayload")
 interface TestPayloadDefinition extends WorkflowPayload {
 
-  String x1String();
-
   ProductUpdateEventsContainer productUpdateEvents();
+
+  String x1String();
 
   TransformedProduct initialTransformedProduct();
 

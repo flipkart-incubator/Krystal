@@ -47,10 +47,6 @@ final class TestPayload implements TestPayloadDefinition {
             TestPayload::triggerUserId,
             TestPayload::setTriggerUserId);
 
-    Field<Collection<Metric>, TestPayload> metrics =
-        new SimpleField<>(
-            "metrics", TestPayload.class, TestPayload::metrics, TestPayload::setMetrics);
-
     Field<Collection<String>, TestPayload> metricNames =
         new SimpleField<>(
             "metricNames",
@@ -93,8 +89,23 @@ final class TestPayload implements TestPayloadDefinition {
       new ValueImpl<>(TestPayloadFields.conditionalTransformedProducts, this);
   private final Value<String, TestPayload> triggerUserId =
       new ValueImpl<>(TestPayloadFields.triggerUserId, this);
-  private final Value<Collection<Metric>, TestPayload> metrics =
-      new ValueImpl<>(TestPayloadFields.metrics, this);
+
+  /* ---------- Collection<Metric> metrics - START -----------*/
+  public static final Field<Collection<Metric>, TestPayload> metrics =
+      new SimpleField<>(
+          "metrics", TestPayload.class, TestPayload::metrics, TestPayload::setMetrics);
+  private final Value<Collection<Metric>, TestPayload> _metrics = new ValueImpl<>(metrics, this);
+
+  @Override
+  public Collection<Metric> metrics() {
+    return _metrics.getOrThrow();
+  }
+
+  public void setMetrics(Collection<Metric> metrics) {
+    this._metrics.set(metrics);
+  }
+  /* ---------- Collection<Metric> metrics - END -----------*/
+
   private final Value<Collection<String>, TestPayload> metricNames =
       new ValueImpl<>(TestPayloadFields.metricNames, this);
   private final Value<Boolean, TestPayload> isEnableValidation =
@@ -157,15 +168,6 @@ final class TestPayload implements TestPayloadDefinition {
 
   public void setTriggerUserId(String triggerUserId) {
     this.triggerUserId.set(triggerUserId);
-  }
-
-  @Override
-  public Collection<Metric> metrics() {
-    return metrics.getOrThrow();
-  }
-
-  public void setMetrics(Collection<Metric> metrics) {
-    this.metrics.set(metrics);
   }
 
   @Override

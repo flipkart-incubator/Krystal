@@ -27,16 +27,15 @@ public class SplitWorkflowBuilder {
         .compute(initString, convertToString(), initProductEvent)
         .peek(initString, log::info)
         .compute(metric, s -> new Metric(s, 2), initString)
-        .splitAs(Stream::of, metric)
-        .stopOnException()
-        .sequentially()
-        .processEachWith(
+        .iterate(
+            metric,
+            Stream::of,
             workflow("subSplitWorkflow", SubMetricPayload.class)
                 .startWith(SubMetricFields.init)
                 .compute(SubMetricFields.metric, identity(), SubMetricFields.init)
                 .peek(() -> log.info("subMetricWorkflowContext.getMetric().toString()"))
                 .terminateWithOutput(SubMetricFields.metric))
-        .toCompute(metrics)
+        .collectTo(metrics)
         .terminateWithOutput(metrics);
   }
 }
