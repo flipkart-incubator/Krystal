@@ -7,13 +7,13 @@ import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayload
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.initialTransformedProduct;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.isEnableValidation;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.metricNames;
-import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.metrics;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.nextProduct;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.productUpdateEvents;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.secondString;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.string;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.triggerUserId;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.x1String;
+import static com.flipkart.krystal.caramel.samples.basic.TestPayload.metrics;
 import static com.flipkart.krystal.caramel.samples.basic.classification.ProductClassification2WorkflowBuilder.classifyProduct2;
 import static com.flipkart.krystal.caramel.samples.basic.classification.ProductClassificationWorkflowBuilder.classifyProduct;
 import static com.flipkart.krystal.caramel.samples.basic.split.SplitWorkflowBuilder.splitter;
@@ -56,33 +56,41 @@ public class ProductProcessingWorkflowBuilder {
         .peek(() -> log.info("created Test Workflow Context"))
         .peek( // This behaves as a fire and forget since we are peeking with a workflow
             initialTransformedProduct, classifyProduct())
-        .fork()
-        .withInput(initialTransformedProduct)
-        .usingWorkflow(classifyProduct2())
-        .toCompute(triggerUserId, identity())
-        .splitAs(
-            wf -> toProductEvents(wf.initialTransformedProduct(), wf.triggerUserId()),
+        .compute(triggerUserId, classifyProduct2(), initialTransformedProduct)
+        .compute(
+            string,
+            (x) -> classifyProduct2().apply(x.initialTransformedProduct()),
             List.of(initialTransformedProduct, triggerUserId))
-        .stopOnException()
-        .sequentially()
-        .processEachWith(splitter())
-        .extractEachWith(l -> l.stream().map(Metric::name).toList())
-        .toCompute(
+        .compute(
+            metrics,
+            testPayload -> {
+              toProductEvents(testPayload.initialTransformedProduct(), testPayload.triggerUserId())
+                  .forEach(productUpdateEvent -> {});
+              return List.of();
+            },
+            List.of(initialTransformedProduct, triggerUserId))
+        .iterate(
+            List.of(initialTransformedProduct, triggerUserId),
+            wf -> toProductEvents(wf.initialTransformedProduct(), wf.triggerUserId()),
+            splitter())
+        .collectTo(
             metricNames,
-            metrics -> metrics.stream().flatMap(Collection::stream).collect(Collectors.toList()))
+            metrics ->
+                metrics.stream()
+                    .flatMap(Collection::stream)
+                    .map(Metric::name)
+                    .collect(Collectors.toList()))
         .compute(metrics, names -> names.stream().map(s -> new Metric(s, 0)).toList(), metricNames)
-        .splitAs(
-            transformedProduct -> transformedProduct.metrics().stream().map(Objects::toString),
-            List.of(metrics))
-        .stopOnException()
-        .processEachWith(
+        .iterate(
+            metrics,
+            metrics -> metrics.stream().map(Objects::toString),
             workflow("subSplitWorkflow", StringMetricPayload.class)
                 .startWith(StringMetricFields.initString)
                 .compute(
                     StringMetricFields.metric, o -> new Metric(o, 1), StringMetricFields.initString)
                 .peek(StringMetricFields.metric, outputChannel("metrics_channel"))
                 .terminateWithOutput(StringMetricFields.metric))
-        .toCompute(metrics)
+        .collectTo(metrics)
         .peek(
             isEnableValidation,
             initialTransformedProduct,
@@ -92,11 +100,9 @@ public class ProductProcessingWorkflowBuilder {
                         + isEnableValidation
                         + " "
                         + initialTransformedProduct))
-        .splitAs(
+        .iterate(
+            productUpdateEvents,
             productUpdateEvents -> productUpdateEvents.getProductUpdateEvents().stream(),
-            productUpdateEvents)
-        .stopOnException()
-        .processEachWith(
             workflow("TransformedProductWf", TransformedProductWfPayload.class)
                 .startWith(TransformedProductWfFields.productUpdateEvent)
                 .compute(
@@ -104,12 +110,11 @@ public class ProductProcessingWorkflowBuilder {
                     productUpdateEvents -> new TransformedProduct(),
                     TransformedProductWfFields.productUpdateEvent)
                 .terminateWithOutput(TransformedProductWfFields.transformedProduct))
-        .toCompute(conditionalTransformedProducts)
+        .collectTo(conditionalTransformedProducts)
         .ifTrue(
             isEnableValidation,
             trueCase -> trueCase.compute(conditionalTransformedProducts, ImmutableList::of))
         .orElse(falseCase -> falseCase.compute(conditionalTransformedProducts, ImmutableList::of))
-        .endIf()
         .ifTrue(
             triggerUserId,
             String::isEmpty,
@@ -123,8 +128,7 @@ public class ProductProcessingWorkflowBuilder {
                     .orElse(
                         emptyTriggerUserIdValidationDisabled ->
                             emptyTriggerUserIdValidationDisabled.compute(
-                                conditionalTransformedProducts, ArrayList::new))
-                    .endIf())
+                                conditionalTransformedProducts, ArrayList::new)))
         .elseIfTrue(
             triggerUserId,
             triggerUserId -> triggerUserId.length() > 10,
@@ -141,9 +145,7 @@ public class ProductProcessingWorkflowBuilder {
                     .orElse(
                         triggerUserId0To10ValidationDisabled ->
                             triggerUserId0To10ValidationDisabled.compute(
-                                conditionalTransformedProducts, ArrayList::new))
-                    .endIf())
-        .endIf()
+                                conditionalTransformedProducts, ArrayList::new)))
         .compute(
             initialTransformedProduct,
             conditionalTransformedProducts -> conditionalTransformedProducts.get(0),
@@ -155,13 +157,11 @@ public class ProductProcessingWorkflowBuilder {
                 ifTrue1.conditional(
                     isEnableValidation,
                     identity(),
-                    ifFalse10 ->
-                        ifFalse10.compute(TestPayload.TestPayloadFields.x1String, () -> "hello")),
+                    ifFalse10 -> ifFalse10.compute(x1String, () -> "hello")),
             ifFalse0 ->
                 ifFalse0.conditional(
                     isEnableValidation,
-                    ifTrue01 ->
-                        ifTrue01.compute(TestPayload.TestPayloadFields.x1String, () -> "hi"),
+                    ifTrue01 -> ifTrue01.compute(x1String, () -> "hi"),
                     ifFalse00 ->
                         ifFalse00.compute(
                             initialTransformedProduct,

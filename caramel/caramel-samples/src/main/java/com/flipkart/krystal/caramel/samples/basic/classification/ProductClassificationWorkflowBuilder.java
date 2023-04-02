@@ -12,7 +12,8 @@ public class ProductClassificationWorkflowBuilder {
 
   private static final Logger log = Logger.getLogger("");
 
-  public static TerminatedWorkflow<TransformedProduct, TransformedProductPayload, TransformedProduct>
+  public static TerminatedWorkflow<
+          TransformedProduct, TransformedProductPayload, TransformedProduct>
       classifyProduct() {
     return workflow("ProductClassificationSubWorkflow", TransformedProductPayload.class)
         .startWith(TransformedProductPayloadFields.initialTransformedProduct)

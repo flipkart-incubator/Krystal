@@ -39,23 +39,26 @@ public interface WorkflowBuildStage<INPUT, ROOT extends WorkflowPayload> extends
       Function<ROOT, U> computer,
       List<Field<?, ? super ROOT>> sourceFields);
 
-  <S, ITEM> SplitStage<INPUT, ROOT, ITEM> splitAs(
-      Function<S, ? extends Stream<? super ITEM>> splitter, Field<S, ROOT> sourceField);
+  <S, ITEM, OUTPUT> SplitExtractStage<INPUT, ROOT, OUTPUT> iterate(
+      Field<S, ROOT> sourceField,
+      Function<S, ? extends Stream<? super ITEM>> splitter,
+      Function<ITEM, OUTPUT> processor);
 
-  <ITEM> SplitStage<INPUT, ROOT, ITEM> splitAs(
+  <S, ITEM, OUTPUT> SplitExtractStage<INPUT, ROOT, OUTPUT> iterate(
+      List<Field<?, ? super ROOT>> sourceFields,
       Function<ROOT, ? extends Stream<? super ITEM>> splitter,
-      List<Field<?, ? super ROOT>> sourceFields);
+      Function<ITEM, OUTPUT> processor);
 
   default ThenStage<INPUT, ROOT> ifTrue(
-      Field<Boolean, ROOT> source,
-      Function<WorkflowBuildStage<INPUT, ROOT>, WorkflowBuildStage<INPUT, ROOT>> thenWorkflow) {
-    return ifTrue(source, aBoolean -> aBoolean, thenWorkflow);
+      Field<Boolean, ROOT> condition,
+      Function<WorkflowBuildStage<INPUT, ROOT>, WorkflowBuildStage<INPUT, ROOT>> ifTrue) {
+    return ifTrue(condition, aBoolean -> aBoolean, ifTrue);
   }
 
   <T> ThenStage<INPUT, ROOT> ifTrue(
-      Field<T, ROOT> source,
-      Predicate<T> condition,
-      Function<WorkflowBuildStage<INPUT, ROOT>, WorkflowBuildStage<INPUT, ROOT>> thenWorkflow);
+      Field<T, ROOT> sourceField,
+      Predicate<T> predicate,
+      Function<WorkflowBuildStage<INPUT, ROOT>, WorkflowBuildStage<INPUT, ROOT>> ifTrue);
 
   default WorkflowBuildStage<INPUT, ROOT> conditional(
       Field<Boolean, ROOT> source,
@@ -77,12 +80,12 @@ public interface WorkflowBuildStage<INPUT, ROOT extends WorkflowPayload> extends
 
   interface ThenStage<INPUT, ROOT extends WorkflowPayload> {
     <T> ThenStage<INPUT, ROOT> elseIfTrue(
-        Field<T, ROOT> source,
+        Field<T, ROOT> sourceField,
         Predicate<T> condition,
-        Function<WorkflowBuildStage<INPUT, ROOT>, WorkflowBuildStage<INPUT, ROOT>> thenWorkflow);
+        Function<WorkflowBuildStage<INPUT, ROOT>, WorkflowBuildStage<INPUT, ROOT>> elseIfTrue);
 
-    ThenStage<INPUT, ROOT> orElse(
-        Function<WorkflowBuildStage<INPUT, ROOT>, WorkflowBuildStage<INPUT, ROOT>> elseWorkflow);
+    WorkflowBuildStage<INPUT, ROOT> orElse(
+        Function<WorkflowBuildStage<INPUT, ROOT>, WorkflowBuildStage<INPUT, ROOT>> orElse);
 
     WorkflowBuildStage<INPUT, ROOT> endIf();
   }

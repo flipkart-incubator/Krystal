@@ -6,6 +6,5 @@ import lombok.Getter;
 
 @AllArgsConstructor
 public class ProductUpdateEventsContainer {
-  @Getter
-  private final ImmutableList<ProductUpdateEvent> productUpdateEvents;
+  @Getter private final ImmutableList<ProductUpdateEvent> productUpdateEvents;
 }
