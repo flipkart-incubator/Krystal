@@ -8,18 +8,18 @@ import com.squareup.javapoet.TypeName;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class CodegenUtilsTest {
 
   public static final String[] EMPTY_INPUTS = new String[0];
 
   @SneakyThrows
-  @org.junit.jupiter.api.Test
+  @Test
   public void testMethodReturnTypeComputation() throws Exception {
     Class<?> klass = Class.forName("java.util.HashMap");
     final Method getMethod = klass.getMethod("get", Object.class);
@@ -45,16 +45,18 @@ public class CodegenUtilsTest {
 
     //    final Type methodGenericType = CodegenUtils.getMethodGenericReturnType(g)
 
-    final Class<?> aClass = Class.forName("com.flipkart.krystal.vajram.codegen.utils.ClassTest1");
+    final Class<?> aClass =
+        Class.forName("com.flipkart.krystal.vajram.codegen.utils.CodegenUtilsTest$ClassTest1");
     final Type genericSuperclass = aClass.getGenericSuperclass();
     if (genericSuperclass instanceof ParameterizedType parameterizedType) {
       final Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
     }
   }
 
-  @org.junit.jupiter.api.Test
+  @Test
   public void testGenericTypeComparison() throws ClassNotFoundException, NoSuchMethodException {
-    final Class<?> aClass = Class.forName("com.flipkart.krystal.vajram.codegen.utils.ClassTest1");
+    final Class<?> aClass =
+        Class.forName("com.flipkart.krystal.vajram.codegen.utils.CodegenUtilsTest$ClassTest1");
     Assertions.assertTrue(
         CodegenUtils.isDepResolverFanout(
             aClass, aClass.getMethod("fanoutMethod1"), EMPTY_INPUTS, Collections.emptyMap()));
@@ -69,37 +71,31 @@ public class CodegenUtilsTest {
             aClass, aClass.getMethod("method1"), EMPTY_INPUTS, Collections.emptyMap()));
   }
 
-  @org.junit.jupiter.api.Test
-  public void testFieldFetch() throws ClassNotFoundException {
-    final Class<?> aClass = Class.forName("com.flipkart.krystal.vajram.codegen.utils.Test1$Test2");
-    Arrays.stream(aClass.getDeclaredFields()).forEach(System.out::println);
-  }
-}
+  interface ITest<E> {}
 
-interface ITest<E> {}
+  static class ClassTest<E> implements ITest<E> {}
 
-class ClassTest<E> implements ITest<E> {}
+  static class ClassTest1 extends ClassTest<Set<String>> {
+    public Set<String> method1() {
+      return Collections.emptySet();
+    }
 
-class ClassTest1 extends ClassTest<Set<String>> {
-  public Set<String> method1() {
-    return Collections.emptySet();
-  }
+    public Set<Set<String>> fanoutMethod1() {
+      return Collections.emptySet();
+    }
 
-  public Set<Set<String>> fanoutMethod1() {
-    return Collections.emptySet();
-  }
+    public Set<VajramRequest> fanoutMethod2() {
+      return Collections.emptySet();
+    }
 
-  public Set<VajramRequest> fanoutMethod2() {
-    return Collections.emptySet();
+    public DependencyCommand<String> fanoutMethod3() {
+      return DependencyCommand.multiExecuteWith(Collections.emptySet());
+    }
   }
 
-  public DependencyCommand<String> fanoutMethod3() {
-    return DependencyCommand.multiExecuteWith(Collections.emptySet());
-  }
-}
-
-final class Test1 {
-  static final class Test2 {
-    private String name;
+  static final class Test1 {
+    static final class Test2 {
+      private String name;
+    }
   }
 }
