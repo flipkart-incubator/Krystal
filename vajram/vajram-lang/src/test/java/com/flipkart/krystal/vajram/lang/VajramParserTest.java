@@ -1,11 +1,11 @@
+package com.flipkart.krystal.vajram.lang;
+
 import static java.nio.file.Files.readString;
 import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 import static org.antlr.v4.runtime.CharStreams.fromString;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flipkart.krystal.vajram.lang.VajramLexer;
-import com.flipkart.krystal.vajram.lang.VajramParser;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
@@ -40,7 +40,8 @@ public class VajramParserTest {
   }
 
   private void parseFile(String name) throws URISyntaxException, IOException {
-    Path path = Paths.get(requireNonNull(this.getClass().getResource(name)).toURI());
+    Path path =
+        Paths.get(requireNonNull(this.getClass().getClassLoader().getResource(name)).toURI());
     String code = readString(path);
     VajramLexer vajramLexer = new VajramLexer(fromString(code));
     VajramParser vajramParser = new VajramParser(new CommonTokenStream(vajramLexer));

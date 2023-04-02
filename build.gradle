@@ -10,7 +10,7 @@ buildscript {
 ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
-    krystal_version = '1.7'
+    krystal_version = '1.8-SNAPSHOT'
 }
 
 subprojects {

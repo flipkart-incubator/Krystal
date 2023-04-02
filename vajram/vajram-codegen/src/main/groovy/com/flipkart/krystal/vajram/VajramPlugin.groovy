@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram
 
-import com.flipkart.krystal.vajram.codegen.VajramModelsCodeGen
+import com.flipkart.krystal.vajram.codegen.VajramCodeGenFacade
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.compile.JavaCompile
@@ -32,7 +32,7 @@ class VajramPlugin implements Plugin<Project> {
         project.tasks.register('codeGenVajramModels') {
             group = 'krystal'
             doLast {
-                VajramModelsCodeGen.codeGenModels(
+                VajramCodeGenFacade.codeGenModels(
                         project.sourceSets.main.java.srcDirs,
                         mainGeneratedSrcDir)
             }
@@ -57,7 +57,7 @@ class VajramPlugin implements Plugin<Project> {
             dependsOn it.project.tasks.compileVajramModels
             print project.tasks.compileJava.destinationDirectory
             doLast {
-                VajramModelsCodeGen.codeGenVajramImpl(
+                VajramCodeGenFacade.codeGenVajramImpl(
                         project.sourceSets.main.java.srcDirs,
                         compiledMainDir,
                         mainGeneratedSrcDir)
@@ -69,7 +69,7 @@ class VajramPlugin implements Plugin<Project> {
         project.tasks.register('testCodeGenVajramModels') {
             group = 'krystal'
             doLast {
-                VajramModelsCodeGen.codeGenModels(
+                VajramCodeGenFacade.codeGenModels(
                         project.sourceSets.test.java.srcDirs,
                         testGeneratedSrcDir)
             }
@@ -90,7 +90,7 @@ class VajramPlugin implements Plugin<Project> {
             group = 'krystal'
             dependsOn it.project.tasks.testCompileVajramModels
             doLast {
-                VajramModelsCodeGen.codeGenVajramImpl(
+                VajramCodeGenFacade.codeGenVajramImpl(
                         project.sourceSets.test.java.srcDirs,
                         compiledTestDir,
                         testGeneratedSrcDir)

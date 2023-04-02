@@ -27,7 +27,6 @@ public abstract class GreetingVajram extends ComputeVajram<String> {
       value = "user_info",
       inputs = {"user_id"})
   public String userIdForUserService(@BindFrom("user_id") String userId) {
-    UserServiceRequest userServiceRequest = UserServiceRequest.builder().userId(userId).build();
     return userId;
   }
 
