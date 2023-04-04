@@ -4,6 +4,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 @Retention(RetentionPolicy.RUNTIME)
-public @interface BindFrom {
-  String value();
+public @interface ResolveInputsOf {
+  String dep();
+
+  String[] depInputs() default {};
 }

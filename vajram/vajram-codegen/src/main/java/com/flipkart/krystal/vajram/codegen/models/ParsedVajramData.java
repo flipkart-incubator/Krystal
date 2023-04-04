@@ -5,7 +5,7 @@ import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.codegen.utils.CodegenUtils;
 import com.flipkart.krystal.vajram.codegen.utils.Constants;
-import com.flipkart.krystal.vajram.inputs.Resolve;
+import com.flipkart.krystal.vajram.inputs.ResolveInputsOf;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -75,7 +75,7 @@ public record ParsedVajramData(
     List<Method> resolveMethods = new ArrayList<>();
     Method vajramLogic = null;
     for (Method method : result.getDeclaredMethods()) {
-      if (method.isAnnotationPresent(Resolve.class)) {
+      if (method.isAnnotationPresent(ResolveInputsOf.class)) {
         resolveMethods.add(method);
       } else if (method.isAnnotationPresent(VajramLogic.class)) {
         if (vajramLogic == null) {

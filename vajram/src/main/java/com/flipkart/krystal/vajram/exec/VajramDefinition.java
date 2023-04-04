@@ -10,12 +10,12 @@ import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Tag;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.BindFrom;
+import com.flipkart.krystal.vajram.inputs.From;
 import com.flipkart.krystal.vajram.inputs.DefaultInputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
-import com.flipkart.krystal.vajram.inputs.Resolve;
+import com.flipkart.krystal.vajram.inputs.ResolveInputsOf;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.tags.Service;
 import com.flipkart.krystal.vajram.tags.ServiceApi;
@@ -56,7 +56,7 @@ public final class VajramDefinition {
         new ArrayList<>(vajram.getSimpleInputResolvers());
     ImmutableSet<Method> resolverMethods =
         Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
-            .filter(method -> method.isAnnotationPresent(Resolve.class))
+            .filter(method -> method.isAnnotationPresent(ResolveInputsOf.class))
             .collect(toImmutableSet());
 
     ImmutableMap<String, Dependency> inputDefinitions =
@@ -66,28 +66,28 @@ public final class VajramDefinition {
             .collect(toImmutableMap(VajramInputDefinition::name, Function.identity()));
 
     for (Method resolverMethod : resolverMethods) {
-      Resolve resolver = resolverMethod.getAnnotation(Resolve.class);
-      String targetDependency = resolver.value();
+      ResolveInputsOf resolver = resolverMethod.getAnnotation(ResolveInputsOf.class);
+      String targetDependency = resolver.dep();
       Dependency dependency = inputDefinitions.get(targetDependency);
       if (dependency == null) {
         throw new IllegalStateException(
             "Could not find dependency with name %s".formatted(targetDependency));
       }
-      String[] targetInputs = resolver.inputs();
+      String[] targetInputs = resolver.depInputs();
       ImmutableSet<String> sources =
           Arrays.stream(resolverMethod.getParameters())
               .map(Parameter::getAnnotations)
               .map(
                   annotations ->
                       Arrays.stream(annotations)
-                          .filter(annotation -> annotation instanceof BindFrom)
-                          .map(annotation -> (BindFrom) annotation)
+                          .filter(annotation -> annotation instanceof From)
+                          .map(annotation -> (From) annotation)
                           .findAny())
               .filter(Optional::isPresent)
               .map(Optional::orElseThrow)
               .toList()
               .stream()
-              .map(BindFrom::value)
+              .map(From::value)
               .collect(toImmutableSet());
       inputResolvers.add(
           new DefaultInputResolverDefinition(
