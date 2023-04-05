@@ -77,11 +77,11 @@ import com.flipkart.krystal.vajram.codegen.models.VajramInputsDef;
 import com.flipkart.krystal.vajram.codegen.utils.CodegenUtils;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
-import com.flipkart.krystal.vajram.inputs.From;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand.MultiExecute;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand.SingleExecute;
+import com.flipkart.krystal.vajram.inputs.From;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
@@ -231,7 +231,8 @@ public class VajramCodeGenerator {
         .resolveMethods()
         .forEach(
             method ->
-                resolverMap.put(method.getAnnotation(ResolveInputsOf.class).dep(), new ArrayList<>()));
+                resolverMap.put(
+                    method.getAnnotation(ResolveInputsOf.class).dep(), new ArrayList<>()));
     for (Method resolve : parsedVajramData.resolveMethods()) {
       String key = resolve.getAnnotation(ResolveInputsOf.class).dep();
       resolverMap.get(key).add(resolve);
@@ -741,7 +742,8 @@ public class VajramCodeGenerator {
                 throw new VajramValidationException("No input resolver found for " + bindParamName);
               }
             });
-    boolean isFanOut = isParamFanoutDependency || depFanoutMap.getOrDefault(resolveInputsOf.dep(), false);
+    boolean isFanOut =
+        isParamFanoutDependency || depFanoutMap.getOrDefault(resolveInputsOf.dep(), false);
     buildFinalResolvers(method, inputs, paramToVariableMap, ifBlockBuilder, isFanOut);
     ifBlockBuilder.endControlFlow();
     return ifBlockBuilder;

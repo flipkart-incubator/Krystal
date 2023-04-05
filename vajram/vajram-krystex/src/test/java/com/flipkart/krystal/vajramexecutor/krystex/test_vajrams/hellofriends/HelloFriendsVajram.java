@@ -36,8 +36,7 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
 
   @ResolveInputsOf(dep = FRIEND_INFOS, depInputs = TestUserServiceVajram.USER_ID)
   public Set<String> friendIdsForUserService(
-      @From(USER_ID) String userId,
-      @From(NUMBER_OF_FRIENDS) Optional<Integer> numberOfFriends) {
+      @From(USER_ID) String userId, @From(NUMBER_OF_FRIENDS) Optional<Integer> numberOfFriends) {
     if (numberOfFriends.isPresent()) {
       return getFriendsFor(userId, numberOfFriends.get());
     } else return Collections.emptySet();

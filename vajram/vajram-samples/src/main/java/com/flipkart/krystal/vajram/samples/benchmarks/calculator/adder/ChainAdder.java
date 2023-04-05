@@ -8,9 +8,9 @@ import static com.flipkart.krystal.vajram.inputs.DependencyCommand.singleExecute
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.From;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand.MultiExecute;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand.SingleExecute;
+import com.flipkart.krystal.vajram.inputs.From;
 import com.flipkart.krystal.vajram.inputs.ResolveInputsOf;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;

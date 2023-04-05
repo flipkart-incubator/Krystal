@@ -6,8 +6,8 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihell
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.From;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand.MultiExecute;
+import com.flipkart.krystal.vajram.inputs.From;
 import com.flipkart.krystal.vajram.inputs.ResolveInputsOf;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Vajram;
