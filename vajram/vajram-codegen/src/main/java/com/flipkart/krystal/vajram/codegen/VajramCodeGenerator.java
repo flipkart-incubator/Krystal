@@ -85,7 +85,7 @@ import com.flipkart.krystal.vajram.inputs.From;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
-import com.flipkart.krystal.vajram.inputs.ResolveInputsOf;
+import com.flipkart.krystal.vajram.inputs.ResolveDep;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
@@ -232,9 +232,9 @@ public class VajramCodeGenerator {
         .forEach(
             method ->
                 resolverMap.put(
-                    method.getAnnotation(ResolveInputsOf.class).dep(), new ArrayList<>()));
+                    method.getAnnotation(ResolveDep.class).depName(), new ArrayList<>()));
     for (Method resolve : parsedVajramData.resolveMethods()) {
-      String key = resolve.getAnnotation(ResolveInputsOf.class).dep();
+      String key = resolve.getAnnotation(ResolveDep.class).depName();
       resolverMap.get(key).add(resolve);
     }
     // Iterate all the resolvers and figure fanout
@@ -246,9 +246,9 @@ public class VajramCodeGenerator {
         .resolveMethods()
         .forEach(
             method -> {
-              ResolveInputsOf resolveInputsOf = method.getAnnotation(ResolveInputsOf.class);
-              String[] inputs = resolveInputsOf.depInputs();
-              String depName = resolveInputsOf.dep();
+              ResolveDep resolveDep = method.getAnnotation(ResolveDep.class);
+              String[] inputs = resolveDep.depInputs();
+              String depName = resolveDep.depName();
               assert depName != null;
 
               final Optional<VajramInputDefinition> definition =
@@ -679,8 +679,8 @@ public class VajramCodeGenerator {
       Method method,
       Map<String, Boolean> depFanoutMap,
       boolean isParamFanoutDependency) {
-    ResolveInputsOf resolveInputsOf = method.getAnnotation(ResolveInputsOf.class);
-    String[] inputs = resolveInputsOf.depInputs();
+    ResolveDep resolveDep = method.getAnnotation(ResolveDep.class);
+    String[] inputs = resolveDep.depInputs();
     // check if the input is satisfied by input or other resolved variables
     CodeBlock.Builder ifBlockBuilder = CodeBlock.builder();
     ifBlockBuilder.beginControlFlow(
@@ -743,7 +743,7 @@ public class VajramCodeGenerator {
               }
             });
     boolean isFanOut =
-        isParamFanoutDependency || depFanoutMap.getOrDefault(resolveInputsOf.dep(), false);
+        isParamFanoutDependency || depFanoutMap.getOrDefault(resolveDep.depName(), false);
     buildFinalResolvers(method, inputs, paramToVariableMap, ifBlockBuilder, isFanOut);
     ifBlockBuilder.endControlFlow();
     return ifBlockBuilder;
@@ -769,9 +769,9 @@ public class VajramCodeGenerator {
       Map<String, Boolean> depFanoutMap,
       Parameter parameter) {
     VajramInputDefinition vajramInputDef = inputDefsMap.get(bindParamName);
-    ResolveInputsOf resolveInputsOf = method.getAnnotation(ResolveInputsOf.class);
-    assert resolveInputsOf != null;
-    String resolvedDep = resolveInputsOf.dep();
+    ResolveDep resolveDep = method.getAnnotation(ResolveDep.class);
+    assert resolveDep != null;
+    String resolvedDep = resolveDep.depName();
     // fanout case
     if (depFanoutMap.containsKey(bindParamName)
         && depFanoutMap.get(bindParamName)

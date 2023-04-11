@@ -6,7 +6,7 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.From;
-import com.flipkart.krystal.vajram.inputs.ResolveInputsOf;
+import com.flipkart.krystal.vajram.inputs.ResolveDep;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaInputUtil.FormulaAllInputs;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.DividerRequest;
@@ -16,22 +16,22 @@ import com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.Divider
 public abstract class Formula extends ComputeVajram<Integer> {
   public static final String ID = "formula";
 
-  @ResolveInputsOf(dep = "sum", depInputs = "number_one")
+  @ResolveDep(depName = "sum", depInputs = "number_one")
   public static int adderNumberOne(@From("p") int p) {
     return p;
   }
 
-  @ResolveInputsOf(dep = "sum", depInputs = "number_two")
+  @ResolveDep(depName = "sum", depInputs = "number_two")
   public static int adderNumberTwo(@From("q") int q) {
     return q;
   }
 
-  @ResolveInputsOf(dep = "quotient", depInputs = "number_one")
+  @ResolveDep(depName = "quotient", depInputs = "number_one")
   public static int quotientNumberOne(@From("a") int a) {
     return a;
   }
 
-  @ResolveInputsOf(dep = "quotient", depInputs = "number_two")
+  @ResolveDep(depName = "quotient", depInputs = "number_two")
   public static int quotientNumberTwo(@From("sum") int sum) {
     return sum;
   }

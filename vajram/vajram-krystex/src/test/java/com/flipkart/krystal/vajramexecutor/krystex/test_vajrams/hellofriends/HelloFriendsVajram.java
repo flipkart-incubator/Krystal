@@ -7,7 +7,7 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.From;
-import com.flipkart.krystal.vajram.inputs.ResolveInputsOf;
+import com.flipkart.krystal.vajram.inputs.ResolveDep;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsInputUtil.HelloFriendsAllInputs;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
@@ -29,12 +29,12 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
   public static final String USER_INFOS = "user_infos";
   public static final String FRIEND_INFOS = "friend_infos";
 
-  @ResolveInputsOf(dep = USER_INFOS, depInputs = TestUserServiceVajram.USER_ID)
+  @ResolveDep(depName = USER_INFOS, depInputs = TestUserServiceVajram.USER_ID)
   public String userIdForUserService(@From(USER_ID) String userId) {
     return userId;
   }
 
-  @ResolveInputsOf(dep = FRIEND_INFOS, depInputs = TestUserServiceVajram.USER_ID)
+  @ResolveDep(depName = FRIEND_INFOS, depInputs = TestUserServiceVajram.USER_ID)
   public Set<String> friendIdsForUserService(
       @From(USER_ID) String userId, @From(NUMBER_OF_FRIENDS) Optional<Integer> numberOfFriends) {
     if (numberOfFriends.isPresent()) {

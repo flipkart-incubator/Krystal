@@ -11,7 +11,7 @@ import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand.MultiExecute;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand.SingleExecute;
 import com.flipkart.krystal.vajram.inputs.From;
-import com.flipkart.krystal.vajram.inputs.ResolveInputsOf;
+import com.flipkart.krystal.vajram.inputs.ResolveDep;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +21,7 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
 
   public static final String ID = "chainAdder";
 
-  @ResolveInputsOf(dep = "chain_sum", depInputs = "numbers")
+  @ResolveDep(depName = "chain_sum", depInputs = "numbers")
   public static MultiExecute<List<Integer>> numbersForSubChainer(
       @From("numbers") List<Integer> numbers) {
     if (numbers.size() < 3) {
@@ -35,7 +35,7 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
     }
   }
 
-  @ResolveInputsOf(dep = "sum", depInputs = "number_one")
+  @ResolveDep(depName = "sum", depInputs = "number_one")
   public static SingleExecute<Integer> adderNumberOne(@From("numbers") List<Integer> numbers) {
     if (numbers.isEmpty()) {
       return skipSingleExecute("No numbers provided. Skipping adder call");
@@ -47,7 +47,7 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
     }
   }
 
-  @ResolveInputsOf(dep = "sum", depInputs = "number_two")
+  @ResolveDep(depName = "sum", depInputs = "number_two")
   public static SingleExecute<Integer> adderNumberTwo(@From("numbers") List<Integer> numbers) {
     if (numbers.isEmpty()) {
       return skipSingleExecute("No numbers provided. Skipping adder call");

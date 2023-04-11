@@ -14,7 +14,7 @@ import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
-import com.flipkart.krystal.vajram.inputs.ResolveInputsOf;
+import com.flipkart.krystal.vajram.inputs.ResolveDep;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableCollection;
@@ -157,10 +157,10 @@ public class ResolutionValidator {
     Arrays.stream(vajramClass.getMethods())
         .forEach(
             method -> {
-              ResolveInputsOf resolveInputsOfDef = method.getAnnotation(ResolveInputsOf.class);
-              if (resolveInputsOfDef != null && resolveInputsOfDef.depInputs().length > 0) {
-                String dependencyName = resolveInputsOfDef.dep();
-                String[] inputs = resolveInputsOfDef.depInputs();
+              ResolveDep resolveDepDef = method.getAnnotation(ResolveDep.class);
+              if (resolveDepDef != null && resolveDepDef.depInputs().length > 0) {
+                String dependencyName = resolveDepDef.depName();
+                String[] inputs = resolveDepDef.depInputs();
                 Arrays.stream(inputs)
                     .forEach(
                         input -> {

@@ -15,7 +15,7 @@ import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.From;
 import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
-import com.flipkart.krystal.vajram.inputs.ResolveInputsOf;
+import com.flipkart.krystal.vajram.inputs.ResolveDep;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.tags.Service;
 import com.flipkart.krystal.vajram.tags.ServiceApi;
@@ -56,7 +56,7 @@ public final class VajramDefinition {
         new ArrayList<>(vajram.getSimpleInputResolvers());
     ImmutableSet<Method> resolverMethods =
         Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
-            .filter(method -> method.isAnnotationPresent(ResolveInputsOf.class))
+            .filter(method -> method.isAnnotationPresent(ResolveDep.class))
             .collect(toImmutableSet());
 
     ImmutableMap<String, Dependency> inputDefinitions =
@@ -66,8 +66,8 @@ public final class VajramDefinition {
             .collect(toImmutableMap(VajramInputDefinition::name, Function.identity()));
 
     for (Method resolverMethod : resolverMethods) {
-      ResolveInputsOf resolver = resolverMethod.getAnnotation(ResolveInputsOf.class);
-      String targetDependency = resolver.dep();
+      ResolveDep resolver = resolverMethod.getAnnotation(ResolveDep.class);
+      String targetDependency = resolver.depName();
       Dependency dependency = inputDefinitions.get(targetDependency);
       if (dependency == null) {
         throw new IllegalStateException(

@@ -9,7 +9,7 @@ import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand.SingleExecute;
 import com.flipkart.krystal.vajram.inputs.From;
-import com.flipkart.krystal.vajram.inputs.ResolveInputsOf;
+import com.flipkart.krystal.vajram.inputs.ResolveDep;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -19,7 +19,7 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
 
   public static final String ID = "splitAdder";
 
-  @ResolveInputsOf(dep = "split_sum_1", depInputs = "numbers")
+  @ResolveDep(depName = "split_sum_1", depInputs = "numbers")
   public static SingleExecute<ArrayList<Integer>> numbersForSubSplitter1(
       @From("numbers") List<Integer> numbers) {
     if (numbers.size() < 2) {
@@ -31,7 +31,7 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
     }
   }
 
-  @ResolveInputsOf(dep = "split_sum_2", depInputs = "numbers")
+  @ResolveDep(depName = "split_sum_2", depInputs = "numbers")
   public static SingleExecute<ArrayList<Integer>> numbersForSubSplitter2(
       @From("numbers") List<Integer> numbers) {
     if (numbers.size() < 2) {
@@ -43,7 +43,7 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
     }
   }
 
-  @ResolveInputsOf(dep = "sum", depInputs = "number_one")
+  @ResolveDep(depName = "sum", depInputs = "number_one")
   public static SingleExecute<Integer> adderNumberOne(@From("numbers") List<Integer> numbers) {
     if (numbers.size() == 1) {
       return singleExecuteWith(numbers.get(0));
@@ -54,7 +54,7 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
     }
   }
 
-  @ResolveInputsOf(dep = "sum", depInputs = "number_two")
+  @ResolveDep(depName = "sum", depInputs = "number_two")
   public static Integer adderNumberTwo(@From("numbers") List<Integer> numbers) {
     return 0;
   }
