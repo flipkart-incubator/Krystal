@@ -49,19 +49,27 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
   private final NodeRegistry nodeRegistry = new NodeRegistry();
   private volatile boolean closed;
-  private final Map<RequestId, List<NodeExecutionInfo>> allRequests = new LinkedHashMap<>();
-  private final Map<RequestId, List<NodeExecutionInfo>> unFlushedRequests = new LinkedHashMap<>();
+  private final Map<RequestId, List<NodeResult>> allRequests = new LinkedHashMap<>();
+  private final Map<RequestId, List<NodeResult>> unFlushedRequests = new LinkedHashMap<>();
   private final Map<NodeId, Set<DependantChain>> dependantChainsPerNode = new LinkedHashMap<>();
+  private final NodeExecutionReport observationData;
 
   public KrystalNodeExecutor(
       NodeDefinitionRegistry nodeDefinitionRegistry,
       LogicDecorationOrdering logicDecorationOrdering,
       MultiLeasePool<? extends ExecutorService> commandQueuePool,
-      String requestId) {
+      String requestId,
+      ObservabilityConfig observabilityConfig) {
     this.nodeDefinitionRegistry = nodeDefinitionRegistry;
     this.logicDecorationOrdering = logicDecorationOrdering;
     this.commandQueueLease = commandQueuePool.lease();
     this.requestId = new RequestId(requestId);
+    if (observabilityConfig.recordNodeExecutionTimes()
+        || observabilityConfig.recordNodeInputsAndOutputs()) {
+      this.observationData = new DefaultNodeExecutionReport();
+    } else {
+      this.observationData = new NoOpObservationData();
+    }
   }
 
   private ImmutableMap<String, MainLogicDecorator> getRequestScopedDecorators(
@@ -80,10 +88,10 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                     decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
                 MainLogicDecorator mainLogicDecorator =
                     requestScopedMainDecorators
-                        .computeIfAbsent(decoratorType, k -> new LinkedHashMap<>())
+                        .computeIfAbsent(decoratorType, t -> new LinkedHashMap<>())
                         .computeIfAbsent(
                             instanceId,
-                            k ->
+                            _i ->
                                 decoratorConfig
                                     .factory()
                                     .apply(
@@ -113,15 +121,14 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     if (closed) {
       throw new RejectedExecutionException("KrystalNodeExecutor is already closed");
     }
-    return supplyAsync(
+    return supplyAsync( // Perform all datastructure manipulations in the command queue to avoid
+            // multi-thread access
             () -> {
               createDependantNodes(nodeId, DependantChainStart.instance());
               CompletableFuture<Object> future = new CompletableFuture<>();
-              NodeExecutionInfo nodeExecutionInfo = new NodeExecutionInfo(nodeId, inputs, future);
-              allRequests.computeIfAbsent(requestId, r -> new ArrayList<>()).add(nodeExecutionInfo);
-              unFlushedRequests
-                  .computeIfAbsent(requestId, r -> new ArrayList<>())
-                  .add(nodeExecutionInfo);
+              NodeResult nodeResult = new NodeResult(nodeId, inputs, future);
+              allRequests.computeIfAbsent(requestId, r -> new ArrayList<>()).add(nodeResult);
+              unFlushedRequests.computeIfAbsent(requestId, r -> new ArrayList<>()).add(nodeResult);
               return future;
             },
             commandQueueLease.get())
@@ -151,21 +158,25 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       // scenario that InitiateActiveDepChains will not contain recursive active dependant
       // chains.
       dependantChainsPerNode
-          .computeIfAbsent(nodeId, k -> new LinkedHashSet<>())
+          .computeIfAbsent(nodeId, _n -> new LinkedHashSet<>())
           .add(dependantChain);
     } else {
       nodeRegistry.createIfAbsent(
           nodeId,
-          n ->
+          _n ->
               new Node(
-                  nodeDefinition, this, this::getRequestScopedDecorators, logicDecorationOrdering));
+                  nodeDefinition,
+                  this,
+                  this::getRequestScopedDecorators,
+                  logicDecorationOrdering,
+                  observationData));
       ImmutableMap<String, NodeId> dependencyNodes = nodeDefinition.dependencyNodes();
       dependencyNodes.forEach(
           (dependencyName, depNodeId) ->
               createDependantNodes(
                   depNodeId, DependantChain.from(nodeId, dependencyName, dependantChain)));
       dependantChainsPerNode
-          .computeIfAbsent(nodeId, k -> new LinkedHashSet<>())
+          .computeIfAbsent(nodeId, _n -> new LinkedHashSet<>())
           .add(dependantChain);
     }
   }
@@ -184,12 +195,13 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   public void flush() {
     runAsync(
         () -> {
+          //noinspection CodeBlock2Expr
           unFlushedRequests.forEach(
               (requestId, nodeExecutionInfos) -> {
                 nodeExecutionInfos.forEach(
-                    nodeExecutionInfo -> {
-                      NodeId nodeId = nodeExecutionInfo.nodeId();
-                      if (nodeExecutionInfo.future().isDone()) {
+                    nodeResult -> {
+                      NodeId nodeId = nodeResult.nodeId();
+                      if (nodeResult.future().isDone()) {
                         return;
                       }
                       NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
@@ -205,7 +217,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                                           .filter(
                                               s -> !nodeDefinition.dependencyNodes().containsKey(s))
                                           .collect(toImmutableSet()),
-                                      nodeExecutionInfo.inputs(),
+                                      nodeResult.inputs(),
                                       DependantChainStart.instance(),
                                       requestId))
                               .thenApply(NodeResponse::response)
@@ -217,18 +229,22 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                                       return valueOrError.value().orElse(null);
                                     }
                                   });
-                      linkFutures(submissionResult, nodeExecutionInfo.future());
+                      linkFutures(submissionResult, nodeResult.future());
                     });
               });
           unFlushedRequests.forEach(
               (requestId, nodeExecutionInfos) ->
                   nodeExecutionInfos.forEach(
-                      nodeExecutionInfo -> enqueueCommand(new Flush(nodeExecutionInfo.nodeId()))));
+                      nodeResult -> enqueueCommand(new Flush(nodeResult.nodeId()))));
           unFlushedRequests.clear();
         },
         commandQueueLease.get());
   }
 
+  @Override
+  public ObservationData getObservationData() {
+    return observationData;
+  }
   /**
    * Prevents accepting new requests. For reasons of performance optimization, submitted requests
    * are executed in this method.
@@ -246,12 +262,11 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                     allRequests.values().stream()
                         .flatMap(
                             nodeExecutionInfos ->
-                                nodeExecutionInfos.stream().map(NodeExecutionInfo::future))
+                                nodeExecutionInfos.stream().map(NodeResult::future))
                         .toArray(CompletableFuture[]::new))
                 .whenComplete((unused, throwable) -> commandQueueLease.close()),
         commandQueueLease.get());
   }
 
-  private record NodeExecutionInfo(
-      NodeId nodeId, Inputs inputs, CompletableFuture<Object> future) {}
+  private record NodeResult(NodeId nodeId, Inputs inputs, CompletableFuture<Object> future) {}
 }

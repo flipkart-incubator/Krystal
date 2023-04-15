@@ -21,7 +21,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public abstract sealed class MainLogicDefinition<T> extends LogicDefinition
     permits IOLogicDefinition, ComputeLogicDefinition {
 
-  public MainLogicDefinition(
+  protected MainLogicDefinition(
       NodeLogicId nodeLogicId, Set<String> inputs, ImmutableMap<String, LogicTag> logicTags) {
     super(nodeLogicId, inputs, logicTags);
   }

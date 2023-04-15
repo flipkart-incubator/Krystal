@@ -19,6 +19,7 @@ import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
 import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
+import com.flipkart.krystal.krystex.node.ObservabilityConfig;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.IOVajram;
@@ -51,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import lombok.Getter;
 
@@ -73,7 +75,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   private final ImmutableMap<String, MainLogicDecoratorConfig> sessionScopedDecoratorConfigs;
 
   private final LogicDecorationOrdering logicDecorationOrdering;
-  private MultiLeasePool<? extends ExecutorService> executorPool;
+  private final MultiLeasePool<? extends ExecutorService> executorPool;
 
   private VajramNodeGraph(
       String[] packagePrefixes,
@@ -100,7 +102,13 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   @Override
   public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
       C requestContext) {
-    return new KrystexVajramExecutor<>(this, logicDecorationOrdering, executorPool, requestContext);
+    return createExecutor(requestContext, ObservabilityConfig.noOp());
+  }
+
+  public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
+      C requestContext, ObservabilityConfig observabilityConfig) {
+    return new KrystexVajramExecutor<>(
+        this, logicDecorationOrdering, executorPool, requestContext, observabilityConfig);
   }
 
   @Override
@@ -141,8 +149,9 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     NodeId nodeId = vajramExecutables.get(vajramId);
     if (nodeId != null) {
       return nodeId;
+    } else {
+      nodeId = new NodeId(vajramId.vajramId());
     }
-    nodeId = new NodeId(vajramId.vajramId());
     vajramExecutables.put(vajramId, nodeId);
 
     VajramDefinition vajramDefinition =
@@ -189,7 +198,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                   ImmutableSet<String> sources = inputResolverDefinition.sources();
                   ImmutableCollection<VajramInputDefinition> requiredInputs =
                       vajram.getInputDefinitions().stream()
-                          .filter(i -> sources.contains(i.name()))
+                          .filter(def -> sources.contains(def.name()))
                           .collect(toImmutableList());
                   ResolverLogicDefinition inputResolverNode =
                       logicRegistryDecorator.newResolverLogic(
@@ -306,7 +315,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   }
 
   private static Inputs injectFromSession(
-      ImmutableCollection<VajramInputDefinition> inputDefinitions, Inputs inputs) {
+      ImmutableCollection<? extends VajramInputDefinition> inputDefinitions, Inputs inputs) {
     Map<String, InputValue<Object>> newValues = new HashMap<>();
     for (VajramInputDefinition inputDefinition : inputDefinitions) {
       String inputName = inputDefinition.name();
@@ -356,7 +365,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
       ImmutableMap<DataAccessSpec, Vajram> dependencyVajrams =
           accessSpecMatchingResult.successfulMatches();
       if (dependencyVajrams.size() > 1) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("");
       }
       Vajram dependencyVajram = dependencyVajrams.values().iterator().next();
 
@@ -377,7 +386,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   }
 
   public static final class Builder {
-    private final LinkedHashSet<String> packagePrefixes = new LinkedHashSet<>();
+    private final Set<String> packagePrefixes = new LinkedHashSet<>();
     private final Map<String, MainLogicDecoratorConfig> sessionScopedDecoratorConfigs =
         new HashMap<>();
     private final Map<VajramID, InputModulatorConfig> inputModulators = new LinkedHashMap<>();

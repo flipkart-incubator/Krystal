@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
+import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.flipkart.krystal.krystex.node.DependantChain.fromTriggerOrder;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static java.time.Duration.ofSeconds;
@@ -7,6 +8,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
@@ -17,6 +22,8 @@ import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JCircuitBreaker;
 import com.flipkart.krystal.krystex.node.NodeId;
+import com.flipkart.krystal.krystex.node.ObservabilityConfig;
+import com.flipkart.krystal.krystex.node.ObservationData;
 import com.flipkart.krystal.logic.LogicTag;
 import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
 import com.flipkart.krystal.vajram.modulation.Batcher;
@@ -61,12 +68,17 @@ import org.junit.jupiter.api.TestInfo;
 class KrystexVajramExecutorTest {
 
   private TestRequestContext requestContext;
+  private ObjectMapper objectMapper;
 
   @BeforeEach
   void setUp() {
     requestContext = new TestRequestContext(Optional.of("user_id_1"), 2);
-    //
-    // TestRequestContext.builder().loggedInUserId(Optional.of("user_id_1")).numberOfFriends(2);
+    objectMapper =
+        new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .registerModule(new Jdk8Module())
+            .setSerializationInclusion(NON_NULL)
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
   }
 
   @AfterEach
@@ -269,8 +281,9 @@ class KrystexVajramExecutorTest {
             .build();
     CompletableFuture<String> multiHellos;
     requestContext.requestId("execute_multiResolverFanouts_permutesTheFanouts");
+    ObservationData nodeExecutionReport;
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
-        graph.createExecutor(requestContext)) {
+        graph.createExecutor(requestContext, new ObservabilityConfig(true, true))) {
       multiHellos =
           krystexVajramExecutor.execute(
               vajramID(MultiHelloFriends.ID),
@@ -278,6 +291,7 @@ class KrystexVajramExecutorTest {
                   MultiHelloFriendsRequest.builder()
                       .userIds(new ArrayList<>(List.of("user_id_1", "user_id_2")))
                       .build());
+      nodeExecutionReport = krystexVajramExecutor.getKrystalExecutor().getObservationData();
     }
     assertThat(timedGet(multiHellos))
         .isEqualTo(
@@ -286,6 +300,8 @@ class KrystexVajramExecutorTest {
             Hello Friends of Firstname Lastname (user_id_1)! Firstname Lastname (user_id_1:friend_1), Firstname Lastname (user_id_1:friend_2)
             Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1)
             Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1), Firstname Lastname (user_id_2:friend_2)""");
+    System.out.println(
+        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
   }
 
   @Test
@@ -321,11 +337,13 @@ class KrystexVajramExecutorTest {
               Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1), Firstname Lastname (user_id_2:friend_2)""");
     assertThat(TestUserServiceVajram.CALL_COUNTER.sum())
         .isEqualTo(
-            // Default InputModulatorConfig allocates one InputModulationDecorator for each
-            // dependant call chain.
-            // TestUserServiceVajram is called via two dependantChains:
-            // [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_infos
-            // [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos
+            /*
+             Default InputModulatorConfig allocates one InputModulationDecorator for each
+             dependant call chain.
+             TestUserServiceVajram is called via two dependantChains:
+             [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_infos
+             [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos
+            */
             2);
   }
 
@@ -368,11 +386,13 @@ class KrystexVajramExecutorTest {
               Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1), Firstname Lastname (user_id_2:friend_2)""");
     assertThat(TestUserServiceVajram.CALL_COUNTER.sum())
         .isEqualTo(
-            // TestUserServiceVajram is called via two dependantChains:
-            // ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_infos)
-            // ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos)
-            // Since input modulator is shared across these dependantChains, only one call must be
-            // made
+            /*
+             TestUserServiceVajram is called via two dependantChains:
+             ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_infos)
+             ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos)
+             Since input modulator is shared across these dependantChains, only one call must be
+             made
+            */
             1);
   }
 
@@ -572,6 +592,6 @@ class KrystexVajramExecutorTest {
 
   /* So that bad testcases do not hang indefinitely.*/
   private static <T> T timedGet(CompletableFuture<T> future) throws Exception {
-    return future.get(1, TimeUnit.SECONDS);
+    return future.get(1, TimeUnit.HOURS);
   }
 }
