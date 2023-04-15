@@ -9,8 +9,8 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.BindFrom;
 import com.flipkart.krystal.vajram.inputs.Resolve;
+import com.flipkart.krystal.vajram.inputs.Using;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceVajram;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2InputUtil.HelloFriendsV2AllInputs;
@@ -31,14 +31,14 @@ public abstract class HelloFriendsV2Vajram extends ComputeVajram<String> {
   public static final String FRIEND_IDS = "friend_ids";
   public static final String FRIEND_INFOS = "friend_infos";
 
-  @Resolve(value = FRIEND_IDS, inputs = FriendsServiceVajram.USER_ID)
-  public static String userIdForFriendService(@BindFrom(USER_ID) String userId) {
+  @Resolve(depName = FRIEND_IDS, depInputs = FriendsServiceVajram.USER_ID)
+  public static String userIdForFriendService(@Using(USER_ID) String userId) {
     return userId;
   }
 
-  @Resolve(value = FRIEND_INFOS, inputs = TestUserServiceVajram.USER_ID)
+  @Resolve(depName = FRIEND_INFOS, depInputs = TestUserServiceVajram.USER_ID)
   public static Set<String> userIdsForUserService(
-      @BindFrom(FRIEND_IDS) DependencyResponse<FriendsServiceRequest, Set<String>> friendIds) {
+      @Using(FRIEND_IDS) DependencyResponse<FriendsServiceRequest, Set<String>> friendIds) {
     return friendIds.values().stream()
         .map(ValueOrError::value)
         .filter(Optional::isPresent)
