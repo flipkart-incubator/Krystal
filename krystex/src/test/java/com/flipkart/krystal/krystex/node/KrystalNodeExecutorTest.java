@@ -42,7 +42,8 @@ class KrystalNodeExecutorTest {
             nodeDefinitionRegistry,
             new LogicDecorationOrdering(ImmutableSet.of()),
             new ForkJoinExecutorPool(1),
-            "test");
+            "test",
+            ObservabilityConfig.noOp());
   }
 
   @AfterEach

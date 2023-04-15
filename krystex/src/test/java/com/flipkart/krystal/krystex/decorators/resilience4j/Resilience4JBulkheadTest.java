@@ -17,6 +17,7 @@ import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
+import com.flipkart.krystal.krystex.node.ObservabilityConfig;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
@@ -47,7 +48,8 @@ class Resilience4JBulkheadTest {
             nodeDefinitionRegistry,
             new LogicDecorationOrdering(ImmutableSet.of()),
             new ForkJoinExecutorPool(1),
-            "test");
+            "test",
+            ObservabilityConfig.noOp());
     this.executorService = Executors.newSingleThreadExecutor();
   }
 

@@ -20,8 +20,7 @@ import lombok.ToString;
 
 @ToString
 public final class DefaultNodeExecutionReport implements NodeExecutionReport {
-  @Getter
-  private final Instant startTime;
+  @Getter private final Instant startTime;
 
   @Getter
   private final Map<NodeExecution, LogicExecInfo> mainLogicExecInfos = new LinkedHashMap<>();
