@@ -5,8 +5,8 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihell
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.From;
-import com.flipkart.krystal.vajram.inputs.ResolveDep;
+import com.flipkart.krystal.vajram.inputs.Resolve;
+import com.flipkart.krystal.vajram.inputs.Using;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsVajram;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsInputUtil.MultiHelloFriendsAllInputs;
@@ -17,13 +17,13 @@ import java.util.List;
 public abstract class MultiHelloFriends extends ComputeVajram<String> {
   public static final String ID = "MultiHelloFriends";
 
-  @ResolveDep(depName = "hellos", depInputs = HelloFriendsVajram.USER_ID)
-  public static List<String> userIdsForHellos(@From("user_ids") List<String> userIds) {
+  @Resolve(depName = "hellos", depInputs = HelloFriendsVajram.USER_ID)
+  public static List<String> userIdsForHellos(@Using("user_ids") List<String> userIds) {
     return userIds;
   }
 
-  @ResolveDep(depName = "hellos", depInputs = HelloFriendsVajram.NUMBER_OF_FRIENDS)
-  public static List<Integer> numberOfFriendsForHellos(@From("user_ids") List<String> userIds) {
+  @Resolve(depName = "hellos", depInputs = HelloFriendsVajram.NUMBER_OF_FRIENDS)
+  public static List<Integer> numberOfFriendsForHellos(@Using("user_ids") List<String> userIds) {
     return List.of(1, 2);
   }
 

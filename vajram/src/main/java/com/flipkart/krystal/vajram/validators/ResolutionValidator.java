@@ -9,12 +9,12 @@ import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import com.flipkart.krystal.vajram.inputs.DefaultInputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.Dependency;
-import com.flipkart.krystal.vajram.inputs.From;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
-import com.flipkart.krystal.vajram.inputs.ResolveDep;
+import com.flipkart.krystal.vajram.inputs.Resolve;
+import com.flipkart.krystal.vajram.inputs.Using;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableCollection;
@@ -157,10 +157,10 @@ public class ResolutionValidator {
     Arrays.stream(vajramClass.getMethods())
         .forEach(
             method -> {
-              ResolveDep resolveDepDef = method.getAnnotation(ResolveDep.class);
-              if (resolveDepDef != null && resolveDepDef.depInputs().length > 0) {
-                String dependencyName = resolveDepDef.depName();
-                String[] inputs = resolveDepDef.depInputs();
+              Resolve resolveDef = method.getAnnotation(Resolve.class);
+              if (resolveDef != null && resolveDef.depInputs().length > 0) {
+                String dependencyName = resolveDef.depName();
+                String[] inputs = resolveDef.depInputs();
                 Arrays.stream(inputs)
                     .forEach(
                         input -> {
@@ -172,9 +172,9 @@ public class ResolutionValidator {
                                   new QualifiedInputs(dependencyName, vajramID, input);
                               ImmutableSet<String> sources =
                                   Arrays.stream(method.getParameters())
-                                      .map(parameter -> parameter.getAnnotation(From.class))
+                                      .map(parameter -> parameter.getAnnotation(Using.class))
                                       .filter(Objects::nonNull)
-                                      .map(From::value)
+                                      .map(Using::value)
                                       .collect(toImmutableSet());
                               result.put(
                                   target, new DefaultInputResolverDefinition(sources, target));

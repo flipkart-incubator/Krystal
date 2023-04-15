@@ -10,8 +10,8 @@ import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand.MultiExecute;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand.SingleExecute;
-import com.flipkart.krystal.vajram.inputs.From;
-import com.flipkart.krystal.vajram.inputs.ResolveDep;
+import com.flipkart.krystal.vajram.inputs.Resolve;
+import com.flipkart.krystal.vajram.inputs.Using;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,9 +21,9 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
 
   public static final String ID = "chainAdder";
 
-  @ResolveDep(depName = "chain_sum", depInputs = "numbers")
+  @Resolve(depName = "chain_sum", depInputs = "numbers")
   public static MultiExecute<List<Integer>> numbersForSubChainer(
-      @From("numbers") List<Integer> numbers) {
+      @Using("numbers") List<Integer> numbers) {
     if (numbers.size() < 3) {
       return skipMultiExecute(
           "Skipping chainer as count of numbers is less than 3. Will call adder instead");
@@ -35,8 +35,8 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
     }
   }
 
-  @ResolveDep(depName = "sum", depInputs = "number_one")
-  public static SingleExecute<Integer> adderNumberOne(@From("numbers") List<Integer> numbers) {
+  @Resolve(depName = "sum", depInputs = "number_one")
+  public static SingleExecute<Integer> adderNumberOne(@Using("numbers") List<Integer> numbers) {
     if (numbers.isEmpty()) {
       return skipSingleExecute("No numbers provided. Skipping adder call");
     } else if (numbers.size() > 2) {
@@ -47,8 +47,8 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
     }
   }
 
-  @ResolveDep(depName = "sum", depInputs = "number_two")
-  public static SingleExecute<Integer> adderNumberTwo(@From("numbers") List<Integer> numbers) {
+  @Resolve(depName = "sum", depInputs = "number_two")
+  public static SingleExecute<Integer> adderNumberTwo(@Using("numbers") List<Integer> numbers) {
     if (numbers.isEmpty()) {
       return skipSingleExecute("No numbers provided. Skipping adder call");
     } else if (numbers.size() > 2) {

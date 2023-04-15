@@ -7,8 +7,8 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand.MultiExecute;
-import com.flipkart.krystal.vajram.inputs.From;
-import com.flipkart.krystal.vajram.inputs.ResolveDep;
+import com.flipkart.krystal.vajram.inputs.Resolve;
+import com.flipkart.krystal.vajram.inputs.Using;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Vajram;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2InputUtil.MultiHelloFriendsV2AllInputs;
@@ -22,9 +22,9 @@ import java.util.Set;
 public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
   public static final String ID = "MultiHelloFriendsV2";
 
-  @ResolveDep(depName = "hellos", depInputs = HelloFriendsV2Vajram.USER_ID)
+  @Resolve(depName = "hellos", depInputs = HelloFriendsV2Vajram.USER_ID)
   public static MultiExecute<String> userIdsForHellos(
-      @From("user_ids") Set<String> userIds, @From("skip") Optional<Boolean> skip) {
+      @Using("user_ids") Set<String> userIds, @Using("skip") Optional<Boolean> skip) {
     if (skip.orElse(false)) {
       return MultiExecute.skipMultiExecute("skip requested");
     }
