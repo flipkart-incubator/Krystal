@@ -6,8 +6,8 @@ import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.BindFrom;
 import com.flipkart.krystal.vajram.inputs.Resolve;
+import com.flipkart.krystal.vajram.inputs.Using;
 import java.lang.System.Logger.Level;
 
 /**
@@ -24,9 +24,9 @@ public abstract class GreetingVajram extends ComputeVajram<String> {
   // In this case the UserServiceVajram needs a user_id to retrieve user info from User Service.
   // So it's GreetingVajram's responsibility to provide that input.
   @Resolve(
-      value = "user_info",
-      inputs = {"user_id"})
-  public String userIdForUserService(@BindFrom("user_id") String userId) {
+      depName = "user_info",
+      depInputs = {"user_id"})
+  public String userIdForUserService(@Using("user_id") String userId) {
     return userId;
   }
 
