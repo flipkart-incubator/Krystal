@@ -304,10 +304,8 @@ class Node {
             new ExecuteWithDependency(
                 this.nodeId,
                 dependencyName,
-                Results.empty(),
-                //                new Results<>(
-                //                    ImmutableMap.of(Inputs.empty(),
-                // withError(skipNodeException(skipNode)))),
+                new Results<>(
+                    ImmutableMap.of(Inputs.empty(), withError(skipNodeException(skipNode)))),
                 requestId));
       }
     } else {
