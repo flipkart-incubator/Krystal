@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.node;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.time.Instant.now;
 
 import com.flipkart.krystal.data.InputValue;
@@ -11,12 +12,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.ToString;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @ToString
 public final class DefaultNodeExecutionReport implements NodeExecutionReport {
@@ -37,8 +40,8 @@ public final class DefaultNodeExecutionReport implements NodeExecutionReport {
             new NodeExecution(
                 nodeId,
                 inputs.stream()
-                    .map(DefaultNodeExecutionReport::convertInputs)
-                    .collect(ImmutableList.toImmutableList())),
+                    .map(DefaultNodeExecutionReport::extractAndConvertInputs)
+                    .collect(toImmutableList())),
             _k -> new LogicExecInfo(nodeId, inputs));
     logicExecInfo.startTimeMs = startTime.until(now(), ChronoUnit.MILLIS);
   }
@@ -50,10 +53,10 @@ public final class DefaultNodeExecutionReport implements NodeExecutionReport {
             new NodeExecution(
                 nodeId,
                 result.values().keySet().stream()
-                    .map(DefaultNodeExecutionReport::convertInputs)
-                    .collect(ImmutableList.toImmutableList())));
+                    .map(DefaultNodeExecutionReport::extractAndConvertInputs)
+                    .collect(toImmutableList())));
     logicExecInfo.endTimeMs = startTime.until(now(), ChronoUnit.MILLIS);
-    logicExecInfo.result = convertInputValue(result);
+    logicExecInfo.setResult(convertResult(result));
   }
 
   private record NodeExecution(NodeId nodeId, ImmutableList<ImmutableMap<String, Object>> inputs) {
@@ -63,56 +66,80 @@ public final class DefaultNodeExecutionReport implements NodeExecutionReport {
     }
   }
 
-  @ToString
-  @Getter
-  private static final class LogicExecInfo {
-
-    private final String nodeId;
-    private final ImmutableList<ImmutableMap<String, Object>> inputs;
-    private Object result;
-    private long startTimeMs;
-    private long endTimeMs;
-
-    LogicExecInfo(NodeId nodeId, ImmutableCollection<Inputs> inputList) {
-      this.nodeId = nodeId.value();
-      this.inputs =
-          inputList.stream()
-              .map(inputs -> convertInputs(inputs, false))
-              .collect(ImmutableList.toImmutableList());
-    }
-  }
-
-  private static ImmutableMap<String, Object> convertInputs(Inputs inputs) {
-    return convertInputs(inputs, true);
-  }
-
-  private static ImmutableMap<String, Object> convertInputs(
-      Inputs inputs, boolean omitDependencyResults) {
+  private static ImmutableMap<String, Object> extractAndConvertInputs(Inputs inputs) {
     Map<String, Object> inputMap = new LinkedHashMap<>();
     for (Entry<String, InputValue<Object>> e : inputs.values().entrySet()) {
       InputValue<Object> value = e.getValue();
-      if (omitDependencyResults && value instanceof Results<Object>) {
+      if (!(value instanceof ValueOrError<Object>)) {
         continue;
       }
-      Object collect = convertInputValue(value);
+      Object collect = convertValueOrError((ValueOrError<Object>) value);
       inputMap.put(e.getKey(), collect);
     }
     return ImmutableMap.copyOf(inputMap);
   }
 
-  private static Object convertInputValue(InputValue<Object> value) {
-    Object collect;
-    if (value instanceof ValueOrError<Object> voe) {
-      collect = voe.error().isPresent() ? voe.error().get() : voe.value().orElse(null);
-    } else if (value instanceof Results<Object> r) {
-      collect =
-          r.values().entrySet().stream()
-              .collect(
-                  Collectors.toMap(
-                      e -> convertInputs(e.getKey()), e -> convertInputValue(e.getValue())));
-    } else {
-      throw new UnsupportedOperationException("Unsupported InputValueType");
+  private static ImmutableMap<String, Object> extractAndConvertDependencyResults(Inputs inputs) {
+    Map<String, Object> inputMap = new LinkedHashMap<>();
+    for (Entry<String, InputValue<Object>> e : inputs.values().entrySet()) {
+      InputValue<Object> value = e.getValue();
+      if (!(value instanceof Results<Object>)) {
+        continue;
+      }
+      Map<ImmutableMap<String, Object>, Object> collect = convertResult((Results<Object>) value);
+      inputMap.put(e.getKey(), collect);
     }
-    return collect;
+    return ImmutableMap.copyOf(inputMap);
+  }
+
+  private static Object convertValueOrError(ValueOrError<Object> voe) {
+    if (voe.error().isPresent()) {
+      Throwable throwable = voe.error().get();
+      return throwable + "          " + Arrays.toString(throwable.getStackTrace());
+    } else {
+      return voe.value().orElse(null);
+    }
+  }
+
+  private static Map<ImmutableMap<String, Object>, Object> convertResult(Results<Object> results) {
+    return results.values().entrySet().stream()
+        .collect(
+            Collectors.toMap(
+                e -> extractAndConvertInputs(e.getKey()), e -> convertValueOrError(e.getValue())));
+  }
+
+  @ToString
+  @Getter
+  private static final class LogicExecInfo {
+
+    private final String nodeId;
+    private final ImmutableList<ImmutableMap<String, Object>> inputsList;
+    private final @Nullable ImmutableList<ImmutableMap<String, Object>> dependencyResults;
+    private Object result;
+    private long startTimeMs;
+    private long endTimeMs;
+
+    LogicExecInfo(NodeId nodeId, ImmutableCollection<Inputs> inputList) {
+      ImmutableList<ImmutableMap<String, Object>> dependencyResults;
+      this.nodeId = nodeId.value();
+      this.inputsList =
+          inputList.stream()
+              .map(DefaultNodeExecutionReport::extractAndConvertInputs)
+              .collect(toImmutableList());
+      dependencyResults =
+          inputList.stream()
+              .map(DefaultNodeExecutionReport::extractAndConvertDependencyResults)
+              .filter(map -> !map.isEmpty())
+              .collect(toImmutableList());
+      this.dependencyResults = dependencyResults.isEmpty() ? null : dependencyResults;
+    }
+
+    public void setResult(Map<ImmutableMap<String, Object>, Object> result) {
+      if (inputsList.size() <= 1 && result.size() == 1) {
+        this.result = result.values().iterator().next();
+      } else {
+        this.result = result;
+      }
+    }
   }
 }

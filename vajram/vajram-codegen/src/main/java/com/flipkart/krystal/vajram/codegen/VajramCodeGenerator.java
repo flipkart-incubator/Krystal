@@ -42,6 +42,7 @@ import static com.flipkart.krystal.vajram.codegen.utils.Constants.RESPONSE;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.RESPONSES_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.RETURN_TYPE;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.SINGLE_EXEC_CMD;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.SKIPPED_EXCEPTION;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.UNMOD_INPUT;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.VAJRAM_LOGIC_METHOD;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.VAL_ERR;
@@ -62,6 +63,7 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
+import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Vajram;
@@ -435,6 +437,12 @@ public class VajramCodeGenerator {
                               $depResp:T<$request:T, $response:T> $depResponse:L =
                                    new $depResp:T<>(
                                        element.<$response:T>getDepValue($variable:S).values().entrySet().stream()
+                                           .filter(
+                                               e ->
+                                                   e.getValue()
+                                                       .error()
+                                                       .filter(t -> t instanceof $skippedException:T)
+                                                       .isEmpty())
                                            .collect(
                                                $imMap:T.toImmutableMap(
                                                    e -> $request:T.from(e.getKey()), java.util.Map.Entry::getValue)));
@@ -451,7 +459,9 @@ public class VajramCodeGenerator {
                             DEP_RESPONSE,
                             depVariableName,
                             IM_MAP,
-                            clsDeps.get(IM_MAP)));
+                            clsDeps.get(IM_MAP),
+                            SKIPPED_EXCEPTION,
+                            SkippedExecutionException.class));
                     inputCodeBlocks.add(CodeBlock.builder().add(depVariableName).build());
                   }
                 }

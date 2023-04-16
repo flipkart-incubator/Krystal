@@ -14,12 +14,12 @@ public class MultiLeasePool<T> implements AutoCloseable {
   private final MultiLeasePolicy leasePolicy;
 
   private final Consumer<T> destroyer;
-  private double peakAvgActiveLeasesPerObject;
-  private int maxPoolSize;
+  private volatile double peakAvgActiveLeasesPerObject;
+  private volatile int maxPoolSize;
 
   private final Deque<PooledObject<T>> queue = new LinkedList<>();
   private volatile boolean closed;
-  private int maxActiveLeasesPerObject;
+  private volatile int maxActiveLeasesPerObject;
 
   public MultiLeasePool(Supplier<T> creator, MultiLeasePolicy leasePolicy, Consumer<T> destroyer) {
     this.creator = creator;
@@ -27,32 +27,34 @@ public class MultiLeasePool<T> implements AutoCloseable {
     this.destroyer = destroyer;
   }
 
-  public final synchronized Lease<T> lease() {
-    if (closed) {
-      throw new IllegalStateException("MultiLeasePool already closed");
-    }
-    int count = queue.size();
-    PooledObject<T> head;
-    do {
-      head = queue.peek();
-      if (head == null) {
-        continue;
+  public final Lease<T> lease() {
+    synchronized (this) {
+      if (closed) {
+        throw new IllegalStateException("MultiLeasePool already closed");
       }
-      processNonNullHead();
-    } while (head != null && --count > 0 && !canLeaseOut(head));
-    PooledObject<T> leasable;
-    if (head == null || !canLeaseOut(head)) {
-      leasable = createNewForLeasing();
-    } else {
-      leasable = head;
-      leasable.incrementActiveLeases();
+      int count = queue.size();
+      PooledObject<T> head;
+      do {
+        head = queue.peek();
+        if (head == null) {
+          continue;
+        }
+        processNonNullHead();
+      } while (head != null && --count > 0 && !canLeaseOut(head));
+      PooledObject<T> leasable;
+      if (head == null || !canLeaseOut(head)) {
+        leasable = createNewForLeasing();
+      } else {
+        leasable = head;
+        leasable.incrementActiveLeases();
+      }
+      maxActiveLeasesPerObject = max(maxActiveLeasesPerObject, leasable.activeLeases());
+      peakAvgActiveLeasesPerObject =
+          max(
+              peakAvgActiveLeasesPerObject,
+              queue.stream().mapToInt(PooledObject::activeLeases).average().orElse(0));
+      return new Lease<>(leasable, this::giveBack);
     }
-    maxActiveLeasesPerObject = max(maxActiveLeasesPerObject, leasable.activeLeases());
-    peakAvgActiveLeasesPerObject =
-        max(
-            peakAvgActiveLeasesPerObject,
-            queue.stream().mapToInt(PooledObject::activeLeases).average().orElse(0));
-    return new Lease<>(leasable, this::giveBack);
   }
 
   private void processNonNullHead() {

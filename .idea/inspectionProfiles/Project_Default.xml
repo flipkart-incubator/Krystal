@@ -250,7 +250,7 @@
       <option name="ignoreTestCases" value="false" />
     </inspection_tool>
     <inspection_tool class="FieldAccessNotGuarded" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="FieldAccessedSynchronizedAndUnsynchronized" enabled="true" level="ERROR" enabled_by_default="true">
+    <inspection_tool class="FieldAccessedSynchronizedAndUnsynchronized" enabled="true" level="WARNING" enabled_by_default="true" editorAttributes="WARNING_ATTRIBUTES">
       <option name="countGettersAndSetters" value="false" />
     </inspection_tool>
     <inspection_tool class="FieldCount" enabled="true" level="WARNING" enabled_by_default="true">
@@ -378,11 +378,6 @@
     </inspection_tool>
     <inspection_tool class="MethodMayBeSynchronized" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="MethodNameSameAsParentName" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="MethodOnlyUsedFromInnerClass" enabled="true" level="WARNING" enabled_by_default="true">
-      <option name="ignoreMethodsAccessedFromAnonymousClass" value="false" />
-      <option name="ignoreStaticMethodsFromNonStaticInnerClass" value="false" />
-      <option name="onlyReportStaticMethods" value="false" />
-    </inspection_tool>
     <inspection_tool class="MethodOverloadsParentMethod" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="MethodOverridesInaccessibleMethodOfSuper" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="MethodOverridesStaticMethod" enabled="true" level="WARNING" enabled_by_default="true" />
@@ -581,7 +576,9 @@
     <inspection_tool class="SerialPersistentFieldsWithWrongSignature" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="SerialVersionUIDNotStaticFinal" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="SerializableCanHaveDefaultSerialUID" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="SerializableHasSerialVersionUIDField" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="SerializableHasSerialVersionUIDField" enabled="true" level="WARNING" enabled_by_default="true" editorAttributes="WARNING_ATTRIBUTES">
+      <option name="superClassString" value="java.awt.Component,java.lang.Throwable" />
+    </inspection_tool>
     <inspection_tool class="SerializableStoresNonSerializable" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="SerializableWithUnconstructableAncestor" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="SetReplaceableByEnumSet" enabled="true" level="WARNING" enabled_by_default="true" />

@@ -27,6 +27,7 @@ import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.utils.ImmutableMapView;
+import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -131,8 +132,7 @@ class Node {
     try {
       boolean executeMainLogic;
       if (nodeCommand instanceof SkipNode skipNode) {
-        resultForRequest.completeExceptionally(
-            new SkipNodeException(skipNode.skipDependencyCommand().reason()));
+        resultForRequest.completeExceptionally(skipNodeException(skipNode));
         return resultForRequest;
       } else if (nodeCommand instanceof ExecuteWithDependency executeWithDependency) {
         executeMainLogic = executeWithDependency(requestId, executeWithDependency);
@@ -153,6 +153,10 @@ class Node {
       resultForRequest.completeExceptionally(e);
     }
     return resultForRequest;
+  }
+
+  private static SkippedExecutionException skipNodeException(SkipNode skipNode) {
+    return new SkippedExecutionException(skipNode.skipDependencyCommand().reason());
   }
 
   private void flushDecoratorsIfNeeded(DependantChain dependantChain) {
@@ -290,13 +294,21 @@ class Node {
     if (resolverCommand instanceof SkipDependency) {
       if (dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).get(dependencyName)
           == null) {
-        krystalNodeExecutor.enqueueCommand(
+        SkipNode skipNode =
             new SkipNode(
                 depNodeId,
                 requestId.append("skip(%s)".formatted(dependencyName)),
-                (SkipDependency) resolverCommand));
+                (SkipDependency) resolverCommand);
+        krystalNodeExecutor.enqueueCommand(skipNode);
         this.executeRequestCommand(
-            new ExecuteWithDependency(this.nodeId, dependencyName, Results.empty(), requestId));
+            new ExecuteWithDependency(
+                this.nodeId,
+                dependencyName,
+                Results.empty(),
+                //                new Results<>(
+                //                    ImmutableMap.of(Inputs.empty(),
+                // withError(skipNodeException(skipNode)))),
+                requestId));
       }
     } else {
       // Since the resolver can return multiple inputs, we have to call the dependency Node
