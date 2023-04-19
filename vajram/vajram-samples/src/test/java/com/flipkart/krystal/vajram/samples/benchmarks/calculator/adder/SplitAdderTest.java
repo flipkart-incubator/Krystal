@@ -13,12 +13,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.flipkart.krystal.krystex.node.ObservabilityConfig;
-import com.flipkart.krystal.krystex.node.ObservationData;
+import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
+import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutionReport;
+import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderTest.RequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
+import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -47,15 +50,25 @@ class SplitAdderTest {
   @Test
   void splitAdder_success() throws Exception {
     CompletableFuture<Integer> future;
-    ObservationData observationData;
+    NodeExecutionReport nodeExecutionReport = new DefaultNodeExecutionReport();
+    MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(nodeExecutionReport);
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-        graph.build().createExecutor(new RequestContext(""), new ObservabilityConfig(true, true))) {
+        graph
+            .build()
+            .createExecutor(
+                new RequestContext(""),
+                ImmutableMap.of(
+                    mainLogicExecReporter.decoratorType(),
+                    new MainLogicDecoratorConfig(
+                        mainLogicExecReporter.decoratorType(),
+                        logicExecutionContext -> true,
+                        logicExecutionContext -> mainLogicExecReporter.decoratorType(),
+                        decoratorContext -> mainLogicExecReporter)))) {
       future = executeVajram(krystexVajramExecutor, 0);
-      observationData = krystexVajramExecutor.getKrystalExecutor().getObservationData();
     }
     assertThat(future.get()).isEqualTo(55);
     System.out.println(
-        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(observationData));
+        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
   }
 
   // @Test

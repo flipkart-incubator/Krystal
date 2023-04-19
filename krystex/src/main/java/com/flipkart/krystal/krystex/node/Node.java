@@ -1,6 +1,5 @@
 package com.flipkart.krystal.krystex.node;
 
-import static com.flipkart.krystal.data.ValueOrError.empty;
 import static com.flipkart.krystal.data.ValueOrError.withError;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -37,7 +36,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Set;
@@ -65,7 +63,6 @@ class Node {
       resolverDefinitionsByInput;
   private final ImmutableMapView<String, ImmutableSet<ResolverDefinition>>
       resolverDefinitionsByDependencies;
-  private final NodeExecutionReport nodeExecutionReport;
   private final LogicDecorationOrdering logicDecorationOrdering;
 
   private final Map<RequestId, Map<String, DependencyNodeExecutions>> dependencyExecutions =
@@ -102,8 +99,7 @@ class Node {
       KrystalNodeExecutor krystalNodeExecutor,
       Function<LogicExecutionContext, ImmutableMap<String, MainLogicDecorator>>
           requestScopedDecoratorsSupplier,
-      LogicDecorationOrdering logicDecorationOrdering,
-      NodeExecutionReport nodeExecutionReport) {
+      LogicDecorationOrdering logicDecorationOrdering) {
     this.nodeId = nodeDefinition.nodeId();
     this.nodeDefinition = nodeDefinition;
     this.krystalNodeExecutor = krystalNodeExecutor;
@@ -116,7 +112,6 @@ class Node {
             nodeDefinition.resolverDefinitions().stream()
                 .collect(
                     Collectors.groupingBy(ResolverDefinition::dependencyName, toImmutableSet())));
-    this.nodeExecutionReport = nodeExecutionReport;
   }
 
   void executeCommand(Flush nodeCommand) {
@@ -523,33 +518,10 @@ class Node {
       Inputs inputs, MainLogicDefinition<Object> mainLogicDefinition, RequestId requestId) {
     SortedSet<MainLogicDecorator> sortedDecorators =
         getSortedDecorators(dependantChainByRequest.get(requestId));
-    MainLogic<Object> logic =
-        logicInputs -> {
-          nodeExecutionReport.reportMainLogicStart(
-              nodeId, mainLogicDefinition.nodeLogicId(), logicInputs);
-          ImmutableMap<Inputs, CompletableFuture<Object>> result =
-              mainLogicDefinition.execute(logicInputs);
-          allOf(result.values().toArray(CompletableFuture[]::new))
-              .whenComplete(
-                  (unused, throwable) -> {
-                    nodeExecutionReport.reportMainLogicEnd(
-                        nodeId,
-                        mainLogicDefinition.nodeLogicId(),
-                        new Results<>(
-                            result.entrySet().stream()
-                                .collect(
-                                    toImmutableMap(
-                                        Entry::getKey,
-                                        e ->
-                                            e.getValue()
-                                                .handle(ValueOrError::valueOrError)
-                                                .getNow(empty())))));
-                  });
-          return result;
-        };
+    MainLogic<Object> logic = mainLogicDefinition::execute;
 
     for (MainLogicDecorator mainLogicDecorator : sortedDecorators) {
-      logic = mainLogicDecorator.decorateLogic(logic);
+      logic = mainLogicDecorator.decorateLogic(logic, mainLogicDefinition);
     }
     return logic.execute(ImmutableList.of(inputs)).get(inputs);
   }

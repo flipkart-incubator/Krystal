@@ -23,7 +23,7 @@ public class LogicDecorationOrdering {
     this.decoratorTypeIndices = ImmutableMap.copyOf(indices);
   }
 
-  public Comparator<LogicDecorator<?>> decorationOrder() {
+  public Comparator<LogicDecorator<?, ?>> decorationOrder() {
     return comparingInt(
         key ->
             Optional.ofNullable(decoratorTypeIndices.get(key.decoratorType()))

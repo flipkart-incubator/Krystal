@@ -43,7 +43,7 @@ class KrystalNodeExecutorTest {
             new LogicDecorationOrdering(ImmutableSet.of()),
             new ForkJoinExecutorPool(1),
             "test",
-            ObservabilityConfig.noOp());
+            ImmutableMap.of());
   }
 
   @AfterEach
@@ -250,7 +250,7 @@ class KrystalNodeExecutorTest {
       String nodeId, Set<String> inputs, Function<Inputs, T> logic) {
     ComputeLogicDefinition<T> def =
         new ComputeLogicDefinition<>(
-            new NodeLogicId(nodeId),
+            new NodeLogicId(new NodeId(nodeId), nodeId),
             inputs,
             inputsList ->
                 inputsList.stream()
@@ -259,6 +259,7 @@ class KrystalNodeExecutorTest {
                     .stream()
                     .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture())),
             ImmutableMap.of());
+
     logicDefinitionRegistry.addMainLogic(def);
     return def;
   }

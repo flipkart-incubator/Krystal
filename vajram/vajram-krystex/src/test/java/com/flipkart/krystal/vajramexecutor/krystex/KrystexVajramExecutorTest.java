@@ -13,17 +13,19 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.krystex.MainLogic;
+import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicDecoratorCommand;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JCircuitBreaker;
+import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutionReport;
+import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
 import com.flipkart.krystal.krystex.node.NodeId;
-import com.flipkart.krystal.krystex.node.ObservabilityConfig;
-import com.flipkart.krystal.krystex.node.ObservationData;
 import com.flipkart.krystal.logic.LogicTag;
 import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
 import com.flipkart.krystal.vajram.modulation.Batcher;
@@ -281,9 +283,18 @@ class KrystexVajramExecutorTest {
             .build();
     CompletableFuture<String> multiHellos;
     requestContext.requestId("execute_multiResolverFanouts_permutesTheFanouts");
-    ObservationData nodeExecutionReport;
+    NodeExecutionReport nodeExecutionReport = new DefaultNodeExecutionReport();
+    MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(nodeExecutionReport);
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
-        graph.createExecutor(requestContext, new ObservabilityConfig(true, true))) {
+        graph.createExecutor(
+            requestContext,
+              ImmutableMap.of(
+                  mainLogicExecReporter.decoratorType(),
+                  new MainLogicDecoratorConfig(
+                      mainLogicExecReporter.decoratorType(),
+                      logicExecutionContext -> true,
+                      logicExecutionContext -> mainLogicExecReporter.decoratorType(),
+                      decoratorContext -> mainLogicExecReporter)))) {
       multiHellos =
           krystexVajramExecutor.execute(
               vajramID(MultiHelloFriends.ID),
@@ -291,7 +302,6 @@ class KrystexVajramExecutorTest {
                   MultiHelloFriendsRequest.builder()
                       .userIds(new ArrayList<>(List.of("user_id_1", "user_id_2")))
                       .build());
-      nodeExecutionReport = krystexVajramExecutor.getKrystalExecutor().getObservationData();
     }
     assertThat(timedGet(multiHellos))
         .isEqualTo(
@@ -449,8 +459,10 @@ class KrystexVajramExecutorTest {
                     modulatorContext ->
                         new MainLogicDecorator() {
                           @Override
-                          public MainLogic<Object> decorateLogic(MainLogic<Object> mainLogic) {
-                            return mainLogic;
+                          public MainLogic<Object> decorateLogic(
+                              MainLogic<Object> logicToDecorate,
+                              MainLogicDefinition<Object> originalLogicDefinition) {
+                            return logicToDecorate;
                           }
 
                           @Override
@@ -472,8 +484,10 @@ class KrystexVajramExecutorTest {
                     modulatorContext1 ->
                         new MainLogicDecorator() {
                           @Override
-                          public MainLogic<Object> decorateLogic(MainLogic<Object> mainLogic) {
-                            return mainLogic;
+                          public MainLogic<Object> decorateLogic(
+                              MainLogic<Object> logicToDecorate,
+                              MainLogicDefinition<Object> originalLogicDefinition) {
+                            return logicToDecorate;
                           }
 
                           @Override

@@ -1,7 +1,9 @@
-package com.flipkart.krystal.krystex.node;
+package com.flipkart.krystal.krystex.decorators.observability;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.Results;
+import com.flipkart.krystal.krystex.node.NodeId;
+import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.google.common.collect.ImmutableList;
 
 public sealed interface NodeExecutionReport extends ObservationData

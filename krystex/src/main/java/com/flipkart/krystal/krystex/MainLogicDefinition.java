@@ -18,15 +18,20 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public abstract sealed class MainLogicDefinition<T> extends LogicDefinition
+public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<MainLogic<T>>
     permits IOLogicDefinition, ComputeLogicDefinition {
 
   protected MainLogicDefinition(
-      NodeLogicId nodeLogicId, Set<String> inputs, ImmutableMap<String, LogicTag> logicTags) {
-    super(nodeLogicId, inputs, logicTags);
+      NodeLogicId nodeLogicId,
+      Set<String> inputs,
+      ImmutableMap<String, LogicTag> logicTags,
+      MainLogic<T> mainLogic) {
+    super(nodeLogicId, inputs, logicTags, mainLogic);
   }
 
-  public abstract ImmutableMap<Inputs, CompletableFuture<T>> execute(ImmutableList<Inputs> inputs);
+  public final ImmutableMap<Inputs, CompletableFuture<T>> execute(ImmutableList<Inputs> inputs) {
+    return logic().execute(inputs);
+  }
 
   private final Map<String, MainLogicDecoratorConfig> requestScopedLogicDecoratorConfigs =
       new HashMap<>();

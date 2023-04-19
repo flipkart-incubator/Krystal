@@ -1,9 +1,9 @@
 package com.flipkart.krystal.krystex.node;
 
-public record NodeLogicId(String asString) {
+public record NodeLogicId(NodeId nodeId, String value) {
 
   @Override
   public String toString() {
-    return "l<%s>".formatted(asString());
+    return "l<%s>".formatted(value());
   }
 }

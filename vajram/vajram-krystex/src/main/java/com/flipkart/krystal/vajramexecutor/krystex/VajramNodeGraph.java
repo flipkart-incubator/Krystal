@@ -19,7 +19,6 @@ import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
 import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
-import com.flipkart.krystal.krystex.node.ObservabilityConfig;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.IOVajram;
@@ -102,13 +101,17 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   @Override
   public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
       C requestContext) {
-    return createExecutor(requestContext, ObservabilityConfig.noOp());
+    return createExecutor(requestContext, ImmutableMap.of());
   }
 
   public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
-      C requestContext, ObservabilityConfig observabilityConfig) {
+      C requestContext, Map<String, MainLogicDecoratorConfig> requestScopedLogicDecoratorConfigs) {
     return new KrystexVajramExecutor<>(
-        this, logicDecorationOrdering, executorPool, requestContext, observabilityConfig);
+        this,
+        logicDecorationOrdering,
+        executorPool,
+        requestContext,
+        requestScopedLogicDecoratorConfigs);
   }
 
   @Override
@@ -167,7 +170,8 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     ImmutableMap<String, NodeId> depNameToProviderNode =
         createNodeDefinitionsForDependencies(vajramDefinition);
 
-    MainLogicDefinition<?> vajramLogicMainLogicDefinition = createVajramNodeLogic(vajramDefinition);
+    MainLogicDefinition<?> vajramLogicMainLogicDefinition =
+        createVajramNodeLogic(nodeId, vajramDefinition);
 
     NodeDefinition nodeDefinition =
         nodeDefinitionRegistry.newNodeDefinition(
@@ -202,6 +206,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                           .collect(toImmutableList());
                   ResolverLogicDefinition inputResolverNode =
                       logicRegistryDecorator.newResolverLogic(
+                          vajramId.vajramId(),
                           "%s:dep(%s):inputResolver(%s)"
                               .formatted(
                                   vajramId, dependencyName, String.join(",", resolvedInputNames)),
@@ -261,14 +266,15 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     throw new MandatoryInputsMissingException(vajramID, missingMandatoryValues);
   }
 
-  private MainLogicDefinition<?> createVajramNodeLogic(VajramDefinition vajramDefinition) {
+  private MainLogicDefinition<?> createVajramNodeLogic(
+      NodeId nodeId, VajramDefinition vajramDefinition) {
     VajramID vajramId = vajramDefinition.getVajram().getId();
     ImmutableCollection<VajramInputDefinition> inputDefinitions =
         vajramDefinition.getVajram().getInputDefinitions();
     ImmutableSet<String> inputNames =
         inputDefinitions.stream().map(VajramInputDefinition::name).collect(toImmutableSet());
-    NodeLogicId vajramLogicNodeName = new NodeLogicId("%s:vajramLogic".formatted(vajramId));
     MainLogicDefinition<?> vajramLogic;
+    NodeLogicId vajramLogicNodeName = new NodeLogicId(nodeId, "%s:vajramLogic".formatted(vajramId));
     // Step 4: Create and register node for the main vajram logic
     vajramLogic =
         logicRegistryDecorator.newMainLogic(
