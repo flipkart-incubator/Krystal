@@ -20,11 +20,11 @@ import com.flipkart.krystal.krystex.decoration.LogicDecoratorCommand;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutionReport;
 import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
+import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JCircuitBreaker;
-import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutionReport;
-import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
 import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.logic.LogicTag;
 import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
@@ -50,6 +50,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.Test
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceVajram;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -283,18 +284,18 @@ class KrystexVajramExecutorTest {
             .build();
     CompletableFuture<String> multiHellos;
     requestContext.requestId("execute_multiResolverFanouts_permutesTheFanouts");
-    NodeExecutionReport nodeExecutionReport = new DefaultNodeExecutionReport();
+    NodeExecutionReport nodeExecutionReport = new DefaultNodeExecutionReport(Clock.systemUTC());
     MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(nodeExecutionReport);
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
             requestContext,
-              ImmutableMap.of(
-                  mainLogicExecReporter.decoratorType(),
-                  new MainLogicDecoratorConfig(
-                      mainLogicExecReporter.decoratorType(),
-                      logicExecutionContext -> true,
-                      logicExecutionContext -> mainLogicExecReporter.decoratorType(),
-                      decoratorContext -> mainLogicExecReporter)))) {
+            ImmutableMap.of(
+                mainLogicExecReporter.decoratorType(),
+                new MainLogicDecoratorConfig(
+                    mainLogicExecReporter.decoratorType(),
+                    logicExecutionContext -> true,
+                    logicExecutionContext -> mainLogicExecReporter.decoratorType(),
+                    decoratorContext -> mainLogicExecReporter)))) {
       multiHellos =
           krystexVajramExecutor.execute(
               vajramID(MultiHelloFriends.ID),

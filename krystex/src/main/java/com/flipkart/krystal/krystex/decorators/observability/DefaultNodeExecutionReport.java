@@ -1,7 +1,6 @@
 package com.flipkart.krystal.krystex.decorators.observability;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.time.Instant.now;
 
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
@@ -12,6 +11,7 @@ import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
@@ -21,43 +21,61 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @ToString
+@Slf4j
 public final class DefaultNodeExecutionReport implements NodeExecutionReport {
   @Getter private final Instant startTime;
+  private final Clock clock;
 
   @Getter
   private final Map<NodeExecution, LogicExecInfo> mainLogicExecInfos = new LinkedHashMap<>();
 
-  public DefaultNodeExecutionReport() {
-    this.startTime = now();
+  public DefaultNodeExecutionReport(Clock clock) {
+    this.clock = clock;
+    this.startTime = clock.instant();
   }
 
   @Override
   public void reportMainLogicStart(
       NodeId nodeId, NodeLogicId nodeLogicId, ImmutableList<Inputs> inputs) {
-    LogicExecInfo logicExecInfo =
-        mainLogicExecInfos.computeIfAbsent(
-            new NodeExecution(
-                nodeId,
-                inputs.stream()
-                    .map(DefaultNodeExecutionReport::extractAndConvertInputs)
-                    .collect(toImmutableList())),
-            _k -> new LogicExecInfo(nodeId, inputs));
-    logicExecInfo.startTimeMs = startTime.until(now(), ChronoUnit.MILLIS);
+    NodeExecution nodeExecution =
+        new NodeExecution(
+            nodeId,
+            inputs.stream()
+                .map(DefaultNodeExecutionReport::extractAndConvertInputs)
+                .collect(toImmutableList()));
+    if (mainLogicExecInfos.containsKey(nodeExecution)) {
+      log.error("Cannot start the same node execution multiple times: {}", nodeExecution);
+      return;
+    }
+    mainLogicExecInfos.put(
+        nodeExecution,
+        new LogicExecInfo(nodeId, inputs, startTime.until(clock.instant(), ChronoUnit.MILLIS)));
   }
 
   @Override
   public void reportMainLogicEnd(NodeId nodeId, NodeLogicId nodeLogicId, Results<Object> result) {
-    LogicExecInfo logicExecInfo =
-        mainLogicExecInfos.get(
-            new NodeExecution(
-                nodeId,
-                result.values().keySet().stream()
-                    .map(DefaultNodeExecutionReport::extractAndConvertInputs)
-                    .collect(toImmutableList())));
-    logicExecInfo.endTimeMs = startTime.until(now(), ChronoUnit.MILLIS);
+    NodeExecution nodeExecution =
+        new NodeExecution(
+            nodeId,
+            result.values().keySet().stream()
+                .map(DefaultNodeExecutionReport::extractAndConvertInputs)
+                .collect(toImmutableList()));
+    LogicExecInfo logicExecInfo = mainLogicExecInfos.get(nodeExecution);
+    if (logicExecInfo == null) {
+      log.error(
+          "'reportMainLogicEnd' called without calling 'reportMainLogicStart' first for: {}",
+          nodeExecution);
+      return;
+    }
+    if (logicExecInfo.getResult() != null) {
+      log.error("Cannot end the same node execution multiple times: {}", nodeExecution);
+      return;
+    }
+    logicExecInfo.endTimeMs = startTime.until(clock.instant(), ChronoUnit.MILLIS);
     logicExecInfo.setResult(convertResult(result));
   }
 
@@ -112,16 +130,17 @@ public final class DefaultNodeExecutionReport implements NodeExecutionReport {
 
   @ToString
   @Getter
-  private static final class LogicExecInfo {
+  static final class LogicExecInfo {
 
     private final String nodeId;
     private final ImmutableList<ImmutableMap<String, Object>> inputsList;
     private final @Nullable ImmutableList<ImmutableMap<String, Object>> dependencyResults;
     private Object result;
-    private long startTimeMs;
-    private long endTimeMs;
+    @Getter private final long startTimeMs;
+    @Getter private long endTimeMs;
 
-    LogicExecInfo(NodeId nodeId, ImmutableCollection<Inputs> inputList) {
+    LogicExecInfo(NodeId nodeId, ImmutableCollection<Inputs> inputList, long startTimeMs) {
+      this.startTimeMs = startTimeMs;
       ImmutableList<ImmutableMap<String, Object>> dependencyResults;
       this.nodeId = nodeId.value();
       this.inputsList =
