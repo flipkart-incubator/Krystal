@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -47,6 +48,7 @@ public final class VajramCodeGenFacade {
   private final List<Path> srcDirs;
   private final Path compiledClassesDir;
   private final Path generatedSrcDir;
+  private Iterable<File> compileClasspath;
 
   public static void main(String[] args) {
     Options options = new Options();
@@ -123,11 +125,16 @@ public final class VajramCodeGenFacade {
   }
 
   public static void codeGenVajramImpl(
-      Set<? extends File> srcDirs, String compiledDir, String destinationDir) throws Exception {
+      Set<? extends File> srcDirs,
+      String compiledDir,
+      String destinationDir,
+      Iterable<File> classpath)
+      throws Exception {
     new VajramCodeGenFacade(
             srcDirs.stream().map(File::toPath).toList(),
             Path.of(compiledDir),
-            Path.of(destinationDir))
+            Path.of(destinationDir),
+            classpath)
         .codeGenVajramImpl();
   }
 
@@ -135,6 +142,14 @@ public final class VajramCodeGenFacade {
     this.compiledClassesDir = compiledClassesDir;
     this.srcDirs = Collections.unmodifiableList(srcDirs);
     this.generatedSrcDir = generatedSrcDir;
+  }
+
+  public VajramCodeGenFacade(
+      List<Path> srcDirs, Path compiledClassesDir, Path generatedSrcDir, Iterable<File> compileClasspath) {
+    this.compiledClassesDir = compiledClassesDir;
+    this.srcDirs = Collections.unmodifiableList(srcDirs);
+    this.generatedSrcDir = generatedSrcDir;
+    this.compileClasspath = compileClasspath;
   }
 
   private void codeGenModels() throws Exception {
@@ -181,12 +196,16 @@ public final class VajramCodeGenFacade {
 
   private void codeGenVajramImpl() throws Exception {
     ImmutableList<VajramInputFile> inputFiles = getInputDefinitions();
+    Long count = StreamSupport.stream(compileClasspath.spliterator(), false).count();
     ClassLoader systemClassLoader = VajramID.class.getClassLoader();
-    URL[] cp = new URL[srcDirs.size() + 1];
+    URL[] cp = new URL[srcDirs.size() +  count.intValue() + 1];
     int i = 0;
     for (Path srcDir : srcDirs) {
       cp[i] = srcDir.toFile().toURI().toURL();
       i++;
+    }
+    for (File file : compileClasspath) {
+      cp[i++] = file.toURI().toURL();
     }
     cp[i] = compiledClassesDir.toFile().toURI().toURL();
 
