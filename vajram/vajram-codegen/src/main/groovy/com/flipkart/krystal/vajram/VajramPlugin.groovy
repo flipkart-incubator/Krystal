@@ -12,8 +12,6 @@ class VajramPlugin implements Plugin<Project> {
         String testGeneratedSrcDir = project.buildDir.getPath() + '/generated/sources/vajrams/test/java/'
 
         project.sourceSets {
-//            main.java.srcDirs = ['src/main/java', mainGeneratedSrcDir]
-//            test.java.srcDirs = ['src/test/java', testGeneratedSrcDir]
             main {
                 java {
                     srcDirs = ['src/main/java', mainGeneratedSrcDir]
@@ -44,7 +42,6 @@ class VajramPlugin implements Plugin<Project> {
             //Compile the generatedCode
             source project.sourceSets.main.allSource.srcDirs
             classpath = project.configurations.compileClasspath
-//            print "classpath " + classpath
             destinationDirectory = project.tasks.compileJava.destinationDirectory
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
