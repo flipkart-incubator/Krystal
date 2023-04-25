@@ -92,7 +92,7 @@ class VajramPlugin implements Plugin<Project> {
                         project.sourceSets.test.java.srcDirs,
                         compiledTestDir,
                         testGeneratedSrcDir,
-                        project.configurations.compileClasspath)
+                        project.tasks.compileTestJava.classpath)
             }
         }
 
