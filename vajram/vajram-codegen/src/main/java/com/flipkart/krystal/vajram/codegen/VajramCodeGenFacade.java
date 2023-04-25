@@ -15,6 +15,7 @@ import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.google.common.collect.ImmutableList;
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
@@ -47,6 +48,7 @@ public final class VajramCodeGenFacade {
   private final List<Path> srcDirs;
   private final Path compiledClassesDir;
   private final Path generatedSrcDir;
+  private Iterable<? extends File> compileClasspath;
 
   public static void main(String[] args) {
     Options options = new Options();
@@ -123,18 +125,32 @@ public final class VajramCodeGenFacade {
   }
 
   public static void codeGenVajramImpl(
-      Set<? extends File> srcDirs, String compiledDir, String destinationDir) throws Exception {
+      Set<? extends File> srcDirs,
+      String compiledDir,
+      String destinationDir,
+      Iterable<? extends File> classpath)
+      throws Exception {
     new VajramCodeGenFacade(
             srcDirs.stream().map(File::toPath).toList(),
             Path.of(compiledDir),
-            Path.of(destinationDir))
+            Path.of(destinationDir),
+            classpath)
         .codeGenVajramImpl();
   }
 
   public VajramCodeGenFacade(List<Path> srcDirs, Path compiledClassesDir, Path generatedSrcDir) {
+    this(srcDirs, compiledClassesDir, generatedSrcDir, Collections.emptyList());
+  }
+
+  public VajramCodeGenFacade(
+      List<Path> srcDirs,
+      Path compiledClassesDir,
+      Path generatedSrcDir,
+      Iterable<? extends File> compileClasspath) {
     this.compiledClassesDir = compiledClassesDir;
     this.srcDirs = Collections.unmodifiableList(srcDirs);
     this.generatedSrcDir = generatedSrcDir;
+    this.compileClasspath = compileClasspath;
   }
 
   private void codeGenModels() throws Exception {
@@ -182,16 +198,32 @@ public final class VajramCodeGenFacade {
   private void codeGenVajramImpl() throws Exception {
     ImmutableList<VajramInputFile> inputFiles = getInputDefinitions();
     ClassLoader systemClassLoader = VajramID.class.getClassLoader();
-    URL[] cp = new URL[srcDirs.size() + 1];
-    int i = 0;
-    for (Path srcDir : srcDirs) {
-      cp[i] = srcDir.toFile().toURI().toURL();
-      i++;
-    }
-    cp[i] = compiledClassesDir.toFile().toURI().toURL();
+    List<URL> urls = new ArrayList<>();
+    // Adding src dirs to classloader urls
+    srcDirs.forEach(
+        path -> {
+          try {
+            urls.add(path.toFile().toURI().toURL());
+          } catch (MalformedURLException e) {
+            log.error("Malformed url {}", path.toFile().toURI());
+            throw new RuntimeException(e);
+          }
+        });
+    // Adding all compile classpath directories to classloader urls
+    compileClasspath.forEach(
+        file -> {
+          try {
+            urls.add(file.toURI().toURL());
+          } catch (MalformedURLException e) {
+            log.error("Malformed url {}", file.toURI());
+            throw new RuntimeException(e);
+          }
+        });
+    // Adding compiled classes dir to classloader urls
+    urls.add(compiledClassesDir.toFile().toURI().toURL());
 
     //noinspection ClassLoaderInstantiation
-    try (URLClassLoader urlcl = new URLClassLoader(cp, systemClassLoader)) {
+    try (URLClassLoader urlcl = new URLClassLoader(urls.toArray(URL[]::new), systemClassLoader)) {
       Map<String, ParsedVajramData> vajramDefs = new HashMap<>();
       Map<String, ImmutableList<VajramInputDefinition>> vajramInputsDef = new HashMap<>();
       inputFiles.forEach(
