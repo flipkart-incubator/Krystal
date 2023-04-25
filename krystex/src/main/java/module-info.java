@@ -5,7 +5,9 @@ module flipkart.krystal.krystex {
       flipkart.krystal.vajramexecutor.krystex;
   exports com.flipkart.krystal.krystex.decoration to
       flipkart.krystal.vajramexecutor.krystex;
-  exports com.flipkart.krystal.krystex.decorators.resilience4j; exports com.flipkart.krystal.krystex.decorators.observability to flipkart.krystal.vajramexecutor.krystex;
+  exports com.flipkart.krystal.krystex.decorators.resilience4j;
+  exports com.flipkart.krystal.krystex.decorators.observability to
+      flipkart.krystal.vajramexecutor.krystex;
 
   requires com.google.common;
   requires org.checkerframework.checker.qual;
