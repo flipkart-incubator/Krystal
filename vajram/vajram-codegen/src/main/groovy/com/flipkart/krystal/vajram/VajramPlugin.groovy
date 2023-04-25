@@ -58,7 +58,7 @@ class VajramPlugin implements Plugin<Project> {
                         project.sourceSets.main.java.srcDirs,
                         compiledMainDir,
                         mainGeneratedSrcDir,
-                        project.configurations.compileClasspath)
+                        project.tasks.compileJava.classpath)
             }
         }
 

@@ -139,9 +139,10 @@ public final class VajramCodeGenFacade {
   }
 
   public VajramCodeGenFacade(List<Path> srcDirs, Path compiledClassesDir, Path generatedSrcDir) {
-    this.compiledClassesDir = compiledClassesDir;
-    this.srcDirs = Collections.unmodifiableList(srcDirs);
-    this.generatedSrcDir = generatedSrcDir;
+    //    this.compiledClassesDir = compiledClassesDir;
+    //    this.srcDirs = Collections.unmodifiableList(srcDirs);
+    //    this.generatedSrcDir = generatedSrcDir;
+    this(srcDirs, compiledClassesDir, generatedSrcDir, Collections.emptyList());
   }
 
   public VajramCodeGenFacade(
@@ -202,23 +203,25 @@ public final class VajramCodeGenFacade {
     ClassLoader systemClassLoader = VajramID.class.getClassLoader();
     List<URL> urls = new ArrayList<>();
     // Adding src dirs to classloader urls
-    srcDirs.forEach(path -> {
-      try {
-        urls.add(path.toFile().toURI().toURL());
-      } catch (MalformedURLException e) {
-        log.error("Malformed url {}", path.toFile().toURI());
-        throw new RuntimeException(e);
-      }
-    });
+    srcDirs.forEach(
+        path -> {
+          try {
+            urls.add(path.toFile().toURI().toURL());
+          } catch (MalformedURLException e) {
+            log.error("Malformed url {}", path.toFile().toURI());
+            throw new RuntimeException(e);
+          }
+        });
     // Adding all compile classpath directories to classloader urls
-    compileClasspath.forEach(file -> {
-      try {
-        urls.add(file.toURI().toURL());
-      } catch (MalformedURLException e) {
-        log.error("Malformed url {}", file.toURI());
-        throw new RuntimeException(e);
-      }
-    });
+    compileClasspath.forEach(
+        file -> {
+          try {
+            urls.add(file.toURI().toURL());
+          } catch (MalformedURLException e) {
+            log.error("Malformed url {}", file.toURI());
+            throw new RuntimeException(e);
+          }
+        });
     // Adding compiled classes dir to classloader urls
     urls.add(compiledClassesDir.toFile().toURI().toURL());
 
