@@ -13,7 +13,6 @@ public interface KrystalExecutor extends AutoCloseable {
   /** Flushes any pending requests. */
   void flush();
 
-  // Override to suppress "throws Exception"
-  @Override
+  @Override // to suppress "throws Exception"
   void close();
 }

@@ -2,12 +2,14 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
+import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.exec.VajramExecutor;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
@@ -23,7 +25,8 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
       VajramNodeGraph vajramNodeGraph,
       LogicDecorationOrdering logicDecorationOrdering,
       MultiLeasePool<? extends ExecutorService> executorServicePool,
-      C applicationRequestContext) {
+      C applicationRequestContext,
+      Map<String, MainLogicDecoratorConfig> requestScopedLogicDecoratorConfigs) {
     this.vajramNodeGraph = vajramNodeGraph;
     this.applicationRequestContext = applicationRequestContext;
     this.krystalExecutor =
@@ -31,7 +34,8 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
             vajramNodeGraph.getNodeDefinitionRegistry(),
             logicDecorationOrdering,
             executorServicePool,
-            applicationRequestContext.requestId());
+            applicationRequestContext.requestId(),
+            requestScopedLogicDecoratorConfigs);
   }
 
   @Override
@@ -49,6 +53,10 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
         vajramNodeGraph.getNodeId(vajramId),
         vajramRequestBuilder.apply(applicationRequestContext).toInputValues(),
         requestId);
+  }
+
+  public KrystalExecutor getKrystalExecutor() {
+    return krystalExecutor;
   }
 
   @Override

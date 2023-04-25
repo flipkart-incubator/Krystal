@@ -39,9 +39,13 @@ public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error)
 
   public ValueOrError {
     if ((value.isPresent() && error.isPresent())) {
-      throw new IllegalArgumentException(
-          "Both of 'value' and 'failureReason' cannot be present together");
+      throw new IllegalArgumentException("Both of 'value' and 'error' cannot be present together");
     }
+  }
+
+  public static <T> ValueOrError<T> empty() {
+    //noinspection unchecked
+    return (ValueOrError<T>) EMPTY;
   }
 
   public static <T> ValueOrError<T> valueOrError(Callable<T> valueProvider) {
@@ -54,11 +58,6 @@ public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error)
 
   public static <S, T> Function<S, ValueOrError<T>> valueOrError(Function<S, T> valueComputer) {
     return s -> valueOrError(() -> valueComputer.apply(s));
-  }
-
-  public static <T> ValueOrError<T> empty() {
-    //noinspection unchecked
-    return (ValueOrError<T>) EMPTY;
   }
 
   public static <T> ValueOrError<T> withValue(T t) {
@@ -106,7 +105,7 @@ public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error)
     if (error.isPresent()) {
       return error.toString();
     } else {
-      return value().toString();
+      return String.valueOf(value().orElse(null));
     }
   }
 }

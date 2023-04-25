@@ -7,6 +7,7 @@ import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.ResolverLogic;
 import com.flipkart.krystal.krystex.ResolverLogicDefinition;
+import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.flipkart.krystal.logic.LogicTag;
 import com.google.common.collect.ImmutableMap;
@@ -15,9 +16,10 @@ import java.util.Set;
 public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
 
   public <T> ResolverLogicDefinition newResolverLogic(
-      String nodeId, Set<String> inputs, ResolverLogic logic) {
+      String nodeId, String nodeLogicId, Set<String> inputs, ResolverLogic logic) {
     ResolverLogicDefinition def =
-        new ResolverLogicDefinition(new NodeLogicId(nodeId), inputs, logic, ImmutableMap.of());
+        new ResolverLogicDefinition(
+            new NodeLogicId(new NodeId(nodeId), nodeLogicId), inputs, logic, ImmutableMap.of());
     delegate.addResolver(def);
     return def;
   }

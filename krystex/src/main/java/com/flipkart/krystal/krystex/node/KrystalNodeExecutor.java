@@ -18,6 +18,7 @@ import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig.DecoratorContext;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.utils.MultiLeasePool.Lease;
@@ -32,6 +33,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 
 /** Default implementation of Krystal executor which */
@@ -42,6 +44,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   private final LogicDecorationOrdering logicDecorationOrdering;
   private final Lease<? extends ExecutorService> commandQueueLease;
   private final RequestId requestId;
+  private final ImmutableMap</*DecoratorType*/ String, MainLogicDecoratorConfig>
+      requestScopedLogicDecoratorConfigs;
 
   /** DecoratorType -> {InstanceId -> Decorator} */
   private final Map<String, Map<String, MainLogicDecorator>> requestScopedMainDecorators =
@@ -49,19 +53,22 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
   private final NodeRegistry nodeRegistry = new NodeRegistry();
   private volatile boolean closed;
-  private final Map<RequestId, List<NodeExecutionInfo>> allRequests = new LinkedHashMap<>();
-  private final Map<RequestId, List<NodeExecutionInfo>> unFlushedRequests = new LinkedHashMap<>();
+  private final Map<RequestId, List<NodeResult>> allRequests = new LinkedHashMap<>();
+  private final Map<RequestId, List<NodeResult>> unFlushedRequests = new LinkedHashMap<>();
   private final Map<NodeId, Set<DependantChain>> dependantChainsPerNode = new LinkedHashMap<>();
 
   public KrystalNodeExecutor(
       NodeDefinitionRegistry nodeDefinitionRegistry,
       LogicDecorationOrdering logicDecorationOrdering,
       MultiLeasePool<? extends ExecutorService> commandQueuePool,
-      String requestId) {
+      String requestId,
+      Map<String, MainLogicDecoratorConfig> requestScopedLogicDecoratorConfigs) {
     this.nodeDefinitionRegistry = nodeDefinitionRegistry;
     this.logicDecorationOrdering = logicDecorationOrdering;
     this.commandQueueLease = commandQueuePool.lease();
     this.requestId = new RequestId(requestId);
+    this.requestScopedLogicDecoratorConfigs =
+        ImmutableMap.copyOf(requestScopedLogicDecoratorConfigs);
   }
 
   private ImmutableMap<String, MainLogicDecorator> getRequestScopedDecorators(
@@ -71,19 +78,22 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     MainLogicDefinition<?> mainLogicDefinition =
         nodeDefinitionRegistry.logicDefinitionRegistry().getMain(nodeDefinition.mainLogicNode());
     Map<String, MainLogicDecorator> decorators = new LinkedHashMap<>();
-    mainLogicDefinition
-        .getRequestScopedLogicDecoratorConfigs()
+    Stream.concat(
+            mainLogicDefinition.getRequestScopedLogicDecoratorConfigs().entrySet().stream(),
+            requestScopedLogicDecoratorConfigs.entrySet().stream())
         .forEach(
-            (decoratorType, decoratorConfig) -> {
+            entry -> {
+              String decoratorType = entry.getKey();
+              MainLogicDecoratorConfig decoratorConfig = entry.getValue();
               if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
                 String instanceId =
                     decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
                 MainLogicDecorator mainLogicDecorator =
                     requestScopedMainDecorators
-                        .computeIfAbsent(decoratorType, k -> new LinkedHashMap<>())
+                        .computeIfAbsent(decoratorType, t -> new LinkedHashMap<>())
                         .computeIfAbsent(
                             instanceId,
-                            k ->
+                            _i ->
                                 decoratorConfig
                                     .factory()
                                     .apply(
@@ -113,15 +123,14 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     if (closed) {
       throw new RejectedExecutionException("KrystalNodeExecutor is already closed");
     }
-    return supplyAsync(
+    return supplyAsync( // Perform all datastructure manipulations in the command queue to avoid
+            // multi-thread access
             () -> {
               createDependantNodes(nodeId, DependantChainStart.instance());
               CompletableFuture<Object> future = new CompletableFuture<>();
-              NodeExecutionInfo nodeExecutionInfo = new NodeExecutionInfo(nodeId, inputs, future);
-              allRequests.computeIfAbsent(requestId, r -> new ArrayList<>()).add(nodeExecutionInfo);
-              unFlushedRequests
-                  .computeIfAbsent(requestId, r -> new ArrayList<>())
-                  .add(nodeExecutionInfo);
+              NodeResult nodeResult = new NodeResult(nodeId, inputs, future);
+              allRequests.computeIfAbsent(requestId, r -> new ArrayList<>()).add(nodeResult);
+              unFlushedRequests.computeIfAbsent(requestId, r -> new ArrayList<>()).add(nodeResult);
               return future;
             },
             commandQueueLease.get())
@@ -151,12 +160,12 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       // scenario that InitiateActiveDepChains will not contain recursive active dependant
       // chains.
       dependantChainsPerNode
-          .computeIfAbsent(nodeId, k -> new LinkedHashSet<>())
+          .computeIfAbsent(nodeId, _n -> new LinkedHashSet<>())
           .add(dependantChain);
     } else {
       nodeRegistry.createIfAbsent(
           nodeId,
-          n ->
+          _n ->
               new Node(
                   nodeDefinition, this, this::getRequestScopedDecorators, logicDecorationOrdering));
       ImmutableMap<String, NodeId> dependencyNodes = nodeDefinition.dependencyNodes();
@@ -165,7 +174,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
               createDependantNodes(
                   depNodeId, DependantChain.from(nodeId, dependencyName, dependantChain)));
       dependantChainsPerNode
-          .computeIfAbsent(nodeId, k -> new LinkedHashSet<>())
+          .computeIfAbsent(nodeId, _n -> new LinkedHashSet<>())
           .add(dependantChain);
     }
   }
@@ -184,12 +193,13 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   public void flush() {
     runAsync(
         () -> {
+          //noinspection CodeBlock2Expr
           unFlushedRequests.forEach(
               (requestId, nodeExecutionInfos) -> {
                 nodeExecutionInfos.forEach(
-                    nodeExecutionInfo -> {
-                      NodeId nodeId = nodeExecutionInfo.nodeId();
-                      if (nodeExecutionInfo.future().isDone()) {
+                    nodeResult -> {
+                      NodeId nodeId = nodeResult.nodeId();
+                      if (nodeResult.future().isDone()) {
                         return;
                       }
                       NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
@@ -205,7 +215,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                                           .filter(
                                               s -> !nodeDefinition.dependencyNodes().containsKey(s))
                                           .collect(toImmutableSet()),
-                                      nodeExecutionInfo.inputs(),
+                                      nodeResult.inputs(),
                                       DependantChainStart.instance(),
                                       requestId))
                               .thenApply(NodeResponse::response)
@@ -217,13 +227,13 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                                       return valueOrError.value().orElse(null);
                                     }
                                   });
-                      linkFutures(submissionResult, nodeExecutionInfo.future());
+                      linkFutures(submissionResult, nodeResult.future());
                     });
               });
           unFlushedRequests.forEach(
               (requestId, nodeExecutionInfos) ->
                   nodeExecutionInfos.forEach(
-                      nodeExecutionInfo -> enqueueCommand(new Flush(nodeExecutionInfo.nodeId()))));
+                      nodeResult -> enqueueCommand(new Flush(nodeResult.nodeId()))));
           unFlushedRequests.clear();
         },
         commandQueueLease.get());
@@ -246,12 +256,11 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                     allRequests.values().stream()
                         .flatMap(
                             nodeExecutionInfos ->
-                                nodeExecutionInfos.stream().map(NodeExecutionInfo::future))
+                                nodeExecutionInfos.stream().map(NodeResult::future))
                         .toArray(CompletableFuture[]::new))
                 .whenComplete((unused, throwable) -> commandQueueLease.close()),
         commandQueueLease.get());
   }
 
-  private record NodeExecutionInfo(
-      NodeId nodeId, Inputs inputs, CompletableFuture<Object> future) {}
+  private record NodeResult(NodeId nodeId, Inputs inputs, CompletableFuture<Object> future) {}
 }

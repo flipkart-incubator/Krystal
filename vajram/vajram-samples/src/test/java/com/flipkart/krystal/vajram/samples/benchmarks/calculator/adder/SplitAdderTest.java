@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder;
 
+import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
@@ -8,10 +9,20 @@ import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutionReport;
+import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
+import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderTest.RequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
+import com.google.common.collect.ImmutableMap;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -24,20 +35,41 @@ import org.junit.jupiter.api.Test;
 
 class SplitAdderTest {
   private Builder graph;
+  private ObjectMapper objectMapper;
 
   @BeforeEach
   void setUp() {
     graph = loadFromClasspath("com.flipkart.krystal.vajram.samples.benchmarks.calculator");
+    objectMapper =
+        new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .registerModule(new Jdk8Module())
+            .setSerializationInclusion(NON_NULL)
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
   }
 
   @Test
-  void splitAdder_success() throws ExecutionException, InterruptedException {
+  void splitAdder_success() throws Exception {
     CompletableFuture<Integer> future;
+    NodeExecutionReport nodeExecutionReport = new DefaultNodeExecutionReport(Clock.systemUTC());
+    MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(nodeExecutionReport);
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-        graph.build().createExecutor(new RequestContext(""))) {
+        graph
+            .build()
+            .createExecutor(
+                new RequestContext(""),
+                ImmutableMap.of(
+                    mainLogicExecReporter.decoratorType(),
+                    new MainLogicDecoratorConfig(
+                        mainLogicExecReporter.decoratorType(),
+                        logicExecutionContext -> true,
+                        logicExecutionContext -> mainLogicExecReporter.decoratorType(),
+                        decoratorContext -> mainLogicExecReporter)))) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
     assertThat(future.get()).isEqualTo(55);
+    System.out.println(
+        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
   }
 
   // @Test

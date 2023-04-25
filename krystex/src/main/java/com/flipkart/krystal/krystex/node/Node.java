@@ -4,6 +4,7 @@ import static com.flipkart.krystal.data.ValueOrError.withError;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.lang.Math.max;
+import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
@@ -25,6 +26,7 @@ import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.utils.ImmutableMapView;
+import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -45,7 +47,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class Node {
+class Node {
 
   private final NodeId nodeId;
 
@@ -92,7 +94,7 @@ public class Node {
       new LinkedHashMap<>();
   private final Map<RequestId, DependantChain> dependantChainByRequest = new LinkedHashMap<>();
 
-  public Node(
+  Node(
       NodeDefinition nodeDefinition,
       KrystalNodeExecutor krystalNodeExecutor,
       Function<LogicExecutionContext, ImmutableMap<String, MainLogicDecorator>>
@@ -125,8 +127,7 @@ public class Node {
     try {
       boolean executeMainLogic;
       if (nodeCommand instanceof SkipNode skipNode) {
-        resultForRequest.completeExceptionally(
-            new SkipNodeException(skipNode.skipDependencyCommand().reason()));
+        resultForRequest.completeExceptionally(skipNodeException(skipNode));
         return resultForRequest;
       } else if (nodeCommand instanceof ExecuteWithDependency executeWithDependency) {
         executeMainLogic = executeWithDependency(requestId, executeWithDependency);
@@ -147,6 +148,10 @@ public class Node {
       resultForRequest.completeExceptionally(e);
     }
     return resultForRequest;
+  }
+
+  private static SkippedExecutionException skipNodeException(SkipNode skipNode) {
+    return new SkippedExecutionException(skipNode.skipDependencyCommand().reason());
   }
 
   private void flushDecoratorsIfNeeded(DependantChain dependantChain) {
@@ -284,13 +289,19 @@ public class Node {
     if (resolverCommand instanceof SkipDependency) {
       if (dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).get(dependencyName)
           == null) {
-        krystalNodeExecutor.enqueueCommand(
+        SkipNode skipNode =
             new SkipNode(
                 depNodeId,
                 requestId.append("skip(%s)".formatted(dependencyName)),
-                (SkipDependency) resolverCommand));
+                (SkipDependency) resolverCommand);
+        krystalNodeExecutor.enqueueCommand(skipNode);
         this.executeRequestCommand(
-            new ExecuteWithDependency(this.nodeId, dependencyName, Results.empty(), requestId));
+            new ExecuteWithDependency(
+                this.nodeId,
+                dependencyName,
+                new Results<>(
+                    ImmutableMap.of(Inputs.empty(), withError(skipNodeException(skipNode)))),
+                requestId));
       }
     } else {
       // Since the resolver can return multiple inputs, we have to call the dependency Node
@@ -358,7 +369,7 @@ public class Node {
       ImmutableSet<ResolverDefinition> resolverDefinitionsForDependency =
           this.resolverDefinitionsByDependencies.get(dependencyName);
       if (resolverDefinitionsForDependency.equals(dependencyNodeExecutions.executedResolvers())) {
-        CompletableFuture.allOf(
+        allOf(
                 dependencyNodeExecutions
                     .individualCallResponses()
                     .values()
@@ -508,8 +519,9 @@ public class Node {
     SortedSet<MainLogicDecorator> sortedDecorators =
         getSortedDecorators(dependantChainByRequest.get(requestId));
     MainLogic<Object> logic = mainLogicDefinition::execute;
+
     for (MainLogicDecorator mainLogicDecorator : sortedDecorators) {
-      logic = mainLogicDecorator.decorateLogic(logic);
+      logic = mainLogicDecorator.decorateLogic(logic, mainLogicDefinition);
     }
     return logic.execute(ImmutableList.of(inputs)).get(inputs);
   }

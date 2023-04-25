@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
+import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.flipkart.krystal.krystex.node.DependantChain.fromTriggerOrder;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static java.time.Duration.ofSeconds;
@@ -7,13 +8,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.krystex.MainLogic;
+import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicDecoratorCommand;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutionReport;
+import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
+import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JCircuitBreaker;
 import com.flipkart.krystal.krystex.node.NodeId;
@@ -41,6 +50,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.Test
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceVajram;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -61,12 +71,17 @@ import org.junit.jupiter.api.TestInfo;
 class KrystexVajramExecutorTest {
 
   private TestRequestContext requestContext;
+  private ObjectMapper objectMapper;
 
   @BeforeEach
   void setUp() {
     requestContext = new TestRequestContext(Optional.of("user_id_1"), 2);
-    //
-    // TestRequestContext.builder().loggedInUserId(Optional.of("user_id_1")).numberOfFriends(2);
+    objectMapper =
+        new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .registerModule(new Jdk8Module())
+            .setSerializationInclusion(NON_NULL)
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
   }
 
   @AfterEach
@@ -269,8 +284,18 @@ class KrystexVajramExecutorTest {
             .build();
     CompletableFuture<String> multiHellos;
     requestContext.requestId("execute_multiResolverFanouts_permutesTheFanouts");
+    NodeExecutionReport nodeExecutionReport = new DefaultNodeExecutionReport(Clock.systemUTC());
+    MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(nodeExecutionReport);
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
-        graph.createExecutor(requestContext)) {
+        graph.createExecutor(
+            requestContext,
+            ImmutableMap.of(
+                mainLogicExecReporter.decoratorType(),
+                new MainLogicDecoratorConfig(
+                    mainLogicExecReporter.decoratorType(),
+                    logicExecutionContext -> true,
+                    logicExecutionContext -> mainLogicExecReporter.decoratorType(),
+                    decoratorContext -> mainLogicExecReporter)))) {
       multiHellos =
           krystexVajramExecutor.execute(
               vajramID(MultiHelloFriends.ID),
@@ -286,6 +311,8 @@ class KrystexVajramExecutorTest {
             Hello Friends of Firstname Lastname (user_id_1)! Firstname Lastname (user_id_1:friend_1), Firstname Lastname (user_id_1:friend_2)
             Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1)
             Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1), Firstname Lastname (user_id_2:friend_2)""");
+    System.out.println(
+        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
   }
 
   @Test
@@ -321,11 +348,13 @@ class KrystexVajramExecutorTest {
               Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1), Firstname Lastname (user_id_2:friend_2)""");
     assertThat(TestUserServiceVajram.CALL_COUNTER.sum())
         .isEqualTo(
-            // Default InputModulatorConfig allocates one InputModulationDecorator for each
-            // dependant call chain.
-            // TestUserServiceVajram is called via two dependantChains:
-            // [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_infos
-            // [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos
+            /*
+             Default InputModulatorConfig allocates one InputModulationDecorator for each
+             dependant call chain.
+             TestUserServiceVajram is called via two dependantChains:
+             [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_infos
+             [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos
+            */
             2);
   }
 
@@ -368,11 +397,13 @@ class KrystexVajramExecutorTest {
               Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1), Firstname Lastname (user_id_2:friend_2)""");
     assertThat(TestUserServiceVajram.CALL_COUNTER.sum())
         .isEqualTo(
-            // TestUserServiceVajram is called via two dependantChains:
-            // ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_infos)
-            // ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos)
-            // Since input modulator is shared across these dependantChains, only one call must be
-            // made
+            /*
+             TestUserServiceVajram is called via two dependantChains:
+             ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_infos)
+             ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos)
+             Since input modulator is shared across these dependantChains, only one call must be
+             made
+            */
             1);
   }
 
@@ -429,8 +460,10 @@ class KrystexVajramExecutorTest {
                     modulatorContext ->
                         new MainLogicDecorator() {
                           @Override
-                          public MainLogic<Object> decorateLogic(MainLogic<Object> mainLogic) {
-                            return mainLogic;
+                          public MainLogic<Object> decorateLogic(
+                              MainLogic<Object> logicToDecorate,
+                              MainLogicDefinition<Object> originalLogicDefinition) {
+                            return logicToDecorate;
                           }
 
                           @Override
@@ -452,8 +485,10 @@ class KrystexVajramExecutorTest {
                     modulatorContext1 ->
                         new MainLogicDecorator() {
                           @Override
-                          public MainLogic<Object> decorateLogic(MainLogic<Object> mainLogic) {
-                            return mainLogic;
+                          public MainLogic<Object> decorateLogic(
+                              MainLogic<Object> logicToDecorate,
+                              MainLogicDefinition<Object> originalLogicDefinition) {
+                            return logicToDecorate;
                           }
 
                           @Override

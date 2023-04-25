@@ -5,6 +5,7 @@ import static com.flipkart.krystal.krystex.decorators.resilience4j.R4JUtils.extr
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.krystex.MainLogic;
+import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
@@ -27,7 +28,8 @@ public final class Resilience4JCircuitBreaker implements MainLogicDecorator {
   }
 
   @Override
-  public MainLogic<Object> decorateLogic(MainLogic<Object> logicToDecorate) {
+  public MainLogic<Object> decorateLogic(
+      MainLogic<Object> logicToDecorate, MainLogicDefinition<Object> originalLogicDefinition) {
     CircuitBreaker circuitBreaker = this.circuitBreaker;
     if (circuitBreaker != null) {
       return inputsList ->

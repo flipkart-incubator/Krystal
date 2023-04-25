@@ -8,6 +8,7 @@ import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.config.NestedConfig;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.MainLogic;
+import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.decoration.LogicDecoratorCommand;
@@ -58,7 +59,8 @@ public final class InputModulationDecorator<
   }
 
   @Override
-  public MainLogic<Object> decorateLogic(MainLogic<Object> logicToDecorate) {
+  public MainLogic<Object> decorateLogic(
+      MainLogic<Object> logicToDecorate, MainLogicDefinition<Object> originalLogicDefinition) {
     inputModulator.onModulation(
         requests -> requests.forEach(request -> modulateInputsList(logicToDecorate, request)));
     return inputsList -> {

@@ -16,6 +16,7 @@ import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
+import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -47,7 +48,8 @@ class Resilience4JBulkheadTest {
             nodeDefinitionRegistry,
             new LogicDecorationOrdering(ImmutableSet.of()),
             new ForkJoinExecutorPool(1),
-            "test");
+            "test",
+            ImmutableMap.of());
     this.executorService = Executors.newSingleThreadExecutor();
   }
 
@@ -79,7 +81,7 @@ class Resilience4JBulkheadTest {
             return switch (key) {
               case ".bulkhead.max_concurrency" -> (Optional<T>) Optional.of(2);
               case ".bulkhead.enabled" -> (Optional<T>) Optional.of(true);
-              default -> throw new UnsupportedOperationException();
+              default -> Optional.empty();
             };
           }
         });
@@ -120,7 +122,7 @@ class Resilience4JBulkheadTest {
       String nodeId, Set<String> inputs, Function<Inputs, CompletableFuture<T>> logic) {
     IOLogicDefinition<T> def =
         new IOLogicDefinition<>(
-            new NodeLogicId(nodeId),
+            new NodeLogicId(new NodeId(nodeId), nodeId + ":asyncLogic"),
             inputs,
             inputsList ->
                 inputsList.stream()
