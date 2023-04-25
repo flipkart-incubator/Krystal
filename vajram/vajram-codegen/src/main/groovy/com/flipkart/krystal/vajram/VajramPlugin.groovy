@@ -91,7 +91,8 @@ class VajramPlugin implements Plugin<Project> {
                 VajramCodeGenFacade.codeGenVajramImpl(
                         project.sourceSets.test.java.srcDirs,
                         compiledTestDir,
-                        testGeneratedSrcDir)
+                        testGeneratedSrcDir,
+                        project.configurations.compileClasspath)
             }
         }
 
