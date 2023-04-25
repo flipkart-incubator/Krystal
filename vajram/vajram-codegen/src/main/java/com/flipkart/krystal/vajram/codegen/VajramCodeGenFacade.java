@@ -139,9 +139,6 @@ public final class VajramCodeGenFacade {
   }
 
   public VajramCodeGenFacade(List<Path> srcDirs, Path compiledClassesDir, Path generatedSrcDir) {
-    //    this.compiledClassesDir = compiledClassesDir;
-    //    this.srcDirs = Collections.unmodifiableList(srcDirs);
-    //    this.generatedSrcDir = generatedSrcDir;
     this(srcDirs, compiledClassesDir, generatedSrcDir, Collections.emptyList());
   }
 
