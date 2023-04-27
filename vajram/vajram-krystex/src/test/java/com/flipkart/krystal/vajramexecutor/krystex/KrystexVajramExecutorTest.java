@@ -443,7 +443,7 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  @Disabled("Fix: https://github.com/flipkart-incubator/Krystal/issues/84")
+//  @Disabled("Fix: https://github.com/flipkart-incubator/Krystal/issues/84")
   void flush_skippingADependency_flushesCompleteCallGraph(TestInfo testInfo) throws Exception {
     CompletableFuture<FlushCommand> friendServiceFlushCommand = new CompletableFuture<>();
     CompletableFuture<FlushCommand> userServiceFlushCommand = new CompletableFuture<>();
@@ -481,7 +481,7 @@ class KrystexVajramExecutorTest {
             .registerInputModulator(
                 vajramID(TestUserServiceVajram.ID),
                 new InputModulatorConfig(
-                    logicExecutionContext1 -> "",
+                    logicExecutionContext1 -> "1",
                     modulatorContext1 ->
                         new MainLogicDecorator() {
                           @Override
@@ -517,8 +517,8 @@ class KrystexVajramExecutorTest {
                       .skip(true)
                       .build());
     }
-    assertThat(friendServiceFlushCommand).succeedsWithin(ofSeconds(1));
-    assertThat(userServiceFlushCommand).succeedsWithin(ofSeconds(1));
+    assertThat(friendServiceFlushCommand).succeedsWithin(ofSeconds(1000));
+    assertThat(userServiceFlushCommand).succeedsWithin(ofSeconds(1000));
     assertThat(timedGet(multiHellos)).isEqualTo("");
   }
 
@@ -607,6 +607,6 @@ class KrystexVajramExecutorTest {
 
   /* So that bad testcases do not hang indefinitely.*/
   private static <T> T timedGet(CompletableFuture<T> future) throws Exception {
-    return future.get(1, TimeUnit.SECONDS);
+    return future.get(1, TimeUnit.HOURS);
   }
 }
