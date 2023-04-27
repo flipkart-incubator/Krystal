@@ -517,8 +517,8 @@ class KrystexVajramExecutorTest {
                       .skip(true)
                       .build());
     }
-    assertThat(friendServiceFlushCommand).succeedsWithin(ofSeconds(1000));
-    assertThat(userServiceFlushCommand).succeedsWithin(ofSeconds(1000));
+    assertThat(friendServiceFlushCommand).succeedsWithin(ofSeconds(1));
+    assertThat(userServiceFlushCommand).succeedsWithin(ofSeconds(1));
     assertThat(timedGet(multiHellos)).isEqualTo("");
   }
 
@@ -607,6 +607,6 @@ class KrystexVajramExecutorTest {
 
   /* So that bad testcases do not hang indefinitely.*/
   private static <T> T timedGet(CompletableFuture<T> future) throws Exception {
-    return future.get(1, TimeUnit.HOURS);
+    return future.get(1, TimeUnit.SECONDS);
   }
 }
