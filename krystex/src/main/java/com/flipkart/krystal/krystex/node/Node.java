@@ -312,7 +312,6 @@ class Node {
             new SkipNode(
                 depNodeId,
                 requestId.append("skip(%s)".formatted(dependencyName)),
-                dependencyName,
                 DependantChain.from(
                     nodeId,
                     dependencyName,
@@ -334,9 +333,9 @@ class Node {
               new SkipNode(
                   nodeIdEntry.getValue(),
                   requestId.append("%s.%s".formatted(dependencyName, nodeIdEntry.getKey())),
-                  nodeIdEntry.getKey(),
                   DependantChain.from(depNodeId, nodeIdEntry.getKey(), skipNode.dependencyChain()),
-                  new SkipDependency("skipped because parent skiped "+ nodeIdEntry.getKey()));
+                  new SkipDependency("Skipping the dependent node as current node is"
+                      + " getting skipped "+ nodeIdEntry.getKey()));
           krystalNodeExecutor.enqueueCommand(skipNodeDep);
           this.executeRequestCommand(
               new ExecuteWithDependency(
