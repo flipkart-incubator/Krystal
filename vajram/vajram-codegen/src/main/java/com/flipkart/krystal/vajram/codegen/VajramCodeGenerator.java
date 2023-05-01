@@ -251,7 +251,6 @@ public class VajramCodeGenerator {
               String[] inputs = resolve.depInputs();
               String depName = resolve.depName();
               assert depName != null;
-
               final Optional<VajramInputDefinition> definition =
                   vajramInputsDefinitions.get(parsedVajramData.vajramName()).stream()
                       .filter(vajramInputDefinition -> vajramInputDefinition.name().equals(depName))
@@ -815,6 +814,7 @@ public class VajramCodeGenerator {
         String requestClass = CodegenUtils.getRequestClassName(splits[splits.length - 1]);
 
         if (DependencyResponse.class.isAssignableFrom(parameter.getType())) {
+          TypeName typeArgument = CodegenUtils.getClassGenericArgumentsType(parsedVajramData.vajramClass());
           ifBlockBuilder.addStatement(
               """
                 $1T $2L =\s
@@ -825,10 +825,10 @@ public class VajramCodeGenerator {
               ParameterizedTypeName.get(
                   clsDeps.get(DEP_RESP),
                   ClassName.get(depPackageName, requestClass),
-                  CodegenUtils.getMethodReturnType(method)),
+                  typeArgument),
               variableName,
               clsDeps.get(DEP_RESP),
-              CodegenUtils.getMethodReturnType(method),
+              typeArgument,
               bindParamName,
               clsDeps.get(IM_MAP),
               ClassName.get(depPackageName, requestClass),
@@ -846,10 +846,10 @@ public class VajramCodeGenerator {
                       .values().iterator().next().value().orElse(null)""";
           ifBlockBuilder.addStatement(
               code,
-              CodegenUtils.getMethodReturnType(method),
+              requestClass,
               variableName,
               clsDeps.get(DEP_RESP),
-              CodegenUtils.getMethodReturnType(method),
+              requestClass,
               bindParamName,
               clsDeps.get(IM_MAP),
               ClassName.get(depPackageName, requestClass),
