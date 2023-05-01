@@ -251,6 +251,7 @@ public class VajramCodeGenerator {
               String[] inputs = resolve.depInputs();
               String depName = resolve.depName();
               assert depName != null;
+
               final Optional<VajramInputDefinition> definition =
                   vajramInputsDefinitions.get(parsedVajramData.vajramName()).stream()
                       .filter(vajramInputDefinition -> vajramInputDefinition.name().equals(depName))
@@ -846,10 +847,10 @@ public class VajramCodeGenerator {
                       .values().iterator().next().value().orElse(null)""";
           ifBlockBuilder.addStatement(
               code,
-              requestClass,
+              CodegenUtils.getMethodReturnType(method),
               variableName,
               clsDeps.get(DEP_RESP),
-              requestClass,
+              CodegenUtils.getMethodReturnType(method),
               bindParamName,
               clsDeps.get(IM_MAP),
               ClassName.get(depPackageName, requestClass),
