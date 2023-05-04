@@ -130,8 +130,7 @@ public class Node {
     try {
       boolean executeMainLogic;
       if (nodeCommand instanceof SkipNode skipNode) {
-        handleSkipDependency(requestId, skipNode, resultForRequest);
-        return resultForRequest;
+        return handleSkipDependency(requestId, skipNode, resultForRequest);
       } else if (nodeCommand instanceof ExecuteWithDependency executeWithDependency) {
         executeMainLogic = executeWithDependency(requestId, executeWithDependency);
       } else if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
@@ -153,15 +152,25 @@ public class Node {
     return resultForRequest;
   }
 
-  private boolean handleSkipDependency(RequestId requestId, SkipNode skipNode,
+  private CompletableFuture<NodeResponse> handleSkipDependency(RequestId requestId, SkipNode skipNode,
       CompletableFuture<NodeResponse> resultForRequest) {
     requestsByDependantChain
         .computeIfAbsent(skipNode.dependencyChain(), k -> new LinkedHashSet<>())
         .add(requestId);
-    resultForRequest.completeExceptionally(skipNodeException(skipNode));
     dependantChainByRequest.computeIfAbsent(requestId, r -> skipNode.dependencyChain());
     skipLogicExecuted.put(requestId, true);
-    return execute(requestId, ImmutableSet.of(), true);
+    Iterable<ResolverDefinition> pendingResolvers = resolverDefinitionsByInput.values().stream().flatMap(
+        Collection::stream
+    ).collect(Collectors.toSet());
+    Map<NodeLogicId, ResolverDefinition> uniquePendingResolvers = new LinkedHashMap<>();
+    for (ResolverDefinition pendingResolver : pendingResolvers) {
+      uniquePendingResolvers.putIfAbsent(pendingResolver.resolverNodeLogicId(), pendingResolver);
+    }
+    for (ResolverDefinition resolverDefinition : uniquePendingResolvers.values()) {
+      executeResolver(requestId, resolverDefinition, true);
+    }
+    resultForRequest.completeExceptionally(skipNodeException(skipNode));
+    return resultForRequest;
   }
 
   private static SkippedExecutionException skipNodeException(SkipNode skipNode) {
@@ -191,7 +200,7 @@ public class Node {
 
   private boolean executeWithInputs(RequestId requestId, ExecuteWithInputs executeWithInputs) {
     collectInputValues(requestId, executeWithInputs.inputNames(), executeWithInputs.values());
-    return execute(requestId, executeWithInputs.inputNames(), false);
+    return execute(requestId, executeWithInputs.inputNames());
   }
 
   private boolean executeWithDependency(
@@ -206,10 +215,10 @@ public class Node {
           "Duplicate data for dependency %s of node %s in request %s"
               .formatted(dependencyName, nodeId, requestId));
     }
-    return execute(requestId, inputNames, false);
+    return execute(requestId, inputNames);
   }
 
-  private boolean execute(RequestId requestId, ImmutableSet<String> newInputNames, boolean skip) {
+  private boolean execute(RequestId requestId, ImmutableSet<String> newInputNames) {
     MainLogicDefinition<Object> mainLogicNodeDefinition =
         nodeDefinition
             .nodeDefinitionRegistry()
@@ -229,18 +238,13 @@ public class Node {
         return true;
       } else if (nodeDefinition.resolverDefinitions().isEmpty()
           && !nodeDefinition.dependencyNodes().isEmpty())
-        return executeDependenciesWhenNoResolvers(requestId, skip);
+        return executeDependenciesWhenNoResolvers(requestId, false);
     }
     Map<NodeLogicId, ResolverCommand> nodeResults =
         this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
 
     Iterable<ResolverDefinition> pendingResolvers;
-    if(skip){
-      pendingResolvers = resolverDefinitionsByInput.values().stream().flatMap(
-          Collection::stream
-      ).collect(Collectors.toSet());
-    }
-    else if (newInputNames.isEmpty()) {
+    if (newInputNames.isEmpty()) {
       pendingResolvers =
           resolverDefinitionsByInput
                   .getOrDefault(Optional.<String>empty(), Collections.emptyList())
@@ -276,7 +280,7 @@ public class Node {
     int pendingResolverCount = 0;
     for (ResolverDefinition resolverDefinition : uniquePendingResolvers.values()) {
       pendingResolverCount++;
-      executeResolver(requestId, resolverDefinition, skip);
+      executeResolver(requestId, resolverDefinition, false);
     }
 
     boolean executeMainLogic = false;
