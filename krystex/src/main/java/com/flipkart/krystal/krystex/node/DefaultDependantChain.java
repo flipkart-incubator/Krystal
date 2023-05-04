@@ -19,4 +19,18 @@ public record DefaultDependantChain(
   public boolean contains(NodeId nodeId) {
     return this.nodeId.map(n -> n.equals(nodeId)).orElse(false) || dependantChain.contains(nodeId);
   }
+
+  @Override
+  public int hashCode() {
+     return defaultDependantChain().hashCode();
+  }
+
+  @Override
+  public boolean equals(Object obj){
+    return this.hashCode() == obj.hashCode();
+  }
+
+  private String defaultDependantChain() {
+    return (this.dependantChain.toString()+":"+this.dependencyName);
+  }
 }
