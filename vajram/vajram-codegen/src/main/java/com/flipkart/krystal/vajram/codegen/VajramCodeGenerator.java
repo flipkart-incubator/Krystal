@@ -331,10 +331,10 @@ public class VajramCodeGenerator {
    * Method to generate "executeCompute" function code for ComputeVajrams Supported DataAccessSpec
    * => VajramID only.
    *
-   * @param vajramResponseType Vajram response type
-   * @param resolverMap Map of all the resolved variables to the methods resolving them
+   * @param vajramResponseType      Vajram response type
+   * @param resolverMap             Map of all the resolved variables to the methods resolving them
    * @param inputsNeedingModulation ClassName for the inputModulation class for the Vajram
-   * @param commonInputs ClassName for the commonInputs class for the Vajram
+   * @param commonInputs            ClassName for the commonInputs class for the Vajram
    * @return generated code for "executeCompute" {@link MethodSpec}
    */
   private MethodSpec createComputeVajramExecuteMethod(
@@ -380,7 +380,7 @@ public class VajramCodeGenerator {
       // TODO : check if this is needed for compute vajrams or should throw error
       if (type instanceof ParameterizedType
           && CompletableFuture.class.isAssignableFrom(
-              (Class<?>) ((ParameterizedType) type).getRawType())) {
+          (Class<?>) ((ParameterizedType) type).getRawType())) {
         codeBuilder.addNamed(INPUT_MODULATION_FUTURE_CODE_BLOCK, valueMap);
       } else {
         codeBuilder.addNamed(INPUT_MODULATION_CODE_BLOCK, valueMap);
@@ -398,10 +398,10 @@ public class VajramCodeGenerator {
         CodeBlock.builder()
             .add(
                 """
-                return inputsList.stream().collect(
-                     $T.toImmutableMap($T.identity(),
-                     element -> {
-                """,
+                    return inputsList.stream().collect(
+                         $T.toImmutableMap($T.identity(),
+                         element -> {
+                    """,
                 clsDeps.get(IM_MAP),
                 clsDeps.get(FUNCTION));
     List<CodeBlock> inputCodeBlocks = new ArrayList<>();
@@ -434,19 +434,19 @@ public class VajramCodeGenerator {
                     final String depVariableName = variableName + RESPONSES_SUFFIX;
                     codeBlock.addNamed(
                         """
-                              $depResp:T<$request:T, $response:T> $depResponse:L =
-                                   new $depResp:T<>(
-                                       element.<$response:T>getDepValue($variable:S).values().entrySet().stream()
-                                           .filter(
-                                               e ->
-                                                   e.getValue()
-                                                       .error()
-                                                       .filter(t -> t instanceof $skippedException:T)
-                                                       .isEmpty())
-                                           .collect(
-                                               $imMap:T.toImmutableMap(
-                                                   e -> $request:T.from(e.getKey()), java.util.Map.Entry::getValue)));
-                               """,
+                            $depResp:T<$request:T, $response:T> $depResponse:L =
+                                 new $depResp:T<>(
+                                     element.<$response:T>getDepValue($variable:S).values().entrySet().stream()
+                                         .filter(
+                                             e ->
+                                                 e.getValue()
+                                                     .error()
+                                                     .filter(t -> t instanceof $skippedException:T)
+                                                     .isEmpty())
+                                         .collect(
+                                             $imMap:T.toImmutableMap(
+                                                 e -> $request:T.from(e.getKey()), java.util.Map.Entry::getValue)));
+                             """,
                         ImmutableMap.of(
                             DEP_RESP,
                             clsDeps.get(DEP_RESP),
@@ -505,8 +505,8 @@ public class VajramCodeGenerator {
    * Method to generate "getInputsConvertor" function
    *
    * @param inputsNeedingModulation Generated Vajram specific InputUtil.InputsNeedingModulation
-   *     class
-   * @param commonInputs Generated Vajram specific InputUtil.CommonInputs class
+   *                                class
+   * @param commonInputs            Generated Vajram specific InputUtil.CommonInputs class
    * @return {@link MethodSpec}
    */
   private MethodSpec createInputConvertersMethod(
@@ -530,10 +530,11 @@ public class VajramCodeGenerator {
   /**
    * Method to generate "execute" function code for IOVajrams
    *
-   * @param inputsNeedingModulation Generated Vajramspecific InputUtil.InputsNeedingModulation class
-   * @param commonInputs Generated Vajram specific InputUtil.CommonInputs class
-   * @param vajramResponseType Vajram response type
-   * @param resolverMap Map of the resolved variables to their resolver methods
+   * @param inputsNeedingModulation Generated Vajramspecific InputUtil.InputsNeedingModulation
+   *                                class
+   * @param commonInputs            Generated Vajram specific InputUtil.CommonInputs class
+   * @param vajramResponseType      Vajram response type
+   * @param resolverMap             Map of the resolved variables to their resolver methods
    * @return generated code for "execute" {@link MethodSpec}
    */
   private MethodSpec createIOVajramExecuteMethod(
@@ -580,7 +581,7 @@ public class VajramCodeGenerator {
               .getActualTypeArguments()[1];
       if (type instanceof ParameterizedType
           && CompletableFuture.class.isAssignableFrom(
-              (Class<?>) ((ParameterizedType) type).getRawType())) {
+          (Class<?>) ((ParameterizedType) type).getRawType())) {
         codeBuilder.addNamed(INPUT_MODULATION_FUTURE_CODE_BLOCK, valueMap);
       } else {
         codeBuilder.addNamed(INPUT_MODULATION_CODE_BLOCK, valueMap);
@@ -596,9 +597,9 @@ public class VajramCodeGenerator {
    * Method to generate "resolveInputOfDependency" function code for Vajrams. If there are no
    * resolvers defined in the Vajram, {@link Optional}.empty() is returned.
    *
-   * @param resolverMap Map of all the resolved variables to the methods resolving them
+   * @param resolverMap  Map of all the resolved variables to the methods resolving them
    * @param depFanoutMap Map of all the dependencies and their resolvers defintions are fanout or
-   *     not
+   *                     not
    * @return generated code for "resolveInputOfDependency" {@link MethodSpec}
    */
   public Optional<MethodSpec> createResolvers(
@@ -637,7 +638,7 @@ public class VajramCodeGenerator {
                             String bindParamName = parameter.getAnnotation(Using.class).value();
                             if (!fanout.get()
                                 && depFanoutMap.containsKey(
-                                    bindParamName)) { // if fanout is already set skip resetting it.
+                                bindParamName)) { // if fanout is already set skip resetting it.
                               fanout.set(depFanoutMap.get(bindParamName));
                             }
                             // validating if the bind parameter has a resolver binding or defined as
@@ -673,13 +674,13 @@ public class VajramCodeGenerator {
   /**
    * Method to generate resolver code for input binding
    *
-   * @param resolvedVariables all resolved variable names
-   * @param resolverMap Map of all the resolved variables to the methods resolving them
-   * @param method Vajram resolve method
-   * @param depFanoutMap Map of all the dependencies and their resolvers defintions are fanout or
-   *     not
+   * @param resolvedVariables       all resolved variable names
+   * @param resolverMap             Map of all the resolved variables to the methods resolving them
+   * @param method                  Vajram resolve method
+   * @param depFanoutMap            Map of all the dependencies and their resolvers defintions are
+   *                                fanout or not
    * @param isParamFanoutDependency Variable mentioning if the resolved variable uses a fanout
-   *     dependency
+   *                                dependency
    * @return {@link CodeBlock.Builder} with resolver code
    */
   private CodeBlock.Builder buildInputResolver(
@@ -707,7 +708,7 @@ public class VajramCodeGenerator {
                 paramToVariableMap.put(
                     bindParamName,
                     generateDependencyResolutions(
-                            method, inputs, bindParamName, ifBlockBuilder, depFanoutMap, parameter)
+                        method, inputs, bindParamName, ifBlockBuilder, depFanoutMap, parameter)
                         .orElseThrow(
                             () -> {
                               throw new VajramValidationException(
@@ -761,13 +762,13 @@ public class VajramCodeGenerator {
   /**
    * Method to generate resolver code for dependency bindings
    *
-   * @param method Dependency resolver method
-   * @param inputs Inputs to the dependency resolver method
-   * @param bindParamName The bind param name in the resolver method
+   * @param method         Dependency resolver method
+   * @param inputs         Inputs to the dependency resolver method
+   * @param bindParamName  The bind param name in the resolver method
    * @param ifBlockBuilder The {@link CodeBlock.Builder}
-   * @param depFanoutMap Map of all the dependencies and their resolvers defintions are fanout or
-   *     not
-   * @param parameter the bind parameter in the resolver method
+   * @param depFanoutMap   Map of all the dependencies and their resolvers defintions are fanout or
+   *                       not
+   * @param parameter      the bind parameter in the resolver method
    * @return the {@link Type} of the resolver method response
    */
   private Optional<Type> generateDependencyResolutions(
@@ -815,14 +816,15 @@ public class VajramCodeGenerator {
         String requestClass = CodegenUtils.getRequestClassName(splits[splits.length - 1]);
 
         if (DependencyResponse.class.isAssignableFrom(parameter.getType())) {
-          TypeName typeArgument = CodegenUtils.getClassGenericArgumentsType(parsedVajramData.vajramClass());
+          TypeName typeArgument = CodegenUtils.getClassGenericArgumentsType(
+              parsedVajramData.vajramClass());
           ifBlockBuilder.addStatement(
               """
-                $1T $2L =\s
-                 new $3T<>(inputs.<$4T>getDepValue($5S)
-                      .values().entrySet().stream()
-                      .collect($6T.toImmutableMap(e -> $7T.from(e.getKey()),
-                      $8T::getValue)))""",
+                  $1T $2L =\s
+                   new $3T<>(inputs.<$4T>getDepValue($5S)
+                        .values().entrySet().stream()
+                        .collect($6T.toImmutableMap(e -> $7T.from(e.getKey()),
+                        $8T::getValue)))""",
               ParameterizedTypeName.get(
                   clsDeps.get(DEP_RESP),
                   ClassName.get(depPackageName, requestClass),
@@ -839,12 +841,12 @@ public class VajramCodeGenerator {
           // convert to parameter data type from dependency response
           String code =
               """
-                $1T $2L =\s
-                 new $3T<>(inputs.<$4T>getDepValue($5S)
-                      .values().entrySet().stream()
-                      .collect($6T.toImmutableMap(e -> $7T.from(e.getKey()),
-                      $8T::getValue)))
-                      .values().iterator().next().value().orElse(null)""";
+                  $1T $2L =\s
+                   new $3T<>(inputs.<$4T>getDepValue($5S)
+                        .values().entrySet().stream()
+                        .collect($6T.toImmutableMap(e -> $7T.from(e.getKey()),
+                        $8T::getValue)))
+                        .values().iterator().next().value().orElse(null)""";
           ifBlockBuilder.addStatement(
               code,
               CodegenUtils.getMethodReturnType(method),
@@ -868,11 +870,12 @@ public class VajramCodeGenerator {
    * DependencyCommand.MultiExecute<NormalType> Non- fanout - Normal datatype - Vajram Request =>
    * toInputValues() - DependencyCommand.executeWith
    *
-   * @param method Resolve method
-   * @param inputs Resolve inputs
+   * @param method             Resolve method
+   * @param inputs             Resolve inputs
    * @param paramToVariableMap All the input variables with key as bindParam name
-   * @param ifBlockBuilder {@link CodeBlock.Builder}
-   * @param isFanOut Variable mentioning if the resolved variable uses a fanout dependency
+   * @param ifBlockBuilder     {@link CodeBlock.Builder}
+   * @param isFanOut           Variable mentioning if the resolved variable uses a fanout
+   *                           dependency
    */
   private void buildFinalResolvers(
       Method method,
@@ -973,10 +976,10 @@ public class VajramCodeGenerator {
       } else if (DependencyCommand.SingleExecute.class.isAssignableFrom(klass)) {
         ifBlockBuilder.addStatement(
             """
-          return $T.singleExecuteWith(new Inputs(
-           $T.of($S, $T.withValue(
-              $L.inputs().iterator().next().orElse(null)))))
-        """,
+                  return $T.singleExecuteWith(new Inputs(
+                   $T.of($S, $T.withValue(
+                      $L.inputs().iterator().next().orElse(null)))))
+                """,
             clsDeps.get(DEP_COMMAND),
             clsDeps.get(IM_MAP),
             inputs[0],
@@ -1042,9 +1045,9 @@ public class VajramCodeGenerator {
   /**
    * Method to generate VajramDependency code blocks
    *
-   * @param classLoader : Classloader with generated Vajram models
+   * @param classLoader     : Classloader with generated Vajram models
    * @param inputDefBuilder : {@link CodeBlock.Builder}
-   * @param dependency : Vajram dependency
+   * @param dependency      : Vajram dependency
    */
   private static void buildVajramDependency(
       ClassLoader classLoader, CodeBlock.Builder inputDefBuilder, Dependency dependency) {
@@ -1078,7 +1081,7 @@ public class VajramCodeGenerator {
    * Method to generate VajramInput code blocks
    *
    * @param inputDefBuilder : {@link CodeBlock.Builder}
-   * @param input : Vajram Input
+   * @param input           : Vajram Input
    */
   private void buildVajramInput(CodeBlock.Builder inputDefBuilder, Input<?> input) {
     inputDefBuilder.add("$T.builder()", ClassName.get(Input.class)).add(".name($S)", input.name());
@@ -1275,8 +1278,10 @@ public class VajramCodeGenerator {
             .addAnnotation(Override.class)
             .addStatement(
                 "$T builder = new $T<>($L)",
-                new TypeToken<Map<String, InputValue<Object>>>() {}.getType(),
-                new TypeToken<HashMap>() {}.getType(),
+                new TypeToken<Map<String, InputValue<Object>>>() {
+                }.getType(),
+                new TypeToken<HashMap>() {
+                }.getType(),
                 inputDefs.size());
     Builder fromInputValues =
         methodBuilder("from")
@@ -1361,8 +1366,8 @@ public class VajramCodeGenerator {
                 //    return Optional.ofNullable(this.inputName);
                 // }
                 ? CodeBlock.builder()
-                    .addStatement("return $T.ofNullable(this.$L)", Optional.class, name)
-                    .build()
+                .addStatement("return $T.ofNullable(this.$L)", Optional.class, name)
+                .build()
                 // public Type inputName(){return this.inputName;}
                 : CodeBlock.builder().addStatement("return this.$L", name).build())
         .build();
@@ -1616,7 +1621,9 @@ public class VajramCodeGenerator {
     return ParameterizedTypeName.get(ClassName.get(Optional.class), javaType);
   }
 
-  private record FromAndTo(MethodSpec from, MethodSpec to) {}
+  private record FromAndTo(MethodSpec from, MethodSpec to) {
+
+  }
 
   private record TypeAndName(TypeName typeName, Optional<Type> type) {
 
@@ -1625,5 +1632,7 @@ public class VajramCodeGenerator {
     }
   }
 
-  private record FieldTypeName(TypeName typeName, String name) {}
+  private record FieldTypeName(TypeName typeName, String name) {
+
+  }
 }

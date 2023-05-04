@@ -64,7 +64,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -443,7 +442,7 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-//  @Disabled("Fix: https://github.com/flipkart-incubator/Krystal/issues/84")
+  //  @Disabled("Fix: https://github.com/flipkart-incubator/Krystal/issues/84")
   void flush_skippingADependency_flushesCompleteCallGraph(TestInfo testInfo) throws Exception {
     CompletableFuture<FlushCommand> friendServiceFlushCommand = new CompletableFuture<>();
     CompletableFuture<FlushCommand> userServiceFlushCommand = new CompletableFuture<>();
