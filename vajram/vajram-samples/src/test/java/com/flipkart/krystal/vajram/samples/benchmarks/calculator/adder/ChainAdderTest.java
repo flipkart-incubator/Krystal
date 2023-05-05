@@ -5,6 +5,7 @@ import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder.add;
+import static java.time.Duration.ofNanos;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,8 +28,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -72,12 +71,12 @@ class ChainAdderTest {
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
   }
 
-  // @Test
-  void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
+//  @Test
+  void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
-    VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();
-    long javaNativeTime = javaMethodBenchmark(this::chainAdd, loopCount);
-    long javaFuturesTime = javaFuturesBenchmark(this::chainAddAsync, loopCount);
+    VajramNodeGraph graph = this.graph.maxParallelismPerCore(0.5).build();
+    long javaNativeTimeNs = javaMethodBenchmark(this::chainAdd, loopCount);
+    long javaFuturesTimeNs = javaFuturesBenchmark(this::chainAddAsync, loopCount);
     //noinspection unchecked
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
     long startTime = System.nanoTime();
@@ -96,25 +95,29 @@ class ChainAdderTest {
     System.out.printf("Avg. time to Create Executors:%,d%n", timeToCreateExecutors / loopCount);
     System.out.printf("Avg. time to Enqueue vajrams:%,d%n", timeToEnqueueVajram / loopCount);
     allOf(futures).join();
-    long vajramTime = System.nanoTime() - startTime;
-    System.out.printf("Avg. time to execute vajrams:%,d%n", vajramTime / loopCount);
+    long vajramTimeNs = System.nanoTime() - startTime;
+    System.out.printf("Avg. time to execute vajrams:%,d%n", vajramTimeNs / loopCount);
+    System.out.printf("Throughput executions/s: %d%n", loopCount / ofNanos(vajramTimeNs).toSeconds());
     System.out.printf(
         "Platform overhead over native code: %,.0f ns per request%n",
-        (1.0 * vajramTime - javaNativeTime) / loopCount);
+        (1.0 * vajramTimeNs - javaNativeTimeNs) / loopCount);
     /*
      * Benchmark config:
      *    loopCount = 50_000
-     *    maxParallelismPerCore = 1
-     *    Processor: 2.6 GHz 6-Core Intel Core i7
+     *    maxParallelismPerCore = 0.5
+     *    Processor: 2.6 GHz 6-Core Intel Core i7 (with hyperthreading - 12 virtual cores)
      * Benchmark result:
-     *    platform overhead over reactive code = ~260 µs  per request
-     *    maxPoolSize = 12
-     *    maxActiveLeasesPerObject: 4078
-     *    peakAvgActiveLeasesPerObject: 4076.83
+     *    platform overhead over reactive code =  ~260 µs  per request
+     *    maxPoolSize =                           6
+     *    maxActiveLeasesPerObject:               8260
+     *    peakAvgActiveLeasesPerObject:           8257
+     *    Avg. time to Enqueue vajrams:           7,153 ns
+     *    Avg. time to execute vajrams:           239,361 ns
+     *    Throughput executions/sec:              4500
      */
     System.out.printf(
         "Platform overhead over reactive code: %,.0f ns per request%n",
-        (1.0 * vajramTime - javaFuturesTime) / loopCount);
+        (1.0 * vajramTimeNs - javaFuturesTimeNs) / loopCount);
     allOf(futures)
         .whenComplete(
             (unused, throwable) -> {

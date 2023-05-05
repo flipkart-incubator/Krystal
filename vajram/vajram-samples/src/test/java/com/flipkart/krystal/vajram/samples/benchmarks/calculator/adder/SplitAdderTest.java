@@ -5,6 +5,7 @@ import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder.add;
+import static java.time.Duration.ofNanos;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,8 +28,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -72,12 +71,13 @@ class SplitAdderTest {
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
   }
 
-  // @Test
-  void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
+//  @Test
+  void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
-    VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();
-    long javaNativeTime = javaMethodBenchmark(this::splitAdd, loopCount);
-    long javaFuturesTime = javaFuturesBenchmark(this::splitAddAsync, loopCount);
+    VajramNodeGraph graph = this.graph.maxParallelismPerCore(0.5).build();
+    long javaNativeTimeNs = javaMethodBenchmark(this::splitAdd, loopCount);
+    long javaFuturesTimeNs = javaFuturesBenchmark(this::splitAddAsync, loopCount);
+    //noinspection unchecked
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
     long startTime = System.nanoTime();
     long timeToCreateExecutors = 0;
@@ -95,25 +95,29 @@ class SplitAdderTest {
     System.out.printf("Avg. time to Create Executors:%,d %n", timeToCreateExecutors / loopCount);
     System.out.printf("Avg. time to Enqueue vajrams:%,d %n", timeToEnqueueVajram / loopCount);
     allOf(futures).join();
-    long vajramTime = System.nanoTime() - startTime;
-    System.out.printf("Avg. time to execute vajrams:%,d%n", vajramTime / loopCount);
+    long vajramTimeNs = System.nanoTime() - startTime;
+    System.out.printf("Avg. time to execute vajrams:%,d%n", vajramTimeNs / loopCount);
+    System.out.printf("Throughput executions/s: %d%n", loopCount / ofNanos(vajramTimeNs).toSeconds());
     System.out.printf(
         "Platform overhead over native code: %,.0f ns per request%n",
-        (1.0 * vajramTime - javaNativeTime) / loopCount);
+        (1.0 * vajramTimeNs - javaNativeTimeNs) / loopCount);
     /*
      * Benchmark config:
      *    loopCount = 50_000
-     *    maxParallelismPerCore = 1
-     *    Processor: 2.6 GHz 6-Core Intel Core i7
+     *    maxParallelismPerCore = 0.5
+     *    Processor: 2.6 GHz 6-Core Intel Core i7 (with hyperthreading - 12 virtual cores)
      * Benchmark result:
      *    platform overhead = ~300 µs per request
-     *    maxPoolSize = 12
+     *    maxPoolSize = 6
      *    maxActiveLeasesPerObject: 4114
      *    peakAvgActiveLeasesPerObject: 4110.5
+     *    Avg. time to Enqueue vajrams: 7,289 ns
+     *    Avg. time to execute vajrams: 358,405 ns
+     *    Throughput executions/sec: 2900
      */
     System.out.printf(
         "Platform overhead over reactive code: %,.0f ns per request%n",
-        (1.0 * vajramTime - javaFuturesTime) / loopCount);
+        (1.0 * vajramTimeNs - javaFuturesTimeNs) / loopCount);
     allOf(futures)
         .whenComplete(
             (unused, throwable) -> {
@@ -154,7 +158,7 @@ class SplitAdderTest {
   }
 
   private int splitAdd(List<Integer> numbers) {
-    if (numbers.size() == 0) {
+    if (numbers.isEmpty()) {
       return 0;
     } else if (numbers.size() == 1) {
       return add(numbers.get(0), 0);
@@ -174,7 +178,7 @@ class SplitAdderTest {
   }
 
   private CompletableFuture<Integer> splitAddAsync(List<Integer> numbers) {
-    if (numbers.size() == 0) {
+    if (numbers.isEmpty()) {
       return completedFuture(0);
     } else if (numbers.size() == 1) {
       return addAsync(numbers.get(0), 0);
