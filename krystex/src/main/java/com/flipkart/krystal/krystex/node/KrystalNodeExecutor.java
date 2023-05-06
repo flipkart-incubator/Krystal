@@ -3,7 +3,7 @@ package com.flipkart.krystal.krystex.node;
 import static com.flipkart.krystal.utils.Futures.linkFutures;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.concurrent.CompletableFuture.allOf;
-import static java.util.concurrent.CompletableFuture.runAsync;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.function.Function.identity;
 
@@ -13,6 +13,7 @@ import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.RequestId;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
 import com.flipkart.krystal.krystex.commands.Flush;
+import com.flipkart.krystal.krystex.commands.NodeCommand;
 import com.flipkart.krystal.krystex.commands.NodeRequestCommand;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
@@ -33,6 +34,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 
@@ -44,14 +46,20 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   private final LogicDecorationOrdering logicDecorationOrdering;
   private final Lease<? extends ExecutorService> commandQueueLease;
   private final RequestId requestId;
-  private final ImmutableMap</*DecoratorType*/ String, MainLogicDecoratorConfig>
+  private final ImmutableMap<
+          String, // DecoratorType
+          MainLogicDecoratorConfig>
       requestScopedLogicDecoratorConfigs;
 
-  /** DecoratorType -> {InstanceId -> Decorator} */
-  private final Map<String, Map<String, MainLogicDecorator>> requestScopedMainDecorators =
-      new LinkedHashMap<>();
+  private final Map<
+          String, // DecoratorType
+          Map<
+              String, // InstanceId
+              MainLogicDecorator>>
+      requestScopedMainDecorators = new LinkedHashMap<>();
 
   private final NodeRegistry nodeRegistry = new NodeRegistry();
+  private final KrystalNodeExecutorMetrics krystalNodeMetrics;
   private volatile boolean closed;
   private final Map<RequestId, List<NodeResult>> allRequests = new LinkedHashMap<>();
   private final Map<RequestId, List<NodeResult>> unFlushedRequests = new LinkedHashMap<>();
@@ -69,6 +77,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     this.requestId = new RequestId(requestId);
     this.requestScopedLogicDecoratorConfigs =
         ImmutableMap.copyOf(requestScopedLogicDecoratorConfigs);
+    this.krystalNodeMetrics = new KrystalNodeExecutorMetrics();
   }
 
   private ImmutableMap<String, MainLogicDecorator> getRequestScopedDecorators(
@@ -123,7 +132,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     if (closed) {
       throw new RejectedExecutionException("KrystalNodeExecutor is already closed");
     }
-    return supplyAsync( // Perform all datastructure manipulations in the command queue to avoid
+    return enqueueCommand( // Perform all datastructure manipulations in the command queue to avoid
             // multi-thread access
             () -> {
               createDependantNodes(nodeId, DependantChainStart.instance());
@@ -132,8 +141,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
               allRequests.computeIfAbsent(requestId, r -> new ArrayList<>()).add(nodeResult);
               unFlushedRequests.computeIfAbsent(requestId, r -> new ArrayList<>()).add(nodeResult);
               return future;
-            },
-            commandQueueLease.get())
+            })
         .thenCompose(identity());
   }
 
@@ -179,19 +187,46 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     }
   }
 
+  /**
+   * Enqueues the provided ExecuteWithDependency command into the command queue. This method is
+   * intended to be called in threads other than the main thread of this KrystalNodeExecutor.(for
+   * example IO reactor threads). When a non-blocking IO call is made by a Node, a callback is added
+   * to the resulting CompletableFuture which generates an ExecuteWithDependency command for its
+   * dependents. That is when this method is used.
+   */
   CompletableFuture<NodeResponse> enqueueCommand(NodeRequestCommand nodeCommand) {
-    return supplyAsync(
-            () -> nodeRegistry.get(nodeCommand.nodeId()).executeRequestCommand(nodeCommand),
-            commandQueueLease.get())
-        .thenCompose(identity());
+    return enqueueCommand(() -> _executeCommand(nodeCommand)).thenCompose(identity());
   }
 
-  void enqueueCommand(Flush flush) {
-    runAsync(() -> nodeRegistry.get(flush.nodeId()).executeCommand(flush), commandQueueLease.get());
+  /**
+   * This method can be called only from the main thread of this KrystalNodeExecutor. Calling this
+   * method from any other thread (for example: IO reactor threads) will cause race conditions,
+   * multithreaded access of non-thread-safe data structures, and resulting unspecified behaviour.
+   *
+   * <p>This is an optimal version on {@link #enqueueCommand(NodeRequestCommand)} which bypasses the
+   * command queue for the special case that the command is originating from the same main thread
+   * inside the command queue,thus avoiding unnecessary contention in the thread-safe structures
+   * inside the command queue.
+   */
+  CompletableFuture<NodeResponse> executeCommand(NodeCommand nodeCommand) {
+    krystalNodeMetrics.commandQueueBypassed();
+    return _executeCommand(nodeCommand);
+  }
+
+  private CompletableFuture<NodeResponse> _executeCommand(NodeCommand nodeCommand) {
+    if (nodeCommand instanceof NodeRequestCommand nodeRequestCommand) {
+      return nodeRegistry.get(nodeCommand.nodeId()).executeRequestCommand(nodeRequestCommand);
+    } else if (nodeCommand instanceof Flush flush) {
+      nodeRegistry.get(flush.nodeId()).executeCommand(flush);
+      return failedFuture(new UnsupportedOperationException("No data returned for flush command"));
+    } else {
+      throw new UnsupportedOperationException(
+          "Unknown NodeCommand type %s".formatted(nodeCommand.getClass()));
+    }
   }
 
   public void flush() {
-    runAsync(
+    enqueueCommand(
         () -> {
           //noinspection CodeBlock2Expr
           unFlushedRequests.forEach(
@@ -204,7 +239,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                       }
                       NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
                       CompletableFuture<Object> submissionResult =
-                          enqueueCommand(
+                          executeCommand(
                                   new ExecuteWithInputs(
                                       nodeId,
                                       nodeDefinitionRegistry
@@ -233,10 +268,13 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
           unFlushedRequests.forEach(
               (requestId, nodeExecutionInfos) ->
                   nodeExecutionInfos.forEach(
-                      nodeResult -> enqueueCommand(new Flush(nodeResult.nodeId()))));
+                      nodeResult -> executeCommand(new Flush(nodeResult.nodeId()))));
           unFlushedRequests.clear();
-        },
-        commandQueueLease.get());
+        });
+  }
+
+  public KrystalNodeExecutorMetrics getKrystalNodeMetrics() {
+    return krystalNodeMetrics;
   }
 
   /**
@@ -250,7 +288,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     }
     this.closed = true;
     flush();
-    supplyAsync(
+    enqueueCommand(
         () ->
             allOf(
                     allRequests.values().stream()
@@ -258,7 +296,24 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                             nodeExecutionInfos ->
                                 nodeExecutionInfos.stream().map(NodeResult::future))
                         .toArray(CompletableFuture[]::new))
-                .whenComplete((unused, throwable) -> commandQueueLease.close()),
+                .whenComplete((unused, throwable) -> commandQueueLease.close()));
+  }
+
+  private void enqueueCommand(Runnable command) {
+    enqueueCommand(
+        (Supplier<Void>)
+            () -> {
+              command.run();
+              return null;
+            });
+  }
+
+  private <T> CompletableFuture<T> enqueueCommand(Supplier<T> command) {
+    return supplyAsync(
+        () -> {
+          krystalNodeMetrics.commandQueued();
+          return command.get();
+        },
         commandQueueLease.get());
   }
 

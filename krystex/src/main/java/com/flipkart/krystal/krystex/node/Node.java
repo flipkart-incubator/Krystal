@@ -294,7 +294,7 @@ class Node {
                 depNodeId,
                 requestId.append("skip(%s)".formatted(dependencyName)),
                 (SkipDependency) resolverCommand);
-        krystalNodeExecutor.enqueueCommand(skipNode);
+        krystalNodeExecutor.executeCommand(skipNode);
         this.executeRequestCommand(
             new ExecuteWithDependency(
                 this.nodeId,
@@ -352,7 +352,7 @@ class Node {
               .individualCallResponses()
               .putIfAbsent(
                   dependencyRequestId,
-                  krystalNodeExecutor.enqueueCommand(
+                  krystalNodeExecutor.executeCommand(
                       new ExecuteWithInputs(
                           depNodeId,
                           newInputs.values().keySet(),
@@ -424,7 +424,7 @@ class Node {
                             .getOrDefault(dependencyName, new DependencyNodeExecutions())
                             .executedResolvers()))) {
 
-      krystalNodeExecutor.enqueueCommand(
+      krystalNodeExecutor.executeCommand(
           new Flush(depNodeId, DependantChain.from(nodeId, dependencyName, dependantChain)));
     }
   }
@@ -459,7 +459,7 @@ class Node {
                   .containsKey(depName)) {
                 RequestId dependencyRequestId = requestId.append("%s".formatted(depName));
                 CompletableFuture<NodeResponse> nodeResponse =
-                    krystalNodeExecutor.enqueueCommand(
+                    krystalNodeExecutor.executeCommand(
                         new ExecuteWithInputs(
                             depNodeId,
                             ImmutableSet.of(),
@@ -605,7 +605,7 @@ class Node {
       Map<RequestId, Inputs> individualCallInputs,
       Map<RequestId, CompletableFuture<NodeResponse>> individualCallResponses) {
 
-    public DependencyNodeExecutions() {
+    private DependencyNodeExecutions() {
       this(new LongAdder(), new LinkedHashSet<>(), new LinkedHashMap<>(), new LinkedHashMap<>());
     }
   }

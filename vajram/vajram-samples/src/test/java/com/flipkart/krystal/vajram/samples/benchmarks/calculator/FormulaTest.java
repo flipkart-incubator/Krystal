@@ -2,13 +2,15 @@ package com.flipkart.krystal.vajram.samples.benchmarks.calculator;
 
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
+import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder.add;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.Divider.divide;
-import static java.time.Duration.ofNanos;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutorMetrics;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
@@ -38,7 +40,7 @@ class FormulaTest {
     assertThat(future.get()).isEqualTo(4);
   }
 
-//  @Test
+  @Test
   void vajram_benchmark() throws Exception {
     int loopCount = 1_000_000;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(10).build();
@@ -46,6 +48,7 @@ class FormulaTest {
     long javaFuturesTimeNs = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
     //noinspection unchecked
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
+    KrystalNodeExecutorMetrics[] metrics = new KrystalNodeExecutorMetrics[loopCount];
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
     long startTime = System.nanoTime();
@@ -53,17 +56,17 @@ class FormulaTest {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
           graph.createExecutor(new FormulaRequestContext(100, 20, 5, "formulaTest"))) {
+        metrics[value] =
+            ((KrystalNodeExecutor) krystexVajramExecutor.getKrystalExecutor())
+                .getKrystalNodeMetrics();
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         long enqueueStart = System.nanoTime();
         futures[value] = executeVajram(krystexVajramExecutor, value);
         timeToEnqueueVajram += System.nanoTime() - enqueueStart;
       }
     }
-    System.out.printf("Avg. time to Create Executors:%,d %n", timeToCreateExecutors / loopCount);
-    System.out.printf("Avg. time to Enqueue vajrams:%,d %n", timeToEnqueueVajram / loopCount);
     allOf(futures).join();
     long vajramTimeNs = System.nanoTime() - startTime;
-    System.out.printf("Avg. time to execute vajrams:%,d %n", vajramTimeNs / loopCount);
     allOf(futures)
         .whenComplete(
             (unused, throwable) -> {
@@ -71,10 +74,6 @@ class FormulaTest {
                 assertThat(future.getNow(0)).isEqualTo(4);
               }
             });
-    System.out.printf("Throughput executions/s: %d%n", loopCount / ofNanos(vajramTimeNs).toSeconds());
-    System.out.printf(
-        "Platform overhead over native code: %,.0f ns per request%n",
-        (1.0 * vajramTimeNs - javaNativeTimeNs) / loopCount);
     /*
      * Benchmark config:
      *    loopCount = 1_000_000
@@ -89,14 +88,15 @@ class FormulaTest {
      *    Avg. time to execute vajrams : 14,965 ns
      *    Throughput executions/sec: 71000
      */
-    System.out.printf(
-        "Platform overhead over reactive code: %,.0f ns per request%n",
-        (1.0 * vajramTimeNs - javaFuturesTimeNs) / loopCount);
-    System.out.printf(
-        "maxActiveLeasesPerObject: %s, peakAvgActiveLeasesPerObject: %s, maxPoolSize: %s%n",
-        graph.getExecutorPool().maxActiveLeasesPerObject(),
-        graph.getExecutorPool().peakAvgActiveLeasesPerObject(),
-        graph.getExecutorPool().maxPoolSize());
+    printStats(
+        loopCount,
+        graph,
+        javaNativeTimeNs,
+        javaFuturesTimeNs,
+        metrics,
+        timeToCreateExecutors,
+        timeToEnqueueVajram,
+        vajramTimeNs);
   }
 
   private static CompletableFuture<Integer> executeVajram(
