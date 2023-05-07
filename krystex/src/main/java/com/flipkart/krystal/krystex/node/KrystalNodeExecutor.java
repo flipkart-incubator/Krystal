@@ -84,8 +84,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       LogicExecutionContext logicExecutionContext) {
     NodeId nodeId = logicExecutionContext.nodeId();
     NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
-    MainLogicDefinition<?> mainLogicDefinition =
-        nodeDefinitionRegistry.logicDefinitionRegistry().getMain(nodeDefinition.mainLogicNode());
+    MainLogicDefinition<?> mainLogicDefinition = nodeDefinition.getMainLogicDefinition();
     Map<String, MainLogicDecorator> decorators = new LinkedHashMap<>();
     Stream.concat(
             mainLogicDefinition.getRequestScopedLogicDecoratorConfigs().entrySet().stream(),
@@ -188,14 +187,15 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   /**
-   * Enqueues the provided ExecuteWithDependency command into the command queue. This method is
+   * Enqueues the provided NodeRequestCommand supplier into the command queue. This method is
    * intended to be called in threads other than the main thread of this KrystalNodeExecutor.(for
    * example IO reactor threads). When a non-blocking IO call is made by a Node, a callback is added
    * to the resulting CompletableFuture which generates an ExecuteWithDependency command for its
-   * dependents. That is when this method is used.
+   * dependents. That is when this method is used - ensuring that all further processing of the
+   * nodeCammand happens in the main thread.
    */
-  CompletableFuture<NodeResponse> enqueueCommand(NodeRequestCommand nodeCommand) {
-    return enqueueCommand(() -> _executeCommand(nodeCommand)).thenCompose(identity());
+  CompletableFuture<NodeResponse> enqueueNodeCommand(Supplier<NodeRequestCommand> nodeCommand) {
+    return enqueueCommand(() -> _executeCommand(nodeCommand.get())).thenCompose(identity());
   }
 
   /**
@@ -203,10 +203,10 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
    * method from any other thread (for example: IO reactor threads) will cause race conditions,
    * multithreaded access of non-thread-safe data structures, and resulting unspecified behaviour.
    *
-   * <p>This is an optimal version on {@link #enqueueCommand(NodeRequestCommand)} which bypasses the
-   * command queue for the special case that the command is originating from the same main thread
-   * inside the command queue,thus avoiding unnecessary contention in the thread-safe structures
-   * inside the command queue.
+   * <p>This is an optimal version on {@link #enqueueNodeCommand(Supplier<NodeRequestCommand>)}
+   * which bypasses the command queue for the special case that the command is originating from the
+   * same main thread inside the command queue,thus avoiding unnecessary contention in the
+   * thread-safe structures inside the command queue.
    */
   CompletableFuture<NodeResponse> executeCommand(NodeCommand nodeCommand) {
     krystalNodeMetrics.commandQueueBypassed();
@@ -242,11 +242,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                           executeCommand(
                                   new ExecuteWithInputs(
                                       nodeId,
-                                      nodeDefinitionRegistry
-                                          .logicDefinitionRegistry()
-                                          .getMain(nodeDefinition.mainLogicNode())
-                                          .inputNames()
-                                          .stream()
+                                      nodeDefinition.getMainLogicDefinition().inputNames().stream()
                                           .filter(
                                               s -> !nodeDefinition.dependencyNodes().containsKey(s))
                                           .collect(toImmutableSet()),

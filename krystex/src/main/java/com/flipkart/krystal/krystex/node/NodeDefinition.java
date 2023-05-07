@@ -3,13 +3,14 @@ package com.flipkart.krystal.krystex.node;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.krystex.CallGraph;
+import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.ResolverDefinition;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 public record NodeDefinition(
     NodeId nodeId,
-    NodeLogicId mainLogicNode,
+    NodeLogicId mainLogicId,
     ImmutableMap<String, NodeId> dependencyNodes,
     ImmutableList<ResolverDefinition> resolverDefinitions,
     NodeDefinitionRegistry nodeDefinitionRegistry) {
@@ -25,5 +26,9 @@ public record NodeDefinition(
                   return depNode.getCallGraph(previousCalls);
                 })
             .collect(toImmutableList()));
+  }
+
+  public <T> MainLogicDefinition<T> getMainLogicDefinition() {
+    return nodeDefinitionRegistry().logicDefinitionRegistry().getMain(mainLogicId());
   }
 }
