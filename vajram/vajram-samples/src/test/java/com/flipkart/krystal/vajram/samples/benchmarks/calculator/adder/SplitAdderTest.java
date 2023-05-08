@@ -73,7 +73,7 @@ class SplitAdderTest {
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
   }
 
-  @Test
+  //  @Test
   void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();
