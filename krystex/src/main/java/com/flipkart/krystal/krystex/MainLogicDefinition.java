@@ -11,11 +11,14 @@ import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.flipkart.krystal.logic.LogicTag;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<MainLogic<T>>
@@ -33,8 +36,8 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<Main
     return logic().execute(inputs);
   }
 
-  private final Map<String, MainLogicDecoratorConfig> requestScopedLogicDecoratorConfigs =
-      new HashMap<>();
+  private ImmutableMap<String, MainLogicDecoratorConfig> requestScopedLogicDecoratorConfigs =
+      ImmutableMap.of();
 
   /** LogicDecorator Id -> LogicDecorator */
   private final Map<String, MainLogicDecoratorConfig> sessionScopedLogicDecoratorConfigs =
@@ -44,7 +47,7 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<Main
       new LinkedHashMap<>();
 
   public ImmutableMap<String, MainLogicDecoratorConfig> getRequestScopedLogicDecoratorConfigs() {
-    return ImmutableMap.copyOf(requestScopedLogicDecoratorConfigs);
+    return requestScopedLogicDecoratorConfigs;
   }
 
   public ImmutableMap<String, MainLogicDecorator> getSessionScopedLogicDecorators(
@@ -75,8 +78,19 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<Main
     return ImmutableMap.copyOf(decorators);
   }
 
-  public void registerRequestScopedDecorator(MainLogicDecoratorConfig decoratorConfig) {
-    requestScopedLogicDecoratorConfigs.put(decoratorConfig.decoratorType(), decoratorConfig);
+  public void registerRequestScopedDecorator(
+      Collection<MainLogicDecoratorConfig> decoratorConfigs) {
+    //noinspection UnstableApiUsage
+    requestScopedLogicDecoratorConfigs =
+        ImmutableMap.<String, MainLogicDecoratorConfig>builderWithExpectedSize(
+                requestScopedLogicDecoratorConfigs.size() + decoratorConfigs.size())
+            .putAll(sessionScopedLogicDecoratorConfigs)
+            .putAll(
+                decoratorConfigs.stream()
+                    .collect(
+                        Collectors.toMap(
+                            MainLogicDecoratorConfig::decoratorType, Function.identity())))
+            .build();
   }
 
   public void registerSessionScopedLogicDecorator(MainLogicDecoratorConfig decoratorConfig) {

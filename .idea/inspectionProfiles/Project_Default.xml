@@ -645,6 +645,7 @@
           <option value="CodeBlock2Expr" />
           <option value="AssignmentToStaticFieldFromInstanceMethod" />
           <option value="ResultOfMethodCallIgnored" />
+          <option value="UnstableApiUsage" />
         </list>
       </option>
     </inspection_tool>

@@ -19,6 +19,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class FormulaTest {
@@ -40,7 +41,8 @@ class FormulaTest {
     assertThat(future.get()).isEqualTo(4);
   }
 
-  //  @Test
+  @Disabled("Long running benchmark")
+  @Test
   void vajram_benchmark() throws Exception {
     int loopCount = 1_000_000;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(10).build();

@@ -344,7 +344,7 @@ class Node {
           if (j == 0) {
             newInputs = inputs;
           } else {
-            newInputs = Inputs.union(oldInput, inputs);
+            newInputs = Inputs.union(oldInput.values(), inputs.values());
           }
           dependencyNodeExecutions.individualCallInputs().put(dependencyRequestId, newInputs);
           dependencyNodeExecutions
@@ -549,15 +549,12 @@ class Node {
   }
 
   private MainLogicInputs getInputsForMainLogic(RequestId requestId) {
-    Map<String, InputValue<Object>> allInputs =
-        inputsValueCollector.getOrDefault(requestId, ImmutableMap.of());
-    Inputs nonDependencyInputs = new Inputs(allInputs);
-    Inputs dependencyValues =
-        new Inputs(
-            new LinkedHashMap<>(
-                dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of())));
-    Inputs allInputsAndDependencies = Inputs.union(dependencyValues, nonDependencyInputs);
-    return new MainLogicInputs(nonDependencyInputs, allInputsAndDependencies);
+    Inputs inputValues =
+        new Inputs(inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()));
+    Map<String, Results<Object>> dependencyValues =
+        dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of());
+    Inputs allInputsAndDependencies = Inputs.union(dependencyValues, inputValues.values());
+    return new MainLogicInputs(inputValues, allInputsAndDependencies);
   }
 
   private void collectInputValues(
