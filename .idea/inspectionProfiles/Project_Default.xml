@@ -641,6 +641,7 @@
           <option value="rawtypes" />
           <option value="CallToSuspiciousStringMethod" />
           <option value="CodeBlock2Expr" />
+          <option value="ALL" />
         </list>
       </option>
     </inspection_tool>
