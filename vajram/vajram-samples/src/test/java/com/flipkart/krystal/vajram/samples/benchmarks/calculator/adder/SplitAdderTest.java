@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class SplitAdderTest {
@@ -73,7 +74,8 @@ class SplitAdderTest {
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
   }
 
-  //  @Test
+  @Disabled("Long running benchmark")
+  @Test
   void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();

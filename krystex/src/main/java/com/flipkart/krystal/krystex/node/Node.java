@@ -243,13 +243,13 @@ class Node {
               ::iterator;
     }
     Map<NodeLogicId, ResolverDefinition> uniquePendingResolvers = new LinkedHashMap<>();
-    for (ResolverDefinition pendingResolver : pendingResolvers) {
-      uniquePendingResolvers.putIfAbsent(pendingResolver.resolverNodeLogicId(), pendingResolver);
-    }
     int pendingResolverCount = 0;
-    for (ResolverDefinition resolverDefinition : uniquePendingResolvers.values()) {
-      pendingResolverCount++;
-      executeResolver(requestId, resolverDefinition);
+    for (ResolverDefinition pendingResolver : pendingResolvers) {
+      if (!uniquePendingResolvers.containsKey(pendingResolver.resolverNodeLogicId())) {
+        uniquePendingResolvers.put(pendingResolver.resolverNodeLogicId(), pendingResolver);
+        pendingResolverCount++;
+        executeResolver(requestId, pendingResolver);
+      }
     }
 
     boolean executeMainLogic = false;
@@ -318,7 +318,7 @@ class Node {
             new Inputs(
                 dependencyNodeExecutions
                     .individualCallInputs()
-                    .getOrDefault(rid, new Inputs(new LinkedHashMap<>()))
+                    .getOrDefault(rid, Inputs.empty())
                     .values()));
       }
 
@@ -335,8 +335,7 @@ class Node {
           } else {
             inProgressRequestId = dependencyRequestId;
           }
-          Inputs oldInput =
-              oldInputs.getOrDefault(inProgressRequestId, new Inputs(new LinkedHashMap<>()));
+          Inputs oldInput = oldInputs.getOrDefault(inProgressRequestId, Inputs.empty());
           if (requestCounter >= executionsInProgress) {
             dependencyNodeExecutions.executionCounter().increment();
           }
@@ -557,8 +556,7 @@ class Node {
     return new MainLogicInputs(inputValues, allInputsAndDependencies);
   }
 
-  private void collectInputValues(
-      RequestId requestId, ImmutableSet<String> inputNames, Inputs inputs) {
+  private void collectInputValues(RequestId requestId, Set<String> inputNames, Inputs inputs) {
     for (String inputName : inputNames) {
       if (inputsValueCollector
               .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
