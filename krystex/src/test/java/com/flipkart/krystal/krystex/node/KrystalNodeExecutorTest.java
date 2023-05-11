@@ -5,6 +5,7 @@ import static com.flipkart.krystal.data.ValueOrError.withValue;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.flipkart.krystal.data.Inputs;
@@ -48,6 +49,47 @@ class KrystalNodeExecutorTest {
   @AfterEach
   void tearDown() {
     this.krystalNodeExecutor.close();
+  }
+
+  /** Executing same node multiple times in a single execution */
+  @Test
+  void multiRequestExecution() throws Exception {
+    NodeDefinition nodeDefinition =
+        nodeDefinitionRegistry.newNodeDefinition(
+            "node",
+            newComputeLogic(
+                    "nodeLogic", Collections.emptySet(), dependencyValues -> "computed_value")
+                .nodeLogicId());
+
+    CompletableFuture<Object> future_1 =
+        krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), "req_1");
+    CompletableFuture<Object> future_2 =
+        krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), "req_2");
+
+    krystalNodeExecutor.flush();
+    assertEquals("computed_value", timedGet(future_1));
+    assertEquals("computed_value", timedGet(future_2));
+  }
+
+  @Test
+  void multiRequestExecutionWithNullRequestId() throws Exception {
+    NodeDefinition nodeDefinition =
+        nodeDefinitionRegistry.newNodeDefinition(
+            "node",
+            newComputeLogic(
+                    "nodeLogic", Collections.emptySet(), dependencyValues -> "computed_value")
+                .nodeLogicId());
+
+    CompletableFuture<Object> future_1 =
+        krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), "req_1");
+    try {
+      CompletableFuture<Object> future_2 =
+          krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), null);
+    } catch (Exception e) {
+      assertEquals("Request id can not be null", e.getMessage());
+    }
+    krystalNodeExecutor.flush();
+    assertEquals("computed_value", timedGet(future_1));
   }
 
   @Test
