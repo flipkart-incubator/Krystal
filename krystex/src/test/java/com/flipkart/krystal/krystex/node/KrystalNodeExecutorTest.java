@@ -3,10 +3,11 @@ package com.flipkart.krystal.krystex.node;
 import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static com.flipkart.krystal.data.ValueOrError.withValue;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
@@ -82,14 +83,11 @@ class KrystalNodeExecutorTest {
 
     CompletableFuture<Object> future_1 =
         krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), "req_1");
-    try {
-      CompletableFuture<Object> future_2 =
-          krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), null);
-    } catch (Exception e) {
-      assertEquals("Request id can not be null", e.getMessage());
-    }
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), null));
     krystalNodeExecutor.flush();
-    assertEquals("computed_value", timedGet(future_1));
+    assertThat(future_1).succeedsWithin(1, SECONDS).isEqualTo("computed_value");
   }
 
   @Test
@@ -284,7 +282,7 @@ class KrystalNodeExecutorTest {
   /* So that bad testcases do not hang indefinitely.*/
   private static <T> T timedGet(CompletableFuture<T> future)
       throws InterruptedException, ExecutionException, TimeoutException {
-    return future.get(1, TimeUnit.SECONDS);
+    return future.get(1, SECONDS);
   }
 
   private <T> MainLogicDefinition<T> newComputeLogic(
