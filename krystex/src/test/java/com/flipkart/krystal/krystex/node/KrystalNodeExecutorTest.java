@@ -5,6 +5,7 @@ import static com.flipkart.krystal.data.ValueOrError.withValue;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -83,9 +84,10 @@ class KrystalNodeExecutorTest {
 
     CompletableFuture<Object> future_1 =
         krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), "req_1");
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), null));
+    assertThatThrownBy(
+            () -> krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), null))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Execution id can not be null");
     krystalNodeExecutor.flush();
     assertThat(future_1).succeedsWithin(1, SECONDS).isEqualTo("computed_value");
   }
