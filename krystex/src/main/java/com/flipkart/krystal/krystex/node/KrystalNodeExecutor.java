@@ -122,9 +122,12 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   @Override
-  public <T> CompletableFuture<T> executeNode(NodeId nodeId, Inputs inputs, String requestId) {
+  public <T> CompletableFuture<T> executeNode(NodeId nodeId, Inputs inputs, String executionId) {
     //noinspection unchecked
-    return (CompletableFuture<T>) executeNode(nodeId, inputs, new RequestId(requestId));
+    if (executionId == null) {
+      throw new IllegalArgumentException("Execution id can not be null");
+    }
+    return (CompletableFuture<T>) executeNode(nodeId, inputs, this.requestId.append(executionId));
   }
 
   private CompletableFuture<?> executeNode(NodeId nodeId, Inputs inputs, RequestId requestId) {
