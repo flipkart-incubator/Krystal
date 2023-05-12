@@ -3,9 +3,12 @@ package com.flipkart.krystal.krystex.node;
 import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static com.flipkart.krystal.data.ValueOrError.withValue;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
@@ -49,6 +52,45 @@ class KrystalNodeExecutorTest {
   @AfterEach
   void tearDown() {
     this.krystalNodeExecutor.close();
+  }
+
+  /** Executing same node multiple times in a single execution */
+  @Test
+  void multiRequestExecution() throws Exception {
+    NodeDefinition nodeDefinition =
+        nodeDefinitionRegistry.newNodeDefinition(
+            "node",
+            newComputeLogic(
+                    "nodeLogic", Collections.emptySet(), dependencyValues -> "computed_value")
+                .nodeLogicId());
+
+    CompletableFuture<Object> future_1 =
+        krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), "req_1");
+    CompletableFuture<Object> future_2 =
+        krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), "req_2");
+
+    krystalNodeExecutor.flush();
+    assertEquals("computed_value", timedGet(future_1));
+    assertEquals("computed_value", timedGet(future_2));
+  }
+
+  @Test
+  void multiRequestExecutionWithNullRequestId() throws Exception {
+    NodeDefinition nodeDefinition =
+        nodeDefinitionRegistry.newNodeDefinition(
+            "node",
+            newComputeLogic(
+                    "nodeLogic", Collections.emptySet(), dependencyValues -> "computed_value")
+                .nodeLogicId());
+
+    CompletableFuture<Object> future_1 =
+        krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), "req_1");
+    assertThatThrownBy(
+            () -> krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), null))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("Execution id can not be null");
+    krystalNodeExecutor.flush();
+    assertThat(future_1).succeedsWithin(1, SECONDS).isEqualTo("computed_value");
   }
 
   @Test
@@ -243,7 +285,7 @@ class KrystalNodeExecutorTest {
   /* So that bad testcases do not hang indefinitely.*/
   private static <T> T timedGet(CompletableFuture<T> future)
       throws InterruptedException, ExecutionException, TimeoutException {
-    return future.get(1, TimeUnit.SECONDS);
+    return future.get(1, SECONDS);
   }
 
   private <T> MainLogicDefinition<T> newComputeLogic(
