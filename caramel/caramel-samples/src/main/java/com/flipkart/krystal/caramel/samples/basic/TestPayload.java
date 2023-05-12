@@ -1,8 +1,8 @@
 package com.flipkart.krystal.caramel.samples.basic;
 
 import com.flipkart.krystal.caramel.model.AccessBeforeInitializationException;
-import com.flipkart.krystal.caramel.model.Field;
-import com.flipkart.krystal.caramel.model.SimpleField;
+import com.flipkart.krystal.caramel.model.CaramelField;
+import com.flipkart.krystal.caramel.model.SimpleCaramelField;
 import com.flipkart.krystal.caramel.model.Value;
 import com.flipkart.krystal.caramel.model.ValueImpl;
 import java.util.Collection;
@@ -13,64 +13,65 @@ final class TestPayload implements TestPayloadDefinition {
 
   interface TestPayloadFields {
 
-    Field<String, TestPayload> x1String =
-        new SimpleField<>(
+    CaramelField<String, TestPayload> x1String =
+        new SimpleCaramelField<>(
             "x1String", TestPayload.class, TestPayload::x1String, TestPayload::setX1String);
-    Field<ProductUpdateEventsContainer, TestPayload> productUpdateEvents =
-        new SimpleField<>(
+    CaramelField<ProductUpdateEventsContainer, TestPayload> productUpdateEvents =
+        new SimpleCaramelField<>(
             "productUpdateEvents",
             TestPayload.class,
             TestPayload::productUpdateEvents,
             TestPayload::setProductUpdateEvents);
-    Field<TransformedProduct, TestPayload> initialTransformedProduct =
-        new SimpleField<>(
+    CaramelField<TransformedProduct, TestPayload> initialTransformedProduct =
+        new SimpleCaramelField<>(
             "initialTransformedProduct",
             TestPayload.class,
             TestPayload::initialTransformedProduct,
             TestPayload::setInitialTransformedProduct);
-    Field<ProductUpdateEvent, TestPayload> initProductEvent =
-        new SimpleField<>(
+    CaramelField<ProductUpdateEvent, TestPayload> initProductEvent =
+        new SimpleCaramelField<>(
             "initProductEvent",
             TestPayload.class,
             TestPayload::initProductEvent,
             TestPayload::setInitProductEvent);
-    Field<List<TransformedProduct>, TestPayload> conditionalTransformedProducts =
-        new SimpleField<>(
+    CaramelField<List<TransformedProduct>, TestPayload> conditionalTransformedProducts =
+        new SimpleCaramelField<>(
             "conditionalTransformedProducts",
             TestPayload.class,
             TestPayload::conditionalTransformedProducts,
             TestPayload::setConditionalTransformedProducts);
-    Field<String, TestPayload> triggerUserId =
-        new SimpleField<>(
+    CaramelField<String, TestPayload> triggerUserId =
+        new SimpleCaramelField<>(
             "triggerUserId",
             TestPayload.class,
             TestPayload::triggerUserId,
             TestPayload::setTriggerUserId);
 
-    Field<Collection<String>, TestPayload> metricNames =
-        new SimpleField<>(
+    CaramelField<Collection<String>, TestPayload> metricNames =
+        new SimpleCaramelField<>(
             "metricNames",
             TestPayload.class,
             TestPayload::metricNames,
             TestPayload::setMetricNames);
 
-    Field<Boolean, TestPayload> isEnableValidation =
-        new SimpleField<>(
+    CaramelField<Boolean, TestPayload> isEnableValidation =
+        new SimpleCaramelField<>(
             "isEnableValidation",
             TestPayload.class,
             TestPayload::isEnableValidation,
             TestPayload::setIsEnableValidation);
-    Field<String, TestPayload> string =
-        new SimpleField<>("string", TestPayload.class, TestPayload::string, TestPayload::setString);
+    CaramelField<String, TestPayload> string =
+        new SimpleCaramelField<>(
+            "string", TestPayload.class, TestPayload::string, TestPayload::setString);
 
-    Field<String, TestPayload> secondString =
-        new SimpleField<>(
+    CaramelField<String, TestPayload> secondString =
+        new SimpleCaramelField<>(
             "secondString",
             TestPayload.class,
             TestPayload::secondString,
             TestPayload::setSecondString);
-    Field<TransformedProduct, TestPayload> nextProduct =
-        new SimpleField<>(
+    CaramelField<TransformedProduct, TestPayload> nextProduct =
+        new SimpleCaramelField<>(
             "nextProduct",
             TestPayload.class,
             TestPayload::nextProduct,
@@ -91,8 +92,8 @@ final class TestPayload implements TestPayloadDefinition {
       new ValueImpl<>(TestPayloadFields.triggerUserId, this);
 
   /* ---------- Collection<Metric> metrics - START -----------*/
-  public static final Field<Collection<Metric>, TestPayload> metrics =
-      new SimpleField<>(
+  public static final CaramelField<Collection<Metric>, TestPayload> metrics =
+      new SimpleCaramelField<>(
           "metrics", TestPayload.class, TestPayload::metrics, TestPayload::setMetrics);
   private final Value<Collection<Metric>, TestPayload> _metrics = new ValueImpl<>(metrics, this);
 

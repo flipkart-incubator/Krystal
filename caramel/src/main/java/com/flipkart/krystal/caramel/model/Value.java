@@ -4,7 +4,7 @@ import java.util.Optional;
 
 public sealed interface Value<T, P extends WorkflowPayload> permits ValueImpl {
 
-  Field<T, P> field();
+  CaramelField<T, P> field();
 
   P payload();
 

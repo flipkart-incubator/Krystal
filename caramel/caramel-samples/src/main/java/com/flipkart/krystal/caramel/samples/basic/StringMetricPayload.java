@@ -1,21 +1,21 @@
 package com.flipkart.krystal.caramel.samples.basic;
 
-import com.flipkart.krystal.caramel.model.Field;
-import com.flipkart.krystal.caramel.model.SimpleField;
+import com.flipkart.krystal.caramel.model.CaramelField;
+import com.flipkart.krystal.caramel.model.SimpleCaramelField;
 import com.flipkart.krystal.caramel.model.Value;
 import com.flipkart.krystal.caramel.model.ValueImpl;
 
 public class StringMetricPayload implements StringMetricPayloadDefinition {
   interface StringMetricFields {
-    Field<String, StringMetricPayload> initString =
-        new SimpleField<>(
+    CaramelField<String, StringMetricPayload> initString =
+        new SimpleCaramelField<>(
             "initString",
             StringMetricPayload.class,
             StringMetricPayload::initString,
             StringMetricPayload::setInitString);
 
-    Field<Metric, StringMetricPayload> metric =
-        new SimpleField<>(
+    CaramelField<Metric, StringMetricPayload> metric =
+        new SimpleCaramelField<>(
             "metric",
             StringMetricPayload.class,
             StringMetricPayload::metric,

@@ -3,13 +3,13 @@ package com.flipkart.krystal.caramel.model;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-public final class SimpleField<T, P extends WorkflowPayload> implements Field<T, P> {
+public final class SimpleCaramelField<T, P extends WorkflowPayload> implements CaramelField<T, P> {
   private final String name;
   private final Class<P> payloadType;
   private final Function<P, T> getter;
   private final BiConsumer<P, T> setter;
 
-  public SimpleField(
+  public SimpleCaramelField(
       String name, Class<P> payloadType, Function<P, T> getter, BiConsumer<P, T> setter) {
     this.name = name;
     this.payloadType = payloadType;

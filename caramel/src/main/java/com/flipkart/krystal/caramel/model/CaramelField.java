@@ -1,6 +1,6 @@
 package com.flipkart.krystal.caramel.model;
 
-public interface Field<T, P extends WorkflowPayload> {
+public interface CaramelField<T, P extends WorkflowPayload> {
   String getName();
 
   Class<P> getPayloadType();

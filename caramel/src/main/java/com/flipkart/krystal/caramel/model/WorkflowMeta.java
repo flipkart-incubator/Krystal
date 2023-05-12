@@ -36,7 +36,7 @@ public class WorkflowMeta<P extends WorkflowPayload> {
    * @param <F> the type of the received message
    * @param field the field of the workflow payload into which the incoming message is collected.
    */
-  public <F> WorkflowBuildStage<F, P> startWith(Field<F, P> field) {
+  public <F> WorkflowBuildStage<F, P> startWith(CaramelField<F, P> field) {
     throw new UnsupportedOperationException();
   }
 }

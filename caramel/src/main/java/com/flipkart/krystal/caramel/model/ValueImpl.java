@@ -5,12 +5,12 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 public final class ValueImpl<T, P extends WorkflowPayload> implements Value<T, P> {
 
-  private final Field<T, P> field;
+  private final CaramelField<T, P> field;
   private final P payload;
 
   @MonotonicNonNull private T value;
 
-  public ValueImpl(Field<T, P> field, P payload) {
+  public ValueImpl(CaramelField<T, P> field, P payload) {
     this.field = field;
     this.payload = payload;
   }
@@ -34,7 +34,7 @@ public final class ValueImpl<T, P extends WorkflowPayload> implements Value<T, P
   }
 
   @Override
-  public Field<T, P> field() {
+  public CaramelField<T, P> field() {
     return field;
   }
 

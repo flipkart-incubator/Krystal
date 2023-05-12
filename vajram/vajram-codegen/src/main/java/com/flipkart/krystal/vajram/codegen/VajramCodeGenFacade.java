@@ -1,10 +1,12 @@
 package com.flipkart.krystal.vajram.codegen;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.nio.file.StandardOpenOption.WRITE;
 
 import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.vajram.codegen.models.AbstractInput;
 import com.flipkart.krystal.vajram.codegen.models.ParsedVajramData;
 import com.flipkart.krystal.vajram.codegen.models.VajramInputFile;
 import com.flipkart.krystal.vajram.codegen.models.VajramInputsDef;
@@ -236,7 +238,11 @@ public final class VajramCodeGenFacade {
               vajramDefs.put(parsedVajramData.get().vajramName(), parsedVajramData.get());
               vajramInputsDef.put(
                   vajramInputFile.vajramName(),
-                  vajramInputFile.vajramInputsDef().allInputsDefinitions());
+                  vajramInputFile
+                      .vajramInputsDef()
+                      .allInputsStream()
+                      .map(AbstractInput::toInputDefinition)
+                      .collect(toImmutableList()));
             }
           });
       inputFiles.forEach(
