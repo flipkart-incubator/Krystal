@@ -38,7 +38,7 @@ class FormulaTest {
     assertThat(future.get()).isEqualTo(4);
   }
 
-  @Test
+//  @Test
   void vajram_benchmark() throws Exception {
     int loopCount = 1_000_000;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(5).build();

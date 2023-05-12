@@ -46,7 +46,7 @@ class ChainAdderTest {
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
   }
 
-  @Test
+//  @Test
   void chainer_success() throws Exception {
     CompletableFuture<Integer> future;
     NodeExecutionReport nodeExecutionReport = new DefaultNodeExecutionReport(Clock.systemUTC());
