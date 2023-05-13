@@ -972,10 +972,10 @@ public class VajramCodeGenerator {
       } else if (DependencyCommand.SingleExecute.class.isAssignableFrom(klass)) {
         ifBlockBuilder.addStatement(
             """
-                  return $T.singleExecuteWith(new Inputs(
-                   $T.of($S, $T.withValue(
-                      $L.inputs().iterator().next().orElse(null)))))
-                """,
+          return $T.singleExecuteWith(new Inputs(
+           $T.of($S, $T.withValue(
+              $L.inputs().iterator().next().orElse(null)))))
+        """,
             clsDeps.get(DEP_COMMAND),
             clsDeps.get(IM_MAP),
             inputs[0],

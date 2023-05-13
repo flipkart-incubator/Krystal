@@ -22,15 +22,17 @@ public record DefaultDependantChain(
 
   @Override
   public int hashCode() {
-    return defaultDependantChain().hashCode();
+    return this.defaultDependantChainString().hashCode();
   }
 
   @Override
   public boolean equals(Object obj) {
-    return this.hashCode() == obj.hashCode();
+    DefaultDependantChain comparingDependentChain = (DefaultDependantChain) obj;
+    return this.dependantChain.equals(comparingDependentChain.dependantChain())
+        && this.dependencyName.equals(comparingDependentChain.dependencyName());
   }
 
-  private String defaultDependantChain() {
+  private String defaultDependantChainString() {
     return (this.dependantChain.toString() + ":" + this.dependencyName);
   }
 }
