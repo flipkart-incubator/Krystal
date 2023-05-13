@@ -1,15 +1,15 @@
 package com.flipkart.krystal.vajram.inputs;
 
-import com.flipkart.krystal.schema.InputDefinition;
+import com.flipkart.krystal.schema.InputTypeSpec;
 import com.flipkart.krystal.vajram.Vajram;
 
-public sealed class VajramInput<T, V extends Vajram<?>> implements InputDefinition<T>
-    permits VajramDependency {
+public sealed class VajramInputTypeSpec<T, V extends Vajram<?>> implements InputTypeSpec<T>
+    permits VajramDependencyTypeSpec {
 
   private final String name;
   private final Class<V> ofVajram;
 
-  public VajramInput(String name, Class<V> ofVajram) {
+  public VajramInputTypeSpec(String name, Class<V> ofVajram) {
     this.name = name;
     this.ofVajram = ofVajram;
   }

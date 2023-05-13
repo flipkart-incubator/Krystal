@@ -9,7 +9,6 @@ import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getAllInput
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getCommonInputsClassname;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getInputModulationClassname;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getInputUtilClassName;
-import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getVajramBaseName;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.ARRAY_LIST;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.COMMON_INPUT;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.COM_FUTURE;
@@ -27,6 +26,8 @@ import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_LIST;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_MODULATION;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_MODULATION_CODE_BLOCK;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_MODULATION_FUTURE_CODE_BLOCK;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_NAME_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_SPEC_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_SRC;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.LINK_HASH_MAP;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.LIST;
@@ -90,9 +91,9 @@ import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.inputs.Resolve;
 import com.flipkart.krystal.vajram.inputs.Using;
-import com.flipkart.krystal.vajram.inputs.VajramDependency;
-import com.flipkart.krystal.vajram.inputs.VajramInput;
+import com.flipkart.krystal.vajram.inputs.VajramDependencyTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
+import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajram.modulation.UnmodulatedInput;
@@ -1143,7 +1144,7 @@ public class VajramCodeGenerator {
         ClassName.get(packageName + DOT_SEPARATOR + requestClassName, "Builder");
     TypeSpec.Builder requestClass =
         classBuilder(requestClassName)
-            .addModifiers(PUBLIC)
+            .addModifiers(PUBLIC, FINAL)
             .addSuperinterface(VajramRequest.class)
             .addAnnotation(EqualsAndHashCode.class)
             .addMethod(
@@ -1154,54 +1155,60 @@ public class VajramCodeGenerator {
                     .build());
     TypeSpec.Builder builderClass =
         classBuilder("Builder")
-            .addModifiers(PUBLIC, STATIC)
-            .addAnnotation(EqualsAndHashCode.class)
-            .addMethod(constructorBuilder().addModifiers(PRIVATE).build()); // <private Builder(){}>
-    TypeSpec.Builder inputsClass =
-        classBuilder(getVajramBaseName(vajramName) + "Inputs")
             .addModifiers(PUBLIC, STATIC, FINAL)
             .addAnnotation(EqualsAndHashCode.class)
             .addMethod(constructorBuilder().addModifiers(PRIVATE).build());
     Set<String> inputNames = new LinkedHashSet<>();
-    for (AbstractInput abstractInput : vajramInputsDef.allInputsStream().toList()) {
+    List<AbstractInput> allInputs = vajramInputsDef.allInputsStream().toList();
+    List<FieldSpec.Builder> inputNameFields = new ArrayList<>(allInputs.size());
+    List<FieldSpec.Builder> inputSpecFields = new ArrayList<>(allInputs.size());
+    for (AbstractInput abstractInput : allInputs) {
       String inputJavaName = toJavaName(abstractInput.getName());
       TypeAndName javaType = getTypeName(abstractInput.toDataType());
       ClassName vajramClassName = ClassName.get(packageName, vajramName);
 
-      FieldSpec.Builder inputField;
+      FieldSpec.Builder inputNameField =
+          FieldSpec.builder(String.class, inputJavaName + INPUT_NAME_SUFFIX)
+              .initializer("\"$L\"", abstractInput.getName());
+
+      FieldSpec.Builder inputSpecField;
       if (abstractInput instanceof VajramDependencyDef vajramDepDef) {
-        inputField =
+        inputSpecField =
             FieldSpec.builder(
                     ParameterizedTypeName.get(
-                        ClassName.get(VajramDependency.class),
+                        ClassName.get(VajramDependencyTypeSpec.class),
                         javaType.typeName(),
                         vajramClassName,
                         ClassName.bestGuess(vajramDepDef.getVajramClass())),
-                    inputJavaName)
+                    inputJavaName + INPUT_SPEC_SUFFIX)
                 .initializer(
-                    "new $T<>(\"$L\", $T.class, $T.class)",
-                    VajramDependency.class,
-                    abstractInput.getName(),
+                    "new $T<>($L, $T.class, $T.class)",
+                    VajramDependencyTypeSpec.class,
+                    inputJavaName + INPUT_NAME_SUFFIX,
                     vajramClassName,
                     ClassName.bestGuess(vajramDepDef.getVajramClass()));
+
       } else {
-        inputField =
+        inputSpecField =
             FieldSpec.builder(
                     ParameterizedTypeName.get(
-                        ClassName.get(VajramInput.class), javaType.typeName(), vajramClassName),
-                    inputJavaName)
+                        ClassName.get(VajramInputTypeSpec.class),
+                        javaType.typeName(),
+                        vajramClassName),
+                    inputJavaName + INPUT_SPEC_SUFFIX)
                 .initializer(
-                    "new $T<>(\"$L\", $T.class)",
-                    VajramInput.class,
-                    abstractInput.getName(),
+                    "new $T<>($L, $T.class)",
+                    VajramInputTypeSpec.class,
+                    inputJavaName + INPUT_NAME_SUFFIX,
                     vajramClassName);
       }
-      inputField.addModifiers(STATIC, FINAL);
+      inputNameFields.add(inputNameField.addModifiers(STATIC, FINAL));
+      inputSpecFields.add(inputSpecField.addModifiers(STATIC, FINAL));
       if (abstractInput instanceof InputDef input
           && input.toInputDefinition().sources().contains(InputSource.CLIENT)) {
-        inputsClass.addField(inputField.addModifiers(PUBLIC).build());
+        inputSpecField.addModifiers(PUBLIC);
+        inputNameField.addModifiers(PUBLIC);
       } else {
-        inputsClass.addField(inputField.build());
         continue;
       }
       inputNames.add(inputJavaName);
@@ -1234,6 +1241,9 @@ public class VajramCodeGenerator {
               .build());
     }
 
+    requestClass.addFields(inputNameFields.stream().map(FieldSpec.Builder::build)::iterator);
+    requestClass.addFields(inputSpecFields.stream().map(FieldSpec.Builder::build)::iterator);
+
     builderClass.addMethod(
         // public Request build(){
         //   return new Request(input1, input2, input3)
@@ -1260,7 +1270,6 @@ public class VajramCodeGenerator {
                   .addMethod(fromAndTo.from())
                   .addMethod(fromAndTo.to())
                   .addType(builderClass.build())
-                  .addType(inputsClass.build())
                   .build())
           .build()
           .writeTo(writer);

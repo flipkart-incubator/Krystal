@@ -1,5 +1,5 @@
 package com.flipkart.krystal.schema;
 
-public interface InputDefinition<T> {
+public interface InputTypeSpec<T> {
   String name();
 }

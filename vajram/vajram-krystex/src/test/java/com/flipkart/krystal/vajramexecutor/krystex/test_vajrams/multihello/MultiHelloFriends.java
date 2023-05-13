@@ -1,6 +1,10 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello;
 
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.numberOfFriends_n;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.userId_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends.ID;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.hellos_n;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.userIds_n;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -8,7 +12,6 @@ import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.Resolve;
 import com.flipkart.krystal.vajram.inputs.Using;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsVajram;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsInputUtil.MultiHelloFriendsAllInputs;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,13 +20,13 @@ import java.util.List;
 public abstract class MultiHelloFriends extends ComputeVajram<String> {
   public static final String ID = "MultiHelloFriends";
 
-  @Resolve(depName = "hellos", depInputs = HelloFriendsVajram.USER_ID)
-  public static List<String> userIdsForHellos(@Using("user_ids") List<String> userIds) {
+  @Resolve(depName = hellos_n, depInputs = userId_n)
+  public static List<String> userIdsForHellos(@Using(userIds_n) List<String> userIds) {
     return userIds;
   }
 
-  @Resolve(depName = "hellos", depInputs = HelloFriendsVajram.NUMBER_OF_FRIENDS)
-  public static List<Integer> numberOfFriendsForHellos(@Using("user_ids") List<String> userIds) {
+  @Resolve(depName = hellos_n, depInputs = numberOfFriends_n)
+  public static List<Integer> numberOfFriendsForHellos(@Using(userIds_n) List<String> userIds) {
     return List.of(1, 2);
   }
 

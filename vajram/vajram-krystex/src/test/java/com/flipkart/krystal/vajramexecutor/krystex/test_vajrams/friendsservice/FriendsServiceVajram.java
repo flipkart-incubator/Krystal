@@ -19,7 +19,6 @@ import java.util.concurrent.CompletableFuture;
 public abstract class FriendsServiceVajram extends IOVajram<Set<String>> {
 
   public static final String ID = "FriendsServiceVajram";
-  public static final String USER_ID = "user_id";
 
   @VajramLogic
   public static ImmutableMap<FriendsServiceInputsNeedingModulation, CompletableFuture<Set<String>>>

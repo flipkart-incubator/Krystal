@@ -18,6 +18,8 @@ public final class Constants {
   public static final String LIST = "list";
   public static final String JAVA_EXT = ".java";
   public static final char DOLLAR = '$';
+  public static final String INPUT_NAME_SUFFIX = "_n";
+  public static final String INPUT_SPEC_SUFFIX = "_s";
 
   private Constants() {}
 

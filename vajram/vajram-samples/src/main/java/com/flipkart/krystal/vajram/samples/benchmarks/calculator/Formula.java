@@ -2,15 +2,11 @@ package com.flipkart.krystal.vajram.samples.benchmarks.calculator;
 
 import static com.flipkart.krystal.vajram.inputs.ForwardingResolver.resolve;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.Formula.ID;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.FormulaInputs.a;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.FormulaInputs.p;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.FormulaInputs.q;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.FormulaInputs.quotient;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.FormulaInputs.sum;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest.AdderInputs.numberOne;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest.AdderInputs.numberTwo;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.DividerRequest.DividerInputs.denominator;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.DividerRequest.DividerInputs.numerator;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.a_s;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.p_s;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.q_s;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.quotient_s;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.sum_s;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -30,10 +26,10 @@ public abstract class Formula extends ComputeVajram<Integer> {
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
     return ImmutableList.of(
-        resolve(sum, numberOne).using(p).build(),
-        resolve(sum, numberTwo).using(q).build(),
-        resolve(quotient, numerator).using(a).build(),
-        resolve(quotient, denominator).using(sum).build());
+        resolve(sum_s, AdderRequest.numberOne_s).using(p_s).build(),
+        resolve(sum_s, AdderRequest.numberTwo_s).using(q_s).build(),
+        resolve(quotient_s, DividerRequest.numerator_s).using(a_s).build(),
+        resolve(quotient_s, DividerRequest.denominator_s).using(sum_s).build());
   }
 
   @VajramLogic

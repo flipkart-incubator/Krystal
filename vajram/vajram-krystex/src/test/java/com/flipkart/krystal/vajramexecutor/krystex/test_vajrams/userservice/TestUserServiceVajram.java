@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.LongAdder;
 public abstract class TestUserServiceVajram extends IOVajram<TestUserInfo> {
 
   public static final String ID = "testUserServiceVajram";
-  public static final String USER_ID = "user_id";
 
   private static final ScheduledExecutorService LATENCY_INDUCER =
       newSingleThreadScheduledExecutor();

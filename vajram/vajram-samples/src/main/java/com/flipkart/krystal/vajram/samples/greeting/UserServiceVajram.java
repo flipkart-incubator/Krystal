@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 public abstract class UserServiceVajram extends IOVajram<UserInfo> {
 
   public static final String ID = "userServiceVajram";
-  public static final String USER_ID = "user_id";
 
   @VajramLogic
   public ImmutableMap<UserServiceInputsNeedingModulation, CompletableFuture<UserInfo>>

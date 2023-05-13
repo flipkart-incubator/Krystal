@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.samples.greeting;
 
+import static com.flipkart.krystal.vajram.samples.greeting.GreetingRequest.userId_n;
+import static com.flipkart.krystal.vajram.samples.greeting.GreetingRequest.userInfo_n;
 import static com.flipkart.krystal.vajram.samples.greeting.GreetingVajram.ID;
 
 import com.flipkart.krystal.data.ValueOrError;
@@ -24,9 +26,9 @@ public abstract class GreetingVajram extends ComputeVajram<String> {
   // In this case the UserServiceVajram needs a user_id to retrieve user info from User Service.
   // So it's GreetingVajram's responsibility to provide that input.
   @Resolve(
-      depName = "user_info",
-      depInputs = {"user_id"})
-  public String userIdForUserService(@Using("user_id") String userId) {
+      depName = userInfo_n,
+      depInputs = {UserServiceRequest.userId_n})
+  public String userIdForUserService(@Using(userId_n) String userId) {
     return userId;
   }
 

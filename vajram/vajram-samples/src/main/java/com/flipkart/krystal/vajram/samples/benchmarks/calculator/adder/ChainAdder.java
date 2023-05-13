@@ -4,6 +4,11 @@ import static com.flipkart.krystal.vajram.inputs.DependencyCommand.MultiExecute.
 import static com.flipkart.krystal.vajram.inputs.DependencyCommand.SingleExecute.skipSingleExecute;
 import static com.flipkart.krystal.vajram.inputs.DependencyCommand.multiExecuteWith;
 import static com.flipkart.krystal.vajram.inputs.DependencyCommand.singleExecuteWith;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest.numberOne_n;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest.numberTwo_n;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderRequest.chainSum_n;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderRequest.numbers_n;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderRequest.sum_n;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -21,9 +26,9 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
 
   public static final String ID = "chainAdder";
 
-  @Resolve(depName = "chain_sum", depInputs = "numbers")
+  @Resolve(depName = chainSum_n, depInputs = numbers_n)
   public static MultiExecute<List<Integer>> numbersForSubChainer(
-      @Using("numbers") List<Integer> numbers) {
+      @Using(numbers_n) List<Integer> numbers) {
     if (numbers.size() < 3) {
       return skipMultiExecute(
           "Skipping chainer as count of numbers is less than 3. Will call adder instead");
@@ -35,8 +40,8 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
     }
   }
 
-  @Resolve(depName = "sum", depInputs = "number_one")
-  public static SingleExecute<Integer> adderNumberOne(@Using("numbers") List<Integer> numbers) {
+  @Resolve(depName = sum_n, depInputs = numberOne_n)
+  public static SingleExecute<Integer> adderNumberOne(@Using(numbers_n) List<Integer> numbers) {
     if (numbers.isEmpty()) {
       return skipSingleExecute("No numbers provided. Skipping adder call");
     } else if (numbers.size() > 2) {
@@ -47,7 +52,7 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
     }
   }
 
-  @Resolve(depName = "sum", depInputs = "number_two")
+  @Resolve(depName = sum_n, depInputs = numberTwo_n)
   public static SingleExecute<Integer> adderNumberTwo(@Using("numbers") List<Integer> numbers) {
     if (numbers.isEmpty()) {
       return skipSingleExecute("No numbers provided. Skipping adder call");

@@ -13,14 +13,14 @@ import lombok.Builder;
 
 @Builder
 public record ForwardingResolver<S, T, CV extends Vajram<?>, DV extends Vajram<?>>(
-    VajramInput<S, CV> using,
+    VajramInputTypeSpec<S, CV> using,
     Function<S, T> transformWith,
-    VajramDependency<?, CV, DV> dependency,
-    VajramInput<T, DV> targetInput)
+    VajramDependencyTypeSpec<?, CV, DV> dependency,
+    VajramInputTypeSpec<T, DV> targetInput)
     implements SingleInputResolver<S, T, Vajram<?>> {
   public static <T, CV extends Vajram<?>, DV extends Vajram<?>>
       ForwardingResolverBuilder<T, T, CV, DV> resolve(
-          VajramDependency<?, CV, DV> dependency, VajramInput<T, DV> depInput) {
+          VajramDependencyTypeSpec<?, CV, DV> dependency, VajramInputTypeSpec<T, DV> depInput) {
     return ForwardingResolver.<T, T, CV, DV>builder()
         .transformWith(Functions.identity())
         .dependency(dependency)
@@ -41,7 +41,7 @@ public record ForwardingResolver<S, T, CV extends Vajram<?>, DV extends Vajram<?
   public DependencyCommand<Inputs> resolve(
       String dependencyName, ImmutableSet<String> inputsToResolve, Inputs inputs) {
     ValueOrError<Object> inputValue;
-    if (using instanceof VajramDependency<?, ?, ?>) {
+    if (using instanceof VajramDependencyTypeSpec<?, ?, ?>) {
       inputValue = inputs.getDepValue(this.using().name()).values().values().iterator().next();
     } else {
       inputValue = inputs.getInputValue(this.using().name());
