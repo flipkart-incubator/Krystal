@@ -4,6 +4,7 @@ import static com.flipkart.krystal.data.ValueOrError.withError;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.lang.Math.max;
+import static java.util.concurrent.CompletableFuture.*;
 
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
@@ -32,7 +33,6 @@ import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -87,7 +87,7 @@ public class Node {
 
   private final Map<RequestId, Boolean> mainLogicExecuted = new LinkedHashMap<>();
 
-  private final Map<RequestId, Boolean> skipLogicExecuted = new LinkedHashMap<>();
+  private final Map<RequestId, Boolean> skipLogicRequested = new LinkedHashMap<>();
 
   private final Map<RequestId, Map<NodeLogicId, ResolverCommand>> resolverResults =
       new LinkedHashMap<>();
@@ -130,6 +130,11 @@ public class Node {
     try {
       boolean executeMainLogic;
       if (nodeCommand instanceof SkipNode skipNode) {
+        requestsByDependantChain
+            .computeIfAbsent(skipNode.dependentChain(), k -> new LinkedHashSet<>())
+            .add(requestId);
+        dependantChainByRequest.computeIfAbsent(requestId, r -> skipNode.dependentChain());
+        skipLogicRequested.put(requestId, true);
         return handleSkipDependency(requestId, skipNode, resultForRequest);
       } else if (nodeCommand instanceof ExecuteWithDependency executeWithDependency) {
         executeMainLogic = executeWithDependency(requestId, executeWithDependency);
@@ -154,11 +159,6 @@ public class Node {
 
   private CompletableFuture<NodeResponse> handleSkipDependency(
       RequestId requestId, SkipNode skipNode, CompletableFuture<NodeResponse> resultForRequest) {
-    requestsByDependantChain
-        .computeIfAbsent(skipNode.dependencyChain(), k -> new LinkedHashSet<>())
-        .add(requestId);
-    dependantChainByRequest.computeIfAbsent(requestId, r -> skipNode.dependencyChain());
-    skipLogicExecuted.put(requestId, true);
     Iterable<ResolverDefinition> pendingResolvers =
         resolverDefinitionsByInput.values().stream()
             .flatMap(Collection::stream)
@@ -168,7 +168,7 @@ public class Node {
       uniquePendingResolvers.putIfAbsent(pendingResolver.resolverNodeLogicId(), pendingResolver);
     }
     for (ResolverDefinition resolverDefinition : uniquePendingResolvers.values()) {
-      executeResolver(requestId, resolverDefinition, true);
+      executeResolver(requestId, resolverDefinition);
     }
     resultForRequest.completeExceptionally(skipNodeException(skipNode));
     return resultForRequest;
@@ -186,7 +186,7 @@ public class Node {
     int requestIdExecuted = 0;
     for (RequestId requestId : requestIds) {
       if (mainLogicExecuted.getOrDefault(requestId, false)
-          || skipLogicExecuted.getOrDefault(requestId, false)) {
+          || skipLogicRequested.getOrDefault(requestId, false)) {
         requestIdExecuted += 1;
       }
     }
@@ -281,7 +281,7 @@ public class Node {
     int pendingResolverCount = 0;
     for (ResolverDefinition resolverDefinition : uniquePendingResolvers.values()) {
       pendingResolverCount++;
-      executeResolver(requestId, resolverDefinition, false);
+      executeResolver(requestId, resolverDefinition);
     }
 
     boolean executeMainLogic = false;
@@ -299,16 +299,15 @@ public class Node {
   }
 
   private void executeResolver(
-      RequestId requestId, ResolverDefinition resolverDefinition, boolean fromSkipDependency) {
+      RequestId requestId, ResolverDefinition resolverDefinition) {
     Map<NodeLogicId, ResolverCommand> nodeResults =
         this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
     String dependencyName = resolverDefinition.dependencyName();
     NodeId depNodeId = nodeDefinition.dependencyNodes().get(dependencyName);
-    Inputs inputsForResolver =
-        getInputsForResolver(resolverDefinition, requestId, fromSkipDependency);
+    Inputs inputsForResolver = getInputsForResolver(resolverDefinition, requestId);
     NodeLogicId nodeLogicId = resolverDefinition.resolverNodeLogicId();
     ResolverCommand resolverCommand;
-    if (fromSkipDependency) {
+    if (this.skipLogicRequested.getOrDefault(requestId, false)) {
       resolverCommand = ResolverCommand.skip("skipped as parent skipped");
     } else {
       resolverCommand =
@@ -325,8 +324,6 @@ public class Node {
             .computeIfAbsent(dependencyName, k -> new DependencyNodeExecutions());
     dependencyNodeExecutions.executedResolvers().add(resolverDefinition);
     if (resolverCommand instanceof SkipDependency) {
-      ImmutableList<Inputs> inputs = resolverCommand.getInputs();
-      dependencyNodeExecutions.skippedDependency().putIfAbsent(requestId, true);
       if (dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).get(dependencyName)
           == null) {
         SkipNode skipNode =
@@ -414,7 +411,7 @@ public class Node {
       ImmutableSet<ResolverDefinition> resolverDefinitionsForDependency =
           this.resolverDefinitionsByDependencies.get(dependencyName);
       if (resolverDefinitionsForDependency.equals(dependencyNodeExecutions.executedResolvers())) {
-        CompletableFuture.allOf(
+        allOf(
                 dependencyNodeExecutions
                     .individualCallResponses()
                     .values()
@@ -468,24 +465,19 @@ public class Node {
                                 .getOrDefault(requestId, ImmutableMap.of())
                                 .getOrDefault(dependencyName, new DependencyNodeExecutions())
                                 .executedResolvers())
-                        || this.dependencyExecutions
-                            .getOrDefault(requestId, ImmutableMap.of())
-                            .getOrDefault(dependencyName, new DependencyNodeExecutions())
-                            .skippedDependency()
-                            .getOrDefault(dependencyName, false))) {
-
+                        )) {
+      
       krystalNodeExecutor.enqueueCommand(
           new Flush(depNodeId, DependantChain.from(nodeId, dependencyName, dependantChain)));
     }
   }
 
-  private Inputs getInputsForResolver(
-      ResolverDefinition resolverDefinition, RequestId requestId, boolean fromSkipDependency) {
+  private Inputs getInputsForResolver(ResolverDefinition resolverDefinition, RequestId requestId) {
     Map<String, InputValue<Object>> allInputs =
         inputsValueCollector.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
     ImmutableSet<String> boundFrom = resolverDefinition.boundFrom();
     Map<String, InputValue<Object>> inputValues = new LinkedHashMap<>();
-    if (!fromSkipDependency) {
+    if (!this.skipLogicRequested.getOrDefault(requestId, false)) {
       for (String boundFromInput : boundFrom) {
         InputValue<Object> voe = allInputs.get(boundFromInput);
         if (voe == null) {
@@ -678,7 +670,6 @@ public class Node {
   private record DependencyNodeExecutions(
       LongAdder executionCounter,
       Set<ResolverDefinition> executedResolvers,
-      Map<RequestId, Boolean> skippedDependency,
       Map<RequestId, Inputs> individualCallInputs,
       Map<RequestId, CompletableFuture<NodeResponse>> individualCallResponses) {
 
@@ -686,7 +677,6 @@ public class Node {
       this(
           new LongAdder(),
           new LinkedHashSet<>(),
-          new HashMap<>(),
           new LinkedHashMap<>(),
           new LinkedHashMap<>());
     }

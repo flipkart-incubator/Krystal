@@ -8,6 +8,6 @@ import com.flipkart.krystal.krystex.node.NodeId;
 public record SkipNode(
     NodeId nodeId,
     RequestId requestId,
-    DependantChain dependencyChain,
+    DependantChain dependentChain,
     SkipDependency skipDependencyCommand)
     implements NodeRequestCommand {}
