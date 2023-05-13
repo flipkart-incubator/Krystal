@@ -825,9 +825,7 @@ public class VajramCodeGenerator {
                       .collect($6T.toImmutableMap(e -> $7T.from(e.getKey()),
                       $8T::getValue)))""",
               ParameterizedTypeName.get(
-                  clsDeps.get(DEP_RESP),
-                  ClassName.get(depPackageName, requestClass),
-                  typeArgument),
+                  clsDeps.get(DEP_RESP), ClassName.get(depPackageName, requestClass), typeArgument),
               variableName,
               clsDeps.get(DEP_RESP),
               typeArgument,

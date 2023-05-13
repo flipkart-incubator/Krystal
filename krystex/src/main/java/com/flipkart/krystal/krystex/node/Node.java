@@ -239,7 +239,7 @@ public class Node {
         return true;
       } else if (nodeDefinition.resolverDefinitions().isEmpty()
           && !nodeDefinition.dependencyNodes().isEmpty())
-        return executeDependenciesWhenNoResolvers(requestId, false);
+        return executeDependenciesWhenNoResolvers(requestId);
     }
     Map<NodeLogicId, ResolverCommand> nodeResults =
         this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
@@ -298,8 +298,7 @@ public class Node {
     return executeMainLogic;
   }
 
-  private void executeResolver(
-      RequestId requestId, ResolverDefinition resolverDefinition) {
+  private void executeResolver(RequestId requestId, ResolverDefinition resolverDefinition) {
     Map<NodeLogicId, ResolverCommand> nodeResults =
         this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
     String dependencyName = resolverDefinition.dependencyName();
@@ -461,12 +460,11 @@ public class Node {
             .allMatch(
                 requestId ->
                     resolverDefinitionsForDependency.equals(
-                            this.dependencyExecutions
-                                .getOrDefault(requestId, ImmutableMap.of())
-                                .getOrDefault(dependencyName, new DependencyNodeExecutions())
-                                .executedResolvers())
-                        )) {
-      
+                        this.dependencyExecutions
+                            .getOrDefault(requestId, ImmutableMap.of())
+                            .getOrDefault(dependencyName, new DependencyNodeExecutions())
+                            .executedResolvers()))) {
+
       krystalNodeExecutor.enqueueCommand(
           new Flush(depNodeId, DependantChain.from(nodeId, dependencyName, dependantChain)));
     }
@@ -494,8 +492,7 @@ public class Node {
     return new Inputs(inputValues);
   }
 
-  private boolean executeDependenciesWhenNoResolvers(RequestId requestId, boolean skip) {
-
+  private boolean executeDependenciesWhenNoResolvers(RequestId requestId) {
     nodeDefinition
         .dependencyNodes()
         .forEach(
@@ -504,51 +501,29 @@ public class Node {
                   .getOrDefault(requestId, ImmutableMap.of())
                   .containsKey(depName)) {
                 RequestId dependencyRequestId = requestId.append("%s".formatted(depName));
-                if (!skip) {
-                  CompletableFuture<NodeResponse> nodeResponse =
-                      krystalNodeExecutor.enqueueCommand(
-                          new ExecuteWithInputs(
-                              depNodeId,
-                              ImmutableSet.of(),
-                              Inputs.empty(),
-                              DependantChain.from(
-                                  nodeId, depName, dependantChainByRequest.get(requestId)),
-                              dependencyRequestId));
-                  nodeResponse
-                      .thenApply(NodeResponse::response)
-                      .whenComplete(
-                          (valueOrError, throwable) -> {
-                            if (throwable != null) {
-                              valueOrError = withError(throwable);
-                            }
-                            krystalNodeExecutor.enqueueCommand(
-                                new ExecuteWithDependency(
-                                    this.nodeId,
-                                    depName,
-                                    new Results<>(ImmutableMap.of(Inputs.empty(), valueOrError)),
-                                    requestId));
-                          });
-                } else {
-                  SkipNode skipNodeDep =
-                      new SkipNode(
-                          depNodeId,
-                          dependencyRequestId,
-                          DependantChain.from(
-                              nodeId, depName, dependantChainByRequest.get(requestId)),
-                          new SkipDependency(
-                              "Skipping the dependent node as current node is"
-                                  + " getting skipped "
-                                  + depNodeId));
-                  krystalNodeExecutor.enqueueCommand(skipNodeDep);
-                  this.executeRequestCommand(
-                      new ExecuteWithDependency(
-                          depNodeId,
-                          depName,
-                          new Results<>(
-                              ImmutableMap.of(
-                                  Inputs.empty(), withError(skipNodeException(skipNodeDep)))),
-                          dependencyRequestId));
-                }
+                CompletableFuture<NodeResponse> nodeResponse =
+                    krystalNodeExecutor.enqueueCommand(
+                        new ExecuteWithInputs(
+                            depNodeId,
+                            ImmutableSet.of(),
+                            Inputs.empty(),
+                            DependantChain.from(
+                                nodeId, depName, dependantChainByRequest.get(requestId)),
+                            dependencyRequestId));
+                nodeResponse
+                    .thenApply(NodeResponse::response)
+                    .whenComplete(
+                        (valueOrError, throwable) -> {
+                          if (throwable != null) {
+                            valueOrError = withError(throwable);
+                          }
+                          krystalNodeExecutor.enqueueCommand(
+                              new ExecuteWithDependency(
+                                  this.nodeId,
+                                  depName,
+                                  new Results<>(ImmutableMap.of(Inputs.empty(), valueOrError)),
+                                  requestId));
+                        });
               }
             });
     return false;
@@ -674,11 +649,7 @@ public class Node {
       Map<RequestId, CompletableFuture<NodeResponse>> individualCallResponses) {
 
     public DependencyNodeExecutions() {
-      this(
-          new LongAdder(),
-          new LinkedHashSet<>(),
-          new LinkedHashMap<>(),
-          new LinkedHashMap<>());
+      this(new LongAdder(), new LinkedHashSet<>(), new LinkedHashMap<>(), new LinkedHashMap<>());
     }
   }
 
