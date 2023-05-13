@@ -23,6 +23,7 @@ import static com.flipkart.krystal.vajram.codegen.utils.Constants.IM_LIST;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.IM_MAP;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_LIST;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_DEFINITIONS_VAR;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_MODULATION;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_MODULATION_CODE_BLOCK;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_MODULATION_FUTURE_CODE_BLOCK;
@@ -1028,13 +1029,16 @@ public class VajramCodeGenerator {
           }
           codeBlocks.add(inputDefBuilder.build());
         });
-    CodeBlock.Builder returnCode =
-        CodeBlock.builder()
-            .add("return $T.of(\n", clsDeps.get(IM_LIST))
-            .add(CodeBlock.join(codeBlocks, ",\n\t"))
-            .add("\n);");
-    inputDefinitionsBuilder.addCode(returnCode.build());
 
+    inputDefinitionsBuilder.beginControlFlow("if(this.$L == null)", INPUT_DEFINITIONS_VAR);
+    inputDefinitionsBuilder.addCode(
+        CodeBlock.builder()
+            .add("this.$L = $T.of(\n", INPUT_DEFINITIONS_VAR, clsDeps.get(IM_LIST))
+            .add(CodeBlock.join(codeBlocks, ",\n\t"))
+            .add("\n);\n")
+            .build());
+    inputDefinitionsBuilder.endControlFlow();
+    inputDefinitionsBuilder.addStatement("return $L", INPUT_DEFINITIONS_VAR);
     return inputDefinitionsBuilder.build();
   }
 
@@ -1593,7 +1597,13 @@ public class VajramCodeGenerator {
   }
 
   private TypeSpec.Builder createVajramImplClass() {
-    return classBuilder(CodegenUtils.getVajramImplClassName(vajramName));
+    return classBuilder(CodegenUtils.getVajramImplClassName(vajramName))
+        .addField(
+            FieldSpec.builder(
+                    ParameterizedTypeName.get(ImmutableList.class, VajramInputDefinition.class),
+                    INPUT_DEFINITIONS_VAR)
+                .addModifiers(PRIVATE)
+                .build());
   }
 
   public String getRequestClassName() {
