@@ -4,9 +4,7 @@ import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
-import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder.add;
-import static java.util.Arrays.stream;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -19,8 +17,6 @@ import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutionReport;
 import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
-import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
-import com.flipkart.krystal.krystex.node.KrystalNodeExecutorMetrics;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
@@ -28,11 +24,13 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
 import com.google.common.collect.ImmutableMap;
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class ChainAdderTest {
@@ -74,16 +72,14 @@ class ChainAdderTest {
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
   }
 
-  @Disabled("Long running benchmark")
-  @Test
-  void vajram_benchmark() throws Exception {
+  // @Test
+  void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
     int loopCount = 50_000;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();
-    long javaNativeTimeNs = javaMethodBenchmark(this::chainAdd, loopCount);
-    long javaFuturesTimeNs = javaFuturesBenchmark(this::chainAddAsync, loopCount);
+    long javaNativeTime = javaMethodBenchmark(this::chainAdd, loopCount);
+    long javaFuturesTime = javaFuturesBenchmark(this::chainAddAsync, loopCount);
     //noinspection unchecked
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
-    KrystalNodeExecutorMetrics[] metrics = new KrystalNodeExecutorMetrics[loopCount];
     long startTime = System.nanoTime();
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
@@ -91,17 +87,34 @@ class ChainAdderTest {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
           graph.createExecutor(new RequestContext(""))) {
-        metrics[value] =
-            ((KrystalNodeExecutor) krystexVajramExecutor.getKrystalExecutor())
-                .getKrystalNodeMetrics();
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         long enqueueStart = System.nanoTime();
         futures[value] = executeVajram(krystexVajramExecutor, value);
         timeToEnqueueVajram += System.nanoTime() - enqueueStart;
       }
     }
+    System.out.printf("Avg. time to Create Executors:%,d%n", timeToCreateExecutors / loopCount);
+    System.out.printf("Avg. time to Enqueue vajrams:%,d%n", timeToEnqueueVajram / loopCount);
     allOf(futures).join();
-    long vajramTimeNs = System.nanoTime() - startTime;
+    long vajramTime = System.nanoTime() - startTime;
+    System.out.printf("Avg. time to execute vajrams:%,d%n", vajramTime / loopCount);
+    System.out.printf(
+        "Platform overhead over native code: %,.0f ns per request%n",
+        (1.0 * vajramTime - javaNativeTime) / loopCount);
+    /*
+     * Benchmark config:
+     *    loopCount = 50_000
+     *    maxParallelismPerCore = 1
+     *    Processor: 2.6 GHz 6-Core Intel Core i7
+     * Benchmark result:
+     *    platform overhead over reactive code = ~260 µs  per request
+     *    maxPoolSize = 12
+     *    maxActiveLeasesPerObject: 4078
+     *    peakAvgActiveLeasesPerObject: 4076.83
+     */
+    System.out.printf(
+        "Platform overhead over reactive code: %,.0f ns per request%n",
+        (1.0 * vajramTime - javaFuturesTime) / loopCount);
     allOf(futures)
         .whenComplete(
             (unused, throwable) -> {
@@ -111,29 +124,11 @@ class ChainAdderTest {
               }
             })
         .get();
-    /*
-     * Benchmark config:
-     *    loopCount = 50_000
-     *    maxParallelismPerCore = 0.5
-     *    Processor: 2.6 GHz 6-Core Intel Core i7 (with hyperthreading - 12 virtual cores)
-     * Benchmark result:
-     *    platform overhead over reactive code =  ~260 µs  per request
-     *    maxPoolSize =                           6
-     *    maxActiveLeasesPerObject:               8260
-     *    peakAvgActiveLeasesPerObject:           8257
-     *    Avg. time to Enqueue vajrams:           7,153 ns
-     *    Avg. time to execute vajrams:           239,361 ns
-     *    Throughput executions/sec:              4500
-     */
-    printStats(
-        loopCount,
-        graph,
-        javaNativeTimeNs,
-        javaFuturesTimeNs,
-        metrics,
-        timeToCreateExecutors,
-        timeToEnqueueVajram,
-        vajramTimeNs);
+    System.out.printf(
+        "maxActiveLeasesPerObject: %s, peakAvgActiveLeasesPerObject: %s, maxPoolSize: %s%n",
+        graph.getExecutorPool().maxActiveLeasesPerObject(),
+        graph.getExecutorPool().peakAvgActiveLeasesPerObject(),
+        graph.getExecutorPool().maxPoolSize());
   }
 
   private static CompletableFuture<Integer> executeVajram(
@@ -201,7 +196,7 @@ class ChainAdderTest {
 
   private static Builder loadFromClasspath(String... packagePrefixes) {
     Builder builder = VajramNodeGraph.builder();
-    stream(packagePrefixes).forEach(builder::loadFromPackage);
+    Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
     return builder;
   }
 }
