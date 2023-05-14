@@ -48,7 +48,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class Node {
+class Node {
 
   private final NodeId nodeId;
 
@@ -131,9 +131,9 @@ public class Node {
       boolean executeMainLogic;
       if (nodeCommand instanceof SkipNode skipNode) {
         requestsByDependantChain
-            .computeIfAbsent(skipNode.dependentChain(), k -> new LinkedHashSet<>())
+            .computeIfAbsent(skipNode.dependantChain(), k -> new LinkedHashSet<>())
             .add(requestId);
-        dependantChainByRequest.computeIfAbsent(requestId, r -> skipNode.dependentChain());
+        dependantChainByRequest.computeIfAbsent(requestId, r -> skipNode.dependantChain());
         skipLogicRequested.put(requestId, true);
         return handleSkipDependency(requestId, skipNode, resultForRequest);
       } else if (nodeCommand instanceof ExecuteWithDependency executeWithDependency) {
@@ -303,12 +303,12 @@ public class Node {
         this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
     String dependencyName = resolverDefinition.dependencyName();
     NodeId depNodeId = nodeDefinition.dependencyNodes().get(dependencyName);
-    Inputs inputsForResolver = getInputsForResolver(resolverDefinition, requestId);
     NodeLogicId nodeLogicId = resolverDefinition.resolverNodeLogicId();
     ResolverCommand resolverCommand;
     if (this.skipLogicRequested.getOrDefault(requestId, false)) {
       resolverCommand = ResolverCommand.skip("skipped as parent skipped");
     } else {
+      Inputs inputsForResolver = getInputsForResolver(resolverDefinition, requestId);
       resolverCommand =
           nodeDefinition
               .nodeDefinitionRegistry()
@@ -475,18 +475,16 @@ public class Node {
         inputsValueCollector.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
     ImmutableSet<String> boundFrom = resolverDefinition.boundFrom();
     Map<String, InputValue<Object>> inputValues = new LinkedHashMap<>();
-    if (!this.skipLogicRequested.getOrDefault(requestId, false)) {
-      for (String boundFromInput : boundFrom) {
-        InputValue<Object> voe = allInputs.get(boundFromInput);
-        if (voe == null) {
-          inputValues.put(
-              boundFromInput,
-              dependencyValuesCollector
-                  .computeIfAbsent(requestId, k -> new LinkedHashMap<>())
-                  .get(boundFromInput));
-        } else {
-          inputValues.put(boundFromInput, voe);
-        }
+    for (String boundFromInput : boundFrom) {
+      InputValue<Object> voe = allInputs.get(boundFromInput);
+      if (voe == null) {
+        inputValues.put(
+            boundFromInput,
+            dependencyValuesCollector
+                .computeIfAbsent(requestId, k -> new LinkedHashMap<>())
+                .get(boundFromInput));
+      } else {
+        inputValues.put(boundFromInput, voe);
       }
     }
     return new Inputs(inputValues);
