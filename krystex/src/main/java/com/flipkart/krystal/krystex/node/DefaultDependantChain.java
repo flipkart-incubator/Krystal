@@ -1,7 +1,10 @@
 package com.flipkart.krystal.krystex.node;
 
+import java.util.Objects;
 import java.util.Optional;
 
+// TODO : Need to make Node ID mandatory, so that record equals and hashcode
+//  can be used as it will be more performant
 public record DefaultDependantChain(
     Optional<NodeId> nodeId, String dependencyName, DependantChain dependantChain)
     implements DependantChain {
@@ -22,17 +25,15 @@ public record DefaultDependantChain(
 
   @Override
   public int hashCode() {
-    return this.defaultDependantChainString().hashCode();
+    return Objects.hash(this.dependantChain, this.dependencyName);
   }
 
   @Override
   public boolean equals(Object obj) {
-    DefaultDependantChain comparingDependentChain = (DefaultDependantChain) obj;
-    return this.dependantChain.equals(comparingDependentChain.dependantChain())
-        && this.dependencyName.equals(comparingDependentChain.dependencyName());
-  }
-
-  private String defaultDependantChainString() {
-    return (this.dependantChain.toString() + ":" + this.dependencyName);
+    if (obj instanceof DefaultDependantChain other) {
+      return other.dependantChain.equals(this.dependantChain)
+          && other.dependencyName.equals(this.dependencyName);
+    }
+    return false;
   }
 }

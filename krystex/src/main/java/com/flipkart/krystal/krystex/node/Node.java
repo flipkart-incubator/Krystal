@@ -133,7 +133,7 @@ class Node {
         requestsByDependantChain
             .computeIfAbsent(skipNode.dependantChain(), k -> new LinkedHashSet<>())
             .add(requestId);
-        dependantChainByRequest.computeIfAbsent(requestId, r -> skipNode.dependantChain());
+        dependantChainByRequest.put(requestId, skipNode.dependantChain());
         skipLogicRequested.put(requestId, true);
         return handleSkipDependency(requestId, skipNode, resultForRequest);
       } else if (nodeCommand instanceof ExecuteWithDependency executeWithDependency) {
