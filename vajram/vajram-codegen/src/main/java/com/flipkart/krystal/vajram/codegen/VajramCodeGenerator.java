@@ -145,7 +145,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class VajramCodeGenerator {
 
-  private static final Pattern COMPILE = Pattern.compile("\\.");
+  public static final Pattern COMPILE = Pattern.compile("\\.");
 
   private final String packageName;
   private final String requestClassName;
@@ -254,8 +254,7 @@ public class VajramCodeGenerator {
               String[] inputs = resolve.depInputs();
               String depName = resolve.depName();
               assert depName != null;
-              ImmutableList<VajramInputDefinition> vajramInputDefinitions =
-                  getVajramInputDefinitions(classLoader, parsedVajramData);
+              ImmutableList<VajramInputDefinition> vajramInputDefinitions = vajramInputsDefinitions.get(parsedVajramData.vajramName());
               final Optional<VajramInputDefinition> definition =
                   vajramInputDefinitions.stream()
                       .filter(vajramInputDefinition -> vajramInputDefinition.name().equals(depName))
@@ -282,7 +281,7 @@ public class VajramCodeGenerator {
                           depName,
                           CodegenUtils.isDepResolverFanout(
                               vajramData.vajramClass(), method, inputs, vajramData.fields()));
-                    }
+                      }
                   });
             });
 
@@ -340,7 +339,7 @@ public class VajramCodeGenerator {
    * @param parsedVajramData Vajram details
    * @return List of {@link VajramInputDefinition} for the Vajram.
    */
-  @SuppressWarnings("ALL")
+  @SuppressWarnings("unchecked")
   private ImmutableList<VajramInputDefinition> getVajramInputDefinitions(
       ClassLoader classLoader, ParsedVajramData parsedVajramData) {
     ImmutableList<VajramInputDefinition> vajramInputDefinitions =
@@ -1055,8 +1054,7 @@ public class VajramCodeGenerator {
             .returns(
                 ParameterizedTypeName.get(
                     clsDeps.get(IM_LIST), ClassName.get(VajramInputDefinition.class)));
-    ImmutableList<VajramInputDefinition> inputDefinitions =
-        getVajramInputDefinitions(classLoader, vajramDefs.get(vajramName));
+    ImmutableList<VajramInputDefinition> inputDefinitions = vajramInputsDefinitions.get(vajramName);
 
     Collection<CodeBlock> codeBlocks = new ArrayList<>(inputDefinitions.size());
     // Input and Dependency code block
