@@ -816,6 +816,8 @@ public class VajramCodeGenerator {
         String requestClass = CodegenUtils.getRequestClassName(splits[splits.length - 1]);
 
         if (DependencyResponse.class.isAssignableFrom(parameter.getType())) {
+          TypeName typeArgument =
+              CodegenUtils.getClassGenericArgumentsType(parsedVajramData.vajramClass());
           ifBlockBuilder.addStatement(
               """
                 $1T $2L =\s
@@ -824,12 +826,10 @@ public class VajramCodeGenerator {
                       .collect($6T.toImmutableMap(e -> $7T.from(e.getKey()),
                       $8T::getValue)))""",
               ParameterizedTypeName.get(
-                  clsDeps.get(DEP_RESP),
-                  ClassName.get(depPackageName, requestClass),
-                  CodegenUtils.getMethodReturnType(method)),
+                  clsDeps.get(DEP_RESP), ClassName.get(depPackageName, requestClass), typeArgument),
               variableName,
               clsDeps.get(DEP_RESP),
-              CodegenUtils.getMethodReturnType(method),
+              typeArgument,
               bindParamName,
               clsDeps.get(IM_MAP),
               ClassName.get(depPackageName, requestClass),
