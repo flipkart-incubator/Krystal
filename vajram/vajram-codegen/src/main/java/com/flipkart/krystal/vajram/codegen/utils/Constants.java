@@ -18,6 +18,7 @@ public final class Constants {
   public static final String LIST = "list";
   public static final String JAVA_EXT = ".java";
   public static final char DOLLAR = '$';
+  public static final String INPUT_DEFINITIONS_VAR = "inputDefinitions";
 
   private Constants() {}
 
