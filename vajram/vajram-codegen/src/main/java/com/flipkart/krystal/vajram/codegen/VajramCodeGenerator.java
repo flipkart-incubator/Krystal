@@ -331,42 +331,6 @@ public class VajramCodeGenerator {
   }
 
   /**
-   * Method to fetch vajram input definitions. The input defs are first fetched from config file. If
-   * its not found, then the VajramImpl class is loaded and "getInputDefinitions" method is invoked
-   * to fetch the vajram input definitions.
-   *
-   * @param classLoader Classloader
-   * @param parsedVajramData Vajram details
-   * @return List of {@link VajramInputDefinition} for the Vajram.
-   */
-  @SuppressWarnings("unchecked")
-  private ImmutableList<VajramInputDefinition> getVajramInputDefinitions(
-      ClassLoader classLoader, ParsedVajramData parsedVajramData) {
-    ImmutableList<VajramInputDefinition> vajramInputDefinitions =
-        vajramInputsDefinitions.get(parsedVajramData.vajramName());
-    if (Objects.isNull(vajramInputDefinitions) || vajramInputDefinitions.isEmpty()) {
-      try {
-        Class<? extends Vajram> parsedVajramImpl =
-            (Class<? extends Vajram>)
-                classLoader.loadClass(
-                    parsedVajramData.packageName()
-                        + DOT
-                        + getVajramImplClassName(parsedVajramData.vajramName()));
-        Method getInputDefinitions = parsedVajramImpl.getDeclaredMethod("getInputDefinitions");
-        vajramInputDefinitions =
-            (ImmutableList<VajramInputDefinition>) getInputDefinitions.invoke(parsedVajramImpl);
-
-      } catch (ClassNotFoundException
-          | NoSuchMethodException
-          | InvocationTargetException
-          | IllegalAccessException e) {
-        throw new RuntimeException(e);
-      }
-    }
-    return vajramInputDefinitions;
-  }
-
-  /**
    * Method to generate "executeCompute" function code for ComputeVajrams Supported DataAccessSpec
    * => VajramID only.
    *
