@@ -1151,6 +1151,9 @@ public class VajramCodeGenerator {
     if (input.needsModulation()) {
       inputDefBuilder.add(".needsModulation()");
     }
+    if (input.annotation() != null) {
+      inputDefBuilder.add(".annotation($T)", input.annotation());
+    }
     // last line
     inputDefBuilder.add(".build()");
   }

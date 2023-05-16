@@ -7,6 +7,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.datatypes.JavaDataType;
 import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
@@ -26,6 +27,7 @@ import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDefinitionException;
 import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.vajram.adaptors.DependencyInjectionAdaptor;
 import com.flipkart.krystal.vajram.das.AccessSpecMatchingResult;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import com.flipkart.krystal.vajram.das.VajramIndex;
@@ -37,6 +39,7 @@ import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputResolver;
 import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.InputSource;
+import com.flipkart.krystal.vajram.inputs.SessionInputResolver;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig.ModulatorContext;
 import com.google.common.collect.ImmutableCollection;
@@ -52,6 +55,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import lombok.Getter;
 
@@ -76,11 +80,14 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   private final LogicDecorationOrdering logicDecorationOrdering;
   private final MultiLeasePool<? extends ExecutorService> executorPool;
 
+  private final DependencyInjectionAdaptor<?> dependencyInjectionAdaptor;
+
   private VajramNodeGraph(
       String[] packagePrefixes,
       ImmutableMap<VajramID, InputModulatorConfig> inputModulatorConfigs,
       ImmutableMap<String, MainLogicDecoratorConfig> sessionScopedDecorators,
       LogicDecorationOrdering logicDecorationOrdering,
+      DependencyInjectionAdaptor<?> dependencyInjectionAdaptor,
       double maxParallelismPerCore) {
     this.inputModulatorConfigs = inputModulatorConfigs;
     this.sessionScopedDecoratorConfigs = sessionScopedDecorators;
@@ -89,6 +96,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     LogicDefinitionRegistry logicDefinitionRegistry = new LogicDefinitionRegistry();
     this.nodeDefinitionRegistry = new NodeDefinitionRegistry(logicDefinitionRegistry);
     this.logicRegistryDecorator = new LogicDefRegistryDecorator(logicDefinitionRegistry);
+    this.dependencyInjectionAdaptor = dependencyInjectionAdaptor;
     for (String packagePrefix : packagePrefixes) {
       loadVajramsFromClassPath(packagePrefix).forEach(this::registerVajram);
     }
@@ -282,15 +290,32 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
             vajramLogicNodeName,
             inputNames,
             inputsList -> {
-              inputsList.forEach(
-                  inputs ->
-                      validateMandatory(
-                          vajramId, inputs, vajramDefinition.getVajram().getInputDefinitions()));
               ImmutableList<Inputs> inputValues =
                   inputsList.stream()
                       .map(inputs -> injectFromSession(inputDefinitions, inputs))
                       .collect(toImmutableList());
-              return vajramDefinition.getVajram().execute(inputValues);
+              inputValues.forEach(
+                  inputs ->
+                      validateMandatory(
+                          vajramId, inputs, vajramDefinition.getVajram().getInputDefinitions()));
+              ImmutableMap<Inputs, ? extends CompletableFuture<?>> result =
+                  vajramDefinition.getVajram().execute(inputValues);
+              Map<Inputs, CompletableFuture<Object>> newResult = new HashMap<>();
+              result.forEach(
+                  (key, value) -> {
+                    int index = inputValues.indexOf(key);
+                    if (index >= 0) {
+                      // Find the Inputs object at the same index from the original Inputs list
+                      if (value != null) {
+                        newResult.put(inputsList.get(index), (CompletableFuture<Object>) value);
+                      }
+                      return;
+                    }
+                    if (value != null) {
+                      newResult.put(key, (CompletableFuture<Object>) value);
+                    }
+                  });
+              return ImmutableMap.copyOf(newResult);
             },
             vajramDefinition.getMainLogicTags());
     enableInputModulation(vajramLogic, vajramDefinition.getVajram());
@@ -320,7 +345,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     }
   }
 
-  private static Inputs injectFromSession(
+  private Inputs injectFromSession(
       ImmutableCollection<? extends VajramInputDefinition> inputDefinitions, Inputs inputs) {
     Map<String, InputValue<Object>> newValues = new HashMap<>();
     for (VajramInputDefinition inputDefinition : inputDefinitions) {
@@ -334,8 +359,13 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
           // Input was not resolved by another vajram. Check if it is resolvable
           // by SESSION
         }
-        if (input.sources().contains(InputSource.SESSION)) {
-          // TODO handle session provided inputs
+        if (input.sources().contains(InputSource.SESSION)
+            && input.type() instanceof JavaDataType<?>) {
+          SessionInputResolver sessionInputResolver =
+              new SessionInputResolver(((JavaDataType<?>) input.type()), input.annotation());
+          ValueOrError<Object> value =
+              sessionInputResolver.resolve(this.dependencyInjectionAdaptor);
+          newValues.put(inputName, value);
         }
       }
     }
@@ -398,6 +428,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     private final Map<VajramID, InputModulatorConfig> inputModulators = new LinkedHashMap<>();
     private LogicDecorationOrdering logicDecorationOrdering =
         new LogicDecorationOrdering(ImmutableSet.of());
+    private DependencyInjectionAdaptor<?> dependencyInjectionAdaptor;
     private double maxParallelismPerCore = 1;
 
     public Builder loadFromPackage(String packagePrefix) {
@@ -431,12 +462,19 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
       return this;
     }
 
+    public Builder dependencyInjectionAdaptor(
+        DependencyInjectionAdaptor<?> dependencyInjectionAdaptor) {
+      this.dependencyInjectionAdaptor = dependencyInjectionAdaptor;
+      return this;
+    }
+
     public VajramNodeGraph build() {
       return new VajramNodeGraph(
           packagePrefixes.toArray(String[]::new),
           ImmutableMap.copyOf(inputModulators),
           ImmutableMap.copyOf(sessionScopedDecoratorConfigs),
           logicDecorationOrdering,
+          dependencyInjectionAdaptor,
           maxParallelismPerCore);
     }
   }

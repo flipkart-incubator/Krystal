@@ -51,10 +51,7 @@ public abstract class GreetingVajram extends ComputeVajram<String> {
             + "! Hope you are doing well!";
     request.log().ifPresent(l -> l.log(Level.INFO, "Greeting user " + userId));
     request
-        .analyticsEventSink()
-        .ifPresent(
-            analyticsEventSink ->
-                analyticsEventSink.pushEvent("event_type", new GreetingEvent(userId, greeting)));
+        .analyticsEventSink().pushEvent("event_type", new GreetingEvent(userId, greeting));
     return greeting;
   }
 }

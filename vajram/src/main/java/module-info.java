@@ -6,6 +6,7 @@ module flipkart.krystal.vajram {
   exports com.flipkart.krystal.vajram.exec;
   exports com.flipkart.krystal.vajram.tags;
   exports com.flipkart.krystal.vajram.exception;
+  exports com.flipkart.krystal.vajram.adaptors;
 
   requires com.google.common;
   requires static lombok;
