@@ -188,8 +188,8 @@ Follow the below mentioned steps for the Krystal version bump -
    - Build and publish
    2. krystal (build.gradle) update
    - update version from 1.6 to 1.7
-   - update vajram-codegen (build.gradle) version to 1.6 (Note : This is temporary)
+   - update vajram-codegen, vajram-krystex (build.gradle) version to 1.6 (Note : This is temporary)
    - Build and publish
-   3. vajram-codegen (build.gradle) update
+   3. vajram-codegen, vajram-krystex (build.gradle) update
    - update version from 1.6 to 1.7
    - Build and publish
