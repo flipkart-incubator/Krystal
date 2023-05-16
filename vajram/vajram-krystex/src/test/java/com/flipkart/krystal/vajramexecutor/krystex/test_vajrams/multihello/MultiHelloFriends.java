@@ -1,18 +1,19 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello;
 
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.numberOfFriends_n;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.userId_n;
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.resolveFanout;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.numberOfFriends_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends.ID;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.hellos_n;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.userIds_n;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.hellos_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.userIds_s;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.Resolve;
-import com.flipkart.krystal.vajram.inputs.Using;
+import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsInputUtil.MultiHelloFriendsAllInputs;
+import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,20 +21,23 @@ import java.util.List;
 public abstract class MultiHelloFriends extends ComputeVajram<String> {
   public static final String ID = "MultiHelloFriends";
 
-  @Resolve(depName = hellos_n, depInputs = userId_n)
-  public static List<String> userIdsForHellos(@Using(userIds_n) List<String> userIds) {
-    return userIds;
-  }
+  private static final List<Integer> NUMBER_OF_FRIENDS = List.of(1, 2);
 
-  @Resolve(depName = hellos_n, depInputs = numberOfFriends_n)
-  public static List<Integer> numberOfFriendsForHellos(@Using(userIds_n) List<String> userIds) {
-    return List.of(1, 2);
+  @Override
+  public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
+    return ImmutableList.of(
+        resolveFanout(hellos_s, HelloFriendsRequest.userId_s)
+            .using(userIds_s)
+            .asResolver(userIds -> userIds),
+        resolveFanout(hellos_s, numberOfFriends_s)
+            .using(userIds_s)
+            .asResolver(userIds -> NUMBER_OF_FRIENDS));
   }
 
   @VajramLogic
   public static String sayHellos(MultiHelloFriendsAllInputs allInputs) {
     ArrayList<String> userIds = allInputs.userIds();
-    List<Integer> numberOfFriends = numberOfFriendsForHellos(userIds);
+    List<Integer> numberOfFriends = NUMBER_OF_FRIENDS;
 
     List<String> result = new ArrayList<>();
     for (String userId : userIds) {

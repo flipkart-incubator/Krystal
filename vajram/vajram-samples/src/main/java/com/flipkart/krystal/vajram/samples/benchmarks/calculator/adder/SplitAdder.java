@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder;
 
-import static com.flipkart.krystal.vajram.inputs.DependencyCommand.SingleExecute.skipSingleExecute;
-import static com.flipkart.krystal.vajram.inputs.DependencyCommand.singleExecuteWith;
+import static com.flipkart.krystal.vajram.inputs.SingleExecute.executeWith;
+import static com.flipkart.krystal.vajram.inputs.SingleExecute.skipExecution;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest.numberOne_n;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest.numberTwo_n;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderRequest.numbers_n;
@@ -13,9 +13,9 @@ import static java.util.function.Function.identity;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.DependencyCommand.SingleExecute;
-import com.flipkart.krystal.vajram.inputs.Resolve;
+import com.flipkart.krystal.vajram.inputs.SingleExecute;
 import com.flipkart.krystal.vajram.inputs.Using;
+import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -29,11 +29,11 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
   public static SingleExecute<ArrayList<Integer>> numbersForSubSplitter1(
       @Using(numbers_n) List<Integer> numbers) {
     if (numbers.size() < 2) {
-      return skipSingleExecute(
+      return skipExecution(
           "Skipping splitters as count of numbers is less than 2. Will call adder instead");
     } else {
       int subListSize = numbers.size() / 2;
-      return singleExecuteWith(new ArrayList<>(numbers.subList(0, subListSize)));
+      return executeWith(new ArrayList<>(numbers.subList(0, subListSize)));
     }
   }
 
@@ -41,22 +41,22 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
   public static SingleExecute<ArrayList<Integer>> numbersForSubSplitter2(
       @Using(numbers_n) List<Integer> numbers) {
     if (numbers.size() < 2) {
-      return skipSingleExecute(
+      return skipExecution(
           "Skipping splitters as count of numbers is less than 2. Will call adder instead");
     } else {
       int subListSize = numbers.size() / 2;
-      return singleExecuteWith(new ArrayList<>(numbers.subList(subListSize, numbers.size())));
+      return executeWith(new ArrayList<>(numbers.subList(subListSize, numbers.size())));
     }
   }
 
   @Resolve(depName = sum_n, depInputs = numberOne_n)
   public static SingleExecute<Integer> adderNumberOne(@Using(numbers_n) List<Integer> numbers) {
     if (numbers.size() == 1) {
-      return singleExecuteWith(numbers.get(0));
+      return executeWith(numbers.get(0));
     } else if (numbers.isEmpty()) {
-      return skipSingleExecute("No numbers provided. Skipping adder call");
+      return skipExecution("No numbers provided. Skipping adder call");
     } else {
-      return skipSingleExecute("More than 1 numbers provided. SplitAdders will be called instead");
+      return skipExecution("More than 1 numbers provided. SplitAdders will be called instead");
     }
   }
 

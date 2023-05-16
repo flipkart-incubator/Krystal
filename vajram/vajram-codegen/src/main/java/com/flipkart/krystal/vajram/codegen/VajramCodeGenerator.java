@@ -84,16 +84,16 @@ import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
-import com.flipkart.krystal.vajram.inputs.DependencyCommand.MultiExecute;
-import com.flipkart.krystal.vajram.inputs.DependencyCommand.SingleExecute;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
-import com.flipkart.krystal.vajram.inputs.Resolve;
+import com.flipkart.krystal.vajram.inputs.MultiExecute;
+import com.flipkart.krystal.vajram.inputs.SingleExecute;
 import com.flipkart.krystal.vajram.inputs.Using;
 import com.flipkart.krystal.vajram.inputs.VajramDependencyTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
+import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajram.modulation.UnmodulatedInput;
@@ -204,18 +204,8 @@ public class VajramCodeGenerator {
     clsDeps.put(IM_MAP, ClassName.get(ImmutableMap.class));
     clsDeps.put(IM_LIST, ClassName.get(ImmutableList.class));
     clsDeps.put(DEP_COMMAND, ClassName.get(DependencyCommand.class));
-    clsDeps.put(
-        SINGLE_EXEC_CMD,
-        ClassName.get(
-            DependencyCommand.class.getPackageName(),
-            DependencyCommand.class.getSimpleName(),
-            SingleExecute.class.getSimpleName()));
-    clsDeps.put(
-        MULTI_EXEC_CMD,
-        ClassName.get(
-            DependencyCommand.class.getPackageName(),
-            DependencyCommand.class.getSimpleName(),
-            MultiExecute.class.getSimpleName()));
+    clsDeps.put(SINGLE_EXEC_CMD, ClassName.get(SingleExecute.class));
+    clsDeps.put(MULTI_EXEC_CMD, ClassName.get(MultiExecute.class));
     clsDeps.put(FUNCTION, ClassName.get(Function.class));
     clsDeps.put(VAL_ERR, ClassName.get(ValueOrError.class));
     clsDeps.put(DEP_RESP, ClassName.get(DependencyResponse.class));
@@ -880,16 +870,16 @@ public class VajramCodeGenerator {
     if (DependencyCommand.class.isAssignableFrom(method.getReturnType())) {
       ifBlockBuilder.beginControlFlow("if($L.shouldSkip())", variableName);
       ifBlockBuilder.addStatement(
-          "\t return $T.skipSingleExecute($L.doc())", clsDeps.get(SINGLE_EXEC_CMD), variableName);
+          "\t return $T.skipExecution($L.doc())", clsDeps.get(SINGLE_EXEC_CMD), variableName);
       ifBlockBuilder.add("} else {\n\t");
       controlFLowStarted = true;
     }
     // TODO : add missing validations if any (??)
     Class<?> klass = Primitives.wrap(method.getReturnType());
-    if (DependencyCommand.MultiExecute.class.isAssignableFrom(klass)) {
+    if (MultiExecute.class.isAssignableFrom(klass)) {
       String code =
           """
-              return $T.multiExecuteWith(
+              return $T.executeFanoutWith(
                   $L.inputs().stream()
                       .map(
                           element ->
@@ -898,7 +888,7 @@ public class VajramCodeGenerator {
                   .toList())""";
       ifBlockBuilder.addStatement(
           code,
-          clsDeps.get(DEP_COMMAND),
+          clsDeps.get(MULTI_EXEC_CMD),
           variableName,
           clsDeps.get(INPUTS),
           clsDeps.get(IM_MAP),
@@ -911,17 +901,17 @@ public class VajramCodeGenerator {
                 ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0])) {
           String code =
               """
-                  return $T.multiExecuteWith(
+                  return $T.executeFanoutWith(
                       $L.stream()
                           .map(
                               element ->
                                   element.toInputValues()))
                       .toList())""";
-          ifBlockBuilder.addStatement(code, clsDeps.get(DEP_COMMAND), variableName);
+          ifBlockBuilder.addStatement(code, clsDeps.get(MULTI_EXEC_CMD), variableName);
         } else {
           String code =
               """
-                  return $T.multiExecuteWith(
+                  return $T.executeFanoutWith(
                       $L.stream()
                           .map(
                               element ->
@@ -930,7 +920,7 @@ public class VajramCodeGenerator {
                       .toList())""";
           ifBlockBuilder.addStatement(
               code,
-              clsDeps.get(DEP_COMMAND),
+              clsDeps.get(MULTI_EXEC_CMD),
               variableName,
               clsDeps.get(INPUTS),
               clsDeps.get(IM_MAP),
@@ -946,17 +936,17 @@ public class VajramCodeGenerator {
     } else {
       if (VajramRequest.class.isAssignableFrom(klass)) {
         ifBlockBuilder.addStatement(
-            "return $T.singleExecuteWith($L.toInputValues())",
-            clsDeps.get(DEP_COMMAND),
+            "return $T.executeWith($L.toInputValues())",
+            clsDeps.get(SINGLE_EXEC_CMD),
             variableName);
-      } else if (DependencyCommand.SingleExecute.class.isAssignableFrom(klass)) {
+      } else if (SingleExecute.class.isAssignableFrom(klass)) {
         ifBlockBuilder.addStatement(
             """
-          return $T.singleExecuteWith(new Inputs(
+          return $T.executeWith(new Inputs(
            $T.of($S, $T.withValue(
               $L.inputs().iterator().next().orElse(null)))))
         """,
-            clsDeps.get(DEP_COMMAND),
+            clsDeps.get(SINGLE_EXEC_CMD),
             clsDeps.get(IM_MAP),
             inputs[0],
             clsDeps.get(VAL_ERR),
@@ -964,8 +954,8 @@ public class VajramCodeGenerator {
 
       } else {
         ifBlockBuilder.addStatement(
-            "return $T.singleExecuteWith(new Inputs(\n " + "$T.of($S, $T.withValue($L))))",
-            clsDeps.get(DEP_COMMAND),
+            "return $T.executeWith(new Inputs(\n " + "$T.of($S, $T.withValue($L))))",
+            clsDeps.get(SINGLE_EXEC_CMD),
             clsDeps.get(IM_MAP),
             inputs[0],
             clsDeps.get(VAL_ERR),

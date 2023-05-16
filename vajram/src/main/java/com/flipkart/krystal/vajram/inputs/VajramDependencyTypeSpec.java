@@ -1,7 +1,11 @@
 package com.flipkart.krystal.vajram.inputs;
 
-import com.flipkart.krystal.vajram.Vajram;
+import static lombok.EqualsAndHashCode.CacheStrategy.LAZY;
 
+import com.flipkart.krystal.vajram.Vajram;
+import lombok.EqualsAndHashCode;
+
+@EqualsAndHashCode(callSuper = true, cacheStrategy = LAZY)
 public final class VajramDependencyTypeSpec<T, CV extends Vajram<?>, DV extends Vajram<T>>
     extends VajramInputTypeSpec<T, CV> {
 

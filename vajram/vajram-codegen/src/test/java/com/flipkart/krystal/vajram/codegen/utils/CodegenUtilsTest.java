@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.codegen.utils;
 
+import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
+
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.squareup.javapoet.ClassName;
@@ -36,7 +38,7 @@ public class CodegenUtilsTest {
         ((ParameterizedTypeName) methodReturnType).rawType, ClassName.get(Set.class));
 
     final TypeName methodReturnType2 = CodegenUtils.getMethodReturnType(getMethod);
-    Assertions.assertEquals(((ClassName) methodReturnType2), ClassName.get(Object.class));
+    Assertions.assertEquals(methodReturnType2, ClassName.get(Object.class));
 
     final TypeName classGenericArgumentsType =
         CodegenUtils.getClassGenericArgumentsType(ClassTest1.class);
@@ -89,7 +91,7 @@ public class CodegenUtilsTest {
     }
 
     public DependencyCommand<String> fanoutMethod3() {
-      return DependencyCommand.multiExecuteWith(Collections.emptySet());
+      return executeFanoutWith(Collections.emptySet());
     }
   }
 

@@ -40,5 +40,4 @@ public abstract sealed class LogicDefinition<L extends Logic>
   public L logic() {
     return logic;
   }
-  ;
 }

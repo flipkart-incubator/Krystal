@@ -1,9 +1,9 @@
-package com.flipkart.krystal.vajram.inputs;
+package com.flipkart.krystal.vajram.inputs.resolution;
 
-import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
 import com.google.common.collect.ImmutableSet;
 
-public abstract class AbstractInputResolver<V extends Vajram<?>> implements InputResolver {
+public abstract class AbstractInputResolver implements InputResolver {
 
   private final ImmutableSet<String> sources;
   private final QualifiedInputs resolutionTarget;

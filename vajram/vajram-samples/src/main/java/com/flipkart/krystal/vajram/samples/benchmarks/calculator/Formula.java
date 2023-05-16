@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator;
 
-import static com.flipkart.krystal.vajram.inputs.ForwardingResolver.resolve;
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.resolve;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.Formula.ID;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.a_s;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.p_s;
@@ -11,7 +11,7 @@ import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaR
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.InputResolver;
+import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaInputUtil.FormulaAllInputs;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.DividerRequest;
@@ -26,10 +26,10 @@ public abstract class Formula extends ComputeVajram<Integer> {
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
     return ImmutableList.of(
-        resolve(sum_s, AdderRequest.numberOne_s).using(p_s).build(),
-        resolve(sum_s, AdderRequest.numberTwo_s).using(q_s).build(),
-        resolve(quotient_s, DividerRequest.numerator_s).using(a_s).build(),
-        resolve(quotient_s, DividerRequest.denominator_s).using(sum_s).build());
+        resolve(sum_s, AdderRequest.numberOne_s).usingAsIs(p_s).asResolver(),
+        resolve(sum_s, AdderRequest.numberTwo_s).usingAsIs(q_s).asResolver(),
+        resolve(quotient_s, DividerRequest.numerator_s).usingAsIs(a_s).asResolver(),
+        resolve(quotient_s, DividerRequest.denominator_s).usingAsIs(sum_s).asResolver());
   }
 
   @VajramLogic

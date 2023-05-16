@@ -1,5 +1,7 @@
-package com.flipkart.krystal.vajram.inputs;
+package com.flipkart.krystal.vajram.inputs.resolution;
 
+import com.flipkart.krystal.vajram.inputs.DefaultInputResolverDefinition;
+import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
 import com.google.common.collect.ImmutableSet;
 
 public sealed interface InputResolverDefinition
