@@ -249,9 +249,9 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   }
 
   private void validateMandatory(
-      VajramID vajramID, Inputs inputs, ImmutableCollection<VajramInputDefinition> requiredInputs) {
+      VajramID vajramID, Inputs inputs, ImmutableCollection<VajramInputDefinition> inputDefinitions) {
     Iterable<VajramInputDefinition> mandatoryInputs =
-        requiredInputs.stream()
+        inputDefinitions.stream()
                 .filter(inputDefinition -> inputDefinition instanceof Input<?>)
                 .filter(VajramInputDefinition::isMandatory)
             ::iterator;
@@ -294,10 +294,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                   inputsList.stream()
                       .map(inputs -> injectFromSession(inputDefinitions, inputs))
                       .collect(toImmutableList());
-              inputValues.forEach(
-                  inputs ->
-                      validateMandatory(
-                          vajramId, inputs, vajramDefinition.getVajram().getInputDefinitions()));
+              inputsList.forEach(inputs -> validateMandatory(vajramId, inputs, inputDefinitions));
               ImmutableMap<Inputs, ? extends CompletableFuture<?>> result =
                   vajramDefinition.getVajram().execute(inputValues);
               Map<Inputs, CompletableFuture<Object>> newResult = new HashMap<>();

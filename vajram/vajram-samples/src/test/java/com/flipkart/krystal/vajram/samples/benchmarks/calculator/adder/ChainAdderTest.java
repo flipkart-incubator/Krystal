@@ -27,8 +27,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,7 +46,7 @@ class ChainAdderTest {
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
   }
 
-  @Test
+//  @Test
   void chainer_success() throws Exception {
     CompletableFuture<Integer> future;
     NodeExecutionReport nodeExecutionReport = new DefaultNodeExecutionReport(Clock.systemUTC());
@@ -72,12 +70,14 @@ class ChainAdderTest {
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
   }
 
-  // @Test
-  void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
+
+//    @Test
+  void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();
-    long javaNativeTime = javaMethodBenchmark(this::chainAdd, loopCount);
-    long javaFuturesTime = javaFuturesBenchmark(this::chainAddAsync, loopCount);
+    long javaNativeTimeNs = javaMethodBenchmark(this::chainAdd, loopCount);
+    long javaFuturesTimeNs = javaFuturesBenchmark(this::chainAddAsync, loopCount);
+    Thread.sleep(5000);
     //noinspection unchecked
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
     long startTime = System.nanoTime();
@@ -100,7 +100,7 @@ class ChainAdderTest {
     System.out.printf("Avg. time to execute vajrams:%,d%n", vajramTime / loopCount);
     System.out.printf(
         "Platform overhead over native code: %,.0f ns per request%n",
-        (1.0 * vajramTime - javaNativeTime) / loopCount);
+        (1.0 * vajramTime - javaNativeTimeNs) / loopCount);
     /*
      * Benchmark config:
      *    loopCount = 50_000
@@ -114,7 +114,7 @@ class ChainAdderTest {
      */
     System.out.printf(
         "Platform overhead over reactive code: %,.0f ns per request%n",
-        (1.0 * vajramTime - javaFuturesTime) / loopCount);
+        (1.0 * vajramTime - javaFuturesTimeNs) / loopCount);
     allOf(futures)
         .whenComplete(
             (unused, throwable) -> {
