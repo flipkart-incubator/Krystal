@@ -143,7 +143,7 @@ import lombok.extern.slf4j.Slf4j;
 public class VajramCodeGenerator {
   private final String packageName;
   private final String requestClassName;
-  private final VajramInputFile vajramInputFile;q
+  private final VajramInputFile vajramInputFile;
   private final String vajramName;
   private final Map<String, ParsedVajramData> vajramDefs;
   private final Map<String, ImmutableList<VajramInputDefinition>> vajramInputsDefinitions;
