@@ -271,7 +271,7 @@ public final class VajramCodeGenFacade {
                                         new VajramValidationException(
                                             "Vajram class missing in VajramInputDefinition for :"
                                                 + vajramID));
-                        String[] splits = VajramCodeGenerator.COMPILE.split(depVajramClass);
+                        String[] splits = Constants.DOT_PATTERN.split(depVajramClass);
                         String depPackageName =
                             stream(splits, 0, splits.length - 1).collect(Collectors.joining(DOT));
                         String vajramName = splits[splits.length - 1];
