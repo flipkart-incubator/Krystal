@@ -17,13 +17,19 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-public final class SingleTargetFanout<S, T, CV extends Vajram<?>, DV extends Vajram<?>> {
+/**
+ * @param <S> Source Type: The DataType of the source input being used for resolution
+ * @param <T> Target Type: The DataType of the dependency target input being resolved
+ * @param <CV> CurrentVajram: The current vajram which is resolving the input
+ * @param <DV> DependencyVajram: The vajram whose input is being resolved
+ */
+public final class FanoutResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<?>> {
   private final VajramDependencyTypeSpec<?, CV, DV> dependency;
   private final VajramInputTypeSpec<T, DV> targetInput;
   private final VajramInputTypeSpec<S, CV> sourceInput;
   private final List<SkipPredicate<S>> skipConditions = new ArrayList<>();
 
-  SingleTargetFanout(
+  FanoutResolverStage(
       VajramDependencyTypeSpec<?, CV, DV> dependency,
       VajramInputTypeSpec<T, DV> targetInput,
       VajramInputTypeSpec<S, CV> sourceInput) {
@@ -32,7 +38,12 @@ public final class SingleTargetFanout<S, T, CV extends Vajram<?>, DV extends Vaj
     this.sourceInput = sourceInput;
   }
 
-  public SingleTargetFanout<S, T, CV, DV> skipIf(String reason, Predicate<Optional<S>> whenToSkip) {
+  /**
+   * @param whenToSkip The condition when the dependency needs to be skipped
+   * @param reason The reason for skipping the dependency
+   */
+  public FanoutResolverStage<S, T, CV, DV> skipIf(
+      Predicate<Optional<S>> whenToSkip, String reason) {
     this.skipConditions.add(new SkipPredicate<>(reason, whenToSkip));
     return this;
   }
@@ -48,20 +59,19 @@ public final class SingleTargetFanout<S, T, CV extends Vajram<?>, DV extends Vaj
     };
   }
 
-  public static final class SingleTargetFanoutIRStage<
-      T, CV extends Vajram<?>, DV extends Vajram<?>> {
+  public static final class ResolveFanoutStage<T, CV extends Vajram<?>, DV extends Vajram<?>> {
 
     private final VajramDependencyTypeSpec<?, CV, DV> dependency;
     private final VajramInputTypeSpec<T, DV> targetInput;
 
-    SingleTargetFanoutIRStage(
+    ResolveFanoutStage(
         VajramDependencyTypeSpec<?, CV, DV> dependency, VajramInputTypeSpec<T, DV> targetInput) {
       this.dependency = dependency;
       this.targetInput = targetInput;
     }
 
-    public <S> SingleTargetFanout<S, T, CV, DV> using(VajramInputTypeSpec<S, CV> sourceInput) {
-      return new SingleTargetFanout<>(dependency, targetInput, sourceInput);
+    public <S> FanoutResolverStage<S, T, CV, DV> using(VajramInputTypeSpec<S, CV> sourceInput) {
+      return new FanoutResolverStage<>(dependency, targetInput, sourceInput);
     }
   }
 }
