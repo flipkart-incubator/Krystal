@@ -15,7 +15,6 @@ import static com.flipkart.krystal.vajram.codegen.utils.Constants.COM_FUTURE;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.DEP_COMMAND;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.DEP_RESP;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.DEP_RESPONSE;
-import static com.flipkart.krystal.vajram.codegen.utils.Constants.DOT_SEPARATOR;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.FUNCTION;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.GET_INPUT_DEFINITIONS;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.HASH_MAP;
@@ -78,6 +77,7 @@ import com.flipkart.krystal.vajram.codegen.models.VajramDependencyDef;
 import com.flipkart.krystal.vajram.codegen.models.VajramInputFile;
 import com.flipkart.krystal.vajram.codegen.models.VajramInputsDef;
 import com.flipkart.krystal.vajram.codegen.utils.CodegenUtils;
+import com.flipkart.krystal.vajram.codegen.utils.Constants;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.inputs.Dependency;
@@ -131,7 +131,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -142,9 +141,6 @@ import lombok.extern.slf4j.Slf4j;
 @SuppressWarnings("rawtypes")
 @Slf4j
 public class VajramCodeGenerator {
-
-  private static final Pattern COMPILE = Pattern.compile("\\.");
-
   private final String packageName;
   private final String requestClassName;
   private final VajramInputFile vajramInputFile;
@@ -269,7 +265,7 @@ public class VajramCodeGenerator {
                                       new VajramValidationException(
                                           "Vajram class missing in VajramInputDefinition for :"
                                               + vajramName));
-                      String[] splits = COMPILE.split(depVajramClass);
+                      String[] splits = Constants.DOT_PATTERN.split(depVajramClass);
                       String depPackageName =
                           stream(splits, 0, splits.length - 1).collect(Collectors.joining(DOT));
                       String depRequestClass =
@@ -423,7 +419,7 @@ public class VajramCodeGenerator {
                                     new VajramValidationException(
                                         "Vajram class missing in VajramInputDefinition for :"
                                             + vajramName));
-                    String[] splits = COMPILE.split(depVajramClass);
+                    String[] splits = Constants.DOT_PATTERN.split(depVajramClass);
                     String depPackageName =
                         stream(splits, 0, splits.length - 1).collect(Collectors.joining(DOT));
                     String depRequestClass =
@@ -808,7 +804,7 @@ public class VajramCodeGenerator {
                             "Vajram class missing in vajram input definition"));
 
         String variableName = CodegenUtils.toJavaName(bindParamName);
-        String[] splits = COMPILE.split(vajramClass);
+        String[] splits = Constants.DOT_PATTERN.split(vajramClass);
         final ParsedVajramData parsedVajramData = vajramDefs.get(splits[splits.length - 1]);
         final Field field = parsedVajramData.fields().getOrDefault(variableName, null);
         String depPackageName =
@@ -1164,7 +1160,7 @@ public class VajramCodeGenerator {
     ImmutableList<InputDef> inputDefs = vajramInputsDef.inputs();
     Builder requestConstructor = constructorBuilder().addModifiers(PRIVATE);
     ClassName builderClassType =
-        ClassName.get(packageName + DOT_SEPARATOR + requestClassName, "Builder");
+        ClassName.get(packageName + Constants.DOT_SEPARATOR + requestClassName, "Builder");
     TypeSpec.Builder requestClass =
         classBuilder(requestClassName)
             .addModifiers(PUBLIC)
@@ -1453,7 +1449,7 @@ public class VajramCodeGenerator {
     String inputJavaName = toJavaName(dependencyDef.getName());
     if (dependencyDef instanceof VajramDependencyDef vajramDepSpec) {
       String depVajramClass = vajramDepSpec.getVajramClass();
-      int lastDotIndex = depVajramClass.lastIndexOf(DOT_SEPARATOR);
+      int lastDotIndex = depVajramClass.lastIndexOf(Constants.DOT_SEPARATOR);
       String depRequestClass =
           CodegenUtils.getRequestClassName(depVajramClass.substring(lastDotIndex + 1));
       String depPackageName = depVajramClass.substring(0, lastDotIndex);
