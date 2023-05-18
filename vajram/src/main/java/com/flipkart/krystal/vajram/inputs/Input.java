@@ -64,5 +64,10 @@ public record Input<T>(
       }
       return this;
     }
+
+    public InputBuilder<T> annotation(String annotation) {
+      this.annotation = annotation;
+      return this;
+    }
   }
 }

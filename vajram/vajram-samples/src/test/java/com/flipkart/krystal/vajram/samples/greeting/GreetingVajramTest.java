@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.name.Named;
 import java.time.Clock;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,6 +79,7 @@ public class GreetingVajramTest {
 
     @Provides
     @Singleton
+    @Named("analytics_sink")
     public AnalyticsEventSink provideAnalyticsEventSink() {
       AnalyticsEventSink analyticsEventSink = new AnalyticsEventSink();
       return analyticsEventSink;
