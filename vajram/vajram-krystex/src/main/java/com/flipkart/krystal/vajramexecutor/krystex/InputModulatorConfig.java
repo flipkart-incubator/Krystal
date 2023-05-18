@@ -95,11 +95,8 @@ public record InputModulatorConfig(
         String vajramId =
             Optional.ofNullable(
                     nodeDefinitionRegistry
-                        .logicDefinitionRegistry()
-                        .getMain(
-                            nodeDefinitionRegistry
-                                .get(dependantChainFirstNode.nodeId())
-                                .mainLogicNode())
+                        .get(dependantChainFirstNode.nodeId())
+                        .getMainLogicDefinition()
                         .logicTags()
                         .get(VajramTags.VAJRAM_ID))
                 .orElseThrow(

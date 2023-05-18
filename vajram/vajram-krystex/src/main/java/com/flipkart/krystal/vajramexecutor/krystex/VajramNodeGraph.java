@@ -4,7 +4,6 @@ import static com.flipkart.krystal.vajram.VajramLoader.loadVajramsFromClassPath;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
-import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
@@ -34,7 +33,6 @@ import com.flipkart.krystal.vajram.exec.VajramExecutableGraph;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolverDefinition;
@@ -186,6 +184,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
       VajramDefinition vajramDefinition) {
     Vajram<?> vajram = vajramDefinition.getVajram();
     VajramID vajramId = vajram.getId();
+    ImmutableCollection<VajramInputDefinition> inputDefinitions = vajram.getInputDefinitions();
 
     // Create node definitions for all input resolvers defined in this vajram
     List<InputResolverDefinition> inputResolvers =
@@ -201,7 +200,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                       inputResolverDefinition.resolutionTarget().inputNames();
                   ImmutableSet<String> sources = inputResolverDefinition.sources();
                   ImmutableCollection<VajramInputDefinition> requiredInputs =
-                      vajram.getInputDefinitions().stream()
+                      inputDefinitions.stream()
                           .filter(def -> sources.contains(def.name()))
                           .collect(toImmutableList());
                   ResolverLogicDefinition inputResolverNode =
@@ -282,15 +281,8 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
             vajramLogicNodeName,
             inputNames,
             inputsList -> {
-              inputsList.forEach(
-                  inputs ->
-                      validateMandatory(
-                          vajramId, inputs, vajramDefinition.getVajram().getInputDefinitions()));
-              ImmutableList<Inputs> inputValues =
-                  inputsList.stream()
-                      .map(inputs -> injectFromSession(inputDefinitions, inputs))
-                      .collect(toImmutableList());
-              return vajramDefinition.getVajram().execute(inputValues);
+              inputsList.forEach(inputs -> validateMandatory(vajramId, inputs, inputDefinitions));
+              return vajramDefinition.getVajram().execute(inputsList);
             },
             vajramDefinition.getMainLogicTags());
     enableInputModulation(vajramLogic, vajramDefinition.getVajram());
@@ -305,45 +297,19 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     InputModulatorConfig inputModulatorConfig = inputModulatorConfigs.get(ioVajram.getId());
     if (inputModulatorConfig != null) {
       logicDefinition.registerRequestScopedDecorator(
-          new MainLogicDecoratorConfig(
-              InputModulationDecorator.DECORATOR_TYPE,
-              nodeExecutionContext ->
-                  ioVajram.getInputDefinitions().stream()
-                      .filter(inputDefinition -> inputDefinition instanceof Input<?>)
-                      .map(inputDefinition -> (Input<?>) inputDefinition)
-                      .anyMatch(Input::needsModulation),
-              inputModulatorConfig.instanceIdGenerator(),
-              decoratorContext ->
-                  inputModulatorConfig
-                      .decoratorFactory()
-                      .apply(new ModulatorContext(ioVajram, decoratorContext))));
-    }
-  }
-
-  private static Inputs injectFromSession(
-      ImmutableCollection<? extends VajramInputDefinition> inputDefinitions, Inputs inputs) {
-    Map<String, InputValue<Object>> newValues = new HashMap<>();
-    for (VajramInputDefinition inputDefinition : inputDefinitions) {
-      String inputName = inputDefinition.name();
-      if (inputDefinition instanceof Input<?> input) {
-        if (input.sources().contains(InputSource.CLIENT)) {
-          ValueOrError<Object> value = inputs.getInputValue(inputName);
-          if (!ValueOrError.empty().equals(value)) {
-            continue;
-          }
-          // Input was not resolved by another vajram. Check if it is resolvable
-          // by SESSION
-        }
-        if (input.sources().contains(InputSource.SESSION)) {
-          // TODO handle session provided inputs
-        }
-      }
-    }
-    if (!newValues.isEmpty()) {
-      inputs.values().forEach(newValues::putIfAbsent);
-      return new Inputs(newValues);
-    } else {
-      return inputs;
+          List.of(
+              new MainLogicDecoratorConfig(
+                  InputModulationDecorator.DECORATOR_TYPE,
+                  nodeExecutionContext ->
+                      ioVajram.getInputDefinitions().stream()
+                          .filter(inputDefinition -> inputDefinition instanceof Input<?>)
+                          .map(inputDefinition -> (Input<?>) inputDefinition)
+                          .anyMatch(Input::needsModulation),
+                  inputModulatorConfig.instanceIdGenerator(),
+                  decoratorContext ->
+                      inputModulatorConfig
+                          .decoratorFactory()
+                          .apply(new ModulatorContext(ioVajram, decoratorContext)))));
     }
   }
 
