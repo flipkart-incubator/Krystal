@@ -168,7 +168,12 @@ class Node {
             .collect(Collectors.toSet());
     Map<NodeLogicId, ResolverDefinition> uniquePendingResolvers = new LinkedHashMap<>();
     for (ResolverDefinition pendingResolver : pendingResolvers) {
-      uniquePendingResolvers.putIfAbsent(pendingResolver.resolverNodeLogicId(), pendingResolver);
+      /**If a node has a resolver of itself then it will keep on adding it in pending
+       * resolver and it will be an infinite loop. So to avoid cyclic depenendency this
+       * check is needed*/
+      if (!skipNode.dependantChain().contains(pendingResolver.resolverNodeLogicId().nodeId())) {
+        uniquePendingResolvers.putIfAbsent(pendingResolver.resolverNodeLogicId(), pendingResolver);
+      }
     }
     for (ResolverDefinition resolverDefinition : uniquePendingResolvers.values()) {
       executeResolver(requestId, resolverDefinition);
