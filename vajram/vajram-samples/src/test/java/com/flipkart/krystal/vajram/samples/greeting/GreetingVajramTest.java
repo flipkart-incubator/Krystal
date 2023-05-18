@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutionReport;
 import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
@@ -15,9 +16,11 @@ import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.adaptors.DependencyInjectionAdaptor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
+import com.flipkart.krystal.vajramexecutor.krystex.SessionInputDecorator;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -36,6 +39,8 @@ public class GreetingVajramTest {
 
     DependencyInjectionAdaptor<?> diAdaptor = new GuiceDIAdaptor.Builder().loadFromModule(new GuiceModule()).build();
     graph.dependencyInjectionAdaptor(diAdaptor);
+    graph.logicDecorationOrdering(new LogicDecorationOrdering(ImmutableSet.<String>builder().add(
+        SessionInputDecorator.DECORATOR_TYPE).add(MainLogicExecReporter.class.getName()).build()));
 
     objectMapper =
         new ObjectMapper()
