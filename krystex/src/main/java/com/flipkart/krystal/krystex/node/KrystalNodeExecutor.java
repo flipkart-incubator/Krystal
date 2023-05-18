@@ -169,6 +169,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       // 2. If the above is not possible, then such LogicDecorators should gracefully handle the
       // scenario that InitiateActiveDepChains will not contain recursive active dependant
       // chains.
+      nodeDefinitionRegistry.registerRecursive(nodeDefinition);
+      nodeRegistry.tryGet(nodeId).ifPresent(Node::markRecursive);
       dependantChainsPerNode
           .computeIfAbsent(nodeId, _n -> new LinkedHashSet<>())
           .add(dependantChain);
