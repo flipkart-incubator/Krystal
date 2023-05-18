@@ -81,7 +81,8 @@ public record SessionInputDecorator(
         }
         if (input.sources().contains(InputSource.SESSION)
             && input.type() instanceof JavaDataType<?>) {
-          ValueOrError<Object> value = getFromInjectionAdaptor(((JavaDataType<?>) input.type()), input.annotation());
+          ValueOrError<Object> value =
+              getFromInjectionAdaptor(((JavaDataType<?>) input.type()), input.annotation());
           newValues.put(inputName, value);
         }
       }
@@ -94,7 +95,8 @@ public record SessionInputDecorator(
     }
   }
 
-  private ValueOrError<Object> getFromInjectionAdaptor(JavaDataType<?> dataType, String annotation) {
+  private ValueOrError<Object> getFromInjectionAdaptor(
+      JavaDataType<?> dataType, String annotation) {
     if (dependencyInjectionAdaptor == null || dependencyInjectionAdaptor.getInjector() == null) {
       return ValueOrError.withError(
           new Exception("Dependency injector is null, cannot resolve SESSION input"));
