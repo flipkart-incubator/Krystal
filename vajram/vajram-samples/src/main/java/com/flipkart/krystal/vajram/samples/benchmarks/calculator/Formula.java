@@ -21,7 +21,7 @@ import com.google.common.collect.ImmutableList;
 /** a/(p+q) */
 @VajramDef(ID)
 public abstract class Formula extends ComputeVajram<Integer> {
-  public static final String ID = "formula";
+  static final String ID = "formula";
 
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {

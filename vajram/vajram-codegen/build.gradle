@@ -4,7 +4,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.flipkart.krystal:vajram:'+ project.krystal_version
+        classpath 'com.flipkart.krystal:vajram:' + project.krystal_version
     }
 }
 
@@ -18,7 +18,10 @@ plugins {
 
 group 'com.flipkart.krystal'
 version project.krystal_version
-description 'Code generator for Vajrams'
+description
+'''Gradle plugin for projects using the Krystal framework. 
+Includes Vajram code generator and validator. 
+Tasks from this plugin are added under the group "Krystal"'''
 
 java {
     withSourcesJar()
