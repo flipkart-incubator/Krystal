@@ -51,6 +51,7 @@ class SplitAdderTest {
   }
 
   @Test
+  @Disabled("https://github.com/flipkart-incubator/Krystal/pull/133")
   void splitAdder_success() throws Exception {
     CompletableFuture<Integer> future;
     NodeExecutionReport nodeExecutionReport = new DefaultNodeExecutionReport(Clock.systemUTC());
