@@ -168,14 +168,13 @@ class Node {
 
   private CompletableFuture<NodeResponse> handleSkipDependency(
       RequestId requestId, SkipNode skipNode, CompletableFuture<NodeResponse> resultForRequest) {
-    if (nodeDefinition.isRecursive()) {
-      /*
-       Do not propagate skipNode command to recursive dependencies as this can lead to an infinite loop.
-       Propagating skipNode is important so that the flush command works as expected.
-       Flushing is anyway not supported for nodes which are recusive, so there is no need for
-       this.
-      */
-    } else {
+    /*
+     Do not propagate skipNode command to recursive dependencies as this can lead to an infinite loop.
+     Propagating skipNode is important so that the flush command works as expected.
+     Flushing is anyway not supported for nodes which are recusive, so there is no need for
+     this.
+    */
+    if (!nodeDefinition.isRecursive()) {
       Map<NodeLogicId, ResolverDefinition> pendingResolvers =
           getPendingResolvers(
               requestId,
