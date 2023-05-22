@@ -68,6 +68,12 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
       super(dependency, targetInput, sourceInput);
     }
 
+    @Override
+    public AsIsResolverStage<T, CV, DV> skipIf(Predicate<Optional<T>> whenToSkip, String reason) {
+      super.skipConditions.add(new SkipPredicate<>(reason, whenToSkip));
+      return this;
+    }
+
     public InputResolver asResolver() {
       return asResolver(Function.identity());
     }
