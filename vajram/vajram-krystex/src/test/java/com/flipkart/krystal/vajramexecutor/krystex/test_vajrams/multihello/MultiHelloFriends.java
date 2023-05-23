@@ -5,6 +5,7 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofrie
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends.ID;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.hellos_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.userIds_s;
+import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -28,7 +29,7 @@ public abstract class MultiHelloFriends extends ComputeVajram<String> {
     return ImmutableList.of(
         resolveFanout(hellos_s, HelloFriendsRequest.userId_s)
             .using(userIds_s)
-            .asResolver(userIds -> userIds),
+            .asResolver(identity()),
         resolveFanout(hellos_s, numberOfFriends_s)
             .using(userIds_s)
             .asResolver(userIds -> NUMBER_OF_FRIENDS));
@@ -36,12 +37,9 @@ public abstract class MultiHelloFriends extends ComputeVajram<String> {
 
   @VajramLogic
   public static String sayHellos(MultiHelloFriendsAllInputs allInputs) {
-    ArrayList<String> userIds = allInputs.userIds();
-    List<Integer> numberOfFriends = NUMBER_OF_FRIENDS;
-
     List<String> result = new ArrayList<>();
-    for (String userId : userIds) {
-      for (Integer numberOfFriend : numberOfFriends) {
+    for (String userId : allInputs.userIds()) {
+      for (Integer numberOfFriend : NUMBER_OF_FRIENDS) {
         allInputs
             .hellos()
             .get(

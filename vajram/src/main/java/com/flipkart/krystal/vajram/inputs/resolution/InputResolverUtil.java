@@ -22,7 +22,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-public final class InputResolverUtil {
+final class InputResolverUtil {
 
   static <S, T, CV extends Vajram<?>, DV extends Vajram<?>>
       DependencyCommand<Inputs> resolutionHelper(
@@ -39,7 +39,7 @@ public final class InputResolverUtil {
       DependencyCommand<Inputs> fanoutResolutionHelper(
           VajramInputTypeSpec<S, CV> sourceInput,
           VajramInputTypeSpec<T, DV> targetInput,
-          Function<S, Collection<T>> fanoutTransformer,
+          Function<S, ? extends Collection<? extends T>> fanoutTransformer,
           List<SkipPredicate<S>> skipPredicates,
           Inputs inputs) {
     return _resolutionHelper(
@@ -51,7 +51,7 @@ public final class InputResolverUtil {
           VajramInputTypeSpec<S, CV> sourceInput,
           VajramInputTypeSpec<T, DV> targetInput,
           Function<S, T> oneToOneTransformer,
-          Function<S, Collection<T>> fanoutTransformer,
+          Function<S, ? extends Collection<? extends T>> fanoutTransformer,
           List<SkipPredicate<S>> skipPredicates,
           Inputs inputs) {
     boolean fanout = fanoutTransformer != null;

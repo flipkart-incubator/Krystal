@@ -7,7 +7,6 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofrie
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.userId_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.userInfos_s;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
@@ -35,9 +34,7 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
     return ImmutableList.of(
-        resolve(userInfos_s, TestUserServiceRequest.userId_s)
-            .using(userId_s)
-            .asResolver(identity()));
+        resolve(userInfos_s, TestUserServiceRequest.userId_s).usingAsIs(userId_s).asResolver());
   }
 
   @Resolve(depName = friendInfos_n, depInputs = TestUserServiceRequest.userId_n)

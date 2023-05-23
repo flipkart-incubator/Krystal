@@ -73,8 +73,9 @@ class ChainAdderTest {
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
   }
 
-  // @Test
-  void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
+  @Disabled("Long running benchmark")
+  @Test
+  void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();
     long javaNativeTime = javaMethodBenchmark(this::chainAdd, loopCount);

@@ -48,7 +48,7 @@ public final class FanoutResolverStage<S, T, CV extends Vajram<?>, DV extends Va
     return this;
   }
 
-  public InputResolver asResolver(Function<S, Collection<T>> transformer) {
+  public InputResolver asResolver(Function<S, ? extends Collection<? extends T>> transformer) {
     return new AbstractSimpleInputResolver(dependency, targetInput, ImmutableList.of(sourceInput)) {
       @Override
       public DependencyCommand<Inputs> resolve(

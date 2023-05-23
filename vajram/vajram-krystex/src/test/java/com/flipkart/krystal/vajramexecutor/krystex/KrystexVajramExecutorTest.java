@@ -606,6 +606,6 @@ class KrystexVajramExecutorTest {
 
   /* So that bad testcases do not hang indefinitely.*/
   private static <T> T timedGet(CompletableFuture<T> future) throws Exception {
-    return future.get(1, TimeUnit.HOURS);
+    return future.get(1, TimeUnit.SECONDS);
   }
 }
