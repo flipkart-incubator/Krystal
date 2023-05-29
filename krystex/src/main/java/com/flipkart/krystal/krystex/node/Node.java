@@ -5,9 +5,11 @@ import static com.google.common.base.Functions.identity;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.lang.Math.max;
+import static java.util.Collections.emptyList;
 import static java.util.concurrent.CompletableFuture.*;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
@@ -36,7 +38,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -51,7 +53,6 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 class Node {
@@ -175,13 +176,19 @@ class Node {
      this.
     */
     if (!nodeDefinition.isRecursive()) {
-      Map<NodeLogicId, ResolverDefinition> pendingResolvers =
-          getPendingResolvers(
-              requestId,
-              nodeDefinition.getMainLogicDefinition().inputNames(),
-              nodeDefinition.getMainLogicDefinition().inputNames());
+      // Since this node is skipped, we need to get all the pending resolvers (irrespective of
+      // whether their inputs are available or not) and mark them resolved.
+      Set<ResolverDefinition> pendingResolvers =
+          resolverDefinitionsByInput.values().stream()
+              .flatMap(Collection::stream)
+              .filter(
+                  resolverDefinition ->
+                      !this.resolverResults
+                          .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
+                          .containsKey(resolverDefinition.resolverNodeLogicId()))
+              .collect(toSet());
 
-      for (ResolverDefinition resolverDefinition : pendingResolvers.values()) {
+      for (ResolverDefinition resolverDefinition : pendingResolvers) {
         executeResolver(requestId, resolverDefinition);
       }
     }
@@ -244,7 +251,7 @@ class Node {
     ImmutableSet<String> allInputNames = mainLogicDefinition.inputNames();
     Set<String> availableInputs =
         Stream.concat(allInputs.keySet().stream(), allDependencies.keySet().stream())
-            .collect(Collectors.toSet());
+            .collect(toSet());
     if (availableInputs.isEmpty()) {
       if (allInputNames.isEmpty()) {
         return true;
@@ -272,6 +279,13 @@ class Node {
     return executeMainLogic;
   }
 
+  /**
+   * @param requestId The requestId.
+   * @param newInputNames The input names for which new values were just made available.
+   * @param availableInputs The inputs for which values are available.
+   * @return the resolver definitions which need at least one of the provided {@code inputNames} and
+   *     all of whose inputs' values are available.
+   */
   private Map<NodeLogicId, ResolverDefinition> getPendingResolvers(
       RequestId requestId, ImmutableSet<String> newInputNames, Set<String> availableInputs) {
     Map<NodeLogicId, ResolverCommand> nodeResults =
@@ -282,9 +296,7 @@ class Node {
         toMap(ResolverDefinition::resolverNodeLogicId, identity(), (o1, o2) -> o1);
     if (newInputNames.isEmpty()) {
       pendingResolvers =
-          resolverDefinitionsByInput
-              .getOrDefault(Optional.<String>empty(), Collections.emptyList())
-              .stream()
+          resolverDefinitionsByInput.getOrDefault(Optional.<String>empty(), emptyList()).stream()
               .filter(
                   resolverDefinition -> availableInputs.containsAll(resolverDefinition.boundFrom()))
               .filter(
