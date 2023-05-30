@@ -25,15 +25,18 @@ public record DefaultDependantChain(
 
   @Override
   public int hashCode() {
-    return Objects.hash(this.dependantChain, this.dependencyName);
+    return this.defaultDependantChainString().hashCode();
   }
 
   @Override
   public boolean equals(Object obj) {
-    if (obj instanceof DefaultDependantChain other) {
-      return other.dependantChain.equals(this.dependantChain)
-          && other.dependencyName.equals(this.dependencyName);
+    if (obj instanceof DefaultDependantChain dep) {
+      return this.defaultDependantChainString().equals(dep.defaultDependantChainString());
     }
     return false;
+  }
+
+  private String defaultDependantChainString() {
+    return this.dependantChain.toString() + ":" + this.dependencyName;
   }
 }

@@ -8,12 +8,44 @@ import com.flipkart.krystal.krystex.ResolverDefinition;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+/**
+ * @param isRecursive {@code true} if this node depends on itself directly or indirectly (a
+ *     dependency loop). {@code false} otherwise.
+ */
 public record NodeDefinition(
     NodeId nodeId,
     NodeLogicId mainLogicId,
     ImmutableMap<String, NodeId> dependencyNodes,
     ImmutableList<ResolverDefinition> resolverDefinitions,
-    NodeDefinitionRegistry nodeDefinitionRegistry) {
+    NodeDefinitionRegistry nodeDefinitionRegistry,
+    boolean isRecursive) {
+
+  public NodeDefinition(
+      NodeId nodeId,
+      NodeLogicId mainLogicId,
+      ImmutableMap<String, NodeId> dependencyNodes,
+      ImmutableList<ResolverDefinition> resolverDefinitions,
+      NodeDefinitionRegistry nodeDefinitionRegistry) {
+    this(nodeId, mainLogicId, dependencyNodes, resolverDefinitions, nodeDefinitionRegistry, false);
+  }
+
+  /**
+   * @return a nodeDefinition which is exactly same as this nodeDefinition except that the returned
+   *     one is guaranteed to return {@code true} for {@link #isRecursive()}
+   */
+  NodeDefinition toRecursive() {
+    if (isRecursive()) {
+      return this;
+    }
+    return new NodeDefinition(
+        nodeId(),
+        mainLogicId(),
+        dependencyNodes(),
+        resolverDefinitions(),
+        nodeDefinitionRegistry(),
+        true);
+  }
+
   public CallGraph getCallGraph(CallGraph previousCalls) {
     return new CallGraph(
         nodeId,
