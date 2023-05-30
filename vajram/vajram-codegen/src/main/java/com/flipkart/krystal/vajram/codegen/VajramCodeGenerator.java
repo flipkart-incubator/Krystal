@@ -815,7 +815,7 @@ public class VajramCodeGenerator {
               depType,
               variableName,
               clsDeps.get(DEP_RESP),
-              CodegenUtils.getMethodReturnType(method),
+              depType,
               usingInputName,
               clsDeps.get(IM_MAP),
               ClassName.get(depPackageName, requestClass),
