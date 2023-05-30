@@ -26,14 +26,20 @@ public abstract class Formula extends ComputeVajram<Integer> {
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
     return ImmutableList.of(
+        /* sum = p+q */
+        /* sum = adder(numberOne=p, numberTwo=q) */
         resolve(sum_s, AdderRequest.numberOne_s).usingAsIs(p_s).asResolver(),
         resolve(sum_s, AdderRequest.numberTwo_s).usingAsIs(q_s).asResolver(),
+
+        /* quotient = a / sum */
+        /* quotient = divider(numerator = a, denominator= sum) */
         resolve(quotient_s, DividerRequest.numerator_s).usingAsIs(a_s).asResolver(),
         resolve(quotient_s, DividerRequest.denominator_s).usingAsIs(sum_s).asResolver());
   }
 
   @VajramLogic
   public static int result(FormulaAllInputs allInputs) {
+    /* Return quotient */
     return allInputs
         .quotient()
         .get(
