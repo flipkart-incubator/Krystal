@@ -1,8 +1,8 @@
 package com.flipkart.krystal.krystex.decoration;
 
 import com.flipkart.krystal.config.ConfigProvider;
-import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * @param decoratorType The id of the decorator
@@ -18,7 +18,7 @@ import java.util.function.Function;
  */
 public record MainLogicDecoratorConfig(
     String decoratorType,
-    BiFunction<LogicExecutionContext, DecoratorContext, Boolean> shouldDecorate,
+    Predicate<LogicExecutionContext> shouldDecorate,
     Function<LogicExecutionContext, String> instanceIdGenerator,
     Function<DecoratorContext, MainLogicDecorator> factory) {
   public record DecoratorContext(String instanceId, LogicExecutionContext logicExecutionContext) {}

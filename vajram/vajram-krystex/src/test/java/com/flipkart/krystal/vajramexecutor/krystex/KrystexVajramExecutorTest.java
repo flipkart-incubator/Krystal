@@ -20,7 +20,6 @@ import com.flipkart.krystal.krystex.decoration.LogicDecoratorCommand;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig.DecoratorContext;
 import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutionReport;
 import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
@@ -62,8 +61,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -296,7 +295,7 @@ class KrystexVajramExecutorTest {
                 mainLogicExecReporter.decoratorType(),
                 new MainLogicDecoratorConfig(
                     mainLogicExecReporter.decoratorType(),
-                    (logicExecutionContext, decoratorContext) -> true,
+                    (logicExecutionContext) -> true,
                     logicExecutionContext -> mainLogicExecReporter.decoratorType(),
                     decoratorContext -> mainLogicExecReporter)))) {
       multiHellos =
@@ -608,8 +607,8 @@ class KrystexVajramExecutorTest {
   private static VajramNodeGraph.Builder loadFromClasspath(String... packagePrefixes) {
     Builder builder = VajramNodeGraph.builder();
     Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
-    BiFunction<LogicExecutionContext, DecoratorContext, Boolean> isIOVajram =
-        (context, decoratorContext) ->
+    Predicate<LogicExecutionContext> isIOVajram =
+        (context) ->
             Optional.ofNullable(context.logicTags().get(VajramTags.VAJRAM_TYPE))
                 .map(LogicTag::tagValue)
                 .map(VajramTypes.IO_VAJRAM::equals)

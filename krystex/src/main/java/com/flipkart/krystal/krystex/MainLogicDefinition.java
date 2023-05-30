@@ -64,10 +64,7 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<Main
                   nodeDefinition.nodeDefinitionRegistry());
           String instanceId = decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
 
-          if (decoratorConfig
-              .shouldDecorate()
-              .apply(
-                  logicExecutionContext, new DecoratorContext(instanceId, logicExecutionContext))) {
+          if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
             decorators.put(
                 s,
                 sessionScopedDecorators

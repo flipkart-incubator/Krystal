@@ -15,7 +15,6 @@ import com.flipkart.krystal.krystex.ResolverLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig.DecoratorContext;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
 import com.flipkart.krystal.krystex.node.NodeId;
@@ -53,7 +52,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.function.BiFunction;
+import java.util.function.Predicate;
 import lombok.Getter;
 
 /** The execution graph encompassing all registered vajrams. */
@@ -303,8 +302,8 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     if (inputModulatorConfigList != null) {
       List<MainLogicDecoratorConfig> mainLogicDecoratorConfigList = new ArrayList<>();
       for (InputModulatorConfig inputModulatorConfig : inputModulatorConfigList) {
-        BiFunction<LogicExecutionContext, DecoratorContext, Boolean> biFunction =
-            (nodeExecutionContext, decoratorContext) -> {
+        Predicate<LogicExecutionContext> biFunction =
+            (nodeExecutionContext) -> {
               return ioVajram.getInputDefinitions().stream()
                       .filter(inputDefinition -> inputDefinition instanceof Input<?>)
                       .map(inputDefinition -> (Input<?>) inputDefinition)

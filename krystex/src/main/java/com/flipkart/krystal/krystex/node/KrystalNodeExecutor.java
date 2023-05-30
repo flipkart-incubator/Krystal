@@ -92,16 +92,16 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
         .forEach(
             entry -> {
               String decoratorType = entry.getKey();
-              List<MainLogicDecoratorConfig> decoratorConfigList =
-                  (List<MainLogicDecoratorConfig>) entry.getValue();
+              List<MainLogicDecoratorConfig> decoratorConfigList = new ArrayList<>();
+              if (entry.getValue() instanceof List) {
+                decoratorConfigList.addAll((List<MainLogicDecoratorConfig>) entry.getValue());
+              } else {
+                decoratorConfigList.add((MainLogicDecoratorConfig) entry.getValue());
+              }
               for (MainLogicDecoratorConfig decoratorConfig : decoratorConfigList) {
                 String instanceId =
                     decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
-                if (decoratorConfig
-                    .shouldDecorate()
-                    .apply(
-                        logicExecutionContext,
-                        new DecoratorContext(instanceId, logicExecutionContext))) {
+                if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
 
                   MainLogicDecorator mainLogicDecorator =
                       requestScopedMainDecorators
