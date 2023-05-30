@@ -384,13 +384,15 @@ public class VajramCodeGenerator {
       }
       executeBuilder.addCode(codeBuilder.build());
     } else { // TODO : Need non modulated IO vajram to test this
-      simpleComputeMethodBuilder(resolverMap, executeBuilder);
+      simpleComputeMethodBuilder(resolverMap, executeBuilder, false);
     }
     return executeBuilder.build();
   }
 
   private void simpleComputeMethodBuilder(
-      Map<String, ? extends Collection<Method>> resolverMap, Builder executeBuilder) {
+      Map<String, ? extends Collection<Method>> resolverMap,
+      Builder executeBuilder,
+      boolean isIOVajram) {
     CodeBlock.Builder returnBuilder =
         CodeBlock.builder()
             .add(
@@ -478,11 +480,21 @@ public class VajramCodeGenerator {
                 }
               }
             });
-    returnBuilder.add(
-        "\nreturn $L(new $T(\n",
-        vajramDefs.get(vajramName).vajramLogic().getName(),
-        ClassName.get(
-            packageName, getInputUtilClassName(vajramName), getAllInputsClassname(vajramName)));
+    if (isIOVajram) {
+      //TODO: Validate IOVajram response type is CompletableFuture<Type>"
+      returnBuilder.add(
+          "\nreturn ($L(new $T(\n",
+          vajramDefs.get(vajramName).vajramLogic().getName(),
+          ClassName.get(
+              packageName, getInputUtilClassName(vajramName), getAllInputsClassname(vajramName)));
+    } else {
+      returnBuilder.add(
+          "\nreturn $T.valueOrError(() -> $L(new $T(\n",
+          clsDeps.get(VAL_ERR),
+          vajramDefs.get(vajramName).vajramLogic().getName(),
+          ClassName.get(
+              packageName, getInputUtilClassName(vajramName), getAllInputsClassname(vajramName)));
+    }
     // merge the code blocks for inputs
     for (int i = 0; i < inputCodeBlocks.size(); i++) {
       // for formatting
@@ -492,7 +504,7 @@ public class VajramCodeGenerator {
         returnBuilder.add(",\n");
       }
     }
-    returnBuilder.add("));\n");
+    returnBuilder.add(")));\n");
     returnBuilder.add("}));\n");
     executeBuilder.addCode(returnBuilder.build());
   }
@@ -583,7 +595,7 @@ public class VajramCodeGenerator {
       }
       executeMethodBuilder.addCode(codeBuilder.build());
     } else {
-      simpleComputeMethodBuilder(resolverMap, executeMethodBuilder);
+      simpleComputeMethodBuilder(resolverMap, executeMethodBuilder, true);
     }
     return executeMethodBuilder.build();
   }
@@ -842,7 +854,8 @@ public class VajramCodeGenerator {
         } else if (ParameterizedTypeName.get(ClassName.get(ValueOrError.class), depType)
             .equals(TypeName.get(parameter.getType()))) {
           // This means this dependency in "Using" annotation is not a fanout and the dev has
-          // requested the 'ValueOrError'. So we extract the only ValueOrError from dependency response and
+          // requested the 'ValueOrError'. So we extract the only ValueOrError from dependency
+          // response and
           // provide it.
           String code =
               """
