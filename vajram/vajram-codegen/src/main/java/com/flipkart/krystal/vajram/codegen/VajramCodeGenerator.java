@@ -479,8 +479,7 @@ public class VajramCodeGenerator {
               }
             });
     returnBuilder.add(
-        "\nreturn $T.valueOrError(() -> $L(new $T(\n",
-        clsDeps.get(VAL_ERR),
+        "\nreturn $L(new $T(\n",
         vajramDefs.get(vajramName).vajramLogic().getName(),
         ClassName.get(
             packageName, getInputUtilClassName(vajramName), getAllInputsClassname(vajramName)));
@@ -493,7 +492,7 @@ public class VajramCodeGenerator {
         returnBuilder.add(",\n");
       }
     }
-    returnBuilder.add(")));\n");
+    returnBuilder.add("));\n");
     returnBuilder.add("}));\n");
     executeBuilder.addCode(returnBuilder.build());
   }
