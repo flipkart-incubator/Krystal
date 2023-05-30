@@ -11,14 +11,14 @@ import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.flipkart.krystal.logic.LogicTag;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<MainLogic<T>>
@@ -36,7 +36,7 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<Main
     return logic().execute(inputs);
   }
 
-  private ImmutableMap<String, MainLogicDecoratorConfig> requestScopedLogicDecoratorConfigs =
+  private ImmutableMap<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs =
       ImmutableMap.of();
 
   /** LogicDecorator Id -> LogicDecorator */
@@ -46,7 +46,8 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<Main
   private final Map<String, Map<String, MainLogicDecorator>> sessionScopedDecorators =
       new LinkedHashMap<>();
 
-  public ImmutableMap<String, MainLogicDecoratorConfig> getRequestScopedLogicDecoratorConfigs() {
+  public ImmutableMap<String, List<MainLogicDecoratorConfig>>
+      getRequestScopedLogicDecoratorConfigs() {
     return requestScopedLogicDecoratorConfigs;
   }
 
@@ -61,8 +62,12 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<Main
                   logicTags(),
                   dependants,
                   nodeDefinition.nodeDefinitionRegistry());
-          if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
-            String instanceId = decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
+          String instanceId = decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
+
+          if (decoratorConfig
+              .shouldDecorate()
+              .apply(
+                  logicExecutionContext, new DecoratorContext(instanceId, logicExecutionContext))) {
             decorators.put(
                 s,
                 sessionScopedDecorators
@@ -82,15 +87,38 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<Main
       Collection<MainLogicDecoratorConfig> decoratorConfigs) {
     //noinspection UnstableApiUsage
     requestScopedLogicDecoratorConfigs =
-        ImmutableMap.<String, MainLogicDecoratorConfig>builderWithExpectedSize(
+        ImmutableMap.<String, List<MainLogicDecoratorConfig>>builderWithExpectedSize(
                 requestScopedLogicDecoratorConfigs.size() + decoratorConfigs.size())
-            .putAll(sessionScopedLogicDecoratorConfigs)
-            .putAll(
-                decoratorConfigs.stream()
-                    .collect(
-                        Collectors.toMap(
-                            MainLogicDecoratorConfig::decoratorType, Function.identity())))
+            .putAll(getSessionScopedLogicDecoratorsMap(sessionScopedLogicDecoratorConfigs))
+            .putAll(getDecoratorConfigMap(decoratorConfigs))
             .build();
+  }
+
+  private Map<String, ? extends List<MainLogicDecoratorConfig>> getSessionScopedLogicDecoratorsMap(
+      Map<String, MainLogicDecoratorConfig> sessionScopedLogicDecoratorConfigs) {
+    Map<String, List<MainLogicDecoratorConfig>> sessionScopedLogicDecoratorConfigMap =
+        new HashMap<>();
+    for (Map.Entry<String, MainLogicDecoratorConfig> sessionScopedLogicDecoratorConfigEntry :
+        sessionScopedLogicDecoratorConfigs.entrySet()) {
+      sessionScopedLogicDecoratorConfigMap.putIfAbsent(
+          sessionScopedLogicDecoratorConfigEntry.getKey(), new ArrayList<>());
+      sessionScopedLogicDecoratorConfigMap
+          .get(sessionScopedLogicDecoratorConfigEntry.getKey())
+          .add(sessionScopedLogicDecoratorConfigEntry.getValue());
+    }
+    return sessionScopedLogicDecoratorConfigMap;
+  }
+
+  private Map<String, List<MainLogicDecoratorConfig>> getDecoratorConfigMap(
+      Collection<MainLogicDecoratorConfig> decoratorConfigs) {
+    Map<String, List<MainLogicDecoratorConfig>> decoratorConfigMap = new HashMap<>();
+    for (MainLogicDecoratorConfig mainLogicDecoratorConfig : decoratorConfigs) {
+      decoratorConfigMap.putIfAbsent(mainLogicDecoratorConfig.decoratorType(), new ArrayList<>());
+      decoratorConfigMap
+          .get(mainLogicDecoratorConfig.decoratorType())
+          .add(mainLogicDecoratorConfig);
+    }
+    return decoratorConfigMap;
   }
 
   public void registerSessionScopedLogicDecorator(MainLogicDecoratorConfig decoratorConfig) {

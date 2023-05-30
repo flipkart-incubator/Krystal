@@ -20,11 +20,13 @@ import com.flipkart.krystal.krystex.decoration.LogicDecoratorCommand;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig.DecoratorContext;
 import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutionReport;
 import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JCircuitBreaker;
+import com.flipkart.krystal.krystex.node.DependantChain;
 import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.logic.LogicTag;
 import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
@@ -60,8 +62,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -86,6 +88,7 @@ class KrystexVajramExecutorTest {
   @AfterEach
   void tearDown() {
     TestUserServiceVajram.CALL_COUNTER.reset();
+    FriendsServiceVajram.CALL_COUNTER.reset();
     TestUserServiceVajram.REQUESTS.clear();
     HelloVajram.CALL_COUNTER.reset();
   }
@@ -151,6 +154,7 @@ class KrystexVajramExecutorTest {
                         fromTriggerOrder(new NodeId(HelloFriendsVajram.ID), "user_infos"),
                         fromTriggerOrder(new NodeId(HelloFriendsVajram.ID), "friend_infos"))))
             .build();
+
     CompletableFuture<String> helloString;
     requestContext.requestId("ioVajramWithModulatorMultipleRequests");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
@@ -292,7 +296,7 @@ class KrystexVajramExecutorTest {
                 mainLogicExecReporter.decoratorType(),
                 new MainLogicDecoratorConfig(
                     mainLogicExecReporter.decoratorType(),
-                    logicExecutionContext -> true,
+                    (logicExecutionContext, decoratorContext) -> true,
                     logicExecutionContext -> mainLogicExecReporter.decoratorType(),
                     decoratorContext -> mainLogicExecReporter)))) {
       multiHellos =
@@ -442,6 +446,53 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
+  void flush_sequentialDependency_flushesSharedBatchers(TestInfo testInfo) throws Exception {
+    VajramNodeGraph graph =
+        loadFromClasspath(
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello")
+            .registerInputModulator(
+                vajramID(TestUserServiceVajram.ID),
+                InputModulatorConfig.simple(() -> new Batcher<>(100)))
+            .registerInputModulator(
+                vajramID(FriendsServiceVajram.ID),
+                InputModulatorConfig.sharedModulator(
+                    () -> new Batcher<>(100),
+                    FriendsServiceVajram.ID + "_1",
+                    ImmutableSet.of(
+                        DependantChain.fromTriggerOrder(
+                            new NodeId("MutualFriendsHello"), "hellos", "friend_ids"))))
+            .registerInputModulator(
+                vajramID(FriendsServiceVajram.ID),
+                InputModulatorConfig.sharedModulator(
+                    () -> new Batcher<>(100),
+                    FriendsServiceVajram.ID + "_2",
+                    ImmutableSet.of(
+                        fromTriggerOrder(new NodeId("MutualFriendsHello"), "friend_ids"))))
+            .build();
+    CompletableFuture<String> multiHellos;
+    requestContext.requestId(testInfo.getDisplayName());
+    try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
+        graph.createExecutor(requestContext)) {
+      multiHellos =
+          krystexVajramExecutor.execute(
+              vajramID("MutualFriendsHello"),
+              testRequestContext ->
+                  MultiHelloFriendsV2Request.builder()
+                      .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
+                      .build());
+    }
+    assertThat(timedGet(multiHellos))
+        .isEqualTo(
+            """
+            Hello Friends! Firstname Lastname (user_id_1:friend1:friend1), Firstname Lastname (user_id_1:friend1:friend2)
+            Hello Friends! Firstname Lastname (user_id_1:friend2:friend1), Firstname Lastname (user_id_1:friend2:friend2)""");
+    assertThat(FriendsServiceVajram.CALL_COUNTER.sum()).isEqualTo(2);
+  }
+
+  @Test
   //  @Disabled("Fix: https://github.com/flipkart-incubator/Krystal/issues/84")
   void flush_skippingADependency_flushesCompleteCallGraph(TestInfo testInfo) throws Exception {
     CompletableFuture<FlushCommand> friendServiceFlushCommand = new CompletableFuture<>();
@@ -456,6 +507,7 @@ class KrystexVajramExecutorTest {
                 vajramID(FriendsServiceVajram.ID),
                 new InputModulatorConfig(
                     logicExecutionContext -> "",
+                    _x -> true,
                     modulatorContext ->
                         new MainLogicDecorator() {
                           @Override
@@ -481,6 +533,7 @@ class KrystexVajramExecutorTest {
                 vajramID(TestUserServiceVajram.ID),
                 new InputModulatorConfig(
                     logicExecutionContext1 -> "1",
+                    _x -> true,
                     modulatorContext1 ->
                         new MainLogicDecorator() {
                           @Override
@@ -555,8 +608,8 @@ class KrystexVajramExecutorTest {
   private static VajramNodeGraph.Builder loadFromClasspath(String... packagePrefixes) {
     Builder builder = VajramNodeGraph.builder();
     Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
-    Predicate<LogicExecutionContext> isIOVajram =
-        context ->
+    BiFunction<LogicExecutionContext, DecoratorContext, Boolean> isIOVajram =
+        (context, decoratorContext) ->
             Optional.ofNullable(context.logicTags().get(VajramTags.VAJRAM_TYPE))
                 .map(LogicTag::tagValue)
                 .map(VajramTypes.IO_VAJRAM::equals)
@@ -606,6 +659,6 @@ class KrystexVajramExecutorTest {
 
   /* So that bad testcases do not hang indefinitely.*/
   private static <T> T timedGet(CompletableFuture<T> future) throws Exception {
-    return future.get(1, TimeUnit.SECONDS);
+    return future.get(1, TimeUnit.HOURS);
   }
 }

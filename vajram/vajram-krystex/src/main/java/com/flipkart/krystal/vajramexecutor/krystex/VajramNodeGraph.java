@@ -13,7 +13,9 @@ import com.flipkart.krystal.krystex.ResolverCommand;
 import com.flipkart.krystal.krystex.ResolverDefinition;
 import com.flipkart.krystal.krystex.ResolverLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
+import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig.DecoratorContext;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
 import com.flipkart.krystal.krystex.node.NodeId;
@@ -51,6 +53,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.function.BiFunction;
 import lombok.Getter;
 
 /** The execution graph encompassing all registered vajrams. */
@@ -66,7 +69,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
 
   private final VajramIndex vajramIndex = new VajramIndex();
 
-  private final ImmutableMap<VajramID, InputModulatorConfig> inputModulatorConfigs;
+  private final ImmutableMap<VajramID, List<InputModulatorConfig>> inputModulatorConfigs;
 
   /** LogicDecorator Id -> LogicDecoratorConfig */
   private final ImmutableMap<String, MainLogicDecoratorConfig> sessionScopedDecoratorConfigs;
@@ -76,7 +79,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
 
   private VajramNodeGraph(
       String[] packagePrefixes,
-      ImmutableMap<VajramID, InputModulatorConfig> inputModulatorConfigs,
+      ImmutableMap<VajramID, List<InputModulatorConfig>> inputModulatorConfigs,
       ImmutableMap<String, MainLogicDecoratorConfig> sessionScopedDecorators,
       LogicDecorationOrdering logicDecorationOrdering,
       double maxParallelismPerCore) {
@@ -294,22 +297,31 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
 
   private <T> void enableInputModulation(
       MainLogicDefinition<T> logicDefinition, Vajram<?> ioVajram) {
-    InputModulatorConfig inputModulatorConfig = inputModulatorConfigs.get(ioVajram.getId());
-    if (inputModulatorConfig != null) {
-      logicDefinition.registerRequestScopedDecorator(
-          List.of(
-              new MainLogicDecoratorConfig(
-                  InputModulationDecorator.DECORATOR_TYPE,
-                  nodeExecutionContext ->
-                      ioVajram.getInputDefinitions().stream()
-                          .filter(inputDefinition -> inputDefinition instanceof Input<?>)
-                          .map(inputDefinition -> (Input<?>) inputDefinition)
-                          .anyMatch(Input::needsModulation),
-                  inputModulatorConfig.instanceIdGenerator(),
-                  decoratorContext ->
-                      inputModulatorConfig
-                          .decoratorFactory()
-                          .apply(new ModulatorContext(ioVajram, decoratorContext)))));
+
+    List<InputModulatorConfig> inputModulatorConfigList =
+        inputModulatorConfigs.get(ioVajram.getId());
+    if (inputModulatorConfigList != null) {
+      List<MainLogicDecoratorConfig> mainLogicDecoratorConfigList = new ArrayList<>();
+      for (InputModulatorConfig inputModulatorConfig : inputModulatorConfigList) {
+        BiFunction<LogicExecutionContext, DecoratorContext, Boolean> biFunction =
+            (nodeExecutionContext, decoratorContext) -> {
+              return ioVajram.getInputDefinitions().stream()
+                      .filter(inputDefinition -> inputDefinition instanceof Input<?>)
+                      .map(inputDefinition -> (Input<?>) inputDefinition)
+                      .anyMatch(Input::needsModulation)
+                  && inputModulatorConfig.shouldModulate().test(nodeExecutionContext);
+            };
+        mainLogicDecoratorConfigList.add(
+            new MainLogicDecoratorConfig(
+                InputModulationDecorator.DECORATOR_TYPE,
+                biFunction,
+                inputModulatorConfig.instanceIdGenerator(),
+                decoratorContext ->
+                    inputModulatorConfig
+                        .decoratorFactory()
+                        .apply(new ModulatorContext(ioVajram, decoratorContext))));
+      }
+      logicDefinition.registerRequestScopedDecorator(mainLogicDecoratorConfigList);
     }
   }
 
@@ -361,7 +373,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     private final Set<String> packagePrefixes = new LinkedHashSet<>();
     private final Map<String, MainLogicDecoratorConfig> sessionScopedDecoratorConfigs =
         new HashMap<>();
-    private final Map<VajramID, InputModulatorConfig> inputModulators = new LinkedHashMap<>();
+    private final Map<VajramID, List<InputModulatorConfig>> inputModulators = new LinkedHashMap<>();
     private LogicDecorationOrdering logicDecorationOrdering =
         new LogicDecorationOrdering(ImmutableSet.of());
     private double maxParallelismPerCore = 1;
@@ -388,7 +400,10 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     }
 
     public Builder registerInputModulator(VajramID vajramID, InputModulatorConfig inputModulator) {
-      inputModulators.put(vajramID, inputModulator);
+      if (!inputModulators.containsKey(vajramID)) {
+        inputModulators.put(vajramID, new ArrayList<>());
+      }
+      inputModulators.get(vajramID).add(inputModulator);
       return this;
     }
 

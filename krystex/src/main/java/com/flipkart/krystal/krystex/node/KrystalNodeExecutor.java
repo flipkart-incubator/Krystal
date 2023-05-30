@@ -92,24 +92,32 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
         .forEach(
             entry -> {
               String decoratorType = entry.getKey();
-              MainLogicDecoratorConfig decoratorConfig = entry.getValue();
-              if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
+              List<MainLogicDecoratorConfig> decoratorConfigList =
+                  (List<MainLogicDecoratorConfig>) entry.getValue();
+              for (MainLogicDecoratorConfig decoratorConfig : decoratorConfigList) {
                 String instanceId =
                     decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
-                MainLogicDecorator mainLogicDecorator =
-                    requestScopedMainDecorators
-                        .computeIfAbsent(decoratorType, t -> new LinkedHashMap<>())
-                        .computeIfAbsent(
-                            instanceId,
-                            _i ->
-                                decoratorConfig
-                                    .factory()
-                                    .apply(
-                                        new DecoratorContext(instanceId, logicExecutionContext)));
-                mainLogicDecorator.executeCommand(
-                    new InitiateActiveDepChains(
-                        nodeId, ImmutableSet.copyOf(dependantChainsPerNode.get(nodeId))));
-                decorators.put(decoratorType, mainLogicDecorator);
+                if (decoratorConfig
+                    .shouldDecorate()
+                    .apply(
+                        logicExecutionContext,
+                        new DecoratorContext(instanceId, logicExecutionContext))) {
+
+                  MainLogicDecorator mainLogicDecorator =
+                      requestScopedMainDecorators
+                          .computeIfAbsent(decoratorType, t -> new LinkedHashMap<>())
+                          .computeIfAbsent(
+                              instanceId,
+                              _i ->
+                                  decoratorConfig
+                                      .factory()
+                                      .apply(
+                                          new DecoratorContext(instanceId, logicExecutionContext)));
+                  mainLogicDecorator.executeCommand(
+                      new InitiateActiveDepChains(
+                          nodeId, ImmutableSet.copyOf(dependantChainsPerNode.get(nodeId))));
+                  decorators.put(decoratorType, mainLogicDecorator);
+                }
               }
             });
     return ImmutableMap.copyOf(decorators);
@@ -177,7 +185,10 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
           nodeId,
           _n ->
               new Node(
-                  nodeDefinition, this, this::getRequestScopedDecorators, logicDecorationOrdering));
+                  nodeDefinition,
+                  this,
+                  logicExecutionContext -> getRequestScopedDecorators(logicExecutionContext),
+                  logicDecorationOrdering));
       ImmutableMap<String, NodeId> dependencyNodes = nodeDefinition.dependencyNodes();
       dependencyNodes.forEach(
           (dependencyName, depNodeId) ->
