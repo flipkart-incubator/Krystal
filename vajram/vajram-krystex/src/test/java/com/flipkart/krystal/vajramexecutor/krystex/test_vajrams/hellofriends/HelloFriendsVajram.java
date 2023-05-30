@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends;
 
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.dep;
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.resolve;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.friendInfos_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.numberOfFriends_n;
@@ -19,7 +21,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.Hel
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
 import com.google.common.collect.ImmutableCollection;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collections;
 import java.util.Optional;
@@ -33,8 +34,10 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
 
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
-    return ImmutableList.of(
-        resolve(userInfos_s, TestUserServiceRequest.userId_s).usingAsIs(userId_s).asResolver());
+    return resolve(
+        dep(
+            userInfos_s,
+            depInput(TestUserServiceRequest.userId_s).usingAsIs(userId_s).asResolver()));
   }
 
   @Resolve(depName = friendInfos_n, depInputs = TestUserServiceRequest.userId_n)

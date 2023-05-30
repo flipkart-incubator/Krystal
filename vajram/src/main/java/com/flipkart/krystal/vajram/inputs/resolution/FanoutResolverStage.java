@@ -1,15 +1,8 @@
 package com.flipkart.krystal.vajram.inputs.resolution;
 
-import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.fanoutResolutionHelper;
-
-import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.inputs.DependencyCommand;
-import com.flipkart.krystal.vajram.inputs.VajramDependencyTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.SkipPredicate;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -24,16 +17,12 @@ import java.util.function.Predicate;
  * @param <DV> DependencyVajram: The vajram whose input is being resolved
  */
 public final class FanoutResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<?>> {
-  private final VajramDependencyTypeSpec<?, CV, DV> dependency;
   private final VajramInputTypeSpec<T, DV> targetInput;
   private final VajramInputTypeSpec<S, CV> sourceInput;
   private final List<SkipPredicate<S>> skipConditions = new ArrayList<>();
 
   FanoutResolverStage(
-      VajramDependencyTypeSpec<?, CV, DV> dependency,
-      VajramInputTypeSpec<T, DV> targetInput,
-      VajramInputTypeSpec<S, CV> sourceInput) {
-    this.dependency = dependency;
+      VajramInputTypeSpec<T, DV> targetInput, VajramInputTypeSpec<S, CV> sourceInput) {
     this.targetInput = targetInput;
     this.sourceInput = sourceInput;
   }
@@ -48,30 +37,22 @@ public final class FanoutResolverStage<S, T, CV extends Vajram<?>, DV extends Va
     return this;
   }
 
-  public InputResolver asResolver(Function<S, ? extends Collection<? extends T>> transformer) {
-    return new AbstractSimpleInputResolver(dependency, targetInput, ImmutableList.of(sourceInput)) {
-      @Override
-      public DependencyCommand<Inputs> resolve(
-          String dependencyName, ImmutableSet<String> inputsToResolve, Inputs inputs) {
-        return fanoutResolutionHelper(
-            sourceInput, targetInput, transformer, skipConditions, inputs);
-      }
-    };
+  public InputResolverSpec<S, T, CV, DV> with(
+      Function<S, ? extends Collection<? extends T>> transformer) {
+    return new InputResolverSpec<>(targetInput, sourceInput, skipConditions, null, transformer);
   }
 
-  public static final class ResolveFanoutStage<T, CV extends Vajram<?>, DV extends Vajram<?>> {
+  public static final class ResolveFanoutStage<T, DV extends Vajram<?>> {
 
-    private final VajramDependencyTypeSpec<?, CV, DV> dependency;
     private final VajramInputTypeSpec<T, DV> targetInput;
 
-    ResolveFanoutStage(
-        VajramDependencyTypeSpec<?, CV, DV> dependency, VajramInputTypeSpec<T, DV> targetInput) {
-      this.dependency = dependency;
+    ResolveFanoutStage(VajramInputTypeSpec<T, DV> targetInput) {
       this.targetInput = targetInput;
     }
 
-    public <S> FanoutResolverStage<S, T, CV, DV> using(VajramInputTypeSpec<S, CV> sourceInput) {
-      return new FanoutResolverStage<>(dependency, targetInput, sourceInput);
+    public <S, CV extends Vajram<?>> FanoutResolverStage<S, T, CV, DV> using(
+        VajramInputTypeSpec<S, CV> sourceInput) {
+      return new FanoutResolverStage<>(targetInput, sourceInput);
     }
   }
 }

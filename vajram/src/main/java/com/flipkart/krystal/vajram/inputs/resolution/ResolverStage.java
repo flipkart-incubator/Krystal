@@ -1,17 +1,10 @@
 package com.flipkart.krystal.vajram.inputs.resolution;
 
-import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.resolutionHelper;
-
-import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.inputs.DependencyCommand;
-import com.flipkart.krystal.vajram.inputs.VajramDependencyTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.SkipPredicate;
 import com.flipkart.krystal.vajram.inputs.resolution.ResolverStage.AsIsResolverStage;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -26,16 +19,11 @@ import java.util.function.Predicate;
  */
 public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<?>>
     permits AsIsResolverStage {
-  private final VajramDependencyTypeSpec<?, CV, DV> dependency;
   private final VajramInputTypeSpec<T, DV> targetInput;
   private final VajramInputTypeSpec<S, CV> sourceInput;
   private final List<SkipPredicate<S>> skipConditions = new ArrayList<>();
 
-  ResolverStage(
-      VajramDependencyTypeSpec<?, CV, DV> dependency,
-      VajramInputTypeSpec<T, DV> targetInput,
-      VajramInputTypeSpec<S, CV> sourceInput) {
-    this.dependency = dependency;
+  ResolverStage(VajramInputTypeSpec<T, DV> targetInput, VajramInputTypeSpec<S, CV> sourceInput) {
     this.targetInput = targetInput;
     this.sourceInput = sourceInput;
   }
@@ -49,23 +37,15 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
     return this;
   }
 
-  public InputResolver asResolver(Function<S, T> transformer) {
-    return new AbstractSimpleInputResolver(dependency, targetInput, ImmutableList.of(sourceInput)) {
-      @Override
-      public DependencyCommand<Inputs> resolve(
-          String dependencyName, ImmutableSet<String> inputsToResolve, Inputs inputs) {
-        return resolutionHelper(sourceInput, targetInput, transformer, skipConditions, inputs);
-      }
-    };
+  public InputResolverSpec<S, T, CV, DV> with(Function<S, T> transformer) {
+    return new InputResolverSpec<>(targetInput, sourceInput, skipConditions, transformer, null);
   }
 
   public static final class AsIsResolverStage<T, CV extends Vajram<?>, DV extends Vajram<?>>
       extends ResolverStage<T, T, CV, DV> {
     AsIsResolverStage(
-        VajramDependencyTypeSpec<?, CV, DV> dependency,
-        VajramInputTypeSpec<T, DV> targetInput,
-        VajramInputTypeSpec<T, CV> sourceInput) {
-      super(dependency, targetInput, sourceInput);
+        VajramInputTypeSpec<T, DV> targetInput, VajramInputTypeSpec<T, CV> sourceInput) {
+      super(targetInput, sourceInput);
     }
 
     @Override
@@ -74,18 +54,15 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
       return this;
     }
 
-    public InputResolver asResolver() {
-      return asResolver(Function.identity());
+    public InputResolverSpec<T, T, CV, DV> asResolver() {
+      return with(Function.identity());
     }
   }
 
-  public static final class ResolveStage<T, CV extends Vajram<?>, DV extends Vajram<?>> {
-    private final VajramDependencyTypeSpec<?, CV, DV> dependency;
+  public static final class ResolveStage<T, DV extends Vajram<?>> {
     private final VajramInputTypeSpec<T, DV> targetInput;
 
-    ResolveStage(
-        VajramDependencyTypeSpec<?, CV, DV> dependency, VajramInputTypeSpec<T, DV> targetInput) {
-      this.dependency = dependency;
+    ResolveStage(VajramInputTypeSpec<T, DV> targetInput) {
       this.targetInput = targetInput;
     }
 
@@ -98,8 +75,9 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
      * @see #using(VajramInputTypeSpec)
      * @param sourceInput the spec of the source input being used for resolution
      */
-    public AsIsResolverStage<T, CV, DV> usingAsIs(VajramInputTypeSpec<T, CV> sourceInput) {
-      return new AsIsResolverStage<>(dependency, targetInput, sourceInput);
+    public <CV extends Vajram<?>> AsIsResolverStage<T, CV, DV> usingAsIs(
+        VajramInputTypeSpec<T, CV> sourceInput) {
+      return new AsIsResolverStage<>(targetInput, sourceInput);
     }
 
     /**
@@ -107,8 +85,9 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
      *
      * @param sourceInput the spec of the source input being used for resolution
      */
-    public <S> ResolverStage<S, T, CV, DV> using(VajramInputTypeSpec<S, CV> sourceInput) {
-      return new ResolverStage<>(dependency, targetInput, sourceInput);
+    public <S, CV extends Vajram<?>> ResolverStage<S, T, CV, DV> using(
+        VajramInputTypeSpec<S, CV> sourceInput) {
+      return new ResolverStage<>(targetInput, sourceInput);
     }
   }
 }

@@ -1,7 +1,8 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello;
 
-import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.resolveFanout;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.numberOfFriends_s;
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.dep;
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.fanout;
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.resolve;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends.ID;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.hellos_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.userIds_s;
@@ -14,7 +15,6 @@ import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsInputUtil.MultiHelloFriendsAllInputs;
 import com.google.common.collect.ImmutableCollection;
-import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,13 +26,13 @@ public abstract class MultiHelloFriends extends ComputeVajram<String> {
 
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
-    return ImmutableList.of(
-        resolveFanout(hellos_s, HelloFriendsRequest.userId_s)
-            .using(userIds_s)
-            .asResolver(identity()),
-        resolveFanout(hellos_s, numberOfFriends_s)
-            .using(userIds_s)
-            .asResolver(userIds -> NUMBER_OF_FRIENDS));
+    return resolve(
+        dep(
+            hellos_s,
+            fanout(HelloFriendsRequest.userId_s).using(userIds_s).with(identity()),
+            fanout(HelloFriendsRequest.numberOfFriends_s)
+                .using(userIds_s)
+                .with(_x -> NUMBER_OF_FRIENDS)));
   }
 
   @VajramLogic
