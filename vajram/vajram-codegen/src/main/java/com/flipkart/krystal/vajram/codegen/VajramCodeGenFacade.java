@@ -238,7 +238,8 @@ public final class VajramCodeGenFacade {
       Map<String, ParsedVajramData> vajramDefs = new HashMap<>();
       Map<String, ImmutableList<VajramInputDefinition>> vajramInputsDef = new HashMap<>();
       // The input defs are first fetched from config file. If
-      // it is not found, then the VajramImpl class is loaded and "getInputDefinitions" method is invoked
+      // it is not found, then the VajramImpl class is loaded and "getInputDefinitions" method is
+      // invoked
       //  to fetch the vajram input definitions
       inputFiles.forEach(
           vajramInputFile -> {

@@ -1,10 +1,15 @@
 package com.flipkart.krystal.krystex.node;
 
 import static com.flipkart.krystal.data.ValueOrError.withError;
+import static com.google.common.base.Functions.identity;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.lang.Math.max;
+import static java.util.Collections.emptyList;
 import static java.util.concurrent.CompletableFuture.*;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.toSet;
 
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
@@ -34,7 +39,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -48,14 +52,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
+import java.util.stream.Collector;
 import java.util.stream.Stream;
 
 class Node {
 
   private final NodeId nodeId;
 
-  private final NodeDefinition nodeDefinition;
+  private NodeDefinition nodeDefinition;
 
   private final KrystalNodeExecutor krystalNodeExecutor;
 
@@ -116,8 +120,7 @@ class Node {
     this.resolverDefinitionsByDependencies =
         ImmutableMapView.viewOf(
             nodeDefinition.resolverDefinitions().stream()
-                .collect(
-                    Collectors.groupingBy(ResolverDefinition::dependencyName, toImmutableSet())));
+                .collect(groupingBy(ResolverDefinition::dependencyName, toImmutableSet())));
   }
 
   void executeCommand(Flush nodeCommand) {
@@ -160,18 +163,34 @@ class Node {
     return resultForRequest;
   }
 
+  public void markRecursive() {
+    this.nodeDefinition = nodeDefinition.toRecursive();
+  }
+
   private CompletableFuture<NodeResponse> handleSkipDependency(
       RequestId requestId, SkipNode skipNode, CompletableFuture<NodeResponse> resultForRequest) {
-    Iterable<ResolverDefinition> pendingResolvers =
-        resolverDefinitionsByInput.values().stream()
-            .flatMap(Collection::stream)
-            .collect(Collectors.toSet());
-    Map<NodeLogicId, ResolverDefinition> uniquePendingResolvers = new LinkedHashMap<>();
-    for (ResolverDefinition pendingResolver : pendingResolvers) {
-      uniquePendingResolvers.putIfAbsent(pendingResolver.resolverNodeLogicId(), pendingResolver);
-    }
-    for (ResolverDefinition resolverDefinition : uniquePendingResolvers.values()) {
-      executeResolver(requestId, resolverDefinition);
+    /*
+     Do not propagate skipNode command to recursive dependencies as this can lead to an infinite loop.
+     Propagating skipNode is important so that the flush command works as expected.
+     Flushing is anyway not supported for nodes which are recusive, so there is no need for
+     this.
+    */
+    if (!nodeDefinition.isRecursive()) {
+      // Since this node is skipped, we need to get all the pending resolvers (irrespective of
+      // whether their inputs are available or not) and mark them resolved.
+      Set<ResolverDefinition> pendingResolvers =
+          resolverDefinitionsByInput.values().stream()
+              .flatMap(Collection::stream)
+              .filter(
+                  resolverDefinition ->
+                      !this.resolverResults
+                          .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
+                          .containsKey(resolverDefinition.resolverNodeLogicId()))
+              .collect(toSet());
+
+      for (ResolverDefinition resolverDefinition : pendingResolvers) {
+        executeResolver(requestId, resolverDefinition);
+      }
     }
     resultForRequest.completeExceptionally(skipNodeException(skipNode));
     return resultForRequest;
@@ -232,7 +251,7 @@ class Node {
     ImmutableSet<String> allInputNames = mainLogicDefinition.inputNames();
     Set<String> availableInputs =
         Stream.concat(allInputs.keySet().stream(), allDependencies.keySet().stream())
-            .collect(Collectors.toSet());
+            .collect(toSet());
     if (availableInputs.isEmpty()) {
       if (allInputNames.isEmpty()) {
         return true;
@@ -240,51 +259,14 @@ class Node {
           && !nodeDefinition.dependencyNodes().isEmpty())
         return executeDependenciesWhenNoResolvers(requestId);
     }
-    Map<NodeLogicId, ResolverCommand> nodeResults =
-        this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
-
-    Iterable<ResolverDefinition> pendingResolvers;
-    if (newInputNames.isEmpty()) {
-      pendingResolvers =
-          resolverDefinitionsByInput
-                  .getOrDefault(Optional.<String>empty(), Collections.emptyList())
-                  .stream()
-                  .filter(
-                      resolverDefinition ->
-                          availableInputs.containsAll(resolverDefinition.boundFrom()))
-                  .filter(
-                      resolverDefinition ->
-                          !nodeResults.containsKey(resolverDefinition.resolverNodeLogicId()))
-              ::iterator;
-    } else {
-      pendingResolvers =
-          newInputNames.stream()
-                  .flatMap(
-                      input ->
-                          resolverDefinitionsByInput
-                              .getOrDefault(Optional.ofNullable(input), ImmutableList.of())
-                              .stream()
-                              .filter(
-                                  resolverDefinition ->
-                                      availableInputs.containsAll(resolverDefinition.boundFrom()))
-                              .filter(
-                                  resolverDefinition ->
-                                      !nodeResults.containsKey(
-                                          resolverDefinition.resolverNodeLogicId())))
-              ::iterator;
-    }
-    Map<NodeLogicId, ResolverDefinition> uniquePendingResolvers = new LinkedHashMap<>();
-    int pendingResolverCount = 0;
-    for (ResolverDefinition pendingResolver : pendingResolvers) {
-      if (!uniquePendingResolvers.containsKey(pendingResolver.resolverNodeLogicId())) {
-        uniquePendingResolvers.put(pendingResolver.resolverNodeLogicId(), pendingResolver);
-        pendingResolverCount++;
-        executeResolver(requestId, pendingResolver);
-      }
+    Map<NodeLogicId, ResolverDefinition> pendingResolvers =
+        getPendingResolvers(requestId, newInputNames, availableInputs);
+    for (ResolverDefinition pendingResolver : pendingResolvers.values()) {
+      executeResolver(requestId, pendingResolver);
     }
 
     boolean executeMainLogic = false;
-    if (pendingResolverCount == 0) {
+    if (pendingResolvers.isEmpty()) {
       ImmutableSet<String> inputNames = mainLogicDefinition.inputNames();
       Set<String> collect =
           new LinkedHashSet<>(
@@ -295,6 +277,50 @@ class Node {
       }
     }
     return executeMainLogic;
+  }
+
+  /**
+   * @param requestId The requestId.
+   * @param newInputNames The input names for which new values were just made available.
+   * @param availableInputs The inputs for which values are available.
+   * @return the resolver definitions which need at least one of the provided {@code inputNames} and
+   *     all of whose inputs' values are available.
+   */
+  private Map<NodeLogicId, ResolverDefinition> getPendingResolvers(
+      RequestId requestId, ImmutableSet<String> newInputNames, Set<String> availableInputs) {
+    Map<NodeLogicId, ResolverCommand> nodeResults =
+        this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
+
+    Map<NodeLogicId, ResolverDefinition> pendingResolvers;
+    Collector<ResolverDefinition, ?, Map<NodeLogicId, ResolverDefinition>> resolverCollector =
+        toMap(ResolverDefinition::resolverNodeLogicId, identity(), (o1, o2) -> o1);
+    if (newInputNames.isEmpty()) {
+      pendingResolvers =
+          resolverDefinitionsByInput.getOrDefault(Optional.<String>empty(), emptyList()).stream()
+              .filter(
+                  resolverDefinition -> availableInputs.containsAll(resolverDefinition.boundFrom()))
+              .filter(
+                  resolverDefinition ->
+                      !nodeResults.containsKey(resolverDefinition.resolverNodeLogicId()))
+              .collect(resolverCollector);
+    } else {
+      pendingResolvers =
+          newInputNames.stream()
+              .flatMap(
+                  input ->
+                      resolverDefinitionsByInput
+                          .getOrDefault(Optional.ofNullable(input), ImmutableList.of())
+                          .stream()
+                          .filter(
+                              resolverDefinition ->
+                                  availableInputs.containsAll(resolverDefinition.boundFrom()))
+                          .filter(
+                              resolverDefinition ->
+                                  !nodeResults.containsKey(
+                                      resolverDefinition.resolverNodeLogicId())))
+              .collect(resolverCollector);
+    }
+    return pendingResolvers;
   }
 
   private void executeResolver(RequestId requestId, ResolverDefinition resolverDefinition) {
@@ -482,8 +508,8 @@ class Node {
                 requestId ->
                     resolverDefinitionsForDependency.equals(
                         this.dependencyExecutions
-                            .getOrDefault(requestId, ImmutableMap.of())
-                            .getOrDefault(dependencyName, new DependencyNodeExecutions())
+                            .computeIfAbsent(requestId, k -> new LinkedHashMap<>())
+                            .computeIfAbsent(dependencyName, k -> new DependencyNodeExecutions())
                             .executedResolvers()))) {
 
       krystalNodeExecutor.executeCommand(
