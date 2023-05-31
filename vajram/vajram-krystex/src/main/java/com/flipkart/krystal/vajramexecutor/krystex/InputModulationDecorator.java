@@ -128,8 +128,4 @@ public final class InputModulationDecorator<
   public String getId() {
     return instanceId;
   }
-
-  public Predicate<DependantChain> getIsApplicableToDependantChain() {
-    return isApplicableToDependantChain;
-  }
 }
