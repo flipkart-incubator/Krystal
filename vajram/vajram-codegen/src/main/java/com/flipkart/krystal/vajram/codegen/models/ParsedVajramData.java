@@ -5,9 +5,11 @@ import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.codegen.utils.CodegenUtils;
 import com.flipkart.krystal.vajram.codegen.utils.Constants;
+import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.inputs.Resolve;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -38,6 +40,16 @@ public record ParsedVajramData(
       result =
           (Class<? extends Vajram>)
               classLoader.loadClass(packageName + DOT_SEPARATOR + inputFile.vajramName());
+
+      for (Method method : result.getDeclaredMethods()) {
+        if ((method.isAnnotationPresent(VajramLogic.class)
+                || method.isAnnotationPresent(Resolve.class))
+            && !Modifier.isStatic(method.getModifiers()))
+          throw new VajramValidationException(
+              "Vajram class %s has non-static method %s"
+                  .formatted(inputFile.vajramName(), method.getName()));
+      }
+
       String inputUtilClass =
           packageName + DOT_SEPARATOR + CodegenUtils.getInputUtilClassName(inputFile.vajramName());
       final Class<?> inputUtilCls = classLoader.loadClass(inputUtilClass);
