@@ -61,7 +61,7 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
                 .collect(joining(", ")));
   }
 
-  private static ImmutableSet<String> getFriendsFor(String userId, int numberOfFriends) {
+  private ImmutableSet<String> getFriendsFor(String userId, int numberOfFriends) {
     return IntStream.range(1, numberOfFriends + 1)
         .mapToObj(i -> userId + ":friend_" + i)
         .collect(toImmutableSet());
