@@ -48,7 +48,7 @@ public abstract class HelloFriendsV2Vajram extends ComputeVajram<String> {
   }
 
   @VajramLogic
-  public String sayHellos(HelloFriendsV2AllInputs request) {
+  public static String sayHellos(HelloFriendsV2AllInputs request) {
     return "Hello Friends! %s"
         .formatted(
             request.friendInfos().values().stream()
