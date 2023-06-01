@@ -8,7 +8,7 @@ import com.flipkart.krystal.vajram.samples.benchmarks.calculator.multiplier.Mult
 @VajramDef("multiplier")
 public abstract class Multiplier extends ComputeVajram<Integer> {
   @VajramLogic
-  public int multiply(MultiplierAllInputs allInputs) {
+  public static int multiply(MultiplierAllInputs allInputs) {
     return allInputs.numberOne() * allInputs.numberTwo().orElse(1);
   }
 }
