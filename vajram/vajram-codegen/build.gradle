@@ -4,7 +4,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.flipkart.krystal:vajram:'+ '2.1'//project.krystal_version
+        classpath 'com.flipkart.krystal:vajram:'+ project.krystal_version
     }
 }
 
