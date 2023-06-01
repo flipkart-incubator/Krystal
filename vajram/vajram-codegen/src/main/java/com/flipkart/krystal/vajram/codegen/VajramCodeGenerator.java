@@ -10,6 +10,7 @@ import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getClassGen
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getCommonInputsClassname;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getInputModulationClassname;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getInputUtilClassName;
+import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getMethodReturnType;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.ARRAY_LIST;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.COMMON_INPUT;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.COM_FUTURE;
@@ -290,7 +291,6 @@ public class VajramCodeGenerator {
             parsedVajramData.packageName(),
             getInputUtilClassName(parsedVajramData.vajramName()),
             getCommonInputsClassname(vajramName));
-    //noinspection unchecked
     final TypeName vajramResponseType =
         getClassGenericArgumentsType(parsedVajramData.vajramClass());
 
@@ -384,12 +384,12 @@ public class VajramCodeGenerator {
       }
       executeBuilder.addCode(codeBuilder.build());
     } else { // TODO : Need non modulated IO vajram to test this
-      simpleComputeMethodBuilder(resolverMap, executeBuilder, false);
+      nonModulatedComputeMethodBuilder(resolverMap, executeBuilder, false);
     }
     return executeBuilder.build();
   }
 
-  private void simpleComputeMethodBuilder(
+  private void nonModulatedComputeMethodBuilder(
       Map<String, ? extends Collection<Method>> resolverMap,
       Builder executeBuilder,
       boolean isIOVajram) {
@@ -481,7 +481,13 @@ public class VajramCodeGenerator {
               }
             });
     if (isIOVajram) {
-      //TODO: Validate IOVajram response type is CompletableFuture<Type>"
+      Class<?> returnType = vajramDefs.get(vajramName).vajramLogic().getReturnType();
+      if (!CompletableFuture.class.isAssignableFrom(returnType)) {
+        // TODO: Validate IOVajram response type is CompletableFuture<Type>"
+        throw new VajramValidationException(
+            "The VajramLogic of non-modulated IO vajram %s must return a CompletableFuture"
+                .formatted(vajramName));
+      }
       returnBuilder.add(
           "\nreturn ($L(new $T(\n",
           vajramDefs.get(vajramName).vajramLogic().getName(),
@@ -595,7 +601,7 @@ public class VajramCodeGenerator {
       }
       executeMethodBuilder.addCode(codeBuilder.build());
     } else {
-      simpleComputeMethodBuilder(resolverMap, executeMethodBuilder, true);
+      nonModulatedComputeMethodBuilder(resolverMap, executeMethodBuilder, true);
     }
     return executeMethodBuilder.build();
   }
@@ -609,7 +615,7 @@ public class VajramCodeGenerator {
    *     not
    * @return generated code for "resolveInputOfDependency" {@link MethodSpec}
    */
-  public Optional<MethodSpec> createResolvers(
+  private Optional<MethodSpec> createResolvers(
       Map<String, ? extends List<Method>> resolverMap, Map<String, Boolean> depFanoutMap) {
     String dependency = "dependency";
     Builder resolveInputsBuilder =
@@ -810,75 +816,78 @@ public class VajramCodeGenerator {
             stream(splits, 0, splits.length - 1).collect(Collectors.joining(DOT));
         String requestClass = CodegenUtils.getRequestClassName(splits[splits.length - 1]);
 
-        TypeName depType = getClassGenericArgumentsType(parsedVajramData.vajramClass());
+        TypeName usingDepType = getClassGenericArgumentsType(parsedVajramData.vajramClass());
+        String resolverName = method.getName();
         if (DependencyResponse.class.isAssignableFrom(parameter.getType())) {
-          ifBlockBuilder.addStatement(
+          String depValueAccessorCode =
               """
-                $1T $2L =\s
-                 new $3T<>(inputs.<$4T>getDepValue($5S)
-                      .values().entrySet().stream()
-                      .collect($6T.toImmutableMap(e -> $7T.from(e.getKey()),
-                      $8T::getValue)))""",
+              $1T $2L =
+               new $3T<>(inputs.<$4T>getDepValue($5S)
+                    .values().entrySet().stream()
+                    .collect($6T.toImmutableMap(e -> $7T.from(e.getKey()),
+                    $8T::getValue)))""";
+          ifBlockBuilder.addStatement(
+              depValueAccessorCode,
               ParameterizedTypeName.get(
-                  clsDeps.get(DEP_RESP), ClassName.get(depPackageName, requestClass), depType),
+                  clsDeps.get(DEP_RESP), ClassName.get(depPackageName, requestClass), usingDepType),
               variableName,
               clsDeps.get(DEP_RESP),
-              depType,
-              usingInputName,
-              clsDeps.get(IM_MAP),
-              ClassName.get(depPackageName, requestClass),
-              ClassName.get(Map.Entry.class));
-        } else if (depType.equals(TypeName.get(Primitives.wrap(parameter.getType())))
-            || depType.equals(TypeName.get(Primitives.unwrap(parameter.getType())))) {
-          // This means this dependency in "Using" annotation is not a fanout and the dev has
-          // requested the value directly. So we extract the only value from dependency response and
-          // provide it.
-          String code =
-              """
-                $1T $2L =\s
-                 new $3T<>(inputs.<$4T>getDepValue($5S)
-                      .values().entrySet().stream()
-                      .collect($6T.toImmutableMap(e -> $7T.from(e.getKey()),
-                      $8T::getValue)))
-                      .values().iterator().next().value().orElse(null)""";
-          ifBlockBuilder.addStatement(
-              code,
-              depType,
-              variableName,
-              clsDeps.get(DEP_RESP),
-              depType,
-              usingInputName,
-              clsDeps.get(IM_MAP),
-              ClassName.get(depPackageName, requestClass),
-              ClassName.get(Map.Entry.class));
-        } else if (ParameterizedTypeName.get(ClassName.get(ValueOrError.class), depType)
-            .equals(TypeName.get(parameter.getType()))) {
-          // This means this dependency in "Using" annotation is not a fanout and the dev has
-          // requested the 'ValueOrError'. So we extract the only ValueOrError from dependency
-          // response and
-          // provide it.
-          String code =
-              """
-                $1T $2L =\s
-                 new $3T<>(inputs.<$4T>getDepValue($5S)
-                      .values().entrySet().stream()
-                      .collect($6T.toImmutableMap(e -> $7T.from(e.getKey()),
-                      $8T::getValue)))
-                      .values().iterator().next()""";
-          ifBlockBuilder.addStatement(
-              code,
-              ParameterizedTypeName.get(ClassName.get(ValueOrError.class), depType),
-              variableName,
-              clsDeps.get(DEP_RESP),
-              CodegenUtils.getMethodReturnType(method),
+              usingDepType,
               usingInputName,
               clsDeps.get(IM_MAP),
               ClassName.get(depPackageName, requestClass),
               ClassName.get(Map.Entry.class));
         } else {
-          throw new VajramValidationException(
-              "Unrecognized parameter Type %s in resolver %s of vajram %s"
-                  .formatted(parameter.getType(), method.getName(), this.vajramName));
+          String depValueAccessorCode =
+              """
+              $1T $2L =
+                inputs.<$3T>getDepValue($4S)
+                   .values()
+                   .entrySet()
+                   .iterator()
+                   .next()
+                   .getValue()""";
+          if (usingDepType.unbox().equals(TypeName.get(parameter.getType()))) {
+            // This means this dependency in "Using" annotation is not a fanout and the dev has
+            // requested the value directly. So we extract the only value from dependency response
+            // and
+            // provide it.
+            if (vajramInputDef.isMandatory()) {
+              String code = depValueAccessorCode + ".value().orElseThrow()";
+              ifBlockBuilder.addStatement(
+                  code, usingDepType, variableName, usingDepType, usingInputName);
+            } else {
+              throw new VajramValidationException(
+                  ("A resolver ('%s') must not access an optional dependency ('%s') directly."
+                          + "Use Optional<>, ValueOrError<>, or DependencyResponse<> instead")
+                      .formatted(resolverName, usingInputName));
+            }
+          } else if (ValueOrError.class.isAssignableFrom(parameter.getType())) {
+            // This means this dependency in "Using" annotation is not a fanout and the dev has
+            // requested the 'ValueOrError'. So we extract the only ValueOrError from dependency
+            // response and provide it.
+            ifBlockBuilder.addStatement(
+                depValueAccessorCode,
+                ParameterizedTypeName.get(ClassName.get(ValueOrError.class), usingDepType),
+                variableName,
+                getMethodReturnType(method).box(),
+                usingInputName);
+          } else if (Optional.class.isAssignableFrom(parameter.getType())) {
+            // This means this dependency in "Using" annotation is not a fanout and the dev has
+            // requested an 'Optional'. So we retrieve the only ValueOrError from the dependency
+            // response, extract the optional and provide it.
+            String code = depValueAccessorCode + ".value()";
+            ifBlockBuilder.addStatement(
+                code,
+                ParameterizedTypeName.get(ClassName.get(Optional.class), usingDepType),
+                variableName,
+                getMethodReturnType(method).box(),
+                usingInputName);
+          } else {
+            throw new VajramValidationException(
+                "Unrecognized parameter type %s in resolver %s of vajram %s"
+                    .formatted(parameter.getType(), resolverName, this.vajramName));
+          }
         }
       }
     }
@@ -901,7 +910,7 @@ public class VajramCodeGenerator {
     String variableName = "resolverResult";
     boolean controlFLowStarted = false;
     // Identify resolve method return type
-    final TypeName methodReturnType = CodegenUtils.getMethodReturnType(method);
+    final TypeName methodReturnType = getMethodReturnType(method);
 
     // call the resolve method
     ifBlockBuilder.add("$T $L = $L(", methodReturnType, variableName, method.getName());
