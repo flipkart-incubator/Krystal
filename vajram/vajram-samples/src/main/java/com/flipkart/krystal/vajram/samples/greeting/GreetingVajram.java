@@ -26,7 +26,7 @@ public abstract class GreetingVajram extends ComputeVajram<String> {
   @Resolve(
       depName = "user_info",
       depInputs = {"user_id"})
-  public String userIdForUserService(@Using("user_id") String userId) {
+  public static String userIdForUserService(@Using("user_id") String userId) {
     return userId;
   }
 
@@ -41,7 +41,7 @@ public abstract class GreetingVajram extends ComputeVajram<String> {
   // This is the core business logic of this Vajram
   // Sync vajrams can return any object. AsyncVajrams need to return {CompletableFuture}s
   @VajramLogic
-  public String createGreetingMessage(GreetingInputUtil.GreetingAllInputs request) {
+  public static String createGreetingMessage(GreetingInputUtil.GreetingAllInputs request) {
     String userId = request.userId();
     ValueOrError<UserInfo> userInfo =
         request.userInfo().get(UserServiceRequest.builder().userId(userId).build());
