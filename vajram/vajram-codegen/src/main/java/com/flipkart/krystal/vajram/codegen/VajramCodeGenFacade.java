@@ -1,9 +1,13 @@
 package com.flipkart.krystal.vajram.codegen;
 
+import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.DOT;
+import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getVajramImplClassName;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.nio.file.StandardOpenOption.WRITE;
+import static java.util.Arrays.stream;
 
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.codegen.models.ParsedVajramData;
 import com.flipkart.krystal.vajram.codegen.models.VajramInputFile;
@@ -11,10 +15,15 @@ import com.flipkart.krystal.vajram.codegen.models.VajramInputsDef;
 import com.flipkart.krystal.vajram.codegen.models.VajramInputsDef.InputFilePath;
 import com.flipkart.krystal.vajram.codegen.utils.CodegenUtils;
 import com.flipkart.krystal.vajram.codegen.utils.Constants;
+import com.flipkart.krystal.vajram.exception.VajramValidationException;
+import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.google.common.collect.ImmutableList;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -31,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.CommandLine;
@@ -195,6 +205,7 @@ public final class VajramCodeGenFacade {
     }
   }
 
+  @SuppressWarnings({"unchecked", "rawtypes"})
   private void codeGenVajramImpl() throws Exception {
     ImmutableList<VajramInputFile> inputFiles = getInputDefinitions();
     ClassLoader systemClassLoader = VajramID.class.getClassLoader();
@@ -226,6 +237,10 @@ public final class VajramCodeGenFacade {
     try (URLClassLoader urlcl = new URLClassLoader(urls.toArray(URL[]::new), systemClassLoader)) {
       Map<String, ParsedVajramData> vajramDefs = new HashMap<>();
       Map<String, ImmutableList<VajramInputDefinition>> vajramInputsDef = new HashMap<>();
+      // The input defs are first fetched from config file. If
+      // it is not found, then the VajramImpl class is loaded and "getInputDefinitions" method is
+      // invoked
+      //  to fetch the vajram input definitions
       inputFiles.forEach(
           vajramInputFile -> {
             Optional<ParsedVajramData> parsedVajramData =
@@ -238,6 +253,61 @@ public final class VajramCodeGenFacade {
                   vajramInputFile.vajramName(),
                   vajramInputFile.vajramInputsDef().allInputsDefinitions());
             }
+          });
+      // add vajram input dependency vajram definitions from dependent modules/jars
+      inputFiles.forEach(
+          vajramInputFile -> {
+            vajramInputFile
+                .vajramInputsDef()
+                .allInputsDefinitions()
+                .forEach(
+                    inputDef -> {
+                      if (inputDef instanceof Dependency dependency
+                          && dependency.dataAccessSpec() instanceof VajramID vajramID) {
+                        String depVajramClass =
+                            vajramID
+                                .className()
+                                .orElseThrow(
+                                    () ->
+                                        new VajramValidationException(
+                                            "Vajram class missing in VajramInputDefinition for :"
+                                                + vajramID));
+                        String[] splits = Constants.DOT_PATTERN.split(depVajramClass);
+                        String depPackageName =
+                            stream(splits, 0, splits.length - 1).collect(Collectors.joining(DOT));
+                        String vajramName = splits[splits.length - 1];
+                        if (!vajramDefs.containsKey(vajramName)) {
+                          try {
+                            Class<?> vajramClass = urlcl.loadClass(depVajramClass);
+                            Map<String, Field> fields = new HashMap<>();
+                            stream(vajramClass.getDeclaredFields())
+                                .forEach(field -> fields.put(field.getName(), field));
+                            ParsedVajramData parsedVajramData1 =
+                                new ParsedVajramData(
+                                    vajramName, null, null, vajramClass, depPackageName, fields);
+                            vajramDefs.put(vajramName, parsedVajramData1);
+                            // load impl class and fetch input definitions
+                            Class<? extends Vajram> parsedVajramImpl =
+                                (Class<? extends Vajram>)
+                                    urlcl.loadClass(
+                                        depPackageName + DOT + getVajramImplClassName(vajramName));
+                            Method getInputDefinitions =
+                                parsedVajramImpl.getDeclaredMethod("getInputDefinitions");
+                            Vajram vajram = parsedVajramImpl.getConstructor().newInstance();
+                            vajramInputsDef.put(
+                                vajramName,
+                                (ImmutableList<VajramInputDefinition>)
+                                    getInputDefinitions.invoke(vajram));
+                          } catch (ClassNotFoundException
+                              | InvocationTargetException
+                              | NoSuchMethodException
+                              | IllegalAccessException
+                              | InstantiationException e) {
+                            throw new RuntimeException(e);
+                          }
+                        }
+                      }
+                    });
           });
       inputFiles.forEach(
           inputFile -> {

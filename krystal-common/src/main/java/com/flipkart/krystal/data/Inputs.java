@@ -1,7 +1,6 @@
 package com.flipkart.krystal.data;
 
 import com.google.common.collect.ImmutableMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -23,7 +22,7 @@ public record Inputs(ImmutableMap<String, InputValue<Object>> values) {
       //noinspection unchecked
       return (ValueOrError<T>) voe;
     }
-    throw new IllegalArgumentException();
+    throw new IllegalArgumentException("%s is not of type ValueOrError".formatted(inputName));
   }
 
   public <T> Optional<T> getInputValueOpt(String inputName) {
@@ -44,13 +43,19 @@ public record Inputs(ImmutableMap<String, InputValue<Object>> values) {
       //noinspection unchecked
       return (Results<T>) voe;
     }
-    throw new IllegalArgumentException();
+    throw new IllegalArgumentException("%s is not of type Results".formatted(inputName));
   }
 
-  public static Inputs union(Inputs inputs1, Inputs inputs2) {
-    Map<String, InputValue<Object>> v = new LinkedHashMap<>(inputs1.values());
-    v.putAll(inputs2.values());
-    return new Inputs(v);
+  public static Inputs union(
+      Map<String, ? extends InputValue<Object>> inputs1,
+      Map<String, ? extends InputValue<Object>> inputs2) {
+    //noinspection UnstableApiUsage
+    return new Inputs(
+        ImmutableMap.<String, InputValue<Object>>builderWithExpectedSize(
+                inputs1.size() + inputs2.size())
+            .putAll(inputs1)
+            .putAll(inputs2)
+            .build());
   }
 
   public static Inputs empty() {

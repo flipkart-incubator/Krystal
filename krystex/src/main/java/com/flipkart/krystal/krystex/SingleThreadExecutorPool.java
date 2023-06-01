@@ -8,16 +8,16 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 
-public final class SingleThreadExecutorPool extends MultiLeasePool<ExecutorService>
-    implements AutoCloseable {
-  public static int EXECUTOR_SERVICE_COUNTER = 0;
+public final class SingleThreadExecutorPool extends MultiLeasePool<ExecutorService> {
+  private static int executorServiceCounter = 0;
 
   public SingleThreadExecutorPool(int maxActiveLeasesPerObject) {
+    //noinspection AssignmentToStaticFieldFromInstanceMethod
     super(
         () ->
             newSingleThreadExecutor(
                 new ThreadFactoryBuilder()
-                    .setNameFormat("KrystalNodeExecutor-%s".formatted(EXECUTOR_SERVICE_COUNTER++))
+                    .setNameFormat("KrystalNodeExecutor-%s".formatted(executorServiceCounter++))
                     .build()),
         new PreferObjectReuse(maxActiveLeasesPerObject, Optional.empty()),
         ExecutorService::shutdown);

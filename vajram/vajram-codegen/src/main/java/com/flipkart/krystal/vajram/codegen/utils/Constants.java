@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.codegen.utils;
 
+import java.util.regex.Pattern;
+
 public final class Constants {
 
   public static final String VAL_ERR = "valErr";
@@ -19,6 +21,7 @@ public final class Constants {
   public static final String JAVA_EXT = ".java";
   public static final char DOLLAR = '$';
   public static final String INPUT_DEFINITIONS_VAR = "inputDefinitions";
+  public static final Pattern DOT_PATTERN = Pattern.compile("\\.");
   public static final String INPUT_TAG = "inputTag";
 
   private Constants() {}

@@ -21,6 +21,7 @@ import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -86,11 +87,12 @@ class Resilience4JBulkheadTest {
           }
         });
     mainLogic.registerRequestScopedDecorator(
-        new MainLogicDecoratorConfig(
-            Resilience4JBulkhead.DECORATOR_TYPE,
-            logicExecutionContext -> true,
-            logicExecutionContext -> "",
-            decoratorContext -> resilience4JBulkhead));
+        List.of(
+            new MainLogicDecoratorConfig(
+                Resilience4JBulkhead.DECORATOR_TYPE,
+                logicExecutionContext -> true,
+                logicExecutionContext -> "",
+                decoratorContext -> resilience4JBulkhead)));
     NodeDefinition nodeDefinition =
         nodeDefinitionRegistry.newNodeDefinition("node", mainLogic.nodeLogicId());
 

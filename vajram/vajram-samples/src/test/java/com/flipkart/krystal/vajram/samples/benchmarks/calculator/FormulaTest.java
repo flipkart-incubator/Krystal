@@ -16,6 +16,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -38,14 +39,13 @@ class FormulaTest {
     assertThat(future.get()).isEqualTo(4);
   }
 
-//  @Test
-  void vajram_benchmark() throws Exception {
+  // @Test
+  void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
     int loopCount = 1_000_000;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(5).build();
     long javaNativeTime = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
     long javaFuturesTime = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
     //noinspection unchecked
-    Thread.sleep(5000);
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
