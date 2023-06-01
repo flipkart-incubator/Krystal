@@ -9,12 +9,16 @@ import com.flipkart.krystal.datatypes.JavaDataType;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.node.NodeId;
+import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.adaptors.DependencyInjectionAdaptor;
+import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputSource;
+import com.flipkart.krystal.vajram.inputs.InputTag;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
-import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Type;
@@ -23,19 +27,41 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-public record SessionInputDecorator(
-    Vajram<?> vajram, DependencyInjectionAdaptor<?> dependencyInjectionAdaptor)
-    implements MainLogicDecorator {
+public final class SessionInputDecorator implements MainLogicDecorator {
 
   public static final String DECORATOR_TYPE = SessionInputDecorator.class.getName();
+  private VajramNodeGraph vajramNodeGraph;
+  private final DependencyInjectionAdaptor dependencyInjectionAdaptor;
+
+  public SessionInputDecorator(
+      VajramNodeGraph vajramNodeGraph, DependencyInjectionAdaptor dependencyInjectionAdaptor) {
+    this.vajramNodeGraph = vajramNodeGraph;
+    this.dependencyInjectionAdaptor = dependencyInjectionAdaptor;
+  }
 
   @Override
   public MainLogic<Object> decorateLogic(
       MainLogic<Object> logicToDecorate, MainLogicDefinition<Object> originalLogicDefinition) {
     return inputsList -> {
+      Map<Inputs, Inputs> newInputsToOldInputs = new HashMap<>();
       ImmutableList<Inputs> inputValues =
           inputsList.stream()
-              .map(inputs -> injectFromSession(vajram.getInputDefinitions(), inputs))
+              .map(
+                  inputs -> {
+                    Inputs newInputs =
+                        injectFromSession(
+                            vajramNodeGraph
+                                .getVajramDefinition(
+                                    VajramID.vajramID(
+                                        Optional.ofNullable(originalLogicDefinition.nodeLogicId())
+                                            .map(NodeLogicId::nodeId)
+                                            .map(NodeId::value)
+                                            .orElse("")))
+                                .orElse(null),
+                            inputs);
+                    newInputsToOldInputs.put(newInputs, inputs);
+                    return newInputs;
+                  })
               .collect(toImmutableList());
 
       ImmutableMap<Inputs, CompletableFuture<Object>> result = logicToDecorate.execute(inputValues);
@@ -44,17 +70,7 @@ public record SessionInputDecorator(
       Map<Inputs, CompletableFuture<Object>> newResult = new HashMap<>();
       result.forEach(
           (key, value) -> {
-            int index = inputValues.indexOf(key);
-            if (index >= 0) {
-              // Find the Inputs object at the same index from the original Inputs list
-              if (value != null) {
-                newResult.put(inputsList.get(index), value);
-              }
-              return;
-            }
-            if (value != null) {
-              newResult.put(key, value);
-            }
+            newResult.put(newInputsToOldInputs.getOrDefault(key, key), value);
           });
       return ImmutableMap.copyOf(newResult);
     };
@@ -65,28 +81,37 @@ public record SessionInputDecorator(
     return SessionInputDecorator.class.getName();
   }
 
-  private Inputs injectFromSession(
-      ImmutableCollection<? extends VajramInputDefinition> inputDefinitions, Inputs inputs) {
+  private Inputs injectFromSession(VajramDefinition vajramDefinition, Inputs inputs) {
     Map<String, InputValue<Object>> newValues = new HashMap<>();
-    for (VajramInputDefinition inputDefinition : inputDefinitions) {
-      String inputName = inputDefinition.name();
-      if (inputDefinition instanceof Input<?> input) {
-        if (input.sources().contains(InputSource.CLIENT)) {
-          ValueOrError<Object> value = inputs.getInputValue(inputName);
-          if (!ValueOrError.empty().equals(value)) {
-            continue;
-          }
-          // Input was not resolved by another vajram. Check if it is resolvable
-          // by SESSION
-        }
-        if (input.sources().contains(InputSource.SESSION)
-            && input.type() instanceof JavaDataType<?>) {
-          ValueOrError<Object> value =
-              getFromInjectionAdaptor(((JavaDataType<?>) input.type()), input.annotation());
-          newValues.put(inputName, value);
-        }
-      }
-    }
+    Optional.ofNullable(vajramDefinition)
+        .map(VajramDefinition::getVajram)
+        .map(Vajram::getInputDefinitions)
+        .ifPresent(
+            inputDefinitions -> {
+              for (VajramInputDefinition inputDefinition : inputDefinitions) {
+                String inputName = inputDefinition.name();
+                if (inputDefinition instanceof Input<?> input) {
+                  if (input.sources().contains(InputSource.CLIENT)) {
+                    ValueOrError<Object> value = inputs.getInputValue(inputName);
+                    if (!ValueOrError.empty().equals(value)) {
+                      continue;
+                    }
+                    // Input was not resolved by another vajram. Check if it is resolvable
+                    // by SESSION
+                  }
+                  if (input.sources().contains(InputSource.SESSION)
+                      && input.type() instanceof JavaDataType<?>) {
+                    ValueOrError<Object> value =
+                        getFromInjectionAdaptor(
+                            ((JavaDataType<?>) input.type()),
+                            Optional.ofNullable(input.inputTags())
+                                .map(tags -> tags.get(InputTag.ANNOTATION))
+                                .orElse(null));
+                    newValues.put(inputName, value);
+                  }
+                }
+              }
+            });
     if (!newValues.isEmpty()) {
       inputs.values().forEach(newValues::putIfAbsent);
       return new Inputs(newValues);
@@ -97,7 +122,7 @@ public record SessionInputDecorator(
 
   private ValueOrError<Object> getFromInjectionAdaptor(
       JavaDataType<?> dataType, String annotation) {
-    if (dependencyInjectionAdaptor == null || dependencyInjectionAdaptor.getInjector() == null) {
+    if (dependencyInjectionAdaptor == null) {
       return ValueOrError.withError(
           new Exception("Dependency injector is null, cannot resolve SESSION input"));
     }

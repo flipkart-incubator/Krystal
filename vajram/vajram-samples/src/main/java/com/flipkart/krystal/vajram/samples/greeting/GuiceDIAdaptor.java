@@ -9,16 +9,12 @@ import com.google.inject.name.Names;
 import java.util.HashSet;
 import java.util.Set;
 
-public final class GuiceDIAdaptor implements DependencyInjectionAdaptor<Injector> {
+public final class GuiceDIAdaptor implements DependencyInjectionAdaptor {
 
   private final Injector injector;
 
   private GuiceDIAdaptor(Set<AbstractModule> modules) {
     injector = Guice.createInjector(modules);
-  }
-
-  public Injector getInjector() {
-    return injector;
   }
 
   public Object getInstance(Class<?> clazz) {

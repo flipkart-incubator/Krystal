@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.adaptors;
 
-public interface DependencyInjectionAdaptor<T> {
-  T getInjector();
+public interface DependencyInjectionAdaptor {
 
   Object getInstance(Class<?> clazz);
 

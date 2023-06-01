@@ -38,7 +38,7 @@ public class GreetingVajramTest {
   public void setUp() {
     graph = new VajramNodeGraph.Builder().loadFromPackage("com.flipkart.krystal.vajram.samples.greeting");
 
-    DependencyInjectionAdaptor<?> diAdaptor = new GuiceDIAdaptor.Builder().loadFromModule(new GuiceModule()).build();
+    DependencyInjectionAdaptor diAdaptor = new GuiceDIAdaptor.Builder().loadFromModule(new GuiceModule()).build();
     graph.dependencyInjectionAdaptor(diAdaptor);
     graph.logicDecorationOrdering(new LogicDecorationOrdering(ImmutableSet.<String>builder().add(
         SessionInputDecorator.DECORATOR_TYPE).add(MainLogicExecReporter.class.getName()).build()));
