@@ -31,7 +31,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class ChainAdderTest {
@@ -50,7 +49,6 @@ class ChainAdderTest {
   }
 
   @Test
-  @Disabled
   void chainer_success() throws Exception {
     CompletableFuture<Integer> future;
     NodeExecutionReport nodeExecutionReport = new DefaultNodeExecutionReport(Clock.systemUTC());
