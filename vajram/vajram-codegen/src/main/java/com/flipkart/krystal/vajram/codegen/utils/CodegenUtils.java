@@ -93,11 +93,10 @@ public final class CodegenUtils {
   }
 
   public static TypeName getMethodReturnType(Method method) {
-    ParameterizedTypeName parameterizedTypeName;
-    if (method.getGenericReturnType() instanceof ParameterizedType genericReturnType) {
+    if (method.getGenericReturnType() instanceof ParameterizedType) {
       return getType(method.getGenericReturnType());
     } else {
-      return ClassName.get(Primitives.wrap(method.getReturnType()));
+      return TypeName.get(method.getReturnType());
     }
   }
 
