@@ -86,24 +86,9 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<Main
     requestScopedLogicDecoratorConfigs =
         ImmutableMap.<String, List<MainLogicDecoratorConfig>>builderWithExpectedSize(
                 requestScopedLogicDecoratorConfigs.size() + decoratorConfigs.size())
-            .putAll(getSessionScopedLogicDecoratorsMap(sessionScopedLogicDecoratorConfigs))
+            .putAll(requestScopedLogicDecoratorConfigs)
             .putAll(getDecoratorConfigMap(decoratorConfigs))
             .build();
-  }
-
-  private Map<String, ? extends List<MainLogicDecoratorConfig>> getSessionScopedLogicDecoratorsMap(
-      Map<String, MainLogicDecoratorConfig> sessionScopedLogicDecoratorConfigs) {
-    Map<String, List<MainLogicDecoratorConfig>> sessionScopedLogicDecoratorConfigMap =
-        new HashMap<>();
-    for (Map.Entry<String, MainLogicDecoratorConfig> sessionScopedLogicDecoratorConfigEntry :
-        sessionScopedLogicDecoratorConfigs.entrySet()) {
-      sessionScopedLogicDecoratorConfigMap.putIfAbsent(
-          sessionScopedLogicDecoratorConfigEntry.getKey(), new ArrayList<>());
-      sessionScopedLogicDecoratorConfigMap
-          .get(sessionScopedLogicDecoratorConfigEntry.getKey())
-          .add(sessionScopedLogicDecoratorConfigEntry.getValue());
-    }
-    return sessionScopedLogicDecoratorConfigMap;
   }
 
   private Map<String, List<MainLogicDecoratorConfig>> getDecoratorConfigMap(

@@ -105,7 +105,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   }
 
   public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
-      C requestContext, Map<String, MainLogicDecoratorConfig> requestScopedLogicDecoratorConfigs) {
+      C requestContext, Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs) {
     return new KrystexVajramExecutor<>(
         this,
         logicDecorationOrdering,
