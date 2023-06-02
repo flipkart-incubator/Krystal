@@ -46,10 +46,12 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   private final LogicDecorationOrdering logicDecorationOrdering;
   private final Lease<? extends ExecutorService> commandQueueLease;
   private final RequestId requestId;
-  /** We need to have a list of request scope global decorators corresponding to each type, in case
-  * we want to have a decorator of one type but based on some config in request, we want to choose
-  * one. Ex : Logger, based on prod or preprod env if we want to choose different types of loggers
-  * Error logger or info logger*/
+  /**
+   * We need to have a list of request scope global decorators corresponding to each type, in case
+   * we want to have a decorator of one type but based on some config in request, we want to choose
+   * one. Ex : Logger, based on prod or preprod env if we want to choose different types of loggers
+   * Error logger or info logger
+   */
   private final ImmutableMap<
           String, // DecoratorType
           List<MainLogicDecoratorConfig>>
@@ -96,29 +98,31 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
         .forEach(
             entry -> {
               String decoratorType = entry.getKey();
-              List<MainLogicDecoratorConfig> decoratorConfigList = new ArrayList<>(
-                  entry.getValue());
-              decoratorConfigList.forEach(decoratorConfig -> {
-                String instanceId =
-                    decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
-                if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
+              List<MainLogicDecoratorConfig> decoratorConfigList =
+                  new ArrayList<>(entry.getValue());
+              decoratorConfigList.forEach(
+                  decoratorConfig -> {
+                    String instanceId =
+                        decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
+                    if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
 
-                  MainLogicDecorator mainLogicDecorator =
-                      requestScopedMainDecorators
-                          .computeIfAbsent(decoratorType, t -> new LinkedHashMap<>())
-                          .computeIfAbsent(
-                              instanceId,
-                              _i ->
-                                  decoratorConfig
-                                      .factory()
-                                      .apply(
-                                          new DecoratorContext(instanceId, logicExecutionContext)));
-                  mainLogicDecorator.executeCommand(
-                      new InitiateActiveDepChains(
-                          nodeId, ImmutableSet.copyOf(dependantChainsPerNode.get(nodeId))));
-                  decorators.put(decoratorType, mainLogicDecorator);
-                }
-              });
+                      MainLogicDecorator mainLogicDecorator =
+                          requestScopedMainDecorators
+                              .computeIfAbsent(decoratorType, t -> new LinkedHashMap<>())
+                              .computeIfAbsent(
+                                  instanceId,
+                                  _i ->
+                                      decoratorConfig
+                                          .factory()
+                                          .apply(
+                                              new DecoratorContext(
+                                                  instanceId, logicExecutionContext)));
+                      mainLogicDecorator.executeCommand(
+                          new InitiateActiveDepChains(
+                              nodeId, ImmutableSet.copyOf(dependantChainsPerNode.get(nodeId))));
+                      decorators.put(decoratorType, mainLogicDecorator);
+                    }
+                  });
             });
     return ImmutableMap.copyOf(decorators);
   }

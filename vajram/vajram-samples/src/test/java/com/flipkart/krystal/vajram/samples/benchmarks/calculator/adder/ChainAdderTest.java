@@ -62,11 +62,12 @@ class ChainAdderTest {
                 new RequestContext(""),
                 ImmutableMap.of(
                     mainLogicExecReporter.decoratorType(),
-                    List.of(new MainLogicDecoratorConfig(
-                        mainLogicExecReporter.decoratorType(),
-                        logicExecutionContext -> true,
-                        logicExecutionContext -> mainLogicExecReporter.decoratorType(),
-                        decoratorContext -> mainLogicExecReporter))))) {
+                    List.of(
+                        new MainLogicDecoratorConfig(
+                            mainLogicExecReporter.decoratorType(),
+                            logicExecutionContext -> true,
+                            logicExecutionContext -> mainLogicExecReporter.decoratorType(),
+                            decoratorContext -> mainLogicExecReporter))))) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
     assertThat(future.get()).isEqualTo(55);
