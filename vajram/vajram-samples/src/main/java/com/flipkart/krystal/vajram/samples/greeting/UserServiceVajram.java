@@ -21,7 +21,7 @@ public abstract class UserServiceVajram extends IOVajram<UserInfo> {
   public static final String ID = "userServiceVajram";
 
   @VajramLogic
-  public ImmutableMap<UserServiceInputsNeedingModulation, CompletableFuture<UserInfo>>
+  public static ImmutableMap<UserServiceInputsNeedingModulation, CompletableFuture<UserInfo>>
       callUserService(
           ModulatedInput<UserServiceInputsNeedingModulation, UserServiceCommonInputs>
               modulatedRequest) {

@@ -41,7 +41,7 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
   }
 
   @Resolve(depName = friendInfos_n, depInputs = TestUserServiceRequest.userId_n)
-  public Set<String> friendIdsForUserService(
+  public static Set<String> friendIdsForUserService(
       @Using(userId_n) String userId, @Using(numberOfFriends_n) Optional<Integer> numberOfFriends) {
     if (numberOfFriends.isPresent()) {
       return getFriendsFor(userId, numberOfFriends.get());
@@ -49,7 +49,7 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
   }
 
   @VajramLogic
-  public String sayHellos(HelloFriendsAllInputs request) throws Exception {
+  public static String sayHellos(HelloFriendsAllInputs request) throws Exception {
     return "Hello Friends of %s! %s"
         .formatted(
             request
@@ -67,7 +67,7 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
                 .collect(joining(", ")));
   }
 
-  private ImmutableSet<String> getFriendsFor(String userId, int numberOfFriends) {
+  private static ImmutableSet<String> getFriendsFor(String userId, int numberOfFriends) {
     return IntStream.range(1, numberOfFriends + 1)
         .mapToObj(i -> userId + ":friend_" + i)
         .collect(toImmutableSet());
