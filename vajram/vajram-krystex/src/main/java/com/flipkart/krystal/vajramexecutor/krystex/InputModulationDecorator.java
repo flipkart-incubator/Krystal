@@ -38,7 +38,6 @@ public final class InputModulationDecorator<
     implements MainLogicDecorator {
 
   public static final String DECORATOR_TYPE = InputModulationDecorator.class.getName();
-
   private final String instanceId;
   private final InputModulator<I, C> inputModulator;
   private final InputsConverter<I, C> inputsConverter;

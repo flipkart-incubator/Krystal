@@ -9,6 +9,7 @@ import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.exec.VajramExecutor;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -26,7 +27,7 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
       LogicDecorationOrdering logicDecorationOrdering,
       MultiLeasePool<? extends ExecutorService> executorServicePool,
       C applicationRequestContext,
-      Map<String, MainLogicDecoratorConfig> requestScopedLogicDecoratorConfigs) {
+      Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs) {
     this.vajramNodeGraph = vajramNodeGraph;
     this.applicationRequestContext = applicationRequestContext;
     this.krystalExecutor =
