@@ -66,10 +66,9 @@ public final class DefaultNodeExecutionReport implements NodeExecutionReport {
                 .collect(toImmutableList()));
     LogicExecInfo logicExecInfo = mainLogicExecInfos.get(nodeExecution);
     if (logicExecInfo == null) {
-      //      log.error(
-      //          "'reportMainLogicEnd' called without calling 'reportMainLogicStart' first for:
-      // {}",
-      //          nodeExecution);
+      log.error(
+          "'reportMainLogicEnd' called without calling 'reportMainLogicStart' first for: {}",
+          nodeExecution);
       return;
     }
     if (logicExecInfo.getResult() != null) {

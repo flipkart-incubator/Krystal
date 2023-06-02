@@ -68,12 +68,6 @@ public record InputModulatorConfig(
       Supplier<InputModulator<InputValuesAdaptor, InputValuesAdaptor>> inputModulatorSupplier,
       String instanceId,
       Set<DependantChain> dependantChains) {
-    //    if (dependantChains.size() < 2) {
-    //      throw new IllegalArgumentException(
-    //          "Share input modulators must be shared across at least two dependant chains. Found
-    // %s"
-    //              .formatted(dependantChains.size()));
-    //    }
     return new InputModulatorConfig(
         logicExecutionContext -> instanceId,
         logicExecutionContext -> dependantChains.contains(logicExecutionContext.dependants()),
