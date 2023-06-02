@@ -28,7 +28,8 @@ public abstract class MutualFriendsHello extends ComputeVajram<String> {
   public static final String USER_IDS = "user_ids";
 
   @VajramLogic
-  public String sayHelloToMutualFriends(MutualFriendsHelloAllInputs mutualFriendsHelloAllInputs) {
+  public static String sayHelloToMutualFriends(
+      MutualFriendsHelloAllInputs mutualFriendsHelloAllInputs) {
     LinkedHashSet<String> userIds = mutualFriendsHelloAllInputs.userIds();
     List<String> result = new ArrayList<>();
     for (String userId :
