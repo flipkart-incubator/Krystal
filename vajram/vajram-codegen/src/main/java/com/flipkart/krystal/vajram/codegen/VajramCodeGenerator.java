@@ -6,9 +6,11 @@ import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.COMMA;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.CONVERTER;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.DOT;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getAllInputsClassname;
+import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getClassGenericArgumentsType;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getCommonInputsClassname;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getInputModulationClassname;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getInputUtilClassName;
+import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getMethodReturnType;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.ARRAY_LIST;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.COMMON_INPUT;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.COM_FUTURE;
@@ -111,7 +113,6 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
@@ -290,9 +291,8 @@ public class VajramCodeGenerator {
             parsedVajramData.packageName(),
             getInputUtilClassName(parsedVajramData.vajramName()),
             getCommonInputsClassname(vajramName));
-    //noinspection unchecked
     final TypeName vajramResponseType =
-        CodegenUtils.getClassGenericArgumentsType(parsedVajramData.vajramClass());
+        getClassGenericArgumentsType(parsedVajramData.vajramClass());
 
     MethodSpec inputDefinitionsMethod = createInputDefinitions(classLoader);
     methodSpecs.add(inputDefinitionsMethod);
@@ -384,13 +384,15 @@ public class VajramCodeGenerator {
       }
       executeBuilder.addCode(codeBuilder.build());
     } else { // TODO : Need non modulated IO vajram to test this
-      simpleComputeMethodBuilder(resolverMap, executeBuilder);
+      nonModulatedComputeMethodBuilder(resolverMap, executeBuilder, false);
     }
     return executeBuilder.build();
   }
 
-  private void simpleComputeMethodBuilder(
-      Map<String, ? extends Collection<Method>> resolverMap, Builder executeBuilder) {
+  private void nonModulatedComputeMethodBuilder(
+      Map<String, ? extends Collection<Method>> resolverMap,
+      Builder executeBuilder,
+      boolean isIOVajram) {
     CodeBlock.Builder returnBuilder =
         CodeBlock.builder()
             .add(
@@ -426,7 +428,7 @@ public class VajramCodeGenerator {
                         CodegenUtils.getRequestClassName(splits[splits.length - 1]);
                     ParsedVajramData parsedVajramData = vajramDefs.get(splits[splits.length - 1]);
                     final TypeName typeArgument =
-                        CodegenUtils.getClassGenericArgumentsType(parsedVajramData.vajramClass());
+                        getClassGenericArgumentsType(parsedVajramData.vajramClass());
                     final String variableName = CodegenUtils.toJavaName(inputDef.name());
                     final String depVariableName = variableName + RESPONSES_SUFFIX;
                     codeBlock.addNamed(
@@ -478,12 +480,27 @@ public class VajramCodeGenerator {
                 }
               }
             });
-    returnBuilder.add(
-        "\nreturn $T.valueOrError(() -> $L(new $T(\n",
-        clsDeps.get(VAL_ERR),
-        vajramDefs.get(vajramName).vajramLogic().getName(),
-        ClassName.get(
-            packageName, getInputUtilClassName(vajramName), getAllInputsClassname(vajramName)));
+    if (isIOVajram) {
+      Class<?> returnType = vajramDefs.get(vajramName).vajramLogic().getReturnType();
+      if (!CompletableFuture.class.isAssignableFrom(returnType)) {
+        // TODO: Validate IOVajram response type is CompletableFuture<Type>"
+        throw new VajramValidationException(
+            "The VajramLogic of non-modulated IO vajram %s must return a CompletableFuture"
+                .formatted(vajramName));
+      }
+      returnBuilder.add(
+          "\nreturn ($L(new $T(\n",
+          vajramDefs.get(vajramName).vajramLogic().getName(),
+          ClassName.get(
+              packageName, getInputUtilClassName(vajramName), getAllInputsClassname(vajramName)));
+    } else {
+      returnBuilder.add(
+          "\nreturn $T.valueOrError(() -> $L(new $T(\n",
+          clsDeps.get(VAL_ERR),
+          vajramDefs.get(vajramName).vajramLogic().getName(),
+          ClassName.get(
+              packageName, getInputUtilClassName(vajramName), getAllInputsClassname(vajramName)));
+    }
     // merge the code blocks for inputs
     for (int i = 0; i < inputCodeBlocks.size(); i++) {
       // for formatting
@@ -584,7 +601,7 @@ public class VajramCodeGenerator {
       }
       executeMethodBuilder.addCode(codeBuilder.build());
     } else {
-      simpleComputeMethodBuilder(resolverMap, executeMethodBuilder);
+      nonModulatedComputeMethodBuilder(resolverMap, executeMethodBuilder, true);
     }
     return executeMethodBuilder.build();
   }
@@ -598,7 +615,7 @@ public class VajramCodeGenerator {
    *     not
    * @return generated code for "resolveInputOfDependency" {@link MethodSpec}
    */
-  public Optional<MethodSpec> createResolvers(
+  private Optional<MethodSpec> createResolvers(
       Map<String, ? extends List<Method>> resolverMap, Map<String, Boolean> depFanoutMap) {
     String dependency = "dependency";
     Builder resolveInputsBuilder =
@@ -691,28 +708,20 @@ public class VajramCodeGenerator {
     CodeBlock.Builder ifBlockBuilder = CodeBlock.builder();
     ifBlockBuilder.beginControlFlow(
         "if ($T.of($S).equals(resolvableInputs))", Set.class, String.join(",", inputs));
-    Map<String, Type> paramToVariableMap = new HashMap<>();
     // TODO : add validation if fanout, then method should accept dependency response for the bind
     // type parameter else error
     // Iterate over the method params and call respective binding methods
     stream(method.getParameters())
         .forEach(
             parameter -> {
-              String bindParamName = parameter.getAnnotation(Using.class).value();
+              String usingInputName = parameter.getAnnotation(Using.class).value();
               // check if the bind param has multiple resolvers
-              if (resolverMap.containsKey(bindParamName)) {
-                paramToVariableMap.put(
-                    bindParamName,
-                    generateDependencyResolutions(
-                            method, inputs, bindParamName, ifBlockBuilder, depFanoutMap, parameter)
-                        .orElseThrow(
-                            () -> {
-                              throw new VajramValidationException(
-                                  "No input resolver found for " + bindParamName);
-                            }));
-              } else if (inputDefsMap.containsKey(bindParamName)) {
-                VajramInputDefinition inputDefinition = inputDefsMap.get(bindParamName);
-                String variable = toJavaName(bindParamName);
+              if (resolverMap.containsKey(usingInputName)) {
+                generateDependencyResolutions(
+                    method, usingInputName, ifBlockBuilder, depFanoutMap, parameter);
+              } else if (inputDefsMap.containsKey(usingInputName)) {
+                VajramInputDefinition inputDefinition = inputDefsMap.get(usingInputName);
+                String variable = toJavaName(usingInputName);
                 final TypeName parameterType =
                     CodegenUtils.getType(parameter.getParameterizedType());
                 if (inputDefinition.isMandatory()) {
@@ -723,7 +732,7 @@ public class VajramCodeGenerator {
                               parameterType,
                               variable,
                               INPUTS,
-                              bindParamName)
+                              usingInputName)
                           .build());
                 } else {
                   if (Optional.class.isAssignableFrom(parameter.getType())) {
@@ -734,23 +743,23 @@ public class VajramCodeGenerator {
                                 parameterType,
                                 variable,
                                 INPUTS,
-                                bindParamName)
+                                usingInputName)
                             .build());
                   } else {
                     throw new VajramValidationException(
                         String.format(
                             "Optional input dependency %s must have type as Optional",
-                            bindParamName));
+                            usingInputName));
                   }
                 }
-                paramToVariableMap.put(bindParamName, Primitives.wrap(parameter.getType()));
               } else {
-                throw new VajramValidationException("No input resolver found for " + bindParamName);
+                throw new VajramValidationException(
+                    "No input resolver found for " + usingInputName);
               }
             });
     boolean isFanOut =
         isParamFanoutDependency || depFanoutMap.getOrDefault(resolve.depName(), false);
-    buildFinalResolvers(method, inputs, paramToVariableMap, ifBlockBuilder, isFanOut);
+    buildFinalResolvers(method, inputs, ifBlockBuilder, isFanOut);
     ifBlockBuilder.endControlFlow();
     return ifBlockBuilder;
   }
@@ -759,28 +768,25 @@ public class VajramCodeGenerator {
    * Method to generate resolver code for dependency bindings
    *
    * @param method Dependency resolver method
-   * @param inputs Inputs to the dependency resolver method
-   * @param bindParamName The bind param name in the resolver method
+   * @param usingInputName The bind param name in the resolver method
    * @param ifBlockBuilder The {@link CodeBlock.Builder}
    * @param depFanoutMap Map of all the dependencies and their resolvers defintions are fanout or
    *     not
    * @param parameter the bind parameter in the resolver method
-   * @return the {@link Type} of the resolver method response
    */
-  private Optional<Type> generateDependencyResolutions(
+  private void generateDependencyResolutions(
       Method method,
-      String[] inputs,
-      String bindParamName,
+      String usingInputName,
       CodeBlock.Builder ifBlockBuilder,
       Map<String, Boolean> depFanoutMap,
       Parameter parameter) {
-    VajramInputDefinition vajramInputDef = inputDefsMap.get(bindParamName);
+    VajramInputDefinition vajramInputDef = inputDefsMap.get(usingInputName);
     Resolve resolve = method.getAnnotation(Resolve.class);
     assert resolve != null;
     String resolvedDep = resolve.depName();
     // fanout case
-    if (depFanoutMap.containsKey(bindParamName)
-        && depFanoutMap.get(bindParamName)
+    if (depFanoutMap.containsKey(usingInputName)
+        && depFanoutMap.get(usingInputName)
         && !DependencyResponse.class.isAssignableFrom(parameter.getType())) {
       // the parameter data type must be DependencyResponse
       log.error(
@@ -803,59 +809,88 @@ public class VajramCodeGenerator {
                         new VajramValidationException(
                             "Vajram class missing in vajram input definition"));
 
-        String variableName = CodegenUtils.toJavaName(bindParamName);
+        String variableName = CodegenUtils.toJavaName(usingInputName);
         String[] splits = Constants.DOT_PATTERN.split(vajramClass);
         final ParsedVajramData parsedVajramData = vajramDefs.get(splits[splits.length - 1]);
-        final Field field = parsedVajramData.fields().getOrDefault(variableName, null);
         String depPackageName =
             stream(splits, 0, splits.length - 1).collect(Collectors.joining(DOT));
         String requestClass = CodegenUtils.getRequestClassName(splits[splits.length - 1]);
 
+        TypeName usingDepType = getClassGenericArgumentsType(parsedVajramData.vajramClass());
+        String resolverName = method.getName();
         if (DependencyResponse.class.isAssignableFrom(parameter.getType())) {
-          TypeName typeArgument =
-              CodegenUtils.getClassGenericArgumentsType(parsedVajramData.vajramClass());
-          ifBlockBuilder.addStatement(
+          String depValueAccessorCode =
               """
-                $1T $2L =\s
-                 new $3T<>(inputs.<$4T>getDepValue($5S)
-                      .values().entrySet().stream()
-                      .collect($6T.toImmutableMap(e -> $7T.from(e.getKey()),
-                      $8T::getValue)))""",
+              $1T $2L =
+               new $3T<>(inputs.<$4T>getDepValue($5S)
+                    .values().entrySet().stream()
+                    .collect($6T.toImmutableMap(e -> $7T.from(e.getKey()),
+                    $8T::getValue)))""";
+          ifBlockBuilder.addStatement(
+              depValueAccessorCode,
               ParameterizedTypeName.get(
-                  clsDeps.get(DEP_RESP), ClassName.get(depPackageName, requestClass), typeArgument),
+                  clsDeps.get(DEP_RESP), ClassName.get(depPackageName, requestClass), usingDepType),
               variableName,
               clsDeps.get(DEP_RESP),
-              typeArgument,
-              bindParamName,
+              usingDepType,
+              usingInputName,
               clsDeps.get(IM_MAP),
               ClassName.get(depPackageName, requestClass),
               ClassName.get(Map.Entry.class));
-          return Optional.of(DependencyResponse.class);
         } else {
-          // convert to parameter data type from dependency response
-          String code =
+          String depValueAccessorCode =
               """
-                $1T $2L =\s
-                 new $3T<>(inputs.<$4T>getDepValue($5S)
-                      .values().entrySet().stream()
-                      .collect($6T.toImmutableMap(e -> $7T.from(e.getKey()),
-                      $8T::getValue)))
-                      .values().iterator().next().value().orElse(null)""";
-          ifBlockBuilder.addStatement(
-              code,
-              CodegenUtils.getMethodReturnType(method),
-              variableName,
-              clsDeps.get(DEP_RESP),
-              CodegenUtils.getMethodReturnType(method),
-              bindParamName,
-              clsDeps.get(IM_MAP),
-              ClassName.get(depPackageName, requestClass),
-              ClassName.get(Map.Entry.class));
-          return Optional.of(method.getReturnType());
+              $1T $2L =
+                inputs.<$3T>getDepValue($4S)
+                   .values()
+                   .entrySet()
+                   .iterator()
+                   .next()
+                   .getValue()""";
+          if (usingDepType.unbox().equals(TypeName.get(parameter.getType()))) {
+            // This means this dependency in "Using" annotation is not a fanout and the dev has
+            // requested the value directly. So we extract the only value from dependency response
+            // and
+            // provide it.
+            if (vajramInputDef.isMandatory()) {
+              String code = depValueAccessorCode + ".value().orElseThrow()";
+              ifBlockBuilder.addStatement(
+                  code, usingDepType, variableName, usingDepType, usingInputName);
+            } else {
+              throw new VajramValidationException(
+                  ("A resolver ('%s') must not access an optional dependency ('%s') directly."
+                          + "Use Optional<>, ValueOrError<>, or DependencyResponse<> instead")
+                      .formatted(resolverName, usingInputName));
+            }
+          } else if (ValueOrError.class.isAssignableFrom(parameter.getType())) {
+            // This means this dependency in "Using" annotation is not a fanout and the dev has
+            // requested the 'ValueOrError'. So we extract the only ValueOrError from dependency
+            // response and provide it.
+            ifBlockBuilder.addStatement(
+                depValueAccessorCode,
+                ParameterizedTypeName.get(ClassName.get(ValueOrError.class), usingDepType),
+                variableName,
+                getMethodReturnType(method).box(),
+                usingInputName);
+          } else if (Optional.class.isAssignableFrom(parameter.getType())) {
+            // This means this dependency in "Using" annotation is not a fanout and the dev has
+            // requested an 'Optional'. So we retrieve the only ValueOrError from the dependency
+            // response, extract the optional and provide it.
+            String code = depValueAccessorCode + ".value()";
+            ifBlockBuilder.addStatement(
+                code,
+                ParameterizedTypeName.get(ClassName.get(Optional.class), usingDepType),
+                variableName,
+                getMethodReturnType(method).box(),
+                usingInputName);
+          } else {
+            throw new VajramValidationException(
+                "Unrecognized parameter type %s in resolver %s of vajram %s"
+                    .formatted(parameter.getType(), resolverName, this.vajramName));
+          }
         }
       }
     }
-    return Optional.empty();
   }
 
   /**
@@ -866,21 +901,16 @@ public class VajramCodeGenerator {
    *
    * @param method Resolve method
    * @param inputs Resolve inputs
-   * @param paramToVariableMap All the input variables with key as bindParam name
    * @param ifBlockBuilder {@link CodeBlock.Builder}
    * @param isFanOut Variable mentioning if the resolved variable uses a fanout dependency
    */
   private void buildFinalResolvers(
-      Method method,
-      String[] inputs,
-      Map<String, Type> paramToVariableMap,
-      CodeBlock.Builder ifBlockBuilder,
-      boolean isFanOut) {
+      Method method, String[] inputs, CodeBlock.Builder ifBlockBuilder, boolean isFanOut) {
 
     String variableName = "resolverResult";
     boolean controlFLowStarted = false;
     // Identify resolve method return type
-    final TypeName methodReturnType = CodegenUtils.getMethodReturnType(method);
+    final TypeName methodReturnType = getMethodReturnType(method);
 
     // call the resolve method
     ifBlockBuilder.add("$T $L = $L(", methodReturnType, variableName, method.getName());

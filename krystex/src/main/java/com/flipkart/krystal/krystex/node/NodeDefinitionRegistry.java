@@ -48,4 +48,8 @@ public final class NodeDefinitionRegistry {
     nodeDefinitions.put(nodeDefinition.nodeId(), nodeDefinition);
     return nodeDefinition;
   }
+
+  void registerRecursive(NodeDefinition nodeDefinition) {
+    nodeDefinitions.put(nodeDefinition.nodeId(), nodeDefinition.toRecursive());
+  }
 }

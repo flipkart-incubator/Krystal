@@ -30,12 +30,12 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
   public static final String FRIEND_INFOS = "friend_infos";
 
   @Resolve(depName = USER_INFOS, depInputs = TestUserServiceVajram.USER_ID)
-  public String userIdForUserService(@Using(USER_ID) String userId) {
+  public static String userIdForUserService(@Using(USER_ID) String userId) {
     return userId;
   }
 
   @Resolve(depName = FRIEND_INFOS, depInputs = TestUserServiceVajram.USER_ID)
-  public Set<String> friendIdsForUserService(
+  public static Set<String> friendIdsForUserService(
       @Using(USER_ID) String userId, @Using(NUMBER_OF_FRIENDS) Optional<Integer> numberOfFriends) {
     if (numberOfFriends.isPresent()) {
       return getFriendsFor(userId, numberOfFriends.get());
@@ -43,7 +43,7 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
   }
 
   @VajramLogic
-  public String sayHellos(HelloFriendsAllInputs request) throws Exception {
+  public static String sayHellos(HelloFriendsAllInputs request) throws Exception {
     return "Hello Friends of %s! %s"
         .formatted(
             request
@@ -61,7 +61,7 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
                 .collect(joining(", ")));
   }
 
-  private ImmutableSet<String> getFriendsFor(String userId, int numberOfFriends) {
+  private static ImmutableSet<String> getFriendsFor(String userId, int numberOfFriends) {
     return IntStream.range(1, numberOfFriends + 1)
         .mapToObj(i -> userId + ":friend_" + i)
         .collect(toImmutableSet());

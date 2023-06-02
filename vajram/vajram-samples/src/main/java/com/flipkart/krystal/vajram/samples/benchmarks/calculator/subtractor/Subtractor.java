@@ -8,7 +8,7 @@ import com.flipkart.krystal.vajram.samples.benchmarks.calculator.subtractor.Subt
 @VajramDef("subtractor")
 public abstract class Subtractor extends ComputeVajram<Integer> {
   @VajramLogic
-  public int subtract(SubtractorAllInputs allInputs) {
+  public static int subtract(SubtractorAllInputs allInputs) {
     return allInputs.numberOne() - allInputs.numberTwo().orElse(0);
   }
 }

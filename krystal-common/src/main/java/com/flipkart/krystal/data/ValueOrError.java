@@ -8,7 +8,7 @@ import java.util.function.Function;
 /**
  * A wrapper object representing a value or an error. This can be seen as a 'completed' version of a
  * {@link CompletableFuture}. This class avoids the prevalence of {@code null}s in the codebase and
- * also allows reactive frameworks to gracefully handle scenarios where a computation led to a error
+ * also allows reactive frameworks to gracefully handle scenarios where a computation led to an error
  * because of which some value could not be computed.
  *
  * <p>Example states:

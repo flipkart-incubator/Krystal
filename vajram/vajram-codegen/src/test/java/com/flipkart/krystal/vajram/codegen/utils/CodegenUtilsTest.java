@@ -36,7 +36,7 @@ public class CodegenUtilsTest {
         ((ParameterizedTypeName) methodReturnType).rawType, ClassName.get(Set.class));
 
     final TypeName methodReturnType2 = CodegenUtils.getMethodReturnType(getMethod);
-    Assertions.assertEquals(((ClassName) methodReturnType2), ClassName.get(Object.class));
+    Assertions.assertEquals(methodReturnType2, ClassName.get(Object.class));
 
     final TypeName classGenericArgumentsType =
         CodegenUtils.getClassGenericArgumentsType(ClassTest1.class);
