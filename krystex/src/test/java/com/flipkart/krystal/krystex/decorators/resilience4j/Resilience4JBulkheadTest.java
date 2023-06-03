@@ -90,7 +90,7 @@ class Resilience4JBulkheadTest {
         List.of(
             new MainLogicDecoratorConfig(
                 Resilience4JBulkhead.DECORATOR_TYPE,
-                logicExecutionContext -> true,
+                (logicExecutionContext) -> true,
                 logicExecutionContext -> "",
                 decoratorContext -> resilience4JBulkhead)));
     NodeDefinition nodeDefinition =

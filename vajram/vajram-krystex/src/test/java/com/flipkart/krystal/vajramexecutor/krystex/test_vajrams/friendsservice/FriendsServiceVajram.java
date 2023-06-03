@@ -14,17 +14,20 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.LongAdder;
 
 @VajramDef(FriendsServiceVajram.ID)
 public abstract class FriendsServiceVajram extends IOVajram<Set<String>> {
 
   public static final String ID = "FriendsServiceVajram";
+  public static final LongAdder CALL_COUNTER = new LongAdder();
 
   @VajramLogic
   public static ImmutableMap<FriendsServiceInputsNeedingModulation, CompletableFuture<Set<String>>>
       call(
           ModulatedInput<FriendsServiceInputsNeedingModulation, FriendsServiceCommonInputs>
               modulatedInput) {
+    CALL_COUNTER.increment();
     Map<FriendsServiceInputsNeedingModulation, CompletableFuture<Set<String>>> result =
         new LinkedHashMap<>();
     for (FriendsServiceInputsNeedingModulation inputsNeedingModulation :

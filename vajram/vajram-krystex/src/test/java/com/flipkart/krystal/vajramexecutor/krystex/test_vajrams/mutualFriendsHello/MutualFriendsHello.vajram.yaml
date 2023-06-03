@@ -1,0 +1,19 @@
+inputs:
+  - name: user_ids
+    mandatory: true
+    dataType: set
+    typeParameters:
+      dataType: string
+dependencies:
+  - name: friend_ids
+    depType: vajram
+    vajramClass: com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceVajram
+    dataType: custom_java
+    customDataType: java.util.Set
+    typeParameters:
+      dataType: string
+  - name: hellos
+    mandatory: true
+    depType: vajram
+    vajramClass: com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Vajram
+    dataType: string
