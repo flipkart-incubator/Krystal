@@ -13,7 +13,7 @@ import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsInputUtil.MultiHelloFriendsAllInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsInputUtil.MultiHelloFriendsInputs;
 import com.google.common.collect.ImmutableCollection;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +36,7 @@ public abstract class MultiHelloFriends extends ComputeVajram<String> {
   }
 
   @VajramLogic
-  public static String sayHellos(MultiHelloFriendsAllInputs allInputs) {
+  public static String sayHellos(MultiHelloFriendsInputs allInputs) {
     List<String> result = new ArrayList<>();
     for (String userId : allInputs.userIds()) {
       for (Integer numberOfFriend : NUMBER_OF_FRIENDS) {

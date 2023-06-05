@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.codegen.utils;
 
-import static com.flipkart.krystal.vajram.codegen.utils.Constants.ALL_INPUTS;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.COMMON_INPUTS;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_NEEDING_MODULATION;
 
@@ -78,7 +78,7 @@ public final class CodegenUtils {
   }
 
   public static String getAllInputsClassname(String vajramName) {
-    return getVajramBaseName(vajramName) + ALL_INPUTS;
+    return getVajramBaseName(vajramName) + INPUTS_CLASS_SUFFIX;
   }
 
   public static String getCommonInputsClassname(String vajramName) {

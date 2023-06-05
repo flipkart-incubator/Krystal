@@ -16,6 +16,7 @@ import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.SingleExecute;
 import com.flipkart.krystal.vajram.inputs.Using;
 import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
+import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderInputUtil.SplitAdderInputs;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -66,7 +67,7 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
   }
 
   @VajramLogic
-  public static Integer add(SplitAdderInputUtil.SplitAdderAllInputs allInputs) {
+  public static Integer add(SplitAdderInputs allInputs) {
     return Stream.of(
             allInputs.splitSum1().values().stream().map(voe -> voe.value().orElseThrow()),
             allInputs.splitSum2().values().stream().map(voe -> voe.value().orElseThrow()),
