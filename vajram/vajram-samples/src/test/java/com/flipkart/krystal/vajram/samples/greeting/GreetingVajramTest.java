@@ -15,18 +15,20 @@ import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutio
 import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
-import com.flipkart.krystal.vajram.samples.GuiceDIProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
+import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjector;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
+import com.google.inject.name.Names;
 import java.time.Clock;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -43,7 +45,7 @@ public class GreetingVajramTest {
         new VajramNodeGraph.Builder()
             .loadFromPackage("com.flipkart.krystal.vajram.samples.greeting");
 
-    graph.injectInputsWith(new GuiceDIProvider(createInjector(new GuiceModule())));
+    graph.injectInputsWith(wrapInjector(createInjector(new GuiceModule())));
     graph.logicDecorationOrdering(
         new LogicDecorationOrdering(
             ImmutableSet.<String>builder()
@@ -109,5 +111,18 @@ public class GreetingVajramTest {
         vajramID(GreetingVajram.ID),
         rc -> GreetingRequest.builder().userId("user@123").build(),
         "greetingTest");
+  }
+
+  private static InputInjectionProvider wrapInjector(Injector injector) {
+    return new InputInjectionProvider() {
+
+      public Object getInstance(Class<?> clazz) {
+        return injector.getInstance(clazz);
+      }
+
+      public Object getInstance(Class<?> clazz, String injectionName) {
+        return injector.getInstance(Key.get(clazz, Names.named(injectionName)));
+      }
+    };
   }
 }
