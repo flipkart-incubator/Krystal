@@ -27,10 +27,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class ChainAdderTest {
@@ -73,8 +72,9 @@ class ChainAdderTest {
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
   }
 
-  // @Test
-  void vajram_benchmark() throws ExecutionException, InterruptedException, TimeoutException {
+  @Disabled("Long running benchmark")
+  @Test
+  void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();
     long javaNativeTime = javaMethodBenchmark(this::chainAdd, loopCount);

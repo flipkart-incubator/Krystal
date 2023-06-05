@@ -1,7 +1,7 @@
 package com.flipkart.krystal.caramel.samples.basic.split;
 
-import com.flipkart.krystal.caramel.model.Field;
-import com.flipkart.krystal.caramel.model.SimpleField;
+import com.flipkart.krystal.caramel.model.CaramelField;
+import com.flipkart.krystal.caramel.model.SimpleCaramelField;
 import com.flipkart.krystal.caramel.model.Value;
 import com.flipkart.krystal.caramel.model.ValueImpl;
 import com.flipkart.krystal.caramel.samples.basic.Metric;
@@ -10,23 +10,23 @@ import java.util.Collection;
 
 class SplitPayload implements SplitPayloadDefinition {
   interface SplitPayloadFields {
-    Field<String, SplitPayload> initString =
-        new SimpleField<>(
+    CaramelField<String, SplitPayload> initString =
+        new SimpleCaramelField<>(
             "initString",
             SplitPayload.class,
             SplitPayload::initString,
             SplitPayload::setInitString);
-    Field<Metric, SplitPayload> metric =
-        new SimpleField<>(
+    CaramelField<Metric, SplitPayload> metric =
+        new SimpleCaramelField<>(
             "metric", SplitPayload.class, SplitPayload::metric, SplitPayload::setMetric);
-    Field<ProductUpdateEvent, SplitPayload> initProductEvent =
-        new SimpleField<>(
+    CaramelField<ProductUpdateEvent, SplitPayload> initProductEvent =
+        new SimpleCaramelField<>(
             "initProductEvent",
             SplitPayload.class,
             SplitPayload::initProductEvent,
             SplitPayload::setInitProductEvent);
-    Field<Collection<Metric>, SplitPayload> metrics =
-        new SimpleField<>(
+    CaramelField<Collection<Metric>, SplitPayload> metrics =
+        new SimpleCaramelField<>(
             "metrics", SplitPayload.class, SplitPayload::metrics, SplitPayload::setMetrics);
   }
 

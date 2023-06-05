@@ -8,8 +8,8 @@ import com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.Divider
 @VajramDef("divider")
 public abstract class Divider extends ComputeVajram<Integer> {
   @VajramLogic
-  public static int divide(DividerAllInputs DividerAllInputs) {
-    return divide(DividerAllInputs.numberOne(), DividerAllInputs.numberTwo().orElse(1));
+  public static int divide(DividerAllInputs allInputs) {
+    return divide(allInputs.numerator(), allInputs.denominator().orElse(1));
   }
 
   public static int divide(int a, int b) {

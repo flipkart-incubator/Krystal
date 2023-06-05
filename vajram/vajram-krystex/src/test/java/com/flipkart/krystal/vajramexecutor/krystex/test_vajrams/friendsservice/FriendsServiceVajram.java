@@ -20,7 +20,6 @@ import java.util.concurrent.atomic.LongAdder;
 public abstract class FriendsServiceVajram extends IOVajram<Set<String>> {
 
   public static final String ID = "FriendsServiceVajram";
-  public static final String USER_ID = "user_id";
   public static final LongAdder CALL_COUNTER = new LongAdder();
 
   @VajramLogic

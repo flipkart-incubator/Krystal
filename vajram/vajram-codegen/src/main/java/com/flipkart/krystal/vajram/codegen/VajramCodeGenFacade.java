@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.DOT;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getVajramImplClassName;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.nio.file.StandardOpenOption.WRITE;
@@ -9,6 +10,7 @@ import static java.util.Arrays.stream;
 
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.vajram.codegen.models.AbstractInput;
 import com.flipkart.krystal.vajram.codegen.models.ParsedVajramData;
 import com.flipkart.krystal.vajram.codegen.models.VajramInputFile;
 import com.flipkart.krystal.vajram.codegen.models.VajramInputsDef;
@@ -251,7 +253,11 @@ public final class VajramCodeGenFacade {
               vajramDefs.put(parsedVajramData.get().vajramName(), parsedVajramData.get());
               vajramInputsDef.put(
                   vajramInputFile.vajramName(),
-                  vajramInputFile.vajramInputsDef().allInputsDefinitions());
+                  vajramInputFile
+                      .vajramInputsDef()
+                      .allInputsStream()
+                      .map(AbstractInput::toInputDefinition)
+                      .collect(toImmutableList()));
             }
           });
       // add vajram input dependency vajram definitions from dependent modules/jars
@@ -259,7 +265,8 @@ public final class VajramCodeGenFacade {
           vajramInputFile -> {
             vajramInputFile
                 .vajramInputsDef()
-                .allInputsDefinitions()
+                .allInputsStream()
+                .map(AbstractInput::toInputDefinition)
                 .forEach(
                     inputDef -> {
                       if (inputDef instanceof Dependency dependency

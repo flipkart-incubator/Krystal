@@ -1,49 +1,53 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator;
 
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.dep;
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.depInput;
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.resolve;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.Formula.ID;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.a_s;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.p_s;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.q_s;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.quotient_s;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.sum_s;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.Resolve;
-import com.flipkart.krystal.vajram.inputs.Using;
+import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaInputUtil.FormulaAllInputs;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.DividerRequest;
+import com.google.common.collect.ImmutableCollection;
 
 /** a/(p+q) */
 @VajramDef(ID)
 public abstract class Formula extends ComputeVajram<Integer> {
-  public static final String ID = "formula";
+  static final String ID = "formula";
 
-  @Resolve(depName = "sum", depInputs = "number_one")
-  public static int adderNumberOne(@Using("p") int p) {
-    return p;
-  }
-
-  @Resolve(depName = "sum", depInputs = "number_two")
-  public static int adderNumberTwo(@Using("q") int q) {
-    return q;
-  }
-
-  @Resolve(depName = "quotient", depInputs = "number_one")
-  public static int quotientNumberOne(@Using("a") int a) {
-    return a;
-  }
-
-  @Resolve(depName = "quotient", depInputs = "number_two")
-  public static int quotientNumberTwo(@Using("sum") int sum) {
-    return sum;
+  @Override
+  public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
+    return resolve(
+        /* sum = adder(numberOne=p, numberTwo=q) */
+        dep(
+            sum_s,
+            depInput(AdderRequest.numberOne_s).usingAsIs(p_s).asResolver(),
+            depInput(AdderRequest.numberTwo_s).usingAsIs(q_s).asResolver()),
+        /* quotient = divider(numerator = a, denominator= sum) */
+        dep(
+            quotient_s,
+            depInput(DividerRequest.numerator_s).usingAsIs(a_s).asResolver(),
+            depInput(DividerRequest.denominator_s).usingAsIs(sum_s).asResolver()));
   }
 
   @VajramLogic
   public static int result(FormulaAllInputs allInputs) {
+    /* Return quotient */
     return allInputs
         .quotient()
         .get(
             DividerRequest.builder()
-                .numberOne(allInputs.a())
-                .numberTwo(
+                .numerator(allInputs.a())
+                .denominator(
                     allInputs
                         .sum()
                         .get(

@@ -22,6 +22,8 @@ public final class Constants {
   public static final char DOLLAR = '$';
   public static final String INPUT_DEFINITIONS_VAR = "inputDefinitions";
   public static final Pattern DOT_PATTERN = Pattern.compile("\\.");
+  public static final String INPUT_NAME_SUFFIX = "_n";
+  public static final String INPUT_SPEC_SUFFIX = "_s";
 
   private Constants() {}
 

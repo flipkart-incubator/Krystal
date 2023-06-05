@@ -1,17 +1,26 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends;
 
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.dep;
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.depInput;
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.resolve;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.friendInfos_n;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.numberOfFriends_n;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.userId_n;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.userId_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.userInfos_s;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.Resolve;
 import com.flipkart.krystal.vajram.inputs.Using;
+import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
+import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsInputUtil.HelloFriendsAllInputs;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceVajram;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collections;
 import java.util.Optional;
@@ -23,20 +32,17 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
 
   public static final String ID = "HelloFriendsVajram";
 
-  public static final String USER_ID = "user_id";
-  public static final String NUMBER_OF_FRIENDS = "number_of_friends";
-
-  public static final String USER_INFOS = "user_infos";
-  public static final String FRIEND_INFOS = "friend_infos";
-
-  @Resolve(depName = USER_INFOS, depInputs = TestUserServiceVajram.USER_ID)
-  public static String userIdForUserService(@Using(USER_ID) String userId) {
-    return userId;
+  @Override
+  public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
+    return resolve(
+        dep(
+            userInfos_s,
+            depInput(TestUserServiceRequest.userId_s).usingAsIs(userId_s).asResolver()));
   }
 
-  @Resolve(depName = FRIEND_INFOS, depInputs = TestUserServiceVajram.USER_ID)
+  @Resolve(depName = friendInfos_n, depInputs = TestUserServiceRequest.userId_n)
   public static Set<String> friendIdsForUserService(
-      @Using(USER_ID) String userId, @Using(NUMBER_OF_FRIENDS) Optional<Integer> numberOfFriends) {
+      @Using(userId_n) String userId, @Using(numberOfFriends_n) Optional<Integer> numberOfFriends) {
     if (numberOfFriends.isPresent()) {
       return getFriendsFor(userId, numberOfFriends.get());
     } else return Collections.emptySet();

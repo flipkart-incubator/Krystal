@@ -55,10 +55,7 @@ public final class CodegenUtils {
   }
 
   public static String getRequestClassName(String vajramName) {
-    return (vajramName.toLowerCase().endsWith(VAJRAM)
-            ? vajramName.substring(0, vajramName.length() - 6)
-            : vajramName)
-        + REQUEST;
+    return getVajramBaseName(vajramName) + REQUEST;
   }
 
   public static String getVajramImplClassName(String vajramName) {

@@ -1,50 +1,39 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2;
 
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.dep;
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.depInput;
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.fanout;
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.resolve;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.friendIds_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.friendInfos_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.userId_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Vajram.ID;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.joining;
 
-import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.Resolve;
-import com.flipkart.krystal.vajram.inputs.Using;
+import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceRequest;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceVajram;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2InputUtil.HelloFriendsV2AllInputs;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceVajram;
-import java.util.Collection;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
+import com.google.common.collect.ImmutableCollection;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
 
 @VajramDef(ID)
 public abstract class HelloFriendsV2Vajram extends ComputeVajram<String> {
 
   public static final String ID = "HelloFriendsV2Vajram";
 
-  public static final String USER_ID = "user_id";
-
-  public static final String FRIEND_IDS = "friend_ids";
-  public static final String FRIEND_INFOS = "friend_infos";
-
-  @Resolve(depName = FRIEND_IDS, depInputs = FriendsServiceVajram.USER_ID)
-  public static String userIdForFriendService(@Using(USER_ID) String userId) {
-    return userId;
-  }
-
-  @Resolve(depName = FRIEND_INFOS, depInputs = TestUserServiceVajram.USER_ID)
-  public static Set<String> userIdsForUserService(
-      @Using(FRIEND_IDS) DependencyResponse<FriendsServiceRequest, Set<String>> friendIds) {
-    return friendIds.values().stream()
-        .map(ValueOrError::value)
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .flatMap(Collection::stream)
-        .collect(toImmutableSet());
+  @Override
+  public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
+    return resolve(
+        dep(friendIds_s, depInput(FriendsServiceRequest.userId_s).usingAsIs(userId_s).asResolver()),
+        dep(
+            friendInfos_s,
+            fanout(TestUserServiceRequest.userId_s).using(friendIds_s).with(identity())));
   }
 
   @VajramLogic

@@ -1,10 +1,12 @@
 package com.flipkart.krystal.vajram;
 
+import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
+
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
-import com.flipkart.krystal.vajram.inputs.InputResolver;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
+import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -20,7 +22,7 @@ public sealed interface Vajram<T> permits AbstractVajram {
 
   default DependencyCommand<Inputs> resolveInputOfDependency(
       String dependency, ImmutableSet<String> resolvableInputs, Inputs inputs) {
-    return DependencyCommand.multiExecuteWith(ImmutableList.of());
+    return executeFanoutWith(ImmutableList.of());
   }
 
   VajramID getId();

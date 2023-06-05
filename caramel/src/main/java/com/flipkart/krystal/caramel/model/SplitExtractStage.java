@@ -11,16 +11,17 @@ public abstract class SplitExtractStage<INPUT, ROOT extends WorkflowPayload, OUT
       Function<OUTPUT, O_ITEM> extractor);
 
   public abstract <X> WorkflowBuildStage<INPUT, ROOT> collectTo(
-      Field<X, ROOT> targetField, Function<? extends Collection<OUTPUT>, ? extends X> collector);
+      CaramelField<X, ROOT> targetField,
+      Function<? extends Collection<OUTPUT>, ? extends X> collector);
 
   public final <X> WorkflowBuildStage<INPUT, ROOT> collectTo(
-      Field<? extends Collection<OUTPUT>, ROOT> targetField) {
+      CaramelField<? extends Collection<OUTPUT>, ROOT> targetField) {
     return collectTo(targetField, identity());
   }
 
   public abstract class SplitMergeStage<O_ITEM> {
 
     public abstract <X> WorkflowBuildStage<INPUT, ROOT> toCompute(
-        Field<X, ROOT> sink, Function<List<O_ITEM>, ? extends X> merger);
+        CaramelField<X, ROOT> sink, Function<List<O_ITEM>, ? extends X> merger);
   }
 }

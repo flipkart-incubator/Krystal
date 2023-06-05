@@ -17,6 +17,6 @@ public final class ResolverLogicDefinition extends LogicDefinition<ResolverLogic
   }
 
   public ResolverCommand resolve(Inputs inputs) {
-    return logic().execute(inputs);
+    return logic().resolve(inputs);
   }
 }

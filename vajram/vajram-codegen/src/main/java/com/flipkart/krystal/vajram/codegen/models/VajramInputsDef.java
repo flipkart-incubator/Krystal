@@ -1,14 +1,11 @@
 package com.flipkart.krystal.vajram.codegen.models;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.google.common.collect.ImmutableList;
 import java.beans.ConstructorProperties;
 import java.io.File;
@@ -39,10 +36,8 @@ public record VajramInputsDef(
     }
   }
 
-  public ImmutableList<VajramInputDefinition> allInputsDefinitions() {
-    return Stream.concat(inputs.stream(), dependencies.stream())
-        .map(AbstractInput::toInputDefinition)
-        .collect(toImmutableList());
+  public Stream<AbstractInput> allInputsStream() {
+    return Stream.concat(inputs.stream(), dependencies.stream());
   }
 
   public static record InputFilePath(Path srcDir, Path relativeFilePath) {

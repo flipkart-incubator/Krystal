@@ -1,8 +1,8 @@
 package com.flipkart.krystal.caramel.samples.basic.classification;
 
 import com.flipkart.krystal.caramel.model.AccessBeforeInitializationException;
-import com.flipkart.krystal.caramel.model.Field;
-import com.flipkart.krystal.caramel.model.SimpleField;
+import com.flipkart.krystal.caramel.model.CaramelField;
+import com.flipkart.krystal.caramel.model.SimpleCaramelField;
 import com.flipkart.krystal.caramel.model.Value;
 import com.flipkart.krystal.caramel.model.ValueImpl;
 import com.flipkart.krystal.caramel.samples.basic.TransformedProduct;
@@ -12,22 +12,22 @@ public class TransformedProductPayload implements TransformedProductPayloadDefin
 
   interface TransformedProductPayloadFields {
 
-    Field<TransformedProduct, TransformedProductPayload> initialTransformedProduct =
-        new SimpleField<>(
+    CaramelField<TransformedProduct, TransformedProductPayload> initialTransformedProduct =
+        new SimpleCaramelField<>(
             "initialTransformedProduct",
             TransformedProductPayload.class,
             TransformedProductPayload::getInitialTransformedProduct,
             TransformedProductPayload::setInitialTransformedProduct);
 
-    Field<String, TransformedProductPayload> x2String =
-        new SimpleField<>(
+    CaramelField<String, TransformedProductPayload> x2String =
+        new SimpleCaramelField<>(
             "x2String",
             TransformedProductPayload.class,
             TransformedProductPayload::getX2String,
             TransformedProductPayload::setX2String);
 
-    Field<TransformedProduct, TransformedProductPayload> finalTransformedProduct =
-        new SimpleField<>(
+    CaramelField<TransformedProduct, TransformedProductPayload> finalTransformedProduct =
+        new SimpleCaramelField<>(
             "finalTransformedProduct",
             TransformedProductPayload.class,
             TransformedProductPayload::getFinalTransformedProduct,
