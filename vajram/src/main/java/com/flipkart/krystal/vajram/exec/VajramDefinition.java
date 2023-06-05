@@ -4,10 +4,10 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.toMap;
 
-import com.flipkart.krystal.logic.LogicTag;
+import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.Tag;
+import com.flipkart.krystal.vajram.TagWith;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.DefaultInputResolverDefinition;
@@ -43,7 +43,7 @@ public final class VajramDefinition {
   // TODO populate input resolvers from vajram
   @Getter private final ImmutableCollection<InputResolverDefinition> inputResolverDefinitions;
 
-  @Getter private final ImmutableMap<String, LogicTag> mainLogicTags;
+  @Getter private final ImmutableMap<String, Tag> mainLogicTags;
 
   public VajramDefinition(Vajram<?> vajram) {
     this.vajram = vajram;
@@ -100,15 +100,16 @@ public final class VajramDefinition {
     return inputResolvers;
   }
 
-  private static ImmutableMap<String, LogicTag> parseVajramLogicTags(Vajram<?> vajram) {
-    Tag[] tags =
+  private static ImmutableMap<String, Tag> parseVajramLogicTags(Vajram<?> vajram) {
+    TagWith[] tagWithArray =
         Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
             .filter(method -> method.getAnnotation(VajramLogic.class) != null)
             .findAny()
-            .map(method -> method.getAnnotationsByType(Tag.class))
-            .orElse(new Tag[0]);
-    Map<String, LogicTag> collect =
-        Arrays.stream(tags).collect(toMap(Tag::name, tag -> new LogicTag(tag.name(), tag.value())));
+            .map(method -> method.getAnnotationsByType(TagWith.class))
+            .orElse(new TagWith[0]);
+    Map<String, Tag> collect =
+        Arrays.stream(tagWithArray)
+            .collect(toMap(TagWith::name, tagWith -> new Tag(tagWith.name(), tagWith.value())));
     Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
         .filter(method -> method.getAnnotation(VajramLogic.class) != null)
         .findFirst()
@@ -116,19 +117,17 @@ public final class VajramDefinition {
             method -> {
               Service service = method.getAnnotation(Service.class);
               if (service != null) {
-                collect.put(Service.TAG_KEY, new LogicTag(Service.TAG_KEY, service.value()));
+                collect.put(Service.TAG_KEY, new Tag(Service.TAG_KEY, service.value()));
               }
               ServiceApi serviceApi = method.getAnnotation(ServiceApi.class);
               if (serviceApi != null) {
-                collect.put(
-                    ServiceApi.TAG_KEY, new LogicTag(ServiceApi.TAG_KEY, serviceApi.apiName()));
+                collect.put(ServiceApi.TAG_KEY, new Tag(ServiceApi.TAG_KEY, serviceApi.apiName()));
               }
               collect.put(
-                  VajramTags.VAJRAM_ID,
-                  new LogicTag(VajramTags.VAJRAM_ID, vajram.getId().vajramId()));
+                  VajramTags.VAJRAM_ID, new Tag(VajramTags.VAJRAM_ID, vajram.getId().vajramId()));
               collect.put(
                   VajramTags.VAJRAM_TYPE,
-                  new LogicTag(
+                  new Tag(
                       VajramTags.VAJRAM_TYPE,
                       vajram instanceof IOVajram<?>
                           ? VajramTypes.IO_VAJRAM
