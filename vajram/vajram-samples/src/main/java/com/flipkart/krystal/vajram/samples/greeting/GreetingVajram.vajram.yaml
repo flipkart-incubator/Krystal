@@ -9,6 +9,9 @@ inputs:
   - name: analytics_event_sink
     dataType: custom_java
     customDataType: com.flipkart.krystal.vajram.samples.greeting.AnalyticsEventSink
+    tags:
+      inject.named: analytics_sink
+    mandatory: true
     sources: SESSION
 dependencies:
   - name: user_info

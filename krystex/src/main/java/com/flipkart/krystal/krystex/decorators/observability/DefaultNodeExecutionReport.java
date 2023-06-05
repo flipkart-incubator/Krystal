@@ -94,7 +94,9 @@ public final class DefaultNodeExecutionReport implements NodeExecutionReport {
         continue;
       }
       Object collect = convertValueOrError((ValueOrError<Object>) value);
-      inputMap.put(e.getKey(), collect);
+      if (collect != null) {
+        inputMap.put(e.getKey(), collect);
+      }
     }
     return ImmutableMap.copyOf(inputMap);
   }

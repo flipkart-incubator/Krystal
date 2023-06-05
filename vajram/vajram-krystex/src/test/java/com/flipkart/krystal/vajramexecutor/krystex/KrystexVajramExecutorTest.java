@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
@@ -27,7 +28,6 @@ import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JBulkhead
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JCircuitBreaker;
 import com.flipkart.krystal.krystex.node.DependantChain;
 import com.flipkart.krystal.krystex.node.NodeId;
-import com.flipkart.krystal.logic.LogicTag;
 import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
 import com.flipkart.krystal.vajram.modulation.Batcher;
 import com.flipkart.krystal.vajram.tags.Service;
@@ -611,16 +611,16 @@ class KrystexVajramExecutorTest {
     Predicate<LogicExecutionContext> isIOVajram =
         (context) ->
             Optional.ofNullable(context.logicTags().get(VajramTags.VAJRAM_TYPE))
-                .map(LogicTag::tagValue)
+                .map(Tag::tagValue)
                 .map(VajramTypes.IO_VAJRAM::equals)
                 .orElse(false);
     Function<LogicExecutionContext, String> instanceIdCreator =
         context -> {
-          ImmutableMap<String, LogicTag> logicTags = context.logicTags();
-          LogicTag service = logicTags.get(Service.TAG_KEY);
+          ImmutableMap<String, Tag> logicTags = context.logicTags();
+          Tag service = logicTags.get(Service.TAG_KEY);
           String instanceId;
           if (service == null) {
-            LogicTag vajramId = logicTags.get(VajramTags.VAJRAM_ID);
+            Tag vajramId = logicTags.get(VajramTags.VAJRAM_ID);
             if (vajramId == null) {
               throw new IllegalStateException();
             }

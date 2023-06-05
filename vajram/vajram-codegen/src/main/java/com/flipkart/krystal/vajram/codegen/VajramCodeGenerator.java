@@ -1181,6 +1181,19 @@ public class VajramCodeGenerator {
     if (input.needsModulation()) {
       inputDefBuilder.add(".needsModulation()");
     }
+    if (input.tags() != null && !input.tags().isEmpty()) {
+      inputDefBuilder.add(".tags($T.of(", ClassName.get(Map.class));
+      String tags =
+          input.tags().entrySet().stream()
+              .filter(entry -> entry.getValue() != null && entry.getValue().tagValue() != null)
+              .map(
+                  entry -> {
+                    return String.format(
+                        "\"%s\", \"%s\"", entry.getValue().tagKey(), entry.getValue().tagValue());
+                  })
+              .collect(Collectors.joining(COMMA));
+      inputDefBuilder.add(tags).add("))");
+    }
     // last line
     inputDefBuilder.add(".build()");
   }
