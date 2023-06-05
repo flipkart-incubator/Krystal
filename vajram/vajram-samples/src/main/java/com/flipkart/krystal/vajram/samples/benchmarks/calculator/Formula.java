@@ -27,13 +27,11 @@ public abstract class Formula extends ComputeVajram<Integer> {
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
     return resolve(
-        /* sum = p+q */
         /* sum = adder(numberOne=p, numberTwo=q) */
         dep(
             sum_s,
             depInput(AdderRequest.numberOne_s).usingAsIs(p_s).asResolver(),
             depInput(AdderRequest.numberTwo_s).usingAsIs(q_s).asResolver()),
-        /* quotient = a / sum */
         /* quotient = divider(numerator = a, denominator= sum) */
         dep(
             quotient_s,
