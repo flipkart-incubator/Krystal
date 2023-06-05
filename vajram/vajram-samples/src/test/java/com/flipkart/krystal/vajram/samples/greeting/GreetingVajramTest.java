@@ -14,11 +14,12 @@ import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutio
 import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
-import com.flipkart.krystal.vajram.adaptors.DependencyInjectionAdaptor;
+import com.flipkart.krystal.vajram.samples.GuiceDIProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.SessionInputDecorator;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
+import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
+import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjector;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
@@ -36,12 +37,19 @@ public class GreetingVajramTest {
 
   @BeforeEach
   public void setUp() {
-    graph = new VajramNodeGraph.Builder().loadFromPackage("com.flipkart.krystal.vajram.samples.greeting");
+    graph =
+        new VajramNodeGraph.Builder()
+            .loadFromPackage("com.flipkart.krystal.vajram.samples.greeting");
 
-    DependencyInjectionAdaptor diAdaptor = new GuiceDIAdaptor.Builder().loadFromModule(new GuiceModule()).build();
-    graph.dependencyInjectionAdaptor(diAdaptor);
-    graph.logicDecorationOrdering(new LogicDecorationOrdering(ImmutableSet.<String>builder().add(
-        SessionInputDecorator.DECORATOR_TYPE).add(MainLogicExecReporter.class.getName()).build()));
+    InputInjectionProvider diAdaptor =
+        new GuiceDIProvider.Builder().loadFromModule(new GuiceModule()).build();
+    graph.injectInputsWith(diAdaptor);
+    graph.logicDecorationOrdering(
+        new LogicDecorationOrdering(
+            ImmutableSet.<String>builder()
+                .add(InputInjector.DECORATOR_TYPE)
+                .add(MainLogicExecReporter.class.getName())
+                .build()));
 
     objectMapper =
         new ObjectMapper()
@@ -94,13 +102,11 @@ public class GreetingVajramTest {
 
   record RequestContext(String requestId) implements ApplicationRequestContext {}
 
-  private static CompletableFuture<String> executeVajram(KrystexVajramExecutor<RequestContext> krystexVajramExecutor) {
+  private static CompletableFuture<String> executeVajram(
+      KrystexVajramExecutor<RequestContext> krystexVajramExecutor) {
     return krystexVajramExecutor.execute(
         vajramID(GreetingVajram.ID),
-        rc ->
-            GreetingRequest.builder()
-                .userId("user@123")
-                .build(),
+        rc -> GreetingRequest.builder().userId("user@123").build(),
         "greetingTest");
   }
 }

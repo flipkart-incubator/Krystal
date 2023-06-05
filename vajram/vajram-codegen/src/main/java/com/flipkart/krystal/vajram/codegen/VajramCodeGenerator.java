@@ -27,7 +27,6 @@ import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_MODULATI
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_MODULATION_CODE_BLOCK;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_MODULATION_FUTURE_CODE_BLOCK;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_SRC;
-import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUT_TAG;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.LINK_HASH_MAP;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.LIST;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.MAP;
@@ -87,7 +86,6 @@ import com.flipkart.krystal.vajram.inputs.DependencyCommand.MultiExecute;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand.SingleExecute;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputSource;
-import com.flipkart.krystal.vajram.inputs.InputTag;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.inputs.Resolve;
 import com.flipkart.krystal.vajram.inputs.Using;
@@ -207,7 +205,6 @@ public class VajramCodeGenerator {
     clsDeps.put(VAL_ERR, ClassName.get(ValueOrError.class));
     clsDeps.put(DEP_RESP, ClassName.get(DependencyResponse.class));
     clsDeps.put(INPUT_SRC, ClassName.get(InputSource.class));
-    clsDeps.put(INPUT_TAG, ClassName.get(InputTag.class));
   }
 
   /**
@@ -1158,19 +1155,14 @@ public class VajramCodeGenerator {
       inputDefBuilder.add(".inputTags($T.of(", ClassName.get(Map.class));
       String tags =
           input.inputTags().entrySet().stream()
-              .filter(entry -> entry.getValue() != null)
+              .filter(entry -> entry.getValue() != null && entry.getValue().tagValue() != null)
               .map(
                   entry -> {
-                    if (InputTag.ANNOTATION == entry.getKey()) {
-                      return ("$inputTag:T.ANNOTATION, ")
-                          + String.format("\"%s\"", entry.getValue());
-                    } else {
-                      throw new IllegalArgumentException(
-                          "Incorrect input tag defined in vajram config");
-                    }
+                    return String.format(
+                        "\"%s\", \"%s\"", entry.getValue().tagKey(), entry.getValue().tagValue());
                   })
               .collect(Collectors.joining(COMMA));
-      inputDefBuilder.addNamed(tags, ImmutableMap.of(INPUT_TAG, clsDeps.get(INPUT_TAG))).add("))");
+      inputDefBuilder.add(tags).add("))");
     }
     // last line
     inputDefBuilder.add(".build()");

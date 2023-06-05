@@ -1,7 +1,8 @@
-package com.flipkart.krystal.vajramexecutor.krystex;
+package com.flipkart.krystal.vajramexecutor.krystex.inputinjection;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.flipkart.krystal.config.LogicTag;
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
@@ -13,12 +14,11 @@ import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
-import com.flipkart.krystal.vajram.adaptors.DependencyInjectionAdaptor;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputSource;
-import com.flipkart.krystal.vajram.inputs.InputTag;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Type;
@@ -27,16 +27,17 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-public final class SessionInputDecorator implements MainLogicDecorator {
+public final class InputInjector implements MainLogicDecorator {
 
-  public static final String DECORATOR_TYPE = SessionInputDecorator.class.getName();
+  public static final String DECORATOR_TYPE = InputInjector.class.getName();
+  public static final String INJECT_NAMED_KEY = "inject.named";
   private VajramNodeGraph vajramNodeGraph;
-  private final DependencyInjectionAdaptor dependencyInjectionAdaptor;
+  private final InputInjectionProvider inputInjectionProvider;
 
-  public SessionInputDecorator(
-      VajramNodeGraph vajramNodeGraph, DependencyInjectionAdaptor dependencyInjectionAdaptor) {
+  public InputInjector(
+      VajramNodeGraph vajramNodeGraph, InputInjectionProvider inputInjectionProvider) {
     this.vajramNodeGraph = vajramNodeGraph;
-    this.dependencyInjectionAdaptor = dependencyInjectionAdaptor;
+    this.inputInjectionProvider = inputInjectionProvider;
   }
 
   @Override
@@ -78,7 +79,7 @@ public final class SessionInputDecorator implements MainLogicDecorator {
 
   @Override
   public String getId() {
-    return SessionInputDecorator.class.getName();
+    return InputInjector.class.getName();
   }
 
   private Inputs injectFromSession(VajramDefinition vajramDefinition, Inputs inputs) {
@@ -105,7 +106,8 @@ public final class SessionInputDecorator implements MainLogicDecorator {
                         getFromInjectionAdaptor(
                             ((JavaDataType<?>) input.type()),
                             Optional.ofNullable(input.inputTags())
-                                .map(tags -> tags.get(InputTag.ANNOTATION))
+                                .map(tags -> tags.get(INJECT_NAMED_KEY))
+                                .map(LogicTag::tagValue)
                                 .orElse(null));
                     newValues.put(inputName, value);
                   }
@@ -121,8 +123,8 @@ public final class SessionInputDecorator implements MainLogicDecorator {
   }
 
   private ValueOrError<Object> getFromInjectionAdaptor(
-      JavaDataType<?> dataType, String annotation) {
-    if (dependencyInjectionAdaptor == null) {
+      JavaDataType<?> dataType, String injectionName) {
+    if (inputInjectionProvider == null) {
       return ValueOrError.withError(
           new Exception("Dependency injector is null, cannot resolve SESSION input"));
     }
@@ -132,11 +134,11 @@ public final class SessionInputDecorator implements MainLogicDecorator {
     }
     Optional<Type> type = dataType.javaType();
     Object resolvedObject = null;
-    if (annotation != null) {
-      resolvedObject = dependencyInjectionAdaptor.getInstance((Class<?>) type.get(), annotation);
+    if (injectionName != null) {
+      resolvedObject = inputInjectionProvider.getInstance((Class<?>) type.get(), injectionName);
     }
     if (resolvedObject == null) {
-      resolvedObject = dependencyInjectionAdaptor.getInstance(((Class<?>) type.get()));
+      resolvedObject = inputInjectionProvider.getInstance(((Class<?>) type.get()));
     }
     return ValueOrError.withValue(resolvedObject);
   }

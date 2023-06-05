@@ -1,7 +1,7 @@
 package com.flipkart.krystal.krystex;
 
+import com.flipkart.krystal.config.LogicTag;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
-import com.flipkart.krystal.logic.LogicTag;
 import com.google.common.collect.ImmutableMap;
 import java.util.Set;
 

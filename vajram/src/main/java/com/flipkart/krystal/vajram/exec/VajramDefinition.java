@@ -4,7 +4,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.toMap;
 
-import com.flipkart.krystal.logic.LogicTag;
+import com.flipkart.krystal.config.LogicTag;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Tag;

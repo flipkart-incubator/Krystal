@@ -25,7 +25,6 @@ import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDefinitionException;
 import com.flipkart.krystal.vajram.VajramID;
-import com.flipkart.krystal.vajram.adaptors.DependencyInjectionAdaptor;
 import com.flipkart.krystal.vajram.das.AccessSpecMatchingResult;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import com.flipkart.krystal.vajram.das.VajramIndex;
@@ -39,6 +38,8 @@ import com.flipkart.krystal.vajram.inputs.InputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig.ModulatorContext;
+import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
+import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjector;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -75,14 +76,14 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
 
   private final LogicDecorationOrdering logicDecorationOrdering;
   private final MultiLeasePool<? extends ExecutorService> executorPool;
-  private final SessionInputDecorator sessionInputDecorator;
+  private final InputInjector inputInjector;
 
   private VajramNodeGraph(
       String[] packagePrefixes,
       ImmutableMap<VajramID, InputModulatorConfig> inputModulatorConfigs,
       ImmutableMap<String, MainLogicDecoratorConfig> sessionScopedDecorators,
       LogicDecorationOrdering logicDecorationOrdering,
-      DependencyInjectionAdaptor dependencyInjectionAdaptor,
+      InputInjectionProvider inputInjectionProvider,
       double maxParallelismPerCore) {
     this.inputModulatorConfigs = inputModulatorConfigs;
     this.sessionScopedDecoratorConfigs = sessionScopedDecorators;
@@ -94,7 +95,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     for (String packagePrefix : packagePrefixes) {
       loadVajramsFromClassPath(packagePrefix).forEach(this::registerVajram);
     }
-    sessionInputDecorator = new SessionInputDecorator(this, dependencyInjectionAdaptor);
+    inputInjector = new InputInjector(this, inputInjectionProvider);
   }
 
   public MultiLeasePool<? extends ExecutorService> getExecutorPool() {
@@ -291,7 +292,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
             },
             vajramDefinition.getMainLogicTags());
     enableInputModulation(vajramLogic, vajramDefinition.getVajram());
-    registerSessionInputInjectionDecorator(vajramLogic, vajramDefinition.getVajram());
+    registerInputInjector(vajramLogic, vajramDefinition.getVajram());
     sessionScopedDecoratorConfigs
         .values()
         .forEach(vajramLogic::registerSessionScopedLogicDecorator);
@@ -319,11 +320,10 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     }
   }
 
-  private <T> void registerSessionInputInjectionDecorator(
-      MainLogicDefinition<T> logicDefinition, Vajram<?> vajram) {
+  private <T> void registerInputInjector(MainLogicDefinition<T> logicDefinition, Vajram<?> vajram) {
     logicDefinition.registerSessionScopedLogicDecorator(
         new MainLogicDecoratorConfig(
-            SessionInputDecorator.DECORATOR_TYPE,
+            InputInjector.DECORATOR_TYPE,
             logicExecutionContext ->
                 vajram.getInputDefinitions().stream()
                     .filter(inputDefinition -> inputDefinition instanceof Input<?>)
@@ -333,7 +333,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                             input.sources() != null
                                 && input.sources().contains(InputSource.SESSION)),
             logicExecutionContext -> logicExecutionContext.nodeId().toString(),
-            decoratorContext -> sessionInputDecorator));
+            decoratorContext -> inputInjector));
   }
 
   private ImmutableMap<String, NodeId> createNodeDefinitionsForDependencies(
@@ -372,7 +372,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   private record InputResolverCreationResult(
       ImmutableList<ResolverDefinition> resolverDefinitions) {}
 
-  protected Optional<VajramDefinition> getVajramDefinition(VajramID vajramId) {
+  public Optional<VajramDefinition> getVajramDefinition(VajramID vajramId) {
     return Optional.ofNullable(vajramDefinitions.get(vajramId));
   }
 
@@ -387,7 +387,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     private final Map<VajramID, InputModulatorConfig> inputModulators = new LinkedHashMap<>();
     private LogicDecorationOrdering logicDecorationOrdering =
         new LogicDecorationOrdering(ImmutableSet.of());
-    private DependencyInjectionAdaptor dependencyInjectionAdaptor;
+    private InputInjectionProvider inputInjectionProvider;
     private double maxParallelismPerCore = 1;
 
     public Builder loadFromPackage(String packagePrefix) {
@@ -421,9 +421,8 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
       return this;
     }
 
-    public Builder dependencyInjectionAdaptor(
-        DependencyInjectionAdaptor dependencyInjectionAdaptor) {
-      this.dependencyInjectionAdaptor = dependencyInjectionAdaptor;
+    public Builder injectInputsWith(InputInjectionProvider inputInjectionProvider) {
+      this.inputInjectionProvider = inputInjectionProvider;
       return this;
     }
 
@@ -433,7 +432,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
           ImmutableMap.copyOf(inputModulators),
           ImmutableMap.copyOf(sessionScopedDecoratorConfigs),
           logicDecorationOrdering,
-          dependencyInjectionAdaptor,
+          inputInjectionProvider,
           maxParallelismPerCore);
     }
   }

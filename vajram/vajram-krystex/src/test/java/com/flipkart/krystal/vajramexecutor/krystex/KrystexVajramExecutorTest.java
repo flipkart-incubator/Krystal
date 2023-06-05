@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.flipkart.krystal.config.LogicTag;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
@@ -26,7 +27,6 @@ import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JCircuitBreaker;
 import com.flipkart.krystal.krystex.node.NodeId;
-import com.flipkart.krystal.logic.LogicTag;
 import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
 import com.flipkart.krystal.vajram.modulation.Batcher;
 import com.flipkart.krystal.vajram.tags.Service;

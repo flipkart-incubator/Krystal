@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex;
 
+import com.flipkart.krystal.config.LogicTag;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
@@ -8,7 +9,6 @@ import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig.Decorato
 import com.flipkart.krystal.krystex.node.DependantChain;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
-import com.flipkart.krystal.logic.LogicTag;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.Collection;

@@ -1,6 +1,6 @@
-package com.flipkart.krystal.vajram.samples.greeting;
+package com.flipkart.krystal.vajram.samples;
 
-import com.flipkart.krystal.vajram.adaptors.DependencyInjectionAdaptor;
+import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -9,11 +9,11 @@ import com.google.inject.name.Names;
 import java.util.HashSet;
 import java.util.Set;
 
-public final class GuiceDIAdaptor implements DependencyInjectionAdaptor {
+public final class GuiceDIProvider implements InputInjectionProvider {
 
   private final Injector injector;
 
-  private GuiceDIAdaptor(Set<AbstractModule> modules) {
+  private GuiceDIProvider(Set<AbstractModule> modules) {
     injector = Guice.createInjector(modules);
   }
 
@@ -22,8 +22,8 @@ public final class GuiceDIAdaptor implements DependencyInjectionAdaptor {
     return injector.getInstance(clazz);
   }
 
-  public Object getInstance(Class<?> clazz, String annotation) {
-    return injector.getInstance(Key.get(clazz, Names.named(annotation)));
+  public Object getInstance(Class<?> clazz, String injectionName) {
+    return injector.getInstance(Key.get(clazz, Names.named(injectionName)));
   }
 
   public static final class Builder {
@@ -34,8 +34,8 @@ public final class GuiceDIAdaptor implements DependencyInjectionAdaptor {
       return this;
     }
 
-    public GuiceDIAdaptor build() {
-      return new GuiceDIAdaptor(this.modules);
+    public GuiceDIProvider build() {
+      return new GuiceDIProvider(this.modules);
     }
   }
 }
