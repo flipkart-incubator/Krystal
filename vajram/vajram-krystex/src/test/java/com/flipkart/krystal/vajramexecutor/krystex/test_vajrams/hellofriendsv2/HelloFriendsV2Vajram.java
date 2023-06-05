@@ -30,8 +30,7 @@ public abstract class HelloFriendsV2Vajram extends ComputeVajram<String> {
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
     return resolve(
-        dep(friendIds_s,
-            depInput(FriendsServiceRequest.userId_s).usingAsIs(userId_s).asResolver()),
+        dep(friendIds_s, depInput(FriendsServiceRequest.userId_s).usingAsIs(userId_s).asResolver()),
         dep(
             friendInfos_s,
             fanout(TestUserServiceRequest.userId_s).using(friendIds_s).with(identity())));
