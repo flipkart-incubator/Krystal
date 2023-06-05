@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.samples.greeting;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
+import static com.google.inject.Guice.createInjector;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,7 +15,6 @@ import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutio
 import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
-import com.flipkart.krystal.vajram.samples.GuiceDIProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
@@ -23,10 +23,14 @@ import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjector;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
+import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
+import com.google.inject.name.Names;
 import java.time.Clock;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,9 +45,7 @@ public class GreetingVajramTest {
         new VajramNodeGraph.Builder()
             .loadFromPackage("com.flipkart.krystal.vajram.samples.greeting");
 
-    InputInjectionProvider diAdaptor =
-        new GuiceDIProvider.Builder().loadFromModule(new GuiceModule()).build();
-    graph.injectInputsWith(diAdaptor);
+    graph.injectInputsWith(wrapInjector(createInjector(new GuiceModule())));
     graph.logicDecorationOrdering(
         new LogicDecorationOrdering(
             ImmutableSet.<String>builder()
@@ -71,11 +73,12 @@ public class GreetingVajramTest {
                 new RequestContext(""),
                 ImmutableMap.of(
                     mainLogicExecReporter.decoratorType(),
-                    new MainLogicDecoratorConfig(
-                        mainLogicExecReporter.decoratorType(),
-                        logicExecutionContext -> true,
-                        logicExecutionContext -> mainLogicExecReporter.decoratorType(),
-                        decoratorContext -> mainLogicExecReporter)))) {
+                    List.of(
+                        new MainLogicDecoratorConfig(
+                            mainLogicExecReporter.decoratorType(),
+                            logicExecutionContext -> true,
+                            logicExecutionContext -> mainLogicExecReporter.decoratorType(),
+                            decoratorContext -> mainLogicExecReporter))))) {
       future = executeVajram(krystexVajramExecutor);
     }
     assertThat(future.get()).contains("user@123");
@@ -108,5 +111,18 @@ public class GreetingVajramTest {
         vajramID(GreetingVajram.ID),
         rc -> GreetingRequest.builder().userId("user@123").build(),
         "greetingTest");
+  }
+
+  private static InputInjectionProvider wrapInjector(Injector injector) {
+    return new InputInjectionProvider() {
+
+      public Object getInstance(Class<?> clazz) {
+        return injector.getInstance(clazz);
+      }
+
+      public Object getInstance(Class<?> clazz, String injectionName) {
+        return injector.getInstance(Key.get(clazz, Names.named(injectionName)));
+      }
+    };
   }
 }
