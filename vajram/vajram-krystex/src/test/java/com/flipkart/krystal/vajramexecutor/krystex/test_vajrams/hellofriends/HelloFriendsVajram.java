@@ -17,7 +17,7 @@ import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.Using;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
 import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsInputUtil.HelloFriendsAllInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsInputUtil.HelloFriendsInputs;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
 import com.google.common.collect.ImmutableCollection;
@@ -49,7 +49,7 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
   }
 
   @VajramLogic
-  public static String sayHellos(HelloFriendsAllInputs request) throws Exception {
+  public static String sayHellos(HelloFriendsInputs request) throws Exception {
     return "Hello Friends of %s! %s"
         .formatted(
             request

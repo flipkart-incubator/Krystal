@@ -14,7 +14,7 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
-import com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaInputUtil.FormulaAllInputs;
+import com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaInputUtil.FormulaInputs;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.DividerRequest;
 import com.google.common.collect.ImmutableCollection;
@@ -40,7 +40,7 @@ public abstract class Formula extends ComputeVajram<Integer> {
   }
 
   @VajramLogic
-  public static int result(FormulaAllInputs allInputs) {
+  public static int result(FormulaInputs allInputs) {
     /* Return quotient */
     return allInputs
         .quotient()

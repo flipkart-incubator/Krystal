@@ -40,7 +40,7 @@ public final class Constants {
   public static final String METHOD_RESOLVE_INPUT_OF_DEPENDENCY = "resolveInputOfDependency";
   public static final String METHOD_EXECUTE_COMPUTE = "executeCompute";
   public static final String GET_INPUT_DEFINITIONS = "getInputDefinitions";
-  public static final String ALL_INPUTS = "AllInputs";
+  public static final String INPUTS_CLASS_SUFFIX = "Inputs";
   public static final String INPUTS_LIST = "inputsList";
   public static final String INPUTS_NEEDING_MODULATION = "InputsNeedingModulation";
   public static final String COMMON_INPUTS = "CommonInputs";

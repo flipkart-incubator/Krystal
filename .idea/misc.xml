@@ -20,8 +20,9 @@
     <option name="commentsEnabled" value="true" />
   </component>
   <component name="EntryPointsManager">
-    <list size="1">
-      <item index="0" class="java.lang.String" itemvalue="java.beans.ConstructorProperties" />
+    <list size="2">
+      <item index="0" class="java.lang.String" itemvalue="com.google.inject.Provides" />
+      <item index="1" class="java.lang.String" itemvalue="java.beans.ConstructorProperties" />
     </list>
   </component>
   <component name="ExternalStorageConfigurationManager" enabled="true" />
@@ -33,7 +34,7 @@
     <option name="myDefaultNotNull" value="org.jetbrains.annotations.NotNull" />
     <option name="myNullables">
       <value>
-        <list size="13">
+        <list size="14">
           <item index="0" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.compatqual.NullableDecl" />
           <item index="1" class="java.lang.String" itemvalue="org.jetbrains.annotations.Nullable" />
           <item index="2" class="java.lang.String" itemvalue="androidx.annotation.Nullable" />
@@ -47,12 +48,13 @@
           <item index="10" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.qual.Nullable" />
           <item index="11" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.compatqual.NullableType" />
           <item index="12" class="java.lang.String" itemvalue="org.jspecify.nullness.Nullable" />
+          <item index="13" class="java.lang.String" itemvalue="jakarta.annotation.Nullable" />
         </list>
       </value>
     </option>
     <option name="myNotNulls">
       <value>
-        <list size="13">
+        <list size="14">
           <item index="0" class="java.lang.String" itemvalue="androidx.annotation.RecentlyNonNull" />
           <item index="1" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.qual.NonNull" />
           <item index="2" class="java.lang.String" itemvalue="com.android.annotations.NonNull" />
@@ -66,6 +68,7 @@
           <item index="10" class="java.lang.String" itemvalue="javax.annotation.Nonnull" />
           <item index="11" class="java.lang.String" itemvalue="org.eclipse.jdt.annotation.NonNull" />
           <item index="12" class="java.lang.String" itemvalue="org.jspecify.nullness.NonNull" />
+          <item index="13" class="java.lang.String" itemvalue="jakarta.annotation.Nonnull" />
         </list>
       </value>
     </option>

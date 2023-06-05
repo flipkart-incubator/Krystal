@@ -14,7 +14,7 @@ import com.flipkart.krystal.vajram.inputs.MultiExecute;
 import com.flipkart.krystal.vajram.inputs.Using;
 import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2InputUtil.MultiHelloFriendsV2AllInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2InputUtil.MultiHelloFriendsV2Inputs;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -35,7 +35,7 @@ public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
   }
 
   @VajramLogic
-  public static String sayHellos(MultiHelloFriendsV2AllInputs allInputs) {
+  public static String sayHellos(MultiHelloFriendsV2Inputs allInputs) {
     if (allInputs.skip().orElse(false)) {
       return "";
     }

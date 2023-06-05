@@ -14,7 +14,7 @@ import com.flipkart.krystal.vajram.inputs.Using;
 import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloInputUtil.MutualFriendsHelloAllInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloInputUtil.MutualFriendsHelloInputs;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -26,7 +26,7 @@ public abstract class MutualFriendsHello extends ComputeVajram<String> {
 
   @VajramLogic
   public static String sayHelloToMutualFriends(
-      MutualFriendsHelloAllInputs mutualFriendsHelloAllInputs) {
+      MutualFriendsHelloInputs mutualFriendsHelloAllInputs) {
     List<String> result = new ArrayList<>();
     for (String userId :
         mutualFriendsHelloAllInputs.friendIds().values().asList().get(0).value().get()) {
