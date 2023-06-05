@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex;
 
-import com.flipkart.krystal.config.LogicTag;
+import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
@@ -27,7 +27,7 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<Main
   protected MainLogicDefinition(
       NodeLogicId nodeLogicId,
       Set<String> inputs,
-      ImmutableMap<String, LogicTag> logicTags,
+      ImmutableMap<String, Tag> logicTags,
       MainLogic<T> mainLogic) {
     super(nodeLogicId, inputs, logicTags, mainLogic);
   }

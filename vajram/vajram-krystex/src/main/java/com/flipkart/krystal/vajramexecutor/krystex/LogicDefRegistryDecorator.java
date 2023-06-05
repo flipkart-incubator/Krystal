@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
-import com.flipkart.krystal.config.LogicTag;
+import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
@@ -29,7 +29,7 @@ public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
       NodeLogicId nodeLogicId,
       Set<String> inputs,
       MainLogic<T> nodeLogic,
-      ImmutableMap<String, LogicTag> logicTags) {
+      ImmutableMap<String, Tag> logicTags) {
     MainLogicDefinition<T> def =
         isIOLogic
             ? new IOLogicDefinition<>(nodeLogicId, inputs, nodeLogic, logicTags)

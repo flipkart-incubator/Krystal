@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.inputs;
 
-import com.flipkart.krystal.config.LogicTag;
+import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.datatypes.DataType;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -13,7 +13,7 @@ import lombok.Builder;
 public record Input<T>(
     String name,
     DataType type,
-    ImmutableMap<String, LogicTag> inputTags,
+    ImmutableMap<String, Tag> inputTags,
     boolean isMandatory,
     T defaultValue,
     String documentation,
@@ -70,8 +70,8 @@ public record Input<T>(
     }
 
     public InputBuilder<T> inputTags(Map<String, String> inputTags) {
-      Map<String, LogicTag> inputTagsMap = new HashMap<>();
-      inputTags.forEach((key, value) -> inputTagsMap.put(key, new LogicTag(key, value)));
+      Map<String, Tag> inputTagsMap = new HashMap<>();
+      inputTags.forEach((key, value) -> inputTagsMap.put(key, new Tag(key, value)));
       this.inputTags = ImmutableMap.copyOf(inputTagsMap);
       return this;
     }

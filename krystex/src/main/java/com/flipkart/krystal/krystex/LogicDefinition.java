@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex;
 
-import com.flipkart.krystal.config.LogicTag;
+import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -11,14 +11,11 @@ public abstract sealed class LogicDefinition<L extends Logic>
 
   private final NodeLogicId nodeLogicId;
   private final ImmutableSet<String> inputNames;
-  private final ImmutableMap<String, LogicTag> logicTags;
+  private final ImmutableMap<String, Tag> logicTags;
   private final L logic;
 
   LogicDefinition(
-      NodeLogicId nodeLogicId,
-      Set<String> inputs,
-      ImmutableMap<String, LogicTag> logicTags,
-      L logic) {
+      NodeLogicId nodeLogicId, Set<String> inputs, ImmutableMap<String, Tag> logicTags, L logic) {
     this.nodeLogicId = nodeLogicId;
     this.inputNames = ImmutableSet.copyOf(inputs);
     this.logicTags = logicTags;
@@ -33,7 +30,7 @@ public abstract sealed class LogicDefinition<L extends Logic>
     return inputNames;
   }
 
-  public ImmutableMap<String, LogicTag> logicTags() {
+  public ImmutableMap<String, Tag> logicTags() {
     return logicTags;
   }
 

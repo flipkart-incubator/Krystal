@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajramexecutor.krystex.inputinjection;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
-import com.flipkart.krystal.config.LogicTag;
+import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
@@ -107,7 +107,7 @@ public final class InputInjector implements MainLogicDecorator {
                             ((JavaDataType<?>) input.type()),
                             Optional.ofNullable(input.inputTags())
                                 .map(tags -> tags.get(INJECT_NAMED_KEY))
-                                .map(LogicTag::tagValue)
+                                .map(Tag::tagValue)
                                 .orElse(null));
                     newValues.put(inputName, value);
                   }
