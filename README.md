@@ -185,11 +185,11 @@ Follow the below mentioned steps for the Krystal version bump -
    Example : Need to update version from 1.6 to 1.7
    1. vajram-codegen (build.gradle) update 
    - update version from 1.6 to 1.7
-   - Build and publish
+   - Build and `gradle publishToMavenLocal` in krystal root directory
    2. krystal (build.gradle) update
    - update version from 1.6 to 1.7
-   - update vajram-codegen, vajram-krystex, vajram-samples (build.gradle) version to 1.6 (Note : This is temporary and required for all moduels which depend on plugin version)
-   - Build and publish
-   3. vajram-codegen, vajram-krystex, vajram-samples (build.gradle) update
-   - update version from 1.6 to 1.7
-   - Build and publish
+   - set `classpath 'com.flipkart.krystal:vajram:'+ project.krystal_version` in vajram-codegen's buildscript block to `classpath 'com.flipkart.krystal:vajram:1.6'`
+   - Build and `gradle publishToMavenLocal` in krystal root directory
+   3. Final update
+   - revert `classpath 'com.flipkart.krystal:vajram:1.6'+ project.krystal_version` in vajram-codegen's buildscript block to `classpath 'com.flipkart.krystal:vajram:'+ project.krystal_version`
+   - Build and `publishToMavenLocal` and `publish` in krystal root directory
