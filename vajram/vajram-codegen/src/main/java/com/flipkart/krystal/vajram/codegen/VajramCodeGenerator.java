@@ -1151,10 +1151,10 @@ public class VajramCodeGenerator {
     if (input.needsModulation()) {
       inputDefBuilder.add(".needsModulation()");
     }
-    if (input.inputTags() != null && !input.inputTags().isEmpty()) {
-      inputDefBuilder.add(".inputTags($T.of(", ClassName.get(Map.class));
+    if (input.tags() != null && !input.tags().isEmpty()) {
+      inputDefBuilder.add(".tags($T.of(", ClassName.get(Map.class));
       String tags =
-          input.inputTags().entrySet().stream()
+          input.tags().entrySet().stream()
               .filter(entry -> entry.getValue() != null && entry.getValue().tagValue() != null)
               .map(
                   entry -> {

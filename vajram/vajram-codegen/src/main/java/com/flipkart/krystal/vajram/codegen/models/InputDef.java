@@ -14,7 +14,7 @@ import lombok.EqualsAndHashCode;
 public final class InputDef extends AbstractInput {
   private boolean needsModulation;
   private Set<InputSource> sources = ImmutableSet.of();
-  private Map<String, String> inputTags = ImmutableMap.of();
+  private Map<String, String> tags = ImmutableMap.of();
 
   @Override
   public Input<?> toInputDefinition() {
@@ -25,7 +25,7 @@ public final class InputDef extends AbstractInput {
         .needsModulation(isNeedsModulation())
         .documentation(getDoc())
         .sources(getSources())
-        .inputTags(getInputTags())
+        .tags(getTags())
         .build();
   }
 }

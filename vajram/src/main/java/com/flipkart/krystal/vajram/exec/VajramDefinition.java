@@ -7,7 +7,7 @@ import static java.util.stream.Collectors.toMap;
 import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.TagAs;
+import com.flipkart.krystal.vajram.TagWith;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.DefaultInputResolverDefinition;
@@ -101,15 +101,15 @@ public final class VajramDefinition {
   }
 
   private static ImmutableMap<String, Tag> parseVajramLogicTags(Vajram<?> vajram) {
-    TagAs[] tagAsArray =
+    TagWith[] tagWithArray =
         Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
             .filter(method -> method.getAnnotation(VajramLogic.class) != null)
             .findAny()
-            .map(method -> method.getAnnotationsByType(TagAs.class))
-            .orElse(new TagAs[0]);
+            .map(method -> method.getAnnotationsByType(TagWith.class))
+            .orElse(new TagWith[0]);
     Map<String, Tag> collect =
-        Arrays.stream(tagAsArray)
-            .collect(toMap(TagAs::name, tagAs -> new Tag(tagAs.name(), tagAs.value())));
+        Arrays.stream(tagWithArray)
+            .collect(toMap(TagWith::name, tagWith -> new Tag(tagWith.name(), tagWith.value())));
     Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
         .filter(method -> method.getAnnotation(VajramLogic.class) != null)
         .findFirst()

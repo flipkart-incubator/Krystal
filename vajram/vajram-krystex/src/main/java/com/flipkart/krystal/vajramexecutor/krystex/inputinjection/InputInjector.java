@@ -105,7 +105,7 @@ public final class InputInjector implements MainLogicDecorator {
                     ValueOrError<Object> value =
                         getFromInjectionAdaptor(
                             ((JavaDataType<?>) input.type()),
-                            Optional.ofNullable(input.inputTags())
+                            Optional.ofNullable(input.tags())
                                 .map(tags -> tags.get(INJECT_NAMED_KEY))
                                 .map(Tag::tagValue)
                                 .orElse(null));

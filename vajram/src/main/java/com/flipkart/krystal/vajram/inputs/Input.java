@@ -13,7 +13,7 @@ import lombok.Builder;
 public record Input<T>(
     String name,
     DataType type,
-    ImmutableMap<String, Tag> inputTags,
+    ImmutableMap<String, Tag> tags,
     boolean isMandatory,
     T defaultValue,
     String documentation,
@@ -69,10 +69,10 @@ public record Input<T>(
       return this;
     }
 
-    public InputBuilder<T> inputTags(Map<String, String> inputTags) {
-      Map<String, Tag> inputTagsMap = new HashMap<>();
-      inputTags.forEach((key, value) -> inputTagsMap.put(key, new Tag(key, value)));
-      this.inputTags = ImmutableMap.copyOf(inputTagsMap);
+    public InputBuilder<T> tags(Map<String, String> tags) {
+      Map<String, Tag> tagsMap = new HashMap<>();
+      tags.forEach((key, value) -> tagsMap.put(key, new Tag(key, value)));
+      this.tags = ImmutableMap.copyOf(tagsMap);
       return this;
     }
   }
