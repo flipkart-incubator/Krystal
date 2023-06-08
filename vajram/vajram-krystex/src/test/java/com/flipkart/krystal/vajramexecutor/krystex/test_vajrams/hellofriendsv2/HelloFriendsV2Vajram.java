@@ -8,7 +8,6 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofrie
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.friendInfos_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.userId_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Vajram.ID;
-import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
@@ -21,6 +20,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.Test
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
 import com.google.common.collect.ImmutableCollection;
 import java.util.Objects;
+import java.util.Optional;
 
 @VajramDef(ID)
 public abstract class HelloFriendsV2Vajram extends ComputeVajram<String> {
@@ -33,7 +33,9 @@ public abstract class HelloFriendsV2Vajram extends ComputeVajram<String> {
         dep(friendIds_s, depInput(FriendsServiceRequest.userId_s).usingAsIs(userId_s).asResolver()),
         dep(
             friendInfos_s,
-            fanout(TestUserServiceRequest.userId_s).using(friendIds_s).with(identity())));
+            fanout(TestUserServiceRequest.userId_s)
+                .using(friendIds_s)
+                .with(Optional::orElseThrow)));
   }
 
   @VajramLogic

@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.inputs.resolution;
 
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.toResolver;
 import static java.util.Arrays.stream;
 
 import com.flipkart.krystal.vajram.Vajram;
@@ -27,7 +28,7 @@ public final class InputResolvers {
     return stream(resolverStages)
         .map(
             spec -> {
-              return InputResolverUtil.toResolver(dependency, spec);
+              return toResolver(dependency, spec);
             })
         .toList();
   }

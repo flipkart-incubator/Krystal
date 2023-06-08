@@ -14,6 +14,12 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
 }
 
+// This is to avoid the gradle error in gradle 8.1:
+// Task ':vajram-lang:spotlessJava' uses this output of task ':vajram-lang:generateGrammarSource'
+// without declaring an explicit or implicit dependency. This can lead to incorrect results being produced,
+// depending on what order the tasks are executed.
+tasks.named("spotlessJava").configure { dependsOn("generateGrammarSource") }
+
 test {
     useJUnitPlatform()
 }

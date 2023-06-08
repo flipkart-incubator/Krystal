@@ -6,7 +6,6 @@ import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.resol
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends.ID;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.hellos_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.userIds_s;
-import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -17,6 +16,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.Multi
 import com.google.common.collect.ImmutableCollection;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @VajramDef(ID)
 public abstract class MultiHelloFriends extends ComputeVajram<String> {
@@ -29,7 +29,7 @@ public abstract class MultiHelloFriends extends ComputeVajram<String> {
     return resolve(
         dep(
             hellos_s,
-            fanout(HelloFriendsRequest.userId_s).using(userIds_s).with(identity()),
+            fanout(HelloFriendsRequest.userId_s).using(userIds_s).with(Optional::orElseThrow),
             fanout(HelloFriendsRequest.numberOfFriends_s)
                 .using(userIds_s)
                 .with(_x -> NUMBER_OF_FRIENDS)));

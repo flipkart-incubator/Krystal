@@ -796,6 +796,9 @@ public class VajramCodeGenerator {
         String requestClass = CodegenUtils.getRequestClassName(splits[splits.length - 1]);
 
         TypeName usingDepType = getClassGenericArgumentsType(parsedVajramData.vajramClass());
+        if (usingDepType.isBoxedPrimitive()) {
+          usingDepType = usingDepType.unbox();
+        }
         String resolverName = method.getName();
         if (DependencyResponse.class.isAssignableFrom(parameter.getType())) {
           String depValueAccessorCode =
@@ -826,7 +829,7 @@ public class VajramCodeGenerator {
                    .iterator()
                    .next()
                    .getValue()""";
-          if (usingDepType.unbox().equals(TypeName.get(parameter.getType()))) {
+          if (usingDepType.equals(TypeName.get(parameter.getType()))) {
             // This means this dependency in "Using" annotation is not a fanout and the dev has
             // requested the value directly. So we extract the only value from dependency response
             // and

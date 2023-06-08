@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.inputs.resolution;
 
+import static com.flipkart.krystal.data.ValueOrError.empty;
 import static com.flipkart.krystal.data.ValueOrError.withValue;
 import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.inputs.MultiExecute.skipFanout;
@@ -23,47 +24,29 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 final class InputResolverUtil {
 
-  static <S, T, CV extends Vajram<?>, DV extends Vajram<?>>
-      DependencyCommand<Inputs> resolutionHelper(
-          VajramInputTypeSpec<S, CV> sourceInput,
-          VajramInputTypeSpec<T, DV> targetInput,
-          Function<S, T> oneToOneTransformer,
-          List<SkipPredicate<S>> skipPredicates,
-          Inputs inputs) {
-    return _resolutionHelper(
-        sourceInput, targetInput, oneToOneTransformer, null, skipPredicates, inputs);
-  }
-
-  static <S, T, CV extends Vajram<?>, DV extends Vajram<?>>
-      DependencyCommand<Inputs> fanoutResolutionHelper(
-          VajramInputTypeSpec<S, CV> sourceInput,
-          VajramInputTypeSpec<T, DV> targetInput,
-          Function<S, ? extends Collection<? extends T>> fanoutTransformer,
-          List<SkipPredicate<S>> skipPredicates,
-          Inputs inputs) {
-    return _resolutionHelper(
-        sourceInput, targetInput, null, fanoutTransformer, skipPredicates, inputs);
-  }
-
   private static <S, T, CV extends Vajram<?>, DV extends Vajram<?>>
       DependencyCommand<Inputs> _resolutionHelper(
-          VajramInputTypeSpec<S, CV> sourceInput,
+          @Nullable VajramInputTypeSpec<S, CV> sourceInput,
           VajramInputTypeSpec<T, DV> targetInput,
-          Function<S, T> oneToOneTransformer,
-          Function<S, ? extends Collection<? extends T>> fanoutTransformer,
+          Function<Optional<S>, T> oneToOneTransformer,
+          Function<Optional<S>, ? extends Collection<? extends T>> fanoutTransformer,
           List<SkipPredicate<S>> skipPredicates,
           Inputs inputs) {
     boolean fanout = fanoutTransformer != null;
     ValueOrError<Object> inputValue;
     if (sourceInput instanceof VajramDependencyTypeSpec<?, ?, ?>) {
       inputValue = inputs.getDepValue(sourceInput.name()).values().values().iterator().next();
-    } else {
+    } else if (sourceInput != null) {
       inputValue = inputs.getInputValue(sourceInput.name());
+    } else {
+      inputValue = empty();
     }
-    Optional<SkipPredicate<S>> skipReason =
+
+    Optional<SkipPredicate<S>> skipPredicate =
         skipPredicates.stream()
             .filter(
                 sSkipPredicate -> {
@@ -72,26 +55,31 @@ final class InputResolverUtil {
                   return sSkipPredicate.condition().test(value);
                 })
             .findFirst();
-    if (skipReason.isPresent()) {
+    if (skipPredicate.isPresent()) {
       if (fanout) {
-        return skipFanout(skipReason.get().reason());
+        return skipFanout(skipPredicate.get().reason());
       } else {
-        return skipExecution(skipReason.get().reason());
+        return skipExecution(skipPredicate.get().reason());
       }
     }
     //noinspection unchecked
-    Function<S, Object> transformer =
-        ofNullable((Function<S, Object>) oneToOneTransformer)
-            .or(() -> ofNullable(fanoutTransformer).map(x -> x.andThen(ts -> ts)))
-            .orElse((Function<S, Object>) identity());
-    Optional<Object> transformedInput =
-        inputValue
-            .value()
-            .map(
-                t -> {
-                  //noinspection unchecked
-                  return transformer.apply((S) t);
-                });
+    Function<Optional<S>, Object> transformer =
+        ofNullable((Function<Optional<S>, Object>) oneToOneTransformer)
+            .or(() -> ofNullable(fanoutTransformer).map(x -> x.andThen(identity())))
+            .orElse(Optional::orElseThrow);
+    Optional<Object> transformedInput;
+    if (sourceInput == null) {
+      transformedInput = ofNullable(transformer.apply(Optional.empty()));
+    } else {
+      transformedInput =
+          inputValue
+              .value()
+              .map(
+                  t -> {
+                    //noinspection unchecked
+                    return transformer.apply((Optional<S>) ofNullable(t));
+                  });
+    }
     Function<T, Inputs> valueToInput =
         t -> new Inputs(ImmutableMap.of(targetInput.name(), withValue(t)));
     if (fanout) {
