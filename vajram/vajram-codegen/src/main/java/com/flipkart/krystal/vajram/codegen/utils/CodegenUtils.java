@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.codegen.utils;
 
-import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.COMMON_INPUTS;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_NEEDING_MODULATION;
 
 import com.flipkart.krystal.vajram.VajramRequest;

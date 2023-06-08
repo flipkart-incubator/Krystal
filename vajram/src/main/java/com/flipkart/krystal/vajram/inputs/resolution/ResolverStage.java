@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
  * @param <S> Source Type: The DataType of the source input being used for resolution
@@ -37,7 +38,7 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
     return this;
   }
 
-  public InputResolverSpec<S, T, CV, DV> with(Function<S, T> transformer) {
+  public InputResolverSpec<S, T, CV, DV> with(Function<Optional<S>, T> transformer) {
     return new InputResolverSpec<>(targetInput, sourceInput, skipConditions, transformer, null);
   }
 
@@ -55,7 +56,7 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
     }
 
     public InputResolverSpec<T, T, CV, DV> asResolver() {
-      return with(Function.identity());
+      return with(t -> t.orElse(null));
     }
   }
 
@@ -88,6 +89,10 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
     public <S, CV extends Vajram<?>> ResolverStage<S, T, CV, DV> using(
         VajramInputTypeSpec<S, CV> sourceInput) {
       return new ResolverStage<>(targetInput, sourceInput);
+    }
+
+    public <CV extends Vajram<?>> InputResolverSpec<Void, T, CV, DV> with(Supplier<T> with) {
+      return new InputResolverSpec<>(targetInput, null, List.of(), o -> with.get(), null);
     }
   }
 }
