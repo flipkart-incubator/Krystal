@@ -683,6 +683,7 @@ public class VajramCodeGenerator {
       Method method, Map<String, Boolean> depFanoutMap, boolean isParamFanoutDependency) {
     Resolve resolve = method.getAnnotation(Resolve.class);
     String[] inputs = resolve.depInputs();
+    String depName = resolve.depName();
     // check if the input is satisfied by input or other resolved variables
     CodeBlock.Builder ifBlockBuilder = CodeBlock.builder();
     ifBlockBuilder.beginControlFlow(
@@ -736,8 +737,7 @@ public class VajramCodeGenerator {
                     "No input resolver found for " + usingInputName);
               }
             });
-    boolean isFanOut =
-        isParamFanoutDependency || depFanoutMap.getOrDefault(resolve.depName(), false);
+    boolean isFanOut = isParamFanoutDependency || depFanoutMap.getOrDefault(depName, false);
     buildFinalResolvers(method, inputs, ifBlockBuilder, isFanOut);
     ifBlockBuilder.endControlFlow();
     return ifBlockBuilder;
@@ -835,9 +835,20 @@ public class VajramCodeGenerator {
             // and
             // provide it.
             if (vajramInputDef.isMandatory()) {
-              String code = depValueAccessorCode + ".value().orElseThrow()";
+              String code =
+                  depValueAccessorCode
+                      + """
+                              .getValueOrThrow().orElseThrow(() ->
+                                  new $5T("Received null value for mandatory dependency '$6L' of vajram '$7L'"))""";
               ifBlockBuilder.addStatement(
-                  code, usingDepType, variableName, usingDepType, usingInputName);
+                  code,
+                  usingDepType,
+                  variableName,
+                  usingDepType,
+                  usingInputName,
+                  IllegalArgumentException.class,
+                  usingInputName,
+                  vajramName);
             } else {
               throw new VajramValidationException(
                   ("A resolver ('%s') must not access an optional dependency ('%s') directly."

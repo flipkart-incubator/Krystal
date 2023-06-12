@@ -88,10 +88,10 @@ public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error)
     }
   }
 
-  public Optional<T> getValueOrThrow() throws Exception {
+  public Optional<T> getValueOrThrow() {
     Optional<Throwable> error = error();
     if (error.isPresent()) {
-      if (error.get() instanceof Exception e) {
+      if (error.get() instanceof RuntimeException e) {
         throw e;
       } else {
         throw new RuntimeException(error.get());
