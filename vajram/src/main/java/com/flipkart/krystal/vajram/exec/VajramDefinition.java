@@ -101,38 +101,37 @@ public final class VajramDefinition {
   }
 
   private static ImmutableMap<String, Tag> parseVajramLogicTags(Vajram<?> vajram) {
-    TagWith[] tagWithArray =
+    Optional<Method> vajramLogicMethod =
         Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
             .filter(method -> method.getAnnotation(VajramLogic.class) != null)
-            .findAny()
+            .findFirst();
+    TagWith[] tagWithArray =
+        vajramLogicMethod
             .map(method -> method.getAnnotationsByType(TagWith.class))
             .orElse(new TagWith[0]);
     Map<String, Tag> collect =
         Arrays.stream(tagWithArray)
             .collect(toMap(TagWith::name, tagWith -> new Tag(tagWith.name(), tagWith.value())));
-    Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
-        .filter(method -> method.getAnnotation(VajramLogic.class) != null)
-        .findFirst()
-        .ifPresent(
-            method -> {
-              Service service = method.getAnnotation(Service.class);
-              if (service != null) {
-                collect.put(Service.TAG_KEY, new Tag(Service.TAG_KEY, service.value()));
-              }
-              ServiceApi serviceApi = method.getAnnotation(ServiceApi.class);
-              if (serviceApi != null) {
-                collect.put(ServiceApi.TAG_KEY, new Tag(ServiceApi.TAG_KEY, serviceApi.apiName()));
-              }
-              collect.put(
-                  VajramTags.VAJRAM_ID, new Tag(VajramTags.VAJRAM_ID, vajram.getId().vajramId()));
-              collect.put(
+    vajramLogicMethod.ifPresent(
+        method -> {
+          Service service = method.getAnnotation(Service.class);
+          if (service != null) {
+            collect.put(Service.TAG_KEY, new Tag(Service.TAG_KEY, service.value()));
+          }
+          ServiceApi serviceApi = method.getAnnotation(ServiceApi.class);
+          if (serviceApi != null) {
+            collect.put(ServiceApi.TAG_KEY, new Tag(ServiceApi.TAG_KEY, serviceApi.apiName()));
+          }
+          collect.put(
+              VajramTags.VAJRAM_TYPE,
+              new Tag(
                   VajramTags.VAJRAM_TYPE,
-                  new Tag(
-                      VajramTags.VAJRAM_TYPE,
-                      vajram instanceof IOVajram<?>
-                          ? VajramTypes.IO_VAJRAM
-                          : VajramTypes.COMPUTE_VAJRAM));
-            });
+                  vajram instanceof IOVajram<?>
+                      ? VajramTypes.IO_VAJRAM
+                      : VajramTypes.COMPUTE_VAJRAM));
+        });
+    collect.put(
+        VajramTags.VAJRAM_ID, new Tag(VajramTags.VAJRAM_ID, vajram.getId().vajramId()));
     return ImmutableMap.copyOf(collect);
   }
 

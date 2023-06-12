@@ -16,7 +16,6 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.VajramDependencyTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collection;
@@ -97,7 +96,9 @@ final class InputResolverUtil {
   static <S, T, CV extends Vajram<?>, DV extends Vajram<?>> InputResolver toResolver(
       VajramDependencyTypeSpec<?, CV, DV> dependency, InputResolverSpec<S, T, CV, DV> spec) {
     return new AbstractSimpleInputResolver(
-        dependency, spec.getTargetInput(), ImmutableList.of(spec.getSourceInput())) {
+        dependency,
+        spec.getTargetInput(),
+        ofNullable(spec.getSourceInput()).stream().collect(toImmutableList())) {
       @Override
       public DependencyCommand<Inputs> resolve(
           String dependencyName, ImmutableSet<String> inputsToResolve, Inputs inputs) {

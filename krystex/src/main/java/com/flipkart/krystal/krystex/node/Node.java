@@ -294,32 +294,29 @@ class Node {
     Map<NodeLogicId, ResolverDefinition> pendingResolvers;
     Collector<ResolverDefinition, ?, Map<NodeLogicId, ResolverDefinition>> resolverCollector =
         toMap(ResolverDefinition::resolverNodeLogicId, identity(), (o1, o2) -> o1);
-    if (newInputNames.isEmpty()) {
-      pendingResolvers =
-          resolverDefinitionsByInput.getOrDefault(Optional.<String>empty(), emptyList()).stream()
-              .filter(
-                  resolverDefinition -> availableInputs.containsAll(resolverDefinition.boundFrom()))
-              .filter(
-                  resolverDefinition ->
-                      !nodeResults.containsKey(resolverDefinition.resolverNodeLogicId()))
-              .collect(resolverCollector);
-    } else {
-      pendingResolvers =
-          newInputNames.stream()
-              .flatMap(
-                  input ->
-                      resolverDefinitionsByInput
-                          .getOrDefault(Optional.ofNullable(input), ImmutableList.of())
-                          .stream()
-                          .filter(
-                              resolverDefinition ->
-                                  availableInputs.containsAll(resolverDefinition.boundFrom()))
-                          .filter(
-                              resolverDefinition ->
-                                  !nodeResults.containsKey(
-                                      resolverDefinition.resolverNodeLogicId())))
-              .collect(resolverCollector);
-    }
+    Map<NodeLogicId, ResolverDefinition> pendingUnboundResolvers =
+        resolverDefinitionsByInput.getOrDefault(Optional.<String>empty(), emptyList()).stream()
+            .filter(
+                resolverDefinition -> availableInputs.containsAll(resolverDefinition.boundFrom()))
+            .filter(
+                resolverDefinition ->
+                    !nodeResults.containsKey(resolverDefinition.resolverNodeLogicId()))
+            .collect(resolverCollector);
+    pendingResolvers =
+        newInputNames.stream()
+            .flatMap(
+                input ->
+                    resolverDefinitionsByInput
+                        .getOrDefault(Optional.ofNullable(input), ImmutableList.of())
+                        .stream()
+                        .filter(
+                            resolverDefinition ->
+                                availableInputs.containsAll(resolverDefinition.boundFrom()))
+                        .filter(
+                            resolverDefinition ->
+                                !nodeResults.containsKey(resolverDefinition.resolverNodeLogicId())))
+            .collect(resolverCollector);
+    pendingResolvers.putAll(pendingUnboundResolvers);
     return pendingResolvers;
   }
 
