@@ -51,7 +51,7 @@ public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error)
   public static <T> ValueOrError<T> valueOrError(Callable<T> valueProvider) {
     try {
       return withValue(valueProvider.call());
-    } catch (Exception e) {
+    } catch (Throwable e) {
       return withError(e);
     }
   }
