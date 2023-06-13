@@ -15,7 +15,7 @@ public final class VajramLoader {
                 aClass -> {
                   try {
                     return aClass.getConstructor().newInstance();
-                  } catch (Exception e) {
+                  } catch (Throwable e) {
                     throw new RuntimeException(e);
                   }
                 })

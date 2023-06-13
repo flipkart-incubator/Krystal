@@ -182,7 +182,7 @@ public final class VajramCodeGenFacade {
           new VajramCodeGenerator(inputFile, Collections.emptyMap(), Collections.emptyMap());
       codeGenRequest(vajramCodeGenerator);
       codeGenUtil(vajramCodeGenerator);
-    } catch (Exception e) {
+    } catch (Throwable e) {
       throw new RuntimeException(
           "Could not generate code for file %s"
               .formatted(inputFile.inputFilePath().relativeFilePath()),
@@ -324,7 +324,7 @@ public final class VajramCodeGenFacade {
                 VajramCodeGenerator vajramCodeGenerator =
                     new VajramCodeGenerator(inputFile, vajramDefs, vajramInputsDef);
                 codeGenVajramImpl(vajramCodeGenerator, urlcl);
-              } catch (Exception e) {
+              } catch (Throwable e) {
                 throw new RuntimeException(
                     "Could not generate vajram impl for file %s"
                         .formatted(inputFile.inputFilePath().relativeFilePath()),

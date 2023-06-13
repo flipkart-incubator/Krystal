@@ -26,7 +26,7 @@ public abstract class UserServiceVajram extends IOVajram<UserInfo> {
 
     // Make a call to user service and get user info
     CompletableFuture<List<UserInfo>> serviceResponse =
-        batchServiceCall(modulatedRequest.inputsNeedingModulation());
+        batchServiceCall(modulatedRequest.modInputs());
 
     CompletableFuture<Map<UserServiceModInputs, UserInfo>> resultsFuture =
         serviceResponse.thenApply(
@@ -36,7 +36,7 @@ public abstract class UserServiceVajram extends IOVajram<UserInfo> {
                         Collectors.toMap(
                             userInfo -> new UserServiceModInputs(userInfo.userId()),
                             userInfo -> userInfo)));
-    return modulatedRequest.inputsNeedingModulation().stream()
+    return modulatedRequest.modInputs().stream()
         .collect(
             toImmutableMap(im -> im, im -> resultsFuture.thenApply(results -> results.get(im))));
   }

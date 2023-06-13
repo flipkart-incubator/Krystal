@@ -94,7 +94,7 @@ class Node {
 
   private final Map<RequestId, Boolean> mainLogicExecuted = new LinkedHashMap<>();
 
-  private final Map<RequestId, Boolean> skipLogicRequested = new LinkedHashMap<>();
+  private final Map<RequestId, Optional<SkipNode>> skipLogicRequested = new LinkedHashMap<>();
 
   private final Map<RequestId, Map<NodeLogicId, ResolverCommand>> resolverResults =
       new LinkedHashMap<>();
@@ -140,7 +140,7 @@ class Node {
             .computeIfAbsent(skipNode.dependantChain(), k -> new LinkedHashSet<>())
             .add(requestId);
         dependantChainByRequest.put(requestId, skipNode.dependantChain());
-        skipLogicRequested.put(requestId, true);
+        skipLogicRequested.put(requestId, Optional.of(skipNode));
         return handleSkipDependency(requestId, skipNode, resultForRequest);
       } else if (nodeCommand instanceof ExecuteWithDependency executeWithDependency) {
         executeMainLogic = executeWithDependency(requestId, executeWithDependency);
@@ -157,7 +157,7 @@ class Node {
       if (executeMainLogic) {
         executeMainLogic(resultForRequest, requestId);
       }
-    } catch (Exception e) {
+    } catch (Throwable e) {
       resultForRequest.completeExceptionally(e);
     }
     return resultForRequest;
@@ -208,7 +208,7 @@ class Node {
     int requestIdExecuted = 0;
     for (RequestId requestId : requestIds) {
       if (mainLogicExecuted.getOrDefault(requestId, false)
-          || skipLogicRequested.getOrDefault(requestId, false)) {
+          || skipLogicRequested.getOrDefault(requestId, Optional.empty()).isPresent()) {
         requestIdExecuted += 1;
       }
     }
@@ -327,8 +327,10 @@ class Node {
     NodeId depNodeId = nodeDefinition.dependencyNodes().get(dependencyName);
     NodeLogicId nodeLogicId = resolverDefinition.resolverNodeLogicId();
     ResolverCommand resolverCommand;
-    if (this.skipLogicRequested.getOrDefault(requestId, false)) {
-      resolverCommand = ResolverCommand.skip("skipped as parent skipped");
+    Optional<SkipNode> skipRequested =
+        this.skipLogicRequested.getOrDefault(requestId, Optional.empty());
+    if (skipRequested.isPresent()) {
+      resolverCommand = ResolverCommand.skip(skipRequested.get().skipDependencyCommand().reason());
     } else {
       Inputs inputsForResolver = getInputsForResolver(resolverDefinition, requestId);
       resolverCommand =

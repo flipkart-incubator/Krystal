@@ -27,8 +27,7 @@ public abstract class FriendsServiceVajram extends IOVajram<Set<String>> {
       ModulatedInput<FriendsServiceModInputs, FriendsServiceCommonInputs> modulatedInput) {
     CALL_COUNTER.increment();
     Map<FriendsServiceModInputs, CompletableFuture<Set<String>>> result = new LinkedHashMap<>();
-    for (FriendsServiceModInputs inputsNeedingModulation :
-        modulatedInput.inputsNeedingModulation()) {
+    for (FriendsServiceModInputs inputsNeedingModulation : modulatedInput.modInputs()) {
       String userId = inputsNeedingModulation.userId();
       result.put(inputsNeedingModulation, completedFuture(getFriends(userId)));
     }

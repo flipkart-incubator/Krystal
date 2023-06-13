@@ -33,12 +33,12 @@ public abstract class TestUserServiceVajram extends IOVajram<TestUserInfo> {
       callUserService(
           ModulatedInput<TestUserServiceModInputs, TestUserServiceCommonInputs> modulatedRequest) {
     CALL_COUNTER.increment();
-    modulatedRequest.inputsNeedingModulation().stream()
+    modulatedRequest.modInputs().stream()
         .map(im -> TestUserServiceRequest.builder().userId(im.userId()).build())
         .forEach(REQUESTS::add);
 
     // Make a call to user service and get user info
-    return modulatedRequest.inputsNeedingModulation().stream()
+    return modulatedRequest.modInputs().stream()
         .collect(
             toImmutableMap(
                 inputsNeedingModulation -> inputsNeedingModulation,

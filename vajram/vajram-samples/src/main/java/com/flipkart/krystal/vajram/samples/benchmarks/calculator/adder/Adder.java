@@ -16,7 +16,7 @@ public abstract class Adder extends ComputeVajram<Integer> {
   @VajramLogic
   public static Map<AdderModInputs, Integer> add(
       ModulatedInput<AdderModInputs, AdderCommonInputs> modulatedInput) {
-    return modulatedInput.inputsNeedingModulation().stream()
+    return modulatedInput.modInputs().stream()
         .collect(toImmutableMap(identity(), im -> add(im.numberOne(), im.numberTwo().orElse(0))));
   }
 
