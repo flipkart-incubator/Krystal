@@ -8,7 +8,7 @@ import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajram.samples.greeting.UserServiceInputUtil.UserServiceCommonInputs;
-import com.flipkart.krystal.vajram.samples.greeting.UserServiceInputUtil.UserServiceInputsNeedingModulation;
+import com.flipkart.krystal.vajram.samples.greeting.UserServiceInputUtil.UserServiceModInputs;
 import com.google.common.collect.ImmutableMap;
 import java.util.List;
 import java.util.Map;
@@ -21,33 +21,31 @@ public abstract class UserServiceVajram extends IOVajram<UserInfo> {
   public static final String ID = "userServiceVajram";
 
   @VajramLogic
-  public static ImmutableMap<UserServiceInputsNeedingModulation, CompletableFuture<UserInfo>>
-      callUserService(
-          ModulatedInput<UserServiceInputsNeedingModulation, UserServiceCommonInputs>
-              modulatedRequest) {
+  public static ImmutableMap<UserServiceModInputs, CompletableFuture<UserInfo>> callUserService(
+      ModulatedInput<UserServiceModInputs, UserServiceCommonInputs> modulatedRequest) {
 
     // Make a call to user service and get user info
     CompletableFuture<List<UserInfo>> serviceResponse =
-        batchServiceCall(modulatedRequest.inputsNeedingModulation());
+        batchServiceCall(modulatedRequest.modInputs());
 
-    CompletableFuture<Map<UserServiceInputsNeedingModulation, UserInfo>> resultsFuture =
+    CompletableFuture<Map<UserServiceModInputs, UserInfo>> resultsFuture =
         serviceResponse.thenApply(
             userInfos ->
                 userInfos.stream()
                     .collect(
                         Collectors.toMap(
-                            userInfo -> new UserServiceInputsNeedingModulation(userInfo.userId()),
+                            userInfo -> new UserServiceModInputs(userInfo.userId()),
                             userInfo -> userInfo)));
-    return modulatedRequest.inputsNeedingModulation().stream()
+    return modulatedRequest.modInputs().stream()
         .collect(
             toImmutableMap(im -> im, im -> resultsFuture.thenApply(results -> results.get(im))));
   }
 
   private static CompletableFuture<List<UserInfo>> batchServiceCall(
-      List<UserServiceInputsNeedingModulation> inputsNeedingModulations) {
+      List<UserServiceModInputs> modInputs) {
     return completedFuture(
-        inputsNeedingModulations.stream()
-            .map(UserServiceInputsNeedingModulation::userId)
+        modInputs.stream()
+            .map(UserServiceModInputs::userId)
             .map(userId -> new UserInfo(userId, "Firstname Lastname (%s)".formatted(userId)))
             .toList());
   }

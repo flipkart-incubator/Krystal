@@ -51,7 +51,7 @@ public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error)
   public static <T> ValueOrError<T> valueOrError(Callable<T> valueProvider) {
     try {
       return withValue(valueProvider.call());
-    } catch (Exception e) {
+    } catch (Throwable e) {
       return withError(e);
     }
   }
@@ -88,10 +88,10 @@ public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error)
     }
   }
 
-  public Optional<T> getValueOrThrow() throws Exception {
+  public Optional<T> getValueOrThrow() {
     Optional<Throwable> error = error();
     if (error.isPresent()) {
-      if (error.get() instanceof Exception e) {
+      if (error.get() instanceof RuntimeException e) {
         throw e;
       } else {
         throw new RuntimeException(error.get());

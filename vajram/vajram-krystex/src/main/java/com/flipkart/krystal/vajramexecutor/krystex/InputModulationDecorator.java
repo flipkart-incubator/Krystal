@@ -105,7 +105,7 @@ public final class InputModulationDecorator<
   private void modulateInputsList(
       MainLogic<Object> logicToDecorate, ModulatedInput<I, C> modulatedInput) {
     ImmutableList<UnmodulatedInput<I, C>> requests =
-        modulatedInput.inputsNeedingModulation().stream()
+        modulatedInput.modInputs().stream()
             .map(each -> new UnmodulatedInput<>(each, modulatedInput.commonInputs()))
             .collect(toImmutableList());
     ImmutableMap<Inputs, CompletableFuture<Object>> originalFutures =

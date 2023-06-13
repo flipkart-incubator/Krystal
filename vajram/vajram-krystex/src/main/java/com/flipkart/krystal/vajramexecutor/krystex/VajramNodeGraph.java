@@ -1,6 +1,8 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.vajram.VajramLoader.loadVajramsFromClassPath;
+import static com.flipkart.krystal.vajram.inputs.SingleExecute.skipExecution;
+import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
@@ -222,14 +224,21 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                           inputValues -> {
                             validateMandatory(vajramId, inputValues, requiredInputs);
                             DependencyCommand<Inputs> dependencyCommand;
-                            if (inputResolverDefinition instanceof InputResolver inputResolver) {
+                            try {
+                              if (inputResolverDefinition instanceof InputResolver inputResolver) {
+                                dependencyCommand =
+                                    inputResolver.resolve(
+                                        dependencyName, resolvedInputNames, inputValues);
+                              } else {
+                                dependencyCommand =
+                                    vajram.resolveInputOfDependency(
+                                        dependencyName, resolvedInputNames, inputValues);
+                              }
+                            } catch (Throwable t) {
                               dependencyCommand =
-                                  inputResolver.resolve(
-                                      dependencyName, resolvedInputNames, inputValues);
-                            } else {
-                              dependencyCommand =
-                                  vajram.resolveInputOfDependency(
-                                      dependencyName, resolvedInputNames, inputValues);
+                                  skipExecution(
+                                      "Resolver threw exception: %s"
+                                          .formatted(getStackTraceAsString(t)));
                             }
 
                             if (dependencyCommand.shouldSkip()) {
@@ -344,7 +353,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                         input ->
                             input.sources() != null
                                 && input.sources().contains(InputSource.SESSION)),
-            logicExecutionContext -> logicExecutionContext.nodeId().toString(),
+            logicExecutionContext -> logicExecutionContext.nodeId().value(),
             decoratorContext -> inputInjector));
   }
 

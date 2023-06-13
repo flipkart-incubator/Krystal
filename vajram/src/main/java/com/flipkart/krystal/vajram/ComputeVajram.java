@@ -19,7 +19,7 @@ public abstract non-sealed class ComputeVajram<T> extends AbstractVajram<T> {
     try {
       return executeCompute(inputsList).entrySet().stream()
           .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture()));
-    } catch (Exception e) {
+    } catch (Throwable e) {
       return inputsList.stream().collect(toImmutableMap(identity(), i -> failedFuture(e)));
     }
   }

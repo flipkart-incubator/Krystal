@@ -8,15 +8,15 @@ import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderInputUtil.AdderCommonInputs;
-import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderInputUtil.AdderInputsNeedingModulation;
+import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderInputUtil.AdderModInputs;
 import java.util.Map;
 
 @VajramDef("adder")
 public abstract class Adder extends ComputeVajram<Integer> {
   @VajramLogic
-  public static Map<AdderInputsNeedingModulation, Integer> add(
-      ModulatedInput<AdderInputsNeedingModulation, AdderCommonInputs> modulatedInput) {
-    return modulatedInput.inputsNeedingModulation().stream()
+  public static Map<AdderModInputs, Integer> add(
+      ModulatedInput<AdderModInputs, AdderCommonInputs> modulatedInput) {
+    return modulatedInput.modInputs().stream()
         .collect(toImmutableMap(identity(), im -> add(im.numberOne(), im.numberTwo().orElse(0))));
   }
 
