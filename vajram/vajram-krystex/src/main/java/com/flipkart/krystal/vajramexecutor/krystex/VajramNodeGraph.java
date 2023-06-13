@@ -237,7 +237,8 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                             } catch (Throwable t) {
                               dependencyCommand =
                                   skipExecution(
-                                      "Resolver threw exception: %s".formatted(getStackTraceAsString(t)));
+                                      "Resolver threw exception: %s"
+                                          .formatted(getStackTraceAsString(t)));
                             }
 
                             if (dependencyCommand.shouldSkip()) {

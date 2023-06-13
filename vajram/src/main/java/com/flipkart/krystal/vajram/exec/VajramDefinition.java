@@ -130,8 +130,7 @@ public final class VajramDefinition {
                       ? VajramTypes.IO_VAJRAM
                       : VajramTypes.COMPUTE_VAJRAM));
         });
-    collect.put(
-        VajramTags.VAJRAM_ID, new Tag(VajramTags.VAJRAM_ID, vajram.getId().vajramId()));
+    collect.put(VajramTags.VAJRAM_ID, new Tag(VajramTags.VAJRAM_ID, vajram.getId().vajramId()));
     return ImmutableMap.copyOf(collect);
   }
 
