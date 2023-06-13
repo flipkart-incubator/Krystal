@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.vajram.VajramLoader.loadVajramsFromClassPath;
 import static com.flipkart.krystal.vajram.inputs.SingleExecute.skipExecution;
+import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
@@ -236,7 +237,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                             } catch (Throwable t) {
                               dependencyCommand =
                                   skipExecution(
-                                      "Resolver threw exception: %s".formatted(t.toString()));
+                                      "Resolver threw exception: %s".formatted(getStackTraceAsString(t)));
                             }
 
                             if (dependencyCommand.shouldSkip()) {
@@ -351,7 +352,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                         input ->
                             input.sources() != null
                                 && input.sources().contains(InputSource.SESSION)),
-            logicExecutionContext -> logicExecutionContext.nodeId().toString(),
+            logicExecutionContext -> logicExecutionContext.nodeId().value(),
             decoratorContext -> inputInjector));
   }
 
