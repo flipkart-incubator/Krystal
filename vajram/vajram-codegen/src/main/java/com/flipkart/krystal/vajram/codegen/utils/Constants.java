@@ -42,7 +42,7 @@ public final class Constants {
   public static final String GET_INPUT_DEFINITIONS = "getInputDefinitions";
   public static final String INPUTS_CLASS_SUFFIX = "Inputs";
   public static final String INPUTS_LIST = "inputsList";
-  public static final String INPUTS_NEEDING_MODULATION = "InputsNeedingModulation";
+  public static final String INPUTS_NEEDING_MODULATION = "ModInputs";
   public static final String COMMON_INPUTS = "CommonInputs";
   public static final String INPUTS = "inputs";
   public static final String UNMOD_INPUT = "unmodInput";

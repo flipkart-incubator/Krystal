@@ -7,7 +7,7 @@ import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceInputUtil.FriendsServiceCommonInputs;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceInputUtil.FriendsServiceInputsNeedingModulation;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceInputUtil.FriendsServiceModInputs;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
@@ -23,14 +23,11 @@ public abstract class FriendsServiceVajram extends IOVajram<Set<String>> {
   public static final LongAdder CALL_COUNTER = new LongAdder();
 
   @VajramLogic
-  public static ImmutableMap<FriendsServiceInputsNeedingModulation, CompletableFuture<Set<String>>>
-      call(
-          ModulatedInput<FriendsServiceInputsNeedingModulation, FriendsServiceCommonInputs>
-              modulatedInput) {
+  public static ImmutableMap<FriendsServiceModInputs, CompletableFuture<Set<String>>> call(
+      ModulatedInput<FriendsServiceModInputs, FriendsServiceCommonInputs> modulatedInput) {
     CALL_COUNTER.increment();
-    Map<FriendsServiceInputsNeedingModulation, CompletableFuture<Set<String>>> result =
-        new LinkedHashMap<>();
-    for (FriendsServiceInputsNeedingModulation inputsNeedingModulation :
+    Map<FriendsServiceModInputs, CompletableFuture<Set<String>>> result = new LinkedHashMap<>();
+    for (FriendsServiceModInputs inputsNeedingModulation :
         modulatedInput.inputsNeedingModulation()) {
       String userId = inputsNeedingModulation.userId();
       result.put(inputsNeedingModulation, completedFuture(getFriends(userId)));
