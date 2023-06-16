@@ -75,7 +75,7 @@ class SplitAdderTest {
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
   }
 
-  @Disabled("Long running benchmark")
+//  @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
@@ -117,7 +117,7 @@ class SplitAdderTest {
      *    loopCount = 50_000
      *    maxParallelismPerCore = 0.5
      *    Processor: 2.6 GHz 6-Core Intel Core i7 (with hyperthreading - 12 virtual cores)
-     * Benchmark result:
+     * Best Benchmark result:
      *    platform overhead = ~300 µs per request
      *    maxPoolSize = 6
      *    maxActiveLeasesPerObject: 4114
