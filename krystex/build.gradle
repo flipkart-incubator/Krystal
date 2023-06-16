@@ -1,18 +1,8 @@
-plugins {
-    id 'java'
-    id 'idea'
-    id 'maven-publish'
-}
-
 group 'com.flipkart.krystal'
 version project.krystal_version
 
-java {
-    withSourcesJar()
-}
-
 dependencies {
-    implementation project(':krystal-common')
+    api project(':krystal-common')
 
     def r4j_version = '1.7.1'
     implementation 'io.github.resilience4j:resilience4j-all:' + r4j_version
@@ -39,17 +29,4 @@ publishing {
             from components.java
         }
     }
-    repositories {
-        maven {
-            url "https://clojars.org/repo"
-            credentials {
-                username = rootProject.ext.clojarsusername
-                password = rootProject.ext.clojarspassword
-            }
-        }
-    }
-}
-
-test {
-    useJUnitPlatform()
 }
