@@ -4,6 +4,7 @@ import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
+import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder.add;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -17,6 +18,8 @@ import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutionReport;
 import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutorMetrics;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
@@ -76,11 +79,12 @@ class ChainAdderTest {
   @Test
   void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
-    VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();
-    long javaNativeTime = javaMethodBenchmark(this::chainAdd, loopCount);
-    long javaFuturesTime = javaFuturesBenchmark(this::chainAddAsync, loopCount);
+    VajramNodeGraph graph = this.graph.maxParallelismPerCore(0.5).build();
+    long javaNativeTimeNs = javaMethodBenchmark(this::chainAdd, loopCount);
+    long javaFuturesTimeNs = javaFuturesBenchmark(this::chainAddAsync, loopCount);
     //noinspection unchecked
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
+    KrystalNodeExecutorMetrics[] metrics = new KrystalNodeExecutorMetrics[loopCount];
     long startTime = System.nanoTime();
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
@@ -88,34 +92,31 @@ class ChainAdderTest {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
           graph.createExecutor(new RequestContext(""))) {
+        metrics[value] =
+            ((KrystalNodeExecutor) krystexVajramExecutor.getKrystalExecutor())
+                .getKrystalNodeMetrics();
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         long enqueueStart = System.nanoTime();
         futures[value] = executeVajram(krystexVajramExecutor, value);
         timeToEnqueueVajram += System.nanoTime() - enqueueStart;
       }
     }
-    System.out.printf("Avg. time to Create Executors:%,d%n", timeToCreateExecutors / loopCount);
-    System.out.printf("Avg. time to Enqueue vajrams:%,d%n", timeToEnqueueVajram / loopCount);
     allOf(futures).join();
-    long vajramTime = System.nanoTime() - startTime;
-    System.out.printf("Avg. time to execute vajrams:%,d%n", vajramTime / loopCount);
-    System.out.printf(
-        "Platform overhead over native code: %,.0f ns per request%n",
-        (1.0 * vajramTime - javaNativeTime) / loopCount);
+    long vajramTimeNs = System.nanoTime() - startTime;
     /*
      * Benchmark config:
      *    loopCount = 50_000
      *    maxParallelismPerCore = 1
      *    Processor: 2.6 GHz 6-Core Intel Core i7
-     * Benchmark result:
+     * Best Benchmark result:
      *    platform overhead over reactive code = ~260 µs  per request
-     *    maxPoolSize = 12
-     *    maxActiveLeasesPerObject: 4078
-     *    peakAvgActiveLeasesPerObject: 4076.83
+     *    maxPoolSize = 6
+     *    maxActiveLeasesPerObject: 8230
+     *    peakAvgActiveLeasesPerObject: 8228.67
+     *    Avg. time to Enqueue vajrams: 9,855 ns
+     *    Avg. time to execute vajrams: 344,809 ns
+     *    Throughput executions/sec: 2941
      */
-    System.out.printf(
-        "Platform overhead over reactive code: %,.0f ns per request%n",
-        (1.0 * vajramTime - javaFuturesTime) / loopCount);
     allOf(futures)
         .whenComplete(
             (unused, throwable) -> {
@@ -125,11 +126,15 @@ class ChainAdderTest {
               }
             })
         .get();
-    System.out.printf(
-        "maxActiveLeasesPerObject: %s, peakAvgActiveLeasesPerObject: %s, maxPoolSize: %s%n",
-        graph.getExecutorPool().maxActiveLeasesPerObject(),
-        graph.getExecutorPool().peakAvgActiveLeasesPerObject(),
-        graph.getExecutorPool().maxPoolSize());
+    printStats(
+        loopCount,
+        graph,
+        javaNativeTimeNs,
+        javaFuturesTimeNs,
+        metrics,
+        timeToCreateExecutors,
+        timeToEnqueueVajram,
+        vajramTimeNs);
   }
 
   private static CompletableFuture<Integer> executeVajram(

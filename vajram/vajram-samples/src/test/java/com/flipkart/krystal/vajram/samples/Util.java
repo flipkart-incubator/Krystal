@@ -52,9 +52,9 @@ public final class Util {
       long vajramTimeNs) {
     System.out
         .printf("Loop Count: %,d%n", loopCount)
-        .printf("Avg. time to Create Executors:%,d %n", timeToCreateExecutors / loopCount)
-        .printf("Avg. time to Enqueue vajrams:%,d %n", timeToEnqueueVajram / loopCount)
-        .printf("Avg. time to execute vajrams:%,d %n", vajramTimeNs / loopCount)
+        .printf("Avg. time to Create Executors:%,d ns%n", timeToCreateExecutors / loopCount)
+        .printf("Avg. time to Enqueue vajrams:%,d ns%n", timeToEnqueueVajram / loopCount)
+        .printf("Avg. time to execute vajrams:%,d ns%n", vajramTimeNs / loopCount)
         .printf("Throughput executions/s: %d%n", loopCount / ofNanos(vajramTimeNs).toSeconds())
         .printf(
             "CommandsQueuedCount: %,d%n",
