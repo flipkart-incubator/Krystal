@@ -21,6 +21,7 @@ subprojects {
 
     spotless {
         java {
+            target 'src/*/java/**/*.java', 'build/generated/sources/vajrams/**/*.java'
             googleJavaFormat()
         }
     }
