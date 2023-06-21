@@ -10,7 +10,7 @@ import java.util.List;
 abstract class AbstractSimpleInputResolver extends AbstractInputResolver {
 
   AbstractSimpleInputResolver(
-      VajramDependencyTypeSpec<?, ?, ?> dependency,
+      VajramDependencyTypeSpec<?, ?, ?, ?> dependency,
       VajramInputTypeSpec<?, ?> targetInput,
       List<VajramInputTypeSpec<?, ?>> sourceInputs) {
     super(

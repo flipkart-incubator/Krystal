@@ -30,11 +30,6 @@ dependencies {
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jacksonVersion
 }
 
-//configurations {
-//    provided
-//    testRuntime.extendsFrom(provided)
-//}
-
 test {
     useJUnitPlatform()
 }

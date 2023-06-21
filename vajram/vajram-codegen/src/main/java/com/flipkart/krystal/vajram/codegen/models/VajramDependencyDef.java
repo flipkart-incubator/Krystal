@@ -12,8 +12,17 @@ import lombok.EqualsAndHashCode;
 public final class VajramDependencyDef extends DependencyDef {
   private String vajramClass;
 
+  // 'true' for backward compatibility - this was the default behaviour before this field was
+  // introduced. At some point in the future, this should change to default to false.
+  private boolean canFanout = true;
+
   @Override
   public DataAccessSpec toDataAccessSpec() {
     return VajramID.fromClass(vajramClass);
+  }
+
+  @Override
+  public boolean canFanout() {
+    return canFanout;
   }
 }

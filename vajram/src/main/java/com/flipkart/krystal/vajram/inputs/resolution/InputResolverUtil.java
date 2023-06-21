@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.inputs.resolution;
 
-import static com.flipkart.krystal.data.ValueOrError.empty;
 import static com.flipkart.krystal.data.ValueOrError.withValue;
 import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.inputs.MultiExecute.skipFanout;
@@ -14,12 +13,15 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
+import com.flipkart.krystal.vajram.inputs.VajramDepFanoutTypeSpec;
+import com.flipkart.krystal.vajram.inputs.VajramDepSingleTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramDependencyTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -36,13 +38,22 @@ final class InputResolverUtil {
           List<SkipPredicate<S>> skipPredicates,
           Inputs inputs) {
     boolean fanout = fanoutTransformer != null;
-    ValueOrError<Object> inputValue;
-    if (sourceInput instanceof VajramDependencyTypeSpec<?, ?, ?>) {
-      inputValue = inputs.getDepValue(sourceInput.name()).values().values().iterator().next();
+    final Optional<Object> inputValue;
+    if (sourceInput instanceof VajramDepSingleTypeSpec<?, ?, ?>) {
+      inputValue =
+          inputs.getDepValue(sourceInput.name()).values().values().iterator().next().value();
+    } else if (sourceInput instanceof VajramDepFanoutTypeSpec<?, ?, ?>) {
+      inputValue =
+          Optional.of(
+              inputs.getDepValue(sourceInput.name()).values().values().stream()
+                  .map(ValueOrError::value)
+                  .map(o -> o.orElse(null))
+                  .filter(Objects::nonNull)
+                  .toList());
     } else if (sourceInput != null) {
-      inputValue = inputs.getInputValue(sourceInput.name());
+      inputValue = inputs.getInputValue(sourceInput.name()).value();
     } else {
-      inputValue = empty();
+      inputValue = Optional.empty();
     }
 
     Optional<SkipPredicate<S>> skipPredicate =
@@ -50,7 +61,7 @@ final class InputResolverUtil {
             .filter(
                 sSkipPredicate -> {
                   //noinspection unchecked
-                  Optional<S> value = (Optional<S>) inputValue.value();
+                  Optional<S> value = (Optional<S>) inputValue;
                   return sSkipPredicate.condition().test(value);
                 })
             .findFirst();
@@ -71,13 +82,11 @@ final class InputResolverUtil {
       transformedInput = ofNullable(transformer.apply(Optional.empty()));
     } else {
       transformedInput =
-          inputValue
-              .value()
-              .map(
-                  t -> {
-                    //noinspection unchecked
-                    return transformer.apply((Optional<S>) ofNullable(t));
-                  });
+          inputValue.map(
+              t -> {
+                //noinspection unchecked
+                return transformer.apply((Optional<S>) ofNullable(t));
+              });
     }
     Function<T, Inputs> valueToInput =
         t -> new Inputs(ImmutableMap.of(targetInput.name(), withValue(t)));
@@ -94,7 +103,7 @@ final class InputResolverUtil {
   }
 
   static <S, T, CV extends Vajram<?>, DV extends Vajram<?>> InputResolver toResolver(
-      VajramDependencyTypeSpec<?, CV, DV> dependency, InputResolverSpec<S, T, CV, DV> spec) {
+      VajramDependencyTypeSpec<?, ?, CV, DV> dependency, InputResolverSpec<S, T, CV, DV> spec) {
     return new AbstractSimpleInputResolver(
         dependency,
         spec.getTargetInput(),

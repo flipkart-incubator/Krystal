@@ -150,7 +150,7 @@ class KrystexVajramExecutorTest {
                     () -> new Batcher<>(3),
                     TestUserServiceVajram.ID + "Batcher",
                     ImmutableSet.of(
-                        fromTriggerOrder(new NodeId(HelloFriendsVajram.ID), "user_infos"),
+                        fromTriggerOrder(new NodeId(HelloFriendsVajram.ID), "user_info"),
                         fromTriggerOrder(new NodeId(HelloFriendsVajram.ID), "friend_infos"))))
             .build();
 
@@ -355,7 +355,7 @@ class KrystexVajramExecutorTest {
              Default InputModulatorConfig allocates one InputModulationDecorator for each
              dependant call chain.
              TestUserServiceVajram is called via two dependantChains:
-             [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_infos
+             [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_info
              [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos
             */
             2);
@@ -375,7 +375,7 @@ class KrystexVajramExecutorTest {
                     () -> new Batcher<>(100),
                     TestUserServiceVajram.ID + "Batcher",
                     ImmutableSet.of(
-                        fromTriggerOrder(new NodeId(MultiHelloFriends.ID), "hellos", "user_infos"),
+                        fromTriggerOrder(new NodeId(MultiHelloFriends.ID), "hellos", "user_info"),
                         fromTriggerOrder(
                             new NodeId(MultiHelloFriends.ID), "hellos", "friend_infos"))))
             .build();
@@ -402,7 +402,7 @@ class KrystexVajramExecutorTest {
         .isEqualTo(
             /*
              TestUserServiceVajram is called via two dependantChains:
-             ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_infos)
+             ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_info)
              ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos)
              Since input modulator is shared across these dependantChains, only one call must be
              made

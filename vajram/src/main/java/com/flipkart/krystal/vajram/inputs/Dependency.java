@@ -5,7 +5,11 @@ import lombok.Builder;
 
 @Builder
 public record Dependency<T>(
-    String name, DataAccessSpec dataAccessSpec, boolean isMandatory, String documentation)
+    String name,
+    DataAccessSpec dataAccessSpec,
+    boolean isMandatory,
+    boolean canFanout,
+    String documentation)
     implements VajramInputDefinition {
 
   @Override

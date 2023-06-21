@@ -3,6 +3,7 @@ package com.flipkart.krystal.krystex;
 import com.flipkart.krystal.data.Inputs;
 import com.google.common.collect.ImmutableList;
 
+@FunctionalInterface
 public interface ResolverCommand {
 
   ImmutableList<Inputs> getInputs();

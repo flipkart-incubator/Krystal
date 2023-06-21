@@ -42,23 +42,6 @@ public abstract class Formula extends ComputeVajram<Integer> {
   @VajramLogic
   public static int result(FormulaInputs allInputs) {
     /* Return quotient */
-    return allInputs
-        .quotient()
-        .get(
-            DividerRequest.builder()
-                .numerator(allInputs.a())
-                .denominator(
-                    allInputs
-                        .sum()
-                        .get(
-                            AdderRequest.builder()
-                                .numberOne(allInputs.p())
-                                .numberTwo(allInputs.q())
-                                .build())
-                        .value()
-                        .orElseThrow())
-                .build())
-        .value()
-        .orElseThrow();
+    return allInputs.quotient();
   }
 }

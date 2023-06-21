@@ -9,8 +9,9 @@ dependencies:
     depType: vajram
     vajramClass: com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdder
     dataType: integer
+    canFanout: true
   - name: sum
     depType: vajram
     vajramClass: com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder
     dataType: integer
-
+    canFanout: false

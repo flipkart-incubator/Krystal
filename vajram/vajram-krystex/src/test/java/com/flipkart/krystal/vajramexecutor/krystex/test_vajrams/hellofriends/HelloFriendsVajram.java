@@ -7,7 +7,7 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofrie
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.numberOfFriends_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.userId_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.userId_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.userInfos_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.userInfo_s;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 
@@ -36,7 +36,7 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
     return resolve(
         dep(
-            userInfos_s,
+            userInfo_s,
             depInput(TestUserServiceRequest.userId_s).usingAsIs(userId_s).asResolver()));
   }
 
@@ -52,14 +52,7 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
   public static String sayHellos(HelloFriendsInputs request) throws Exception {
     return "Hello Friends of %s! %s"
         .formatted(
-            request
-                .userInfos()
-                .getOrThrow(
-                    TestUserServiceRequest.builder().userId(request.userId()).build(),
-                    () ->
-                        new IllegalArgumentException(
-                            "Did not receive userInfo of user %s".formatted(request.userId())))
-                .userName(),
+            request.userInfo().userName(),
             request.friendInfos().values().stream()
                 .filter(voe -> voe.value().isPresent())
                 .map(voe -> voe.value().get())
