@@ -133,8 +133,13 @@ class Node {
     RequestId requestId = nodeCommand.requestId();
     final CompletableFuture<NodeResponse> resultForRequest =
         resultsByRequest.computeIfAbsent(requestId, r -> new CompletableFuture<>());
+    if (resultForRequest.isDone()) {
+      // This is possible if this node was already skipped, for example.
+      // If the result for this requestId is already available, just return and avoid unnecessary
+      // computation.
+      return resultForRequest;
+    }
     try {
-      boolean executeMainLogic;
       if (nodeCommand instanceof SkipNode skipNode) {
         requestsByDependantChain
             .computeIfAbsent(skipNode.dependantChain(), k -> new LinkedHashSet<>())
@@ -143,24 +148,36 @@ class Node {
         skipLogicRequested.put(requestId, Optional.of(skipNode));
         return handleSkipDependency(requestId, skipNode, resultForRequest);
       } else if (nodeCommand instanceof ExecuteWithDependency executeWithDependency) {
-        executeMainLogic = executeWithDependency(requestId, executeWithDependency);
+        executeWithDependency(requestId, executeWithDependency);
       } else if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
         requestsByDependantChain
             .computeIfAbsent(executeWithInputs.dependantChain(), k -> new LinkedHashSet<>())
             .add(requestId);
         dependantChainByRequest.computeIfAbsent(requestId, r -> executeWithInputs.dependantChain());
-        executeMainLogic = executeWithInputs(requestId, executeWithInputs);
+        executeWithInputs(requestId, executeWithInputs);
       } else {
         throw new UnsupportedOperationException(
             "Unknown type of nodeCommand: %s".formatted(nodeCommand));
       }
-      if (executeMainLogic) {
-        executeMainLogic(resultForRequest, requestId);
-      }
+      executeMainLogicIfPossible(requestId, resultForRequest);
     } catch (Throwable e) {
       resultForRequest.completeExceptionally(e);
     }
     return resultForRequest;
+  }
+
+  private void executeMainLogicIfPossible(
+      RequestId requestId, CompletableFuture<NodeResponse> resultForRequest) {
+    // If all the inputs and dependency values are available, then prepare run mainLogic
+    MainLogicDefinition<Object> mainLogicDefinition = nodeDefinition.getMainLogicDefinition();
+    ImmutableSet<String> inputNames = mainLogicDefinition.inputNames();
+    Set<String> collect =
+        new LinkedHashSet<>(
+            inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
+    collect.addAll(dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
+    if (collect.containsAll(inputNames)) { // All the inputs of the logic node have data present
+      executeMainLogic(resultForRequest, requestId);
+    }
   }
 
   public void markRecursive() {
@@ -221,13 +238,12 @@ class Node {
     }
   }
 
-  private boolean executeWithInputs(RequestId requestId, ExecuteWithInputs executeWithInputs) {
+  private void executeWithInputs(RequestId requestId, ExecuteWithInputs executeWithInputs) {
     collectInputValues(requestId, executeWithInputs.inputNames(), executeWithInputs.values());
-    return execute(requestId, executeWithInputs.inputNames());
+    execute(requestId, executeWithInputs.inputNames());
   }
 
-  private boolean executeWithDependency(
-      RequestId requestId, ExecuteWithDependency executeWithInput) {
+  private void executeWithDependency(RequestId requestId, ExecuteWithDependency executeWithInput) {
     String dependencyName = executeWithInput.dependencyName();
     ImmutableSet<String> inputNames = ImmutableSet.of(dependencyName);
     if (dependencyValuesCollector
@@ -238,10 +254,10 @@ class Node {
           "Duplicate data for dependency %s of node %s in request %s"
               .formatted(dependencyName, nodeId, requestId));
     }
-    return execute(requestId, inputNames);
+    execute(requestId, inputNames);
   }
 
-  private boolean execute(RequestId requestId, ImmutableSet<String> newInputNames) {
+  private void execute(RequestId requestId, ImmutableSet<String> newInputNames) {
     MainLogicDefinition<Object> mainLogicDefinition = nodeDefinition.getMainLogicDefinition();
 
     Map<String, InputValue<Object>> allInputs =
@@ -253,30 +269,19 @@ class Node {
         Stream.concat(allInputs.keySet().stream(), allDependencies.keySet().stream())
             .collect(toSet());
     if (availableInputs.isEmpty()) {
-      if (allInputNames.isEmpty()) {
-        return true;
-      } else if (nodeDefinition.resolverDefinitions().isEmpty()
-          && !nodeDefinition.dependencyNodes().isEmpty())
-        return executeDependenciesWhenNoResolvers(requestId);
+      if (!allInputNames.isEmpty()
+          && nodeDefinition.resolverDefinitions().isEmpty()
+          && !nodeDefinition.dependencyNodes().isEmpty()) {
+        executeDependenciesWhenNoResolvers(requestId);
+      }
+      return;
     }
+
     Map<NodeLogicId, ResolverDefinition> pendingResolvers =
         getPendingResolvers(requestId, newInputNames, availableInputs);
     for (ResolverDefinition pendingResolver : pendingResolvers.values()) {
       executeResolver(requestId, pendingResolver);
     }
-
-    boolean executeMainLogic = false;
-    if (pendingResolvers.isEmpty()) {
-      ImmutableSet<String> inputNames = mainLogicDefinition.inputNames();
-      Set<String> collect =
-          new LinkedHashSet<>(
-              inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
-      collect.addAll(dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
-      if (collect.containsAll(inputNames)) { // All the inputs of the logic node have data present
-        executeMainLogic = true;
-      }
-    }
-    return executeMainLogic;
   }
 
   /**
@@ -536,7 +541,7 @@ class Node {
     return new Inputs(inputValues);
   }
 
-  private boolean executeDependenciesWhenNoResolvers(RequestId requestId) {
+  private void executeDependenciesWhenNoResolvers(RequestId requestId) {
     nodeDefinition
         .dependencyNodes()
         .forEach(
@@ -574,7 +579,6 @@ class Node {
                         });
               }
             });
-    return false;
   }
 
   private void executeMainLogic(

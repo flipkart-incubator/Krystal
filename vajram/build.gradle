@@ -1,18 +1,8 @@
-plugins {
-    id 'java'
-    id 'idea'
-    id 'maven-publish'
-}
-
 group 'com.flipkart.krystal'
 version project.krystal_version
 
-java {
-    withSourcesJar()
-}
-
 dependencies {
-    implementation project(':krystal-common')
+    api project(':krystal-common')
     implementation 'com.google.guava:guava:31.1-jre'
     implementation 'org.reflections:reflections:0.10.2'
     implementation 'com.graphql-java:graphql-java:20.0'
@@ -36,17 +26,4 @@ publishing {
             from components.java
         }
     }
-    repositories {
-        maven {
-            url "https://clojars.org/repo"
-            credentials {
-                username = rootProject.ext.clojarsusername
-                password = rootProject.ext.clojarspassword
-            }
-        }
-    }
-}
-
-test {
-    useJUnitPlatform()
 }

@@ -39,7 +39,7 @@ public class MultiLeasePool<T> implements AutoCloseable {
         if (head == null) {
           continue;
         }
-        processNonNullHead();
+        processNonNullHead(head);
       } while (head != null && --count > 0 && !canLeaseOut(head));
       PooledObject<T> leasable;
       if (head == null || !canLeaseOut(head)) {
@@ -57,8 +57,7 @@ public class MultiLeasePool<T> implements AutoCloseable {
     }
   }
 
-  private void processNonNullHead() {
-    PooledObject<T> head = queue.peek();
+  private void processNonNullHead(PooledObject<T> head) {
     boolean shouldPushToLast =
         !canLeaseOut(head)
             || (leasePolicy instanceof DistributeLeases distributeLeases

@@ -5,6 +5,7 @@ import static com.flipkart.krystal.data.ValueOrError.empty;
 import com.flipkart.krystal.data.ValueOrError;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 public record DependencyResponse<R extends VajramRequest, V>(
@@ -17,18 +18,28 @@ public record DependencyResponse<R extends VajramRequest, V>(
     return responses.getOrDefault(request, empty()).value().orElseThrow(exceptionSupplier);
   }
 
+  /**
+   * This method will be removed in a future version. This method hides the actual exception or
+   * cause of a missing value. Please use {@link #getOnlyValue()}.orElseThrow(() -> ...) instead so
+   * that explicit exceptions can be thrown.
+   *
+   * @deprecated Use {@link #getOnlyValue()}.orElseThrow() instead.
+   */
+  @Deprecated(forRemoval = true)
   public V getOnlyValueOrThrow() {
-    ValueOrError<V> value = getOnlyValue();
+    return getOnlyValue().orElseThrow(() -> new IllegalStateException("Received empty response."));
+  }
+
+  public Optional<V> getOnlyValue() {
+    ValueOrError<V> value = getOnlyValueOrError();
     if (value.error().isPresent()) {
       throw new IllegalStateException("Received an error.", value.error().get());
     }
-    if (value.value().isEmpty()) {
-      throw new IllegalStateException("Received empty response.");
-    }
-    return value.value().get();
+    Optional<V> opt = value.value();
+    return opt;
   }
 
-  private ValueOrError<V> getOnlyValue() {
+  private ValueOrError<V> getOnlyValueOrError() {
     ImmutableCollection<ValueOrError<V>> values = values();
     if (values.size() != 1) {
       throw new IllegalStateException(
