@@ -354,24 +354,37 @@ class Node {
     if (resolverCommand instanceof SkipDependency) {
       if (dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).get(dependencyName)
           == null) {
-        SkipNode skipNode =
-            new SkipNode(
-                depNodeId,
-                requestId.append("%s".formatted(dependencyName)),
-                DependantChain.from(
-                    nodeId,
-                    dependencyName,
-                    dependantChainByRequest.getOrDefault(
-                        requestId, DependantChainStart.instance())),
-                (SkipDependency) resolverCommand);
-        krystalNodeExecutor.executeCommand(skipNode);
-        krystalNodeExecutor.executeCommand(
-            new ExecuteWithDependency(
-                this.nodeId,
-                dependencyName,
-                new Results<>(
-                    ImmutableMap.of(Inputs.empty(), withError(skipNodeException(skipNode)))),
-                requestId));
+        ImmutableList<Inputs> inputList = resolverCommand.getInputs();
+        long executionsInProgress = dependencyNodeExecutions.executionCounter().longValue();
+        long batchSize = max(executionsInProgress, 1);
+        int requestCounter = 0;
+
+        for (int j = 0; j < inputList.size(); j++) {
+          for (int i = 0; i < batchSize; i++) {
+            if (requestCounter >= executionsInProgress) {
+              dependencyNodeExecutions.executionCounter().increment();
+            }
+            RequestId dependencyRequestId =
+                requestId.append("%s[%s]".formatted(dependencyName, j * batchSize + i));
+            dependencyNodeExecutions
+                .individualCallInputs()
+                .put(dependencyRequestId, inputList.get(j));
+            SkipNode skipNode =
+                new SkipNode(
+                    depNodeId,
+                    dependencyRequestId,
+                    DependantChain.from(
+                        nodeId,
+                        dependencyName,
+                        dependantChainByRequest.getOrDefault(
+                            requestId, DependantChainStart.instance())),
+                    (SkipDependency) resolverCommand);
+            dependencyNodeExecutions
+                .individualCallResponses()
+                .putIfAbsent(dependencyRequestId, krystalNodeExecutor.executeCommand(skipNode));
+          }
+          requestCounter += batchSize;
+        }
       }
     } else {
       // Since the resolver can return multiple inputs, we have to call the dependency Node
@@ -435,45 +448,42 @@ class Node {
         }
         requestCounter += batchSize;
       }
-      ImmutableSet<ResolverDefinition> resolverDefinitionsForDependency =
-          this.resolverDefinitionsByDependencies.get(dependencyName);
-      if (resolverDefinitionsForDependency.equals(dependencyNodeExecutions.executedResolvers())) {
-        allOf(
-                dependencyNodeExecutions
-                    .individualCallResponses()
-                    .values()
-                    .toArray(CompletableFuture[]::new))
-            .whenComplete(
-                (unused, throwable) -> {
-                  enqueueOrExecuteCommand(
-                      () -> {
-                        Results<Object> results;
-                        if (throwable != null) {
-                          results =
-                              new Results<>(ImmutableMap.of(Inputs.empty(), withError(throwable)));
-                        } else {
-                          results =
-                              new Results<>(
-                                  dependencyNodeExecutions
-                                      .individualCallResponses()
-                                      .values()
-                                      .stream()
-                                      .map(cf -> cf.getNow(new NodeResponse()))
-                                      .collect(
-                                          toImmutableMap(
-                                              NodeResponse::inputs, NodeResponse::response)));
-                        }
-                        return new ExecuteWithDependency(
-                            this.nodeId, dependencyName, results, requestId);
-                      },
-                      depNodeId);
-                });
-      }
-
-      flushDependencyIfNeeded(
-          dependencyName,
-          dependantChainByRequest.getOrDefault(requestId, DependantChainStart.instance()));
     }
+    ImmutableSet<ResolverDefinition> resolverDefinitionsForDependency =
+        this.resolverDefinitionsByDependencies.get(dependencyName);
+    if (resolverDefinitionsForDependency.equals(dependencyNodeExecutions.executedResolvers())) {
+      allOf(
+              dependencyNodeExecutions
+                  .individualCallResponses()
+                  .values()
+                  .toArray(CompletableFuture[]::new))
+          .whenComplete(
+              (unused, throwable) -> {
+                enqueueOrExecuteCommand(
+                    () -> {
+                      Results<Object> results;
+                      if (throwable != null) {
+                        results =
+                            new Results<>(ImmutableMap.of(Inputs.empty(), withError(throwable)));
+                      } else {
+                        results =
+                            new Results<>(
+                                dependencyNodeExecutions.individualCallResponses().values().stream()
+                                    .map(cf -> cf.getNow(new NodeResponse()))
+                                    .collect(
+                                        toImmutableMap(
+                                            NodeResponse::inputs, NodeResponse::response)));
+                      }
+                      return new ExecuteWithDependency(
+                          this.nodeId, dependencyName, results, requestId);
+                    },
+                    depNodeId);
+              });
+    }
+
+    flushDependencyIfNeeded(
+        dependencyName,
+        dependantChainByRequest.getOrDefault(requestId, DependantChainStart.instance()));
   }
 
   private void enqueueOrExecuteCommand(
