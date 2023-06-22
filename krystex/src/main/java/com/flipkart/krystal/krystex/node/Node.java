@@ -359,16 +359,22 @@ class Node {
         long batchSize = max(executionsInProgress, 1);
         int requestCounter = 0;
 
-        for (int j = 0; j < inputList.size(); j++) {
-          for (int i = 0; i < batchSize; i++) {
+        for (int j = 0; j <= inputList.size(); j++) {
+          for (int i = 0; i <= batchSize; i++) {
             if (requestCounter >= executionsInProgress) {
               dependencyNodeExecutions.executionCounter().increment();
             }
             RequestId dependencyRequestId =
                 requestId.append("%s[%s]".formatted(dependencyName, j * batchSize + i));
-            dependencyNodeExecutions
-                .individualCallInputs()
-                .put(dependencyRequestId, inputList.get(j));
+            if (inputList.size() > j) {
+              dependencyNodeExecutions
+                  .individualCallInputs()
+                  .putIfAbsent(dependencyRequestId, inputList.get(j));
+            } else {
+              dependencyNodeExecutions
+                  .individualCallInputs()
+                  .putIfAbsent(dependencyRequestId, Inputs.empty());
+            }
             SkipNode skipNode =
                 new SkipNode(
                     depNodeId,
