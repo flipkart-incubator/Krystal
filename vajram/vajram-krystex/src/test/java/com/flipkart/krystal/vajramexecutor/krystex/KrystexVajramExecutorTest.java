@@ -493,6 +493,51 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
+  void flush_sequentialSkipDependency_flushesSharedBatchers(TestInfo testInfo) throws Exception {
+    VajramNodeGraph graph =
+        loadFromClasspath(
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello")
+            .registerInputModulator(
+                vajramID(TestUserServiceVajram.ID),
+                InputModulatorConfig.simple(() -> new Batcher<>(100)))
+            .registerInputModulator(
+                vajramID(FriendsServiceVajram.ID),
+                InputModulatorConfig.sharedModulator(
+                    () -> new Batcher<>(100),
+                    FriendsServiceVajram.ID + "_1",
+                    ImmutableSet.of(
+                        DependantChain.fromTriggerOrder(
+                            new NodeId("MutualFriendsHello"), "hellos", "friend_ids"))))
+            .registerInputModulator(
+                vajramID(FriendsServiceVajram.ID),
+                InputModulatorConfig.sharedModulator(
+                    () -> new Batcher<>(100),
+                    FriendsServiceVajram.ID + "_2",
+                    ImmutableSet.of(
+                        fromTriggerOrder(new NodeId("MutualFriendsHello"), "friend_ids"))))
+            .build();
+    CompletableFuture<String> multiHellos;
+    requestContext.requestId(testInfo.getDisplayName());
+    try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
+        graph.createExecutor(requestContext)) {
+      multiHellos =
+          krystexVajramExecutor.execute(
+              vajramID("MutualFriendsHello"),
+              testRequestContext ->
+                  MultiHelloFriendsV2Request.builder()
+                      .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
+                      .skip(true)
+                      .build());
+    }
+    assertThat(multiHellos).succeedsWithin(1, TimeUnit.SECONDS);
+    assertThat(multiHellos.get().equals(""));
+    assertThat(FriendsServiceVajram.CALL_COUNTER.sum()).isEqualTo(1);
+  }
+
+  @Test
   //  @Disabled("Fix: https://github.com/flipkart-incubator/Krystal/issues/84")
   void flush_skippingADependency_flushesCompleteCallGraph(TestInfo testInfo) throws Exception {
     CompletableFuture<FlushCommand> friendServiceFlushCommand = new CompletableFuture<>();

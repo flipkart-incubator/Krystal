@@ -485,11 +485,11 @@ class Node {
                     },
                     depNodeId);
               });
-    }
 
-    flushDependencyIfNeeded(
-        dependencyName,
-        dependantChainByRequest.getOrDefault(requestId, DependantChainStart.instance()));
+      flushDependencyIfNeeded(
+          dependencyName,
+          dependantChainByRequest.getOrDefault(requestId, DependantChainStart.instance()));
+    }
   }
 
   private void enqueueOrExecuteCommand(
