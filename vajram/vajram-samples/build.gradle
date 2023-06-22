@@ -1,5 +1,4 @@
 plugins {
-    id 'java'
     id 'com.flipkart.krystal' version "${krystal_version}"
 }
 
@@ -28,8 +27,4 @@ dependencies {
     testImplementation 'com.fasterxml.jackson.core:jackson-databind:' + jacksonVersion
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:' + jacksonVersion
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jacksonVersion
-}
-
-test {
-    useJUnitPlatform()
 }

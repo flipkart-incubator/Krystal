@@ -9,9 +9,6 @@ buildscript {
 }
 
 plugins {
-    id 'java'
-    id 'idea'
-    id 'maven-publish'
     id 'java-gradle-plugin'
     id 'groovy'
 }
@@ -22,10 +19,6 @@ description
 '''Gradle plugin for projects using the Krystal framework. 
 Includes Vajram code generator and validator. 
 Tasks from this plugin are added under the group "Krystal"'''
-
-java {
-    withSourcesJar()
-}
 
 gradlePlugin {
     plugins {
@@ -38,8 +31,7 @@ gradlePlugin {
 
 
 dependencies {
-    implementation project(':krystal-common')
-    implementation project(':vajram')
+    api project(':vajram')
     implementation 'com.google.guava:guava:31.1-jre'
     implementation 'com.squareup:javapoet:1.13.0'
     implementation 'commons-cli:commons-cli:1.5.0'
@@ -56,20 +48,4 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
     testImplementation 'org.assertj:assertj-core:3.23.1'
-}
-
-publishing {
-    repositories {
-        maven {
-            url "https://clojars.org/repo"
-            credentials {
-                username = rootProject.ext.clojarsusername
-                password = rootProject.ext.clojarspassword
-            }
-        }
-    }
-}
-
-test {
-    useJUnitPlatform()
 }

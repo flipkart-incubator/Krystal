@@ -1,7 +1,4 @@
 plugins {
-    id 'java'
-    id 'idea'
-    id 'maven-publish'
     id 'com.flipkart.krystal' version "${krystal_version}"
 }
 
@@ -15,14 +12,9 @@ repositories {
     maven { url "https://clojars.org/repo" }
 }
 
-java {
-    withSourcesJar()
-}
-
 dependencies {
-    implementation project(':krystal-common')
-    implementation project(':vajram')
-    implementation project(':krystex')
+    api project(':vajram')
+    api project(':krystex')
     implementation 'com.google.guava:guava:31.1-jre'
     implementation 'org.checkerframework:checker-qual:3.21.3'
 
@@ -51,15 +43,6 @@ publishing {
             artifactId = 'vajram-krystex'
             version = project.krystal_version
             from components.java
-        }
-    }
-    repositories {
-        maven {
-            url "https://clojars.org/repo"
-            credentials {
-                username = rootProject.ext.clojarsusername
-                password = rootProject.ext.clojarspassword
-            }
         }
     }
 }
