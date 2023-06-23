@@ -1,11 +1,13 @@
 package com.flipkart.krystal.caramel.samples.basic;
 
+import com.flipkart.krystal.caramel.model.CaramelPayload;
 import com.flipkart.krystal.caramel.model.ImplAs;
 import com.flipkart.krystal.caramel.model.WorkflowPayload;
 import java.util.Collection;
 import java.util.List;
 
 @ImplAs("TestPayload")
+@CaramelPayload
 interface TestPayloadDefinition extends WorkflowPayload {
 
   ProductUpdateEventsContainer productUpdateEvents();

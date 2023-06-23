@@ -2,18 +2,18 @@ package com.flipkart.krystal.caramel.samples.basic;
 
 import static com.flipkart.krystal.caramel.model.OutputChannel.outputChannel;
 import static com.flipkart.krystal.caramel.model.WorkflowMeta.workflow;
-import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.conditionalTransformedProducts;
-import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.initProductEvent;
-import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.initialTransformedProduct;
-import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.isEnableValidation;
-import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.metricNames;
-import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.nextProduct;
-import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.productUpdateEvents;
-import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.secondString;
-import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.string;
-import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.triggerUserId;
-import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.x1String;
-import static com.flipkart.krystal.caramel.samples.basic.TestPayload.metrics;
+import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.TestPayloadFields.conditionalTransformedProducts;
+import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.TestPayloadFields.initProductEvent;
+import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.TestPayloadFields.initialTransformedProduct;
+import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.TestPayloadFields.isEnableValidation;
+import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.TestPayloadFields.metricNames;
+import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.TestPayloadFields.nextProduct;
+import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.TestPayloadFields.productUpdateEvents;
+import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.TestPayloadFields.secondString;
+import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.TestPayloadFields.string;
+import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.TestPayloadFields.triggerUserId;
+import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.TestPayloadFields.x1String;
+import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.metrics;
 import static com.flipkart.krystal.caramel.samples.basic.classification.ProductClassification2WorkflowBuilder.classifyProduct2;
 import static com.flipkart.krystal.caramel.samples.basic.classification.ProductClassificationWorkflowBuilder.classifyProduct;
 import static com.flipkart.krystal.caramel.samples.basic.split.SplitWorkflowBuilder.splitter;
@@ -43,9 +43,10 @@ public class ProductProcessingWorkflowBuilder {
 
   private static final Logger log = Logger.getLogger("");
 
-  private static TerminatedWorkflow<ProductUpdateEventsContainer, TestPayload, TransformedProduct>
+  private static TerminatedWorkflow<
+          ProductUpdateEventsContainer, TestPayloadBkp, TransformedProduct>
       processProduct() {
-    return workflow("ProductProcessingWorkflow", TestPayload.class)
+    return workflow("ProductProcessingWorkflow", TestPayloadBkp.class)
         .startWith(productUpdateEvents)
         .compute(x1String, convertToString(), productUpdateEvents)
         .peek(productUpdateEvents, payload -> log.info(payload.toString()))
@@ -98,7 +99,7 @@ public class ProductProcessingWorkflowBuilder {
                 log.info(
                     "created Test Workflow Context with validation: "
                         + isEnableValidation
-                        + " "
+                        + ' '
                         + initialTransformedProduct))
         .iterate(
             productUpdateEvents,

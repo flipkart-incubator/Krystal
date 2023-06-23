@@ -13,8 +13,6 @@ plugins {
     id 'groovy'
 }
 
-group 'com.flipkart.krystal'
-version project.krystal_version
 description
 '''Gradle plugin for projects using the Krystal framework. 
 Includes Vajram code generator and validator. 
@@ -29,23 +27,29 @@ gradlePlugin {
     }
 }
 
-
 dependencies {
     api project(':vajram')
-    implementation 'com.google.guava:guava:31.1-jre'
+    api project(':caramel')
     implementation 'com.squareup:javapoet:1.13.0'
     implementation 'commons-cli:commons-cli:1.5.0'
+    implementation 'org.projectlombok:lombok:1.18.24'
+
+    compileOnly 'com.google.auto.service:auto-service:1.1.1'
+    annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
 
     def jacksonVersion = '2.14.2'
     implementation 'com.fasterxml.jackson.core:jackson-annotations:' + jacksonVersion
     implementation 'com.fasterxml.jackson.core:jackson-databind:' + jacksonVersion
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:' + jacksonVersion
+}
 
-    implementation 'org.projectlombok:lombok:1.18.24'
-
-    annotationProcessor 'org.projectlombok:lombok:1.18.24'
-
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
-    testImplementation 'org.assertj:assertj-core:3.23.1'
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.flipkart.krystal'
+            artifactId = 'krystal-plugin'
+            version = project.krystal_version
+            from components.java
+        }
+    }
 }

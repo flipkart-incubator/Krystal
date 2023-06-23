@@ -1,13 +1,6 @@
-group 'org.example'
-version 'unspecified'
+description 'Sample caramel workflows used as documentation and for integration testing.'
 
 dependencies {
-    implementation project(':caramel')
-    implementation 'com.google.guava:guava:31.1-jre'
-
-    compileOnly 'org.projectlombok:lombok:1.18.24'
-    annotationProcessor 'org.projectlombok:lombok:1.18.24'
-
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    api project(':caramel')
+    annotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
 }

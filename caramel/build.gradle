@@ -1,8 +1,16 @@
-group 'com.flipkart.krystal'
-version '0.1-SNAPSHOT'
+description 'A framework to write asynchronous workflows'
 
 dependencies {
-    implementation 'org.checkerframework:checker-qual:3.21.3'
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    api project(':krystal-common')
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.flipkart.krystal'
+            artifactId = project.name
+            version = project.krystal_version
+            from components.java
+        }
+    }
 }
