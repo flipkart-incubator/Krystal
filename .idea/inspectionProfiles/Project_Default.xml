@@ -645,6 +645,8 @@
           <option value="OverlyCoupledMethod" />
           <option value="OverlyCoupledClass" />
           <option value="OptionalContainsCollection" />
+          <option value="UnstableApiUsage" />
+          <option value="Singleton" />
           <option value="NumericCastThatLosesPrecision" />
         </list>
       </option>
@@ -688,7 +690,9 @@
       <option name="ignoreSupers" value="true" />
     </inspection_tool>
     <inspection_tool class="TestMethodInProductCode" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="TestMethodWithoutAssertion" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="TestMethodWithoutAssertion" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="assertionMethods" value="org.junit.Assert,assert.*|fail.*,junit.framework.Assert,assert.*|fail.*,org.junit.jupiter.api.Assertions,assert.*|fail.*,org.assertj.core.api.Assertions,assertThat.*,org.assertj.core.api.WithAssertions,assertThat,com.google.common.truth.Truth,assert.*,com.google.common.truth.Truth8,assert.*,org.mockito.Mockito,verify.*,org.mockito.InOrder,verify,org.junit.rules.ExpectedException,expect.*,org.hamcrest.MatcherAssert,assertThat,mockit.Verifications,Verifications,kotlin.PreconditionsKt__AssertionsJVMKt,assert,kotlin.test.AssertionsKt__AssertionsKt,assert.*|fail.*|expect,org.testng.Assert,assert.*|fail.*|expect.*,org.testng.AssertJUnit,assert.*|fail.*" />
+    </inspection_tool>
     <inspection_tool class="TestNGDataProvider" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="TestOnlyProblems" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="ThisEscapedInConstructor" enabled="false" level="ERROR" enabled_by_default="false" />

@@ -39,6 +39,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -354,24 +355,29 @@ class Node {
     if (resolverCommand instanceof SkipDependency) {
       if (dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).get(dependencyName)
           == null) {
-        SkipNode skipNode =
-            new SkipNode(
-                depNodeId,
-                requestId.append("%s".formatted(dependencyName)),
-                DependantChain.from(
-                    nodeId,
-                    dependencyName,
-                    dependantChainByRequest.getOrDefault(
-                        requestId, DependantChainStart.instance())),
-                (SkipDependency) resolverCommand);
-        krystalNodeExecutor.executeCommand(skipNode);
-        krystalNodeExecutor.executeCommand(
-            new ExecuteWithDependency(
-                this.nodeId,
-                dependencyName,
-                new Results<>(
-                    ImmutableMap.of(Inputs.empty(), withError(skipNodeException(skipNode)))),
-                requestId));
+        /* This is for the case where for some resolvers the input has already been resolved but we
+        do need to skip them as well, as our current resolver is skipped.*/
+        Set<RequestId> requestIdSet = new HashSet<>();
+        requestIdSet.addAll(dependencyNodeExecutions.individualCallResponses().keySet());
+        RequestId dependencyRequestId = requestId.append("%s[%s]".formatted(dependencyName, 0));
+        /*Skipping Current resolver, as its a skip, we dont need to iterate
+         * over fanout requests as the input is empty*/
+        requestIdSet.add(dependencyRequestId);
+        for (RequestId depRequestId : requestIdSet) {
+          SkipNode skipNode =
+              new SkipNode(
+                  depNodeId,
+                  depRequestId,
+                  DependantChain.extend(
+                      dependantChainByRequest.getOrDefault(
+                          requestId, DependantChainStart.instance()),
+                      nodeId,
+                      dependencyName),
+                  (SkipDependency) resolverCommand);
+          dependencyNodeExecutions
+              .individualCallResponses()
+              .putIfAbsent(depRequestId, krystalNodeExecutor.executeCommand(skipNode));
+        }
       }
     } else {
       // Since the resolver can return multiple inputs, we have to call the dependency Node
@@ -426,49 +432,46 @@ class Node {
                           depNodeId,
                           newInputs.values().keySet(),
                           newInputs,
-                          DependantChain.from(
-                              nodeId,
-                              dependencyName,
+                          DependantChain.extend(
                               dependantChainByRequest.getOrDefault(
-                                  requestId, DependantChainStart.instance())),
+                                  requestId, DependantChainStart.instance()),
+                              nodeId,
+                              dependencyName),
                           dependencyRequestId)));
         }
         requestCounter += batchSize;
       }
-      ImmutableSet<ResolverDefinition> resolverDefinitionsForDependency =
-          this.resolverDefinitionsByDependencies.get(dependencyName);
-      if (resolverDefinitionsForDependency.equals(dependencyNodeExecutions.executedResolvers())) {
-        allOf(
-                dependencyNodeExecutions
-                    .individualCallResponses()
-                    .values()
-                    .toArray(CompletableFuture[]::new))
-            .whenComplete(
-                (unused, throwable) -> {
-                  enqueueOrExecuteCommand(
-                      () -> {
-                        Results<Object> results;
-                        if (throwable != null) {
-                          results =
-                              new Results<>(ImmutableMap.of(Inputs.empty(), withError(throwable)));
-                        } else {
-                          results =
-                              new Results<>(
-                                  dependencyNodeExecutions
-                                      .individualCallResponses()
-                                      .values()
-                                      .stream()
-                                      .map(cf -> cf.getNow(new NodeResponse()))
-                                      .collect(
-                                          toImmutableMap(
-                                              NodeResponse::inputs, NodeResponse::response)));
-                        }
-                        return new ExecuteWithDependency(
-                            this.nodeId, dependencyName, results, requestId);
-                      },
-                      depNodeId);
-                });
-      }
+    }
+    ImmutableSet<ResolverDefinition> resolverDefinitionsForDependency =
+        this.resolverDefinitionsByDependencies.get(dependencyName);
+    if (resolverDefinitionsForDependency.equals(dependencyNodeExecutions.executedResolvers())) {
+      allOf(
+              dependencyNodeExecutions
+                  .individualCallResponses()
+                  .values()
+                  .toArray(CompletableFuture[]::new))
+          .whenComplete(
+              (unused, throwable) -> {
+                enqueueOrExecuteCommand(
+                    () -> {
+                      Results<Object> results;
+                      if (throwable != null) {
+                        results =
+                            new Results<>(ImmutableMap.of(Inputs.empty(), withError(throwable)));
+                      } else {
+                        results =
+                            new Results<>(
+                                dependencyNodeExecutions.individualCallResponses().values().stream()
+                                    .map(cf -> cf.getNow(new NodeResponse()))
+                                    .collect(
+                                        toImmutableMap(
+                                            NodeResponse::inputs, NodeResponse::response)));
+                      }
+                      return new ExecuteWithDependency(
+                          this.nodeId, dependencyName, results, requestId);
+                    },
+                    depNodeId);
+              });
 
       flushDependencyIfNeeded(
           dependencyName,
@@ -517,7 +520,7 @@ class Node {
                             .executedResolvers()))) {
 
       krystalNodeExecutor.executeCommand(
-          new Flush(depNodeId, DependantChain.from(nodeId, dependencyName, dependantChain)));
+          new Flush(depNodeId, DependantChain.extend(dependantChain, nodeId, dependencyName)));
     }
   }
 
@@ -556,8 +559,8 @@ class Node {
                             depNodeId,
                             ImmutableSet.of(),
                             Inputs.empty(),
-                            DependantChain.from(
-                                nodeId, depName, dependantChainByRequest.get(requestId)),
+                            DependantChain.extend(
+                                dependantChainByRequest.get(requestId), nodeId, depName),
                             dependencyRequestId));
                 nodeResponse
                     .thenApply(NodeResponse::response)

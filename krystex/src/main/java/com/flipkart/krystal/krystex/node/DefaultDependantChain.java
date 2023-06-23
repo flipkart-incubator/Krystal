@@ -1,41 +1,39 @@
 package com.flipkart.krystal.krystex.node;
 
-import java.util.Optional;
+import lombok.EqualsAndHashCode;
+import lombok.EqualsAndHashCode.CacheStrategy;
 
-// TODO : Need to make Node ID mandatory, so that record equals and hashcode
-//  can be used as it will be more performant
-public record DefaultDependantChain(
-    Optional<NodeId> nodeId, String dependencyName, DependantChain dependantChain)
-    implements DependantChain {
+@EqualsAndHashCode(cacheStrategy = CacheStrategy.LAZY)
+public final class DefaultDependantChain implements DependantChain {
+  private final NodeId nodeId;
+  private final String dependencyName;
+  private final DependantChain dependantChain;
 
-  public DefaultDependantChain(String dependencyName, DependantChain dependantChain) {
-    this(Optional.empty(), dependencyName, dependantChain);
-  }
-
-  @Override
-  public String toString() {
-    return "%s.%s".formatted(dependantChain().toString(), dependencyName());
+  DefaultDependantChain(NodeId nodeId, String dependencyName, DependantChain dependantChain) {
+    this.nodeId = nodeId;
+    this.dependencyName = dependencyName;
+    this.dependantChain = dependantChain;
   }
 
   @Override
   public boolean contains(NodeId nodeId) {
-    return this.nodeId.map(n -> n.equals(nodeId)).orElse(false) || dependantChain.contains(nodeId);
+    return this.nodeId.equals(nodeId) || dependantChain.contains(nodeId);
+  }
+
+  public NodeId nodeId() {
+    return nodeId;
+  }
+
+  public String dependencyName() {
+    return dependencyName;
+  }
+
+  public DependantChain dependantChain() {
+    return dependantChain;
   }
 
   @Override
-  public int hashCode() {
-    return this.defaultDependantChainString().hashCode();
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (obj instanceof DefaultDependantChain dep) {
-      return this.defaultDependantChainString().equals(dep.defaultDependantChainString());
-    }
-    return false;
-  }
-
-  private String defaultDependantChainString() {
-    return this.dependantChain.toString() + ":" + this.dependencyName;
+  public String toString() {
+    return "%s.%s:%s".formatted(dependantChain, nodeId.value(), dependencyName());
   }
 }

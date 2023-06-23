@@ -11,6 +11,7 @@ import com.flipkart.krystal.krystex.KrystalExecutor;
  * <p>{@link Node}s which are executed explicitly using {@link KrystalExecutor#executeNode} have
  * this as their dependantChain.
  */
+@SuppressWarnings("Singleton")
 public final class DependantChainStart implements DependantChain {
 
   private static final DependantChainStart INSTANCE = new DependantChainStart();
@@ -22,19 +23,15 @@ public final class DependantChainStart implements DependantChain {
   /**
    * @return A string representation that depicts the beginning of the DependantChain.
    */
-  public String asString() {
-    return "[Start]";
-  }
-
   @Override
   public String toString() {
-    return asString();
+    return "[Start]";
   }
-
-  private DependantChainStart() {}
 
   @Override
   public boolean contains(NodeId nodeId) {
     return false;
   }
+
+  private DependantChainStart() {}
 }
