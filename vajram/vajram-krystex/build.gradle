@@ -2,15 +2,7 @@ plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
 }
 
-group 'com.flipkart.krystal'
-version project.krystal_version
 description 'An implementation of a vajram executor powered by the Krystex module.'
-
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven { url "https://clojars.org/repo" }
-}
 
 dependencies {
     api project(':vajram')
@@ -27,13 +19,9 @@ publishing {
     publications {
         maven(MavenPublication) {
             groupId = 'com.flipkart.krystal'
-            artifactId = 'vajram-krystex'
+            artifactId = project.name
             version = project.krystal_version
             from components.java
         }
     }
-}
-
-test {
-    useJUnitPlatform()
 }
