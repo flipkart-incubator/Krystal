@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
+import static com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig.sharedModulator;
 import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -145,7 +146,7 @@ class KrystexVajramExecutorTest {
             .build();
     graph.registerInputModulators(
         vajramID(TestUserServiceVajram.ID),
-        InputModulatorConfig.sharedModulator(
+        sharedModulator(
             () -> new Batcher<>(3),
             TestUserServiceVajram.ID + "Batcher",
             graph.computeDependantChain(HelloFriendsVajram.ID, "user_infos"),
@@ -366,7 +367,7 @@ class KrystexVajramExecutorTest {
             .build();
     graph.registerInputModulators(
         vajramID(TestUserServiceVajram.ID),
-        InputModulatorConfig.sharedModulator(
+        sharedModulator(
             () -> new Batcher<>(100),
             TestUserServiceVajram.ID + "Batcher",
             graph.computeDependantChain(MultiHelloFriends.ID, "hellos", "user_infos"),
@@ -381,6 +382,7 @@ class KrystexVajramExecutorTest {
               testRequestContext ->
                   MultiHelloFriendsRequest.builder()
                       .userIds(new ArrayList<>(List.of("user_id_1", "user_id_2")))
+                      .skip(false)
                       .build());
     }
     assertThat(timedGet(multiHellos))
@@ -400,6 +402,49 @@ class KrystexVajramExecutorTest {
              made
             */
             1);
+  }
+
+  @Test
+  void flush_singleDepthSkipParallelDependencySharedInputModulatorConfig_flushes1Batcher(
+      TestInfo testInfo) throws Exception {
+    VajramNodeGraph graph =
+        loadFromClasspath(
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello")
+            .build();
+    graph.registerInputModulators(
+        vajramID(TestUserServiceVajram.ID),
+        sharedModulator(
+            () -> new Batcher<>(100),
+            TestUserServiceVajram.ID + "Batcher",
+            graph.computeDependantChain(MultiHelloFriends.ID, "hellos", "user_infos"),
+            graph.computeDependantChain(MultiHelloFriends.ID, "hellos", "friend_infos")));
+    CompletableFuture<String> multiHellos;
+    requestContext.requestId(testInfo.getDisplayName());
+    try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
+        graph.createExecutor(requestContext)) {
+      multiHellos =
+          krystexVajramExecutor.execute(
+              vajramID(MultiHelloFriends.ID),
+              testRequestContext ->
+                  MultiHelloFriendsRequest.builder()
+                      .userIds(new ArrayList<>(Set.of("user_id_1", "user_id_2")))
+                      .skip(true)
+                      .build());
+    }
+    assertThat(timedGet(multiHellos)).isEqualTo("");
+    assertThat(TestUserServiceVajram.CALL_COUNTER.sum())
+        .isEqualTo(
+            /*
+             TestUserServiceVajram is called via two dependantChains:
+             ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_infos)
+             ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos)
+             Since we have skipped HelloFriendsVajram, we would not call TestUserSericeVajram
+             so, the count should be 0.
+            */
+            0);
   }
 
   @Test
@@ -448,11 +493,11 @@ class KrystexVajramExecutorTest {
         vajramID(TestUserServiceVajram.ID), InputModulatorConfig.simple(() -> new Batcher<>(100)));
     graph.registerInputModulators(
         vajramID(FriendsServiceVajram.ID),
-        InputModulatorConfig.sharedModulator(
+        sharedModulator(
             () -> new Batcher<>(100),
             FriendsServiceVajram.ID + "_1",
             graph.computeDependantChain(MutualFriendsHello.ID, "hellos", "friend_ids")),
-        InputModulatorConfig.sharedModulator(
+        sharedModulator(
             () -> new Batcher<>(100),
             FriendsServiceVajram.ID + "_2",
             graph.computeDependantChain(MutualFriendsHello.ID, "friend_ids")));
@@ -474,6 +519,46 @@ class KrystexVajramExecutorTest {
             Hello Friends! Firstname Lastname (user_id_1:friend1:friend1), Firstname Lastname (user_id_1:friend1:friend2)
             Hello Friends! Firstname Lastname (user_id_1:friend2:friend1), Firstname Lastname (user_id_1:friend2:friend2)""");
     assertThat(FriendsServiceVajram.CALL_COUNTER.sum()).isEqualTo(2);
+  }
+
+  @Test
+  void flush_sequentialSkipDependency_flushesSharedBatchers(TestInfo testInfo) throws Exception {
+    VajramNodeGraph graph =
+        loadFromClasspath(
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello")
+            .build();
+    graph.registerInputModulators(
+        vajramID(TestUserServiceVajram.ID), InputModulatorConfig.simple(() -> new Batcher<>(100)));
+    graph.registerInputModulators(
+        vajramID(FriendsServiceVajram.ID),
+        sharedModulator(
+            () -> new Batcher<>(100),
+            FriendsServiceVajram.ID + "_1",
+            graph.computeDependantChain(MutualFriendsHello.ID, "hellos", "friend_ids")),
+        sharedModulator(
+            () -> new Batcher<>(100),
+            FriendsServiceVajram.ID + "_2",
+            graph.computeDependantChain(MutualFriendsHello.ID, "friend_ids")));
+
+    CompletableFuture<String> multiHellos;
+    requestContext.requestId(testInfo.getDisplayName());
+    try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
+        graph.createExecutor(requestContext)) {
+      multiHellos =
+          krystexVajramExecutor.execute(
+              vajramID("MutualFriendsHello"),
+              testRequestContext ->
+                  MultiHelloFriendsV2Request.builder()
+                      .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
+                      .skip(true)
+                      .build());
+    }
+    assertThat(multiHellos).succeedsWithin(1, TimeUnit.SECONDS);
+    assertThat(multiHellos.get().equals(""));
+    assertThat(FriendsServiceVajram.CALL_COUNTER.sum()).isEqualTo(1);
   }
 
   @Test
