@@ -358,11 +358,10 @@ class Node {
             new SkipNode(
                 depNodeId,
                 requestId.append("%s".formatted(dependencyName)),
-                DependantChain.from(
+                DependantChain.extend(
+                    dependantChainByRequest.getOrDefault(requestId, DependantChainStart.instance()),
                     nodeId,
-                    dependencyName,
-                    dependantChainByRequest.getOrDefault(
-                        requestId, DependantChainStart.instance())),
+                    dependencyName),
                 (SkipDependency) resolverCommand);
         krystalNodeExecutor.executeCommand(skipNode);
         krystalNodeExecutor.executeCommand(
@@ -426,11 +425,11 @@ class Node {
                           depNodeId,
                           newInputs.values().keySet(),
                           newInputs,
-                          DependantChain.from(
-                              nodeId,
-                              dependencyName,
+                          DependantChain.extend(
                               dependantChainByRequest.getOrDefault(
-                                  requestId, DependantChainStart.instance())),
+                                  requestId, DependantChainStart.instance()),
+                              nodeId,
+                              dependencyName),
                           dependencyRequestId)));
         }
         requestCounter += batchSize;
@@ -517,7 +516,7 @@ class Node {
                             .executedResolvers()))) {
 
       krystalNodeExecutor.executeCommand(
-          new Flush(depNodeId, DependantChain.from(nodeId, dependencyName, dependantChain)));
+          new Flush(depNodeId, DependantChain.extend(dependantChain, nodeId, dependencyName)));
     }
   }
 
@@ -556,8 +555,8 @@ class Node {
                             depNodeId,
                             ImmutableSet.of(),
                             Inputs.empty(),
-                            DependantChain.from(
-                                nodeId, depName, dependantChainByRequest.get(requestId)),
+                            DependantChain.extend(
+                                dependantChainByRequest.get(requestId), nodeId, depName),
                             dependencyRequestId));
                 nodeResponse
                     .thenApply(NodeResponse::response)

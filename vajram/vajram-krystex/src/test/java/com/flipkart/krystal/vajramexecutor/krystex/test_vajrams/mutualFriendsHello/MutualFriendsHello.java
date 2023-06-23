@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello;
 
 import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello.ID;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.friendIds_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.hellos_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.userIds_n;
@@ -21,8 +22,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@VajramDef("MutualFriendsHello")
+@VajramDef(ID)
 public abstract class MutualFriendsHello extends ComputeVajram<String> {
+
+  public static final String ID = "MutualFriendsHello";
 
   @VajramLogic
   public static String sayHelloToMutualFriends(
