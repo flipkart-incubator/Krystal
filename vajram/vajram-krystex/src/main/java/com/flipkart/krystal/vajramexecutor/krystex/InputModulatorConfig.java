@@ -5,7 +5,6 @@ import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig.DecoratorContext;
 import com.flipkart.krystal.krystex.node.DefaultDependantChain;
 import com.flipkart.krystal.krystex.node.DependantChain;
-import com.flipkart.krystal.krystex.node.DependantChainFirstNode;
 import com.flipkart.krystal.krystex.node.DependantChainStart;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
 import com.flipkart.krystal.vajram.Vajram;
@@ -13,9 +12,9 @@ import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.flipkart.krystal.vajram.tags.VajramTags;
+import com.google.common.collect.ImmutableSet;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -67,17 +66,18 @@ public record InputModulatorConfig(
   public static InputModulatorConfig sharedModulator(
       Supplier<InputModulator<InputValuesAdaptor, InputValuesAdaptor>> inputModulatorSupplier,
       String instanceId,
-      Set<DependantChain> dependantChains) {
+      DependantChain... dependantChains) {
+    ImmutableSet<DependantChain> depChainsSet = ImmutableSet.copyOf(dependantChains);
     return new InputModulatorConfig(
         logicExecutionContext -> instanceId,
-        logicExecutionContext -> dependantChains.contains(logicExecutionContext.dependants()),
+        logicExecutionContext -> depChainsSet.contains(logicExecutionContext.dependants()),
         modulatorContext -> {
           @SuppressWarnings("unchecked")
           var inputsConvertor =
               (InputsConverter<InputValuesAdaptor, InputValuesAdaptor>)
                   modulatorContext.vajram().getInputsConvertor();
           return new InputModulationDecorator<>(
-              instanceId, inputModulatorSupplier.get(), inputsConvertor, dependantChains::contains);
+              instanceId, inputModulatorSupplier.get(), inputsConvertor, depChainsSet::contains);
         });
   }
 
@@ -88,13 +88,13 @@ public record InputModulatorConfig(
   private static StringBuilder generateInstanceId(
       DependantChain dependantChain, NodeDefinitionRegistry nodeDefinitionRegistry) {
     if (dependantChain instanceof DependantChainStart dependantChainStart) {
-      return new StringBuilder(dependantChainStart.asString());
-    } else {
-      if (dependantChain instanceof DependantChainFirstNode dependantChainFirstNode) {
+      return new StringBuilder(dependantChainStart.toString());
+    } else if (dependantChain instanceof DefaultDependantChain defaultDependantChain) {
+      if (defaultDependantChain.dependantChain() instanceof DependantChainStart) {
         String vajramId =
             Optional.ofNullable(
                     nodeDefinitionRegistry
-                        .get(dependantChainFirstNode.nodeId())
+                        .get(defaultDependantChain.nodeId())
                         .getMainLogicDefinition()
                         .logicTags()
                         .get(VajramTags.VAJRAM_ID))
@@ -102,14 +102,14 @@ public record InputModulatorConfig(
                     () ->
                         new NoSuchElementException(
                             "Could not find tag %s for node %s"
-                                .formatted(VajramTags.VAJRAM_ID, dependantChainFirstNode.nodeId())))
+                                .formatted(VajramTags.VAJRAM_ID, defaultDependantChain.nodeId())))
                 .tagValue();
-        return generateInstanceId(dependantChainFirstNode.dependantChain(), nodeDefinitionRegistry)
+        return generateInstanceId(defaultDependantChain.dependantChain(), nodeDefinitionRegistry)
             .append('>')
             .append(vajramId)
             .append(':')
-            .append(dependantChainFirstNode.dependencyName());
-      } else if (dependantChain instanceof DefaultDependantChain defaultDependantChain) {
+            .append(defaultDependantChain.dependencyName());
+      } else {
         return generateInstanceId(defaultDependantChain.dependantChain(), nodeDefinitionRegistry)
             .append('>')
             .append(defaultDependantChain.dependencyName());

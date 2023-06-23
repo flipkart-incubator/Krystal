@@ -9,6 +9,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 /**
+ * @param dependencyNodes Map of dependency name to nodeId.
  * @param isRecursive {@code true} if this node depends on itself directly or indirectly (a
  *     dependency loop). {@code false} otherwise.
  */
