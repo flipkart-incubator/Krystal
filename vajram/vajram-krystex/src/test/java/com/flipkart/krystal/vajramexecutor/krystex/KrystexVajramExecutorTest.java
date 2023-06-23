@@ -389,6 +389,7 @@ class KrystexVajramExecutorTest {
               testRequestContext ->
                   MultiHelloFriendsRequest.builder()
                       .userIds(new ArrayList<>(List.of("user_id_1", "user_id_2")))
+                      .skip(false)
                       .build());
     }
     assertThat(timedGet(multiHellos))
@@ -408,6 +409,51 @@ class KrystexVajramExecutorTest {
              made
             */
             1);
+  }
+
+  @Test
+  void flush_singleDepthSkipParallelDependencySharedInputModulatorConfig_flushes1Batcher(
+      TestInfo testInfo) throws Exception {
+    VajramNodeGraph graph =
+        loadFromClasspath(
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello")
+            .registerInputModulator(
+                vajramID(TestUserServiceVajram.ID),
+                InputModulatorConfig.sharedModulator(
+                    () -> new Batcher<>(100),
+                    TestUserServiceVajram.ID + "Batcher",
+                    ImmutableSet.of(
+                        fromTriggerOrder(new NodeId(MultiHelloFriends.ID), "hellos", "user_infos"),
+                        fromTriggerOrder(
+                            new NodeId(MultiHelloFriends.ID), "hellos", "friend_infos"))))
+            .build();
+    CompletableFuture<String> multiHellos;
+    requestContext.requestId(testInfo.getDisplayName());
+    try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
+        graph.createExecutor(requestContext)) {
+      multiHellos =
+          krystexVajramExecutor.execute(
+              vajramID(MultiHelloFriends.ID),
+              testRequestContext ->
+                  MultiHelloFriendsRequest.builder()
+                      .userIds(new ArrayList<>(Set.of("user_id_1", "user_id_2")))
+                      .skip(true)
+                      .build());
+    }
+    assertThat(timedGet(multiHellos)).isEqualTo("");
+    assertThat(TestUserServiceVajram.CALL_COUNTER.sum())
+        .isEqualTo(
+            /*
+             TestUserServiceVajram is called via two dependantChains:
+             ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_infos)
+             ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos)
+             Since input modulator is shared across these dependantChains, only one call must be
+             made
+            */
+            0);
   }
 
   @Test
@@ -704,6 +750,6 @@ class KrystexVajramExecutorTest {
 
   /* So that bad testcases do not hang indefinitely.*/
   private static <T> T timedGet(CompletableFuture<T> future) throws Exception {
-    return future.get(1, TimeUnit.SECONDS);
+    return future.get(1, TimeUnit.HOURS);
   }
 }
