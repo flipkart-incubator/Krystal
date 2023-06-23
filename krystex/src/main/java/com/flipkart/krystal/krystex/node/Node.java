@@ -39,6 +39,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -356,11 +357,12 @@ class Node {
           == null) {
         /* This is for the case where for some resolvers the input has already been resolved but we
         do need to skip them as well, as our current resolver is skipped.*/
-        Set<RequestId> requestIdSet = dependencyNodeExecutions.individualCallResponses().keySet();
-        RequestId currentDepResolverReqId = requestId.append("%s[%s]".formatted(dependencyName, 0));
+        Set<RequestId> requestIdSet = new HashSet<>();
+        requestIdSet.addAll(dependencyNodeExecutions.individualCallResponses().keySet());
+        RequestId dependencyRequestId = requestId.append("%s[%s]".formatted(dependencyName, 0));
         /*Skipping Current resolver, as its a skip, we dont need to iterate
          * over fanout requests as the input is empty*/
-        requestIdSet.add(currentDepResolverReqId);
+        requestIdSet.add(dependencyRequestId);
         for (RequestId depRequestId : requestIdSet) {
           SkipNode skipNode =
               new SkipNode(
@@ -376,7 +378,6 @@ class Node {
               .individualCallResponses()
               .putIfAbsent(depRequestId, krystalNodeExecutor.executeCommand(skipNode));
         }
-
       }
     } else {
       // Since the resolver can return multiple inputs, we have to call the dependency Node
