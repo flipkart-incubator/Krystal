@@ -354,14 +354,13 @@ class Node {
     if (resolverCommand instanceof SkipDependency) {
       if (dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).get(dependencyName)
           == null) {
-
-        /*Skipping Current resolver, as its a skip, we dont need to iterate
-         * over fanout requests as the input is empty*/
-        Set<RequestId> requestIdSet =
-            Set.of(requestId.append("%s[%s]".formatted(dependencyName, 0)));
         /* This is for the case where for some resolvers the input has already been resolved but we
         do need to skip them as well, as our current resolver is skipped.*/
-        requestIdSet.addAll(dependencyNodeExecutions.individualCallResponses().keySet());
+        Set<RequestId> requestIdSet = dependencyNodeExecutions.individualCallResponses().keySet();
+        RequestId currentDepResolverReqId = requestId.append("%s[%s]".formatted(dependencyName, 0));
+        /*Skipping Current resolver, as its a skip, we dont need to iterate
+         * over fanout requests as the input is empty*/
+        requestIdSet.add(currentDepResolverReqId);
         for (RequestId depRequestId : requestIdSet) {
           SkipNode skipNode =
               new SkipNode(
@@ -377,6 +376,7 @@ class Node {
               .individualCallResponses()
               .putIfAbsent(depRequestId, krystalNodeExecutor.executeCommand(skipNode));
         }
+
       }
     } else {
       // Since the resolver can return multiple inputs, we have to call the dependency Node
