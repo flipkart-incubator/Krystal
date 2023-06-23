@@ -645,6 +645,7 @@
           <option value="OverlyCoupledMethod" />
           <option value="OverlyCoupledClass" />
           <option value="OptionalContainsCollection" />
+          <option value="NumericCastThatLosesPrecision" />
         </list>
       </option>
     </inspection_tool>
