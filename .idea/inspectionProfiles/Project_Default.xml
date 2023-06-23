@@ -647,6 +647,7 @@
           <option value="OptionalContainsCollection" />
           <option value="UnstableApiUsage" />
           <option value="Singleton" />
+          <option value="NumericCastThatLosesPrecision" />
         </list>
       </option>
     </inspection_tool>
