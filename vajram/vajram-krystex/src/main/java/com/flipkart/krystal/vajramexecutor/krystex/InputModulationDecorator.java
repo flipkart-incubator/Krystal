@@ -121,7 +121,8 @@ public final class InputModulationDecorator<
 
   @Override
   public void onConfigUpdate(ConfigProvider configProvider) {
-    inputModulator.onConfigUpdate(new NestedConfig("input_modulation." + instanceId, configProvider));
+    inputModulator.onConfigUpdate(
+        new NestedConfig(String.format("input_modulation.%s.", instanceId), configProvider));
   }
 
   @Override

@@ -450,8 +450,8 @@ class KrystexVajramExecutorTest {
              TestUserServiceVajram is called via two dependantChains:
              ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_infos)
              ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos)
-             Since input modulator is shared across these dependantChains, only one call must be
-             made
+             Since we have skipped HelloFriendsVajram, we would not call TestUserSericeVajram
+             so, the count should be 0.
             */
             0);
   }
