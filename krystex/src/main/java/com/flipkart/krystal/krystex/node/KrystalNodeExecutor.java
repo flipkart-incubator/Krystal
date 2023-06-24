@@ -15,6 +15,7 @@ import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
 import com.flipkart.krystal.krystex.commands.NodeRequestCommand;
+import com.flipkart.krystal.krystex.commands.SkipNode;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
@@ -57,6 +58,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
           List<MainLogicDecoratorConfig>>
       requestScopedLogicDecoratorConfigs;
 
+  private final ImmutableSet<DependantChain> disabledDependantChains;
+
   private final Map<
           String, // DecoratorType
           Map<
@@ -73,16 +76,32 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
   public KrystalNodeExecutor(
       NodeDefinitionRegistry nodeDefinitionRegistry,
-      LogicDecorationOrdering logicDecorationOrdering,
       MultiLeasePool<? extends ExecutorService> commandQueuePool,
-      String requestId,
-      Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs) {
+      KrystalNodeExecutorConfig config,
+      String requestId) {
+    this(
+        nodeDefinitionRegistry,
+        commandQueuePool,
+        config.logicDecorationOrdering(),
+        config.requestScopedLogicDecoratorConfigs(),
+        config.disabledDependantChains(),
+        requestId);
+  }
+
+  public KrystalNodeExecutor(
+      NodeDefinitionRegistry nodeDefinitionRegistry,
+      MultiLeasePool<? extends ExecutorService> commandQueuePool,
+      LogicDecorationOrdering logicDecorationOrdering,
+      Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs,
+      ImmutableSet<DependantChain> disabledDependantChains,
+      String requestId) {
     this.nodeDefinitionRegistry = nodeDefinitionRegistry;
     this.logicDecorationOrdering = logicDecorationOrdering;
     this.commandQueueLease = commandQueuePool.lease();
     this.requestId = new RequestId(requestId);
     this.requestScopedLogicDecoratorConfigs =
         ImmutableMap.copyOf(requestScopedLogicDecoratorConfigs);
+    this.disabledDependantChains = disabledDependantChains;
     this.krystalNodeMetrics = new KrystalNodeExecutorMetrics();
   }
 
@@ -149,7 +168,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     return enqueueCommand( // Perform all datastructure manipulations in the command queue to avoid
             // multi-thread access
             () -> {
-              createDependantNodes(nodeId, DependantChainStart.instance());
+              createDependencyNodes(nodeId, DependantChainStart.instance());
               CompletableFuture<Object> future = new CompletableFuture<>();
               NodeResult nodeResult = new NodeResult(nodeId, inputs, future);
               allRequests.computeIfAbsent(requestId, r -> new ArrayList<>()).add(nodeResult);
@@ -159,46 +178,19 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
         .thenCompose(identity());
   }
 
-  private void createDependantNodes(NodeId nodeId, DependantChain dependantChain) {
+  private void createDependencyNodes(NodeId nodeId, DependantChain dependantChain) {
     NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
-    if (dependantChain.contains(nodeId)) {
-      // There is a cyclic dependency for the given node. So we avoid creating nodes for
-      // dependencies nodes to avoid infinite recursion of this method.
-      //
-      // This means 'dependantChainsPerNode' field of this class will not contain all possible
-      // dependantChains (since there will be infinitely many of them). Instead, there will be
-      // exactly one dependantChain which will have this node as a dependant, and this
-      // dependantChain can be used to infer that there is a dependency recursion.
-      //
-      // The implication of this is that any LogicDecorators configured for this node or any
-      // of its transitive dependencies, where such LogicDecorators  rely on the
-      // 'InitiateActiveDepChains' command to initiate all possible active DependantChains might
-      // not work as expected (For example, InputModulationDecorator of vajram-krystex library).
-      //
-      // It is the responsibility of users of the krystex library to make sure that either:
-      // 1. Nodes which have LogicDecorators which depend on activeDepChains to be exhaustive,
-      // should not have dependant chains containing loops, or ...
-      // 2. If the above is not possible, then such LogicDecorators should gracefully handle the
-      // scenario that InitiateActiveDepChains will not contain recursive active dependant
-      // chains.
-      nodeDefinitionRegistry.registerRecursive(nodeDefinition);
-      nodeRegistry.tryGet(nodeId).ifPresent(Node::markRecursive);
-      dependantChainsPerNode
-          .computeIfAbsent(nodeId, _n -> new LinkedHashSet<>())
-          .add(dependantChain);
-    } else {
+    // If a dependantChain is disabled, don't create that node and its dependency nodes
+    if (!disabledDependantChains.contains(dependantChain)) {
       nodeRegistry.createIfAbsent(
           nodeId,
           _n ->
               new Node(
-                  nodeDefinition,
-                  this,
-                  logicExecutionContext -> getRequestScopedDecorators(logicExecutionContext),
-                  logicDecorationOrdering));
+                  nodeDefinition, this, this::getRequestScopedDecorators, logicDecorationOrdering));
       ImmutableMap<String, NodeId> dependencyNodes = nodeDefinition.dependencyNodes();
       dependencyNodes.forEach(
           (dependencyName, depNodeId) ->
-              createDependantNodes(
+              createDependencyNodes(
                   depNodeId, DependantChain.extend(dependantChain, nodeId, dependencyName)));
       dependantChainsPerNode
           .computeIfAbsent(nodeId, _n -> new LinkedHashSet<>())
@@ -234,6 +226,11 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   private CompletableFuture<NodeResponse> _executeCommand(NodeCommand nodeCommand) {
+    try {
+      validate(nodeCommand);
+    } catch (Throwable e) {
+      return failedFuture(e);
+    }
     if (nodeCommand instanceof NodeRequestCommand nodeRequestCommand) {
       return nodeRegistry.get(nodeCommand.nodeId()).executeRequestCommand(nodeRequestCommand);
     } else if (nodeCommand instanceof Flush flush) {
@@ -242,6 +239,18 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     } else {
       throw new UnsupportedOperationException(
           "Unknown NodeCommand type %s".formatted(nodeCommand.getClass()));
+    }
+  }
+
+  private void validate(NodeCommand nodeCommand) {
+    DependantChain dependantChain = null;
+    if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
+      dependantChain = executeWithInputs.dependantChain();
+    } else if (nodeCommand instanceof SkipNode skipNode) {
+      dependantChain = skipNode.dependantChain();
+    }
+    if (disabledDependantChains.contains(dependantChain)) {
+      throw new DisabledDependantChainException(dependantChain);
     }
   }
 

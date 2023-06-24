@@ -47,10 +47,11 @@ class Resilience4JBulkheadTest {
     this.krystalNodeExecutor =
         new KrystalNodeExecutor(
             nodeDefinitionRegistry,
-            new LogicDecorationOrdering(ImmutableSet.of()),
             new ForkJoinExecutorPool(1),
-            "test",
-            ImmutableMap.of());
+            new LogicDecorationOrdering(ImmutableSet.of()),
+            ImmutableMap.of(),
+            ImmutableSet.of(),
+            "test");
     this.executorService = Executors.newSingleThreadExecutor();
   }
 

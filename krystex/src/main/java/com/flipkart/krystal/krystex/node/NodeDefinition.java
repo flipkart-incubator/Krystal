@@ -18,34 +18,7 @@ public record NodeDefinition(
     NodeLogicId mainLogicId,
     ImmutableMap<String, NodeId> dependencyNodes,
     ImmutableList<ResolverDefinition> resolverDefinitions,
-    NodeDefinitionRegistry nodeDefinitionRegistry,
-    boolean isRecursive) {
-
-  public NodeDefinition(
-      NodeId nodeId,
-      NodeLogicId mainLogicId,
-      ImmutableMap<String, NodeId> dependencyNodes,
-      ImmutableList<ResolverDefinition> resolverDefinitions,
-      NodeDefinitionRegistry nodeDefinitionRegistry) {
-    this(nodeId, mainLogicId, dependencyNodes, resolverDefinitions, nodeDefinitionRegistry, false);
-  }
-
-  /**
-   * @return a nodeDefinition which is exactly same as this nodeDefinition except that the returned
-   *     one is guaranteed to return {@code true} for {@link #isRecursive()}
-   */
-  NodeDefinition toRecursive() {
-    if (isRecursive()) {
-      return this;
-    }
-    return new NodeDefinition(
-        nodeId(),
-        mainLogicId(),
-        dependencyNodes(),
-        resolverDefinitions(),
-        nodeDefinitionRegistry(),
-        true);
-  }
+    NodeDefinitionRegistry nodeDefinitionRegistry) {
 
   public CallGraph getCallGraph(CallGraph previousCalls) {
     return new CallGraph(

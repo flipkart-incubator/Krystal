@@ -34,6 +34,6 @@ public final class DefaultDependantChain implements DependantChain {
 
   @Override
   public String toString() {
-    return "%s.%s:%s".formatted(dependantChain, nodeId.value(), dependencyName());
+    return "%s:%s[%s]".formatted(dependantChain, nodeId.value(), dependencyName());
   }
 }

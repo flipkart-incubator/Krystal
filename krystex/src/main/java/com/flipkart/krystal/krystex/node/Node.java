@@ -60,7 +60,7 @@ class Node {
 
   private final NodeId nodeId;
 
-  private NodeDefinition nodeDefinition;
+  private final NodeDefinition nodeDefinition;
 
   private final KrystalNodeExecutor krystalNodeExecutor;
 
@@ -181,34 +181,23 @@ class Node {
     }
   }
 
-  public void markRecursive() {
-    this.nodeDefinition = nodeDefinition.toRecursive();
-  }
-
   private CompletableFuture<NodeResponse> handleSkipDependency(
       RequestId requestId, SkipNode skipNode, CompletableFuture<NodeResponse> resultForRequest) {
-    /*
-     Do not propagate skipNode command to recursive dependencies as this can lead to an infinite loop.
-     Propagating skipNode is important so that the flush command works as expected.
-     Flushing is anyway not supported for nodes which are recusive, so there is no need for
-     this.
-    */
-    if (!nodeDefinition.isRecursive()) {
-      // Since this node is skipped, we need to get all the pending resolvers (irrespective of
-      // whether their inputs are available or not) and mark them resolved.
-      Set<ResolverDefinition> pendingResolvers =
-          resolverDefinitionsByInput.values().stream()
-              .flatMap(Collection::stream)
-              .filter(
-                  resolverDefinition ->
-                      !this.resolverResults
-                          .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
-                          .containsKey(resolverDefinition.resolverNodeLogicId()))
-              .collect(toSet());
 
-      for (ResolverDefinition resolverDefinition : pendingResolvers) {
-        executeResolver(requestId, resolverDefinition);
-      }
+    // Since this node is skipped, we need to get all the pending resolvers (irrespective of
+    // whether their inputs are available or not) and mark them resolved.
+    Set<ResolverDefinition> pendingResolvers =
+        resolverDefinitionsByInput.values().stream()
+            .flatMap(Collection::stream)
+            .filter(
+                resolverDefinition ->
+                    !this.resolverResults
+                        .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
+                        .containsKey(resolverDefinition.resolverNodeLogicId()))
+            .collect(toSet());
+
+    for (ResolverDefinition resolverDefinition : pendingResolvers) {
+      executeResolver(requestId, resolverDefinition);
     }
     resultForRequest.completeExceptionally(skipNodeException(skipNode));
     return resultForRequest;

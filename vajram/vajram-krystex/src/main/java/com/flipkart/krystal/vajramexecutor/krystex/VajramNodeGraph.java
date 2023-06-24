@@ -19,6 +19,7 @@ import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.node.DependantChain;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
 import com.flipkart.krystal.krystex.node.NodeId;
@@ -107,22 +108,21 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   @Override
   public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
       C requestContext) {
-    return createExecutor(requestContext, ImmutableMap.of());
+    return createExecutor(requestContext, KrystalNodeExecutorConfig.builder().build());
   }
 
   public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
-      C requestContext,
-      Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs) {
-    return new KrystexVajramExecutor<>(
-        this,
-        logicDecorationOrdering,
-        executorPool,
-        requestContext,
-        requestScopedLogicDecoratorConfigs);
+      C requestContext, KrystalNodeExecutorConfig krystexConfig) {
+    if (logicDecorationOrdering != null
+        && LogicDecorationOrdering.none().equals(krystexConfig.logicDecorationOrdering())) {
+      krystexConfig =
+          krystexConfig.toBuilder().logicDecorationOrdering(logicDecorationOrdering).build();
+    }
+    return new KrystexVajramExecutor<>(this, requestContext, executorPool, krystexConfig);
   }
 
   public void registerInputModulators(VajramID vajramID, InputModulatorConfig... inputModulators) {
-    NodeId nodeId = _getVajramExecutionGraph(vajramID);
+    NodeId nodeId = getNodeId(vajramID);
     VajramDefinition vajramDefinition = vajramDefinitions.get(vajramID);
     MainLogicDefinition<Object> mainLogicDefinition =
         nodeDefinitionRegistry.get(nodeId).getMainLogicDefinition();

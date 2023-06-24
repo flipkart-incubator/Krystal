@@ -7,6 +7,7 @@ import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -26,6 +27,7 @@ import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReport
 import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JCircuitBreaker;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
 import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
 import com.flipkart.krystal.vajram.modulation.Batcher;
 import com.flipkart.krystal.vajram.tags.Service;
@@ -287,14 +289,17 @@ class KrystexVajramExecutorTest {
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
             requestContext,
-            ImmutableMap.of(
-                mainLogicExecReporter.decoratorType(),
-                List.of(
-                    new MainLogicDecoratorConfig(
+            KrystalNodeExecutorConfig.builder()
+                .requestScopedLogicDecoratorConfigs(
+                    ImmutableMap.of(
                         mainLogicExecReporter.decoratorType(),
-                        (logicExecutionContext) -> true,
-                        logicExecutionContext -> mainLogicExecReporter.decoratorType(),
-                        decoratorContext -> mainLogicExecReporter))))) {
+                        List.of(
+                            new MainLogicDecoratorConfig(
+                                mainLogicExecReporter.decoratorType(),
+                                (logicExecutionContext) -> true,
+                                logicExecutionContext -> mainLogicExecReporter.decoratorType(),
+                                decoratorContext -> mainLogicExecReporter))))
+                .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
               vajramID(MultiHelloFriends.ID),
@@ -557,7 +562,7 @@ class KrystexVajramExecutorTest {
                       .build());
     }
     assertThat(multiHellos).succeedsWithin(1, TimeUnit.SECONDS);
-    assertThat(multiHellos.get().equals(""));
+    assertTrue(multiHellos.get().isEmpty());
     assertThat(FriendsServiceVajram.CALL_COUNTER.sum()).isEqualTo(1);
   }
 

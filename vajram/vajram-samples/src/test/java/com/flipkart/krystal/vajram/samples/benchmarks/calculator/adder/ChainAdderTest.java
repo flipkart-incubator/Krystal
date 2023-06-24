@@ -19,6 +19,7 @@ import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutio
 import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutorMetrics;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
@@ -60,14 +61,17 @@ class ChainAdderTest {
             .build()
             .createExecutor(
                 new RequestContext(""),
-                ImmutableMap.of(
-                    mainLogicExecReporter.decoratorType(),
-                    List.of(
-                        new MainLogicDecoratorConfig(
+                KrystalNodeExecutorConfig.builder()
+                    .requestScopedLogicDecoratorConfigs(
+                        ImmutableMap.of(
                             mainLogicExecReporter.decoratorType(),
-                            logicExecutionContext -> true,
-                            logicExecutionContext -> mainLogicExecReporter.decoratorType(),
-                            decoratorContext -> mainLogicExecReporter))))) {
+                            List.of(
+                                new MainLogicDecoratorConfig(
+                                    mainLogicExecReporter.decoratorType(),
+                                    logicExecutionContext -> true,
+                                    logicExecutionContext -> mainLogicExecReporter.decoratorType(),
+                                    decoratorContext -> mainLogicExecReporter))))
+                    .build())) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
     assertThat(future.get()).isEqualTo(55);

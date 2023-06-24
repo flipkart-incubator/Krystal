@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.decorators.observability;
 
+import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.data.InputValue;
@@ -14,7 +15,6 @@ import com.google.common.collect.ImmutableMap;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -28,14 +28,20 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Slf4j
 public final class DefaultNodeExecutionReport implements NodeExecutionReport {
   @Getter private final Instant startTime;
+  private final boolean verbose;
   private final Clock clock;
 
   @Getter
   private final Map<NodeExecution, LogicExecInfo> mainLogicExecInfos = new LinkedHashMap<>();
 
   public DefaultNodeExecutionReport(Clock clock) {
+    this(clock, false);
+  }
+
+  public DefaultNodeExecutionReport(Clock clock, boolean verbose) {
     this.clock = clock;
     this.startTime = clock.instant();
+    this.verbose = verbose;
   }
 
   @Override
@@ -43,17 +49,15 @@ public final class DefaultNodeExecutionReport implements NodeExecutionReport {
       NodeId nodeId, NodeLogicId nodeLogicId, ImmutableList<Inputs> inputs) {
     NodeExecution nodeExecution =
         new NodeExecution(
-            nodeId,
-            inputs.stream()
-                .map(DefaultNodeExecutionReport::extractAndConvertInputs)
-                .collect(toImmutableList()));
+            nodeId, inputs.stream().map(this::extractAndConvertInputs).collect(toImmutableList()));
     if (mainLogicExecInfos.containsKey(nodeExecution)) {
       log.error("Cannot start the same node execution multiple times: {}", nodeExecution);
       return;
     }
     mainLogicExecInfos.put(
         nodeExecution,
-        new LogicExecInfo(nodeId, inputs, startTime.until(clock.instant(), ChronoUnit.MILLIS)));
+        new LogicExecInfo(
+            this, nodeId, inputs, startTime.until(clock.instant(), ChronoUnit.MILLIS)));
   }
 
   @Override
@@ -62,7 +66,7 @@ public final class DefaultNodeExecutionReport implements NodeExecutionReport {
         new NodeExecution(
             nodeId,
             result.values().keySet().stream()
-                .map(DefaultNodeExecutionReport::extractAndConvertInputs)
+                .map(this::extractAndConvertInputs)
                 .collect(toImmutableList()));
     LogicExecInfo logicExecInfo = mainLogicExecInfos.get(nodeExecution);
     if (logicExecInfo == null) {
@@ -86,7 +90,7 @@ public final class DefaultNodeExecutionReport implements NodeExecutionReport {
     }
   }
 
-  private static ImmutableMap<String, Object> extractAndConvertInputs(Inputs inputs) {
+  private ImmutableMap<String, Object> extractAndConvertInputs(Inputs inputs) {
     Map<String, Object> inputMap = new LinkedHashMap<>();
     for (Entry<String, InputValue<Object>> e : inputs.values().entrySet()) {
       InputValue<Object> value = e.getValue();
@@ -101,7 +105,7 @@ public final class DefaultNodeExecutionReport implements NodeExecutionReport {
     return ImmutableMap.copyOf(inputMap);
   }
 
-  private static ImmutableMap<String, Object> extractAndConvertDependencyResults(Inputs inputs) {
+  private ImmutableMap<String, Object> extractAndConvertDependencyResults(Inputs inputs) {
     Map<String, Object> inputMap = new LinkedHashMap<>();
     for (Entry<String, InputValue<Object>> e : inputs.values().entrySet()) {
       InputValue<Object> value = e.getValue();
@@ -114,16 +118,16 @@ public final class DefaultNodeExecutionReport implements NodeExecutionReport {
     return ImmutableMap.copyOf(inputMap);
   }
 
-  private static Object convertValueOrError(ValueOrError<Object> voe) {
+  private Object convertValueOrError(ValueOrError<Object> voe) {
     if (voe.error().isPresent()) {
       Throwable throwable = voe.error().get();
-      return throwable + "          " + Arrays.toString(throwable.getStackTrace());
+      return verbose ? getStackTraceAsString(throwable) : throwable.toString();
     } else {
       return voe.value().orElse(null);
     }
   }
 
-  private static Map<ImmutableMap<String, Object>, Object> convertResult(Results<Object> results) {
+  private Map<ImmutableMap<String, Object>, Object> convertResult(Results<Object> results) {
     return results.values().entrySet().stream()
         .collect(
             Collectors.toMap(
@@ -141,17 +145,21 @@ public final class DefaultNodeExecutionReport implements NodeExecutionReport {
     @Getter private final long startTimeMs;
     @Getter private long endTimeMs;
 
-    LogicExecInfo(NodeId nodeId, ImmutableCollection<Inputs> inputList, long startTimeMs) {
+    LogicExecInfo(
+        DefaultNodeExecutionReport nodeExecutionReport,
+        NodeId nodeId,
+        ImmutableCollection<Inputs> inputList,
+        long startTimeMs) {
       this.startTimeMs = startTimeMs;
       ImmutableList<ImmutableMap<String, Object>> dependencyResults;
       this.nodeId = nodeId.value();
       this.inputsList =
           inputList.stream()
-              .map(DefaultNodeExecutionReport::extractAndConvertInputs)
+              .map(nodeExecutionReport::extractAndConvertInputs)
               .collect(toImmutableList());
       dependencyResults =
           inputList.stream()
-              .map(DefaultNodeExecutionReport::extractAndConvertDependencyResults)
+              .map(nodeExecutionReport::extractAndConvertDependencyResults)
               .filter(map -> !map.isEmpty())
               .collect(toImmutableList());
       this.dependencyResults = dependencyResults.isEmpty() ? null : dependencyResults;

@@ -67,17 +67,24 @@ public record InputModulatorConfig(
       Supplier<InputModulator<InputValuesAdaptor, InputValuesAdaptor>> inputModulatorSupplier,
       String instanceId,
       DependantChain... dependantChains) {
-    ImmutableSet<DependantChain> depChainsSet = ImmutableSet.copyOf(dependantChains);
+    return sharedModulator(
+        inputModulatorSupplier, instanceId, ImmutableSet.copyOf(dependantChains));
+  }
+
+  public static InputModulatorConfig sharedModulator(
+      Supplier<InputModulator<InputValuesAdaptor, InputValuesAdaptor>> inputModulatorSupplier,
+      String instanceId,
+      ImmutableSet<DependantChain> dependantChains) {
     return new InputModulatorConfig(
         logicExecutionContext -> instanceId,
-        logicExecutionContext -> depChainsSet.contains(logicExecutionContext.dependants()),
+        logicExecutionContext -> dependantChains.contains(logicExecutionContext.dependants()),
         modulatorContext -> {
           @SuppressWarnings("unchecked")
           var inputsConvertor =
               (InputsConverter<InputValuesAdaptor, InputValuesAdaptor>)
                   modulatorContext.vajram().getInputsConvertor();
           return new InputModulationDecorator<>(
-              instanceId, inputModulatorSupplier.get(), inputsConvertor, depChainsSet::contains);
+              instanceId, inputModulatorSupplier.get(), inputsConvertor, dependantChains::contains);
         });
   }
 

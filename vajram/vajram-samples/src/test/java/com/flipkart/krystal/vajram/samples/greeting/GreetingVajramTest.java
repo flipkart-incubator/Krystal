@@ -14,6 +14,7 @@ import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutionReport;
 import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
@@ -43,15 +44,14 @@ public class GreetingVajramTest {
   public void setUp() {
     graph =
         new VajramNodeGraph.Builder()
-            .loadFromPackage("com.flipkart.krystal.vajram.samples.greeting");
-
-    graph.injectInputsWith(wrapInjector(createInjector(new GuiceModule())));
-    graph.logicDecorationOrdering(
-        new LogicDecorationOrdering(
-            ImmutableSet.<String>builder()
-                .add(InputInjector.DECORATOR_TYPE)
-                .add(MainLogicExecReporter.class.getName())
-                .build()));
+            .loadFromPackage("com.flipkart.krystal.vajram.samples.greeting")
+            .injectInputsWith(wrapInjector(createInjector(new GuiceModule())))
+            .logicDecorationOrdering(
+                new LogicDecorationOrdering(
+                    ImmutableSet.<String>builder()
+                        .add(InputInjector.DECORATOR_TYPE)
+                        .add(MainLogicExecReporter.class.getName())
+                        .build()));
 
     objectMapper =
         new ObjectMapper()
@@ -71,14 +71,17 @@ public class GreetingVajramTest {
             .build()
             .createExecutor(
                 new RequestContext(""),
-                ImmutableMap.of(
-                    mainLogicExecReporter.decoratorType(),
-                    List.of(
-                        new MainLogicDecoratorConfig(
+                KrystalNodeExecutorConfig.builder()
+                    .requestScopedLogicDecoratorConfigs(
+                        ImmutableMap.of(
                             mainLogicExecReporter.decoratorType(),
-                            logicExecutionContext -> true,
-                            logicExecutionContext -> mainLogicExecReporter.decoratorType(),
-                            decoratorContext -> mainLogicExecReporter))))) {
+                            List.of(
+                                new MainLogicDecoratorConfig(
+                                    mainLogicExecReporter.decoratorType(),
+                                    logicExecutionContext -> true,
+                                    logicExecutionContext -> mainLogicExecReporter.decoratorType(),
+                                    decoratorContext -> mainLogicExecReporter))))
+                    .build())) {
       future = executeVajram(krystexVajramExecutor);
     }
     assertThat(future.get()).contains("user@123");
