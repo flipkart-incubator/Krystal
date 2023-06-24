@@ -6,6 +6,7 @@ import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder.add;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderRequest.chainSum_n;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,6 +19,7 @@ import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutionReport;
 import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
+import com.flipkart.krystal.krystex.node.DependantChain;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutorMetrics;
@@ -26,6 +28,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -56,22 +59,22 @@ class ChainAdderTest {
     CompletableFuture<Integer> future;
     NodeExecutionReport nodeExecutionReport = new DefaultNodeExecutionReport(Clock.systemUTC());
     MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(nodeExecutionReport);
+    VajramNodeGraph graph = this.graph.build();
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-        graph
-            .build()
-            .createExecutor(
-                new RequestContext(""),
-                KrystalNodeExecutorConfig.builder()
-                    .requestScopedLogicDecoratorConfigs(
-                        ImmutableMap.of(
-                            mainLogicExecReporter.decoratorType(),
-                            List.of(
-                                new MainLogicDecoratorConfig(
-                                    mainLogicExecReporter.decoratorType(),
-                                    logicExecutionContext -> true,
-                                    logicExecutionContext -> mainLogicExecReporter.decoratorType(),
-                                    decoratorContext -> mainLogicExecReporter))))
-                    .build())) {
+        graph.createExecutor(
+            new RequestContext(""),
+            KrystalNodeExecutorConfig.builder()
+                .requestScopedLogicDecoratorConfigs(
+                    ImmutableMap.of(
+                        mainLogicExecReporter.decoratorType(),
+                        List.of(
+                            new MainLogicDecoratorConfig(
+                                mainLogicExecReporter.decoratorType(),
+                                logicExecutionContext -> true,
+                                logicExecutionContext -> mainLogicExecReporter.decoratorType(),
+                                decoratorContext -> mainLogicExecReporter))))
+                .disabledDependantChains(getDisabledDependantChains(graph))
+                .build())) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
     assertThat(future.get()).isEqualTo(55);
@@ -79,7 +82,7 @@ class ChainAdderTest {
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
   }
 
-  @Disabled("Long running benchmark")
+//  @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
@@ -95,7 +98,11 @@ class ChainAdderTest {
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-          graph.createExecutor(new RequestContext(""))) {
+          graph.createExecutor(
+              new RequestContext(""),
+              KrystalNodeExecutorConfig.builder()
+                  .disabledDependantChains(getDisabledDependantChains(graph))
+                  .build())) {
         metrics[value] =
             ((KrystalNodeExecutor) krystexVajramExecutor.getKrystalExecutor())
                 .getKrystalNodeMetrics();
@@ -208,5 +215,20 @@ class ChainAdderTest {
     Builder builder = VajramNodeGraph.builder();
     Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
     return builder;
+  }
+
+  private static ImmutableSet<DependantChain> getDisabledDependantChains(VajramNodeGraph graph) {
+    return ImmutableSet.of(
+        graph.computeDependantChain(
+            ChainAdder.ID,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n));
   }
 }
