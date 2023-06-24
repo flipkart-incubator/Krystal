@@ -117,16 +117,16 @@ class ChainAdderTest {
     /*
      * Benchmark config:
      *    loopCount = 50_000
-     *    maxParallelismPerCore = 1
+     *    maxParallelismPerCore = 0.5
      *    Processor: 2.6 GHz 6-Core Intel Core i7
      * Best Benchmark result:
      *    platform overhead over reactive code = ~260 µs  per request
      *    maxPoolSize = 6
-     *    maxActiveLeasesPerObject: 8230
-     *    peakAvgActiveLeasesPerObject: 8228.67
-     *    Avg. time to Enqueue vajrams: 9,855 ns
-     *    Avg. time to execute vajrams: 344,809 ns
-     *    Throughput executions/sec: 2941
+     *    maxActiveLeasesPerObject: 8224
+     *    peakAvgActiveLeasesPerObject: 8222.17
+     *    Avg. time to Enqueue vajrams: 10,304 ns
+     *    Avg. time to execute vajrams: 322,697 ns
+     *    Throughput executions/sec: 3125
      */
     allOf(futures)
         .whenComplete(
