@@ -120,13 +120,13 @@ class ChainAdderTest {
      *    maxParallelismPerCore = 0.5
      *    Processor: 2.6 GHz 6-Core Intel Core i7
      * Best Benchmark result:
-     *    platform overhead over reactive code = ~260 µs  per request
+     *    platform overhead over reactive code = ~100 µs  per request
      *    maxPoolSize = 6
-     *    maxActiveLeasesPerObject: 8224
-     *    peakAvgActiveLeasesPerObject: 8222.17
-     *    Avg. time to Enqueue vajrams: 10,304 ns
-     *    Avg. time to execute vajrams: 322,697 ns
-     *    Throughput executions/sec: 3125
+     *    maxActiveLeasesPerObject: 7889
+     *    peakAvgActiveLeasesPerObject: 7874.5
+     *    Avg. time to Enqueue vajrams: 9,217 ns
+     *    Avg. time to execute vajrams: 102,799 ns
+     *    Throughput executions/sec: 10,000
      */
     allOf(futures)
         .whenComplete(
@@ -221,10 +221,6 @@ class ChainAdderTest {
     return ImmutableSet.of(
         graph.computeDependantChain(
             ChainAdder.ID,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
             chainSum_n,
             chainSum_n,
             chainSum_n,
