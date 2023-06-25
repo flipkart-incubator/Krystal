@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex;
+package com.flipkart.krystal.krystex.request;
 
 public record RequestId(String asString, RequestId originatedFrom) {
 
