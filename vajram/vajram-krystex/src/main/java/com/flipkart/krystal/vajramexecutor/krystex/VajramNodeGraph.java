@@ -133,12 +133,12 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     List<MainLogicDecoratorConfig> mainLogicDecoratorConfigList = new ArrayList<>();
     for (InputModulatorConfig inputModulatorConfig : inputModulators) {
       Predicate<LogicExecutionContext> biFunction =
-          (nodeExecutionContext) -> {
+          logicExecutionContext -> {
             return vajram.getInputDefinitions().stream()
                     .filter(inputDefinition -> inputDefinition instanceof Input<?>)
                     .map(inputDefinition -> (Input<?>) inputDefinition)
                     .anyMatch(Input::needsModulation)
-                && inputModulatorConfig.shouldModulate().test(nodeExecutionContext);
+                && inputModulatorConfig.shouldModulate().test(logicExecutionContext);
           };
       mainLogicDecoratorConfigList.add(
           new MainLogicDecoratorConfig(

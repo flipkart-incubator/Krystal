@@ -126,7 +126,6 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                     String instanceId =
                         decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
                     if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
-
                       MainLogicDecorator mainLogicDecorator =
                           requestScopedMainDecorators
                               .computeIfAbsent(decoratorType, t -> new LinkedHashMap<>())
@@ -141,7 +140,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                       mainLogicDecorator.executeCommand(
                           new InitiateActiveDepChains(
                               nodeId, ImmutableSet.copyOf(dependantChainsPerNode.get(nodeId))));
-                      decorators.put(decoratorType, mainLogicDecorator);
+                      decorators.putIfAbsent(decoratorType, mainLogicDecorator);
                     }
                   });
             });
@@ -304,8 +303,16 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                             });
                 linkFutures(submissionResult, nodeResult.future());
               });
-          unFlushedRequests.forEach(
-              requestId -> executeCommand(new Flush(allRequests.get(requestId).nodeId())));
+          allOf(
+                  unFlushedRequests.stream()
+                      .map(
+                          requestId ->
+                              executeCommand(new Flush(allRequests.get(requestId).nodeId())))
+                      .toArray(CompletableFuture[]::new))
+              .whenComplete(
+                  (unused, throwable) -> {
+                    dependantChainsPerNode.clear();
+                  });
           unFlushedRequests.clear();
         });
   }
