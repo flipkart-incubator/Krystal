@@ -303,17 +303,21 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                             });
                 linkFutures(submissionResult, nodeResult.future());
               });
-          allOf(
-                  unFlushedRequests.stream()
-                      .map(
-                          requestId ->
-                              executeCommand(new Flush(allRequests.get(requestId).nodeId())))
-                      .toArray(CompletableFuture[]::new))
+          List<CompletableFuture<?>> futures = new ArrayList<>();
+          unFlushedRequests.stream()
+              .map(allRequests::get)
+              .map(NodeResult::future)
+              .forEach(futures::add);
+          unFlushedRequests.stream()
+              .map(requestId -> allRequests.get(requestId).nodeId())
+              .distinct()
+              .forEach(nodeId -> futures.add(executeCommand(new Flush(nodeId))));
+          return allOf(futures.toArray(CompletableFuture[]::new))
               .whenComplete(
-                  (unused, throwable) -> {
+                  (_v, _t) -> {
                     dependantChainsPerNode.clear();
+                    unFlushedRequests.clear();
                   });
-          unFlushedRequests.clear();
         });
   }
 
@@ -339,15 +343,6 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                         .map(NodeResult::future)
                         .toArray(CompletableFuture[]::new))
                 .whenComplete((unused, throwable) -> commandQueueLease.close()));
-  }
-
-  private void enqueueCommand(Runnable command) {
-    enqueueCommand(
-        (Supplier<Void>)
-            () -> {
-              command.run();
-              return null;
-            });
   }
 
   private <T> CompletableFuture<T> enqueueCommand(Supplier<T> command) {
