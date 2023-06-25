@@ -16,6 +16,7 @@ import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
+import com.flipkart.krystal.krystex.node.NodeExecutionConfig;
 import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.google.common.collect.ImmutableMap;
@@ -26,10 +27,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,7 +59,6 @@ class Resilience4JBulkheadTest {
     CountDownLatch countDownLatch = new CountDownLatch(1);
     MainLogicDefinition<String> mainLogic =
         newAsyncLogic(
-            "nodeLogic",
             Set.of("input"),
             dependencyValues ->
                 supplyAsync(
@@ -99,13 +97,19 @@ class Resilience4JBulkheadTest {
 
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         krystalNodeExecutor.executeNode(
-            nodeDefinition.nodeId(), new Inputs(ImmutableMap.of("input", withValue(1))), "req_1");
+            nodeDefinition.nodeId(),
+            new Inputs(ImmutableMap.of("input", withValue(1))),
+            NodeExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> call2BeforeBulkheadExhaustion =
         krystalNodeExecutor.executeNode(
-            nodeDefinition.nodeId(), new Inputs(ImmutableMap.of("input", withValue(2))), "req_2");
+            nodeDefinition.nodeId(),
+            new Inputs(ImmutableMap.of("input", withValue(2))),
+            NodeExecutionConfig.builder().executionId("req_2").build());
     CompletableFuture<Object> callAfterBulkheadExhaustion =
         krystalNodeExecutor.executeNode(
-            nodeDefinition.nodeId(), new Inputs(ImmutableMap.of("input", withValue(3))), "req_3");
+            nodeDefinition.nodeId(),
+            new Inputs(ImmutableMap.of("input", withValue(3))),
+            NodeExecutionConfig.builder().executionId("req_3").build());
     krystalNodeExecutor.flush();
     assertThat(callAfterBulkheadExhaustion)
         .failsWithin(1, SECONDS)
@@ -122,10 +126,10 @@ class Resilience4JBulkheadTest {
   }
 
   private <T> MainLogicDefinition<T> newAsyncLogic(
-      String nodeId, Set<String> inputs, Function<Inputs, CompletableFuture<T>> logic) {
+      Set<String> inputs, Function<Inputs, CompletableFuture<T>> logic) {
     IOLogicDefinition<T> def =
         new IOLogicDefinition<>(
-            new NodeLogicId(new NodeId(nodeId), nodeId + ":asyncLogic"),
+            new NodeLogicId(new NodeId("nodeLogic"), "nodeLogic" + ":asyncLogic"),
             inputs,
             inputsList ->
                 inputsList.stream()
@@ -133,11 +137,5 @@ class Resilience4JBulkheadTest {
             ImmutableMap.of());
     logicDefinitionRegistry.addMainLogic(def);
     return def;
-  }
-
-  /* So that bad testcases do not hang indefinitely.*/
-  private static <T> T timedGet(CompletableFuture<T> future)
-      throws InterruptedException, ExecutionException, TimeoutException {
-    return future.get(1, SECONDS);
   }
 }

@@ -5,7 +5,6 @@ import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig.sharedModulator;
 import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -28,6 +27,7 @@ import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JCircuitBreaker;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
+import com.flipkart.krystal.krystex.node.NodeExecutionConfig;
 import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
 import com.flipkart.krystal.vajram.modulation.Batcher;
 import com.flipkart.krystal.vajram.tags.Service;
@@ -53,6 +53,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.Test
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -71,6 +72,7 @@ import org.junit.jupiter.api.TestInfo;
 
 class KrystexVajramExecutorTest {
 
+  private static final Duration TIMEOUT = ofSeconds(1);
   private TestRequestContext requestContext;
   private ObjectMapper objectMapper;
 
@@ -94,7 +96,7 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  void executeCompute_noDependencies_success() throws Exception {
+  void executeCompute_noDependencies_success() {
     VajramNodeGraph graph =
         loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello").build();
     CompletableFuture<String> result;
@@ -103,7 +105,7 @@ class KrystexVajramExecutorTest {
         graph.createExecutor(requestContext)) {
       result = krystexVajramExecutor.execute(vajramID(HelloVajram.ID), this::helloRequest);
     }
-    assertEquals("Hello! user_id_1", timedGet(result));
+    assertThat(result).succeedsWithin(TIMEOUT).isEqualTo("Hello! user_id_1");
   }
 
   @Test
@@ -120,7 +122,7 @@ class KrystexVajramExecutorTest {
               applicationRequestContext ->
                   helloRequestBuilder(applicationRequestContext).greeting("Namaste").build());
     }
-    assertEquals("Namaste! user_id_1", timedGet(result));
+    assertThat(result).succeedsWithin(TIMEOUT).isEqualTo("Namaste! user_id_1");
   }
 
   @Test
@@ -136,7 +138,10 @@ class KrystexVajramExecutorTest {
           krystexVajramExecutor.execute(
               vajramID(TestUserServiceVajram.ID), this::testUserServiceRequest);
     }
-    assertEquals("Firstname Lastname (user_id_1)", timedGet(userInfo123).userName());
+    assertThat(userInfo123)
+        .succeedsWithin(TIMEOUT)
+        .extracting(TestUserInfo::userName)
+        .isEqualTo("Firstname Lastname (user_id_1)");
   }
 
   @Test
@@ -161,10 +166,13 @@ class KrystexVajramExecutorTest {
       helloString =
           krystexVajramExecutor.execute(vajramID(HelloFriendsVajram.ID), this::helloFriendsRequest);
     }
-    assertEquals(
-        "Hello Friends of Firstname Lastname (user_id_1)! Firstname Lastname (user_id_1:friend_1), Firstname Lastname (user_id_1:friend_2)",
-        timedGet(helloString));
-    assertEquals(1, TestUserServiceVajram.CALL_COUNTER.sum());
+    assertThat(helloString)
+        .succeedsWithin(TIMEOUT)
+        .isEqualTo(
+            "Hello Friends of Firstname Lastname (user_id_1)! "
+                + "Firstname Lastname (user_id_1:friend_1), "
+                + "Firstname Lastname (user_id_1:friend_2)");
+    assertThat(TestUserServiceVajram.CALL_COUNTER.sum()).isEqualTo(1);
   }
 
   @Test
@@ -185,9 +193,10 @@ class KrystexVajramExecutorTest {
           krystexVajramExecutor.execute(
               vajramID(HelloFriendsV2Vajram.ID), this::helloFriendsV2Request);
     }
-    assertEquals(
-        "Hello Friends! Firstname Lastname (user_id_1:friend1), Firstname Lastname (user_id_1:friend2)",
-        timedGet(helloString));
+    assertThat(helloString)
+        .succeedsWithin(TIMEOUT)
+        .isEqualTo(
+            ("Hello Friends! Firstname Lastname (user_id_1:friend1), Firstname Lastname (user_id_1:friend2)"));
     assertEquals(1, TestUserServiceVajram.CALL_COUNTER.sum());
   }
 
@@ -202,10 +211,11 @@ class KrystexVajramExecutorTest {
       result =
           krystexVajramExecutor.execute(vajramID(HelloVajram.ID), this::incompleteHelloRequest);
     }
-    assertThatThrownBy(() -> timedGet(result))
-        .isInstanceOf(ExecutionException.class)
-        .hasCauseExactlyInstanceOf(MandatoryInputsMissingException.class)
-        .hasMessageContaining(
+    assertThat(result)
+        .failsWithin(TIMEOUT)
+        .withThrowableOfType(ExecutionException.class)
+        .withCauseExactlyInstanceOf(MandatoryInputsMissingException.class)
+        .withMessageContaining(
             "Vajram v<" + HelloVajram.ID + "> did not receive these mandatory inputs: [ name");
   }
 
@@ -224,15 +234,21 @@ class KrystexVajramExecutorTest {
       userInfo =
           krystexVajramExecutor.execute(
               vajramID(TestUserServiceVajram.ID),
-              testRequestContext -> TestUserServiceRequest.builder().userId("user_id_1").build());
+              testRequestContext -> TestUserServiceRequest.builder().userId("user_id_1").build(),
+              NodeExecutionConfig.builder().executionId("req_1").build());
       helloFriends =
           krystexVajramExecutor.execute(
               vajramID(HelloFriendsVajram.ID),
               testRequestContext ->
-                  HelloFriendsRequest.builder().userId("user_id_1").numberOfFriends(0).build());
+                  HelloFriendsRequest.builder().userId("user_id_1").numberOfFriends(0).build(),
+              NodeExecutionConfig.builder().executionId("req_2").build());
     }
-    assertThat(timedGet(userInfo).userName()).isEqualTo("Firstname Lastname (user_id_1)");
-    assertThat(timedGet(helloFriends))
+    assertThat(userInfo)
+        .succeedsWithin(TIMEOUT)
+        .extracting(TestUserInfo::userName)
+        .isEqualTo("Firstname Lastname (user_id_1)");
+    assertThat(helloFriends)
+        .succeedsWithin(TIMEOUT)
         .isEqualTo("Hello Friends of Firstname Lastname (user_id_1)! ");
     assertThat(TestUserServiceVajram.CALL_COUNTER.sum()).isEqualTo(1);
   }
@@ -253,15 +269,21 @@ class KrystexVajramExecutorTest {
           krystexVajramExecutor.execute(
               vajramID(TestUserServiceVajram.ID),
               testRequestContext ->
-                  TestUserServiceRequest.builder().userId("user_id_1:friend_1").build());
+                  TestUserServiceRequest.builder().userId("user_id_1:friend_1").build(),
+              NodeExecutionConfig.builder().executionId("req_1").build());
       helloFriends =
           krystexVajramExecutor.execute(
               vajramID(HelloFriendsVajram.ID),
               testRequestContext ->
-                  HelloFriendsRequest.builder().userId("user_id_1").numberOfFriends(1).build());
+                  HelloFriendsRequest.builder().userId("user_id_1").numberOfFriends(1).build(),
+              NodeExecutionConfig.builder().executionId("req_2").build());
     }
-    assertThat(timedGet(userInfo).userName()).isEqualTo("Firstname Lastname (user_id_1:friend_1)");
-    assertThat(timedGet(helloFriends))
+    assertThat(userInfo)
+        .succeedsWithin(TIMEOUT)
+        .extracting(TestUserInfo::userName)
+        .isEqualTo("Firstname Lastname (user_id_1:friend_1)");
+    assertThat(helloFriends)
+        .succeedsWithin(TIMEOUT)
         .isEqualTo(
             "Hello Friends of Firstname Lastname (user_id_1)! Firstname Lastname (user_id_1:friend_1)");
     assertThat(TestUserServiceVajram.CALL_COUNTER.sum()).isEqualTo(2);
@@ -308,7 +330,8 @@ class KrystexVajramExecutorTest {
                       .userIds(new ArrayList<>(List.of("user_id_1", "user_id_2")))
                       .build());
     }
-    assertThat(timedGet(multiHellos))
+    assertThat(multiHellos)
+        .succeedsWithin(TIMEOUT)
         .isEqualTo(
             """
             Hello Friends of Firstname Lastname (user_id_1)! Firstname Lastname (user_id_1:friend_1)
@@ -342,23 +365,21 @@ class KrystexVajramExecutorTest {
                       .userIds(new ArrayList<>(List.of("user_id_1", "user_id_2")))
                       .build());
     }
-    assertThat(timedGet(multiHellos))
+    assertThat(multiHellos)
+        .succeedsWithin(TIMEOUT)
         .isEqualTo(
             """
               Hello Friends of Firstname Lastname (user_id_1)! Firstname Lastname (user_id_1:friend_1)
               Hello Friends of Firstname Lastname (user_id_1)! Firstname Lastname (user_id_1:friend_1), Firstname Lastname (user_id_1:friend_2)
               Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1)
               Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1), Firstname Lastname (user_id_2:friend_2)""");
-    assertThat(TestUserServiceVajram.CALL_COUNTER.sum())
-        .isEqualTo(
-            /*
+    assertThat(TestUserServiceVajram.CALL_COUNTER.sum()).isEqualTo(2 /*
              Default InputModulatorConfig allocates one InputModulationDecorator for each
              dependant call chain.
              TestUserServiceVajram is called via two dependantChains:
              [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_infos
              [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos
-            */
-            2);
+            */);
   }
 
   @Test
@@ -390,7 +411,8 @@ class KrystexVajramExecutorTest {
                       .skip(false)
                       .build());
     }
-    assertThat(timedGet(multiHellos))
+    assertThat(multiHellos)
+        .succeedsWithin(TIMEOUT)
         .isEqualTo(
             """
               Hello Friends of Firstname Lastname (user_id_1)! Firstname Lastname (user_id_1:friend_1)
@@ -439,7 +461,7 @@ class KrystexVajramExecutorTest {
                       .skip(true)
                       .build());
     }
-    assertThat(timedGet(multiHellos)).isEqualTo("");
+    assertThat(multiHellos).succeedsWithin(TIMEOUT).isEqualTo("");
     assertThat(TestUserServiceVajram.CALL_COUNTER.sum())
         .isEqualTo(
             /*
@@ -477,7 +499,8 @@ class KrystexVajramExecutorTest {
                       .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
                       .build());
     }
-    assertThat(timedGet(multiHellos))
+    assertThat(multiHellos)
+        .succeedsWithin(TIMEOUT)
         .isEqualTo(
             """
             Hello Friends! Firstname Lastname (user_id_1:friend1), Firstname Lastname (user_id_1:friend2)
@@ -518,7 +541,8 @@ class KrystexVajramExecutorTest {
                       .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
                       .build());
     }
-    assertThat(timedGet(multiHellos))
+    assertThat(multiHellos)
+        .succeedsWithin(TIMEOUT)
         .isEqualTo(
             """
             Hello Friends! Firstname Lastname (user_id_1:friend1:friend1), Firstname Lastname (user_id_1:friend1:friend2)
@@ -643,9 +667,9 @@ class KrystexVajramExecutorTest {
                       .skip(true)
                       .build());
     }
-    assertThat(friendServiceFlushCommand).succeedsWithin(ofSeconds(1));
-    assertThat(userServiceFlushCommand).succeedsWithin(ofSeconds(1));
-    assertThat(timedGet(multiHellos)).isEqualTo("");
+    assertThat(friendServiceFlushCommand).succeedsWithin(TIMEOUT);
+    assertThat(userServiceFlushCommand).succeedsWithin(TIMEOUT);
+    assertThat(multiHellos).succeedsWithin(TIMEOUT).isEqualTo("");
   }
 
   private HelloRequest helloRequest(TestRequestContext applicationRequestContext) {
@@ -729,10 +753,5 @@ class KrystexVajramExecutorTest {
                     Resilience4JCircuitBreaker.DECORATOR_TYPE,
                     Resilience4JBulkhead.DECORATOR_TYPE,
                     InputModulationDecorator.DECORATOR_TYPE)));
-  }
-
-  /* So that bad testcases do not hang indefinitely.*/
-  private static <T> T timedGet(CompletableFuture<T> future) throws Exception {
-    return future.get(1, TimeUnit.HOURS);
   }
 }

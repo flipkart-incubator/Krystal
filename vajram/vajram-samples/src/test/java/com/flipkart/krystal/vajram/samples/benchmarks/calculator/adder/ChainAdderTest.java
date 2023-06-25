@@ -23,6 +23,7 @@ import com.flipkart.krystal.krystex.node.DependantChain;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutorMetrics;
+import com.flipkart.krystal.krystex.node.NodeExecutionConfig;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
@@ -40,12 +41,15 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class ChainAdderTest {
-  private Builder graph;
+  private VajramNodeGraph graph;
   private ObjectMapper objectMapper;
 
   @BeforeEach
   void setUp() {
-    graph = loadFromClasspath("com.flipkart.krystal.vajram.samples.benchmarks.calculator");
+    graph =
+        loadFromClasspath("com.flipkart.krystal.vajram.samples.benchmarks.calculator")
+            .maxParallelismPerCore(0.5)
+            .build();
     objectMapper =
         new ObjectMapper()
             .registerModule(new JavaTimeModule())
@@ -59,10 +63,9 @@ class ChainAdderTest {
     CompletableFuture<Integer> future;
     NodeExecutionReport nodeExecutionReport = new DefaultNodeExecutionReport(Clock.systemUTC());
     MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(nodeExecutionReport);
-    VajramNodeGraph graph = this.graph.build();
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            new RequestContext(""),
+            new RequestContext("chainAdderTest"),
             KrystalNodeExecutorConfig.builder()
                 .requestScopedLogicDecoratorConfigs(
                     ImmutableMap.of(
@@ -73,7 +76,6 @@ class ChainAdderTest {
                                 logicExecutionContext -> true,
                                 logicExecutionContext -> mainLogicExecReporter.decoratorType(),
                                 decoratorContext -> mainLogicExecReporter))))
-                .disabledDependantChains(getDisabledDependantChains(graph))
                 .build())) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
@@ -82,11 +84,10 @@ class ChainAdderTest {
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
   }
 
-//  @Disabled("Long running benchmark")
+  @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
-    VajramNodeGraph graph = this.graph.maxParallelismPerCore(0.5).build();
     long javaNativeTimeNs = javaMethodBenchmark(this::chainAdd, loopCount);
     long javaFuturesTimeNs = javaFuturesBenchmark(this::chainAddAsync, loopCount);
     //noinspection unchecked
@@ -98,11 +99,7 @@ class ChainAdderTest {
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-          graph.createExecutor(
-              new RequestContext(""),
-              KrystalNodeExecutorConfig.builder()
-                  .disabledDependantChains(getDisabledDependantChains(graph))
-                  .build())) {
+          graph.createExecutor(new RequestContext("chainAdderTest"))) {
         metrics[value] =
             ((KrystalNodeExecutor) krystexVajramExecutor.getKrystalExecutor())
                 .getKrystalNodeMetrics();
@@ -148,7 +145,7 @@ class ChainAdderTest {
         vajramTimeNs);
   }
 
-  private static CompletableFuture<Integer> executeVajram(
+  private CompletableFuture<Integer> executeVajram(
       KrystexVajramExecutor<RequestContext> krystexVajramExecutor, int multiplier) {
     return krystexVajramExecutor.execute(
         vajramID(ChainAdder.ID),
@@ -160,7 +157,11 @@ class ChainAdderTest {
                             .map(integer -> integer + multiplier * 10)
                             .toList()))
                 .build(),
-        "chainAdderTest" + multiplier);
+        NodeExecutionConfig.builder()
+            .executionId(String.valueOf(multiplier))
+            // Tests whether request level disabled dependant chains is working
+            .disabledDependantChains(getDisabledDependantChains(graph))
+            .build());
   }
 
   private void chainAdd(Integer value) {
@@ -220,11 +221,6 @@ class ChainAdderTest {
   private static ImmutableSet<DependantChain> getDisabledDependantChains(VajramNodeGraph graph) {
     return ImmutableSet.of(
         graph.computeDependantChain(
-            ChainAdder.ID,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n));
+            ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n));
   }
 }

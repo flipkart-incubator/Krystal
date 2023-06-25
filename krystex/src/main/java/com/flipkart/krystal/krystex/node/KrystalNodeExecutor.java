@@ -1,7 +1,9 @@
 package com.flipkart.krystal.krystex.node;
 
 import static com.flipkart.krystal.utils.Futures.linkFutures;
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.collect.Sets.union;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
@@ -46,7 +48,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   private final NodeDefinitionRegistry nodeDefinitionRegistry;
   private final LogicDecorationOrdering logicDecorationOrdering;
   private final Lease<? extends ExecutorService> commandQueueLease;
-  private final RequestId requestId;
+  private final String instanceId;
   /**
    * We need to have a list of request scope global decorators corresponding to each type, in case
    * we want to have a decorator of one type but based on some config in request, we want to choose
@@ -70,22 +72,22 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   private final NodeRegistry nodeRegistry = new NodeRegistry();
   private final KrystalNodeExecutorMetrics krystalNodeMetrics;
   private volatile boolean closed;
-  private final Map<RequestId, List<NodeResult>> allRequests = new LinkedHashMap<>();
-  private final Map<RequestId, List<NodeResult>> unFlushedRequests = new LinkedHashMap<>();
+  private final Map<RequestId, NodeResult> allRequests = new LinkedHashMap<>();
+  private final Set<RequestId> unFlushedRequests = new LinkedHashSet<>();
   private final Map<NodeId, Set<DependantChain>> dependantChainsPerNode = new LinkedHashMap<>();
 
   public KrystalNodeExecutor(
       NodeDefinitionRegistry nodeDefinitionRegistry,
       MultiLeasePool<? extends ExecutorService> commandQueuePool,
       KrystalNodeExecutorConfig config,
-      String requestId) {
+      String instanceId) {
     this(
         nodeDefinitionRegistry,
         commandQueuePool,
         config.logicDecorationOrdering(),
         config.requestScopedLogicDecoratorConfigs(),
         config.disabledDependantChains(),
-        requestId);
+        instanceId);
   }
 
   public KrystalNodeExecutor(
@@ -94,11 +96,11 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       LogicDecorationOrdering logicDecorationOrdering,
       Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs,
       ImmutableSet<DependantChain> disabledDependantChains,
-      String requestId) {
+      String instanceId) {
     this.nodeDefinitionRegistry = nodeDefinitionRegistry;
     this.logicDecorationOrdering = logicDecorationOrdering;
     this.commandQueueLease = commandQueuePool.lease();
-    this.requestId = new RequestId(requestId);
+    this.instanceId = instanceId;
     this.requestScopedLogicDecoratorConfigs =
         ImmutableMap.copyOf(requestScopedLogicDecoratorConfigs);
     this.disabledDependantChains = disabledDependantChains;
@@ -147,41 +149,46 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   @Override
-  public <T> CompletableFuture<T> executeNode(NodeId nodeId, Inputs inputs) {
-    //noinspection unchecked
-    return (CompletableFuture<T>) executeNode(nodeId, inputs, requestId);
-  }
-
-  @Override
-  public <T> CompletableFuture<T> executeNode(NodeId nodeId, Inputs inputs, String executionId) {
-    //noinspection unchecked
-    if (executionId == null) {
-      throw new IllegalArgumentException("Execution id can not be null");
-    }
-    return (CompletableFuture<T>) executeNode(nodeId, inputs, this.requestId.append(executionId));
-  }
-
-  private CompletableFuture<?> executeNode(NodeId nodeId, Inputs inputs, RequestId requestId) {
+  public <T> CompletableFuture<T> executeNode(
+      NodeId nodeId, Inputs inputs, NodeExecutionConfig executionConfig) {
     if (closed) {
       throw new RejectedExecutionException("KrystalNodeExecutor is already closed");
     }
-    return enqueueCommand( // Perform all datastructure manipulations in the command queue to avoid
-            // multi-thread access
-            () -> {
-              createDependencyNodes(nodeId, DependantChainStart.instance());
-              CompletableFuture<Object> future = new CompletableFuture<>();
-              NodeResult nodeResult = new NodeResult(nodeId, inputs, future);
-              allRequests.computeIfAbsent(requestId, r -> new ArrayList<>()).add(nodeResult);
-              unFlushedRequests.computeIfAbsent(requestId, r -> new ArrayList<>()).add(nodeResult);
-              return future;
-            })
-        .thenCompose(identity());
+
+    checkArgument(executionConfig != null, "executionConfig can not be null");
+
+    String executionId = executionConfig.executionId();
+    checkArgument(executionId != null, "executionConfig.executionId can not be null");
+    RequestId requestId = new RequestId("%s:%s".formatted(instanceId, executionId));
+
+    //noinspection unchecked
+    return (CompletableFuture<T>)
+        enqueueCommand( // Perform all datastructure manipulations in the command queue to avoid
+                // multi-thread access
+                () -> {
+                  createDependencyNodes(nodeId, DependantChainStart.instance(), executionConfig);
+                  CompletableFuture<Object> future = new CompletableFuture<>();
+                  if (allRequests.containsKey(requestId)) {
+                    future.completeExceptionally(
+                        new IllegalArgumentException(
+                            "Received duplicate requests for same instanceId '%s' and execution Id '%s'"
+                                .formatted(instanceId, executionId)));
+                  } else {
+                    allRequests.put(
+                        requestId, new NodeResult(nodeId, inputs, executionConfig, future));
+                    unFlushedRequests.add(requestId);
+                  }
+                  return future;
+                })
+            .thenCompose(identity());
   }
 
-  private void createDependencyNodes(NodeId nodeId, DependantChain dependantChain) {
+  private void createDependencyNodes(
+      NodeId nodeId, DependantChain dependantChain, NodeExecutionConfig executionConfig) {
     NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
     // If a dependantChain is disabled, don't create that node and its dependency nodes
-    if (!disabledDependantChains.contains(dependantChain)) {
+    if (!union(this.disabledDependantChains, executionConfig.disabledDependantChains())
+        .contains(dependantChain)) {
       nodeRegistry.createIfAbsent(
           nodeId,
           _n ->
@@ -191,7 +198,9 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       dependencyNodes.forEach(
           (dependencyName, depNodeId) ->
               createDependencyNodes(
-                  depNodeId, DependantChain.extend(dependantChain, nodeId, dependencyName)));
+                  depNodeId,
+                  DependantChain.extend(dependantChain, nodeId, dependencyName),
+                  executionConfig));
       dependantChainsPerNode
           .computeIfAbsent(nodeId, _n -> new LinkedHashSet<>())
           .add(dependantChain);
@@ -215,10 +224,10 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
    * method from any other thread (for example: IO reactor threads) will cause race conditions,
    * multithreaded access of non-thread-safe data structures, and resulting unspecified behaviour.
    *
-   * <p>This is an optimal version on {@link #enqueueNodeCommand(Supplier<NodeRequestCommand>)}
-   * which bypasses the command queue for the special case that the command is originating from the
-   * same main thread inside the command queue,thus avoiding unnecessary contention in the
-   * thread-safe structures inside the command queue.
+   * <p>This is an optimal version on {@link #enqueueNodeCommand(Supplier)} which bypasses the
+   * command queue for the special case that the command is originating from the same main thread
+   * inside the command queue,thus avoiding unnecessary contention in the thread-safe structures
+   * inside the command queue.
    */
   CompletableFuture<NodeResponse> executeCommand(NodeCommand nodeCommand) {
     krystalNodeMetrics.commandQueueBypassed();
@@ -244,56 +253,59 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
   private void validate(NodeCommand nodeCommand) {
     DependantChain dependantChain = null;
-    if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
-      dependantChain = executeWithInputs.dependantChain();
-    } else if (nodeCommand instanceof SkipNode skipNode) {
-      dependantChain = skipNode.dependantChain();
-    }
-    if (disabledDependantChains.contains(dependantChain)) {
-      throw new DisabledDependantChainException(dependantChain);
+    if (nodeCommand instanceof NodeRequestCommand nodeRequestCommand) {
+      RequestId requestId = nodeRequestCommand.requestId();
+      if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
+        dependantChain = executeWithInputs.dependantChain();
+      } else if (nodeCommand instanceof SkipNode skipNode) {
+        dependantChain = skipNode.dependantChain();
+      }
+      if (union(
+              disabledDependantChains,
+              allRequests
+                  .get(requestId.originatedFrom())
+                  .executionConfig()
+                  .disabledDependantChains())
+          .contains(dependantChain)) {
+        throw new DisabledDependantChainException(dependantChain);
+      }
     }
   }
 
   public void flush() {
     enqueueCommand(
         () -> {
-          //noinspection CodeBlock2Expr
           unFlushedRequests.forEach(
-              (requestId, nodeExecutionInfos) -> {
-                nodeExecutionInfos.forEach(
-                    nodeResult -> {
-                      NodeId nodeId = nodeResult.nodeId();
-                      if (nodeResult.future().isDone()) {
-                        return;
-                      }
-                      NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
-                      CompletableFuture<Object> submissionResult =
-                          executeCommand(
-                                  new ExecuteWithInputs(
-                                      nodeId,
-                                      nodeDefinition.getMainLogicDefinition().inputNames().stream()
-                                          .filter(
-                                              s -> !nodeDefinition.dependencyNodes().containsKey(s))
-                                          .collect(toImmutableSet()),
-                                      nodeResult.inputs(),
-                                      DependantChainStart.instance(),
-                                      requestId))
-                              .thenApply(NodeResponse::response)
-                              .thenApply(
-                                  valueOrError -> {
-                                    if (valueOrError.error().isPresent()) {
-                                      throw new RuntimeException(valueOrError.error().get());
-                                    } else {
-                                      return valueOrError.value().orElse(null);
-                                    }
-                                  });
-                      linkFutures(submissionResult, nodeResult.future());
-                    });
+              requestId -> {
+                NodeResult nodeResult = allRequests.get(requestId);
+                NodeId nodeId = nodeResult.nodeId();
+                if (nodeResult.future().isDone()) {
+                  return;
+                }
+                NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
+                CompletableFuture<Object> submissionResult =
+                    executeCommand(
+                            new ExecuteWithInputs(
+                                nodeId,
+                                nodeDefinition.getMainLogicDefinition().inputNames().stream()
+                                    .filter(s -> !nodeDefinition.dependencyNodes().containsKey(s))
+                                    .collect(toImmutableSet()),
+                                nodeResult.inputs(),
+                                DependantChainStart.instance(),
+                                requestId))
+                        .thenApply(NodeResponse::response)
+                        .thenApply(
+                            valueOrError -> {
+                              if (valueOrError.error().isPresent()) {
+                                throw new RuntimeException(valueOrError.error().get());
+                              } else {
+                                return valueOrError.value().orElse(null);
+                              }
+                            });
+                linkFutures(submissionResult, nodeResult.future());
               });
           unFlushedRequests.forEach(
-              (requestId, nodeExecutionInfos) ->
-                  nodeExecutionInfos.forEach(
-                      nodeResult -> executeCommand(new Flush(nodeResult.nodeId()))));
+              requestId -> executeCommand(new Flush(allRequests.get(requestId).nodeId())));
           unFlushedRequests.clear();
         });
   }
@@ -317,9 +329,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
         () ->
             allOf(
                     allRequests.values().stream()
-                        .flatMap(
-                            nodeExecutionInfos ->
-                                nodeExecutionInfos.stream().map(NodeResult::future))
+                        .map(NodeResult::future)
                         .toArray(CompletableFuture[]::new))
                 .whenComplete((unused, throwable) -> commandQueueLease.close()));
   }
@@ -342,5 +352,9 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
         commandQueueLease.get());
   }
 
-  private record NodeResult(NodeId nodeId, Inputs inputs, CompletableFuture<Object> future) {}
+  private record NodeResult(
+      NodeId nodeId,
+      Inputs inputs,
+      NodeExecutionConfig executionConfig,
+      CompletableFuture<Object> future) {}
 }

@@ -24,6 +24,7 @@ import com.flipkart.krystal.krystex.node.DependantChain;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutorMetrics;
+import com.flipkart.krystal.krystex.node.NodeExecutionConfig;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderTest.RequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
@@ -37,6 +38,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class SplitAdderTest {
@@ -62,7 +64,7 @@ class SplitAdderTest {
     VajramNodeGraph graph = this.graph.build();
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            new RequestContext(""),
+            new RequestContext("chainAdderTest"),
             KrystalNodeExecutorConfig.builder()
                 .requestScopedLogicDecoratorConfigs(
                     ImmutableMap.of(
@@ -73,6 +75,7 @@ class SplitAdderTest {
                                 logicExecutionContext -> true,
                                 logicExecutionContext -> mainLogicExecReporter.decoratorType(),
                                 decoratorContext -> mainLogicExecReporter))))
+                // Tests whether instasnce level disabled dependant chains is working
                 .disabledDependantChains(disabledDepChains(graph))
                 .build())) {
       future = executeVajram(krystexVajramExecutor, 0);
@@ -83,7 +86,7 @@ class SplitAdderTest {
     assertThat(result).isEqualTo(55);
   }
 
-  //  @Disabled("Long running benchmark")
+  @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
@@ -100,7 +103,7 @@ class SplitAdderTest {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
           graph.createExecutor(
-              new RequestContext(""),
+              new RequestContext("chainAdderTest"),
               KrystalNodeExecutorConfig.builder()
                   .disabledDependantChains(disabledDepChains(graph))
                   .build())) {
@@ -161,7 +164,7 @@ class SplitAdderTest {
                             .map(integer -> integer + multiplier * 10)
                             .toList()))
                 .build(),
-        "chainAdderTest" + multiplier);
+        NodeExecutionConfig.builder().executionId(String.valueOf(multiplier)).build());
   }
 
   private void splitAdd(Integer value) {

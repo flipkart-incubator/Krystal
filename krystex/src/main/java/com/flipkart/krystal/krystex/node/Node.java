@@ -37,6 +37,7 @@ import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -54,7 +55,6 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
-import java.util.stream.Stream;
 
 class Node {
 
@@ -255,9 +255,7 @@ class Node {
     Map<String, Results<Object>> allDependencies =
         dependencyValuesCollector.computeIfAbsent(requestId, k -> new LinkedHashMap<>());
     ImmutableSet<String> allInputNames = mainLogicDefinition.inputNames();
-    Set<String> availableInputs =
-        Stream.concat(allInputs.keySet().stream(), allDependencies.keySet().stream())
-            .collect(toSet());
+    Set<String> availableInputs = Sets.union(allInputs.keySet(), allDependencies.keySet());
     if (availableInputs.isEmpty()) {
       if (!allInputNames.isEmpty()
           && nodeDefinition.resolverDefinitions().isEmpty()
@@ -346,9 +344,10 @@ class Node {
           == null) {
         /* This is for the case where for some resolvers the input has already been resolved but we
         do need to skip them as well, as our current resolver is skipped.*/
-        Set<RequestId> requestIdSet = new HashSet<>();
-        requestIdSet.addAll(dependencyNodeExecutions.individualCallResponses().keySet());
-        RequestId dependencyRequestId = requestId.append("%s[%s]".formatted(dependencyName, 0));
+        Set<RequestId> requestIdSet =
+            new HashSet<>(dependencyNodeExecutions.individualCallResponses().keySet());
+        RequestId dependencyRequestId =
+            requestId.createNewRequest("%s[%s]".formatted(dependencyName, 0));
         /*Skipping Current resolver, as its a skip, we dont need to iterate
          * over fanout requests as the input is empty*/
         requestIdSet.add(dependencyRequestId);
@@ -378,7 +377,7 @@ class Node {
       long executionsInProgress = dependencyNodeExecutions.executionCounter().longValue();
       Map<RequestId, Inputs> oldInputs = new LinkedHashMap<>();
       for (int i = 0; i < executionsInProgress; i++) {
-        RequestId rid = requestId.append("%s[%s]".formatted(dependencyName, i));
+        RequestId rid = requestId.createNewRequest("%s[%s]".formatted(dependencyName, i));
         oldInputs.put(
             rid,
             new Inputs(
@@ -394,10 +393,10 @@ class Node {
         Inputs inputs = inputList.get(j);
         for (int i = 0; i < batchSize; i++) {
           RequestId dependencyRequestId =
-              requestId.append("%s[%s]".formatted(dependencyName, j * batchSize + i));
+              requestId.createNewRequest("%s[%s]".formatted(dependencyName, j * batchSize + i));
           RequestId inProgressRequestId;
           if (executionsInProgress > 0) {
-            inProgressRequestId = requestId.append("%s[%s]".formatted(dependencyName, i));
+            inProgressRequestId = requestId.createNewRequest("%s[%s]".formatted(dependencyName, i));
           } else {
             inProgressRequestId = dependencyRequestId;
           }
@@ -541,7 +540,7 @@ class Node {
               if (!dependencyValuesCollector
                   .getOrDefault(requestId, ImmutableMap.of())
                   .containsKey(depName)) {
-                RequestId dependencyRequestId = requestId.append("%s".formatted(depName));
+                RequestId dependencyRequestId = requestId.createNewRequest("%s".formatted(depName));
                 CompletableFuture<NodeResponse> nodeResponse =
                     krystalNodeExecutor.executeCommand(
                         new ExecuteWithInputs(

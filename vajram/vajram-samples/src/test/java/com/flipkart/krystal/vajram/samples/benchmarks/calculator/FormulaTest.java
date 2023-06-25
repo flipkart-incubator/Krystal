@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutorMetrics;
+import com.flipkart.krystal.krystex.node.NodeExecutionConfig;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
@@ -106,7 +107,7 @@ class FormulaTest {
     return krystexVajramExecutor.execute(
         vajramID(Formula.ID),
         rc -> FormulaRequest.builder().a(value).p(rc.p).q(rc.q).build(),
-        "formulaTest" + value);
+        NodeExecutionConfig.builder().executionId("formulaTest" + value).build());
   }
 
   private static void syncFormula(Integer value) {

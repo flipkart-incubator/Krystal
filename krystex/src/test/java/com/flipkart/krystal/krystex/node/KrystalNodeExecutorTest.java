@@ -64,18 +64,24 @@ class KrystalNodeExecutorTest {
                     "nodeLogic", Collections.emptySet(), dependencyValues -> "computed_value")
                 .nodeLogicId());
 
-    CompletableFuture<Object> future_1 =
-        krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), "req_1");
-    CompletableFuture<Object> future_2 =
-        krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), "req_2");
+    CompletableFuture<Object> future1 =
+        krystalNodeExecutor.executeNode(
+            nodeDefinition.nodeId(),
+            Inputs.empty(),
+            NodeExecutionConfig.builder().executionId("req_1").build());
+    CompletableFuture<Object> future2 =
+        krystalNodeExecutor.executeNode(
+            nodeDefinition.nodeId(),
+            Inputs.empty(),
+            NodeExecutionConfig.builder().executionId("req_2").build());
 
     krystalNodeExecutor.flush();
-    assertEquals("computed_value", timedGet(future_1));
-    assertEquals("computed_value", timedGet(future_2));
+    assertEquals("computed_value", timedGet(future1));
+    assertEquals("computed_value", timedGet(future2));
   }
 
   @Test
-  void multiRequestExecutionWithNullRequestId() throws Exception {
+  void multiRequestExecutionWithNullRequestId() {
     NodeDefinition nodeDefinition =
         nodeDefinitionRegistry.newNodeDefinition(
             "node",
@@ -83,14 +89,17 @@ class KrystalNodeExecutorTest {
                     "nodeLogic", Collections.emptySet(), dependencyValues -> "computed_value")
                 .nodeLogicId());
 
-    CompletableFuture<Object> future_1 =
-        krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), "req_1");
+    CompletableFuture<Object> future1 =
+        krystalNodeExecutor.executeNode(
+            nodeDefinition.nodeId(),
+            Inputs.empty(),
+            NodeExecutionConfig.builder().executionId("req_1").build());
     assertThatThrownBy(
             () -> krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), null))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Execution id can not be null");
+        .hasMessageContaining("executionConfig can not be null");
     krystalNodeExecutor.flush();
-    assertThat(future_1).succeedsWithin(1, SECONDS).isEqualTo("computed_value");
+    assertThat(future1).succeedsWithin(1, SECONDS).isEqualTo("computed_value");
   }
 
   @Test
@@ -103,7 +112,10 @@ class KrystalNodeExecutorTest {
                 .nodeLogicId());
 
     CompletableFuture<Object> future =
-        krystalNodeExecutor.executeNode(nodeDefinition.nodeId(), Inputs.empty(), "req_1");
+        krystalNodeExecutor.executeNode(
+            nodeDefinition.nodeId(),
+            Inputs.empty(),
+            NodeExecutionConfig.builder().executionId("req_1").build());
     krystalNodeExecutor.flush();
     assertEquals("computed_value", timedGet(future));
   }
@@ -130,7 +142,7 @@ class KrystalNodeExecutorTest {
         krystalNodeExecutor.executeNode(
             nodeId,
             new Inputs(ImmutableMap.of("a", withValue(1), "b", withValue(2), "c", withValue("3"))),
-            "r");
+            NodeExecutionConfig.builder().executionId("r").build());
     krystalNodeExecutor.flush();
     assertEquals("computed_values: a=1;b=2;c=3", timedGet(future));
   }
@@ -164,7 +176,8 @@ class KrystalNodeExecutorTest {
             ImmutableMap.of("dep", n1.nodeId()));
 
     CompletableFuture<Object> future =
-        krystalNodeExecutor.executeNode(n2.nodeId(), Inputs.empty(), "r1");
+        krystalNodeExecutor.executeNode(
+            n2.nodeId(), Inputs.empty(), NodeExecutionConfig.builder().executionId("r1").build());
     krystalNodeExecutor.flush();
     assertEquals("dependency_value:computed_value", timedGet(future));
   }
@@ -257,7 +270,7 @@ class KrystalNodeExecutorTest {
                     ImmutableMap.of("input", new NodeId(l4Dep)))
                 .nodeId(),
             inputs,
-            "r");
+            NodeExecutionConfig.builder().executionId("r").build());
     krystalNodeExecutor.flush();
     assertEquals("l1:l2:l3:l4:final", timedGet(future));
   }
@@ -279,7 +292,7 @@ class KrystalNodeExecutorTest {
                             .nodeLogicId())
                     .nodeId(),
                 Inputs.empty(),
-                ""));
+                NodeExecutionConfig.builder().executionId("req_1").build()));
   }
 
   /* So that bad testcases do not hang indefinitely.*/

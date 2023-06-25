@@ -15,6 +15,7 @@ import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutio
 import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
+import com.flipkart.krystal.krystex.node.NodeExecutionConfig;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
@@ -70,7 +71,7 @@ public class GreetingVajramTest {
         graph
             .build()
             .createExecutor(
-                new RequestContext(""),
+                new RequestContext("greetingTest"),
                 KrystalNodeExecutorConfig.builder()
                     .requestScopedLogicDecoratorConfigs(
                         ImmutableMap.of(
@@ -95,8 +96,7 @@ public class GreetingVajramTest {
     @Singleton
     @Named("analytics_sink")
     public AnalyticsEventSink provideAnalyticsEventSink() {
-      AnalyticsEventSink analyticsEventSink = new AnalyticsEventSink();
-      return analyticsEventSink;
+      return new AnalyticsEventSink();
     }
 
     @Provides
@@ -113,7 +113,7 @@ public class GreetingVajramTest {
     return krystexVajramExecutor.execute(
         vajramID(GreetingVajram.ID),
         rc -> GreetingRequest.builder().userId("user@123").build(),
-        "greetingTest");
+        NodeExecutionConfig.builder().executionId("req_1").build());
   }
 
   private static InputInjectionProvider wrapInjector(Injector injector) {

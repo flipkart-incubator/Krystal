@@ -57,6 +57,6 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
   @VajramLogic
   public static Integer add(ChainAdderInputs allInputs) {
     return allInputs.sum().values().stream().mapToInt(value -> value.value().orElse(0)).sum()
-           + allInputs.chainSum().values().stream().mapToInt(value -> value.value().orElse(0)).sum();
+        + allInputs.chainSum().values().stream().mapToInt(value -> value.value().orElse(0)).sum();
   }
 }
