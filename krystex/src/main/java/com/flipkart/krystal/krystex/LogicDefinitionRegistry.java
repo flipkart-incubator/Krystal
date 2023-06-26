@@ -1,12 +1,16 @@
 package com.flipkart.krystal.krystex;
 
 import com.flipkart.krystal.krystex.node.NodeLogicId;
+import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
+import com.flipkart.krystal.krystex.resolution.ResolverLogicDefinition;
 import java.util.HashMap;
 import java.util.Map;
 
 public final class LogicDefinitionRegistry {
   private final Map<NodeLogicId, MainLogicDefinition<?>> mainLogicDefinitions = new HashMap<>();
   private final Map<NodeLogicId, ResolverLogicDefinition> resolverLogicDefinitions =
+      new HashMap<>();
+  private final Map<NodeLogicId, MultiResolverDefinition> multiResolverDefinitions =
       new HashMap<>();
 
   public LogicDefinitionRegistry() {}
@@ -32,6 +36,13 @@ public final class LogicDefinitionRegistry {
       return;
     }
     resolverLogicDefinitions.put(def.nodeLogicId(), def);
+  }
+
+  public void addMultiResolver(MultiResolverDefinition def) {
+    if (multiResolverDefinitions.containsKey(def.nodeLogicId())) {
+      return;
+    }
+    multiResolverDefinitions.put(def.nodeLogicId(), def);
   }
 
   public void validate() {

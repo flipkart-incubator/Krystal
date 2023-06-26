@@ -48,7 +48,7 @@ class ChainAdderTest {
   void setUp() {
     graph =
         loadFromClasspath("com.flipkart.krystal.vajram.samples.benchmarks.calculator")
-            .maxParallelismPerCore(0.5)
+            .maxParallelismPerCore(1)
             .build();
     objectMapper =
         new ObjectMapper()
@@ -87,7 +87,7 @@ class ChainAdderTest {
   @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark() throws Exception {
-    int loopCount = 50_000;
+    int loopCount = 100_000;
     long javaNativeTimeNs = javaMethodBenchmark(this::chainAdd, loopCount);
     long javaFuturesTimeNs = javaFuturesBenchmark(this::chainAddAsync, loopCount);
     //noinspection unchecked

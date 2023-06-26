@@ -1,7 +1,7 @@
 package com.flipkart.krystal.krystex.node;
 
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.ResolverDefinition;
+import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -13,6 +13,7 @@ public record NodeDefinition(
     NodeLogicId mainLogicId,
     ImmutableMap<String, NodeId> dependencyNodes,
     ImmutableList<ResolverDefinition> resolverDefinitions,
+    NodeLogicId multiResolverLogicId,
     NodeDefinitionRegistry nodeDefinitionRegistry) {
 
   public <T> MainLogicDefinition<T> getMainLogicDefinition() {

@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex;
+package com.flipkart.krystal.krystex.resolution;
 
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.google.common.collect.ImmutableSet;

@@ -3,8 +3,10 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.VajramLoader.loadVajramsFromClassPath;
 import static com.flipkart.krystal.vajram.inputs.SingleExecute.skipExecution;
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.multiResolve;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.flipkart.krystal.data.Inputs;
@@ -12,9 +14,6 @@ import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.ResolverCommand;
-import com.flipkart.krystal.krystex.ResolverDefinition;
-import com.flipkart.krystal.krystex.ResolverLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
@@ -24,6 +23,10 @@ import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
 import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
+import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
+import com.flipkart.krystal.krystex.resolution.ResolverCommand;
+import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
+import com.flipkart.krystal.krystex.resolution.ResolverLogicDefinition;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.IOVajram;
@@ -43,6 +46,7 @@ import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolverDefinition;
+import com.flipkart.krystal.vajram.inputs.resolution.ResolutionRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig.ModulatorContext;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjector;
@@ -56,6 +60,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
@@ -245,7 +250,8 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
             nodeId.value(),
             vajramLogicMainLogicDefinition.nodeLogicId(),
             depNameToProviderNode,
-            inputResolverCreationResult.resolverDefinitions());
+            inputResolverCreationResult.resolverDefinitions(),
+            inputResolverCreationResult.multiResolver());
     return nodeDefinition.nodeId();
   }
 
@@ -285,8 +291,17 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                             try {
                               if (inputResolverDefinition instanceof InputResolver inputResolver) {
                                 dependencyCommand =
-                                    inputResolver.resolve(
-                                        dependencyName, resolvedInputNames, inputValues);
+                                    multiResolve(
+                                            List.of(
+                                                new ResolutionRequest(
+                                                    dependencyName, resolvedInputNames)),
+                                            List.of(inputResolver),
+                                            inputValues)
+                                        .entrySet()
+                                        .iterator()
+                                        .next()
+                                        .getValue();
+
                               } else {
                                 dependencyCommand =
                                     vajram.resolveInputOfDependency(
@@ -298,21 +313,41 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                                       "Resolver threw exception: %s"
                                           .formatted(getStackTraceAsString(t)));
                             }
-
-                            if (dependencyCommand.shouldSkip()) {
-                              return ResolverCommand.skip(dependencyCommand.doc());
-                            }
-                            return ResolverCommand.multiExecuteWith(
-                                dependencyCommand.inputs().stream()
-                                    .filter(Optional::isPresent)
-                                    .map(Optional::get)
-                                    .collect(toImmutableList()));
+                            return toResolverCommand(dependencyCommand);
                           });
                   return new ResolverDefinition(
                       inputResolverNode.nodeLogicId(), sources, dependencyName, resolvedInputNames);
                 })
             .collect(toImmutableList());
-    return new InputResolverCreationResult(resolverDefinitions);
+    MultiResolverDefinition multiResolverDefinition =
+        logicRegistryDecorator.newMultiResolver(
+            vajramId.vajramId(),
+            vajramId.vajramId() + ":multiResolver",
+            inputDefinitions.stream().map(VajramInputDefinition::name).collect(toImmutableSet()),
+            (resolverRequests, inputs) -> {
+              return multiResolve(
+                      resolverRequests.stream()
+                          .map(r -> new ResolutionRequest(r.dependencyName(), r.inputsToResolve()))
+                          .toList(),
+                      vajramDefinition.getInputResolverDefinitions(),
+                      inputs)
+                  .entrySet()
+                  .stream()
+                  .collect(toImmutableMap(Entry::getKey, e -> toResolverCommand(e.getValue())));
+            });
+    return new InputResolverCreationResult(
+        resolverDefinitions, multiResolverDefinition.nodeLogicId());
+  }
+
+  private static ResolverCommand toResolverCommand(DependencyCommand<Inputs> dependencyCommand) {
+    if (dependencyCommand.shouldSkip()) {
+      return ResolverCommand.skip(dependencyCommand.doc());
+    }
+    return ResolverCommand.multiExecuteWith(
+        dependencyCommand.inputs().stream()
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .collect(toImmutableList()));
   }
 
   private void validateMandatory(
@@ -417,7 +452,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   }
 
   private record InputResolverCreationResult(
-      ImmutableList<ResolverDefinition> resolverDefinitions) {}
+      ImmutableList<ResolverDefinition> resolverDefinitions, NodeLogicId multiResolver) {}
 
   public Optional<VajramDefinition> getVajramDefinition(VajramID vajramId) {
     return Optional.ofNullable(vajramDefinitions.get(vajramId));

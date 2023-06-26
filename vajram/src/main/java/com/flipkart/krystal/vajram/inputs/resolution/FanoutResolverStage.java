@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.inputs.resolution;
 
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
-import com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.SkipPredicate;
+import com.flipkart.krystal.vajram.inputs.resolution.internal.SkipPredicate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
