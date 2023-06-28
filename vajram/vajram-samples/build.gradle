@@ -30,7 +30,7 @@ dependencies {
 }
 
 test {
-    minHeapSize = "1g" // initial heap size
+    minHeapSize = "128m" // initial heap size
     maxHeapSize = "4g" // maximum heap size
 }
 

@@ -149,6 +149,35 @@ class FormulaTest {
                 assertThat(future.getNow(0)).isEqualTo(4);
               }
             });
+    /*
+       Old code performance:
+       Total java method time: 29,883,631
+       Total java futures time: 66,435,359
+       Loop Count: 1,000,000
+       Avg. time to Create Executors:14,522 ns
+       Avg. time to Enqueue vajrams:2,904 ns
+       Avg. time to execute vajrams:190,280 ns
+       Throughput executions/s: 5263
+       CommandsQueuedCount: 1,003,999
+       CommandQueueBypassedCount: 9,998,637
+       Platform overhead over native code: 190,251 ns per request
+       Platform overhead over reactive code: 190,214 ns per request
+       maxActiveLeasesPerObject: 165, peakAvgActiveLeasesPerObject: 164.66666666666666, maxPoolSize: 12
+    */
+    /*
+      Total java method time: 6,624,273
+      Total java futures time: 65,579,807
+      Loop Count: 1,000,000
+      Avg. time to Create Executors:16,842 ns
+      Avg. time to Enqueue vajrams:4,125 ns
+      Avg. time to execute vajrams:24,266 ns
+      Throughput executions/s: 41666
+      CommandsQueuedCount: 1,002,000
+      CommandQueueBypassedCount: 6,003,000
+      Platform overhead over native code: 24,260 ns per request
+      Platform overhead over reactive code: 24,201 ns per request
+      maxActiveLeasesPerObject: 72, peakAvgActiveLeasesPerObject: 71.33333333333333, maxPoolSize: 12
+    */
     printStats(
         outerLoopCount,
         innerLoopCount,
