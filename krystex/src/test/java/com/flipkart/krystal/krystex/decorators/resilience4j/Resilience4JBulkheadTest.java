@@ -18,6 +18,7 @@ import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
+import com.flipkart.krystal.krystex.node.NodeExecutionConfig;
 import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.google.common.collect.ImmutableMap;
@@ -101,13 +102,19 @@ class Resilience4JBulkheadTest {
 
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         krystalNodeExecutor.executeNode(
-            nodeDefinition.nodeId(), new Inputs(ImmutableMap.of("input", withValue(1))), "req_1");
+            nodeDefinition.nodeId(),
+            new Inputs(ImmutableMap.of("input", withValue(1))),
+            NodeExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> call2BeforeBulkheadExhaustion =
         krystalNodeExecutor.executeNode(
-            nodeDefinition.nodeId(), new Inputs(ImmutableMap.of("input", withValue(2))), "req_2");
+            nodeDefinition.nodeId(),
+            new Inputs(ImmutableMap.of("input", withValue(2))),
+            NodeExecutionConfig.builder().executionId("req_2").build());
     CompletableFuture<Object> callAfterBulkheadExhaustion =
         krystalNodeExecutor.executeNode(
-            nodeDefinition.nodeId(), new Inputs(ImmutableMap.of("input", withValue(3))), "req_3");
+            nodeDefinition.nodeId(),
+            new Inputs(ImmutableMap.of("input", withValue(3))),
+            NodeExecutionConfig.builder().executionId("req_3").build());
     krystalNodeExecutor.flush();
     assertThat(callAfterBulkheadExhaustion)
         .failsWithin(1, SECONDS)
@@ -149,7 +156,7 @@ class Resilience4JBulkheadTest {
           public <T> Optional<T> getConfig(String key) {
             return switch (key) {
               case "threadpoolBulkhead_restrictsConcurrency.bulkhead.max_concurrency" -> (Optional<
-                  T>)
+                      T>)
                   Optional.of(2);
               case "threadpoolBulkhead_restrictsConcurrency.bulkhead.enabled" -> (Optional<T>)
                   Optional.of(true);
@@ -171,13 +178,19 @@ class Resilience4JBulkheadTest {
 
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         krystalNodeExecutor.executeNode(
-            nodeDefinition.nodeId(), new Inputs(ImmutableMap.of("input", withValue(1))), "req_1");
+            nodeDefinition.nodeId(),
+            new Inputs(ImmutableMap.of("input", withValue(1))),
+            NodeExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> call2BeforeBulkheadExhaustion =
         krystalNodeExecutor.executeNode(
-            nodeDefinition.nodeId(), new Inputs(ImmutableMap.of("input", withValue(2))), "req_2");
+            nodeDefinition.nodeId(),
+            new Inputs(ImmutableMap.of("input", withValue(2))),
+            NodeExecutionConfig.builder().executionId("req_2").build());
     CompletableFuture<Object> callAfterBulkheadExhaustion =
         krystalNodeExecutor.executeNode(
-            nodeDefinition.nodeId(), new Inputs(ImmutableMap.of("input", withValue(3))), "req_3");
+            nodeDefinition.nodeId(),
+            new Inputs(ImmutableMap.of("input", withValue(3))),
+            NodeExecutionConfig.builder().executionId("req_3").build());
     krystalNodeExecutor.flush();
     assertThat(callAfterBulkheadExhaustion)
         .failsWithin(1, HOURS)
