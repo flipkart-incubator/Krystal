@@ -521,6 +521,28 @@
     <inspection_tool class="StringTokenizer" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="SubtractionInCompareTo" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="SuperTearDownInFinally" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="SuppressionAnnotation" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="myAllowedSuppressions">
+        <list>
+          <option value="common-java:InsufficientBranchCoverage" />
+          <option value="CallToSystemExit" />
+          <option value="ClassLoaderInstantiation" />
+          <option value="unchecked" />
+          <option value="rawtypes" />
+          <option value="CallToSuspiciousStringMethod" />
+          <option value="CodeBlock2Expr" />
+          <option value="HardcodedLineSeparator" />
+          <option value="OverlyComplexClass" />
+          <option value="OverlyCoupledMethod" />
+          <option value="OverlyCoupledClass" />
+          <option value="OptionalContainsCollection" />
+          <option value="UnstableApiUsage" />
+          <option value="Singleton" />
+          <option value="NumericCastThatLosesPrecision" />
+          <option value="ResultOfMethodCallIgnored" />
+        </list>
+      </option>
+    </inspection_tool>
     <inspection_tool class="SuspiciousArrayCast" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="SuspiciousGetterSetter" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="SuspiciousIndentAfterControlStatement" enabled="true" level="ERROR" enabled_by_default="true" />
