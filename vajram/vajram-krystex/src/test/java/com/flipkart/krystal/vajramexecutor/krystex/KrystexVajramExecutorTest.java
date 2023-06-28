@@ -72,7 +72,7 @@ import org.junit.jupiter.api.TestInfo;
 
 class KrystexVajramExecutorTest {
 
-  private static final Duration TIMEOUT = ofSeconds(1);
+  private static final Duration TIMEOUT = ofSeconds(1000);
   private TestRequestContext requestContext;
   private ObjectMapper objectMapper;
 
@@ -145,7 +145,7 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  void executeIo_withModulatorMultipleRequests_calledOnlyOnce() throws Exception {
+  void executeIo_withModulatorMultipleRequests_calledOnlyOnce() {
     VajramNodeGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",

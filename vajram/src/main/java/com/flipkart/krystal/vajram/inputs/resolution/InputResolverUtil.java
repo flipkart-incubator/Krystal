@@ -22,6 +22,7 @@ import com.flipkart.krystal.vajram.inputs.VajramDependencyTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
 import com.flipkart.krystal.vajram.inputs.resolution.internal.AbstractSimpleInputResolver;
 import com.flipkart.krystal.vajram.inputs.resolution.internal.SkipPredicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -73,7 +74,9 @@ public final class InputResolverUtil {
 
   public static DependencyCommand<Inputs> toDependencyCommand(List<Map<String, Object>> depInputs) {
     DependencyCommand<Inputs> dependencyCommand;
-    if (depInputs.size() <= 1) {
+    if (depInputs.isEmpty()) {
+      dependencyCommand = executeFanoutWith(ImmutableList.of());
+    } else if (depInputs.size() == 1) {
       Map<String, InputValue<Object>> collect =
           depInputs.get(0).entrySet().stream()
               .collect(toMap(Entry::getKey, e -> withValue(e.getValue())));
@@ -120,7 +123,7 @@ public final class InputResolverUtil {
               first = false;
               handleResolverReturn(resolvable, object, depInput);
             } else {
-              LinkedHashMap<String, Object> e = new LinkedHashMap<>();
+              LinkedHashMap<String, Object> e = new LinkedHashMap<>(depInput);
               more.add(e);
               handleResolverReturn(resolvable, object, e);
             }
