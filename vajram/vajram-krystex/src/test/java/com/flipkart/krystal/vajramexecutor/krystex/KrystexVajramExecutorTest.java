@@ -591,8 +591,7 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  //  @Disabled("Fix: https://github.com/flipkart-incubator/Krystal/issues/84")
-  void flush_skippingADependency_flushesCompleteCallGraph(TestInfo testInfo) throws Exception {
+  void flush_skippingADependency_flushesCompleteCallGraph(TestInfo testInfo) {
     CompletableFuture<FlushCommand> friendServiceFlushCommand = new CompletableFuture<>();
     CompletableFuture<FlushCommand> userServiceFlushCommand = new CompletableFuture<>();
     VajramNodeGraph graph =

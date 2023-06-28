@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.resolution;
 
-import com.google.common.collect.ImmutableSet;
+import java.util.List;
 
 public record DependencyResolutionRequest(
-    String dependencyName, ImmutableSet<String> inputsToResolve) {}
+    String dependencyName, List<ResolverDefinition> resolverDefinitions) {}

@@ -4,6 +4,7 @@ import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.util.Optional;
 
 /**
  * @param dependencyNodes Map of dependency name to nodeId.
@@ -13,7 +14,7 @@ public record NodeDefinition(
     NodeLogicId mainLogicId,
     ImmutableMap<String, NodeId> dependencyNodes,
     ImmutableList<ResolverDefinition> resolverDefinitions,
-    NodeLogicId multiResolverLogicId,
+    Optional<NodeLogicId> multiResolverLogicId,
     NodeDefinitionRegistry nodeDefinitionRegistry) {
 
   public <T> MainLogicDefinition<T> getMainLogicDefinition() {

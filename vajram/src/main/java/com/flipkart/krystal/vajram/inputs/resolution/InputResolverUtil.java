@@ -22,7 +22,6 @@ import com.flipkart.krystal.vajram.inputs.VajramDependencyTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
 import com.flipkart.krystal.vajram.inputs.resolution.internal.AbstractSimpleInputResolver;
 import com.flipkart.krystal.vajram.inputs.resolution.internal.SkipPredicate;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -35,93 +34,114 @@ import java.util.function.Function;
 
 public final class InputResolverUtil {
 
-  public static ImmutableMap<String, DependencyCommand<Inputs>> multiResolve(
+  public static ResolutionResult multiResolve(
       List<ResolutionRequest> resolutionRequests,
-      Collection<InputResolverDefinition> resolvers,
+      Map<String, Collection<InputResolverDefinition>> resolvers,
       Inputs inputs) {
-    Map<String, AbstractSimpleInputResolver> resolversByTarget =
-        resolvers.stream()
-            .collect(
-                toMap(
-                    resolver ->
-                        ((AbstractSimpleInputResolver) resolver)
-                            .getResolverSpec()
-                            .getTargetInput()
-                            .name(),
-                    inputResolver -> (AbstractSimpleInputResolver) inputResolver));
-    Map<String, DependencyCommand<Inputs>> results = new LinkedHashMap<>();
+    Map<String, Map<String, AbstractSimpleInputResolver>> resolversByDepTarget =
+        new LinkedHashMap<>();
+
+    Map<String, List<Map<String, Object>>> results = new LinkedHashMap<>();
+    Map<String, DependencyCommand<Inputs>> skippedDependencies = new LinkedHashMap<>();
     for (ResolutionRequest resolutionRequest : resolutionRequests) {
       String dependencyName = resolutionRequest.dependencyName();
-      ImmutableSet<String> inputsToResolve = resolutionRequest.inputsToResolve();
       List<Map<String, Object>> depInputs = new ArrayList<>();
-      for (String resolvable : inputsToResolve) {
-        AbstractSimpleInputResolver resolver = resolversByTarget.get(resolvable);
+      Collection<InputResolverDefinition> depResolvers = resolvers.get(dependencyName);
+      for (InputResolverDefinition resolver : depResolvers) {
+        AbstractSimpleInputResolver simpleResolver = (AbstractSimpleInputResolver) resolver;
+        String resolvable = simpleResolver.getResolverSpec().getTargetInput().name();
         DependencyCommand<?> command =
             _resolutionHelper(
-                resolver.getResolverSpec().getSourceInput(),
-                resolver.getResolverSpec().getTransformer(),
-                resolver.getResolverSpec().getFanoutTransformer(),
-                resolver.getResolverSpec().getSkipConditions(),
+                simpleResolver.getResolverSpec().getSourceInput(),
+                simpleResolver.getResolverSpec().getTransformer(),
+                simpleResolver.getResolverSpec().getFanoutTransformer(),
+                simpleResolver.getResolverSpec().getSkipConditions(),
                 inputs);
         if (command.shouldSkip()) {
           //noinspection unchecked
-          results.put(dependencyName, (DependencyCommand<Inputs>) command);
+          skippedDependencies.put(dependencyName, (DependencyCommand<Inputs>) command);
           break;
-        } else if (command instanceof SingleExecute<?> singleExecute) {
-          if (depInputs.isEmpty()) {
-            LinkedHashMap<String, Object> e = new LinkedHashMap<>();
-            e.put(resolvable, singleExecute.input());
-            depInputs.add(e);
-          } else {
-            depInputs.forEach(map -> map.put(resolvable, singleExecute.input()));
-          }
-        } else if (command instanceof MultiExecute<?> multiExecute) {
-          Collection<?> objects = multiExecute.multiInputs();
-          if (depInputs.isEmpty()) {
-            objects.forEach(
-                o -> {
-                  LinkedHashMap<String, Object> e = new LinkedHashMap<>();
-                  e.put(resolvable, o);
-                  depInputs.add(e);
-                });
-          } else {
-            List<Map<String, Object>> more =
-                new ArrayList<>(depInputs.size() * objects.size() - depInputs.size());
-            for (Map<String, Object> depInput : depInputs) {
-              boolean first = true;
-              for (Object object : objects) {
-                if (first) {
-                  first = false;
-                  depInput.put(resolvable, object);
-                } else {
-                  LinkedHashMap<String, Object> e = new LinkedHashMap<>();
-                  e.put(resolvable, object);
-                  more.add(e);
-                }
-              }
-            }
-            depInputs.addAll(more);
-          }
         }
+        collectDepInputs(depInputs, resolvable, command);
       }
-      if (depInputs.size() <= 1) {
-        Map<String, InputValue<Object>> collect =
-            depInputs.get(0).entrySet().stream()
-                .collect(toMap(Entry::getKey, e -> withValue(e.getValue())));
-        DependencyCommand<Inputs> tSingleExecute = executeWith(new Inputs(collect));
-        results.put(dependencyName, tSingleExecute);
-      } else {
-        List<Inputs> inputsList = new ArrayList<>();
-        for (Map<String, Object> depInput : depInputs) {
-          inputsList.add(
-              new Inputs(
-                  depInput.entrySet().stream()
-                      .collect(toMap(Entry::getKey, e -> withValue(e.getValue())))));
-        }
-        results.put(dependencyName, executeFanoutWith(inputsList));
+      if (!skippedDependencies.containsKey(dependencyName)) {
+        results.putIfAbsent(dependencyName, depInputs);
       }
     }
-    return ImmutableMap.copyOf(results);
+    return new ResolutionResult(results, skippedDependencies);
+  }
+
+  public static DependencyCommand<Inputs> toDependencyCommand(List<Map<String, Object>> depInputs) {
+    DependencyCommand<Inputs> dependencyCommand;
+    if (depInputs.size() <= 1) {
+      Map<String, InputValue<Object>> collect =
+          depInputs.get(0).entrySet().stream()
+              .collect(toMap(Entry::getKey, e -> withValue(e.getValue())));
+      dependencyCommand = executeWith(new Inputs(collect));
+    } else {
+      List<Inputs> inputsList = new ArrayList<>();
+      for (Map<String, Object> depInput : depInputs) {
+        inputsList.add(
+            new Inputs(
+                depInput.entrySet().stream()
+                    .collect(toMap(Entry::getKey, e -> withValue(e.getValue())))));
+      }
+      dependencyCommand = executeFanoutWith(inputsList);
+    }
+    return dependencyCommand;
+  }
+
+  public static void collectDepInputs(
+      List<Map<String, Object>> depInputs, String resolvable, DependencyCommand<?> command) {
+    if (command.shouldSkip()) {
+      return;
+    }
+    if (command instanceof SingleExecute<?> singleExecute) {
+      if (depInputs.isEmpty()) {
+        depInputs.add(new LinkedHashMap<>());
+      }
+      depInputs.forEach(map -> handleResolverReturn(resolvable, singleExecute.input(), map));
+    } else if (command instanceof MultiExecute<?> multiExecute) {
+      Collection<?> objects = multiExecute.multiInputs();
+      if (depInputs.isEmpty()) {
+        objects.forEach(
+            o -> {
+              LinkedHashMap<String, Object> e = new LinkedHashMap<>();
+              depInputs.add(e);
+              handleResolverReturn(resolvable, o, e);
+            });
+      } else {
+        List<Map<String, Object>> more =
+            new ArrayList<>(depInputs.size() * objects.size() - depInputs.size());
+        for (Map<String, Object> depInput : depInputs) {
+          boolean first = true;
+          for (Object object : objects) {
+            if (first) {
+              first = false;
+              handleResolverReturn(resolvable, object, depInput);
+            } else {
+              LinkedHashMap<String, Object> e = new LinkedHashMap<>();
+              more.add(e);
+              handleResolverReturn(resolvable, object, e);
+            }
+          }
+        }
+        depInputs.addAll(more);
+      }
+    }
+  }
+
+  private static void handleResolverReturn(
+      String resolvable, Object o, Map<String, Object> valuesMap) {
+    if (o instanceof Inputs inputs) {
+      //noinspection unchecked,rawtypes
+      valuesMap.putAll(
+          inputs.values().entrySet().stream()
+              .collect(
+                  toMap(Entry::getKey, e -> ((ValueOrError) e.getValue()).value().orElse(null))));
+    } else {
+      valuesMap.put(resolvable, o);
+    }
   }
 
   static <S, T, CV extends Vajram<?>, DV extends Vajram<?>> InputResolver toResolver(
@@ -200,6 +220,10 @@ public final class InputResolverUtil {
       return executeWith((T) transformedInput.orElse(null));
     }
   }
+
+  public record ResolutionResult(
+      Map<String, List<Map<String, Object>>> results,
+      Map<String, DependencyCommand<Inputs>> skippedDependencies) {}
 
   private InputResolverUtil() {}
 }

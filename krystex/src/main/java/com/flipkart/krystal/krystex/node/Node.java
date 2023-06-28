@@ -29,6 +29,8 @@ import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.request.RequestId;
+import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
+import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
 import com.flipkart.krystal.krystex.resolution.ResolverCommand;
 import com.flipkart.krystal.krystex.resolution.ResolverCommand.SkipDependency;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
@@ -97,7 +99,7 @@ class Node {
 
   private final Map<RequestId, Optional<SkipNode>> skipLogicRequested = new LinkedHashMap<>();
 
-  private final Map<RequestId, Map<NodeLogicId, ResolverCommand>> resolverResults =
+  private final Map<RequestId, Map<ResolverDefinition, ResolverCommand>> resolverResults =
       new LinkedHashMap<>();
 
   private final Map<DependantChain, Boolean> flushedDependantChain = new LinkedHashMap<>();
@@ -193,12 +195,13 @@ class Node {
                 resolverDefinition ->
                     !this.resolverResults
                         .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
-                        .containsKey(resolverDefinition.resolverNodeLogicId()))
+                        .containsKey(resolverDefinition))
             .collect(toSet());
 
-    for (ResolverDefinition resolverDefinition : pendingResolvers) {
-      executeResolver(requestId, resolverDefinition);
-    }
+    //    for (ResolverDefinition resolverDefinition : pendingResolvers) {
+    //      executeResolver(requestId, resolverDefinition);
+    //    }
+    executeResolvers(requestId, pendingResolvers);
     resultForRequest.completeExceptionally(skipNodeException(skipNode));
     return resultForRequest;
   }
@@ -265,11 +268,7 @@ class Node {
       return;
     }
 
-    Map<NodeLogicId, ResolverDefinition> pendingResolvers =
-        getPendingResolvers(requestId, newInputNames, availableInputs);
-    for (ResolverDefinition pendingResolver : pendingResolvers.values()) {
-      executeResolver(requestId, pendingResolver);
-    }
+    executeResolvers(requestId, getPendingResolvers(requestId, newInputNames, availableInputs));
   }
 
   /**
@@ -277,24 +276,23 @@ class Node {
    * @param newInputNames The input names for which new values were just made available.
    * @param availableInputs The inputs for which values are available.
    * @return the resolver definitions which need at least one of the provided {@code inputNames} and
-   *     all of whose inputs' values are available.
+   *     all of whose inputs' values are available. i.e resolvers which should be executed
+   *     immediately
    */
-  private Map<NodeLogicId, ResolverDefinition> getPendingResolvers(
+  private Set<ResolverDefinition> getPendingResolvers(
       RequestId requestId, ImmutableSet<String> newInputNames, Set<String> availableInputs) {
-    Map<NodeLogicId, ResolverCommand> nodeResults =
+    Map<ResolverDefinition, ResolverCommand> nodeResults =
         this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
 
-    Map<NodeLogicId, ResolverDefinition> pendingResolvers;
+    Set<ResolverDefinition> pendingResolvers;
     Collector<ResolverDefinition, ?, Map<NodeLogicId, ResolverDefinition>> resolverCollector =
         toMap(ResolverDefinition::resolverNodeLogicId, identity(), (o1, o2) -> o1);
-    Map<NodeLogicId, ResolverDefinition> pendingUnboundResolvers =
+    Set<ResolverDefinition> pendingUnboundResolvers =
         resolverDefinitionsByInput.getOrDefault(Optional.<String>empty(), emptyList()).stream()
             .filter(
                 resolverDefinition -> availableInputs.containsAll(resolverDefinition.boundFrom()))
-            .filter(
-                resolverDefinition ->
-                    !nodeResults.containsKey(resolverDefinition.resolverNodeLogicId()))
-            .collect(resolverCollector);
+            .filter(resolverDefinition -> !nodeResults.containsKey(resolverDefinition))
+            .collect(toSet());
     pendingResolvers =
         newInputNames.stream()
             .flatMap(
@@ -305,19 +303,66 @@ class Node {
                         .filter(
                             resolverDefinition ->
                                 availableInputs.containsAll(resolverDefinition.boundFrom()))
-                        .filter(
-                            resolverDefinition ->
-                                !nodeResults.containsKey(resolverDefinition.resolverNodeLogicId())))
-            .collect(resolverCollector);
-    pendingResolvers.putAll(pendingUnboundResolvers);
+                        .filter(resolverDefinition -> !nodeResults.containsKey(resolverDefinition)))
+            .collect(toSet());
+    pendingResolvers.addAll(pendingUnboundResolvers);
     return pendingResolvers;
   }
 
+  private void executeResolvers(RequestId requestId, Set<ResolverDefinition> pendingResolvers) {
+    if (pendingResolvers.isEmpty()) {
+      return;
+    }
+
+    Optional<MultiResolverDefinition> multiResolverOpt =
+        nodeDefinition
+            .multiResolverLogicId()
+            .map(
+                nodeLogicId ->
+                    nodeDefinition
+                        .nodeDefinitionRegistry()
+                        .logicDefinitionRegistry()
+                        .getMultiResolver(nodeLogicId));
+    if (multiResolverOpt.isEmpty()) {
+      return;
+    }
+    MultiResolverDefinition multiResolver = multiResolverOpt.get();
+
+    Map<String, List<ResolverDefinition>> resolversByDependency =
+        pendingResolvers.stream().collect(groupingBy(ResolverDefinition::dependencyName));
+    Optional<SkipNode> skipRequested =
+        this.skipLogicRequested.getOrDefault(requestId, Optional.empty());
+    Map<String, ResolverCommand> resolverCommands;
+    if (skipRequested.isPresent()) {
+      SkipDependency skip =
+          ResolverCommand.skip(skipRequested.get().skipDependencyCommand().reason());
+      resolverCommands =
+          resolversByDependency.keySet().stream().collect(toMap(identity(), _k -> skip));
+    } else {
+      Inputs inputs =
+          getInputsFor(
+              requestId,
+              pendingResolvers.stream()
+                  .map(ResolverDefinition::boundFrom)
+                  .flatMap(Collection::stream)
+                  .collect(toSet()));
+      resolverCommands =
+          multiResolver
+              .logic()
+              .resolve(
+                  resolversByDependency.entrySet().stream()
+                      .map(e -> new DependencyResolutionRequest(e.getKey(), e.getValue()))
+                      .toList(),
+                  inputs);
+    }
+    resolverCommands.forEach(
+        (depName, resolverCommand) -> {
+          handleResolverCommand(
+              requestId, depName, resolversByDependency.get(depName), resolverCommand);
+        });
+  }
+
   private void executeResolver(RequestId requestId, ResolverDefinition resolverDefinition) {
-    Map<NodeLogicId, ResolverCommand> nodeResults =
-        this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
-    String dependencyName = resolverDefinition.dependencyName();
-    NodeId depNodeId = nodeDefinition.dependencyNodes().get(dependencyName);
     NodeLogicId nodeLogicId = resolverDefinition.resolverNodeLogicId();
     ResolverCommand resolverCommand;
     Optional<SkipNode> skipRequested =
@@ -333,12 +378,26 @@ class Node {
               .getResolver(nodeLogicId)
               .resolve(inputsForResolver);
     }
-    nodeResults.put(nodeLogicId, resolverCommand);
+    String dependencyName = resolverDefinition.dependencyName();
+    handleResolverCommand(requestId, dependencyName, List.of(resolverDefinition), resolverCommand);
+  }
+
+  private void handleResolverCommand(
+      RequestId requestId,
+      String dependencyName,
+      List<ResolverDefinition> resolverDefinitions,
+      ResolverCommand resolverCommand) {
+    NodeId depNodeId = nodeDefinition.dependencyNodes().get(dependencyName);
+    Map<ResolverDefinition, ResolverCommand> resolverResults =
+        this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
+    resolverDefinitions.forEach(
+        resolverDefinition -> resolverResults.put(resolverDefinition, resolverCommand));
+
     DependencyNodeExecutions dependencyNodeExecutions =
         dependencyExecutions
             .computeIfAbsent(requestId, k -> new LinkedHashMap<>())
             .computeIfAbsent(dependencyName, k -> new DependencyNodeExecutions());
-    dependencyNodeExecutions.executedResolvers().add(resolverDefinition);
+    dependencyNodeExecutions.executedResolvers().addAll(resolverDefinitions);
     if (resolverCommand instanceof SkipDependency) {
       if (dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).get(dependencyName)
           == null) {
@@ -513,9 +572,13 @@ class Node {
   }
 
   private Inputs getInputsForResolver(ResolverDefinition resolverDefinition, RequestId requestId) {
+    ImmutableSet<String> boundFrom = resolverDefinition.boundFrom();
+    return getInputsFor(requestId, boundFrom);
+  }
+
+  private Inputs getInputsFor(RequestId requestId, Set<String> boundFrom) {
     Map<String, InputValue<Object>> allInputs =
         inputsValueCollector.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
-    ImmutableSet<String> boundFrom = resolverDefinition.boundFrom();
     Map<String, InputValue<Object>> inputValues = new LinkedHashMap<>();
     for (String boundFromInput : boundFrom) {
       InputValue<Object> voe = allInputs.get(boundFromInput);

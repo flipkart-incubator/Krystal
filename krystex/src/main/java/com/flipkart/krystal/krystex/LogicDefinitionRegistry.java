@@ -24,6 +24,10 @@ public final class LogicDefinitionRegistry {
     return resolverLogicDefinitions.get(nodeLogicId);
   }
 
+  public MultiResolverDefinition getMultiResolver(NodeLogicId nodeLogicId) {
+    return multiResolverDefinitions.get(nodeLogicId);
+  }
+
   public void addMainLogic(MainLogicDefinition<?> mainLogicDefinition) {
     if (mainLogicDefinitions.containsKey(mainLogicDefinition.nodeLogicId())) {
       return;

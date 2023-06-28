@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
 public final class NodeDefinitionRegistry {
 
@@ -28,28 +29,31 @@ public final class NodeDefinitionRegistry {
     return node;
   }
 
-  public NodeDefinition newNodeDefinition(String nodeId, NodeLogicId logicNode) {
-    return newNodeDefinition(nodeId, logicNode, ImmutableMap.of());
+  public NodeDefinition newNodeDefinition(String nodeId, NodeLogicId mainLogicId) {
+    return newNodeDefinition(nodeId, mainLogicId, ImmutableMap.of());
   }
 
   public NodeDefinition newNodeDefinition(
-      String nodeId, NodeLogicId logicNode, ImmutableMap<String, NodeId> dependencyNodes) {
-    return newNodeDefinition(nodeId, logicNode, dependencyNodes, ImmutableList.of(), null);
+      String nodeId, NodeLogicId mainLogicId, ImmutableMap<String, NodeId> dependencyNodes) {
+    return newNodeDefinition(nodeId, mainLogicId, dependencyNodes, ImmutableList.of(), null);
   }
 
   public NodeDefinition newNodeDefinition(
       String nodeId,
-      NodeLogicId logicNode,
+      NodeLogicId mainLogicId,
       ImmutableMap<String, NodeId> dependencyNodes,
       ImmutableList<ResolverDefinition> resolverDefinitions,
       NodeLogicId mulitResolverId) {
+    if (!resolverDefinitions.isEmpty() && mulitResolverId == null) {
+      throw new IllegalArgumentException("missing multi resolver logic");
+    }
     NodeDefinition nodeDefinition =
         new NodeDefinition(
             new NodeId(nodeId),
-            logicNode,
+            mainLogicId,
             dependencyNodes,
             resolverDefinitions,
-            mulitResolverId,
+            Optional.ofNullable(mulitResolverId),
             this);
     nodeDefinitions.put(nodeDefinition.nodeId(), nodeDefinition);
     return nodeDefinition;
