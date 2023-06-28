@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,6 +55,7 @@ class Resilience4JBulkheadTest {
   @Test
   void bulkhead_restrictsConcurrency() {
     CountDownLatch countDownLatch = new CountDownLatch(1);
+    ExecutorService executorService = Executors.newSingleThreadExecutor();
     MainLogicDefinition<String> mainLogic =
         newAsyncLogic(
             "bulkhead_restrictsConcurrency",
@@ -69,7 +71,7 @@ class Resilience4JBulkheadTest {
                       }
                       return "computed_value";
                     },
-                    Executors.newSingleThreadExecutor()));
+                    executorService));
     Resilience4JBulkhead resilience4JBulkhead =
         new Resilience4JBulkhead("bulkhead_restrictsConcurrency");
     resilience4JBulkhead.onConfigUpdate(
