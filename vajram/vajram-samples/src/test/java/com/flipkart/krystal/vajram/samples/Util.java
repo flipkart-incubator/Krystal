@@ -50,9 +50,32 @@ public final class Util {
       long timeToCreateExecutors,
       long timeToEnqueueVajram,
       long vajramTimeNs) {
+    printStats(
+        loopCount,
+        1,
+        graph,
+        javaNativeTimeNs,
+        javaFuturesTimeNs,
+        metrics,
+        timeToCreateExecutors,
+        timeToEnqueueVajram,
+        vajramTimeNs);
+  }
+
+  public static void printStats(
+      int outerLoopCount,
+      int innerLoopCount,
+      VajramNodeGraph graph,
+      long javaNativeTimeNs,
+      long javaFuturesTimeNs,
+      KrystalNodeExecutorMetrics[] metrics,
+      long timeToCreateExecutors,
+      long timeToEnqueueVajram,
+      long vajramTimeNs) {
+    int loopCount = outerLoopCount * innerLoopCount;
     System.out
         .printf("Loop Count: %,d%n", loopCount)
-        .printf("Avg. time to Create Executors:%,d ns%n", timeToCreateExecutors / loopCount)
+        .printf("Avg. time to Create Executors:%,d ns%n", timeToCreateExecutors / outerLoopCount)
         .printf("Avg. time to Enqueue vajrams:%,d ns%n", timeToEnqueueVajram / loopCount)
         .printf("Avg. time to execute vajrams:%,d ns%n", vajramTimeNs / loopCount)
         .printf("Throughput executions/s: %d%n", loopCount / ofNanos(vajramTimeNs).toSeconds())
