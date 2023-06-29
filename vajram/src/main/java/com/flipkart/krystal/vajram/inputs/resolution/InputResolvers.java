@@ -24,7 +24,7 @@ public final class InputResolvers {
   @SafeVarargs
   public static <T, CV extends Vajram<?>, DV extends Vajram<T>> List<InputResolver> dep(
       VajramDependencyTypeSpec<T, CV, DV> dependency,
-      InputResolverSpec<?, ?, CV, DV>... resolverStages) {
+      SimpleInputResolverSpec<?, ?, CV, DV>... resolverStages) {
     return stream(resolverStages)
         .map(
             spec -> {

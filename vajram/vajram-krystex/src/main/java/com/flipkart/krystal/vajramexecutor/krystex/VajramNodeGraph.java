@@ -1,11 +1,14 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
+import static com.flipkart.krystal.data.ValueOrError.withValue;
+import static com.flipkart.krystal.krystex.resolution.ResolverCommand.multiExecuteWith;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.VajramLoader.loadVajramsFromClassPath;
+import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
+import static com.flipkart.krystal.vajram.inputs.SingleExecute.executeWith;
 import static com.flipkart.krystal.vajram.inputs.SingleExecute.skipExecution;
 import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.collectDepInputs;
 import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.multiResolve;
-import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.toDependencyCommand;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -13,6 +16,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
+import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
@@ -53,6 +57,7 @@ import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.ResolutionResult;
 import com.flipkart.krystal.vajram.inputs.resolution.ResolutionRequest;
+import com.flipkart.krystal.vajram.inputs.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig.ModulatorContext;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjector;
@@ -112,6 +117,29 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
       loadVajramsFromClassPath(packagePrefix).forEach(this::registerVajram);
     }
     inputInjector = new InputInjector(this, inputInjectionProvider);
+  }
+
+  private static DependencyCommand<Inputs> toDependencyCommand(
+      List<Map<String, Object>> depInputs) {
+    DependencyCommand<Inputs> dependencyCommand;
+    if (depInputs.isEmpty()) {
+      dependencyCommand = executeFanoutWith(ImmutableList.of());
+    } else if (depInputs.size() == 1) {
+      Map<String, InputValue<Object>> collect =
+          depInputs.get(0).entrySet().stream()
+              .collect(toMap(Entry::getKey, e -> withValue(e.getValue())));
+      dependencyCommand = executeWith(new Inputs(collect));
+    } else {
+      List<Inputs> inputsList = new ArrayList<>();
+      for (Map<String, Object> depInput : depInputs) {
+        inputsList.add(
+            new Inputs(
+                depInput.entrySet().stream()
+                    .collect(toMap(Entry::getKey, e -> withValue(e.getValue())))));
+      }
+      dependencyCommand = executeFanoutWith(inputsList);
+    }
+    return dependencyCommand;
   }
 
   public MultiLeasePool<? extends ExecutorService> getExecutorPool() {
@@ -301,7 +329,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                                 DependencyCommand<Inputs> dependencyCommand;
                                 try {
                                   if (inputResolverDefinition
-                                      instanceof InputResolver inputResolver) {
+                                      instanceof SimpleInputResolver inputResolver) {
                                     ResolutionResult resolutionResult =
                                         multiResolve(
                                             List.of(
@@ -327,6 +355,11 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                                                   .next());
                                     }
 
+                                  } else if (inputResolverDefinition
+                                      instanceof InputResolver inputResolver) {
+                                    dependencyCommand =
+                                        inputResolver.resolve(
+                                            dependencyName, resolvedInputNames, inputValues);
                                   } else {
                                     dependencyCommand =
                                         vajram.resolveInputOfDependency(
@@ -361,7 +394,8 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
               Map<String, List<ResolverDefinition>> simpleResolverDefsByDep = new HashMap<>();
               List<ResolverDefinition> complexResolverDefs = new ArrayList<>();
               for (ResolverDefinition resolverDefinition : allResolverDefs) {
-                if (resolversByResolverDefs.get(resolverDefinition) instanceof InputResolver) {
+                if (resolversByResolverDefs.get(resolverDefinition)
+                    instanceof SimpleInputResolver) {
                   simpleResolverDefsByDep
                       .computeIfAbsent(resolverDefinition.dependencyName(), k -> new ArrayList<>())
                       .add(resolverDefinition);
@@ -388,6 +422,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                                   e ->
                                       e.getValue().stream()
                                           .map(resolversByResolverDefs::get)
+                                          .map(ird -> (SimpleInputResolver) ird)
                                           .toList())),
                       inputs);
               Map<String, List<Map<String, Object>>> results = simpleResolutions.results();
@@ -400,9 +435,14 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                 if (skippedDependencies.containsKey(dependencyName)) {
                   continue;
                 }
-                DependencyCommand<Inputs> command =
-                    vajram.resolveInputOfDependency(
-                        dependencyName, resolverDef.resolvedInputNames(), inputs);
+                ImmutableSet<String> resolvables = resolverDef.resolvedInputNames();
+                DependencyCommand<Inputs> command;
+                if (resolversByResolverDefs.get(resolverDef)
+                    instanceof InputResolver inputResolver) {
+                  command = inputResolver.resolve(dependencyName, resolvables, inputs);
+                } else {
+                  command = vajram.resolveInputOfDependency(dependencyName, resolvables, inputs);
+                }
                 if (command.shouldSkip()) {
                   skippedDependencies.put(dependencyName, command);
                   results.remove(dependencyName);
@@ -413,13 +453,13 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                       command);
                 }
               }
+              results.forEach(
+                  (key, value) ->
+                      resolverCommands.put(key, toResolverCommand(toDependencyCommand(value))));
               skippedDependencies.forEach(
                   (depName, command) -> {
                     resolverCommands.put(depName, ResolverCommand.skip(command.doc()));
                   });
-              results.forEach(
-                  (key, value) ->
-                      resolverCommands.put(key, toResolverCommand(toDependencyCommand(value))));
               return ImmutableMap.copyOf(resolverCommands);
             });
     return new InputResolverCreationResult(
@@ -431,7 +471,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     if (dependencyCommand.shouldSkip()) {
       return ResolverCommand.skip(dependencyCommand.doc());
     }
-    return ResolverCommand.multiExecuteWith(
+    return multiExecuteWith(
         dependencyCommand.inputs().stream()
             .filter(Optional::isPresent)
             .map(Optional::get)

@@ -4,7 +4,6 @@ import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
 import com.flipkart.krystal.vajram.inputs.resolution.ResolverStage.AsIsResolverStage;
-import com.flipkart.krystal.vajram.inputs.resolution.internal.SkipPredicate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -38,8 +37,8 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
     return this;
   }
 
-  public InputResolverSpec<S, T, CV, DV> with(Function<Optional<S>, T> transformer) {
-    return new InputResolverSpec<>(targetInput, sourceInput, skipConditions, transformer, null);
+  public SimpleInputResolverSpec<S, T, CV, DV> with(Function<Optional<S>, T> transformer) {
+    return new SimpleInputResolverSpec<>(targetInput, sourceInput, skipConditions, transformer, null);
   }
 
   public static final class AsIsResolverStage<T, CV extends Vajram<?>, DV extends Vajram<?>>
@@ -55,7 +54,7 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
       return this;
     }
 
-    public InputResolverSpec<T, T, CV, DV> asResolver() {
+    public SimpleInputResolverSpec<T, T, CV, DV> asResolver() {
       return with(t -> t.orElse(null));
     }
   }
@@ -91,8 +90,8 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
       return new ResolverStage<>(targetInput, sourceInput);
     }
 
-    public <CV extends Vajram<?>> InputResolverSpec<Void, T, CV, DV> with(Supplier<T> with) {
-      return new InputResolverSpec<>(targetInput, null, List.of(), o -> with.get(), null);
+    public <CV extends Vajram<?>> SimpleInputResolverSpec<Void, T, CV, DV> with(Supplier<T> with) {
+      return new SimpleInputResolverSpec<>(targetInput, null, List.of(), o -> with.get(), null);
     }
   }
 }

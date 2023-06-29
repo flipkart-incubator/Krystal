@@ -18,6 +18,6 @@ public record SingleExecute<T>(T input, boolean shouldSkip, String doc)
   }
 
   public static <T> SingleExecute<T> skipExecution(String reason) {
-    return new com.flipkart.krystal.vajram.inputs.SingleExecute<>(null, true, reason);
+    return new SingleExecute<>(null, true, reason);
   }
 }
