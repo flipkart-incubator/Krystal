@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.inputs.resolution;
 
 import static com.flipkart.krystal.data.ValueOrError.empty;
-import static com.flipkart.krystal.data.ValueOrError.withValue;
 import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.inputs.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajram.inputs.SingleExecute.executeWith;
@@ -11,7 +10,6 @@ import static java.util.Optional.ofNullable;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
-import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.Vajram;
@@ -20,10 +18,6 @@ import com.flipkart.krystal.vajram.inputs.MultiExecute;
 import com.flipkart.krystal.vajram.inputs.SingleExecute;
 import com.flipkart.krystal.vajram.inputs.VajramDependencyTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
-import com.flipkart.krystal.vajram.inputs.resolution.internal.AbstractSimpleInputResolver;
-import com.flipkart.krystal.vajram.inputs.resolution.internal.SkipPredicate;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -37,19 +31,16 @@ public final class InputResolverUtil {
 
   public static ResolutionResult multiResolve(
       List<ResolutionRequest> resolutionRequests,
-      Map<String, Collection<InputResolverDefinition>> resolvers,
+      Map<String, Collection<SimpleInputResolver>> resolvers,
       Inputs inputs) {
-    Map<String, Map<String, AbstractSimpleInputResolver>> resolversByDepTarget =
-        new LinkedHashMap<>();
 
     Map<String, List<Map<String, Object>>> results = new LinkedHashMap<>();
     Map<String, DependencyCommand<Inputs>> skippedDependencies = new LinkedHashMap<>();
     for (ResolutionRequest resolutionRequest : resolutionRequests) {
       String dependencyName = resolutionRequest.dependencyName();
       List<Map<String, Object>> depInputs = new ArrayList<>();
-      Collection<InputResolverDefinition> depResolvers = resolvers.get(dependencyName);
-      for (InputResolverDefinition resolver : depResolvers) {
-        AbstractSimpleInputResolver simpleResolver = (AbstractSimpleInputResolver) resolver;
+      Collection<SimpleInputResolver> depResolvers = resolvers.get(dependencyName);
+      for (SimpleInputResolver simpleResolver : depResolvers) {
         String resolvable = simpleResolver.getResolverSpec().getTargetInput().name();
         DependencyCommand<?> command =
             _resolutionHelper(
@@ -70,28 +61,6 @@ public final class InputResolverUtil {
       }
     }
     return new ResolutionResult(results, skippedDependencies);
-  }
-
-  public static DependencyCommand<Inputs> toDependencyCommand(List<Map<String, Object>> depInputs) {
-    DependencyCommand<Inputs> dependencyCommand;
-    if (depInputs.isEmpty()) {
-      dependencyCommand = executeFanoutWith(ImmutableList.of());
-    } else if (depInputs.size() == 1) {
-      Map<String, InputValue<Object>> collect =
-          depInputs.get(0).entrySet().stream()
-              .collect(toMap(Entry::getKey, e -> withValue(e.getValue())));
-      dependencyCommand = executeWith(new Inputs(collect));
-    } else {
-      List<Inputs> inputsList = new ArrayList<>();
-      for (Map<String, Object> depInput : depInputs) {
-        inputsList.add(
-            new Inputs(
-                depInput.entrySet().stream()
-                    .collect(toMap(Entry::getKey, e -> withValue(e.getValue())))));
-      }
-      dependencyCommand = executeFanoutWith(inputsList);
-    }
-    return dependencyCommand;
   }
 
   public static void collectDepInputs(
@@ -148,15 +117,8 @@ public final class InputResolverUtil {
   }
 
   static <S, T, CV extends Vajram<?>, DV extends Vajram<?>> InputResolver toResolver(
-      VajramDependencyTypeSpec<?, CV, DV> dependency, InputResolverSpec<S, T, CV, DV> spec) {
-    return new AbstractSimpleInputResolver(dependency, spec) {
-      @Override
-      public DependencyCommand<Inputs> resolve(
-          String dependencyName, ImmutableSet<String> inputsToResolve, Inputs inputs) {
-        throw new UnsupportedOperationException(
-            "This should not be called. See InputResolverUtil.multiResolve");
-      }
-    };
+      VajramDependencyTypeSpec<?, CV, DV> dependency, SimpleInputResolverSpec<S, T, CV, DV> spec) {
+    return new SimpleInputResolver(dependency, spec);
   }
 
   private static <T> DependencyCommand<T> _resolutionHelper(

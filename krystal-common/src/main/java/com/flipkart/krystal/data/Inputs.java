@@ -30,7 +30,7 @@ public record Inputs(ImmutableMap<String, InputValue<Object>> values) {
   }
 
   public <T> T getInputValueOrThrow(String inputName) {
-    return this.<T>getInputValueOpt(inputName).orElseThrow();
+    return this.<T>getInputValue(inputName).getValueOrThrow().orElseThrow();
   }
 
   public <T> T getInputValueOrDefault(String inputName, T defaultValue) {
