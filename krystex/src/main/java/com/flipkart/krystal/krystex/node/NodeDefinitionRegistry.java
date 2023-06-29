@@ -43,8 +43,8 @@ public final class NodeDefinitionRegistry {
       NodeLogicId mainLogicId,
       ImmutableMap<String, NodeId> dependencyNodes,
       ImmutableList<ResolverDefinition> resolverDefinitions,
-      NodeLogicId mulitResolverId) {
-    if (!resolverDefinitions.isEmpty() && mulitResolverId == null) {
+      NodeLogicId multiResolverId) {
+    if (!resolverDefinitions.isEmpty() && multiResolverId == null) {
       throw new IllegalArgumentException("missing multi resolver logic");
     }
     NodeDefinition nodeDefinition =
@@ -53,7 +53,7 @@ public final class NodeDefinitionRegistry {
             mainLogicId,
             dependencyNodes,
             resolverDefinitions,
-            Optional.ofNullable(mulitResolverId),
+            Optional.ofNullable(multiResolverId),
             this);
     nodeDefinitions.put(nodeDefinition.nodeId(), nodeDefinition);
     return nodeDefinition;

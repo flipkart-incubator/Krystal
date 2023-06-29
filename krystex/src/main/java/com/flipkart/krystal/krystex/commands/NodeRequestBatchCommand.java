@@ -1,9 +1,9 @@
 package com.flipkart.krystal.krystex.commands;
 
-import java.util.List;
+import com.flipkart.krystal.krystex.node.NodeId;
+import com.flipkart.krystal.krystex.request.RequestId;
+import com.google.common.collect.ImmutableMap;
 
-public sealed interface NodeRequestBatchCommand<T extends NodeRequestCommand> extends NodeCommand
-    permits ExecuteWithInputsBatch {
-
-  List<T> subCommands();
-}
+public record NodeRequestBatchCommand(
+    NodeId nodeId, ImmutableMap<RequestId, NodeRequestCommand> subCommands)
+    implements NodeCommand {}

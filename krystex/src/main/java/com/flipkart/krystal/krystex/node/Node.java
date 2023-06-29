@@ -21,7 +21,6 @@ import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.commands.ExecuteWithDependency;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
-import com.flipkart.krystal.krystex.commands.ExecuteWithInputsBatch;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.NodeRequestBatchCommand;
 import com.flipkart.krystal.krystex.commands.NodeRequestCommand;
@@ -38,6 +37,7 @@ import com.flipkart.krystal.krystex.resolution.ResolverCommand.SkipDependency;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.flipkart.krystal.utils.ImmutableMapView;
 import com.flipkart.krystal.utils.SkippedExecutionException;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -135,20 +135,9 @@ class Node {
   }
 
   CompletableFuture<NodeBatchResponse> executeBatchCommand(
-      NodeRequestBatchCommand<?> batchCommand) {
-    if (batchCommand instanceof ExecuteWithInputsBatch ewib) {
-      List<ExecuteWithInputs> executeWithInputsBatch = ewib.subCommands();
-      executeWithInputsBatch.forEach(
-          executeWithInputs -> {
-            RequestId requestId = executeWithInputs.requestId();
-            requestsByDependantChain
-                .computeIfAbsent(executeWithInputs.dependantChain(), k -> new LinkedHashSet<>())
-                .add(requestId);
-            dependantChainByRequest.computeIfAbsent(
-                requestId, r -> executeWithInputs.dependantChain());
-          });
-      executeWithInputs(executeWithInputsBatch);
-    }
+      NodeRequestBatchCommand nodeRequestBatchCommand) {
+    ImmutableCollection<NodeRequestCommand> subCommands =
+        nodeRequestBatchCommand.subCommands().values();
   }
 
   CompletableFuture<NodeResponse> executeRequestCommand(NodeRequestCommand nodeCommand) {
@@ -176,7 +165,7 @@ class Node {
             .computeIfAbsent(executeWithInputs.dependantChain(), k -> new LinkedHashSet<>())
             .add(requestId);
         dependantChainByRequest.computeIfAbsent(requestId, r -> executeWithInputs.dependantChain());
-        executeWithInputs(ImmutableList.of(executeWithInputs));
+        executeWithInputs(requestId, executeWithInputs);
       } else {
         throw new UnsupportedOperationException(
             "Unknown type of nodeCommand: %s".formatted(nodeCommand));
@@ -247,8 +236,8 @@ class Node {
     }
   }
 
-  private void executeWithInputs(List<ExecuteWithInputs> executeWithInputs) {
-    collectInputValues(executeWithInputs);
+  private void executeWithInputs(RequestId requestId, ExecuteWithInputs executeWithInputs) {
+    collectInputValues(ImmutableList.of(executeWithInputs));
     execute(requestId, executeWithInputs.inputNames());
   }
 
