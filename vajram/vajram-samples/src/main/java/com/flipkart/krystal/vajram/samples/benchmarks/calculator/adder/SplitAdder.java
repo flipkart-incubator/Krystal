@@ -29,7 +29,7 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
   @Resolve(depName = splitSum1_n, depInputs = numbers_n)
   public static SingleExecute<ArrayList<Integer>> numbersForSubSplitter1(
       @Using(numbers_n) List<Integer> numbers) {
-    if (numbers.size() < 3) {
+    if (numbers.size() < 2) {
       return skipExecution(
           "Skipping splitters as count of numbers is less than 2. Will call adder instead");
     } else {
@@ -41,7 +41,7 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
   @Resolve(depName = splitSum2_n, depInputs = numbers_n)
   public static SingleExecute<ArrayList<Integer>> numbersForSubSplitter2(
       @Using(numbers_n) List<Integer> numbers) {
-    if (numbers.size() < 3) {
+    if (numbers.size() < 2) {
       return skipExecution(
           "Skipping splitters as count of numbers is less than 2. Will call adder instead");
     } else {
@@ -52,20 +52,17 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
 
   @Resolve(depName = sum_n, depInputs = numberOne_n)
   public static SingleExecute<Integer> adderNumberOne(@Using(numbers_n) List<Integer> numbers) {
-    if (numbers.isEmpty()) {
-      return skipExecution("No numbers provided. Skipping adder call");
-    } else if (numbers.size() > 2) {
-      return skipExecution("More than 1 numbers provided. SplitAdders will be called instead");
-    } else {
+    if (numbers.size() == 1) {
       return executeWith(numbers.get(0));
+    } else if (numbers.isEmpty()) {
+      return skipExecution("No numbers provided. Skipping adder call");
+    } else {
+      return skipExecution("More than 1 numbers provided. SplitAdders will be called instead");
     }
   }
 
   @Resolve(depName = sum_n, depInputs = numberTwo_n)
   public static Integer adderNumberTwo(@Using(numbers_n) List<Integer> numbers) {
-    if (numbers.size() == 2) {
-      return numbers.get(1);
-    }
     return 0;
   }
 
