@@ -21,7 +21,9 @@ import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.commands.ExecuteWithDependency;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
+import com.flipkart.krystal.krystex.commands.ExecuteWithInputsBatch;
 import com.flipkart.krystal.krystex.commands.Flush;
+import com.flipkart.krystal.krystex.commands.NodeRequestBatchCommand;
 import com.flipkart.krystal.krystex.commands.NodeRequestCommand;
 import com.flipkart.krystal.krystex.commands.SkipNode;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
@@ -132,6 +134,23 @@ class Node {
     flushDecoratorsIfNeeded(nodeCommand.nodeDependants());
   }
 
+  CompletableFuture<NodeBatchResponse> executeBatchCommand(
+      NodeRequestBatchCommand<?> batchCommand) {
+    if (batchCommand instanceof ExecuteWithInputsBatch ewib) {
+      List<ExecuteWithInputs> executeWithInputsBatch = ewib.subCommands();
+      executeWithInputsBatch.forEach(
+          executeWithInputs -> {
+            RequestId requestId = executeWithInputs.requestId();
+            requestsByDependantChain
+                .computeIfAbsent(executeWithInputs.dependantChain(), k -> new LinkedHashSet<>())
+                .add(requestId);
+            dependantChainByRequest.computeIfAbsent(
+                requestId, r -> executeWithInputs.dependantChain());
+          });
+      executeWithInputs(executeWithInputsBatch);
+    }
+  }
+
   CompletableFuture<NodeResponse> executeRequestCommand(NodeRequestCommand nodeCommand) {
     RequestId requestId = nodeCommand.requestId();
     final CompletableFuture<NodeResponse> resultForRequest =
@@ -151,13 +170,13 @@ class Node {
         skipLogicRequested.put(requestId, Optional.of(skipNode));
         return handleSkipDependency(requestId, skipNode, resultForRequest);
       } else if (nodeCommand instanceof ExecuteWithDependency executeWithDependency) {
-        executeWithDependency(requestId, executeWithDependency);
+        executeWithDependency(ImmutableList.of(executeWithDependency));
       } else if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
         requestsByDependantChain
             .computeIfAbsent(executeWithInputs.dependantChain(), k -> new LinkedHashSet<>())
             .add(requestId);
         dependantChainByRequest.computeIfAbsent(requestId, r -> executeWithInputs.dependantChain());
-        executeWithInputs(requestId, executeWithInputs);
+        executeWithInputs(ImmutableList.of(executeWithInputs));
       } else {
         throw new UnsupportedOperationException(
             "Unknown type of nodeCommand: %s".formatted(nodeCommand));
@@ -198,9 +217,6 @@ class Node {
                         .containsKey(resolverDefinition))
             .collect(toSet());
 
-    //    for (ResolverDefinition resolverDefinition : pendingResolvers) {
-    //      executeResolver(requestId, resolverDefinition);
-    //    }
     executeResolvers(requestId, pendingResolvers);
     resultForRequest.completeExceptionally(skipNodeException(skipNode));
     return resultForRequest;
@@ -231,23 +247,26 @@ class Node {
     }
   }
 
-  private void executeWithInputs(RequestId requestId, ExecuteWithInputs executeWithInputs) {
-    collectInputValues(requestId, executeWithInputs.inputNames(), executeWithInputs.values());
+  private void executeWithInputs(List<ExecuteWithInputs> executeWithInputs) {
+    collectInputValues(executeWithInputs);
     execute(requestId, executeWithInputs.inputNames());
   }
 
-  private void executeWithDependency(RequestId requestId, ExecuteWithDependency executeWithInput) {
-    String dependencyName = executeWithInput.dependencyName();
-    ImmutableSet<String> inputNames = ImmutableSet.of(dependencyName);
-    if (dependencyValuesCollector
-            .computeIfAbsent(requestId, k -> new LinkedHashMap<>())
-            .putIfAbsent(dependencyName, executeWithInput.results())
-        != null) {
-      throw new DuplicateRequestException(
-          "Duplicate data for dependency %s of node %s in request %s"
-              .formatted(dependencyName, nodeId, requestId));
+  private void executeWithDependency(List<ExecuteWithDependency> executeWithDepBatch) {
+    for (ExecuteWithDependency executeWithInput : executeWithDepBatch) {
+      RequestId requestId = executeWithInput.requestId();
+      String dependencyName = executeWithInput.dependencyName();
+      ImmutableSet<String> inputNames = ImmutableSet.of(dependencyName);
+      if (dependencyValuesCollector
+              .computeIfAbsent(requestId, k -> new LinkedHashMap<>())
+              .putIfAbsent(dependencyName, executeWithInput.results())
+          != null) {
+        throw new DuplicateRequestException(
+            "Duplicate data for dependency %s of node %s in request %s"
+                .formatted(dependencyName, nodeId, requestId));
+      }
+      execute(requestId, inputNames);
     }
-    execute(requestId, inputNames);
   }
 
   private void execute(RequestId requestId, ImmutableSet<String> newInputNames) {
@@ -509,7 +528,7 @@ class Node {
                         results =
                             new Results<>(
                                 dependencyNodeExecutions.individualCallResponses().values().stream()
-                                    .map(cf -> cf.getNow(new NodeResponse()))
+                                    .map(cf -> cf.getNow(new NodeResponse(requestId)))
                                     .collect(
                                         toImmutableMap(
                                             NodeResponse::inputs, NodeResponse::response)));
@@ -654,7 +673,7 @@ class Node {
         .thenAccept(
             value ->
                 resultForRequest.complete(
-                    new NodeResponse(mainLogicInputs.nonDependencyInputs(), value)));
+                    new NodeResponse(mainLogicInputs.nonDependencyInputs(), value, requestId)));
     mainLogicExecuted.put(requestId, true);
     flushDecoratorsIfNeeded(dependantChainByRequest.get(requestId));
   }
@@ -680,15 +699,20 @@ class Node {
     return new MainLogicInputs(inputValues, allInputsAndDependencies);
   }
 
-  private void collectInputValues(RequestId requestId, Set<String> inputNames, Inputs inputs) {
-    for (String inputName : inputNames) {
-      if (inputsValueCollector
-              .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
-              .putIfAbsent(inputName, inputs.getInputValue(inputName))
-          != null) {
-        throw new DuplicateRequestException(
-            "Duplicate data for inputs %s of node %s in request %s"
-                .formatted(inputNames, nodeId, requestId));
+  private void collectInputValues(List<ExecuteWithInputs> executeWithInputsBatch) {
+    for (ExecuteWithInputs executeWithInputs : executeWithInputsBatch) {
+      RequestId requestId = executeWithInputs.requestId();
+      ImmutableSet<String> inputNames = executeWithInputs.inputNames();
+      Inputs inputs = executeWithInputs.values();
+      for (String inputName : inputNames) {
+        if (inputsValueCollector
+                .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
+                .putIfAbsent(inputName, inputs.getInputValue(inputName))
+            != null) {
+          throw new DuplicateRequestException(
+              "Duplicate data for inputs %s of node %s in request %s"
+                  .formatted(inputNames, nodeId, requestId));
+        }
       }
     }
   }
