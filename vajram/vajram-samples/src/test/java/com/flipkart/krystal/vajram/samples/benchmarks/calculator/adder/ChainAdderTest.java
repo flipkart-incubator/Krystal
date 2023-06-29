@@ -87,7 +87,7 @@ class ChainAdderTest {
   @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark() throws Exception {
-    int loopCount = 100_000;
+    int loopCount = 50_000;
     long javaNativeTimeNs = javaMethodBenchmark(this::chainAdd, loopCount);
     long javaFuturesTimeNs = javaFuturesBenchmark(this::chainAddAsync, loopCount);
     //noinspection unchecked
@@ -117,13 +117,15 @@ class ChainAdderTest {
      *    maxParallelismPerCore = 0.5
      *    Processor: 2.6 GHz 6-Core Intel Core i7
      * Best Benchmark result:
-     *    platform overhead over reactive code = ~100 µs  per request
+     *    platform overhead over reactive code = ~764 µs  per request
      *    maxPoolSize = 6
-     *    maxActiveLeasesPerObject: 7889
-     *    peakAvgActiveLeasesPerObject: 7874.5
-     *    Avg. time to Enqueue vajrams: 9,217 ns
-     *    Avg. time to execute vajrams: 102,799 ns
-     *    Throughput executions/sec: 10,000
+     *    maxActiveLeasesPerObject: 4085
+     *    peakAvgActiveLeasesPerObject: 4083.25
+     *    Avg. time to Enqueue vajrams: 28,183 ns
+     *    Avg. time to execute vajrams: 765,979 ns
+     *    Throughput executions/sec: 1315
+     *    CommandsQueuedCount: 150,000
+     *    CommandQueueBypassedCount: 9,950,000
      */
     allOf(futures)
         .whenComplete(
@@ -221,6 +223,6 @@ class ChainAdderTest {
   private static ImmutableSet<DependantChain> getDisabledDependantChains(VajramNodeGraph graph) {
     return ImmutableSet.of(
         graph.computeDependantChain(
-            ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n));
+            ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n));
   }
 }
