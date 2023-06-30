@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class NodeDefinitionRegistry {
 
@@ -43,7 +44,7 @@ public final class NodeDefinitionRegistry {
       NodeLogicId mainLogicId,
       ImmutableMap<String, NodeId> dependencyNodes,
       ImmutableList<ResolverDefinition> resolverDefinitions,
-      NodeLogicId multiResolverId) {
+      @Nullable NodeLogicId multiResolverId) {
     if (!resolverDefinitions.isEmpty() && multiResolverId == null) {
       throw new IllegalArgumentException("missing multi resolver logic");
     }

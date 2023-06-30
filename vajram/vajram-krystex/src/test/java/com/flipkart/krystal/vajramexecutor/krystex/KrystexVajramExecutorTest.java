@@ -220,7 +220,7 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  void execute_multiRequestNoInputModulator_cacheHitSuccess() throws Exception {
+  void execute_multiRequestNoInputModulator_cacheHitSuccess() {
     VajramNodeGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
