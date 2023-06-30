@@ -22,6 +22,7 @@ import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.commands.ExecuteWithDependency;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
 import com.flipkart.krystal.krystex.commands.Flush;
+import com.flipkart.krystal.krystex.commands.NodeRequestBatchCommand;
 import com.flipkart.krystal.krystex.commands.NodeRequestCommand;
 import com.flipkart.krystal.krystex.commands.SkipNode;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
@@ -47,6 +48,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Set;
@@ -135,12 +137,6 @@ class Node {
     flushDecoratorsIfNeeded(nodeCommand.nodeDependants());
   }
 
-  //  CompletableFuture<NodeBatchResponse> executeBatchCommand(
-  //      NodeRequestBatchCommand nodeRequestBatchCommand) {
-  //    ImmutableCollection<NodeRequestCommand> subCommands =
-  //        nodeRequestBatchCommand.subCommands().values();
-  //  }
-
   CompletableFuture<NodeResponse> executeRequestCommand(NodeRequestCommand nodeCommand) {
     RequestId requestId = nodeCommand.requestId();
     final CompletableFuture<NodeResponse> resultForRequest =
@@ -160,6 +156,52 @@ class Node {
       resultForRequest.completeExceptionally(e);
     }
     return resultForRequest;
+  }
+
+  CompletableFuture<NodeBatchResponse> executeBatchCommand(
+      NodeRequestBatchCommand nodeRequestBatchCommand) {
+    Map<RequestId, NodeRequestCommand> subCommands = nodeRequestBatchCommand.subCommands();
+    Map<RequestId, CompletableFuture<NodeResponse>> nodeResponses = new LinkedHashMap<>();
+    Map<NodeId, Map<RequestId, NodeRequestCommand>> commandsByDepNode = new LinkedHashMap<>();
+    for (Entry<RequestId, NodeRequestCommand> entry : subCommands.entrySet()) {
+      RequestId requestId = entry.getKey();
+      NodeRequestCommand nodeRequestCommand = entry.getValue();
+      final CompletableFuture<NodeResponse> resultForRequest =
+          resultsByRequest.computeIfAbsent(requestId, r -> new CompletableFuture<>());
+      nodeResponses.put(requestId, resultForRequest);
+      if (resultForRequest.isDone()) {
+        // This is possible if this node was already skipped, for example.
+        // If the result for this requestId is already available, just return and avoid unnecessary
+        // computation.
+        continue;
+      }
+      try {
+        List<NodeRequestCommand> nodeRequestCommands =
+            computeNodeCommands(nodeRequestCommand, requestId, resultForRequest);
+        for (NodeRequestCommand requestCommand : nodeRequestCommands) {
+          NodeId depNodeId = requestCommand.nodeId();
+          commandsByDepNode
+              .computeIfAbsent(depNodeId, _d -> new LinkedHashMap<>())
+              .put(requestCommand.requestId(), requestCommand);
+        }
+        executeMainLogicIfPossible(requestId, resultForRequest);
+      } catch (Throwable e) {
+        resultForRequest.completeExceptionally(e);
+      }
+    }
+    propagateCommands(commandsByDepNode);
+
+    CompletableFuture<NodeBatchResponse> batchResult = new CompletableFuture<>();
+    allOf(nodeResponses.values().toArray(CompletableFuture[]::new))
+        .whenComplete(
+            (unused, throwable) -> {
+              batchResult.complete(
+                  new NodeBatchResponse(
+                      nodeResponses.entrySet().stream()
+                          .collect(
+                              toImmutableMap(Entry::getKey, entry -> entry.getValue().join()))));
+            });
+    return batchResult;
   }
 
   private void propagateCommands(
@@ -190,13 +232,24 @@ class Node {
       dependencies.add(dependencyName);
     }
     for (String dependencyName : dependencies) {
-      handlePostResolution(
+      registerDependencyCallbacks(
           requestId,
           dependencyName,
           nodeDefinition.dependencyNodes().get(dependencyName),
           dependencyExecutions
               .computeIfAbsent(requestId, _r -> new LinkedHashMap<>())
               .computeIfAbsent(dependencyName, _d -> new DependencyNodeExecutions()));
+    }
+  }
+
+  private void propagateCommands(
+      Map<NodeId, Map<RequestId, NodeRequestCommand>> commandsByDepNode) {
+    for (Entry<NodeId, Map<RequestId, NodeRequestCommand>> entry : commandsByDepNode.entrySet()) {
+      NodeId nodeId = entry.getKey();
+      Map<RequestId, NodeRequestCommand> nodeRequestCommands = entry.getValue();
+      NodeRequestBatchCommand batchCommand =
+          new NodeRequestBatchCommand(nodeId, nodeRequestCommands);
+      krystalNodeExecutor.executeCommand(batchCommand);
     }
   }
 
@@ -551,7 +604,7 @@ class Node {
     return nodeRequestCommands;
   }
 
-  private void handlePostResolution(
+  private void registerDependencyCallbacks(
       RequestId requestId,
       String dependencyName,
       NodeId depNodeId,

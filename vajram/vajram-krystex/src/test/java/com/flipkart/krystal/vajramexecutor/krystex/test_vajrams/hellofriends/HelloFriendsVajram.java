@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends;
 
+import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
+import static com.flipkart.krystal.vajram.inputs.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.resolve;
@@ -14,6 +16,7 @@ import static java.util.stream.Collectors.joining;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
+import com.flipkart.krystal.vajram.inputs.MultiExecute;
 import com.flipkart.krystal.vajram.inputs.Using;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
 import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
@@ -22,9 +25,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.Test
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableSet;
-import java.util.Collections;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.IntStream;
 
 @VajramDef(HelloFriendsVajram.ID)
@@ -41,11 +42,15 @@ public abstract class HelloFriendsVajram extends ComputeVajram<String> {
   }
 
   @Resolve(depName = friendInfos_n, depInputs = TestUserServiceRequest.userId_n)
-  public static Set<String> friendIdsForUserService(
+  public static MultiExecute<String> friendIdsForUserService(
       @Using(userId_n) String userId, @Using(numberOfFriends_n) Optional<Integer> numberOfFriends) {
-    if (numberOfFriends.isPresent()) {
-      return getFriendsFor(userId, numberOfFriends.get());
-    } else return Collections.emptySet();
+    if (numberOfFriends.isEmpty()) {
+      return skipFanout("numberOfFriends is missing ");
+    } else if (numberOfFriends.get() < 1) {
+      return skipFanout("numberOfFriends is less than 1");
+    } else {
+      return executeFanoutWith(getFriendsFor(userId, numberOfFriends.get()));
+    }
   }
 
   @VajramLogic

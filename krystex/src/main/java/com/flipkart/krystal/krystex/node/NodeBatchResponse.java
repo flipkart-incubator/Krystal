@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.node;
 
-import java.util.List;
+import com.flipkart.krystal.krystex.request.RequestId;
+import com.google.common.collect.ImmutableMap;
 
-public record NodeBatchResponse(List<NodeResponse> responses) {}
+public record NodeBatchResponse(ImmutableMap<RequestId, NodeResponse> responses) {}

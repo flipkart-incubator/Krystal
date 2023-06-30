@@ -17,6 +17,9 @@ public record MultiExecute<T>(Collection<T> multiInputs, boolean shouldSkip, Str
   }
 
   public static <T> MultiExecute<T> executeFanoutWith(Collection<T> inputs) {
+    if (inputs.isEmpty()) {
+      throw new IllegalArgumentException("Fanout cannot be executed with zero values");
+    }
     return new MultiExecute<>(ImmutableList.copyOf(inputs), false, EMPTY_STRING);
   }
 

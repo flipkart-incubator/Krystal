@@ -15,6 +15,7 @@ import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
+import com.flipkart.krystal.krystex.commands.NodeRequestBatchCommand;
 import com.flipkart.krystal.krystex.commands.NodeRequestCommand;
 import com.flipkart.krystal.krystex.commands.SkipNode;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
@@ -252,7 +253,9 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
   private void validate(NodeCommand nodeCommand) {
     DependantChain dependantChain = null;
-    if (nodeCommand instanceof NodeRequestCommand nodeRequestCommand) {
+    if (nodeCommand instanceof NodeRequestBatchCommand batchCommand) {
+      batchCommand.subCommands().values().forEach(this::validate);
+    } else if (nodeCommand instanceof NodeRequestCommand nodeRequestCommand) {
       RequestId requestId = nodeRequestCommand.requestId();
       if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
         dependantChain = executeWithInputs.dependantChain();
