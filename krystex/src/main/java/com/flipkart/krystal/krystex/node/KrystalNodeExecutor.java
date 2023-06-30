@@ -1,15 +1,16 @@
 package com.flipkart.krystal.krystex.node;
 
-import static com.flipkart.krystal.utils.Futures.linkFutures;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.union;
 import static java.util.concurrent.CompletableFuture.allOf;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
@@ -34,6 +35,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -234,6 +236,15 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     return _executeCommand(nodeCommand);
   }
 
+  CompletableFuture<NodeBatchResponse> executeCommand(NodeRequestBatchCommand nodeCommand) {
+    try {
+      validate(nodeCommand);
+    } catch (Throwable e) {
+      return failedFuture(e);
+    }
+    return nodeRegistry.get(nodeCommand.nodeId()).executeBatchCommand(nodeCommand);
+  }
+
   private CompletableFuture<NodeResponse> _executeCommand(NodeCommand nodeCommand) {
     try {
       validate(nodeCommand);
@@ -244,7 +255,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       return nodeRegistry.get(nodeCommand.nodeId()).executeRequestCommand(nodeRequestCommand);
     } else if (nodeCommand instanceof Flush flush) {
       nodeRegistry.get(flush.nodeId()).executeCommand(flush);
-      return failedFuture(new UnsupportedOperationException("No data returned for flush command"));
+      // No data returned for flush command
+      return completedFuture(null);
     } else {
       throw new UnsupportedOperationException(
           "Unknown NodeCommand type %s".formatted(nodeCommand.getClass()));
@@ -277,6 +289,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   public void flush() {
     enqueueCommand(
         () -> {
+          Map<NodeId, Map<RequestId, NodeRequestCommand>> batchCommands = new LinkedHashMap<>();
           unFlushedRequests.forEach(
               requestId -> {
                 NodeResult nodeResult = allRequests.get(requestId);
@@ -285,26 +298,54 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                   return;
                 }
                 NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
-                CompletableFuture<Object> submissionResult =
-                    executeCommand(
-                            new ExecuteWithInputs(
-                                nodeId,
-                                nodeDefinition.getMainLogicDefinition().inputNames().stream()
-                                    .filter(s -> !nodeDefinition.dependencyNodes().containsKey(s))
-                                    .collect(toImmutableSet()),
-                                nodeResult.inputs(),
-                                DependantChainStart.instance(),
-                                requestId))
-                        .thenApply(NodeResponse::response)
-                        .thenApply(
-                            valueOrError -> {
-                              if (valueOrError.error().isPresent()) {
-                                throw new RuntimeException(valueOrError.error().get());
+                ExecuteWithInputs nodeCommand =
+                    new ExecuteWithInputs(
+                        nodeId,
+                        nodeDefinition.getMainLogicDefinition().inputNames().stream()
+                            .filter(s -> !nodeDefinition.dependencyNodes().containsKey(s))
+                            .collect(toImmutableSet()),
+                        nodeResult.inputs(),
+                        DependantChainStart.instance(),
+                        requestId);
+                batchCommands
+                    .computeIfAbsent(nodeId, _n -> new LinkedHashMap<>())
+                    .put(requestId, nodeCommand);
+                //                CompletableFuture<Object> submissionResult =
+                //                    executeCommand(nodeCommand)
+                //                        .thenApply(NodeResponse::response)
+                //                        .thenApply(
+                //                            valueOrError -> {
+                //                              return valueOrError.getValueOrThrow().orElse(null);
+                //                            });
+                //                linkFutures(submissionResult, nodeResult.future());
+              });
+
+          batchCommands.forEach(
+              (nodeId, nodeRequestCommands) -> {
+                CompletableFuture<NodeBatchResponse> f =
+                    executeCommand(new NodeRequestBatchCommand(nodeId, nodeRequestCommands));
+                f.whenComplete(
+                    (nodeBatchResponse, throwable) -> {
+                      nodeRequestCommands.forEach(
+                          (requestId, nodeRequestCommand) -> {
+                            NodeResult nodeResult = allRequests.get(requestId);
+                            Throwable error = throwable;
+                            if (error == null) {
+                              ValueOrError<Object> voe =
+                                  Optional.ofNullable(nodeBatchResponse.responses().get(requestId))
+                                      .map(NodeResponse::response)
+                                      .orElse(ValueOrError.empty());
+                              if (voe.error().isPresent()) {
+                                error = voe.error().get();
                               } else {
-                                return valueOrError.value().orElse(null);
+                                nodeResult.future().complete(voe.value().orElse(null));
                               }
-                            });
-                linkFutures(submissionResult, nodeResult.future());
+                            }
+                            if (error != null) {
+                              nodeResult.future().completeExceptionally(error);
+                            }
+                          });
+                    });
               });
           List<CompletableFuture<?>> futures = new ArrayList<>();
           unFlushedRequests.stream()

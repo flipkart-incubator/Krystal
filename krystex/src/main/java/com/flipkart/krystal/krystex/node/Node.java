@@ -148,9 +148,11 @@ class Node {
       return resultForRequest;
     }
     try {
-      List<NodeRequestCommand> nodeRequestCommands =
+      List<DependencyRequestCommand> nodeRequestCommands =
           computeNodeCommands(nodeCommand, requestId, resultForRequest);
-      propagateCommands(requestId, nodeRequestCommands);
+      propagateCommands(
+          requestId,
+          nodeRequestCommands.stream().map(DependencyRequestCommand::nodeRequestCommand).toList());
       executeMainLogicIfPossible(requestId, resultForRequest);
     } catch (Throwable e) {
       resultForRequest.completeExceptionally(e);
@@ -162,7 +164,7 @@ class Node {
       NodeRequestBatchCommand nodeRequestBatchCommand) {
     Map<RequestId, NodeRequestCommand> subCommands = nodeRequestBatchCommand.subCommands();
     Map<RequestId, CompletableFuture<NodeResponse>> nodeResponses = new LinkedHashMap<>();
-    Map<NodeId, Map<RequestId, NodeRequestCommand>> commandsByDepNode = new LinkedHashMap<>();
+    Map<NodeId, Map<RequestId, DependencyRequestCommand>> commandsByDepNode = new LinkedHashMap<>();
     for (Entry<RequestId, NodeRequestCommand> entry : subCommands.entrySet()) {
       RequestId requestId = entry.getKey();
       NodeRequestCommand nodeRequestCommand = entry.getValue();
@@ -176,13 +178,15 @@ class Node {
         continue;
       }
       try {
-        List<NodeRequestCommand> nodeRequestCommands =
+        List<DependencyRequestCommand> nodeRequestCommands =
             computeNodeCommands(nodeRequestCommand, requestId, resultForRequest);
-        for (NodeRequestCommand requestCommand : nodeRequestCommands) {
+        for (DependencyRequestCommand dependencyRequestCommand : nodeRequestCommands) {
+          NodeRequestCommand requestCommand = dependencyRequestCommand.nodeRequestCommand();
+          String dependencyName = dependencyRequestCommand.dependencyName();
           NodeId depNodeId = requestCommand.nodeId();
           commandsByDepNode
               .computeIfAbsent(depNodeId, _d -> new LinkedHashMap<>())
-              .put(requestCommand.requestId(), requestCommand);
+              .put(requestCommand.requestId(), dependencyRequestCommand);
         }
         executeMainLogicIfPossible(requestId, resultForRequest);
       } catch (Throwable e) {
@@ -243,17 +247,29 @@ class Node {
   }
 
   private void propagateCommands(
-      Map<NodeId, Map<RequestId, NodeRequestCommand>> commandsByDepNode) {
-    for (Entry<NodeId, Map<RequestId, NodeRequestCommand>> entry : commandsByDepNode.entrySet()) {
+      Map<NodeId, Map<RequestId, DependencyRequestCommand>> commandsByDepNode) {
+    for (Entry<NodeId, Map<RequestId, DependencyRequestCommand>> entry : commandsByDepNode.entrySet()) {
       NodeId nodeId = entry.getKey();
-      Map<RequestId, NodeRequestCommand> nodeRequestCommands = entry.getValue();
+      Map<RequestId, DependencyRequestCommand> nodeRequestCommands = entry.getValue();
       NodeRequestBatchCommand batchCommand =
           new NodeRequestBatchCommand(nodeId, nodeRequestCommands);
-      krystalNodeExecutor.executeCommand(batchCommand);
+      CompletableFuture<NodeBatchResponse> batchCompletionFuture =
+          krystalNodeExecutor.executeCommand(batchCommand);
+      nodeRequestCommands.forEach(
+          (requestId, nodeRequestCommand) -> {
+            DependencyNodeExecutions dependencyNodeExecutions =
+                dependencyExecutions
+                    .computeIfAbsent(requestId, _r -> new LinkedHashMap<>())
+                    .computeIfAbsent(dependencyName, _d -> new DependencyNodeExecutions());
+            dependencyNodeExecutions
+                .individualCallResponses()
+                .putIfAbsent(depRequestId, krystalNodeExecutor.executeCommand(nodeRequestCommand));
+            dependencies.add(dependencyName);
+          });
     }
   }
 
-  private List<NodeRequestCommand> computeNodeCommands(
+  private List<DependencyRequestCommand> computeNodeCommands(
       NodeRequestCommand nodeCommand,
       RequestId requestId,
       CompletableFuture<NodeResponse> resultForRequest) {
@@ -858,4 +874,7 @@ class Node {
   }
 
   private record MainLogicInputs(Inputs nonDependencyInputs, Inputs allInputsAndDependencies) {}
+
+  private record DependencyRequestCommand(
+      String dependencyName, NodeRequestCommand nodeRequestCommand) {}
 }
