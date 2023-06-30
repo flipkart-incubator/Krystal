@@ -255,7 +255,6 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       return nodeRegistry.get(nodeCommand.nodeId()).executeRequestCommand(nodeRequestCommand);
     } else if (nodeCommand instanceof Flush flush) {
       nodeRegistry.get(flush.nodeId()).executeCommand(flush);
-      // No data returned for flush command
       return completedFuture(null);
     } else {
       throw new UnsupportedOperationException(
