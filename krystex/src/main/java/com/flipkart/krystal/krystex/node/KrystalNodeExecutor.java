@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.union;
 import static java.util.concurrent.CompletableFuture.allOf;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.function.Function.identity;
@@ -243,7 +244,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       return nodeRegistry.get(nodeCommand.nodeId()).executeRequestCommand(nodeRequestCommand);
     } else if (nodeCommand instanceof Flush flush) {
       nodeRegistry.get(flush.nodeId()).executeCommand(flush);
-      return failedFuture(new UnsupportedOperationException("No data returned for flush command"));
+      return completedFuture(null);
     } else {
       throw new UnsupportedOperationException(
           "Unknown NodeCommand type %s".formatted(nodeCommand.getClass()));
