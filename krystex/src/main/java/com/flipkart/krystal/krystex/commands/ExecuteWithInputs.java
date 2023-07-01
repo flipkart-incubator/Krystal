@@ -12,4 +12,4 @@ public record ExecuteWithInputs(
     Inputs values,
     DependantChain dependantChain,
     RequestId requestId)
-    implements NodeRequestCommand {}
+    implements NodeInputCommand {}

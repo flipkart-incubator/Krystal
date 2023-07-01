@@ -13,10 +13,13 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.commands.DependencyCallbackBatch;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
 import com.flipkart.krystal.krystex.commands.Flush;
+import com.flipkart.krystal.krystex.commands.NodeBatch;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
-import com.flipkart.krystal.krystex.commands.NodeRequestBatchCommand;
+import com.flipkart.krystal.krystex.commands.NodeInputBatch;
+import com.flipkart.krystal.krystex.commands.NodeInputCommand;
 import com.flipkart.krystal.krystex.commands.NodeRequestCommand;
 import com.flipkart.krystal.krystex.commands.SkipNode;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
@@ -200,9 +203,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       dependencyNodes.forEach(
           (dependencyName, depNodeId) ->
               createDependencyNodes(
-                  depNodeId,
-                  DependantChain.extend(dependantChain, nodeId, dependencyName),
-                  executionConfig));
+                  depNodeId, dependantChain.extend(nodeId, dependencyName), executionConfig));
       dependantChainsPerNode
           .computeIfAbsent(nodeId, _n -> new LinkedHashSet<>())
           .add(dependantChain);
@@ -221,6 +222,10 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     return enqueueCommand(() -> _executeCommand(nodeCommand.get())).thenCompose(identity());
   }
 
+  CompletableFuture<NodeBatchResponse> enqueueNodeBatchCommand(Supplier<NodeBatch<?>> nodeCommand) {
+    return enqueueCommand(() -> executeBatchCommand(nodeCommand.get())).thenCompose(identity());
+  }
+
   /**
    * This method can be called only from the main thread of this KrystalNodeExecutor. Calling this
    * method from any other thread (for example: IO reactor threads) will cause race conditions,
@@ -236,13 +241,24 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     return _executeCommand(nodeCommand);
   }
 
-  CompletableFuture<NodeBatchResponse> executeCommand(NodeRequestBatchCommand nodeCommand) {
+  CompletableFuture<NodeBatchResponse> executeBatchCommand(NodeBatch<?> nodeCommand) {
+    krystalNodeMetrics.commandQueueBypassed();
+    return _executeBatchCommand(nodeCommand);
+  }
+
+  CompletableFuture<NodeBatchResponse> _executeBatchCommand(NodeBatch<?> nodeBatch) {
     try {
-      validate(nodeCommand);
+      validate(nodeBatch);
     } catch (Throwable e) {
       return failedFuture(e);
     }
-    return nodeRegistry.get(nodeCommand.nodeId()).executeBatchCommand(nodeCommand);
+    if (nodeBatch instanceof NodeInputBatch nodeInputBatch) {
+      return nodeRegistry.get(nodeBatch.nodeId()).executeBatchCommand(nodeInputBatch);
+    } else if (nodeBatch instanceof DependencyCallbackBatch callbackBatch) {
+      return nodeRegistry.get(nodeBatch.nodeId()).executeBatchCommand(callbackBatch);
+    } else {
+      throw new UnsupportedOperationException("Unknow nodeBatch type %s".formatted(nodeBatch));
+    }
   }
 
   private CompletableFuture<NodeResponse> _executeCommand(NodeCommand nodeCommand) {
@@ -264,7 +280,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
   private void validate(NodeCommand nodeCommand) {
     DependantChain dependantChain = null;
-    if (nodeCommand instanceof NodeRequestBatchCommand batchCommand) {
+    if (nodeCommand instanceof NodeInputBatch batchCommand) {
       batchCommand.subCommands().values().forEach(this::validate);
     } else if (nodeCommand instanceof NodeRequestCommand nodeRequestCommand) {
       RequestId requestId = nodeRequestCommand.requestId();
@@ -288,7 +304,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   public void flush() {
     enqueueCommand(
         () -> {
-          Map<NodeId, Map<RequestId, NodeRequestCommand>> batchCommands = new LinkedHashMap<>();
+          Map<NodeId, Map<RequestId, NodeInputCommand>> batchCommands = new LinkedHashMap<>();
           unFlushedRequests.forEach(
               requestId -> {
                 NodeResult nodeResult = allRequests.get(requestId);
@@ -322,7 +338,12 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
           batchCommands.forEach(
               (nodeId, nodeRequestCommands) -> {
                 CompletableFuture<NodeBatchResponse> f =
-                    executeCommand(new NodeRequestBatchCommand(nodeId, nodeRequestCommands));
+                    executeBatchCommand(
+                        new NodeInputBatch(
+                            nodeId,
+                            new RequestId(nodeId.value()),
+                            nodeRequestCommands,
+                            DependantChainStart.instance()));
                 f.whenComplete(
                     (nodeBatchResponse, throwable) -> {
                       nodeRequestCommands.forEach(

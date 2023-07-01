@@ -10,4 +10,4 @@ public record SkipNode(
     RequestId requestId,
     DependantChain dependantChain,
     SkipDependency skipDependencyCommand)
-    implements NodeRequestCommand {}
+    implements NodeInputCommand {}

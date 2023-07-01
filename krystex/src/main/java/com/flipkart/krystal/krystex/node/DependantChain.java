@@ -12,8 +12,7 @@ public sealed interface DependantChain permits DefaultDependantChain, DependantC
     return new DefaultDependantChain(nodeId, dependencyName, DependantChainStart.instance());
   }
 
-  static DependantChain extend(
-      DependantChain dependantChain, NodeId nodeId, String dependencyName) {
-    return new DefaultDependantChain(nodeId, dependencyName, dependantChain);
+  default DependantChain extend(NodeId nodeId, String dependencyName) {
+    return new DefaultDependantChain(nodeId, dependencyName, this);
   }
 }

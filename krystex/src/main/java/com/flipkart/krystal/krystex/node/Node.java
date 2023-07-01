@@ -19,10 +19,13 @@ import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.commands.DependencyCallbackBatch;
 import com.flipkart.krystal.krystex.commands.ExecuteWithDependency;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
 import com.flipkart.krystal.krystex.commands.Flush;
-import com.flipkart.krystal.krystex.commands.NodeRequestBatchCommand;
+import com.flipkart.krystal.krystex.commands.NodeBatch;
+import com.flipkart.krystal.krystex.commands.NodeInputBatch;
+import com.flipkart.krystal.krystex.commands.NodeInputCommand;
 import com.flipkart.krystal.krystex.commands.NodeRequestCommand;
 import com.flipkart.krystal.krystex.commands.SkipNode;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
@@ -58,7 +61,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collector;
 
 /*
    handlePostResolution()
@@ -92,6 +94,9 @@ class Node {
 
   /** A unique Result future for every requestId. */
   private final Map<RequestId, CompletableFuture<NodeResponse>> resultsByRequest =
+      new LinkedHashMap<>();
+  /** A unique Result future for every requestId. */
+  private final Map<RequestId, CompletableFuture<NodeBatchResponse>> resultsByBatch =
       new LinkedHashMap<>();
 
   /**
@@ -148,11 +153,9 @@ class Node {
       return resultForRequest;
     }
     try {
-      List<DependencyRequestCommand> nodeRequestCommands =
+      List<NodeInputCommand> nodeRequestCommands =
           computeNodeCommands(nodeCommand, requestId, resultForRequest);
-      propagateCommands(
-          requestId,
-          nodeRequestCommands.stream().map(DependencyRequestCommand::nodeRequestCommand).toList());
+      propagateCommands(requestId, nodeRequestCommands);
       executeMainLogicIfPossible(requestId, resultForRequest);
     } catch (Throwable e) {
       resultForRequest.completeExceptionally(e);
@@ -160,12 +163,35 @@ class Node {
     return resultForRequest;
   }
 
+  CompletableFuture<NodeBatchResponse> executeBatchCommand(NodeInputBatch nodeInputBatch) {
+    Map<RequestId, CompletableFuture<NodeResponse>> nodeResponses =
+        handleBatchCommand(nodeInputBatch);
+
+    CompletableFuture<NodeBatchResponse> batchResult =
+        resultsByBatch.computeIfAbsent(nodeInputBatch.batchId(), _b -> new CompletableFuture<>());
+    allOf(nodeResponses.values().toArray(CompletableFuture[]::new))
+        .whenComplete(
+            (unused, throwable) -> {
+              batchResult.complete(
+                  new NodeBatchResponse(
+                      nodeResponses.entrySet().stream()
+                          .collect(toMap(Entry::getKey, e -> e.getValue().join()))));
+            });
+    return batchResult;
+  }
+
   CompletableFuture<NodeBatchResponse> executeBatchCommand(
-      NodeRequestBatchCommand nodeRequestBatchCommand) {
-    Map<RequestId, NodeRequestCommand> subCommands = nodeRequestBatchCommand.subCommands();
+      DependencyCallbackBatch dependencyCallBack) {
+    handleBatchCommand(dependencyCallBack);
+    return resultsByBatch.get(dependencyCallBack.batchId());
+  }
+
+  private Map<RequestId, CompletableFuture<NodeResponse>> handleBatchCommand(
+      NodeBatch<?> nodeInputBatchCommand) {
+    Map<RequestId, ? extends NodeRequestCommand> subCommands = nodeInputBatchCommand.subCommands();
     Map<RequestId, CompletableFuture<NodeResponse>> nodeResponses = new LinkedHashMap<>();
-    Map<NodeId, Map<RequestId, DependencyRequestCommand>> commandsByDepNode = new LinkedHashMap<>();
-    for (Entry<RequestId, NodeRequestCommand> entry : subCommands.entrySet()) {
+    Map<String, Map<RequestId, List<NodeInputCommand>>> commandsByDepName = new LinkedHashMap<>();
+    for (Entry<RequestId, ? extends NodeRequestCommand> entry : subCommands.entrySet()) {
       RequestId requestId = entry.getKey();
       NodeRequestCommand nodeRequestCommand = entry.getValue();
       final CompletableFuture<NodeResponse> resultForRequest =
@@ -178,54 +204,29 @@ class Node {
         continue;
       }
       try {
-        List<DependencyRequestCommand> nodeRequestCommands =
+        List<NodeInputCommand> nodeRequestCommands =
             computeNodeCommands(nodeRequestCommand, requestId, resultForRequest);
-        for (DependencyRequestCommand dependencyRequestCommand : nodeRequestCommands) {
-          NodeRequestCommand requestCommand = dependencyRequestCommand.nodeRequestCommand();
-          String dependencyName = dependencyRequestCommand.dependencyName();
-          NodeId depNodeId = requestCommand.nodeId();
-          commandsByDepNode
-              .computeIfAbsent(depNodeId, _d -> new LinkedHashMap<>())
-              .put(requestCommand.requestId(), dependencyRequestCommand);
+        for (NodeInputCommand requestCommand : nodeRequestCommands) {
+          String dependencyName = getDependencyName(requestCommand);
+          commandsByDepName
+              .computeIfAbsent(dependencyName, _d -> new LinkedHashMap<>())
+              .computeIfAbsent(requestId, _d -> new ArrayList<>())
+              .add(requestCommand);
         }
         executeMainLogicIfPossible(requestId, resultForRequest);
       } catch (Throwable e) {
         resultForRequest.completeExceptionally(e);
       }
     }
-    propagateCommands(commandsByDepNode);
-
-    CompletableFuture<NodeBatchResponse> batchResult = new CompletableFuture<>();
-    allOf(nodeResponses.values().toArray(CompletableFuture[]::new))
-        .whenComplete(
-            (unused, throwable) -> {
-              batchResult.complete(
-                  new NodeBatchResponse(
-                      nodeResponses.entrySet().stream()
-                          .collect(
-                              toImmutableMap(Entry::getKey, entry -> entry.getValue().join()))));
-            });
-    return batchResult;
+    propagateCommands(nodeInputBatchCommand, commandsByDepName);
+    return nodeResponses;
   }
 
-  private void propagateCommands(
-      RequestId requestId, List<NodeRequestCommand> nodeRequestCommands) {
+  private void propagateCommands(RequestId requestId, List<NodeInputCommand> nodeRequestCommands) {
     Set<String> dependencies = new LinkedHashSet<>();
     for (NodeRequestCommand nodeRequestCommand : nodeRequestCommands) {
       RequestId depRequestId = nodeRequestCommand.requestId();
-      DependantChain dependantChain;
-      if (nodeRequestCommand instanceof ExecuteWithInputs executeWithInputs) {
-        dependantChain = executeWithInputs.dependantChain();
-      } else if (nodeRequestCommand instanceof SkipNode skipNode) {
-        dependantChain = skipNode.dependantChain();
-      } else {
-        throw new UnsupportedOperationException(
-            "Unknown NodeRequestCommand Type: %s".formatted(nodeRequestCommand));
-      }
-      if (!(dependantChain instanceof DefaultDependantChain defaultDependantChain)) {
-        throw new IllegalStateException("This should never happen");
-      }
-      String dependencyName = defaultDependantChain.dependencyName();
+      String dependencyName = getDependencyName(nodeRequestCommand);
       DependencyNodeExecutions dependencyNodeExecutions =
           dependencyExecutions
               .computeIfAbsent(requestId, _r -> new LinkedHashMap<>())
@@ -247,54 +248,87 @@ class Node {
   }
 
   private void propagateCommands(
-      Map<NodeId, Map<RequestId, DependencyRequestCommand>> commandsByDepNode) {
-    for (Entry<NodeId, Map<RequestId, DependencyRequestCommand>> entry : commandsByDepNode.entrySet()) {
-      NodeId nodeId = entry.getKey();
-      Map<RequestId, DependencyRequestCommand> nodeRequestCommands = entry.getValue();
-      NodeRequestBatchCommand batchCommand =
-          new NodeRequestBatchCommand(nodeId, nodeRequestCommands);
+      NodeBatch<?> nodeBatch,
+      Map<String, Map<RequestId, List<NodeInputCommand>>> commandsByDepNode) {
+    RequestId batchId = nodeBatch.batchId();
+    for (Entry<String, Map<RequestId, List<NodeInputCommand>>> entry :
+        commandsByDepNode.entrySet()) {
+      String dependencyName = entry.getKey();
+      Map<RequestId, List<NodeInputCommand>> nodeRequestCommands = entry.getValue();
+      NodeId depNodeId = nodeDefinition.dependencyNodes().get(dependencyName);
       CompletableFuture<NodeBatchResponse> batchCompletionFuture =
-          krystalNodeExecutor.executeCommand(batchCommand);
+          krystalNodeExecutor.executeBatchCommand(
+              new NodeInputBatch(
+                  depNodeId,
+                  batchId.createNewRequest(dependencyName),
+                  nodeRequestCommands.values().stream()
+                      .flatMap(Collection::stream)
+                      .collect(toMap(NodeRequestCommand::requestId, identity())),
+                  nodeBatch.dependantChain().extend(nodeId, dependencyName)));
       nodeRequestCommands.forEach(
-          (requestId, nodeRequestCommand) -> {
-            DependencyNodeExecutions dependencyNodeExecutions =
-                dependencyExecutions
-                    .computeIfAbsent(requestId, _r -> new LinkedHashMap<>())
-                    .computeIfAbsent(dependencyName, _d -> new DependencyNodeExecutions());
-            dependencyNodeExecutions
-                .individualCallResponses()
-                .putIfAbsent(depRequestId, krystalNodeExecutor.executeCommand(nodeRequestCommand));
-            dependencies.add(dependencyName);
+          (requestId, nodeRequestCommandList) -> {
+            nodeRequestCommandList.forEach(
+                nodeRequestCommand -> {
+                  RequestId depRequestId = nodeRequestCommand.requestId();
+                  DependencyNodeExecutions dependencyNodeExecutions =
+                      dependencyExecutions
+                          .computeIfAbsent(requestId, _r -> new LinkedHashMap<>())
+                          .computeIfAbsent(dependencyName, _d -> new DependencyNodeExecutions());
+                  dependencyNodeExecutions
+                      .individualCallResponses()
+                      .putIfAbsent(
+                          depRequestId,
+                          batchCompletionFuture.thenApply(
+                              batch -> batch.responses().get(depRequestId)));
+                });
           });
+      registerBatchDependencyCallbacks(
+          nodeRequestCommands.keySet(), dependencyName, depNodeId, nodeBatch);
     }
   }
 
-  private List<DependencyRequestCommand> computeNodeCommands(
+  private static String getDependencyName(NodeRequestCommand nodeRequestCommand) {
+    DependantChain dependantChain;
+    if (nodeRequestCommand instanceof ExecuteWithInputs executeWithInputs) {
+      dependantChain = executeWithInputs.dependantChain();
+    } else if (nodeRequestCommand instanceof SkipNode skipNode) {
+      dependantChain = skipNode.dependantChain();
+    } else {
+      throw new UnsupportedOperationException(
+          "Unknown NodeRequestCommand Type: %s".formatted(nodeRequestCommand));
+    }
+    if (!(dependantChain instanceof DefaultDependantChain defaultDependantChain)) {
+      throw new IllegalStateException("This should never happen");
+    }
+    return defaultDependantChain.dependencyName();
+  }
+
+  private List<NodeInputCommand> computeNodeCommands(
       NodeRequestCommand nodeCommand,
       RequestId requestId,
       CompletableFuture<NodeResponse> resultForRequest) {
-    List<NodeRequestCommand> nodeRequestCommands;
+    List<NodeInputCommand> nodeInputCommands;
     if (nodeCommand instanceof SkipNode skipNode) {
       requestsByDependantChain
           .computeIfAbsent(skipNode.dependantChain(), k -> new LinkedHashSet<>())
           .add(requestId);
       dependantChainByRequest.put(requestId, skipNode.dependantChain());
       skipLogicRequested.put(requestId, Optional.of(skipNode));
-      nodeRequestCommands = handleSkipDependency(requestId);
+      nodeInputCommands = handleSkipDependency(requestId);
       resultForRequest.completeExceptionally(skipNodeException(skipNode));
     } else if (nodeCommand instanceof ExecuteWithDependency executeWithDependency) {
-      nodeRequestCommands = executeWithDependency(executeWithDependency);
+      nodeInputCommands = executeWithDependency(executeWithDependency);
     } else if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
       requestsByDependantChain
           .computeIfAbsent(executeWithInputs.dependantChain(), k -> new LinkedHashSet<>())
           .add(requestId);
       dependantChainByRequest.computeIfAbsent(requestId, r -> executeWithInputs.dependantChain());
-      nodeRequestCommands = executeWithInputs(requestId, executeWithInputs);
+      nodeInputCommands = executeWithInputs(requestId, executeWithInputs);
     } else {
       throw new UnsupportedOperationException(
           "Unknown type of nodeCommand: %s".formatted(nodeCommand));
     }
-    return nodeRequestCommands;
+    return nodeInputCommands;
   }
 
   private void executeMainLogicIfPossible(
@@ -311,7 +345,7 @@ class Node {
     }
   }
 
-  private List<NodeRequestCommand> handleSkipDependency(RequestId requestId) {
+  private List<NodeInputCommand> handleSkipDependency(RequestId requestId) {
 
     // Since this node is skipped, we need to get all the pending resolvers (irrespective of
     // whether their inputs are available or not) and mark them resolved.
@@ -353,13 +387,13 @@ class Node {
     }
   }
 
-  private List<NodeRequestCommand> executeWithInputs(
+  private List<NodeInputCommand> executeWithInputs(
       RequestId requestId, ExecuteWithInputs executeWithInputs) {
     collectInputValues(ImmutableList.of(executeWithInputs));
     return execute(requestId, executeWithInputs.inputNames());
   }
 
-  private List<NodeRequestCommand> executeWithDependency(
+  private List<NodeInputCommand> executeWithDependency(
       ExecuteWithDependency executeWithDependency) {
     RequestId requestId = executeWithDependency.requestId();
     String dependencyName = executeWithDependency.dependencyName();
@@ -375,8 +409,7 @@ class Node {
     return execute(requestId, inputNames);
   }
 
-  private List<NodeRequestCommand> execute(
-      RequestId requestId, ImmutableSet<String> newInputNames) {
+  private List<NodeInputCommand> execute(RequestId requestId, ImmutableSet<String> newInputNames) {
     MainLogicDefinition<Object> mainLogicDefinition = nodeDefinition.getMainLogicDefinition();
 
     Map<String, InputValue<Object>> allInputs =
@@ -411,16 +444,13 @@ class Node {
     Map<ResolverDefinition, ResolverCommand> nodeResults =
         this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
 
-    Set<ResolverDefinition> pendingResolvers;
-    Collector<ResolverDefinition, ?, Map<NodeLogicId, ResolverDefinition>> resolverCollector =
-        toMap(ResolverDefinition::resolverNodeLogicId, identity(), (o1, o2) -> o1);
     Set<ResolverDefinition> pendingUnboundResolvers =
         resolverDefinitionsByInput.getOrDefault(Optional.<String>empty(), emptyList()).stream()
             .filter(
                 resolverDefinition -> availableInputs.containsAll(resolverDefinition.boundFrom()))
             .filter(resolverDefinition -> !nodeResults.containsKey(resolverDefinition))
             .collect(toSet());
-    pendingResolvers =
+    Set<ResolverDefinition> pendingResolvers =
         newInputNames.stream()
             .flatMap(
                 input ->
@@ -436,7 +466,7 @@ class Node {
     return pendingResolvers;
   }
 
-  private List<NodeRequestCommand> executeResolvers(
+  private List<NodeInputCommand> executeResolvers(
       RequestId requestId, Set<ResolverDefinition> pendingResolvers) {
     if (pendingResolvers.isEmpty()) {
       return emptyList();
@@ -454,7 +484,7 @@ class Node {
     if (multiResolverOpt.isEmpty()) {
       return emptyList();
     }
-    List<NodeRequestCommand> nodeRequestCommands = new ArrayList<>();
+    List<NodeInputCommand> nodeRequestCommands = new ArrayList<>();
     MultiResolverDefinition multiResolver = multiResolverOpt.get();
 
     Map<String, List<ResolverDefinition>> resolversByDependency =
@@ -493,7 +523,7 @@ class Node {
     return nodeRequestCommands;
   }
 
-  private List<NodeRequestCommand> executeResolver(
+  private List<NodeInputCommand> executeResolver(
       RequestId requestId, ResolverDefinition resolverDefinition) {
     NodeLogicId nodeLogicId = resolverDefinition.resolverNodeLogicId();
     ResolverCommand resolverCommand;
@@ -515,12 +545,12 @@ class Node {
         requestId, dependencyName, List.of(resolverDefinition), resolverCommand);
   }
 
-  private List<NodeRequestCommand> handleResolverCommand(
+  private List<NodeInputCommand> handleResolverCommand(
       RequestId requestId,
       String dependencyName,
       List<ResolverDefinition> resolverDefinitions,
       ResolverCommand resolverCommand) {
-    List<NodeRequestCommand> nodeRequestCommands = new ArrayList<>();
+    List<NodeInputCommand> nodeRequestCommands = new ArrayList<>();
     NodeId depNodeId = nodeDefinition.dependencyNodes().get(dependencyName);
     Map<ResolverDefinition, ResolverCommand> resolverResults =
         this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
@@ -547,11 +577,9 @@ class Node {
               new SkipNode(
                   depNodeId,
                   depRequestId,
-                  DependantChain.extend(
-                      dependantChainByRequest.getOrDefault(
-                          requestId, DependantChainStart.instance()),
-                      nodeId,
-                      dependencyName),
+                  dependantChainByRequest
+                      .getOrDefault(requestId, DependantChainStart.instance())
+                      .extend(nodeId, dependencyName),
                   (SkipDependency) resolverCommand);
           nodeRequestCommands.add(skipNode);
         }
@@ -605,11 +633,9 @@ class Node {
                   depNodeId,
                   newInputs.values().keySet(),
                   newInputs,
-                  DependantChain.extend(
-                      dependantChainByRequest.getOrDefault(
-                          requestId, DependantChainStart.instance()),
-                      nodeId,
-                      dependencyName),
+                  dependantChainByRequest
+                      .getOrDefault(requestId, DependantChainStart.instance())
+                      .extend(nodeId, dependencyName),
                   dependencyRequestId);
           nodeRequestCommands.add(nodeCommand);
         }
@@ -662,6 +688,81 @@ class Node {
     }
   }
 
+  private void registerBatchDependencyCallbacks(
+      Collection<RequestId> requestIds,
+      String dependencyName,
+      NodeId depNodeId,
+      NodeBatch<?> nodeBatch) {
+    ImmutableSet<ResolverDefinition> resolverDefinitionsForDependency =
+        this.resolverDefinitionsByDependencies.getOrDefault(dependencyName, ImmutableSet.of());
+    if (requestIds.stream()
+        .map(
+            requestId ->
+                dependencyExecutions
+                    .getOrDefault(requestId, ImmutableMap.of())
+                    .getOrDefault(dependencyName, new DependencyNodeExecutions()))
+        .allMatch(
+            dependencyNodeExecutions ->
+                resolverDefinitionsForDependency.equals(
+                    dependencyNodeExecutions.executedResolvers()))) {
+      allOf(
+              requestIds.stream()
+                  .map(
+                      requestId ->
+                          dependencyExecutions
+                              .getOrDefault(requestId, ImmutableMap.of())
+                              .getOrDefault(dependencyName, new DependencyNodeExecutions()))
+                  .toList()
+                  .stream()
+                  .map(DependencyNodeExecutions::individualCallResponses)
+                  .map(Map::values)
+                  .flatMap(Collection::stream)
+                  .toArray(CompletableFuture[]::new))
+          .whenComplete(
+              (unused, throwable) -> {
+                enqueueOrExecuteBatchCommand(
+                    () -> {
+                      Map<RequestId, ExecuteWithDependency> callbacks = new LinkedHashMap<>();
+                      for (RequestId requestId : requestIds) {
+                        Results<Object> results;
+                        if (throwable != null) {
+                          results =
+                              new Results<>(ImmutableMap.of(Inputs.empty(), withError(throwable)));
+                        } else {
+                          DependencyNodeExecutions dependencyNodeExecutions =
+                              dependencyExecutions
+                                  .getOrDefault(requestId, ImmutableMap.of())
+                                  .getOrDefault(dependencyName, new DependencyNodeExecutions());
+                          results =
+                              new Results<>(
+                                  dependencyNodeExecutions
+                                      .individualCallResponses()
+                                      .values()
+                                      .stream()
+                                      .map(cf -> cf.getNow(new NodeResponse(requestId)))
+                                      .collect(
+                                          toImmutableMap(
+                                              NodeResponse::inputs, NodeResponse::response)));
+                        }
+                        callbacks.put(
+                            requestId,
+                            new ExecuteWithDependency(
+                                this.nodeId, dependencyName, results, requestId));
+                      }
+                      return new DependencyCallbackBatch(
+                          depNodeId, nodeBatch.batchId(), callbacks, nodeBatch.dependantChain());
+                    },
+                    depNodeId);
+              });
+
+      for (RequestId requestId : requestIds) {
+        flushDependencyIfNeeded(
+            dependencyName,
+            dependantChainByRequest.getOrDefault(requestId, DependantChainStart.instance()));
+      }
+    }
+  }
+
   private void enqueueOrExecuteCommand(
       Supplier<NodeRequestCommand> commandGenerator, NodeId depNodeId) {
     MainLogicDefinition<Object> depMainLogic =
@@ -670,6 +771,20 @@ class Node {
       krystalNodeExecutor.enqueueNodeCommand(commandGenerator);
     } else if (depMainLogic instanceof ComputeLogicDefinition<Object>) {
       krystalNodeExecutor.executeCommand(commandGenerator.get());
+    } else {
+      throw new UnsupportedOperationException(
+          "Unknown logicDefinition type %s".formatted(depMainLogic.getClass()));
+    }
+  }
+
+  private void enqueueOrExecuteBatchCommand(
+      Supplier<NodeBatch<?>> commandGenerator, NodeId depNodeId) {
+    MainLogicDefinition<Object> depMainLogic =
+        nodeDefinition.nodeDefinitionRegistry().get(depNodeId).getMainLogicDefinition();
+    if (depMainLogic instanceof IOLogicDefinition<Object>) {
+      krystalNodeExecutor.enqueueNodeBatchCommand(commandGenerator);
+    } else if (depMainLogic instanceof ComputeLogicDefinition<Object>) {
+      krystalNodeExecutor.executeBatchCommand(commandGenerator.get());
     } else {
       throw new UnsupportedOperationException(
           "Unknown logicDefinition type %s".formatted(depMainLogic.getClass()));
@@ -703,7 +818,7 @@ class Node {
                             .executedResolvers()))) {
 
       krystalNodeExecutor.executeCommand(
-          new Flush(depNodeId, DependantChain.extend(dependantChain, nodeId, dependencyName)));
+          new Flush(depNodeId, dependantChain.extend(nodeId, dependencyName)));
     }
   }
 
@@ -731,8 +846,8 @@ class Node {
     return new Inputs(inputValues);
   }
 
-  private List<NodeRequestCommand> executeDependenciesWhenNoResolvers(RequestId requestId) {
-    List<NodeRequestCommand> nodeReqCommands =
+  private List<NodeInputCommand> executeDependenciesWhenNoResolvers(RequestId requestId) {
+    List<NodeInputCommand> nodeReqCommands =
         new ArrayList<>(nodeDefinition.dependencyNodes().size());
     nodeDefinition
         .dependencyNodes()
@@ -747,8 +862,7 @@ class Node {
                         depNodeId,
                         ImmutableSet.of(),
                         Inputs.empty(),
-                        DependantChain.extend(
-                            dependantChainByRequest.get(requestId), nodeId, depName),
+                        dependantChainByRequest.get(requestId).extend(nodeId, depName),
                         dependencyRequestId);
                 nodeReqCommands.add(nodeCommand);
               }
@@ -874,7 +988,4 @@ class Node {
   }
 
   private record MainLogicInputs(Inputs nonDependencyInputs, Inputs allInputsAndDependencies) {}
-
-  private record DependencyRequestCommand(
-      String dependencyName, NodeRequestCommand nodeRequestCommand) {}
 }
