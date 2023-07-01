@@ -279,10 +279,10 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   private void validate(NodeCommand nodeCommand) {
-    DependantChain dependantChain = null;
     if (nodeCommand instanceof NodeInputBatch batchCommand) {
       batchCommand.subCommands().values().forEach(this::validate);
     } else if (nodeCommand instanceof NodeRequestCommand nodeRequestCommand) {
+      DependantChain dependantChain = null;
       RequestId requestId = nodeRequestCommand.requestId();
       if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
         dependantChain = executeWithInputs.dependantChain();
@@ -296,6 +296,17 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                   .executionConfig()
                   .disabledDependantChains())
           .contains(dependantChain)) {
+        throw new DisabledDependantChainException(dependantChain);
+      }
+    } else if (nodeCommand instanceof Flush flush) {
+      DependantChain dependantChain = flush.nodeDependants();
+      if (disabledDependantChains.contains(dependantChain)) {
+        throw new DisabledDependantChainException(dependantChain);
+      }
+      if (allRequests.values().stream()
+          .map(NodeResult::executionConfig)
+          .map(NodeExecutionConfig::disabledDependantChains)
+          .allMatch(disableDepChains -> disableDepChains.contains(dependantChain))) {
         throw new DisabledDependantChainException(dependantChain);
       }
     }
