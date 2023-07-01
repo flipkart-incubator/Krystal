@@ -6,8 +6,5 @@ import com.flipkart.krystal.krystex.request.RequestId;
 import java.util.Map;
 
 public record DependencyCallbackBatch(
-    NodeId nodeId,
-    RequestId batchId,
-    Map<RequestId, ExecuteWithDependency> subCommands,
-    DependantChain dependantChain)
-    implements NodeBatch<ExecuteWithDependency> {}
+    NodeId nodeId, Map<RequestId, ExecuteWithDependency> subCommands, DependantChain dependantChain)
+    implements BatchCommand<ExecuteWithDependency> {}

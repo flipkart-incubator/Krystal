@@ -6,8 +6,5 @@ import com.flipkart.krystal.krystex.request.RequestId;
 import java.util.Map;
 
 public record NodeInputBatch(
-    NodeId nodeId,
-    RequestId batchId,
-    Map<RequestId, NodeInputCommand> subCommands,
-    DependantChain dependantChain)
-    implements NodeBatch<NodeInputCommand> {}
+    NodeId nodeId, Map<RequestId, NodeInputCommand> subCommands, DependantChain dependantChain)
+    implements BatchCommand<NodeInputCommand> {}

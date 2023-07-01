@@ -17,4 +17,9 @@ public record RequestId(String asString, RequestId originatedFrom) {
   public RequestId createNewRequest(Object suffix) {
     return new RequestId("%s:%s".formatted(asString, suffix), originatedFrom());
   }
+
+  @Override
+  public String toString() {
+    return asString;
+  }
 }

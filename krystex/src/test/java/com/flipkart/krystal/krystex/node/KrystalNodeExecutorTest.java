@@ -16,8 +16,10 @@ import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.NodeExecStrategy;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -31,6 +33,7 @@ import org.junit.jupiter.api.Test;
 
 class KrystalNodeExecutorTest {
 
+  private static final Duration TIMEOUT = Duration.ofSeconds(3600);
   private KrystalNodeExecutor krystalNodeExecutor;
   private NodeDefinitionRegistry nodeDefinitionRegistry;
   private LogicDefinitionRegistry logicDefinitionRegistry;
@@ -46,7 +49,8 @@ class KrystalNodeExecutorTest {
             new LogicDecorationOrdering(ImmutableSet.of()),
             ImmutableMap.of(),
             ImmutableSet.of(),
-            "test");
+            "test",
+            NodeExecStrategy.BATCH);
   }
 
   @AfterEach
@@ -56,7 +60,7 @@ class KrystalNodeExecutorTest {
 
   /** Executing same node multiple times in a single execution */
   @Test
-  void multiRequestExecution() throws Exception {
+  void multiRequestExecution() {
     NodeDefinition nodeDefinition =
         nodeDefinitionRegistry.newNodeDefinition(
             "node",
@@ -76,8 +80,8 @@ class KrystalNodeExecutorTest {
             NodeExecutionConfig.builder().executionId("req_2").build());
 
     krystalNodeExecutor.flush();
-    assertEquals("computed_value", timedGet(future1));
-    assertEquals("computed_value", timedGet(future2));
+    assertThat(future1).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
+    assertThat(future2).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
   }
 
   @Test
@@ -272,7 +276,7 @@ class KrystalNodeExecutorTest {
             inputs,
             NodeExecutionConfig.builder().executionId("r").build());
     krystalNodeExecutor.flush();
-    assertEquals("l1:l2:l3:l4:final", timedGet(future));
+    assertThat(future).succeedsWithin(TIMEOUT).isEqualTo("l1:l2:l3:l4:final");
   }
 
   @Test

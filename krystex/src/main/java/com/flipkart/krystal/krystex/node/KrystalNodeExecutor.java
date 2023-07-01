@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.node;
 
+import static com.flipkart.krystal.utils.Futures.linkFutures;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.union;
@@ -13,10 +14,10 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.commands.BatchCommand;
 import com.flipkart.krystal.krystex.commands.DependencyCallbackBatch;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
 import com.flipkart.krystal.krystex.commands.Flush;
-import com.flipkart.krystal.krystex.commands.NodeBatch;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
 import com.flipkart.krystal.krystex.commands.NodeInputBatch;
 import com.flipkart.krystal.krystex.commands.NodeInputCommand;
@@ -51,10 +52,16 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class KrystalNodeExecutor implements KrystalExecutor {
 
+  public enum NodeExecStrategy {
+    GRANULAR,
+    BATCH
+  }
+
   private final NodeDefinitionRegistry nodeDefinitionRegistry;
   private final LogicDecorationOrdering logicDecorationOrdering;
   private final Lease<? extends ExecutorService> commandQueueLease;
   private final String instanceId;
+
   /**
    * We need to have a list of request scope global decorators corresponding to each type, in case
    * we want to have a decorator of one type but based on some config in request, we want to choose
@@ -74,12 +81,13 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
               String, // InstanceId
               MainLogicDecorator>>
       requestScopedMainDecorators = new LinkedHashMap<>();
-
   private final NodeRegistry nodeRegistry = new NodeRegistry();
   private final KrystalNodeExecutorMetrics krystalNodeMetrics;
+  private final NodeExecStrategy nodeExecStrategy;
   private volatile boolean closed;
   private final Map<RequestId, NodeResult> allRequests = new LinkedHashMap<>();
   private final Set<RequestId> unFlushedRequests = new LinkedHashSet<>();
+
   private final Map<NodeId, Set<DependantChain>> dependantChainsPerNode = new LinkedHashMap<>();
 
   public KrystalNodeExecutor(
@@ -93,7 +101,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
         config.logicDecorationOrdering(),
         config.requestScopedLogicDecoratorConfigs(),
         config.disabledDependantChains(),
-        instanceId);
+        instanceId,
+        NodeExecStrategy.BATCH);
   }
 
   public KrystalNodeExecutor(
@@ -102,7 +111,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       LogicDecorationOrdering logicDecorationOrdering,
       Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs,
       ImmutableSet<DependantChain> disabledDependantChains,
-      String instanceId) {
+      String instanceId,
+      NodeExecStrategy nodeExecStrategy) {
     this.nodeDefinitionRegistry = nodeDefinitionRegistry;
     this.logicDecorationOrdering = logicDecorationOrdering;
     this.commandQueueLease = commandQueuePool.lease();
@@ -110,6 +120,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     this.requestScopedLogicDecoratorConfigs =
         ImmutableMap.copyOf(requestScopedLogicDecoratorConfigs);
     this.disabledDependantChains = disabledDependantChains;
+    this.nodeExecStrategy = nodeExecStrategy;
     this.krystalNodeMetrics = new KrystalNodeExecutorMetrics();
   }
 
@@ -222,7 +233,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     return enqueueCommand(() -> _executeCommand(nodeCommand.get())).thenCompose(identity());
   }
 
-  CompletableFuture<NodeBatchResponse> enqueueNodeBatchCommand(Supplier<NodeBatch<?>> nodeCommand) {
+  CompletableFuture<NodeBatchResponse> enqueueNodeBatchCommand(
+      Supplier<BatchCommand<?>> nodeCommand) {
     return enqueueCommand(() -> executeBatchCommand(nodeCommand.get())).thenCompose(identity());
   }
 
@@ -241,23 +253,23 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     return _executeCommand(nodeCommand);
   }
 
-  CompletableFuture<NodeBatchResponse> executeBatchCommand(NodeBatch<?> nodeCommand) {
+  CompletableFuture<NodeBatchResponse> executeBatchCommand(BatchCommand<?> nodeCommand) {
     krystalNodeMetrics.commandQueueBypassed();
     return _executeBatchCommand(nodeCommand);
   }
 
-  CompletableFuture<NodeBatchResponse> _executeBatchCommand(NodeBatch<?> nodeBatch) {
+  CompletableFuture<NodeBatchResponse> _executeBatchCommand(BatchCommand<?> batchCommand) {
     try {
-      validate(nodeBatch);
+      validate(batchCommand);
     } catch (Throwable e) {
       return failedFuture(e);
     }
-    if (nodeBatch instanceof NodeInputBatch nodeInputBatch) {
-      return nodeRegistry.get(nodeBatch.nodeId()).executeBatchCommand(nodeInputBatch);
-    } else if (nodeBatch instanceof DependencyCallbackBatch callbackBatch) {
-      return nodeRegistry.get(nodeBatch.nodeId()).executeBatchCommand(callbackBatch);
+    if (batchCommand instanceof NodeInputBatch nodeInputBatch) {
+      return nodeRegistry.get(batchCommand.nodeId()).executeBatchCommand(nodeInputBatch);
+    } else if (batchCommand instanceof DependencyCallbackBatch callbackBatch) {
+      return nodeRegistry.get(batchCommand.nodeId()).executeBatchCommand(callbackBatch);
     } else {
-      throw new UnsupportedOperationException("Unknow nodeBatch type %s".formatted(nodeBatch));
+      throw new UnsupportedOperationException("Unknow nodeBatch type %s".formatted(batchCommand));
     }
   }
 
@@ -336,48 +348,54 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                 batchCommands
                     .computeIfAbsent(nodeId, _n -> new LinkedHashMap<>())
                     .put(requestId, nodeCommand);
-                //                CompletableFuture<Object> submissionResult =
-                //                    executeCommand(nodeCommand)
-                //                        .thenApply(NodeResponse::response)
-                //                        .thenApply(
-                //                            valueOrError -> {
-                //                              return valueOrError.getValueOrThrow().orElse(null);
-                //                            });
-                //                linkFutures(submissionResult, nodeResult.future());
+                if (NodeExecStrategy.GRANULAR.equals(nodeExecStrategy)) {
+                  CompletableFuture<Object> submissionResult =
+                      executeCommand(nodeCommand)
+                          .thenApply(NodeResponse::response)
+                          .thenApply(
+                              valueOrError -> {
+                                if (valueOrError.error().isPresent()) {
+                                  throw new RuntimeException(valueOrError.error().get());
+                                } else {
+                                  return valueOrError.value().orElse(null);
+                                }
+                              });
+                  linkFutures(submissionResult, nodeResult.future());
+                }
               });
 
-          batchCommands.forEach(
-              (nodeId, nodeRequestCommands) -> {
-                CompletableFuture<NodeBatchResponse> f =
-                    executeBatchCommand(
-                        new NodeInputBatch(
-                            nodeId,
-                            new RequestId(nodeId.value()),
-                            nodeRequestCommands,
-                            DependantChainStart.instance()));
-                f.whenComplete(
-                    (nodeBatchResponse, throwable) -> {
-                      nodeRequestCommands.forEach(
-                          (requestId, nodeRequestCommand) -> {
-                            NodeResult nodeResult = allRequests.get(requestId);
-                            Throwable error = throwable;
-                            if (error == null) {
-                              ValueOrError<Object> voe =
-                                  Optional.ofNullable(nodeBatchResponse.responses().get(requestId))
-                                      .map(NodeResponse::response)
-                                      .orElse(ValueOrError.empty());
-                              if (voe.error().isPresent()) {
-                                error = voe.error().get();
-                              } else {
-                                nodeResult.future().complete(voe.value().orElse(null));
+          if (NodeExecStrategy.BATCH.equals(nodeExecStrategy)) {
+            batchCommands.forEach(
+                (nodeId, nodeRequestCommands) -> {
+                  CompletableFuture<NodeBatchResponse> f =
+                      executeBatchCommand(
+                          new NodeInputBatch(
+                              nodeId, nodeRequestCommands, DependantChainStart.instance()));
+                  f.whenComplete(
+                      (nodeBatchResponse, throwable) -> {
+                        nodeRequestCommands.forEach(
+                            (requestId, nodeRequestCommand) -> {
+                              NodeResult nodeResult = allRequests.get(requestId);
+                              Throwable error = throwable;
+                              if (error == null) {
+                                ValueOrError<Object> voe =
+                                    Optional.ofNullable(
+                                            nodeBatchResponse.responses().get(requestId))
+                                        .map(NodeResponse::response)
+                                        .orElse(ValueOrError.empty());
+                                if (voe.error().isPresent()) {
+                                  error = voe.error().get();
+                                } else {
+                                  nodeResult.future().complete(voe.value().orElse(null));
+                                }
                               }
-                            }
-                            if (error != null) {
-                              nodeResult.future().completeExceptionally(error);
-                            }
-                          });
-                    });
-              });
+                              if (error != null) {
+                                nodeResult.future().completeExceptionally(error);
+                              }
+                            });
+                      });
+                });
+          }
           List<CompletableFuture<?>> futures = new ArrayList<>();
           unFlushedRequests.stream()
               .map(allRequests::get)

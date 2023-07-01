@@ -1,11 +1,15 @@
 package com.flipkart.krystal.krystex.node;
 
+import static com.flipkart.krystal.data.ValueOrError.empty;
 import static com.flipkart.krystal.data.ValueOrError.withError;
+import static com.flipkart.krystal.utils.Futures.linkFutures;
 import static com.google.common.base.Functions.identity;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.lang.Math.max;
 import static java.util.Collections.emptyList;
+import static java.util.Optional.ofNullable;
 import static java.util.concurrent.CompletableFuture.*;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
@@ -19,11 +23,11 @@ import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.commands.BatchCommand;
 import com.flipkart.krystal.krystex.commands.DependencyCallbackBatch;
 import com.flipkart.krystal.krystex.commands.ExecuteWithDependency;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
 import com.flipkart.krystal.krystex.commands.Flush;
-import com.flipkart.krystal.krystex.commands.NodeBatch;
 import com.flipkart.krystal.krystex.commands.NodeInputBatch;
 import com.flipkart.krystal.krystex.commands.NodeInputCommand;
 import com.flipkart.krystal.krystex.commands.NodeRequestCommand;
@@ -53,6 +57,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
@@ -61,6 +66,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 /*
    handlePostResolution()
@@ -96,7 +102,7 @@ class Node {
   private final Map<RequestId, CompletableFuture<NodeResponse>> resultsByRequest =
       new LinkedHashMap<>();
   /** A unique Result future for every requestId. */
-  private final Map<RequestId, CompletableFuture<NodeBatchResponse>> resultsByBatch =
+  private final Map<DependantChain, CompletableFuture<NodeBatchResponse>> resultsByBatch =
       new LinkedHashMap<>();
 
   /**
@@ -116,6 +122,12 @@ class Node {
   private final Map<DependantChain, Set<RequestId>> requestsByDependantChain =
       new LinkedHashMap<>();
   private final Map<RequestId, DependantChain> dependantChainByRequest = new LinkedHashMap<>();
+  private final ResolverExecStrategy resolverExecStrategy;
+
+  private enum ResolverExecStrategy {
+    EARLIEST_POSSIBLE,
+    ONE_SHOT
+  }
 
   Node(
       NodeDefinition nodeDefinition,
@@ -123,6 +135,7 @@ class Node {
       Function<LogicExecutionContext, ImmutableMap<String, MainLogicDecorator>>
           requestScopedDecoratorsSupplier,
       LogicDecorationOrdering logicDecorationOrdering) {
+    this.resolverExecStrategy = ResolverExecStrategy.EARLIEST_POSSIBLE;
     this.nodeId = nodeDefinition.nodeId();
     this.nodeDefinition = nodeDefinition;
     this.krystalNodeExecutor = krystalNodeExecutor;
@@ -153,59 +166,37 @@ class Node {
       return resultForRequest;
     }
     try {
-      List<NodeInputCommand> nodeRequestCommands =
-          computeNodeCommands(nodeCommand, requestId, resultForRequest);
+      if (nodeCommand instanceof SkipNode skipNode) {
+        resultForRequest.completeExceptionally(skipNodeException(skipNode));
+      }
+      List<NodeInputCommand> nodeRequestCommands = computeNodeCommands(nodeCommand);
       propagateCommands(requestId, nodeRequestCommands);
-      executeMainLogicIfPossible(requestId, resultForRequest);
+      executeMainLogicIfPossible(requestId)
+          .ifPresent(mainLogicResult -> linkFutures(mainLogicResult, resultForRequest));
     } catch (Throwable e) {
       resultForRequest.completeExceptionally(e);
     }
     return resultForRequest;
   }
 
-  CompletableFuture<NodeBatchResponse> executeBatchCommand(NodeInputBatch nodeInputBatch) {
-    Map<RequestId, CompletableFuture<NodeResponse>> nodeResponses =
-        handleBatchCommand(nodeInputBatch);
-
-    CompletableFuture<NodeBatchResponse> batchResult =
-        resultsByBatch.computeIfAbsent(nodeInputBatch.batchId(), _b -> new CompletableFuture<>());
-    allOf(nodeResponses.values().toArray(CompletableFuture[]::new))
-        .whenComplete(
-            (unused, throwable) -> {
-              batchResult.complete(
-                  new NodeBatchResponse(
-                      nodeResponses.entrySet().stream()
-                          .collect(toMap(Entry::getKey, e -> e.getValue().join()))));
-            });
-    return batchResult;
-  }
-
-  CompletableFuture<NodeBatchResponse> executeBatchCommand(
-      DependencyCallbackBatch dependencyCallBack) {
-    handleBatchCommand(dependencyCallBack);
-    return resultsByBatch.get(dependencyCallBack.batchId());
-  }
-
-  private Map<RequestId, CompletableFuture<NodeResponse>> handleBatchCommand(
-      NodeBatch<?> nodeInputBatchCommand) {
+  CompletableFuture<NodeBatchResponse> executeBatchCommand(BatchCommand<?> nodeInputBatchCommand) {
     Map<RequestId, ? extends NodeRequestCommand> subCommands = nodeInputBatchCommand.subCommands();
-    Map<RequestId, CompletableFuture<NodeResponse>> nodeResponses = new LinkedHashMap<>();
     Map<String, Map<RequestId, List<NodeInputCommand>>> commandsByDepName = new LinkedHashMap<>();
-    for (Entry<RequestId, ? extends NodeRequestCommand> entry : subCommands.entrySet()) {
-      RequestId requestId = entry.getKey();
-      NodeRequestCommand nodeRequestCommand = entry.getValue();
-      final CompletableFuture<NodeResponse> resultForRequest =
-          resultsByRequest.computeIfAbsent(requestId, r -> new CompletableFuture<>());
-      nodeResponses.put(requestId, resultForRequest);
-      if (resultForRequest.isDone()) {
-        // This is possible if this node was already skipped, for example.
-        // If the result for this requestId is already available, just return and avoid unnecessary
-        // computation.
-        continue;
-      }
-      try {
-        List<NodeInputCommand> nodeRequestCommands =
-            computeNodeCommands(nodeRequestCommand, requestId, resultForRequest);
+    CompletableFuture<NodeBatchResponse> batchFuture =
+        resultsByBatch.computeIfAbsent(
+            nodeInputBatchCommand.dependantChain(), requestId -> new CompletableFuture<>());
+    try {
+      for (Entry<RequestId, ? extends NodeRequestCommand> entry : subCommands.entrySet()) {
+        RequestId requestId = entry.getKey();
+        NodeRequestCommand nodeRequestCommand = entry.getValue();
+        if (batchFuture.isDone()) {
+          // This is possible if this node was already skipped, for example.
+          // If the result for this requestId is already available, just return and avoid
+          // unnecessary
+          // computation.
+          continue;
+        }
+        List<NodeInputCommand> nodeRequestCommands = computeNodeCommands(nodeRequestCommand);
         for (NodeInputCommand requestCommand : nodeRequestCommands) {
           String dependencyName = getDependencyName(requestCommand);
           commandsByDepName
@@ -213,13 +204,16 @@ class Node {
               .computeIfAbsent(requestId, _d -> new ArrayList<>())
               .add(requestCommand);
         }
-        executeMainLogicIfPossible(requestId, resultForRequest);
-      } catch (Throwable e) {
-        resultForRequest.completeExceptionally(e);
+        propagateCommands(nodeInputBatchCommand, commandsByDepName);
       }
+      executeMainLogicIfPossible(
+              subCommands.values().stream().map(NodeRequestCommand::requestId).toList(),
+              nodeInputBatchCommand.dependantChain())
+          .ifPresent(mainLogicResponse -> linkFutures(mainLogicResponse, batchFuture));
+    } catch (Throwable e) {
+      batchFuture.completeExceptionally(e);
     }
-    propagateCommands(nodeInputBatchCommand, commandsByDepName);
-    return nodeResponses;
+    return batchFuture;
   }
 
   private void propagateCommands(RequestId requestId, List<NodeInputCommand> nodeRequestCommands) {
@@ -248,11 +242,10 @@ class Node {
   }
 
   private void propagateCommands(
-      NodeBatch<?> nodeBatch,
-      Map<String, Map<RequestId, List<NodeInputCommand>>> commandsByDepNode) {
-    RequestId batchId = nodeBatch.batchId();
+      BatchCommand<?> incomingBatch,
+      Map<String, Map<RequestId, List<NodeInputCommand>>> outGoingBatchesByDep) {
     for (Entry<String, Map<RequestId, List<NodeInputCommand>>> entry :
-        commandsByDepNode.entrySet()) {
+        outGoingBatchesByDep.entrySet()) {
       String dependencyName = entry.getKey();
       Map<RequestId, List<NodeInputCommand>> nodeRequestCommands = entry.getValue();
       NodeId depNodeId = nodeDefinition.dependencyNodes().get(dependencyName);
@@ -260,11 +253,10 @@ class Node {
           krystalNodeExecutor.executeBatchCommand(
               new NodeInputBatch(
                   depNodeId,
-                  batchId.createNewRequest(dependencyName),
                   nodeRequestCommands.values().stream()
                       .flatMap(Collection::stream)
                       .collect(toMap(NodeRequestCommand::requestId, identity())),
-                  nodeBatch.dependantChain().extend(nodeId, dependencyName)));
+                  incomingBatch.dependantChain().extend(nodeId, dependencyName)));
       nodeRequestCommands.forEach(
           (requestId, nodeRequestCommandList) -> {
             nodeRequestCommandList.forEach(
@@ -283,7 +275,7 @@ class Node {
                 });
           });
       registerBatchDependencyCallbacks(
-          nodeRequestCommands.keySet(), dependencyName, depNodeId, nodeBatch);
+          nodeRequestCommands.keySet(), dependencyName, depNodeId, incomingBatch);
     }
   }
 
@@ -303,10 +295,8 @@ class Node {
     return defaultDependantChain.dependencyName();
   }
 
-  private List<NodeInputCommand> computeNodeCommands(
-      NodeRequestCommand nodeCommand,
-      RequestId requestId,
-      CompletableFuture<NodeResponse> resultForRequest) {
+  private List<NodeInputCommand> computeNodeCommands(NodeRequestCommand nodeCommand) {
+    RequestId requestId = nodeCommand.requestId();
     List<NodeInputCommand> nodeInputCommands;
     if (nodeCommand instanceof SkipNode skipNode) {
       requestsByDependantChain
@@ -315,7 +305,6 @@ class Node {
       dependantChainByRequest.put(requestId, skipNode.dependantChain());
       skipLogicRequested.put(requestId, Optional.of(skipNode));
       nodeInputCommands = handleSkipDependency(requestId);
-      resultForRequest.completeExceptionally(skipNodeException(skipNode));
     } else if (nodeCommand instanceof ExecuteWithDependency executeWithDependency) {
       nodeInputCommands = executeWithDependency(executeWithDependency);
     } else if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
@@ -331,18 +320,33 @@ class Node {
     return nodeInputCommands;
   }
 
-  private void executeMainLogicIfPossible(
-      RequestId requestId, CompletableFuture<NodeResponse> resultForRequest) {
+  private Optional<CompletableFuture<NodeResponse>> executeMainLogicIfPossible(
+      RequestId requestId) {
+    return executeMainLogicIfPossible(List.of(requestId), dependantChainByRequest.get(requestId))
+        .map(
+            f ->
+                f.thenApply(
+                    nodeBatchResponse -> nodeBatchResponse.responses().values().iterator().next()));
+  }
+
+  private Optional<CompletableFuture<NodeBatchResponse>> executeMainLogicIfPossible(
+      List<RequestId> requestIds, DependantChain dependantChain) {
     // If all the inputs and dependency values are available, then prepare run mainLogic
     MainLogicDefinition<Object> mainLogicDefinition = nodeDefinition.getMainLogicDefinition();
     ImmutableSet<String> inputNames = mainLogicDefinition.inputNames();
-    Set<String> collect =
-        new LinkedHashSet<>(
-            inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
-    collect.addAll(dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
-    if (collect.containsAll(inputNames)) { // All the inputs of the logic node have data present
-      executeMainLogic(resultForRequest, requestId);
+    if (requestIds.stream()
+        .allMatch(
+            requestId -> {
+              Set<String> collect =
+                  new LinkedHashSet<>(
+                      inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
+              collect.addAll(
+                  dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
+              return collect.containsAll(inputNames);
+            })) { // All the inputs of the logic node have data present
+      return Optional.of(executeMainLogic(requestIds, dependantChain));
     }
+    return Optional.empty();
   }
 
   private List<NodeInputCommand> handleSkipDependency(RequestId requestId) {
@@ -441,29 +445,50 @@ class Node {
    */
   private Set<ResolverDefinition> getPendingResolvers(
       RequestId requestId, ImmutableSet<String> newInputNames, Set<String> availableInputs) {
-    Map<ResolverDefinition, ResolverCommand> nodeResults =
+    Map<ResolverDefinition, ResolverCommand> resolverCommands =
         this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
 
-    Set<ResolverDefinition> pendingUnboundResolvers =
-        resolverDefinitionsByInput.getOrDefault(Optional.<String>empty(), emptyList()).stream()
-            .filter(
-                resolverDefinition -> availableInputs.containsAll(resolverDefinition.boundFrom()))
-            .filter(resolverDefinition -> !nodeResults.containsKey(resolverDefinition))
-            .collect(toSet());
-    Set<ResolverDefinition> pendingResolvers =
-        newInputNames.stream()
-            .flatMap(
-                input ->
-                    resolverDefinitionsByInput
-                        .getOrDefault(Optional.ofNullable(input), ImmutableList.of())
-                        .stream()
-                        .filter(
-                            resolverDefinition ->
-                                availableInputs.containsAll(resolverDefinition.boundFrom()))
-                        .filter(resolverDefinition -> !nodeResults.containsKey(resolverDefinition)))
-            .collect(toSet());
-    pendingResolvers.addAll(pendingUnboundResolvers);
-    return pendingResolvers;
+    if (ResolverExecStrategy.EARLIEST_POSSIBLE.equals(resolverExecStrategy)) {
+      Set<ResolverDefinition> pendingUnboundResolvers =
+          resolverDefinitionsByInput.getOrDefault(Optional.<String>empty(), emptyList()).stream()
+              .filter(resolverDefinition -> !resolverCommands.containsKey(resolverDefinition))
+              .filter(
+                  resolverDefinition -> availableInputs.containsAll(resolverDefinition.boundFrom()))
+              .collect(toSet());
+      Set<ResolverDefinition> pendingResolvers =
+          newInputNames.stream()
+              .flatMap(
+                  input ->
+                      resolverDefinitionsByInput
+                          .getOrDefault(ofNullable(input), ImmutableList.of())
+                          .stream()
+                          .filter(
+                              resolverDefinition ->
+                                  availableInputs.containsAll(resolverDefinition.boundFrom()))
+                          .filter(
+                              resolverDefinition ->
+                                  !resolverCommands.containsKey(resolverDefinition)))
+              .collect(toSet());
+      pendingResolvers.addAll(pendingUnboundResolvers);
+      return pendingResolvers;
+    } else {
+      return Stream.concat(
+              Stream.of(Optional.<String>empty()), newInputNames.stream().map(Optional::of))
+          .map(resolverDefinitionsByInput::get)
+          .filter(Objects::nonNull)
+          .flatMap(Collection::stream)
+          .map(ResolverDefinition::dependencyName)
+          .map(resolverDefinitionsByDependencies::get)
+          .filter(
+              resolverDefinitions ->
+                  resolverDefinitions.stream()
+                      .map(ResolverDefinition::boundFrom)
+                      .flatMap(Collection::stream)
+                      .allMatch(availableInputs::contains))
+          .flatMap(Collection::stream)
+          .filter(key -> !resolverCommands.containsKey(key))
+          .collect(toSet());
+    }
   }
 
   private List<NodeInputCommand> executeResolvers(
@@ -692,7 +717,7 @@ class Node {
       Collection<RequestId> requestIds,
       String dependencyName,
       NodeId depNodeId,
-      NodeBatch<?> nodeBatch) {
+      BatchCommand<?> batchCommand) {
     ImmutableSet<ResolverDefinition> resolverDefinitionsForDependency =
         this.resolverDefinitionsByDependencies.getOrDefault(dependencyName, ImmutableSet.of());
     if (requestIds.stream()
@@ -750,7 +775,7 @@ class Node {
                                 this.nodeId, dependencyName, results, requestId));
                       }
                       return new DependencyCallbackBatch(
-                          depNodeId, nodeBatch.batchId(), callbacks, nodeBatch.dependantChain());
+                          nodeId, callbacks, batchCommand.dependantChain());
                     },
                     depNodeId);
               });
@@ -778,7 +803,7 @@ class Node {
   }
 
   private void enqueueOrExecuteBatchCommand(
-      Supplier<NodeBatch<?>> commandGenerator, NodeId depNodeId) {
+      Supplier<BatchCommand<?>> commandGenerator, NodeId depNodeId) {
     MainLogicDefinition<Object> depMainLogic =
         nodeDefinition.nodeDefinitionRegistry().get(depNodeId).getMainLogicDefinition();
     if (depMainLogic instanceof IOLogicDefinition<Object>) {
@@ -870,40 +895,93 @@ class Node {
     return nodeReqCommands;
   }
 
-  private void executeMainLogic(
-      CompletableFuture<NodeResponse> resultForRequest, RequestId requestId) {
+  private CompletableFuture<NodeBatchResponse> executeMainLogic(
+      List<RequestId> requestIds, DependantChain dependantChain) {
+
     MainLogicDefinition<Object> mainLogicDefinition = nodeDefinition.getMainLogicDefinition();
-    MainLogicInputs mainLogicInputs = getInputsForMainLogic(requestId);
-    // Retrieve existing result from cache if result for this set of inputs has already been
-    // calculated
-    CompletableFuture<Object> resultFuture =
-        resultsCache.get(mainLogicInputs.nonDependencyInputs());
-    if (resultFuture == null) {
-      resultFuture =
-          executeDecoratedMainLogic(
-              mainLogicInputs.allInputsAndDependencies(), mainLogicDefinition, requestId);
-      resultsCache.put(mainLogicInputs.nonDependencyInputs(), resultFuture);
+
+    Map<RequestId, MainLogicInputs> mainLogicInputsByReq = new LinkedHashMap<>();
+    Map<RequestId, CompletableFuture<ValueOrError<Object>>> resultsByRequest =
+        new LinkedHashMap<>();
+
+    boolean cacheMiss = false;
+    for (RequestId requestId : requestIds) {
+      MainLogicInputs mainLogicInputs = getInputsForMainLogic(requestId);
+      // Retrieve existing result from cache if result for this set of inputs has already been
+      // calculated
+      CompletableFuture<Object> cachedResult =
+          resultsCache.get(mainLogicInputs.nonDependencyInputs());
+      mainLogicInputsByReq.put(requestId, mainLogicInputs);
+      if (cachedResult == null) {
+        cacheMiss = true;
+      } else {
+        resultsByRequest.put(requestId, cachedResult.handle(ValueOrError::valueOrError));
+      }
     }
-    resultFuture
-        .handle(ValueOrError::valueOrError)
-        .thenAccept(
-            value ->
-                resultForRequest.complete(
-                    new NodeResponse(mainLogicInputs.nonDependencyInputs(), value, requestId)));
-    mainLogicExecuted.put(requestId, true);
-    flushDecoratorsIfNeeded(dependantChainByRequest.get(requestId));
+    CompletableFuture<NodeBatchResponse> resultForBatch = new CompletableFuture<>();
+    if (cacheMiss) {
+      ImmutableMap<MainLogicInputs, CompletableFuture<Object>> mainLogicResults =
+          executeDecoratedMainLogic(
+              mainLogicInputsByReq.values(), mainLogicDefinition, dependantChain);
+      mainLogicResults.forEach(
+          (mainLogicInputs, individualFuture) -> {
+            resultsCache.put(mainLogicInputs.nonDependencyInputs(), individualFuture);
+            requestIds.forEach(
+                requestId -> {
+                  ofNullable(mainLogicResults.get(mainLogicInputsByReq.get(requestId)))
+                      .ifPresent(
+                          f ->
+                              resultsByRequest.put(
+                                  requestId, f.handle(ValueOrError::valueOrError)));
+                });
+          });
+    }
+
+    allOf(resultsByRequest.values().toArray(CompletableFuture[]::new))
+        .whenComplete(
+            (unused, throwable) -> {
+              Map<RequestId, NodeResponse> batchResponses = new LinkedHashMap<>();
+              for (Entry<RequestId, MainLogicInputs> entry : mainLogicInputsByReq.entrySet()) {
+                RequestId requestId = entry.getKey();
+                CompletableFuture<ValueOrError<Object>> requestResult =
+                    resultsByRequest.get(requestId);
+                batchResponses.put(
+                    requestId,
+                    new NodeResponse(
+                        entry.getValue().nonDependencyInputs(),
+                        requestResult.getNow(empty()),
+                        requestId));
+              }
+              resultForBatch.complete(new NodeBatchResponse(batchResponses));
+            });
+
+    requestIds.forEach(requestId -> mainLogicExecuted.put(requestId, true));
+    flushDecoratorsIfNeeded(dependantChain);
+    return resultForBatch;
   }
 
-  private CompletableFuture<Object> executeDecoratedMainLogic(
-      Inputs inputs, MainLogicDefinition<Object> mainLogicDefinition, RequestId requestId) {
-    SortedSet<MainLogicDecorator> sortedDecorators =
-        getSortedDecorators(dependantChainByRequest.get(requestId));
+  private ImmutableMap<MainLogicInputs, CompletableFuture<Object>> executeDecoratedMainLogic(
+      Collection<MainLogicInputs> mainLogicInputsList,
+      MainLogicDefinition<Object> mainLogicDefinition,
+      DependantChain dependantChain) {
+    SortedSet<MainLogicDecorator> sortedDecorators = getSortedDecorators(dependantChain);
     MainLogic<Object> logic = mainLogicDefinition::execute;
 
     for (MainLogicDecorator mainLogicDecorator : sortedDecorators) {
       logic = mainLogicDecorator.decorateLogic(logic, mainLogicDefinition);
     }
-    return logic.execute(ImmutableList.of(inputs)).get(inputs);
+    ImmutableMap<Inputs, CompletableFuture<Object>> execute =
+        logic.execute(
+            mainLogicInputsList.stream()
+                .map(MainLogicInputs::allInputsAndDependencies)
+                .distinct()
+                .collect(toImmutableList()));
+    return mainLogicInputsList.stream()
+        .distinct()
+        .collect(
+            toImmutableMap(
+                identity(),
+                mainLogicInputs -> execute.get(mainLogicInputs.allInputsAndDependencies())));
   }
 
   private MainLogicInputs getInputsForMainLogic(RequestId requestId) {
