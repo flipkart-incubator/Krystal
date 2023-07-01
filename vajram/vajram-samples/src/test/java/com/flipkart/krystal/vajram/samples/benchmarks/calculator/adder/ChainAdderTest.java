@@ -237,13 +237,13 @@ class ChainAdderTest {
     return ImmutableSet.of(
         graph.computeDependantChain(
             ChainAdder.ID,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
+//            chainSum_n,
+//            chainSum_n,
+//            chainSum_n,
+//            chainSum_n,
+//            chainSum_n,
+//            chainSum_n,
+//            chainSum_n,
             chainSum_n,
             chainSum_n));
   }

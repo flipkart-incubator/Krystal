@@ -204,8 +204,8 @@ class Node {
               .computeIfAbsent(requestId, _d -> new ArrayList<>())
               .add(requestCommand);
         }
-        propagateCommands(nodeInputBatchCommand, commandsByDepName);
       }
+      propagateCommands(nodeInputBatchCommand, commandsByDepName);
       executeMainLogicIfPossible(
               subCommands.values().stream().map(NodeRequestCommand::requestId).toList(),
               nodeInputBatchCommand.dependantChain())
