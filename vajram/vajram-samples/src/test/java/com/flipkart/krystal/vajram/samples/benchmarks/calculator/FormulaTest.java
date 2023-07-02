@@ -181,6 +181,7 @@ class FormulaTest {
           propagateNodeCommands=       12,688,314,941 ns,
           executeMainLogicTime=           748,000,652 ns
     */
+
     int loopCount = outerLoopCount * innerLoopCount;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();
     graph.registerInputModulators(
