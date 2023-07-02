@@ -161,8 +161,8 @@ class ChainAdderTest {
   @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark_2() throws Exception {
-    int outerLoopCount = 50;
-    int innerLoopCount = 1000;
+    int innerLoopCount = 500;
+    int outerLoopCount = 100;
     int loopCount = outerLoopCount * innerLoopCount;
 
     long javaNativeTimeNs = javaMethodBenchmark(this::chainAdd, loopCount);
@@ -268,7 +268,7 @@ class ChainAdderTest {
       return add(numbers.get(0), numbers.get(1));
     } else {
       return chainAdd(numbers.subList(0, numbers.size() - 1))
-          + add(numbers.get(numbers.size() - 1), 0);
+             + add(numbers.get(numbers.size() - 1), 0);
     }
   }
 
@@ -322,44 +322,44 @@ class ChainAdderTest {
 
   private DependantChain[] getBatchedDepChains() {
     return new DependantChain[] {
-      graph.computeDependantChain(ChainAdder.ID, sum_n),
-      graph.computeDependantChain(ChainAdder.ID, chainSum_n, sum_n),
-      graph.computeDependantChain(ChainAdder.ID, chainSum_n, chainSum_n, sum_n),
-      graph.computeDependantChain(ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, sum_n),
-      graph.computeDependantChain(
-          ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
-      graph.computeDependantChain(
-          ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
-      graph.computeDependantChain(
-          ChainAdder.ID,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          sum_n),
-      graph.computeDependantChain(
-          ChainAdder.ID,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          sum_n),
-      graph.computeDependantChain(
-          ChainAdder.ID,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          sum_n)
+        graph.computeDependantChain(ChainAdder.ID, sum_n),
+        graph.computeDependantChain(ChainAdder.ID, chainSum_n, sum_n),
+        graph.computeDependantChain(ChainAdder.ID, chainSum_n, chainSum_n, sum_n),
+        graph.computeDependantChain(ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, sum_n),
+        graph.computeDependantChain(
+            ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
+        graph.computeDependantChain(
+            ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
+        graph.computeDependantChain(
+            ChainAdder.ID,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            sum_n),
+        graph.computeDependantChain(
+            ChainAdder.ID,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            sum_n),
+        graph.computeDependantChain(
+            ChainAdder.ID,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            sum_n)
     };
   }
 }
