@@ -178,34 +178,33 @@ class ChainAdderTest {
     nodeInputsBatchCount            1,800
     depCallbackBatchCount           1,800
     executeMainLogicCount           1,700
-
-    int innerLoopCount = 250;
-    int outerLoopCount = 200;
-    Throughput executions/s: 1439
-    KrystalNodeExecutorMetrics{
-      totalNodeTimeNs                 6m 15s 370943064ns
-      mainLogicIfPossibleTimeNs       1m 2s 415908678ns
-
-      computeInputsForExecuteTimeNs   1m 23s 1714652ns
-      executeResolversTime            0m 49s 842523610ns
-      handleResolverCommandTime       0m 51s 111124710ns
-      propagateNodeCommands           0m 46s 652243222ns
-      executeMainLogicTime            0m 45s 877527805ns
-
-      commandQueuedCount              61,600
-      commandQueueBypassedCount       0
-      nodeInputsBatchCount            3,600
-      depCallbackBatchCount           3,600
-      executeMainLogicCount           3,400
-    }
-
   }
+
+    int outerLoopCount = 250;
+    int innerLoopCount = 200;
+    Throughput executions/s: 1604
+    KrystalNodeExecutorMetrics{
+      totalNodeTimeNs                 5m 29s 432963588ns
+      mainLogicIfPossibleTimeNs       0m 44s 427384582ns
+
+      computeInputsForExecuteTimeNs   1m 22s 978111969ns
+      executeResolversTime            0m 42s 455732262ns
+      handleResolverCommandTime       0m 45s 234693689ns
+      propagateNodeCommands           0m 47s 240986403ns
+      executeMainLogicTime            0m 26s 752874290ns
+
+      commandQueuedCount              64,500
+      commandQueueBypassedCount       0
+      nodeInputsBatchCount            4,500
+      depCallbackBatchCount           4,500
+      executeMainLogicCount           4,250
+    }
    */
   @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark_2() throws Exception {
-    int innerLoopCount = 250;
-    int outerLoopCount = 200;
+    int outerLoopCount = 250;
+    int innerLoopCount = 200;
     int loopCount = outerLoopCount * innerLoopCount;
 
     long javaNativeTimeNs = javaMethodBenchmark(this::chainAdd, loopCount);
