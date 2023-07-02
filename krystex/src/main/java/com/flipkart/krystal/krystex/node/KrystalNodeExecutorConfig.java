@@ -2,9 +2,9 @@ package com.flipkart.krystal.krystex.node;
 
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.DependencyExecStrategy;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.NodeExecStrategy;
-import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.DependencyExecStrategy;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
@@ -22,10 +22,10 @@ public record KrystalNodeExecutorConfig(
 
   public KrystalNodeExecutorConfig {
     if (nodeExecStrategy == null) {
-      nodeExecStrategy = NodeExecStrategy.BATCH;
+      nodeExecStrategy = NodeExecStrategy.GRANULAR;
     }
     if (graphTraversalStrategy == null) {
-      graphTraversalStrategy = GraphTraversalStrategy.BREADTH;
+      graphTraversalStrategy = GraphTraversalStrategy.DEPTH;
     }
     if (dependencyExecStrategy == null) {
       dependencyExecStrategy = DependencyExecStrategy.ONE_SHOT;

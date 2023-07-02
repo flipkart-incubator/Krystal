@@ -61,7 +61,6 @@ import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
@@ -157,97 +156,108 @@ class Node {
   }
 
   CompletableFuture<NodeResponse> executeRequestCommand(NodeRequestCommand nodeCommand) {
-    RequestId requestId = nodeCommand.requestId();
-    final CompletableFuture<NodeResponse> resultForRequest =
-        resultsByRequest.computeIfAbsent(requestId, r -> new CompletableFuture<>());
-    if (resultForRequest.isDone()) {
-      // This is possible if this node was already skipped, for example.
-      // If the result for this requestId is already available, just return and avoid unnecessary
-      // computation.
-      return resultForRequest;
-    }
-    try {
-      if (nodeCommand instanceof SkipNode skipNode) {
-        resultForRequest.completeExceptionally(skipNodeException(skipNode));
-      }
-      List<NodeInputCommand> nodeRequestCommands = computeNodeCommands(nodeCommand);
-      propagateCommands(requestId, nodeRequestCommands);
-      if (!resultForRequest.isDone()) {
-        executeMainLogicIfPossible(requestId)
-            .ifPresent(mainLogicResult -> linkFutures(mainLogicResult, resultForRequest));
-      }
-    } catch (Throwable e) {
-      resultForRequest.completeExceptionally(e);
-    }
-    return resultForRequest;
+    return measuringTimeTaken(
+        () -> {
+          RequestId requestId = nodeCommand.requestId();
+          final CompletableFuture<NodeResponse> resultForRequest =
+              resultsByRequest.computeIfAbsent(requestId, r -> new CompletableFuture<>());
+          if (resultForRequest.isDone()) {
+            // This is possible if this node was already skipped, for example.
+            // If the result for this requestId is already available, just return and avoid
+            // unnecessary
+            // computation.
+            return resultForRequest;
+          }
+          try {
+            if (nodeCommand instanceof SkipNode skipNode) {
+              resultForRequest.completeExceptionally(skipNodeException(skipNode));
+            }
+            List<NodeInputCommand> nodeRequestCommands = computeNodeCommands(nodeCommand);
+            propagateCommands(requestId, nodeRequestCommands);
+            if (!resultForRequest.isDone()) {
+              executeMainLogicIfPossible(requestId)
+                  .ifPresent(mainLogicResult -> linkFutures(mainLogicResult, resultForRequest));
+            }
+          } catch (Throwable e) {
+            resultForRequest.completeExceptionally(e);
+          }
+          return resultForRequest;
+        },
+        timeTaken -> krystalNodeMetrics.totalNodeTimeNs += timeTaken.toNanos());
   }
 
   CompletableFuture<NodeBatchResponse> executeBatchCommand(BatchCommand<?> nodeInputBatchCommand) {
-    Map<RequestId, ? extends NodeRequestCommand> subCommands = nodeInputBatchCommand.subCommands();
-    Map<String, Map<RequestId, List<NodeInputCommand>>> commandsByDepName = new LinkedHashMap<>();
-    CompletableFuture<NodeBatchResponse> batchFuture =
-        resultsByBatch.computeIfAbsent(
-            nodeInputBatchCommand.dependantChain(), requestId -> new CompletableFuture<>());
-    try {
-      for (Entry<RequestId, ? extends NodeRequestCommand> entry : subCommands.entrySet()) {
-        RequestId requestId = entry.getKey();
-        NodeRequestCommand nodeRequestCommand = entry.getValue();
-        if (batchFuture.isDone()) {
-          // This is possible if this node was already skipped, for example.
-          // If the result for this requestId is already available, just return and avoid
-          // unnecessary
-          // computation.
-          continue;
-        }
-        List<NodeInputCommand> nodeRequestCommands = computeNodeCommands(nodeRequestCommand);
-        for (NodeInputCommand requestCommand : nodeRequestCommands) {
-          String dependencyName = getDependencyName(requestCommand);
-          commandsByDepName
-              .computeIfAbsent(dependencyName, _d -> new LinkedHashMap<>())
-              .computeIfAbsent(requestId, _d -> new ArrayList<>())
-              .add(requestCommand);
-        }
-      }
-      propagateCommands(nodeInputBatchCommand, commandsByDepName);
-      Map<RequestId, NodeResponse> skipResults = new LinkedHashMap<>();
-      subCommands.values().stream()
-          .filter(c -> c instanceof SkipNode)
-          .map(c -> (SkipNode) c)
-          .forEach(
-              skipNode -> {
-                skipResults.put(
-                    skipNode.requestId(),
-                    new NodeResponse(
-                        Inputs.empty(),
-                        withError(skipNodeException(skipNode)),
-                        skipNode.requestId()));
-              });
+    return measuringTimeTaken(
+        () -> {
+          Map<RequestId, ? extends NodeRequestCommand> subCommands =
+              nodeInputBatchCommand.subCommands();
+          Map<String, Map<RequestId, List<NodeInputCommand>>> commandsByDepName =
+              new LinkedHashMap<>();
+          CompletableFuture<NodeBatchResponse> batchFuture =
+              resultsByBatch.computeIfAbsent(
+                  nodeInputBatchCommand.dependantChain(), requestId -> new CompletableFuture<>());
+          try {
+            for (Entry<RequestId, ? extends NodeRequestCommand> entry : subCommands.entrySet()) {
+              RequestId requestId = entry.getKey();
+              NodeRequestCommand nodeRequestCommand = entry.getValue();
+              if (batchFuture.isDone()) {
+                // This is possible if this node was already skipped, for example.
+                // If the result for this requestId is already available, just return and avoid
+                // unnecessary
+                // computation.
+                continue;
+              }
+              List<NodeInputCommand> nodeRequestCommands = computeNodeCommands(nodeRequestCommand);
+              for (NodeInputCommand requestCommand : nodeRequestCommands) {
+                String dependencyName = getDependencyName(requestCommand);
+                commandsByDepName
+                    .computeIfAbsent(dependencyName, _d -> new LinkedHashMap<>())
+                    .computeIfAbsent(requestId, _d -> new ArrayList<>())
+                    .add(requestCommand);
+              }
+            }
+            propagateCommands(nodeInputBatchCommand, commandsByDepName);
+            Map<RequestId, NodeResponse> skipResults = new LinkedHashMap<>();
+            subCommands.values().stream()
+                .filter(c -> c instanceof SkipNode)
+                .map(c -> (SkipNode) c)
+                .forEach(
+                    skipNode -> {
+                      skipResults.put(
+                          skipNode.requestId(),
+                          new NodeResponse(
+                              Inputs.empty(),
+                              withError(skipNodeException(skipNode)),
+                              skipNode.requestId()));
+                    });
 
-      Optional<CompletableFuture<Map<RequestId, NodeResponse>>> mainLogicFuture =
-          executeMainLogicIfPossible(
-              subCommands.values().stream()
-                  .filter(c -> !(c instanceof SkipNode))
-                  .map(NodeRequestCommand::requestId)
-                  .toList(),
-              nodeInputBatchCommand.dependantChain());
-      if (mainLogicFuture.isPresent()) {
-        linkFutures(
-            mainLogicFuture
-                .get()
-                .thenApply(
-                    map -> {
-                      map.putAll(skipResults);
-                      return map;
-                    })
-                .thenApply(NodeBatchResponse::new),
-            batchFuture);
-      } else if (skipResults.size() == subCommands.size()) {
-        batchFuture.complete(new NodeBatchResponse(skipResults));
-      }
-    } catch (Throwable e) {
-      batchFuture.completeExceptionally(e);
-    }
-    return batchFuture;
+            Optional<CompletableFuture<Map<RequestId, NodeResponse>>> mainLogicFuture =
+                executeMainLogicIfPossible(
+                    subCommands.values().stream()
+                        .filter(c -> !(c instanceof SkipNode))
+                        .map(NodeRequestCommand::requestId)
+                        .toList(),
+                    nodeInputBatchCommand.dependantChain());
+            if (mainLogicFuture.isPresent()) {
+              linkFutures(
+                  mainLogicFuture
+                      .get()
+                      .thenApply(
+                          map -> {
+                            map.putAll(skipResults);
+                            return map;
+                          })
+                      .thenApply(NodeBatchResponse::new),
+                  batchFuture);
+            } else if (skipResults.size() == subCommands.size()) {
+              batchFuture.complete(new NodeBatchResponse(skipResults));
+            }
+          } catch (Throwable e) {
+            batchFuture.completeExceptionally(e);
+          }
+          return batchFuture;
+        },
+        timeTaken -> krystalNodeMetrics.totalNodeTimeNs += timeTaken.toNanos());
   }
 
   private void propagateCommands(RequestId requestId, List<NodeInputCommand> nodeRequestCommands) {
@@ -322,22 +332,6 @@ class Node {
         timeTaken -> krystalNodeMetrics.propagateNodeCommandsNs += timeTaken.toNanos());
   }
 
-  private static String getDependencyName(NodeRequestCommand nodeRequestCommand) {
-    DependantChain dependantChain;
-    if (nodeRequestCommand instanceof ExecuteWithInputs executeWithInputs) {
-      dependantChain = executeWithInputs.dependantChain();
-    } else if (nodeRequestCommand instanceof SkipNode skipNode) {
-      dependantChain = skipNode.dependantChain();
-    } else {
-      throw new UnsupportedOperationException(
-          "Unknown NodeRequestCommand Type: %s".formatted(nodeRequestCommand));
-    }
-    if (!(dependantChain instanceof DefaultDependantChain defaultDependantChain)) {
-      throw new IllegalStateException("This should never happen");
-    }
-    return defaultDependantChain.dependencyName();
-  }
-
   private List<NodeInputCommand> computeNodeCommands(NodeRequestCommand nodeCommand) {
     return measuringTimeTaken(
         () -> {
@@ -349,7 +343,7 @@ class Node {
                 .add(requestId);
             dependantChainByRequest.put(requestId, skipNode.dependantChain());
             skipLogicRequested.put(requestId, Optional.of(skipNode));
-            nodeInputCommands = handleSkipDependency(requestId);
+            nodeInputCommands = handleSkipDependency(skipNode);
           } else if (nodeCommand instanceof ExecuteWithDependency executeWithDependency) {
             nodeInputCommands = executeWithDependency(executeWithDependency);
           } else if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
@@ -363,6 +357,42 @@ class Node {
             throw new UnsupportedOperationException(
                 "Unknown type of nodeCommand: %s".formatted(nodeCommand));
           }
+          return nodeInputCommands;
+        },
+        timeTaken -> krystalNodeMetrics.computeNodeCommandsTimeNs += timeTaken.toNanos());
+  }
+
+  private List<NodeInputCommand> computeNodeCommands(BatchCommand<?> batchCommand) {
+    return measuringTimeTaken(
+        () -> {
+          Set<RequestId> allRequestIds = batchCommand.subCommands().keySet();
+          Set<RequestId> requestsByDepChain =
+              requestsByDependantChain.computeIfAbsent(
+                  batchCommand.dependantChain(), k -> new LinkedHashSet<>(allRequestIds.size()));
+          List<SkipNode> skipCommands = new ArrayList<>();
+          List<ExecuteWithDependency> executeWithDependencies = new ArrayList<>();
+          List<ExecuteWithInputs> executeWithInputsList = new ArrayList<>();
+
+          batchCommand
+              .subCommands()
+              .forEach(
+                  (requestId, nodeCommand) -> {
+                    requestsByDepChain.add(requestId);
+                    dependantChainByRequest.put(requestId, batchCommand.dependantChain());
+                    if (nodeCommand instanceof SkipNode skipNode) {
+                      skipLogicRequested.put(requestId, Optional.of(skipNode));
+                      skipCommands.add(skipNode);
+                    } else if (nodeCommand instanceof ExecuteWithDependency executeWithDependency) {
+                      executeWithDependencies.add(executeWithDependency);
+                    } else if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
+                      executeWithInputsList.add(executeWithInputs);
+                    } else {
+                      throw new UnsupportedOperationException(
+                          "Unknown type of nodeCommand: %s".formatted(nodeCommand));
+                    }
+                  });
+          List<NodeInputCommand> nodeInputCommands = new ArrayList<>();
+          handleSkipDependencies(skipCommands);
           return nodeInputCommands;
         },
         timeTaken -> krystalNodeMetrics.computeNodeCommandsTimeNs += timeTaken.toNanos());
@@ -397,10 +427,9 @@ class Node {
     return Optional.empty();
   }
 
-  private List<NodeInputCommand> handleSkipDependency(RequestId requestId) {
-
-    // Since this node is skipped, we need to get all the pending resolvers (irrespective of
-    // whether their inputs are available or not) and mark them resolved.
+  private List<NodeInputCommand> handleSkipDependency(SkipNode skipNode) {
+    //    return handleSkipDependencies(List.of(requestId));
+    RequestId requestId = skipNode.requestId();
     Set<ResolverDefinition> pendingResolvers =
         resolverDefinitionsByInput.values().stream()
             .flatMap(Collection::stream)
@@ -411,7 +440,48 @@ class Node {
                         .containsKey(resolverDefinition))
             .collect(toSet());
 
-    return executeResolvers(requestId, pendingResolvers);
+    Optional<MultiResolverDefinition> multiResolverOpt =
+        nodeDefinition
+            .multiResolverLogicId()
+            .map(
+                nodeLogicId ->
+                    nodeDefinition
+                        .nodeDefinitionRegistry()
+                        .logicDefinitionRegistry()
+                        .getMultiResolver(nodeLogicId));
+    return executeResolvers(requestId, pendingResolvers, multiResolverOpt);
+  }
+
+  private List<NodeInputCommand> handleSkipDependencies(List<SkipNode> skipCommands) {
+    Optional<MultiResolverDefinition> multiResolverOpt = getMultiResolverDef();
+    List<NodeInputCommand> outGoingNodeCommands = new ArrayList<>();
+    for (SkipNode skipCommand : skipCommands) {
+      RequestId requestId = skipCommand.requestId();
+      // Since this node is skipped, we need to get all the pending resolvers (irrespective of
+      // whether their inputs are available or not) and mark them resolved.
+      Set<ResolverDefinition> pendingResolvers =
+          resolverDefinitionsByInput.values().stream()
+              .flatMap(Collection::stream)
+              .filter(
+                  resolverDefinition ->
+                      !this.resolverResults
+                          .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
+                          .containsKey(resolverDefinition))
+              .collect(toSet());
+      outGoingNodeCommands.addAll(executeResolvers(requestId, pendingResolvers, multiResolverOpt));
+    }
+    return outGoingNodeCommands;
+  }
+
+  private Optional<MultiResolverDefinition> getMultiResolverDef() {
+    return nodeDefinition
+        .multiResolverLogicId()
+        .map(
+            nodeLogicId ->
+                nodeDefinition
+                    .nodeDefinitionRegistry()
+                    .logicDefinitionRegistry()
+                    .getMultiResolver(nodeLogicId));
   }
 
   private static SkippedExecutionException skipNodeException(SkipNode skipNode) {
@@ -485,7 +555,9 @@ class Node {
     }
 
     return executeResolvers(
-        requestId, getPendingResolvers(requestId, newInputNames, availableInputs));
+        requestId,
+        getPendingResolvers(requestId, newInputNames, availableInputs),
+        getMultiResolverDef());
   }
 
   /**
@@ -545,25 +617,15 @@ class Node {
   }
 
   private List<NodeInputCommand> executeResolvers(
-      RequestId requestId, Set<ResolverDefinition> pendingResolvers) {
-    if (pendingResolvers.isEmpty()) {
+      RequestId requestId,
+      Set<ResolverDefinition> pendingResolvers,
+      Optional<MultiResolverDefinition> multiResolver) {
+    if (multiResolver.isEmpty() || pendingResolvers.isEmpty()) {
       return emptyList();
     }
 
-    Optional<MultiResolverDefinition> multiResolverOpt =
-        nodeDefinition
-            .multiResolverLogicId()
-            .map(
-                nodeLogicId ->
-                    nodeDefinition
-                        .nodeDefinitionRegistry()
-                        .logicDefinitionRegistry()
-                        .getMultiResolver(nodeLogicId));
-    if (multiResolverOpt.isEmpty()) {
-      return emptyList();
-    }
+
     List<NodeInputCommand> nodeRequestCommands = new ArrayList<>();
-    MultiResolverDefinition multiResolver = multiResolverOpt.get();
 
     Map<String, List<ResolverDefinition>> resolversByDependency =
         pendingResolvers.stream().collect(groupingBy(ResolverDefinition::dependencyName));
@@ -585,6 +647,7 @@ class Node {
                   .collect(toSet()));
       resolverCommands =
           multiResolver
+              .get()
               .logic()
               .resolve(
                   resolversByDependency.entrySet().stream()
@@ -621,6 +684,22 @@ class Node {
     String dependencyName = resolverDefinition.dependencyName();
     return handleResolverCommand(
         requestId, dependencyName, List.of(resolverDefinition), resolverCommand);
+  }
+
+  private static String getDependencyName(NodeRequestCommand nodeRequestCommand) {
+    DependantChain dependantChain;
+    if (nodeRequestCommand instanceof ExecuteWithInputs executeWithInputs) {
+      dependantChain = executeWithInputs.dependantChain();
+    } else if (nodeRequestCommand instanceof SkipNode skipNode) {
+      dependantChain = skipNode.dependantChain();
+    } else {
+      throw new UnsupportedOperationException(
+          "Unknown NodeRequestCommand Type: %s".formatted(nodeRequestCommand));
+    }
+    if (!(dependantChain instanceof DefaultDependantChain defaultDependantChain)) {
+      throw new IllegalStateException("This should never happen");
+    }
+    return defaultDependantChain.dependencyName();
   }
 
   private List<NodeInputCommand> handleResolverCommand(
@@ -787,21 +866,16 @@ class Node {
               this.resolverDefinitionsByDependencies.getOrDefault(
                   dependencyName, ImmutableSet.of());
           boolean allResolversExecuted =
-              measuringTimeTaken(
-                  () -> {
-                    return requestIds.stream()
-                        .map(
-                            requestId ->
-                                dependencyExecutions
-                                    .getOrDefault(requestId, ImmutableMap.of())
-                                    .getOrDefault(dependencyName, new DependencyNodeExecutions()))
-                        .allMatch(
-                            dependencyNodeExecutions ->
-                                resolverDefinitionsForDependency.equals(
-                                    dependencyNodeExecutions.executedResolvers()));
-                  },
-                  timeTaken ->
-                      krystalNodeMetrics.allResolversExecutedTimeNs += timeTaken.toNanos());
+              requestIds.stream()
+                  .map(
+                      requestId ->
+                          dependencyExecutions
+                              .getOrDefault(requestId, ImmutableMap.of())
+                              .getOrDefault(dependencyName, new DependencyNodeExecutions()))
+                  .allMatch(
+                      dependencyNodeExecutions ->
+                          resolverDefinitionsForDependency.equals(
+                              dependencyNodeExecutions.executedResolvers()));
           if (allResolversExecuted) {
             allOf(
                     requestIds.stream()
@@ -999,21 +1073,8 @@ class Node {
     }
     CompletableFuture<Map<RequestId, NodeResponse>> resultForBatch = new CompletableFuture<>();
     if (cacheMiss) {
-      measuringTimeTaken(
-          () ->
-              mainLogicInputsByReq.forEach(
-                  (requestId, mainLogicInputs) -> {
-                    CompletableFuture<Object> mainLogicResult =
-                        executeDecoratedMainLogic(
-                            mainLogicInputs.allInputsAndDependencies(),
-                            mainLogicDefinition,
-                            dependantChain);
-                    resultsCache.put(mainLogicInputs.nonDependencyInputs(), mainLogicResult);
-                    resultsByRequest.put(
-                        requestId, mainLogicResult.handle(ValueOrError::valueOrError));
-                  }),
-          timeTaken -> krystalNodeMetrics.executeMainLogicTimeNs += timeTaken.toNanos());
-      krystalNodeMetrics.executeMainLogicCount++;
+      executeDecoratedMainLogic(
+          mainLogicDefinition, mainLogicInputsByReq, resultsByRequest, dependantChain);
     }
 
     allOf(resultsByRequest.values().toArray(CompletableFuture[]::new))
@@ -1039,17 +1100,39 @@ class Node {
     return resultForBatch;
   }
 
-  private CompletableFuture<Object> executeDecoratedMainLogic(
-      Inputs mainLogicInputsList,
+  private void executeDecoratedMainLogic(
       MainLogicDefinition<Object> mainLogicDefinition,
+      Map<RequestId, MainLogicInputs> mainLogicInputsByReq,
+      Map<RequestId, CompletableFuture<ValueOrError<Object>>> resultsByRequest,
       DependantChain dependantChain) {
-    SortedSet<MainLogicDecorator> sortedDecorators = getSortedDecorators(dependantChain);
-    MainLogic<Object> logic = mainLogicDefinition::execute;
+    MainLogic<Object> finalLogic =
+        measuringTimeTaken(
+            () -> {
+              NavigableSet<MainLogicDecorator> sortedDecorators =
+                  getSortedDecorators(dependantChain);
+              MainLogic<Object> logic = mainLogicDefinition::execute;
 
-    for (MainLogicDecorator mainLogicDecorator : sortedDecorators) {
-      logic = mainLogicDecorator.decorateLogic(logic, mainLogicDefinition);
-    }
-    return logic.execute(ImmutableList.of(mainLogicInputsList)).values().iterator().next();
+              for (MainLogicDecorator mainLogicDecorator : sortedDecorators) {
+                logic = mainLogicDecorator.decorateLogic(logic, mainLogicDefinition);
+              }
+              return logic;
+            },
+            timeTaken -> krystalNodeMetrics.decorateMainLogicTimeNs += timeTaken.toNanos());
+    mainLogicInputsByReq.forEach(
+        (requestId, mainLogicInputs) -> {
+          CompletableFuture<Object> mainLogicResult =
+              measuringTimeTaken(
+                  () ->
+                      finalLogic
+                          .execute(ImmutableList.of(mainLogicInputs.allInputsAndDependencies()))
+                          .values()
+                          .iterator()
+                          .next(),
+                  timeTaken -> krystalNodeMetrics.executeMainLogicTimeNs += timeTaken.toNanos());
+          resultsCache.put(mainLogicInputs.nonDependencyInputs(), mainLogicResult);
+          resultsByRequest.put(requestId, mainLogicResult.handle(ValueOrError::valueOrError));
+        });
+    krystalNodeMetrics.executeMainLogicCount++;
   }
 
   private MainLogicInputs getInputsForMainLogic(RequestId requestId) {
@@ -1080,6 +1163,7 @@ class Node {
   }
 
   private NavigableSet<MainLogicDecorator> getSortedDecorators(DependantChain dependantChain) {
+
     MainLogicDefinition<Object> mainLogicDefinition = nodeDefinition.getMainLogicDefinition();
     Map<String, MainLogicDecorator> decorators =
         new LinkedHashMap<>(

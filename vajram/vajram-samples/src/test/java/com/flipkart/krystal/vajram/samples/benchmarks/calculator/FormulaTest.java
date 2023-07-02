@@ -65,16 +65,57 @@ class FormulaTest {
     KrystalNodeExecutorMetrics[] metrics = new KrystalNodeExecutorMetrics[loopCount];
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
+    /*
+    GRANULAR + INCREMETAL
+    Throughput executions/s: 33971
+    KrystalNodeExecutorMetrics{
+      totalNodeTimeNs                 4m 15s 259366054ns
+      computeNodeCommandsTime         2m 9s 246590027ns
+      propagateNodeCommands           0m 12s 820437733ns
+      executeMainLogicTime            1m 4s 789491305ns
+      registerDepCallbacksTime        0m 8s 84212158ns
+      allResolversExecutedTime        0m 0s 0ns
+      flushDependencyIfNeededTime     0m 8s 90879031ns
+
+      commandQueuedCount              12,000,000
+      commandQueueBypassedCount       0
+      nodeInputsBatchCount            0
+      depCallbackBatchCount           0
+      executeMainLogicCount           3,000,000
+
+
+      BATCH + ONE_SHOT
+      Throughput executions/s: 31688
+      KrystalNodeExecutorMetrics{
+        totalNodeTimeNs                 4m 56s 161824764ns
+        computeNodeCommandsTime         2m 8s 977622263ns
+        propagateNodeCommands           0m 38s 102987106ns
+        executeMainLogicTime            1m 9s 610911434ns
+        registerDepCallbacksTime        0m 27s 213733999ns
+        allResolversExecutedTime        0m 7s 771743138ns
+        flushDependencyIfNeededTime     0m 8s 681010976ns
+
+        commandQueuedCount              11,000,000
+        commandQueueBypassedCount       0
+        nodeInputsBatchCount            3,000,000
+        depCallbackBatchCount           2,000,000
+        executeMainLogicCount           3,000,000
+      }
+    }
+     */
     long startTime = System.nanoTime();
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
           graph.createExecutor(
               new FormulaRequestContext(100, 20, 5, "formulaTest")
-              /*, KrystalNodeExecutorConfig.builder()
-              .nodeExecStrategy(NodeExecStrategy.BATCH)
-              .dependencyExecStrategy(DependencyExecStrategy.ONE_SHOT)
-              .build()*/
+              //
+              /*   ,
+              KrystalNodeExecutorConfig.builder()
+                  .nodeExecStrategy(NodeExecStrategy.GRANULAR)
+                  .dependencyExecStrategy(DependencyExecStrategy.INCREMENTAL)
+                  .build()*/
+              //
               )) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[value] =
@@ -127,7 +168,7 @@ class FormulaTest {
   @Disabled("Long running benchmark (~16s)")
   @Test
   void vajram_benchmark_2() throws Exception {
-    int outerLoopCount = 1;
+    int outerLoopCount = 100;
     int innerLoopCount = 10000;
 
     int loopCount = outerLoopCount * innerLoopCount;
@@ -145,7 +186,16 @@ class FormulaTest {
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
-          graph.createExecutor(new FormulaRequestContext(100, 20, 5, "formulaTest"))) {
+          graph.createExecutor(
+              new FormulaRequestContext(100, 20, 5, "formulaTest")
+              //
+              /*   ,
+              KrystalNodeExecutorConfig.builder()
+                  .nodeExecStrategy(NodeExecStrategy.GRANULAR)
+                  .dependencyExecStrategy(DependencyExecStrategy.INCREMENTAL)
+                  .build()*/
+              //
+              )) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         KrystalNodeExecutorMetrics krystalNodeMetrics =
             ((KrystalNodeExecutor) krystexVajramExecutor.getKrystalExecutor())
