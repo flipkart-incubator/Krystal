@@ -128,12 +128,12 @@ class FormulaTest {
   @Test
   @Order(3)
   void vajram_benchmark_2() throws Exception {
-    int outerLoopCount = 1_000;
-    int innerLoopCount = 1000;
+    int outerLoopCount = 10_000;
+    int innerLoopCount = 100;
     int loopCount = outerLoopCount * innerLoopCount;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();
     graph.registerInputModulators(
-        vajramID(Adder.ID), InputModulatorConfig.simple(() -> new Batcher<>(1000)));
+        vajramID(Adder.ID), InputModulatorConfig.simple(() -> new Batcher<>(innerLoopCount)));
     long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
     long javaFuturesTimeNs = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
     //noinspection unchecked
@@ -170,7 +170,7 @@ class FormulaTest {
                       }
                     }))
         .succeedsWithin(Duration.ofSeconds(1));
-    assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1000);
+    assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(outerLoopCount);
     /*
        Old code performance:
        Total java method time: 29,883,631
