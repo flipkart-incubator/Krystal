@@ -72,6 +72,7 @@ import java.util.stream.Stream;
 /*
    handlePostResolution()
 */
+@SuppressWarnings({"ClassWithTooManyFields", "OverlyComplexClass"})
 class Node {
 
   private final NodeId nodeId;
@@ -624,7 +625,6 @@ class Node {
       return emptyList();
     }
 
-
     List<NodeInputCommand> nodeRequestCommands = new ArrayList<>();
 
     Map<String, List<ResolverDefinition>> resolversByDependency =
@@ -1057,25 +1057,12 @@ class Node {
     Map<RequestId, CompletableFuture<ValueOrError<Object>>> resultsByRequest =
         new LinkedHashMap<>();
 
-    boolean cacheMiss = false;
     for (RequestId requestId : requestIds) {
-      MainLogicInputs mainLogicInputs = getInputsForMainLogic(requestId);
-      // Retrieve existing result from cache if result for this set of inputs has already been
-      // calculated
-      CompletableFuture<Object> cachedResult =
-          resultsCache.get(mainLogicInputs.nonDependencyInputs());
-      mainLogicInputsByReq.put(requestId, mainLogicInputs);
-      if (cachedResult == null) {
-        cacheMiss = true;
-      } else {
-        resultsByRequest.put(requestId, cachedResult.handle(ValueOrError::valueOrError));
-      }
+      mainLogicInputsByReq.put(requestId, getInputsForMainLogic(requestId));
     }
     CompletableFuture<Map<RequestId, NodeResponse>> resultForBatch = new CompletableFuture<>();
-    if (cacheMiss) {
-      executeDecoratedMainLogic(
-          mainLogicDefinition, mainLogicInputsByReq, resultsByRequest, dependantChain);
-    }
+    executeDecoratedMainLogic(
+        mainLogicDefinition, mainLogicInputsByReq, resultsByRequest, dependantChain);
 
     allOf(resultsByRequest.values().toArray(CompletableFuture[]::new))
         .whenComplete(
@@ -1120,17 +1107,23 @@ class Node {
             timeTaken -> krystalNodeMetrics.decorateMainLogicTimeNs += timeTaken.toNanos());
     mainLogicInputsByReq.forEach(
         (requestId, mainLogicInputs) -> {
-          CompletableFuture<Object> mainLogicResult =
-              measuringTimeTaken(
-                  () ->
-                      finalLogic
-                          .execute(ImmutableList.of(mainLogicInputs.allInputsAndDependencies()))
-                          .values()
-                          .iterator()
-                          .next(),
-                  timeTaken -> krystalNodeMetrics.executeMainLogicTimeNs += timeTaken.toNanos());
-          resultsCache.put(mainLogicInputs.nonDependencyInputs(), mainLogicResult);
-          resultsByRequest.put(requestId, mainLogicResult.handle(ValueOrError::valueOrError));
+          // Retrieve existing result from cache if result for this set of inputs has already been
+          // calculated
+          CompletableFuture<Object> cachedResult =
+              resultsCache.get(mainLogicInputs.nonDependencyInputs());
+          if (cachedResult == null) {
+            cachedResult =
+                measuringTimeTaken(
+                    () ->
+                        finalLogic
+                            .execute(ImmutableList.of(mainLogicInputs.allInputsAndDependencies()))
+                            .values()
+                            .iterator()
+                            .next(),
+                    timeTaken -> krystalNodeMetrics.executeMainLogicTimeNs += timeTaken.toNanos());
+            resultsCache.put(mainLogicInputs.nonDependencyInputs(), cachedResult);
+          }
+          resultsByRequest.put(requestId, cachedResult.handle(ValueOrError::valueOrError));
         });
     krystalNodeMetrics.executeMainLogicCount++;
   }

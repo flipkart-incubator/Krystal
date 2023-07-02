@@ -538,6 +538,7 @@
           <option value="NumericCastThatLosesPrecision" />
           <option value="ResultOfMethodCallIgnored" />
           <option value="PackageVisibleField" />
+          <option value="ClassWithTooManyFields" />
         </list>
       </option>
     </inspection_tool>
