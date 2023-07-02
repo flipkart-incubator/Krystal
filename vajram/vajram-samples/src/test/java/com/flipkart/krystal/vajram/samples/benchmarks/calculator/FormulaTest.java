@@ -164,12 +164,25 @@ class FormulaTest {
         timeToEnqueueVajram,
         vajramTimeNs);
   }
-
+/*
+BATCH
+int outerLoopCount = 100;
+int innerLoopCount = 10000;
+Throughput executions/s: 24379
+KrystalNodeExecutorMetrics{
+  totalNodeTimeNs                 7m 19s 46633901ns
+  computeNodeCommandsTime         3m 22s 103212344ns
+  propagateNodeCommands           0m 17s 169845765ns
+  executeMainLogicTime            2m 28s 354621641ns
+  registerDepCallbacksTime        0m 10s 958042969ns
+  handleResolverCommandTime       0m 22s 262713588ns
+  executeResolversTime            1m 16s 966988741ns
+ */
   @Disabled("Long running benchmark (~16s)")
   @Test
   void vajram_benchmark_2() throws Exception {
-    int outerLoopCount = 1_000;
-    int innerLoopCount = 1000;
+    int outerLoopCount = 100;
+    int innerLoopCount = 10000;
 
     int loopCount = outerLoopCount * innerLoopCount;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();

@@ -6,12 +6,12 @@ import java.time.Duration;
 public final class KrystalNodeExecutorMetrics {
 
   long totalNodeTimeNs;
-  long computeNodeCommandsTimeNs;
+  long mainLogicIfPossibleTimeNs;
+  long computeInputsForExecuteTimeNs;
   long propagateNodeCommandsNs;
   long executeMainLogicTimeNs;
-  long registerDepCallbacksTimeNs;
-  long flushDependencyIfNeededTimeNs;
-  long decorateMainLogicTimeNs;
+  long handleResolverCommandTimeNs;
+  long executeResolversTimeNs;
 
   long commandQueuedCount;
   long commandQueueBypassedCount;
@@ -21,12 +21,12 @@ public final class KrystalNodeExecutorMetrics {
 
   public void add(KrystalNodeExecutorMetrics other) {
     totalNodeTimeNs += other.totalNodeTimeNs;
-    computeNodeCommandsTimeNs += other.computeNodeCommandsTimeNs;
+    computeInputsForExecuteTimeNs += other.computeInputsForExecuteTimeNs;
     propagateNodeCommandsNs += other.propagateNodeCommandsNs;
     executeMainLogicTimeNs += other.executeMainLogicTimeNs;
-    registerDepCallbacksTimeNs += other.registerDepCallbacksTimeNs;
-    flushDependencyIfNeededTimeNs += other.flushDependencyIfNeededTimeNs;
-    decorateMainLogicTimeNs += other.decorateMainLogicTimeNs;
+    mainLogicIfPossibleTimeNs += other.mainLogicIfPossibleTimeNs;
+    handleResolverCommandTimeNs += other.handleResolverCommandTimeNs;
+    executeResolversTimeNs += other.executeResolversTimeNs;
 
     commandQueuedCount += other.commandQueuedCount;
     commandQueueBypassedCount += other.commandQueueBypassedCount;
@@ -40,12 +40,13 @@ public final class KrystalNodeExecutorMetrics {
     return """
               KrystalNodeExecutorMetrics{
                 totalNodeTimeNs                 %s
-                computeNodeCommandsTime         %s
+                mainLogicIfPossibleTimeNs       %s
+                
+                computeInputsForExecuteTimeNs   %s
+                executeResolversTime            %s
+                handleResolverCommandTime       %s
                 propagateNodeCommands           %s
                 executeMainLogicTime            %s
-                registerDepCallbacksTime        %s
-                flushDependencyIfNeededTime     %s
-                decorateMainLogicTime           %s
 
                 commandQueuedCount              %,d
                 commandQueueBypassedCount       %,d
@@ -56,12 +57,12 @@ public final class KrystalNodeExecutorMetrics {
               """
         .formatted(
             toString(Duration.ofNanos(totalNodeTimeNs)),
-            toString(Duration.ofNanos(computeNodeCommandsTimeNs)),
+            toString(Duration.ofNanos(mainLogicIfPossibleTimeNs)),
+            toString(Duration.ofNanos(computeInputsForExecuteTimeNs)),
+            toString(Duration.ofNanos(executeResolversTimeNs)),
+            toString(Duration.ofNanos(handleResolverCommandTimeNs)),
             toString(Duration.ofNanos(propagateNodeCommandsNs)),
             toString(Duration.ofNanos(executeMainLogicTimeNs)),
-            toString(Duration.ofNanos(registerDepCallbacksTimeNs)),
-            toString(Duration.ofNanos(flushDependencyIfNeededTimeNs)),
-            toString(Duration.ofNanos(decorateMainLogicTimeNs)),
             commandQueuedCount,
             commandQueueBypassedCount,
             nodeInputsBatchCount,
