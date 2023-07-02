@@ -63,17 +63,17 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-/*
-   handlePostResolution()
-*/
 @SuppressWarnings({"ClassWithTooManyFields", "OverlyComplexClass"})
 class Node {
+
+  private static final long TIMEOUT_MS = 1000000;
 
   private final NodeId nodeId;
 
@@ -220,8 +220,12 @@ class Node {
             propagateCommands(nodeInputBatchCommand, commandsByDepName);
             Map<RequestId, NodeResponse> skipResults = new LinkedHashMap<>();
             subCommands.values().stream()
-                .filter(c -> c instanceof SkipNode)
-                .map(c -> (SkipNode) c)
+                .map(
+                    c ->
+                        skipLogicRequested
+                            .getOrDefault(c.requestId(), Optional.empty())
+                            .orElse(null))
+                .filter(Objects::nonNull)
                 .forEach(
                     skipNode -> {
                       skipResults.put(
@@ -235,8 +239,12 @@ class Node {
             Optional<CompletableFuture<Map<RequestId, NodeResponse>>> mainLogicFuture =
                 executeMainLogicIfPossible(
                     subCommands.values().stream()
-                        .filter(c -> !(c instanceof SkipNode))
                         .map(NodeRequestCommand::requestId)
+                        .filter(
+                            key ->
+                                skipLogicRequested
+                                    .getOrDefault(key, Optional.empty())
+                                    .isEmpty())
                         .toList(),
                     nodeInputBatchCommand.dependantChain());
             if (mainLogicFuture.isPresent()) {
@@ -884,12 +892,11 @@ class Node {
                                 dependencyExecutions
                                     .getOrDefault(requestId, ImmutableMap.of())
                                     .getOrDefault(dependencyName, new DependencyNodeExecutions()))
-                        .toList()
-                        .stream()
                         .map(DependencyNodeExecutions::individualCallResponses)
                         .map(Map::values)
                         .flatMap(Collection::stream)
                         .toArray(CompletableFuture[]::new))
+                .orTimeout(TIMEOUT_MS, TimeUnit.MILLISECONDS)
                 .whenComplete(
                     (unused, throwable) -> {
                       enqueueOrExecuteBatchCommand(

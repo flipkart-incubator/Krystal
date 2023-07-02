@@ -22,13 +22,13 @@ public record KrystalNodeExecutorConfig(
 
   public KrystalNodeExecutorConfig {
     if (nodeExecStrategy == null) {
-      nodeExecStrategy = NodeExecStrategy.GRANULAR;
-    }
-    if (graphTraversalStrategy == null) {
-      graphTraversalStrategy = GraphTraversalStrategy.DEPTH;
+      nodeExecStrategy = NodeExecStrategy.BATCH;
     }
     if (dependencyExecStrategy == null) {
       dependencyExecStrategy = DependencyExecStrategy.ONE_SHOT;
+    }
+    if (graphTraversalStrategy == null) {
+      graphTraversalStrategy = GraphTraversalStrategy.BREADTH;
     }
     if (disabledDependantChains == null) {
       disabledDependantChains = ImmutableSet.of();

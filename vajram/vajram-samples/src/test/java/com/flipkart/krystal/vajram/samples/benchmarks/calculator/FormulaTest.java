@@ -168,8 +168,8 @@ class FormulaTest {
   @Disabled("Long running benchmark (~16s)")
   @Test
   void vajram_benchmark_2() throws Exception {
-    int outerLoopCount = 100;
-    int innerLoopCount = 10000;
+    int outerLoopCount = 1_000;
+    int innerLoopCount = 1000;
 
     int loopCount = outerLoopCount * innerLoopCount;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();

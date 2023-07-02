@@ -256,7 +256,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       return enqueueCommand(() -> _executeBatchCommand(nodeCommand)).thenCompose(identity());
     } else {
       krystalNodeMetrics.commandQueueBypassedCount++;
-      return executeBatchCommand(nodeCommand);
+      return _executeBatchCommand(nodeCommand);
     }
   }
 
