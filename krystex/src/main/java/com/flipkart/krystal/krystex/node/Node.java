@@ -196,20 +196,18 @@ class Node {
           CompletableFuture<NodeBatchResponse> batchFuture =
               resultsByBatch.computeIfAbsent(
                   nodeInputBatchCommand.dependantChain(), requestId -> new CompletableFuture<>());
+          if (batchFuture.isDone()) {
+            // This is possible if this node was already skipped, for example.
+            // If the result for this requestId is already available, just return and avoid
+            // unnecessary
+            // computation.
+            return batchFuture;
+          }
           try {
-            for (Entry<RequestId, ? extends NodeRequestCommand> entry : subCommands.entrySet()) {
-              RequestId requestId = entry.getKey();
-              NodeRequestCommand nodeRequestCommand = entry.getValue();
-              if (batchFuture.isDone()) {
-                // This is possible if this node was already skipped, for example.
-                // If the result for this requestId is already available, just return and avoid
-                // unnecessary
-                // computation.
-                continue;
-              }
-            }
 
-            propagateCommands(nodeInputBatchCommand, computeNodeCommands(nodeInputBatchCommand));
+            Map<String, Map<RequestId, List<NodeInputCommand>>> outgoingCommandsByDep =
+                computeNodeCommands(nodeInputBatchCommand);
+            propagateCommands(nodeInputBatchCommand, outgoingCommandsByDep);
             Map<RequestId, NodeResponse> skipResults = new LinkedHashMap<>();
             subCommands.values().stream()
                 .map(
@@ -363,6 +361,8 @@ class Node {
   private Map<String, Map<RequestId, List<NodeInputCommand>>> computeNodeCommands(
       BatchCommand<?> batchCommand) {
     Map<String, Map<RequestId, List<NodeInputCommand>>> nodeInputCommands = new LinkedHashMap<>();
+    List<ExecuteWithDependency> executeWithDependencyList = new ArrayList<>();
+    List<ExecuteWithInputs> executeWithInputsList = new ArrayList<>();
     measuringTimeTaken(
             () -> {
               Set<RequestId> allRequestIds = batchCommand.subCommands().keySet();
@@ -371,17 +371,15 @@ class Node {
                       batchCommand.dependantChain(),
                       k -> new LinkedHashSet<>(allRequestIds.size()));
               List<SkipNode> skipCommands = new ArrayList<>();
-              List<ExecuteWithDependency> executeWithDependencyList = new ArrayList<>();
-              List<ExecuteWithInputs> executeWithInputsList = new ArrayList<>();
 
               batchCommand
                   .subCommands()
                   .forEach(
-                      (requestId1, nodeCommand) -> {
-                        requestsByDepChain.add(requestId1);
-                        dependantChainByRequest.put(requestId1, batchCommand.dependantChain());
+                      (requestId, nodeCommand) -> {
+                        requestsByDepChain.add(requestId);
+                        dependantChainByRequest.put(requestId, batchCommand.dependantChain());
                         if (nodeCommand instanceof SkipNode skipNode) {
-                          skipLogicRequested.put(requestId1, Optional.of(skipNode));
+                          skipLogicRequested.put(requestId, Optional.of(skipNode));
                           skipCommands.add(skipNode);
                         } else if (nodeCommand
                             instanceof ExecuteWithDependency executeWithDependency) {

@@ -158,11 +158,54 @@ class ChainAdderTest {
         vajramTimeNs);
   }
 
+  /*
+  BATCH
+    int innerLoopCount = 500;
+    int outerLoopCount = 100;
+  Throughput executions/s: 1408
+  KrystalNodeExecutorMetrics{
+    totalNodeTimeNs                 6m 6s 163614657ns
+    mainLogicIfPossibleTimeNs       0m 55s 107536935ns
+
+    computeInputsForExecuteTimeNs   1m 30s 405429364ns
+    executeResolversTime            0m 43s 393278994ns
+    handleResolverCommandTime       0m 55s 98049010ns
+    propagateNodeCommands           0m 46s 384250313ns
+    executeMainLogicTime            0m 37s 150854203ns
+
+    commandQueuedCount              55,800
+    commandQueueBypassedCount       0
+    nodeInputsBatchCount            1,800
+    depCallbackBatchCount           1,800
+    executeMainLogicCount           1,700
+
+    int innerLoopCount = 250;
+    int outerLoopCount = 200;
+    Throughput executions/s: 1439
+    KrystalNodeExecutorMetrics{
+      totalNodeTimeNs                 6m 15s 370943064ns
+      mainLogicIfPossibleTimeNs       1m 2s 415908678ns
+
+      computeInputsForExecuteTimeNs   1m 23s 1714652ns
+      executeResolversTime            0m 49s 842523610ns
+      handleResolverCommandTime       0m 51s 111124710ns
+      propagateNodeCommands           0m 46s 652243222ns
+      executeMainLogicTime            0m 45s 877527805ns
+
+      commandQueuedCount              61,600
+      commandQueueBypassedCount       0
+      nodeInputsBatchCount            3,600
+      depCallbackBatchCount           3,600
+      executeMainLogicCount           3,400
+    }
+
+  }
+   */
   @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark_2() throws Exception {
-    int innerLoopCount = 500;
-    int outerLoopCount = 100;
+    int innerLoopCount = 250;
+    int outerLoopCount = 200;
     int loopCount = outerLoopCount * innerLoopCount;
 
     long javaNativeTimeNs = javaMethodBenchmark(this::chainAdd, loopCount);
