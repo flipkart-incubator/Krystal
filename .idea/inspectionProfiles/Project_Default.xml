@@ -432,6 +432,9 @@
     </inspection_tool>
     <inspection_tool class="ParameterizedParametersStaticCollection" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="ParametersPerMethod" enabled="true" level="WARNING" enabled_by_default="true">
+      <scope name="Tests" level="WARNING" enabled="false">
+        <option name="m_limit" value="7" />
+      </scope>
       <option name="m_limit" value="7" />
     </inspection_tool>
     <inspection_tool class="PlaceholderCountMatchesArgumentCount" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -534,6 +537,7 @@
           <option value="Singleton" />
           <option value="NumericCastThatLosesPrecision" />
           <option value="ResultOfMethodCallIgnored" />
+          <option value="PackageVisibleField" />
         </list>
       </option>
     </inspection_tool>

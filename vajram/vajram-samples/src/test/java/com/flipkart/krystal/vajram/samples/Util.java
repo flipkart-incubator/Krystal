@@ -1,11 +1,10 @@
 package com.flipkart.krystal.vajram.samples;
 
-import static java.time.Duration.ofNanos;
-import static java.util.Arrays.stream;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutorMetrics;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -73,20 +72,15 @@ public final class Util {
       long timeToEnqueueVajram,
       long vajramTimeNs) {
     int loopCount = outerLoopCount * innerLoopCount;
+    KrystalNodeExecutorMetrics metricsSum = new KrystalNodeExecutorMetrics();
+    Arrays.stream(metrics).forEach(metricsSum::add);
     System.out
         .printf("Loop Count: %,d%n", loopCount)
         .printf("Avg. time to Create Executors:%,d ns%n", timeToCreateExecutors / outerLoopCount)
         .printf("Avg. time to Enqueue vajrams:%,d ns%n", timeToEnqueueVajram / loopCount)
         .printf("Avg. time to execute vajrams:%,d ns%n", vajramTimeNs / loopCount)
-        .printf("Throughput executions/s: %d%n", loopCount / ofNanos(vajramTimeNs).toSeconds())
-        .printf(
-            "CommandsQueuedCount: %,d%n",
-            stream(metrics).mapToInt(KrystalNodeExecutorMetrics::getCommandQueuedCount).sum())
-        .printf(
-            "CommandQueueBypassedCount: %,d%n",
-            stream(metrics)
-                .mapToInt(KrystalNodeExecutorMetrics::getCommandQueueBypassedCount)
-                .sum())
+        .printf("Throughput executions/s: %d%n", loopCount * 1_000_000_000L / vajramTimeNs)
+        .printf("%s%n", metricsSum)
         .printf(
             "Platform overhead over native code: %,.0f ns per request%n",
             (1.0 * vajramTimeNs - javaNativeTimeNs) / loopCount)

@@ -168,7 +168,7 @@ class ChainAdderTest {
             ChainAdderRequest.builder()
                 .numbers(
                     new ArrayList<>(
-                        Stream.of(1, 2)
+                        Stream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
                             .map(integer -> integer + multiplier * 10)
                             .toList()))
                 .build(),
@@ -237,13 +237,13 @@ class ChainAdderTest {
     return ImmutableSet.of(
         graph.computeDependantChain(
             ChainAdder.ID,
-//            chainSum_n,
-//            chainSum_n,
-//            chainSum_n,
-//            chainSum_n,
-//            chainSum_n,
-//            chainSum_n,
-//            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
+            chainSum_n,
             chainSum_n,
             chainSum_n));
   }
