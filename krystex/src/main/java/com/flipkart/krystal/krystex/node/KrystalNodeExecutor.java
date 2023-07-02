@@ -1,7 +1,6 @@
 package com.flipkart.krystal.krystex.node;
 
-import static com.flipkart.krystal.krystex.node.KrystalNodeExecutor.CommandOrderStrategy.BREADTH;
-import static com.flipkart.krystal.krystex.node.KrystalNodeExecutor.NodeExecStrategy.BATCH;
+import static com.flipkart.krystal.krystex.node.KrystalNodeExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.node.KrystalNodeExecutor.NodeExecStrategy.GRANULAR;
 import static com.flipkart.krystal.utils.Futures.linkFutures;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -27,7 +26,6 @@ import com.flipkart.krystal.krystex.commands.NodeInputCommand;
 import com.flipkart.krystal.krystex.commands.NodeRequestCommand;
 import com.flipkart.krystal.krystex.commands.SkipNode;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
-import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
@@ -57,17 +55,23 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
   public enum NodeExecStrategy {
     GRANULAR,
-    BATCH;
+    BATCH
   }
 
-  public enum CommandOrderStrategy {
+  public enum GraphTraversalStrategy {
     BREADTH,
-    DEPTH;
+    DEPTH
+  }
+
+  public enum DependencyExecStrategy {
+    INCREMENTAL,
+    ONE_SHOT
   }
 
   private final NodeDefinitionRegistry nodeDefinitionRegistry;
-  private final LogicDecorationOrdering logicDecorationOrdering;
   private final Lease<? extends ExecutorService> commandQueueLease;
+
+  private final KrystalNodeExecutorConfig executorConfig;
   private final String instanceId;
 
   /**
@@ -81,8 +85,6 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
           List<MainLogicDecoratorConfig>>
       requestScopedLogicDecoratorConfigs;
 
-  private final ImmutableSet<DependantChain> disabledDependantChains;
-
   private final Map<
           String, // DecoratorType
           Map<
@@ -91,10 +93,9 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       requestScopedMainDecorators = new LinkedHashMap<>();
   private final NodeRegistry nodeRegistry = new NodeRegistry();
   private final KrystalNodeExecutorMetrics krystalNodeMetrics;
-  private final NodeExecStrategy nodeExecStrategy;
-  private final CommandOrderStrategy commandOrderStrategy;
   private volatile boolean closed;
   private final Map<RequestId, NodeResult> allRequests = new LinkedHashMap<>();
+
   private final Set<RequestId> unFlushedRequests = new LinkedHashSet<>();
 
   private final Map<NodeId, Set<DependantChain>> dependantChainsPerNode = new LinkedHashMap<>();
@@ -102,35 +103,14 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   public KrystalNodeExecutor(
       NodeDefinitionRegistry nodeDefinitionRegistry,
       MultiLeasePool<? extends ExecutorService> commandQueuePool,
-      KrystalNodeExecutorConfig config,
+      KrystalNodeExecutorConfig executorConfig,
       String instanceId) {
-    this(
-        nodeDefinitionRegistry,
-        commandQueuePool,
-        config.logicDecorationOrdering(),
-        config.requestScopedLogicDecoratorConfigs(),
-        config.disabledDependantChains(),
-        instanceId,
-        NodeExecStrategy.BATCH);
-  }
-
-  public KrystalNodeExecutor(
-      NodeDefinitionRegistry nodeDefinitionRegistry,
-      MultiLeasePool<? extends ExecutorService> commandQueuePool,
-      LogicDecorationOrdering logicDecorationOrdering,
-      Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs,
-      ImmutableSet<DependantChain> disabledDependantChains,
-      String instanceId,
-      NodeExecStrategy nodeExecStrategy) {
-    this.nodeExecStrategy = GRANULAR;
-    this.commandOrderStrategy = BREADTH;
     this.nodeDefinitionRegistry = nodeDefinitionRegistry;
-    this.logicDecorationOrdering = logicDecorationOrdering;
     this.commandQueueLease = commandQueuePool.lease();
+    this.executorConfig = executorConfig;
     this.instanceId = instanceId;
     this.requestScopedLogicDecoratorConfigs =
-        ImmutableMap.copyOf(requestScopedLogicDecoratorConfigs);
-    this.disabledDependantChains = disabledDependantChains;
+        ImmutableMap.copyOf(executorConfig.requestScopedLogicDecoratorConfigs());
     this.krystalNodeMetrics = new KrystalNodeExecutorMetrics();
   }
 
@@ -213,7 +193,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       NodeId nodeId, DependantChain dependantChain, NodeExecutionConfig executionConfig) {
     NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
     // If a dependantChain is disabled, don't create that node and its dependency nodes
-    if (!union(this.disabledDependantChains, executionConfig.disabledDependantChains())
+    if (!union(executorConfig.disabledDependantChains(), executionConfig.disabledDependantChains())
         .contains(dependantChain)) {
       nodeRegistry.createIfAbsent(
           nodeId,
@@ -222,7 +202,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                   nodeDefinition,
                   this,
                   this::getRequestScopedDecorators,
-                  logicDecorationOrdering,
+                  executorConfig.logicDecorationOrdering(),
+                  executorConfig.dependencyExecStrategy(),
                   krystalNodeMetrics));
       ImmutableMap<String, NodeId> dependencyNodes = nodeDefinition.dependencyNodes();
       dependencyNodes.forEach(
@@ -248,11 +229,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   void enqueueNodeBatchCommand(Supplier<BatchCommand<?>> nodeCommand) {
-    if (BREADTH.equals(commandOrderStrategy)) {
-      enqueueCommand(() -> _executeBatchCommand(nodeCommand.get())).thenCompose(identity());
-    } else {
-      executeBatchCommand(nodeCommand.get());
-    }
+    enqueueCommand(() -> _executeBatchCommand(nodeCommand.get())).thenCompose(identity());
   }
 
   /**
@@ -266,7 +243,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
    * inside the command queue.
    */
   CompletableFuture<NodeResponse> executeCommand(NodeCommand nodeCommand) {
-    if (BREADTH.equals(commandOrderStrategy)) {
+    if (BREADTH.equals(executorConfig.graphTraversalStrategy())) {
       return enqueueCommand(() -> _executeCommand(nodeCommand)).thenCompose(identity());
     } else {
       krystalNodeMetrics.commandQueueBypassedCount++;
@@ -275,7 +252,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   CompletableFuture<NodeBatchResponse> executeBatchCommand(BatchCommand<?> nodeCommand) {
-    if (BREADTH.equals(commandOrderStrategy)) {
+    if (BREADTH.equals(executorConfig.graphTraversalStrategy())) {
       return enqueueCommand(() -> _executeBatchCommand(nodeCommand)).thenCompose(identity());
     } else {
       krystalNodeMetrics.commandQueueBypassedCount++;
@@ -329,7 +306,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
         dependantChain = skipNode.dependantChain();
       }
       if (union(
-              disabledDependantChains,
+              executorConfig.disabledDependantChains(),
               allRequests
                   .get(requestId.originatedFrom())
                   .executionConfig()
@@ -339,7 +316,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       }
     } else if (nodeCommand instanceof Flush flush) {
       DependantChain dependantChain = flush.nodeDependants();
-      if (disabledDependantChains.contains(dependantChain)) {
+      if (executorConfig.disabledDependantChains().contains(dependantChain)) {
         throw new DisabledDependantChainException(dependantChain);
       }
       if (allRequests.values().stream()
@@ -375,7 +352,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                 batchCommands
                     .computeIfAbsent(nodeId, _n -> new LinkedHashMap<>())
                     .put(requestId, nodeCommand);
-                if (GRANULAR.equals(nodeExecStrategy)) {
+                if (GRANULAR.equals(executorConfig.nodeExecStrategy())) {
                   CompletableFuture<Object> submissionResult =
                       executeCommand(nodeCommand)
                           .thenApply(NodeResponse::response)
@@ -391,7 +368,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                 }
               });
 
-          if (NodeExecStrategy.BATCH.equals(nodeExecStrategy)) {
+          if (NodeExecStrategy.BATCH.equals(executorConfig.nodeExecStrategy())) {
             batchCommands.forEach(
                 (nodeId, nodeRequestCommands) -> {
                   CompletableFuture<NodeBatchResponse> f =

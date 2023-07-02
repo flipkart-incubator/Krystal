@@ -35,6 +35,7 @@ import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.DependencyExecStrategy;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
 import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
@@ -123,13 +124,8 @@ class Node {
   private final Map<DependantChain, Set<RequestId>> requestsByDependantChain =
       new LinkedHashMap<>();
   private final Map<RequestId, DependantChain> dependantChainByRequest = new LinkedHashMap<>();
-  private final ResolverExecStrategy resolverExecStrategy;
+  private final DependencyExecStrategy dependencyExecStrategy;
   private final KrystalNodeExecutorMetrics krystalNodeMetrics;
-
-  private enum ResolverExecStrategy {
-    EARLIEST_POSSIBLE,
-    ONE_SHOT
-  }
 
   Node(
       NodeDefinition nodeDefinition,
@@ -137,9 +133,10 @@ class Node {
       Function<LogicExecutionContext, ImmutableMap<String, MainLogicDecorator>>
           requestScopedDecoratorsSupplier,
       LogicDecorationOrdering logicDecorationOrdering,
+      DependencyExecStrategy dependencyExecStrategy,
       KrystalNodeExecutorMetrics krystalNodeMetrics) {
     this.krystalNodeMetrics = krystalNodeMetrics;
-    this.resolverExecStrategy = ResolverExecStrategy.ONE_SHOT;
+    this.dependencyExecStrategy = dependencyExecStrategy;
     this.nodeId = nodeDefinition.nodeId();
     this.nodeDefinition = nodeDefinition;
     this.krystalNodeExecutor = krystalNodeExecutor;
@@ -504,7 +501,7 @@ class Node {
     Map<ResolverDefinition, ResolverCommand> resolverCommands =
         this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
 
-    if (ResolverExecStrategy.EARLIEST_POSSIBLE.equals(resolverExecStrategy)) {
+    if (DependencyExecStrategy.INCREMENTAL.equals(dependencyExecStrategy)) {
       Set<ResolverDefinition> pendingUnboundResolvers =
           resolverDefinitionsByInput.getOrDefault(Optional.<String>empty(), emptyList()).stream()
               .filter(resolverDefinition -> !resolverCommands.containsKey(resolverDefinition))

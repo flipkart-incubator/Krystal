@@ -15,7 +15,6 @@ import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.NodeExecStrategy;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -46,11 +45,8 @@ class KrystalNodeExecutorTest {
         new KrystalNodeExecutor(
             nodeDefinitionRegistry,
             new ForkJoinExecutorPool(1),
-            new LogicDecorationOrdering(ImmutableSet.of()),
-            ImmutableMap.of(),
-            ImmutableSet.of(),
-            "test",
-            NodeExecStrategy.BATCH);
+            KrystalNodeExecutorConfig.builder().nodeExecStrategy(NodeExecStrategy.BATCH).build(),
+            "test");
   }
 
   @AfterEach

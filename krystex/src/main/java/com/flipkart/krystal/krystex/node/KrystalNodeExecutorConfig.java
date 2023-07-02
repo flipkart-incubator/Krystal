@@ -2,6 +2,9 @@ package com.flipkart.krystal.krystex.node;
 
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.GraphTraversalStrategy;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.NodeExecStrategy;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.DependencyExecStrategy;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
@@ -12,24 +15,29 @@ import lombok.Builder;
 public record KrystalNodeExecutorConfig(
     LogicDecorationOrdering logicDecorationOrdering,
     Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs,
-    ImmutableSet<DependantChain> disabledDependantChains) {
+    ImmutableSet<DependantChain> disabledDependantChains,
+    NodeExecStrategy nodeExecStrategy,
+    GraphTraversalStrategy graphTraversalStrategy,
+    DependencyExecStrategy dependencyExecStrategy) {
 
-  @Override
-  public ImmutableSet<DependantChain> disabledDependantChains() {
-    return disabledDependantChains != null ? disabledDependantChains : ImmutableSet.of();
-  }
-
-  @Override
-  public LogicDecorationOrdering logicDecorationOrdering() {
-    return logicDecorationOrdering != null
-        ? logicDecorationOrdering
-        : LogicDecorationOrdering.none();
-  }
-
-  @Override
-  public Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs() {
-    return requestScopedLogicDecoratorConfigs != null
-        ? requestScopedLogicDecoratorConfigs
-        : ImmutableMap.of();
+  public KrystalNodeExecutorConfig {
+    if (nodeExecStrategy == null) {
+      nodeExecStrategy = NodeExecStrategy.BATCH;
+    }
+    if (graphTraversalStrategy == null) {
+      graphTraversalStrategy = GraphTraversalStrategy.BREADTH;
+    }
+    if (dependencyExecStrategy == null) {
+      dependencyExecStrategy = DependencyExecStrategy.ONE_SHOT;
+    }
+    if (disabledDependantChains == null) {
+      disabledDependantChains = ImmutableSet.of();
+    }
+    if (logicDecorationOrdering == null) {
+      logicDecorationOrdering = LogicDecorationOrdering.none();
+    }
+    if (requestScopedLogicDecoratorConfigs == null) {
+      requestScopedLogicDecoratorConfigs = ImmutableMap.of();
+    }
   }
 }

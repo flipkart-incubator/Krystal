@@ -24,12 +24,9 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
-import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 
-@TestMethodOrder(OrderAnnotation.class)
 class FormulaTest {
 
   private Builder graph;
@@ -41,7 +38,6 @@ class FormulaTest {
   }
 
   @Test
-  @Order(1)
   void formula_success() throws Exception {
     CompletableFuture<Integer> future;
     VajramNodeGraph graph = this.graph.build();
@@ -55,12 +51,11 @@ class FormulaTest {
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
   }
 
-  //  @Disabled("Long running benchmark (~16s)")
+  @Disabled("Long running benchmark (~16s)")
   @Test
-  @Order(2)
   void vajram_benchmark() throws Exception {
     int loopCount = 1_000_000;
-    VajramNodeGraph graph = this.graph.maxParallelismPerCore(5).build();
+    VajramNodeGraph graph = this.graph.maxParallelismPerCore(10).build();
     graph.registerInputModulators(
         vajramID(Adder.ID), InputModulatorConfig.simple(() -> new Batcher<>(100)));
     long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
@@ -74,7 +69,13 @@ class FormulaTest {
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
-          graph.createExecutor(new FormulaRequestContext(100, 20, 5, "formulaTest"))) {
+          graph.createExecutor(
+              new FormulaRequestContext(100, 20, 5, "formulaTest")
+              /*, KrystalNodeExecutorConfig.builder()
+              .nodeExecStrategy(NodeExecStrategy.BATCH)
+              .dependencyExecStrategy(DependencyExecStrategy.ONE_SHOT)
+              .build()*/
+              )) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[value] =
             ((KrystalNodeExecutor) krystexVajramExecutor.getKrystalExecutor())
@@ -123,64 +124,11 @@ class FormulaTest {
         vajramTimeNs);
   }
 
-  //  @Disabled("Long running benchmark (~16s)")
+  @Disabled("Long running benchmark (~16s)")
   @Test
-  @Order(3)
   void vajram_benchmark_2() throws Exception {
-    int outerLoopCount = 1000;
-    int innerLoopCount = 1_000;
-    /*
-      krystalNodeExecutor.nodeExecStrategy = BATCH;
-      int outerLoopCount = 1;
-      int innerLoopCount = 1_000;
-        computeNodeCommandsTime         242,307,701 ns,
-        propagateNodeCommands           17,255,374 ns,
-        executeMainLogicTime            140,084,856 ns
-    */
-    /*
-      krystalNodeExecutor.nodeExecStrategy = BATCH;
-      int outerLoopCount = 1;
-      int innerLoopCount = 2_000;
-        computeNodeCommandsTime         309,175,222 ns,
-        propagateNodeCommands           22,042,204 ns,
-        executeMainLogicTime            260,570,055 ns
-    */
-    /*
-      int innerLoopCount = 3_000;
-      int outerLoopCount = 1;
-        krystalNodeExecutor.nodeExecStrategy = BATCH;
-          computeNodeCommandsTime         481,568,909 ns,
-          propagateNodeCommands           37,506,122 ns,
-          executeMainLogicTime            370,869,072 ns
-        krystalNodeExecutor.nodeExecStrategy = GRANULAR;
-          computeNodeCommandsTime=        364,815,805 ns,
-          propagateNodeCommands=        1,104,913,190 ns,
-          executeMainLogicTime=           334,096,017 ns
-    */
-    /*
-      int outerLoopCount = 1;
-      int innerLoopCount = 4_000;
-        krystalNodeExecutor.nodeExecStrategy = BATCH;
-          computeNodeCommandsTime         482,436,145 ns,
-          propagateNodeCommands           36,976,695 ns,
-          executeMainLogicTime            340,330,908 ns
-        krystalNodeExecutor.nodeExecStrategy = GRANULAR;
-          computeNodeCommandsTime=        434,464,327 ns,
-          propagateNodeCommands=        1,901,071,789 ns,
-          executeMainLogicTime=           364,970,125 ns
-    */
-    /*
-      int outerLoopCount = 1;
-      int innerLoopCount = 10_000;
-        krystalNodeExecutor.nodeExecStrategy = BATCH;
-          computeNodeCommandsTime         762,694,150 ns,
-          propagateNodeCommands           75,638,292 ns,
-          executeMainLogicTime            689,111,577 ns
-        krystalNodeExecutor.nodeExecStrategy = GRANULAR;
-          computeNodeCommandsTime=        845,271,269 ns,
-          propagateNodeCommands=       12,688,314,941 ns,
-          executeMainLogicTime=           748,000,652 ns
-    */
+    int outerLoopCount = 1;
+    int innerLoopCount = 10000;
 
     int loopCount = outerLoopCount * innerLoopCount;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();
