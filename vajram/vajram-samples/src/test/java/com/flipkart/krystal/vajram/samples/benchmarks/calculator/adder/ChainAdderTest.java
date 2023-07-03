@@ -159,47 +159,55 @@ class ChainAdderTest {
   }
 
   /*
-  BATCH
-    int innerLoopCount = 500;
-    int outerLoopCount = 100;
-  Throughput executions/s: 1408
-  KrystalNodeExecutorMetrics{
-    totalNodeTimeNs                 6m 6s 163614657ns
-    mainLogicIfPossibleTimeNs       0m 55s 107536935ns
-
-    computeInputsForExecuteTimeNs   1m 30s 405429364ns
-    executeResolversTime            0m 43s 393278994ns
-    handleResolverCommandTime       0m 55s 98049010ns
-    propagateNodeCommands           0m 46s 384250313ns
-    executeMainLogicTime            0m 37s 150854203ns
-
-    commandQueuedCount              55,800
+    BATCH
+      int outerLoopCount = 500;
+      int innerLoopCount = 100;
+    KrystalNodeExecutorMetrics{
+    commandQueuedCount              79,000
     commandQueueBypassedCount       0
-    nodeInputsBatchCount            1,800
-    depCallbackBatchCount           1,800
-    executeMainLogicCount           1,700
+
+    allNodeMetrics:
+    NodeMetrics {
+    totalNodeTimeNs                   4m 45s 641793036ns
+      computeInputsForExecuteTimeNs     0m 23s 149272243ns
+      executeResolversTime              0m 35s 791600285ns
+      handleResolverCommandTime         0m 41s 791962116ns
+      propagateNodeCommands             0m 38s 809592067ns
+      mainLogicIfPossibleTimeNs         0m 39s 36248968ns
+        executeMainLogicTime              0m 27s 621594253ns
+
+    nodeInputsBatchCount            9,000
+    depCallbackBatchCount           9,000
+    executeMainLogicCount           8,500
   }
 
-    int outerLoopCount = 250;
-    int innerLoopCount = 200;
-    Throughput executions/s: 1604
-    KrystalNodeExecutorMetrics{
-      totalNodeTimeNs                 5m 29s 432963588ns
-      mainLogicIfPossibleTimeNs       0m 44s 427384582ns
+  }
 
-      computeInputsForExecuteTimeNs   1m 22s 978111969ns
-      executeResolversTime            0m 42s 455732262ns
-      handleResolverCommandTime       0m 45s 234693689ns
-      propagateNodeCommands           0m 47s 240986403ns
-      executeMainLogicTime            0m 26s 752874290ns
+      Batch
+      int outerLoopCount = 250;
+      int innerLoopCount = 200;
+      Throughput executions/s: 1618
+      KrystalNodeExecutorMetrics{
+        commandQueuedCount              64,500
+        commandQueueBypassedCount       0
 
-      commandQueuedCount              64,500
-      commandQueueBypassedCount       0
-      nodeInputsBatchCount            4,500
-      depCallbackBatchCount           4,500
-      executeMainLogicCount           4,250
-    }
-   */
+        allNodeMetrics:
+        NodeMetrics {
+        totalNodeTimeNs                   5m 27s 584343391ns
+          computeInputsForExecuteTimeNs     0m 25s 374670080ns
+          executeResolversTime              0m 41s 350433974ns
+          handleResolverCommandTime         0m 40s 654925099ns
+          propagateNodeCommands             0m 44s 294566759ns
+          mainLogicIfPossibleTimeNs         0m 48s 165339269ns
+            executeMainLogicTime              0m 33s 926845476ns
+
+        nodeInputsBatchCount            4,500
+        depCallbackBatchCount           4,500
+        executeMainLogicCount           4,250
+      }
+
+      }
+     */
   @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark_2() throws Exception {
@@ -310,7 +318,7 @@ class ChainAdderTest {
       return add(numbers.get(0), numbers.get(1));
     } else {
       return chainAdd(numbers.subList(0, numbers.size() - 1))
-             + add(numbers.get(numbers.size() - 1), 0);
+          + add(numbers.get(numbers.size() - 1), 0);
     }
   }
 
@@ -364,44 +372,44 @@ class ChainAdderTest {
 
   private DependantChain[] getBatchedDepChains() {
     return new DependantChain[] {
-        graph.computeDependantChain(ChainAdder.ID, sum_n),
-        graph.computeDependantChain(ChainAdder.ID, chainSum_n, sum_n),
-        graph.computeDependantChain(ChainAdder.ID, chainSum_n, chainSum_n, sum_n),
-        graph.computeDependantChain(ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, sum_n),
-        graph.computeDependantChain(
-            ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
-        graph.computeDependantChain(
-            ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
-        graph.computeDependantChain(
-            ChainAdder.ID,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            sum_n),
-        graph.computeDependantChain(
-            ChainAdder.ID,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            sum_n),
-        graph.computeDependantChain(
-            ChainAdder.ID,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            sum_n)
+      graph.computeDependantChain(ChainAdder.ID, sum_n),
+      graph.computeDependantChain(ChainAdder.ID, chainSum_n, sum_n),
+      graph.computeDependantChain(ChainAdder.ID, chainSum_n, chainSum_n, sum_n),
+      graph.computeDependantChain(ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, sum_n),
+      graph.computeDependantChain(
+          ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
+      graph.computeDependantChain(
+          ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
+      graph.computeDependantChain(
+          ChainAdder.ID,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          sum_n),
+      graph.computeDependantChain(
+          ChainAdder.ID,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          sum_n),
+      graph.computeDependantChain(
+          ChainAdder.ID,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          sum_n)
     };
   }
 }

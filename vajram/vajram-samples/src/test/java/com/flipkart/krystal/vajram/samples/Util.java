@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.samples;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutorMetrics;
+import com.flipkart.krystal.krystex.node.NodeMetrics;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
@@ -72,7 +73,7 @@ public final class Util {
       long timeToEnqueueVajram,
       long vajramTimeNs) {
     int loopCount = outerLoopCount * innerLoopCount;
-    KrystalNodeExecutorMetrics metricsSum = new KrystalNodeExecutorMetrics();
+    KrystalNodeExecutorMetrics metricsSum = new KrystalNodeExecutorMetrics(new NodeMetrics());
     Arrays.stream(metrics).forEach(metricsSum::add);
     System.out
         .printf("Loop Count: %,d%n", loopCount)

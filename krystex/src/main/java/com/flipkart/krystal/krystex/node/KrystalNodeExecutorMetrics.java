@@ -5,69 +5,33 @@ import java.time.Duration;
 @SuppressWarnings("PackageVisibleField")
 public final class KrystalNodeExecutorMetrics {
 
-  long totalNodeTimeNs;
-  long mainLogicIfPossibleTimeNs;
-  long computeInputsForExecuteTimeNs;
-  long propagateNodeCommandsNs;
-  long executeMainLogicTimeNs;
-  long handleResolverCommandTimeNs;
-  long executeResolversTimeNs;
+  private final NodeMetrics allNodeMetrics;
 
   long commandQueuedCount;
   long commandQueueBypassedCount;
-  long nodeInputsBatchCount;
-  long depCallbackBatchCount;
-  long executeMainLogicCount;
+
+  public KrystalNodeExecutorMetrics(NodeMetrics allNodeMetrics) {
+    this.allNodeMetrics = allNodeMetrics;
+  }
 
   public void add(KrystalNodeExecutorMetrics other) {
-    totalNodeTimeNs += other.totalNodeTimeNs;
-    computeInputsForExecuteTimeNs += other.computeInputsForExecuteTimeNs;
-    propagateNodeCommandsNs += other.propagateNodeCommandsNs;
-    executeMainLogicTimeNs += other.executeMainLogicTimeNs;
-    mainLogicIfPossibleTimeNs += other.mainLogicIfPossibleTimeNs;
-    handleResolverCommandTimeNs += other.handleResolverCommandTimeNs;
-    executeResolversTimeNs += other.executeResolversTimeNs;
-
     commandQueuedCount += other.commandQueuedCount;
     commandQueueBypassedCount += other.commandQueueBypassedCount;
-    nodeInputsBatchCount += other.nodeInputsBatchCount;
-    depCallbackBatchCount += other.depCallbackBatchCount;
-    executeMainLogicCount += other.executeMainLogicCount;
+    this.allNodeMetrics.add(other.allNodeMetrics);
   }
 
   @Override
   public String toString() {
     return """
               KrystalNodeExecutorMetrics{
-                totalNodeTimeNs                 %s
-                mainLogicIfPossibleTimeNs       %s
-                
-                computeInputsForExecuteTimeNs   %s
-                executeResolversTime            %s
-                handleResolverCommandTime       %s
-                propagateNodeCommands           %s
-                executeMainLogicTime            %s
-
                 commandQueuedCount              %,d
                 commandQueueBypassedCount       %,d
-                nodeInputsBatchCount            %,d
-                depCallbackBatchCount           %,d
-                executeMainLogicCount           %,d
+
+                allNodeMetrics:
+                %s
               }
               """
-        .formatted(
-            toString(Duration.ofNanos(totalNodeTimeNs)),
-            toString(Duration.ofNanos(mainLogicIfPossibleTimeNs)),
-            toString(Duration.ofNanos(computeInputsForExecuteTimeNs)),
-            toString(Duration.ofNanos(executeResolversTimeNs)),
-            toString(Duration.ofNanos(handleResolverCommandTimeNs)),
-            toString(Duration.ofNanos(propagateNodeCommandsNs)),
-            toString(Duration.ofNanos(executeMainLogicTimeNs)),
-            commandQueuedCount,
-            commandQueueBypassedCount,
-            nodeInputsBatchCount,
-            depCallbackBatchCount,
-            executeMainLogicCount);
+        .formatted(commandQueuedCount, commandQueueBypassedCount, allNodeMetrics);
   }
 
   private static String toString(Duration duration) {

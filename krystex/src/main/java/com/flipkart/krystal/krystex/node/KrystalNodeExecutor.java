@@ -47,6 +47,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 /** Default implementation of Krystal executor which */
@@ -73,6 +74,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
   private final KrystalNodeExecutorConfig executorConfig;
   private final String instanceId;
+  private final NodeMetrics allNodeMetrics;
+  @Getter private final Map<NodeId, NodeMetrics> nodeMetrics = new LinkedHashMap<>();
 
   /**
    * We need to have a list of request scope global decorators corresponding to each type, in case
@@ -111,7 +114,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     this.instanceId = instanceId;
     this.requestScopedLogicDecoratorConfigs =
         ImmutableMap.copyOf(executorConfig.requestScopedLogicDecoratorConfigs());
-    this.krystalNodeMetrics = new KrystalNodeExecutorMetrics();
+    this.allNodeMetrics = new NodeMetrics();
+    this.krystalNodeMetrics = new KrystalNodeExecutorMetrics(this.allNodeMetrics);
   }
 
   private ImmutableMap<String, MainLogicDecorator> getRequestScopedDecorators(
@@ -197,14 +201,17 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
         .contains(dependantChain)) {
       nodeRegistry.createIfAbsent(
           nodeId,
-          _n ->
-              new Node(
-                  nodeDefinition,
-                  this,
-                  this::getRequestScopedDecorators,
-                  executorConfig.logicDecorationOrdering(),
-                  executorConfig.dependencyExecStrategy(),
-                  krystalNodeMetrics));
+          _n -> {
+            NodeMetrics nodeMetrics = new NodeMetrics(this.allNodeMetrics);
+            this.nodeMetrics.put(nodeId, nodeMetrics);
+            return new Node(
+                nodeDefinition,
+                this,
+                this::getRequestScopedDecorators,
+                executorConfig.logicDecorationOrdering(),
+                executorConfig.dependencyExecStrategy(),
+                nodeMetrics);
+          });
       ImmutableMap<String, NodeId> dependencyNodes = nodeDefinition.dependencyNodes();
       dependencyNodes.forEach(
           (dependencyName, depNodeId) ->
@@ -267,10 +274,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       return failedFuture(e);
     }
     if (batchCommand instanceof NodeInputBatch nodeInputBatch) {
-      krystalNodeMetrics.nodeInputsBatchCount++;
       return nodeRegistry.get(batchCommand.nodeId()).executeBatchCommand(nodeInputBatch);
     } else if (batchCommand instanceof DependencyCallbackBatch callbackBatch) {
-      krystalNodeMetrics.depCallbackBatchCount++;
       return nodeRegistry.get(batchCommand.nodeId()).executeBatchCommand(callbackBatch);
     } else {
       throw new UnsupportedOperationException("Unknow nodeBatch type %s".formatted(batchCommand));

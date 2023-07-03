@@ -101,6 +101,8 @@ class Node {
   private final Map<RequestId, Map<String, Results<Object>>> dependencyValuesCollector =
       new LinkedHashMap<>();
 
+  private final Map<DependantChain, Set<String>> collectedInputNames = new LinkedHashMap<>();
+
   /** A unique Result future for every requestId. */
   private final Map<RequestId, CompletableFuture<NodeResponse>> resultsByRequest =
       new LinkedHashMap<>();
@@ -126,7 +128,7 @@ class Node {
       new LinkedHashMap<>();
   private final Map<RequestId, DependantChain> dependantChainByRequest = new LinkedHashMap<>();
   private final DependencyExecStrategy dependencyExecStrategy;
-  private final KrystalNodeExecutorMetrics krystalNodeMetrics;
+  private final NodeMetrics nodeMetrics;
 
   Node(
       NodeDefinition nodeDefinition,
@@ -135,8 +137,7 @@ class Node {
           requestScopedDecoratorsSupplier,
       LogicDecorationOrdering logicDecorationOrdering,
       DependencyExecStrategy dependencyExecStrategy,
-      KrystalNodeExecutorMetrics krystalNodeMetrics) {
-    this.krystalNodeMetrics = krystalNodeMetrics;
+      NodeMetrics nodeMetrics) {
     this.dependencyExecStrategy = dependencyExecStrategy;
     this.nodeId = nodeDefinition.nodeId();
     this.nodeDefinition = nodeDefinition;
@@ -149,6 +150,7 @@ class Node {
         ImmutableMapView.viewOf(
             nodeDefinition.resolverDefinitions().stream()
                 .collect(groupingBy(ResolverDefinition::dependencyName, toImmutableSet())));
+    this.nodeMetrics = nodeMetrics;
   }
 
   void executeCommand(Flush nodeCommand) {
@@ -185,14 +187,20 @@ class Node {
           }
           return resultForRequest;
         },
-        timeTaken -> krystalNodeMetrics.totalNodeTimeNs += timeTaken.toNanos());
+        timeTaken -> nodeMetrics.totalNodeTimeNs(timeTaken.toNanos()));
   }
 
   CompletableFuture<NodeBatchResponse> executeBatchCommand(BatchCommand<?> nodeInputBatchCommand) {
     return measuringTimeTaken(
         () -> {
+          if (nodeInputBatchCommand instanceof DependencyCallbackBatch) {
+            nodeMetrics.depCallbackBatchCount();
+          } else if (nodeInputBatchCommand instanceof NodeInputBatch) {
+            nodeMetrics.nodeInputsBatchCount();
+          }
           Map<RequestId, ? extends NodeRequestCommand> subCommands =
               nodeInputBatchCommand.subCommands();
+          validate(nodeInputBatchCommand);
           CompletableFuture<NodeBatchResponse> batchFuture =
               resultsByBatch.computeIfAbsent(
                   nodeInputBatchCommand.dependantChain(), requestId -> new CompletableFuture<>());
@@ -253,8 +261,10 @@ class Node {
           }
           return batchFuture;
         },
-        timeTaken -> krystalNodeMetrics.totalNodeTimeNs += timeTaken.toNanos());
+        timeTaken -> nodeMetrics.totalNodeTimeNs(timeTaken.toNanos()));
   }
+
+  private void validate(BatchCommand<?> nodeInputBatchCommand) {}
 
   private void propagateCommands(RequestId requestId, List<NodeInputCommand> nodeRequestCommands) {
     measuringTimeTaken(
@@ -282,7 +292,7 @@ class Node {
                     .computeIfAbsent(dependencyName, _d -> new DependencyNodeExecutions()));
           }
         },
-        timeTaken -> krystalNodeMetrics.propagateNodeCommandsNs += timeTaken.toNanos());
+        timeTaken -> nodeMetrics.propagateNodeCommandsNs(timeTaken.toNanos()));
   }
 
   private void propagateCommands(
@@ -325,7 +335,7 @@ class Node {
                 nodeRequestCommands.keySet(), dependencyName, depNodeId, incomingBatch);
           }
         },
-        timeTaken -> krystalNodeMetrics.propagateNodeCommandsNs += timeTaken.toNanos());
+        timeTaken -> nodeMetrics.propagateNodeCommandsNs(timeTaken.toNanos()));
   }
 
   private List<NodeInputCommand> computeNodeCommands(NodeRequestCommand nodeCommand) {
@@ -355,45 +365,49 @@ class Node {
           }
           return nodeInputCommands;
         },
-        timeTaken -> krystalNodeMetrics.computeInputsForExecuteTimeNs += timeTaken.toNanos());
+        timeTaken -> nodeMetrics.computeInputsForExecuteTimeNs(timeTaken.toNanos()));
   }
 
   private Map<String, Map<RequestId, List<NodeInputCommand>>> computeNodeCommands(
       BatchCommand<?> batchCommand) {
-    Map<String, Map<RequestId, List<NodeInputCommand>>> nodeInputCommands = new LinkedHashMap<>();
     List<ExecuteWithDependency> executeWithDependencyList = new ArrayList<>();
     List<ExecuteWithInputs> executeWithInputsList = new ArrayList<>();
+    List<SkipNode> skipCommands = new ArrayList<>();
+
+    Set<RequestId> allRequestIds = batchCommand.subCommands().keySet();
+    Set<RequestId> requestsByDepChain =
+        requestsByDependantChain.computeIfAbsent(
+            batchCommand.dependantChain(), k -> new LinkedHashSet<>(allRequestIds.size()));
+
+    measuringTimeTaken(
+        () -> {
+          batchCommand
+              .subCommands()
+              .forEach(
+                  (requestId, nodeCommand) -> {
+                    requestsByDepChain.add(requestId);
+                    dependantChainByRequest.put(requestId, batchCommand.dependantChain());
+                    if (nodeCommand instanceof SkipNode skipNode) {
+                      skipLogicRequested.put(requestId, Optional.of(skipNode));
+                      skipCommands.add(skipNode);
+                    } else if (nodeCommand instanceof ExecuteWithDependency executeWithDependency) {
+                      executeWithDependencyList.add(executeWithDependency);
+                    } else if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
+                      executeWithInputsList.add(executeWithInputs);
+                    } else {
+                      throw new UnsupportedOperationException(
+                          "Unknown type of nodeCommand: %s".formatted(nodeCommand));
+                    }
+                  });
+        },
+        timeTaken -> nodeMetrics.computeInputsForExecuteTimeNs(timeTaken.toNanos()));
+
+    Map<String, Map<RequestId, List<NodeInputCommand>>> nodeInputCommands =
+        new LinkedHashMap<>(handleSkipDependencies(skipCommands));
     measuringTimeTaken(
             () -> {
-              Set<RequestId> allRequestIds = batchCommand.subCommands().keySet();
-              Set<RequestId> requestsByDepChain =
-                  requestsByDependantChain.computeIfAbsent(
-                      batchCommand.dependantChain(),
-                      k -> new LinkedHashSet<>(allRequestIds.size()));
-              List<SkipNode> skipCommands = new ArrayList<>();
-
-              batchCommand
-                  .subCommands()
-                  .forEach(
-                      (requestId, nodeCommand) -> {
-                        requestsByDepChain.add(requestId);
-                        dependantChainByRequest.put(requestId, batchCommand.dependantChain());
-                        if (nodeCommand instanceof SkipNode skipNode) {
-                          skipLogicRequested.put(requestId, Optional.of(skipNode));
-                          skipCommands.add(skipNode);
-                        } else if (nodeCommand
-                            instanceof ExecuteWithDependency executeWithDependency) {
-                          executeWithDependencyList.add(executeWithDependency);
-                        } else if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
-                          executeWithInputsList.add(executeWithInputs);
-                        } else {
-                          throw new UnsupportedOperationException(
-                              "Unknown type of nodeCommand: %s".formatted(nodeCommand));
-                        }
-                      });
-              collectInputValues(executeWithInputsList);
-              collectDepValues(executeWithDependencyList);
-              nodeInputCommands.putAll(handleSkipDependencies(skipCommands));
+              collectInputValues(executeWithInputsList, batchCommand.dependantChain());
+              collectDepValues(executeWithDependencyList, batchCommand.dependantChain());
 
               Map<RequestId, Set<String>> inputNamesByRequest = new LinkedHashMap<>();
               executeWithInputsList.forEach(
@@ -410,7 +424,7 @@ class Node {
                           .add(executeWithDependency.dependencyName()));
               return inputNamesByRequest;
             },
-            timeTaken -> krystalNodeMetrics.computeInputsForExecuteTimeNs += timeTaken.toNanos())
+            timeTaken -> nodeMetrics.computeInputsForExecuteTimeNs(timeTaken.toNanos()))
         .forEach(
             (requestId, newInputNames) -> {
               execute(requestId, newInputNames)
@@ -427,41 +441,42 @@ class Node {
 
   private Optional<CompletableFuture<NodeResponse>> executeMainLogicIfPossible(
       RequestId requestId) {
-    return executeMainLogicIfPossible(List.of(requestId), dependantChainByRequest.get(requestId))
-        .map(f -> f.thenApply(nodeBatchResponse -> nodeBatchResponse.values().iterator().next()));
+    return measuringTimeTaken(
+        () -> {
+          Set<String> collect =
+              new LinkedHashSet<>(
+                  inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
+          collect.addAll(
+              dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
+          ImmutableSet<String> inputNames = nodeDefinition.getMainLogicDefinition().inputNames();
+          if (collect.containsAll(inputNames)) {
+            return Optional.of(
+                executeMainLogic(
+                        ImmutableList.of(requestId), dependantChainByRequest.get(requestId))
+                    .thenApply(nodeBatchResponse -> nodeBatchResponse.values().iterator().next()));
+          }
+          return Optional.empty();
+        },
+        timeTaken -> nodeMetrics.mainLogicIfPossibleTimeNs(timeTaken.toNanos()));
   }
 
   private Optional<CompletableFuture<Map<RequestId, NodeResponse>>> executeMainLogicIfPossible(
       List<RequestId> requestIds, DependantChain dependantChain) {
-    MainLogicDefinition<Object> mainLogicDefinition = nodeDefinition.getMainLogicDefinition();
     // If all the inputs and dependency values are available, then prepare run mainLogic
-    ImmutableSet<String> inputNames = mainLogicDefinition.inputNames();
+    ImmutableSet<String> inputNames = nodeDefinition.getMainLogicDefinition().inputNames();
     return measuringTimeTaken(
         () -> {
-          if (!requestIds.isEmpty()
-              && requestIds.stream()
-                  .allMatch(
-                      requestId -> {
-                        Set<String> collect =
-                            new LinkedHashSet<>(
-                                inputsValueCollector
-                                    .getOrDefault(requestId, ImmutableMap.of())
-                                    .keySet());
-                        collect.addAll(
-                            dependencyValuesCollector
-                                .getOrDefault(requestId, ImmutableMap.of())
-                                .keySet());
-                        return collect.containsAll(inputNames);
-                      })) { // All the inputs of the logic node have data present
+          if (collectedInputNames
+              .getOrDefault(dependantChain, ImmutableSet.of())
+              .containsAll(inputNames)) { // All the inputs of the logic node have data present
             return Optional.of(executeMainLogic(requestIds, dependantChain));
           }
           return Optional.empty();
         },
-        timeTaken -> krystalNodeMetrics.mainLogicIfPossibleTimeNs += timeTaken.toNanos());
+        timeTaken -> nodeMetrics.mainLogicIfPossibleTimeNs(timeTaken.toNanos()));
   }
 
   private List<NodeInputCommand> handleSkipDependency(SkipNode skipNode) {
-    //    return handleSkipDependencies(List.of(requestId));
     RequestId requestId = skipNode.requestId();
     Set<ResolverDefinition> pendingResolvers =
         resolverDefinitionsByInput.values().stream()
@@ -559,7 +574,7 @@ class Node {
   }
 
   private List<NodeInputCommand> executeWithInputs(ExecuteWithInputs executeWithInputs) {
-    collectInputValues(ImmutableList.of(executeWithInputs));
+    collectInputValues(ImmutableList.of(executeWithInputs), executeWithInputs.dependantChain());
     return execute(executeWithInputs.requestId(), executeWithInputs.inputNames()).values().stream()
         .flatMap(Collection::stream)
         .toList();
@@ -567,7 +582,9 @@ class Node {
 
   private List<NodeInputCommand> executeWithDependency(
       ExecuteWithDependency executeWithDependency) {
-    collectDepValues(ImmutableList.of(executeWithDependency));
+    collectDepValues(
+        ImmutableList.of(executeWithDependency),
+        dependantChainByRequest.get(executeWithDependency.requestId()));
     return execute(
             executeWithDependency.requestId(),
             ImmutableSet.of(executeWithDependency.dependencyName()))
@@ -577,10 +594,14 @@ class Node {
         .toList();
   }
 
-  private void collectDepValues(List<ExecuteWithDependency> executeWithDependencyBatch) {
+  private void collectDepValues(
+      List<ExecuteWithDependency> executeWithDependencyBatch, DependantChain dependantChain) {
+    Set<String> allInputNames =
+        collectedInputNames.computeIfAbsent(dependantChain, _k -> new LinkedHashSet<>());
     for (ExecuteWithDependency executeWithDependency : executeWithDependencyBatch) {
       RequestId requestId = executeWithDependency.requestId();
       String dependencyName = executeWithDependency.dependencyName();
+      allInputNames.add(dependencyName);
       if (dependencyValuesCollector
               .computeIfAbsent(requestId, k -> new LinkedHashMap<>())
               .putIfAbsent(dependencyName, executeWithDependency.results())
@@ -611,10 +632,9 @@ class Node {
       return emptyMap();
     }
 
-    return executeResolvers(
-        requestId,
-        getPendingResolvers(requestId, newInputNames, availableInputs),
-        getMultiResolverDef());
+    Set<ResolverDefinition> pendingResolvers =
+        getPendingResolvers(requestId, newInputNames, availableInputs);
+    return executeResolvers(requestId, pendingResolvers, getMultiResolverDef());
   }
 
   /**
@@ -711,7 +731,7 @@ class Node {
                         inputs);
               }
             },
-            timeTaken -> krystalNodeMetrics.executeResolversTimeNs += timeTaken.toNanos());
+            timeTaken -> nodeMetrics.executeResolversTimeNs(timeTaken.toNanos()));
 
     Map<String, List<NodeInputCommand>> nodeRequestCommands = new LinkedHashMap<>();
     resolverCommands.forEach(
@@ -771,7 +791,7 @@ class Node {
     return measuringTimeTaken(
         () ->
             _handleResolverCommand(requestId, dependencyName, resolverDefinitions, resolverCommand),
-        timeTaken -> krystalNodeMetrics.handleResolverCommandTimeNs += timeTaken.toNanos());
+        timeTaken -> nodeMetrics.handleResolverCommandTimeNs(timeTaken.toNanos()));
   }
 
   private List<NodeInputCommand> _handleResolverCommand(
@@ -1166,12 +1186,12 @@ class Node {
                             .values()
                             .iterator()
                             .next(),
-                    timeTaken -> krystalNodeMetrics.executeMainLogicTimeNs += timeTaken.toNanos());
+                    timeTaken -> nodeMetrics.executeMainLogicTimeNs(timeTaken.toNanos()));
             resultsCache.put(mainLogicInputs.nonDependencyInputs(), cachedResult);
           }
           resultsByRequest.put(requestId, cachedResult.handle(ValueOrError::valueOrError));
         });
-    krystalNodeMetrics.executeMainLogicCount++;
+    nodeMetrics.executeMainLogicCount();
   }
 
   private MainLogicInputs getInputsForMainLogic(RequestId requestId) {
@@ -1183,10 +1203,14 @@ class Node {
     return new MainLogicInputs(inputValues, allInputsAndDependencies);
   }
 
-  private void collectInputValues(List<ExecuteWithInputs> executeWithInputsBatch) {
+  private void collectInputValues(
+      List<ExecuteWithInputs> executeWithInputsBatch, DependantChain dependantChain) {
+    Set<String> allInputNames =
+        collectedInputNames.computeIfAbsent(dependantChain, _k -> new LinkedHashSet<>());
     for (ExecuteWithInputs executeWithInputs : executeWithInputsBatch) {
       RequestId requestId = executeWithInputs.requestId();
       ImmutableSet<String> inputNames = executeWithInputs.inputNames();
+      allInputNames.addAll(inputNames);
       Inputs inputs = executeWithInputs.values();
       for (String inputName : inputNames) {
         if (inputsValueCollector
