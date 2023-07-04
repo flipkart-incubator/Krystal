@@ -158,11 +158,11 @@ class ChainAdderTest {
         vajramTimeNs);
   }
 
-  @Disabled("Long running benchmark")
+//  @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark_2() throws Exception {
-    int innerLoopCount = 500;
-    int outerLoopCount = 100;
+    int innerLoopCount = 200;
+    int outerLoopCount = 250;
     int loopCount = outerLoopCount * innerLoopCount;
 
     long javaNativeTimeNs = javaMethodBenchmark(this::chainAdd, loopCount);
