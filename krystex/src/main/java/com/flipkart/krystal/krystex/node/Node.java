@@ -62,6 +62,7 @@ import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -200,7 +201,6 @@ class Node {
           }
           Map<RequestId, ? extends NodeRequestCommand> subCommands =
               nodeInputBatchCommand.subCommands();
-          validate(nodeInputBatchCommand);
           CompletableFuture<NodeBatchResponse> batchFuture =
               resultsByBatch.computeIfAbsent(
                   nodeInputBatchCommand.dependantChain(), requestId -> new CompletableFuture<>());
@@ -263,8 +263,6 @@ class Node {
         },
         timeTaken -> nodeMetrics.totalNodeTimeNs(timeTaken.toNanos()));
   }
-
-  private void validate(BatchCommand<?> nodeInputBatchCommand) {}
 
   private void propagateCommands(RequestId requestId, List<NodeInputCommand> nodeRequestCommands) {
     measuringTimeTaken(
@@ -437,27 +435,6 @@ class Node {
                       });
             });
     return nodeInputCommands;
-  }
-
-  private Optional<CompletableFuture<NodeResponse>> executeMainLogicIfPossible(
-      RequestId requestId) {
-    return measuringTimeTaken(
-        () -> {
-          Set<String> collect =
-              new LinkedHashSet<>(
-                  inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
-          collect.addAll(
-              dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
-          ImmutableSet<String> inputNames = nodeDefinition.getMainLogicDefinition().inputNames();
-          if (collect.containsAll(inputNames)) {
-            return Optional.of(
-                executeMainLogic(
-                        ImmutableList.of(requestId), dependantChainByRequest.get(requestId))
-                    .thenApply(nodeBatchResponse -> nodeBatchResponse.values().iterator().next()));
-          }
-          return Optional.empty();
-        },
-        timeTaken -> nodeMetrics.mainLogicIfPossibleTimeNs(timeTaken.toNanos()));
   }
 
   private Optional<CompletableFuture<Map<RequestId, NodeResponse>>> executeMainLogicIfPossible(
@@ -1118,6 +1095,63 @@ class Node {
               }
             });
     return nodeReqCommands;
+  }
+
+  private Optional<CompletableFuture<NodeResponse>> executeMainLogicIfPossible(
+      RequestId requestId) {
+    return measuringTimeTaken(
+        () -> {
+          // If all the inputs and dependency values are available, then prepare run mainLogic
+          MainLogicDefinition<Object> mainLogicDefinition = nodeDefinition.getMainLogicDefinition();
+          ImmutableSet<String> inputNames = mainLogicDefinition.inputNames();
+          Set<String> collect =
+              new LinkedHashSet<>(
+                  inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
+          collect.addAll(
+              dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
+          if (collect.containsAll(
+              inputNames)) { // All the inputs of the logic node have data present
+            return Optional.of(executeMainLogic(requestId));
+          }
+          return Optional.empty();
+        },
+        timeTaken -> nodeMetrics.mainLogicIfPossibleTimeNs(timeTaken.toNanos()));
+  }
+
+  private CompletableFuture<Object> executeDecoratedMainLogic(
+      Inputs inputs, MainLogicDefinition<Object> mainLogicDefinition, RequestId requestId) {
+    SortedSet<MainLogicDecorator> sortedDecorators =
+        getSortedDecorators(dependantChainByRequest.get(requestId));
+    MainLogic<Object> logic = mainLogicDefinition::execute;
+
+    for (MainLogicDecorator mainLogicDecorator : sortedDecorators) {
+      logic = mainLogicDecorator.decorateLogic(logic, mainLogicDefinition);
+    }
+    MainLogic<Object> finalLogic = logic;
+    return measuringTimeTaken(
+        () -> finalLogic.execute(ImmutableList.of(inputs)).get(inputs),
+        timeTaken -> nodeMetrics.executeMainLogicTimeNs(timeTaken.toNanos()));
+  }
+
+  private CompletableFuture<NodeResponse> executeMainLogic(RequestId requestId) {
+
+    MainLogicDefinition<Object> mainLogicDefinition = nodeDefinition.getMainLogicDefinition();
+    MainLogicInputs mainLogicInputs = getInputsForMainLogic(requestId);
+    // Retrieve existing result from cache if result for this set of inputs has already been
+    // calculated
+    CompletableFuture<Object> resultFuture =
+        resultsCache.get(mainLogicInputs.nonDependencyInputs());
+    if (resultFuture == null) {
+      resultFuture =
+          executeDecoratedMainLogic(
+              mainLogicInputs.allInputsAndDependencies(), mainLogicDefinition, requestId);
+      resultsCache.put(mainLogicInputs.nonDependencyInputs(), resultFuture);
+    }
+    mainLogicExecuted.put(requestId, true);
+    flushDecoratorsIfNeeded(dependantChainByRequest.get(requestId));
+    return resultFuture
+        .handle(ValueOrError::valueOrError)
+        .thenApply(voe -> new NodeResponse(mainLogicInputs.nonDependencyInputs(), voe, requestId));
   }
 
   private CompletableFuture<Map<RequestId, NodeResponse>> executeMainLogic(

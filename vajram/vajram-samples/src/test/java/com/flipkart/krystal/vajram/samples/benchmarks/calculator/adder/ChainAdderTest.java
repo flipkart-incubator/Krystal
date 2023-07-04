@@ -183,36 +183,57 @@ class ChainAdderTest {
 
   }
 
-      Batch
-      int outerLoopCount = 250;
-      int innerLoopCount = 200;
-      Throughput executions/s: 1618
+      BATCH
+      Throughput executions/s: 1700
       KrystalNodeExecutorMetrics{
-        commandQueuedCount              64,500
+        commandQueuedCount              61,600
         commandQueueBypassedCount       0
 
         allNodeMetrics:
         NodeMetrics {
-        totalNodeTimeNs                   5m 27s 584343391ns
-          computeInputsForExecuteTimeNs     0m 25s 374670080ns
-          executeResolversTime              0m 41s 350433974ns
-          handleResolverCommandTime         0m 40s 654925099ns
-          propagateNodeCommands             0m 44s 294566759ns
-          mainLogicIfPossibleTimeNs         0m 48s 165339269ns
-            executeMainLogicTime              0m 33s 926845476ns
+        totalNodeTimeNs                   5m 13s 826001589ns
+          computeInputsForExecuteTimeNs     0m 24s 266145538ns
+          executeResolversTime              0m 37s 163653343ns
+          handleResolverCommandTime         0m 42s 218424224ns
+          propagateNodeCommands             0m 48s 954796366ns
+          mainLogicIfPossibleTimeNs         0m 46s 188785628ns
+            executeMainLogicTime              0m 35s 177957233ns
 
-        nodeInputsBatchCount            4,500
-        depCallbackBatchCount           4,500
-        executeMainLogicCount           4,250
+        nodeInputsBatchCount              3,600
+        depCallbackBatchCount             3,600
+        executeMainLogicCount             3,400   }
+
       }
+
+      GRANULAR
+      int outerLoopCount = 200;
+      int innerLoopCount = 250;
+      Throughput executions/s: 1417
+      KrystalNodeExecutorMetrics{
+        commandQueuedCount              50,400
+        commandQueueBypassedCount       9,453,800
+
+        allNodeMetrics:
+        NodeMetrics {
+        totalNodeTimeNs                   45m 16s 994922305ns
+          computeInputsForExecuteTimeNs     2m 43s 772408907ns
+          executeResolversTime              0m 38s 233607880ns
+          handleResolverCommandTime         0m 42s 625349677ns
+          propagateNodeCommands             39m 41s 674688494ns
+          mainLogicIfPossibleTimeNs         2m 5s 467038062ns
+            executeMainLogicTime              1m 17s 355361030ns
+
+        nodeInputsBatchCount              0
+        depCallbackBatchCount             0
+        executeMainLogicCount             0   }
 
       }
      */
   @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark_2() throws Exception {
-    int outerLoopCount = 250;
-    int innerLoopCount = 200;
+    int outerLoopCount = 200;
+    int innerLoopCount = 250;
     int loopCount = outerLoopCount * innerLoopCount;
 
     long javaNativeTimeNs = javaMethodBenchmark(this::chainAdd, loopCount);
