@@ -179,7 +179,7 @@ class Node {
             }
             List<NodeInputCommand> nodeRequestCommands = computeNodeCommands(nodeCommand);
             propagateCommands(requestId, nodeRequestCommands);
-            if (!resultForRequest.isDone()) {
+            if (nodeRequestCommands.isEmpty()) {
               executeMainLogicIfPossible(requestId)
                   .ifPresent(mainLogicResult -> linkFutures(mainLogicResult, resultForRequest));
             }
