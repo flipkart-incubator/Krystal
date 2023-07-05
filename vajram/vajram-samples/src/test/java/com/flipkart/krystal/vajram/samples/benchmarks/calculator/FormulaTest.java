@@ -54,7 +54,7 @@ class FormulaTest {
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
   }
 
-  //  @Disabled("Long running benchmark (~16s)")
+  @Disabled("Long running benchmark (~16s)")
   @Test
   void vajram_benchmark() throws Exception {
     int loopCount = 1_000_000;
@@ -223,7 +223,7 @@ class FormulaTest {
      executeMainLogicCount           60
    }
   */
-    @Disabled("Long running benchmark (~16s)")
+  @Disabled("Long running benchmark (~16s)")
   @Test
   void vajram_benchmark_2() throws Exception {
     int outerLoopCount = 1;
