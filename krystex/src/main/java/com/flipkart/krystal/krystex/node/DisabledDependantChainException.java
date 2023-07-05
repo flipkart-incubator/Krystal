@@ -4,4 +4,9 @@ public class DisabledDependantChainException extends RuntimeException {
   public DisabledDependantChainException(DependantChain disabledDependantChain) {
     super("The dependant chain %s has been disabled".formatted(disabledDependantChain));
   }
+
+  @Override
+  public Throwable fillInStackTrace() {
+    return null;
+  }
 }

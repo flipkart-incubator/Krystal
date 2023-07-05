@@ -38,7 +38,8 @@ public final class FanoutResolverStage<S, T, CV extends Vajram<?>, DV extends Va
 
   public SimpleInputResolverSpec<S, T, CV, DV> with(
       Function<Optional<S>, ? extends Collection<? extends T>> transformer) {
-    return new SimpleInputResolverSpec<>(targetInput, sourceInput, skipConditions, null, transformer);
+    return new SimpleInputResolverSpec<>(
+        targetInput, sourceInput, skipConditions, null, transformer);
   }
 
   public static final class ResolveFanoutStage<T, DV extends Vajram<?>> {

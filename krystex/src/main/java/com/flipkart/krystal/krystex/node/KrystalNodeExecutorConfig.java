@@ -28,7 +28,7 @@ public record KrystalNodeExecutorConfig(
       dependencyExecStrategy = DependencyExecStrategy.ONE_SHOT;
     }
     if (graphTraversalStrategy == null) {
-      graphTraversalStrategy = GraphTraversalStrategy.DEPTH;
+      graphTraversalStrategy = GraphTraversalStrategy.BREADTH;
     }
     if (disabledDependantChains == null) {
       disabledDependantChains = ImmutableSet.of();

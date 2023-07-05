@@ -38,7 +38,8 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
   }
 
   public SimpleInputResolverSpec<S, T, CV, DV> with(Function<Optional<S>, T> transformer) {
-    return new SimpleInputResolverSpec<>(targetInput, sourceInput, skipConditions, transformer, null);
+    return new SimpleInputResolverSpec<>(
+        targetInput, sourceInput, skipConditions, transformer, null);
   }
 
   public static final class AsIsResolverStage<T, CV extends Vajram<?>, DV extends Vajram<?>>
