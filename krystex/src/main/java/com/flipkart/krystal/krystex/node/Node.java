@@ -204,7 +204,6 @@ class Node {
           CompletableFuture<NodeBatchResponse> batchFuture =
               resultsByBatch.computeIfAbsent(
                   nodeInputBatchCommand.dependantChain(), requestId -> new CompletableFuture<>());
-
           if (batchFuture.isDone()) {
             // This is possible if this node was already skipped, for example.
             // If the result for this requestId is already available, just return and avoid
