@@ -10,6 +10,9 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.DependencyExecStrategy;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.NodeExecStrategy;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutorMetrics;
 import com.flipkart.krystal.krystex.node.NodeExecutionConfig;
 import com.flipkart.krystal.krystex.node.NodeId;
@@ -113,13 +116,11 @@ class FormulaTest {
           graph.createExecutor(
               new FormulaRequestContext(100, 20, 5, "formulaTest")
               //
-              /*   ,
+              ,
               KrystalNodeExecutorConfig.builder()
-                  .nodeExecStrategy(NodeExecStrategy.GRANULAR)
-                  .dependencyExecStrategy(DependencyExecStrategy.INCREMENTAL)
-                  .build()*/
-              //
-              )) {
+                  .nodeExecStrategy(NodeExecStrategy.BATCH)
+                  .dependencyExecStrategy(DependencyExecStrategy.ONE_SHOT)
+                  .build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[value] =
             ((KrystalNodeExecutor) krystexVajramExecutor.getKrystalExecutor())
