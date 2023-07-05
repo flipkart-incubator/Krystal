@@ -36,6 +36,7 @@ import com.flipkart.krystal.utils.MultiLeasePool.Lease;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -46,6 +47,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -268,18 +270,63 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   CompletableFuture<NodeBatchResponse> _executeBatchCommand(BatchCommand<?> batchCommand) {
-    try {
-      validate(batchCommand);
-    } catch (Throwable e) {
-      return failedFuture(e);
-    }
+
     if (batchCommand instanceof NodeInputBatch nodeInputBatch) {
-      return nodeRegistry.get(batchCommand.nodeId()).executeBatchCommand(nodeInputBatch);
+      Map<RequestId, NodeResponse> disableRequestIdResponse =
+          getDisabledCommandsResponse(batchCommand);
+      NodeInputBatch newNodeInputBatch;
+      if (disableRequestIdResponse != null && !disableRequestIdResponse.isEmpty()) {
+        Map<RequestId, NodeInputCommand> subCommands = nodeInputBatch.subCommands();
+        Map<RequestId, NodeInputCommand> newSubCommands =
+            subCommands.entrySet().stream()
+                .filter(entry -> !disableRequestIdResponse.containsKey(entry.getKey()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        newNodeInputBatch =
+            new NodeInputBatch(
+                nodeInputBatch.nodeId(), newSubCommands, nodeInputBatch.dependantChain());
+      } else {
+        newNodeInputBatch = nodeInputBatch;
+      }
+      CompletableFuture<NodeBatchResponse> inputBatchResponse =
+          nodeRegistry.get(batchCommand.nodeId()).executeBatchCommand(newNodeInputBatch);
+      return inputBatchResponse.whenComplete(
+          (nodeBatchResponse, throwable) -> {
+            if (throwable == null
+                && nodeBatchResponse != null
+                && nodeBatchResponse.responses() != null) {
+              nodeBatchResponse.responses().putAll(disableRequestIdResponse);
+            } else {
+              failedFuture(throwable);
+            }
+          });
     } else if (batchCommand instanceof DependencyCallbackBatch callbackBatch) {
       return nodeRegistry.get(batchCommand.nodeId()).executeBatchCommand(callbackBatch);
     } else {
       throw new UnsupportedOperationException("Unknow nodeBatch type %s".formatted(batchCommand));
     }
+  }
+
+  private Map<RequestId, NodeResponse> getDisabledCommandsResponse(NodeCommand nodeCommand) {
+    Map<RequestId, NodeResponse> disableRequestIdList = new HashMap<>();
+
+    if (nodeCommand instanceof NodeInputBatch batchCommand) {
+      for (NodeInputCommand nodeInputCommand : batchCommand.subCommands().values()) {
+        try {
+          validate(nodeInputCommand);
+        } catch (Throwable ex) {
+          disableRequestIdList.put(
+              nodeInputCommand.requestId(),
+              new NodeResponse(
+                  Inputs.empty(),
+                  ValueOrError.withError(
+                      new DisabledDependantChainException(
+                          ((NodeInputBatch) nodeCommand).dependantChain())),
+                  nodeInputCommand.requestId()));
+        }
+      }
+    }
+    return disableRequestIdList;
   }
 
   private CompletableFuture<NodeResponse> _executeCommand(NodeCommand nodeCommand) {
@@ -300,9 +347,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   private void validate(NodeCommand nodeCommand) {
-    if (nodeCommand instanceof NodeInputBatch batchCommand) {
-      batchCommand.subCommands().values().forEach(this::validate);
-    } else if (nodeCommand instanceof NodeRequestCommand nodeRequestCommand) {
+    if (nodeCommand instanceof NodeRequestCommand nodeRequestCommand) {
       DependantChain dependantChain = null;
       RequestId requestId = nodeRequestCommand.requestId();
       if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
