@@ -275,7 +275,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       Map<RequestId, NodeResponse> disableRequestIdResponse =
           getDisabledCommandsResponse(batchCommand);
       NodeInputBatch newNodeInputBatch;
-      if (disableRequestIdResponse != null && !disableRequestIdResponse.isEmpty()) {
+      if (!disableRequestIdResponse.isEmpty()) {
         Map<RequestId, NodeInputCommand> subCommands = nodeInputBatch.subCommands();
         Map<RequestId, NodeInputCommand> newSubCommands =
             subCommands.entrySet().stream()
@@ -288,18 +288,18 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       } else {
         newNodeInputBatch = nodeInputBatch;
       }
-      CompletableFuture<NodeBatchResponse> inputBatchResponse =
-          nodeRegistry.get(batchCommand.nodeId()).executeBatchCommand(newNodeInputBatch);
-      return inputBatchResponse.whenComplete(
-          (nodeBatchResponse, throwable) -> {
-            if (throwable == null
-                && nodeBatchResponse != null
-                && nodeBatchResponse.responses() != null) {
-              nodeBatchResponse.responses().putAll(disableRequestIdResponse);
-            } else {
-              failedFuture(throwable);
-            }
-          });
+      if (newNodeInputBatch.subCommands().isEmpty()) {
+        return completedFuture(new NodeBatchResponse(disableRequestIdResponse));
+      } else {
+        CompletableFuture<NodeBatchResponse> inputBatchResponse =
+            nodeRegistry.get(batchCommand.nodeId()).executeBatchCommand(newNodeInputBatch);
+        return inputBatchResponse.whenComplete(
+            (nodeBatchResponse, throwable) -> {
+              if (nodeBatchResponse != null) {
+                nodeBatchResponse.responses().putAll(disableRequestIdResponse);
+              }
+            });
+      }
     } else if (batchCommand instanceof DependencyCallbackBatch callbackBatch) {
       return nodeRegistry.get(batchCommand.nodeId()).executeBatchCommand(callbackBatch);
     } else {
@@ -320,8 +320,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
               new NodeResponse(
                   Inputs.empty(),
                   ValueOrError.withError(
-                      new DisabledDependantChainException(
-                          ((NodeInputBatch) nodeCommand).dependantChain())),
+                      new DisabledDependantChainException(batchCommand.dependantChain())),
                   nodeInputCommand.requestId()));
         }
       }
