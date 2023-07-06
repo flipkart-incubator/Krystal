@@ -26,6 +26,8 @@ import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReport
 import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JCircuitBreaker;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.DependencyExecStrategy;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.NodeExecStrategy;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
 import com.flipkart.krystal.krystex.node.NodeExecutionConfig;
 import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
@@ -67,6 +69,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -656,7 +659,12 @@ class KrystexVajramExecutorTest {
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
-        graph.createExecutor(requestContext)) {
+        graph.createExecutor(
+            requestContext,
+            KrystalNodeExecutorConfig.builder()
+                .nodeExecStrategy(NodeExecStrategy.BATCH)
+                .dependencyExecStrategy(DependencyExecStrategy.ONE_SHOT)
+                .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
               vajramID(MultiHelloFriendsV2.ID),

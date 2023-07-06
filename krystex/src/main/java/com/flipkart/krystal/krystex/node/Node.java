@@ -400,14 +400,21 @@ class Node {
         },
         timeTaken -> nodeMetrics.computeInputsForExecuteTimeNs(timeTaken.toNanos()));
 
-    Map<String, Map<RequestId, List<NodeInputCommand>>> nodeInputCommands =
-        new LinkedHashMap<>(handleSkipDependencies(skipCommands));
+    Map<String, Map<RequestId, List<NodeInputCommand>>> nodeInputCommands;
+
+    if (skipCommands.size() == batchCommand.subCommands().size()) {
+      nodeInputCommands = new LinkedHashMap<>(handleSkipDependencies(skipCommands));
+    } else {
+      nodeInputCommands = new LinkedHashMap<>();
+    }
+
     measuringTimeTaken(
             () -> {
+              Map<RequestId, Set<String>> inputNamesByRequest = new LinkedHashMap<>();
+
               collectInputValues(executeWithInputsList, batchCommand.dependantChain());
               collectDepValues(executeWithDependencyList, batchCommand.dependantChain());
 
-              Map<RequestId, Set<String>> inputNamesByRequest = new LinkedHashMap<>();
               executeWithInputsList.forEach(
                   executeWithInputs ->
                       inputNamesByRequest
@@ -420,6 +427,7 @@ class Node {
                           .computeIfAbsent(
                               executeWithDependency.requestId(), _k1 -> new LinkedHashSet<>())
                           .add(executeWithDependency.dependencyName()));
+
               return inputNamesByRequest;
             },
             timeTaken -> nodeMetrics.computeInputsForExecuteTimeNs(timeTaken.toNanos()))
@@ -434,7 +442,8 @@ class Node {
                             .addAll(outgoingCommands);
                       });
             });
-    return getFilteredInputCommands(nodeInputCommands, batchCommand.subCommands().size());
+    return nodeInputCommands;
+    //    return getFilteredInputCommands(nodeInputCommands, batchCommand.subCommands().size());
   }
 
   private Map<String, Map<RequestId, List<NodeInputCommand>>> getFilteredInputCommands(
