@@ -370,7 +370,7 @@ class Node {
       BatchCommand<?> batchCommand) {
     List<ExecuteWithDependency> executeWithDependencyList = new ArrayList<>();
     List<ExecuteWithInputs> executeWithInputsList = new ArrayList<>();
-    List<SkipNode> skipCommands = new ArrayList<>();
+    Map<RequestId, SkipNode> skipCommands = new LinkedHashMap<>();
 
     Set<RequestId> allRequestIds = batchCommand.subCommands().keySet();
     Set<RequestId> requestsByDepChain =
@@ -387,7 +387,7 @@ class Node {
                     dependantChainByRequest.put(requestId, batchCommand.dependantChain());
                     if (nodeCommand instanceof SkipNode skipNode) {
                       skipLogicRequested.put(requestId, Optional.of(skipNode));
-                      skipCommands.add(skipNode);
+                      skipCommands.put(skipNode.requestId(), skipNode);
                     } else if (nodeCommand instanceof ExecuteWithDependency executeWithDependency) {
                       executeWithDependencyList.add(executeWithDependency);
                     } else if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
@@ -401,47 +401,51 @@ class Node {
         timeTaken -> nodeMetrics.computeInputsForExecuteTimeNs(timeTaken.toNanos()));
 
     Map<String, Map<RequestId, List<NodeInputCommand>>> nodeInputCommands = new LinkedHashMap<>();
-    Map<RequestId, Set<String>> inputNamesByRequest = new LinkedHashMap<>();
+    Set<String> newInputNames = new LinkedHashSet<>();
 
     measuringTimeTaken(
         () -> {
           collectInputValues(executeWithInputsList, batchCommand.dependantChain());
           collectDepValues(executeWithDependencyList, batchCommand.dependantChain());
-
           executeWithInputsList.forEach(
-              executeWithInputs ->
-                  inputNamesByRequest
-                      .computeIfAbsent(executeWithInputs.requestId(), _k1 -> new LinkedHashSet<>())
-                      .addAll(executeWithInputs.inputNames()));
+              executeWithInputs -> newInputNames.addAll(executeWithInputs.inputNames()));
           executeWithDependencyList.forEach(
-              executeWithDependency ->
-                  inputNamesByRequest
-                      .computeIfAbsent(
-                          executeWithDependency.requestId(), _k1 -> new LinkedHashSet<>())
-                      .add(executeWithDependency.dependencyName()));
+              executeWithDependency -> newInputNames.add(executeWithDependency.dependencyName()));
 
-          return inputNamesByRequest;
+          return newInputNames;
         },
         timeTaken -> nodeMetrics.computeInputsForExecuteTimeNs(timeTaken.toNanos()));
     if (skipCommands.size() == batchCommand.subCommands().size()) {
-      nodeInputCommands.putAll(handleSkipDependencies(skipCommands));
+      nodeInputCommands.putAll(handleSkipDependencies(skipCommands.values()));
     } else {
-      skipCommands.forEach(
-          skipNode ->
-              inputNamesByRequest.put(
-                  skipNode.requestId(), inputNamesByRequest.values().iterator().next()));
+      RequestId x =
+          batchCommand.subCommands().entrySet().stream()
+              .filter(e -> !skipCommands.containsKey(e.getKey()))
+              .findAny()
+              .map(Entry::getKey)
+              .orElseThrow();
+      Map<String, InputValue<Object>> allInputs =
+          inputsValueCollector.computeIfAbsent(x, r -> new LinkedHashMap<>());
+      Map<String, Results<Object>> allDependencies =
+          dependencyValuesCollector.computeIfAbsent(x, k -> new LinkedHashMap<>());
+      Set<String> availableInputs = Sets.union(allInputs.keySet(), allDependencies.keySet());
+      Set<ResolverDefinition> pendingResolvers =
+          getPendingResolvers(x, newInputNames, availableInputs);
+      batchCommand
+          .subCommands()
+          .keySet()
+          .forEach(
+              (requestId) -> {
+                executeBatch(requestId, pendingResolvers)
+                    .forEach(
+                        (depName, outgoingCommands) -> {
+                          nodeInputCommands
+                              .computeIfAbsent(depName, _k -> new LinkedHashMap<>())
+                              .computeIfAbsent(requestId, _k -> new ArrayList<>())
+                              .addAll(outgoingCommands);
+                        });
+              });
     }
-    inputNamesByRequest.forEach(
-        (requestId, newInputNames) -> {
-          execute(requestId, newInputNames)
-              .forEach(
-                  (depName, outgoingCommands) -> {
-                    nodeInputCommands
-                        .computeIfAbsent(depName, _k -> new LinkedHashMap<>())
-                        .computeIfAbsent(requestId, _k -> new ArrayList<>())
-                        .addAll(outgoingCommands);
-                  });
-        });
     return nodeInputCommands;
     //    return getFilteredInputCommands(nodeInputCommands, batchCommand.subCommands().size());
   }
@@ -496,7 +500,7 @@ class Node {
   }
 
   private Map<String, Map<RequestId, List<NodeInputCommand>>> handleSkipDependencies(
-      List<SkipNode> skipCommands) {
+      Collection<SkipNode> skipCommands) {
     Optional<MultiResolverDefinition> multiResolverOpt = getMultiResolverDef();
     Map<String, Map<RequestId, List<NodeInputCommand>>> outGoingNodeCommands =
         new LinkedHashMap<>();
@@ -604,6 +608,24 @@ class Node {
                 .formatted(dependencyName, nodeId, requestId));
       }
     }
+  }
+
+  private Map<String, List<NodeInputCommand>> executeBatch(
+      RequestId requestId, Set<ResolverDefinition> resolvers) {
+    Map<String, InputValue<Object>> allInputs =
+        inputsValueCollector.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
+    Map<String, Results<Object>> allDependencies =
+        dependencyValuesCollector.computeIfAbsent(requestId, k -> new LinkedHashMap<>());
+    ImmutableSet<String> allInputNames = nodeDefinition.getMainLogicDefinition().inputNames();
+    Set<String> availableInputs = Sets.union(allInputs.keySet(), allDependencies.keySet());
+    if (availableInputs.isEmpty()
+        && !allInputNames.isEmpty()
+        && nodeDefinition.resolverDefinitions().isEmpty()
+        && !nodeDefinition.dependencyNodes().isEmpty()) {
+      return executeDependenciesWhenNoResolvers(requestId);
+    }
+
+    return executeResolvers(requestId, resolvers, getMultiResolverDef());
   }
 
   private Map<String, List<NodeInputCommand>> execute(
