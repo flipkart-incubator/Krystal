@@ -434,7 +434,14 @@ class Node {
                             .addAll(outgoingCommands);
                       });
             });
-    return nodeInputCommands;
+    return getFilteredInputCommands(nodeInputCommands, batchCommand.subCommands().size());
+  }
+
+  private Map<String, Map<RequestId, List<NodeInputCommand>>> getFilteredInputCommands(
+      Map<String, Map<RequestId, List<NodeInputCommand>>> nodeInputCommands, int subCommandsSize) {
+    return nodeInputCommands.entrySet().stream()
+        .filter(entry -> entry.getValue().size() == subCommandsSize)
+        .collect(toMap(Entry::getKey, Entry::getValue));
   }
 
   private Optional<CompletableFuture<Map<RequestId, NodeResponse>>> executeMainLogicIfPossible(

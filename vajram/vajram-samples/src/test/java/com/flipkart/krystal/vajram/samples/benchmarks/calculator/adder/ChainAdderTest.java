@@ -229,7 +229,7 @@ class ChainAdderTest {
 
       }
      */
-//  @Disabled("Long running benchmark")
+  @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark_2() throws Exception {
     int outerLoopCount = 200;
