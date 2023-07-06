@@ -56,14 +56,12 @@ class FormulaTest {
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
   }
 
-  @Disabled("Long running benchmark (~16s)")
+//  @Disabled("Long running benchmark (~16s)")
   @Test
   @Order(2)
   void vajram_benchmark() throws Exception {
     int loopCount = 1_000_000;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(5).build();
-    graph.registerInputModulators(
-        vajramID(Adder.ID), InputModulatorConfig.simple(() -> new Batcher<>(100)));
     long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
     long javaFuturesTimeNs = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
     //noinspection unchecked

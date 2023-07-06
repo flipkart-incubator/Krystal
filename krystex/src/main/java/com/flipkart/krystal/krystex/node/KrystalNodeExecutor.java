@@ -19,7 +19,6 @@ import com.flipkart.krystal.krystex.commands.NodeCommand;
 import com.flipkart.krystal.krystex.commands.NodeRequestCommand;
 import com.flipkart.krystal.krystex.commands.SkipNode;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
-import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
@@ -46,8 +45,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class KrystalNodeExecutor implements KrystalExecutor {
 
+  public enum ResolverExecStrategy {
+    SINGLE,
+    MULTI
+  }
+
   private final NodeDefinitionRegistry nodeDefinitionRegistry;
-  private final LogicDecorationOrdering logicDecorationOrdering;
+  private final KrystalNodeExecutorConfig executorConfig;
   private final Lease<? extends ExecutorService> commandQueueLease;
   private final String instanceId;
   /**
@@ -60,8 +64,6 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
           String, // DecoratorType
           List<MainLogicDecoratorConfig>>
       requestScopedLogicDecoratorConfigs;
-
-  private final ImmutableSet<DependantChain> disabledDependantChains;
 
   private final Map<
           String, // DecoratorType
@@ -80,31 +82,14 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   public KrystalNodeExecutor(
       NodeDefinitionRegistry nodeDefinitionRegistry,
       MultiLeasePool<? extends ExecutorService> commandQueuePool,
-      KrystalNodeExecutorConfig config,
-      String instanceId) {
-    this(
-        nodeDefinitionRegistry,
-        commandQueuePool,
-        config.logicDecorationOrdering(),
-        config.requestScopedLogicDecoratorConfigs(),
-        config.disabledDependantChains(),
-        instanceId);
-  }
-
-  public KrystalNodeExecutor(
-      NodeDefinitionRegistry nodeDefinitionRegistry,
-      MultiLeasePool<? extends ExecutorService> commandQueuePool,
-      LogicDecorationOrdering logicDecorationOrdering,
-      Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs,
-      ImmutableSet<DependantChain> disabledDependantChains,
+      KrystalNodeExecutorConfig executorConfig,
       String instanceId) {
     this.nodeDefinitionRegistry = nodeDefinitionRegistry;
-    this.logicDecorationOrdering = logicDecorationOrdering;
+    this.executorConfig = executorConfig;
     this.commandQueueLease = commandQueuePool.lease();
     this.instanceId = instanceId;
     this.requestScopedLogicDecoratorConfigs =
-        ImmutableMap.copyOf(requestScopedLogicDecoratorConfigs);
-    this.disabledDependantChains = disabledDependantChains;
+        ImmutableMap.copyOf(executorConfig.requestScopedLogicDecoratorConfigs());
     this.krystalNodeMetrics = new KrystalNodeExecutorMetrics();
   }
 
@@ -187,13 +172,17 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       NodeId nodeId, DependantChain dependantChain, NodeExecutionConfig executionConfig) {
     NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
     // If a dependantChain is disabled, don't create that node and its dependency nodes
-    if (!union(this.disabledDependantChains, executionConfig.disabledDependantChains())
+    if (!union(executorConfig.disabledDependantChains(), executionConfig.disabledDependantChains())
         .contains(dependantChain)) {
       nodeRegistry.createIfAbsent(
           nodeId,
           _n ->
               new Node(
-                  nodeDefinition, this, this::getRequestScopedDecorators, logicDecorationOrdering));
+                  nodeDefinition,
+                  this,
+                  this::getRequestScopedDecorators,
+                  executorConfig.logicDecorationOrdering(),
+                  executorConfig.resolverExecStrategy()));
       ImmutableMap<String, NodeId> dependencyNodes = nodeDefinition.dependencyNodes();
       dependencyNodes.forEach(
           (dependencyName, depNodeId) ->
@@ -261,7 +250,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
         dependantChain = skipNode.dependantChain();
       }
       if (union(
-              disabledDependantChains,
+              executorConfig.disabledDependantChains(),
               allRequests
                   .get(requestId.originatedFrom())
                   .executionConfig()
@@ -271,7 +260,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       }
     } else if (nodeCommand instanceof Flush flush) {
       DependantChain dependantChain = flush.nodeDependants();
-      if (disabledDependantChains.contains(dependantChain)) {
+      if (executorConfig.disabledDependantChains().contains(dependantChain)) {
         throw new DisabledDependantChainException(dependantChain);
       }
       if (allRequests.values().stream()
@@ -317,19 +306,20 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
               });
           List<CompletableFuture<?>> futures = new ArrayList<>();
           unFlushedRequests.stream()
-              .map(allRequests::get)
-              .map(NodeResult::future)
-              .forEach(futures::add);
-          unFlushedRequests.stream()
               .map(requestId -> allRequests.get(requestId).nodeId())
               .distinct()
               .forEach(nodeId -> futures.add(executeCommand(new Flush(nodeId))));
-          return allOf(futures.toArray(CompletableFuture[]::new))
-              .whenComplete(
-                  (_v, _t) -> {
-                    dependantChainsPerNode.clear();
-                    unFlushedRequests.clear();
-                  });
+          return null;
+          //          unFlushedRequests.stream()
+          //              .map(allRequests::get)
+          //              .map(NodeResult::future)
+          //              .forEach(futures::add);
+          //          return allOf(futures.toArray(CompletableFuture[]::new))
+          //              .whenComplete(
+          //                  (_v, _t) -> {
+          //                    dependantChainsPerNode.clear();
+          //                    unFlushedRequests.clear();
+          //                  });
         });
   }
 

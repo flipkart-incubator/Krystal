@@ -2,6 +2,7 @@ package com.flipkart.krystal.krystex.node;
 
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.ResolverExecStrategy;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
@@ -12,7 +13,14 @@ import lombok.Builder;
 public record KrystalNodeExecutorConfig(
     LogicDecorationOrdering logicDecorationOrdering,
     Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs,
-    ImmutableSet<DependantChain> disabledDependantChains) {
+    ImmutableSet<DependantChain> disabledDependantChains,
+    ResolverExecStrategy resolverExecStrategy) {
+
+  public KrystalNodeExecutorConfig {
+    if (resolverExecStrategy == null) {
+      resolverExecStrategy = ResolverExecStrategy.MULTI;
+    }
+  }
 
   @Override
   public ImmutableSet<DependantChain> disabledDependantChains() {

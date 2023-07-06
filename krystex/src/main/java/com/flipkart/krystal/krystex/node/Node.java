@@ -28,6 +28,7 @@ import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.ResolverExecStrategy;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
 import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
@@ -74,6 +75,7 @@ class Node {
       resolverDefinitionsByInput;
   private final ImmutableMapView<String, ImmutableSet<ResolverDefinition>>
       resolverDefinitionsByDependencies;
+  private final ResolverExecStrategy resolverExecStrategy;
   private final LogicDecorationOrdering logicDecorationOrdering;
 
   private final Map<RequestId, Map<String, DependencyNodeExecutions>> dependencyExecutions =
@@ -112,7 +114,8 @@ class Node {
       KrystalNodeExecutor krystalNodeExecutor,
       Function<LogicExecutionContext, ImmutableMap<String, MainLogicDecorator>>
           requestScopedDecoratorsSupplier,
-      LogicDecorationOrdering logicDecorationOrdering) {
+      LogicDecorationOrdering logicDecorationOrdering,
+      ResolverExecStrategy resolverExecStrategy) {
     this.nodeId = nodeDefinition.nodeId();
     this.nodeDefinition = nodeDefinition;
     this.krystalNodeExecutor = krystalNodeExecutor;
@@ -124,6 +127,7 @@ class Node {
         ImmutableMapView.viewOf(
             nodeDefinition.resolverDefinitions().stream()
                 .collect(groupingBy(ResolverDefinition::dependencyName, toImmutableSet())));
+    this.resolverExecStrategy = resolverExecStrategy;
   }
 
   void executeCommand(Flush nodeCommand) {
@@ -310,6 +314,12 @@ class Node {
   }
 
   private void executeResolvers(RequestId requestId, Set<ResolverDefinition> pendingResolvers) {
+    if (ResolverExecStrategy.SINGLE.equals(resolverExecStrategy)) {
+      for (ResolverDefinition resolverDefinition : pendingResolvers) {
+        executeResolver(requestId, resolverDefinition);
+      }
+      return;
+    }
     if (pendingResolvers.isEmpty()) {
       return;
     }

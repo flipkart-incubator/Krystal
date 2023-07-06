@@ -31,7 +31,7 @@ public final class InputResolverUtil {
 
   public static ResolutionResult multiResolve(
       List<ResolutionRequest> resolutionRequests,
-      Map<String, Collection<SimpleInputResolver>> resolvers,
+      Map<String, Collection<? extends SimpleInputResolver<?, ?, ?, ?>>> resolvers,
       Inputs inputs) {
 
     Map<String, List<Map<String, Object>>> results = new LinkedHashMap<>();
@@ -39,8 +39,9 @@ public final class InputResolverUtil {
     for (ResolutionRequest resolutionRequest : resolutionRequests) {
       String dependencyName = resolutionRequest.dependencyName();
       List<Map<String, Object>> depInputs = new ArrayList<>();
-      Collection<SimpleInputResolver> depResolvers = resolvers.get(dependencyName);
-      for (SimpleInputResolver simpleResolver : depResolvers) {
+      Collection<? extends SimpleInputResolver<?, ?, ?, ?>> depResolvers =
+          resolvers.get(dependencyName);
+      for (SimpleInputResolver<?, ?, ?, ?> simpleResolver : depResolvers) {
         String resolvable = simpleResolver.getResolverSpec().getTargetInput().name();
         DependencyCommand<?> command =
             _resolutionHelper(
@@ -118,10 +119,10 @@ public final class InputResolverUtil {
 
   static <S, T, CV extends Vajram<?>, DV extends Vajram<?>> InputResolver toResolver(
       VajramDependencyTypeSpec<?, CV, DV> dependency, SimpleInputResolverSpec<S, T, CV, DV> spec) {
-    return new SimpleInputResolver(dependency, spec);
+    return new SimpleInputResolver<>(dependency, spec);
   }
 
-  private static <T> DependencyCommand<T> _resolutionHelper(
+  static <T> DependencyCommand<T> _resolutionHelper(
       VajramInputTypeSpec<?, ?> sourceInput,
       Function<? extends Optional<?>, ?> oneToOneTransformer,
       Function<? extends Optional<?>, ? extends Collection<?>> fanoutTransformer,

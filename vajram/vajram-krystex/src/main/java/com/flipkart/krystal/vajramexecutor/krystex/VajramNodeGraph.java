@@ -422,7 +422,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                                   e ->
                                       e.getValue().stream()
                                           .map(resolversByResolverDefs::get)
-                                          .map(ird -> (SimpleInputResolver) ird)
+                                          .map(ird -> (SimpleInputResolver<?, ?, ?, ?>) ird)
                                           .toList())),
                       inputs);
               Map<String, List<Map<String, Object>>> results = simpleResolutions.results();

@@ -13,16 +13,15 @@ import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
 import com.flipkart.krystal.krystex.node.NodeExecutionConfig;
 import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
 import java.util.List;
 import java.util.Optional;
@@ -48,9 +47,7 @@ class Resilience4JBulkheadTest {
         new KrystalNodeExecutor(
             nodeDefinitionRegistry,
             new ForkJoinExecutorPool(1),
-            new LogicDecorationOrdering(ImmutableSet.of()),
-            ImmutableMap.of(),
-            ImmutableSet.of(),
+            KrystalNodeExecutorConfig.builder().build(),
             "test");
   }
 
