@@ -188,7 +188,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
           (dependencyName, depNodeId) ->
               createDependencyNodes(
                   depNodeId,
-                  DependantChain.extend(dependantChain, nodeId, dependencyName),
+                  dependantChain.extend(nodeId, dependencyName),
                   executionConfig));
       dependantChainsPerNode
           .computeIfAbsent(nodeId, _n -> new LinkedHashSet<>())

@@ -215,7 +215,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
         throw new IllegalStateException(
             "Unable find node for dependency %s of node %s".formatted(currentDepName, currentNode));
       }
-      currentDepChain = DependantChain.extend(currentDepChain, depNodeId, currentDepName);
+      currentDepChain = currentDepChain.extend(depNodeId, currentDepName);
       currentNode = nodeDefinitionRegistry.get(depNodeId);
       previousDepName = currentDepName;
     }

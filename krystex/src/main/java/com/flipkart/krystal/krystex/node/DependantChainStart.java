@@ -33,5 +33,5 @@ public final class DependantChainStart implements DependantChain {
     return false;
   }
 
-  private DependantChainStart() {}
+  DependantChainStart() {}
 }
