@@ -207,7 +207,8 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
       String firstVajramId, String firstDependencyName, String... subsequentDependencyNames) {
     NodeId firstNodeId = _getVajramExecutionGraph(vajramID(firstVajramId));
     NodeDefinition currentNode = nodeDefinitionRegistry.get(firstNodeId);
-    DependantChain currentDepChain = DependantChain.start(firstNodeId, firstDependencyName);
+    DependantChain currentDepChain =
+        nodeDefinitionRegistry.getDependantChainsStart().extend(firstNodeId, firstDependencyName);
     String previousDepName = firstDependencyName;
     for (String currentDepName : subsequentDependencyNames) {
       NodeId depNodeId = currentNode.dependencyNodes().get(previousDepName);

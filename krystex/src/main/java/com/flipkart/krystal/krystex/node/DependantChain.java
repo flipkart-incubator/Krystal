@@ -8,10 +8,6 @@ public sealed interface DependantChain permits DefaultDependantChain, DependantC
    */
   boolean contains(NodeId nodeId);
 
-  static DependantChain start(NodeId nodeId, String dependencyName) {
-    return new DefaultDependantChain(nodeId, dependencyName, DependantChainStart.instance());
-  }
-
   default DependantChain extend(NodeId nodeId, String dependencyName) {
     return new DefaultDependantChain(nodeId, dependencyName, this);
   }

@@ -12,6 +12,7 @@ public final class NodeDefinitionRegistry {
 
   private final LogicDefinitionRegistry logicDefinitionRegistry;
   private final Map<NodeId, NodeDefinition> nodeDefinitions = new LinkedHashMap<>();
+  private final DependantChainStart dependantChainStart = new DependantChainStart();
 
   public NodeDefinitionRegistry(LogicDefinitionRegistry logicDefinitionRegistry) {
     this.logicDefinitionRegistry = logicDefinitionRegistry;
@@ -57,5 +58,9 @@ public final class NodeDefinitionRegistry {
             this);
     nodeDefinitions.put(nodeDefinition.nodeId(), nodeDefinition);
     return nodeDefinition;
+  }
+
+  public DependantChain getDependantChainsStart() {
+    return dependantChainStart;
   }
 }

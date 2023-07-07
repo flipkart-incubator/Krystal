@@ -151,7 +151,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
         enqueueCommand( // Perform all datastructure manipulations in the command queue to avoid
                 // multi-thread access
                 () -> {
-                  createDependencyNodes(nodeId, DependantChainStart.instance(), executionConfig);
+                  createDependencyNodes(
+                      nodeId, nodeDefinitionRegistry.getDependantChainsStart(), executionConfig);
                   CompletableFuture<Object> future = new CompletableFuture<>();
                   if (allRequests.containsKey(requestId)) {
                     future.completeExceptionally(
@@ -187,9 +188,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       dependencyNodes.forEach(
           (dependencyName, depNodeId) ->
               createDependencyNodes(
-                  depNodeId,
-                  dependantChain.extend(nodeId, dependencyName),
-                  executionConfig));
+                  depNodeId, dependantChain.extend(nodeId, dependencyName), executionConfig));
       dependantChainsPerNode
           .computeIfAbsent(nodeId, _n -> new LinkedHashSet<>())
           .add(dependantChain);
@@ -291,7 +290,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                                     .filter(s -> !nodeDefinition.dependencyNodes().containsKey(s))
                                     .collect(toImmutableSet()),
                                 nodeResult.inputs(),
-                                DependantChainStart.instance(),
+                                nodeDefinitionRegistry.getDependantChainsStart(),
                                 requestId))
                         .thenApply(NodeResponse::response)
                         .thenApply(
@@ -308,7 +307,12 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
           unFlushedRequests.stream()
               .map(requestId -> allRequests.get(requestId).nodeId())
               .distinct()
-              .forEach(nodeId -> futures.add(executeCommand(new Flush(nodeId))));
+              .forEach(
+                  nodeId ->
+                      futures.add(
+                          executeCommand(
+                              new Flush(
+                                  nodeId, nodeDefinitionRegistry.getDependantChainsStart()))));
           return null;
           //          unFlushedRequests.stream()
           //              .map(allRequests::get)

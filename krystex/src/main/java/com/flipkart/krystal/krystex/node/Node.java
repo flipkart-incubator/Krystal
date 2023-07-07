@@ -426,7 +426,9 @@ class Node {
                   depNodeId,
                   depRequestId,
                   dependantChainByRequest
-                      .getOrDefault(requestId, DependantChainStart.instance())
+                      .getOrDefault(
+                          requestId,
+                          nodeDefinition.nodeDefinitionRegistry().getDependantChainsStart())
                       .extend(nodeId, dependencyName),
                   (SkipDependency) resolverCommand);
           dependencyNodeExecutions
@@ -488,7 +490,9 @@ class Node {
                           newInputs.values().keySet(),
                           newInputs,
                           dependantChainByRequest
-                              .getOrDefault(requestId, DependantChainStart.instance())
+                              .getOrDefault(
+                                  requestId,
+                                  nodeDefinition.nodeDefinitionRegistry().getDependantChainsStart())
                               .extend(nodeId, dependencyName),
                           dependencyRequestId)));
         }
@@ -528,7 +532,8 @@ class Node {
 
       flushDependencyIfNeeded(
           dependencyName,
-          dependantChainByRequest.getOrDefault(requestId, DependantChainStart.instance()));
+          dependantChainByRequest.getOrDefault(
+              requestId, nodeDefinition.nodeDefinitionRegistry().getDependantChainsStart()));
     }
   }
 
