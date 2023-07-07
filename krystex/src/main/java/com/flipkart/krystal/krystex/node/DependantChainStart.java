@@ -11,7 +11,7 @@ import com.flipkart.krystal.krystex.KrystalExecutor;
  * <p>{@link Node}s which are executed explicitly using {@link KrystalExecutor#executeNode} have
  * this as their dependantChain.
  */
-public final class DependantChainStart implements DependantChain {
+public final class DependantChainStart extends AbstractDependantChain {
 
   DependantChainStart() {}
 
@@ -21,10 +21,5 @@ public final class DependantChainStart implements DependantChain {
   @Override
   public String toString() {
     return "[Start]";
-  }
-
-  @Override
-  public boolean contains(NodeId nodeId) {
-    return false;
   }
 }

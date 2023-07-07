@@ -1,10 +1,6 @@
 package com.flipkart.krystal.krystex.node;
 
-import lombok.EqualsAndHashCode;
-import lombok.EqualsAndHashCode.CacheStrategy;
-
-@EqualsAndHashCode(cacheStrategy = CacheStrategy.LAZY)
-public final class DefaultDependantChain implements DependantChain {
+public final class DefaultDependantChain extends AbstractDependantChain {
   private final NodeId nodeId;
   private final String dependencyName;
   private final DependantChain dependantChain;
@@ -13,11 +9,6 @@ public final class DefaultDependantChain implements DependantChain {
     this.nodeId = nodeId;
     this.dependencyName = dependencyName;
     this.dependantChain = dependantChain;
-  }
-
-  @Override
-  public boolean contains(NodeId nodeId) {
-    return this.nodeId.equals(nodeId) || dependantChain.contains(nodeId);
   }
 
   public NodeId nodeId() {
