@@ -13,11 +13,11 @@ import static java.util.function.Function.identity;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
 import com.flipkart.krystal.krystex.commands.Flush;
+import com.flipkart.krystal.krystex.commands.ForwardGranularCommand;
+import com.flipkart.krystal.krystex.commands.GranularNodeCommand;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
-import com.flipkart.krystal.krystex.commands.NodeRequestCommand;
-import com.flipkart.krystal.krystex.commands.SkipNode;
+import com.flipkart.krystal.krystex.commands.SkipGranularCommand;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
@@ -48,6 +48,11 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   public enum ResolverExecStrategy {
     SINGLE,
     MULTI
+  }
+
+  public enum NodeExecStrategy {
+    GRANULAR,
+    BATCH
   }
 
   private final NodeDefinitionRegistry nodeDefinitionRegistry;
@@ -178,7 +183,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
       nodeRegistry.createIfAbsent(
           nodeId,
           _n ->
-              new Node(
+              new GranularNode(
                   nodeDefinition,
                   this,
                   this::getRequestScopedDecorators,
@@ -203,7 +208,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
    * dependents. That is when this method is used - ensuring that all further processing of the
    * nodeCammand happens in the main thread.
    */
-  CompletableFuture<NodeResponse> enqueueNodeCommand(Supplier<NodeRequestCommand> nodeCommand) {
+  CompletableFuture<GranularNodeResponse> enqueueNodeCommand(
+      Supplier<GranularNodeCommand> nodeCommand) {
     return enqueueCommand(() -> _executeCommand(nodeCommand.get())).thenCompose(identity());
   }
 
@@ -217,19 +223,19 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
    * inside the command queue,thus avoiding unnecessary contention in the thread-safe structures
    * inside the command queue.
    */
-  CompletableFuture<NodeResponse> executeCommand(NodeCommand nodeCommand) {
+  CompletableFuture<GranularNodeResponse> executeCommand(NodeCommand nodeCommand) {
     krystalNodeMetrics.commandQueueBypassed();
     return _executeCommand(nodeCommand);
   }
 
-  private CompletableFuture<NodeResponse> _executeCommand(NodeCommand nodeCommand) {
+  private CompletableFuture<GranularNodeResponse> _executeCommand(NodeCommand nodeCommand) {
     try {
       validate(nodeCommand);
     } catch (Throwable e) {
       return failedFuture(e);
     }
-    if (nodeCommand instanceof NodeRequestCommand nodeRequestCommand) {
-      return nodeRegistry.get(nodeCommand.nodeId()).executeRequestCommand(nodeRequestCommand);
+    if (nodeCommand instanceof GranularNodeCommand granularNodeCommand) {
+      return nodeRegistry.get(nodeCommand.nodeId()).executeCommand(granularNodeCommand);
     } else if (nodeCommand instanceof Flush flush) {
       nodeRegistry.get(flush.nodeId()).executeCommand(flush);
       return completedFuture(null);
@@ -240,12 +246,12 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   private void validate(NodeCommand nodeCommand) {
-    if (nodeCommand instanceof NodeRequestCommand nodeRequestCommand) {
+    if (nodeCommand instanceof GranularNodeCommand granularNodeCommand) {
       DependantChain dependantChain = null;
-      RequestId requestId = nodeRequestCommand.requestId();
-      if (nodeCommand instanceof ExecuteWithInputs executeWithInputs) {
-        dependantChain = executeWithInputs.dependantChain();
-      } else if (nodeCommand instanceof SkipNode skipNode) {
+      RequestId requestId = granularNodeCommand.requestId();
+      if (nodeCommand instanceof ForwardGranularCommand forwardGranularCommand) {
+        dependantChain = forwardGranularCommand.dependantChain();
+      } else if (nodeCommand instanceof SkipGranularCommand skipNode) {
         dependantChain = skipNode.dependantChain();
       }
       if (union(
@@ -284,7 +290,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                 NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
                 CompletableFuture<Object> submissionResult =
                     executeCommand(
-                            new ExecuteWithInputs(
+                            new ForwardGranularCommand(
                                 nodeId,
                                 nodeDefinition.getMainLogicDefinition().inputNames().stream()
                                     .filter(s -> !nodeDefinition.dependencyNodes().containsKey(s))
@@ -292,7 +298,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                                 nodeResult.inputs(),
                                 nodeDefinitionRegistry.getDependantChainsStart(),
                                 requestId))
-                        .thenApply(NodeResponse::response)
+                        .thenApply(GranularNodeResponse::response)
                         .thenApply(
                             valueOrError -> {
                               if (valueOrError.error().isPresent()) {

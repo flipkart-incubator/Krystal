@@ -56,7 +56,7 @@ class FormulaTest {
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
   }
 
-//  @Disabled("Long running benchmark (~16s)")
+  @Disabled("Long running benchmark (~16s)")
   @Test
   @Order(2)
   void vajram_benchmark() throws Exception {

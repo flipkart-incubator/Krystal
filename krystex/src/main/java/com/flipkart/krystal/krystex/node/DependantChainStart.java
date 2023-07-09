@@ -8,7 +8,7 @@ import com.flipkart.krystal.krystex.KrystalExecutor;
  *
  * <p>All {@link DependantChain}s are guaranteed to begin with a {@link DependantChainStart}
  *
- * <p>{@link Node}s which are executed explicitly using {@link KrystalExecutor#executeNode} have
+ * <p>{@link GranularNode}s which are executed explicitly using {@link KrystalExecutor#executeNode} have
  * this as their dependantChain.
  */
 public final class DependantChainStart extends AbstractDependantChain {
