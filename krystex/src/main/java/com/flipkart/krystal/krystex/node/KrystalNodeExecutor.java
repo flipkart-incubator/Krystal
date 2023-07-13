@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.node;
 
+import static com.flipkart.krystal.krystex.node.KrystalNodeExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.utils.Futures.linkFutures;
 import static com.flipkart.krystal.utils.Futures.propagateCancellation;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -59,6 +60,11 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   public enum NodeExecStrategy {
     GRANULAR,
     BATCH
+  }
+
+  public enum GraphTraversalStrategy {
+    DEPTH,
+    BREADTH
   }
 
   private final NodeDefinitionRegistry nodeDefinitionRegistry;
@@ -239,7 +245,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
    * nodeCammand happens in the main thread.
    */
   <R extends NodeResponse> CompletableFuture<R> enqueueNodeCommand(
-      Supplier<GranularNodeCommand> nodeCommand) {
+      Supplier<? extends NodeCommand> nodeCommand) {
     return enqueueCommand((Supplier<CompletableFuture<R>>) () -> _executeCommand(nodeCommand.get()))
         .thenCompose(identity());
   }
@@ -255,8 +261,12 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
    * inside the command queue.
    */
   <T extends NodeResponse> CompletableFuture<T> executeCommand(NodeCommand nodeCommand) {
-    krystalNodeMetrics.commandQueueBypassed();
-    return _executeCommand(nodeCommand);
+    if (BREADTH.equals(executorConfig.graphTraversalStrategy())) {
+      return enqueueNodeCommand(() -> nodeCommand);
+    } else {
+      krystalNodeMetrics.commandQueueBypassed();
+      return _executeCommand(nodeCommand);
+    }
   }
 
   private <R extends NodeResponse> CompletableFuture<R> _executeCommand(NodeCommand nodeCommand) {
