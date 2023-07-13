@@ -23,7 +23,7 @@ public record KrystalNodeExecutorConfig(
       resolverExecStrategy = ResolverExecStrategy.MULTI;
     }
     if (nodeExecStrategy == null) {
-      nodeExecStrategy = NodeExecStrategy.BATCH;
+      nodeExecStrategy = NodeExecStrategy.GRANULAR;
     }
   }
 

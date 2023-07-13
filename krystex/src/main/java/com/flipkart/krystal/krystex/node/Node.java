@@ -1,7 +1,6 @@
 package com.flipkart.krystal.krystex.node;
 
 import com.flipkart.krystal.krystex.commands.Flush;
-import com.flipkart.krystal.krystex.commands.NodeCommand;
 import com.flipkart.krystal.krystex.commands.NodeDataCommand;
 import java.util.concurrent.CompletableFuture;
 
