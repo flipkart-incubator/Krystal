@@ -15,8 +15,8 @@ import java.util.Set;
 public record ForwardBatchCommand(
     NodeId nodeId,
     ImmutableMap<RequestId, Inputs> inputsByRequest,
-    ImmutableMap<RequestId, String> skipReasonsByRequest,
     DependantChain dependantChain,
+    ImmutableMap<RequestId, String> skipReasonsByRequest,
     Optional<String> skipReason)
     implements BatchNodeCommand {
 
@@ -32,7 +32,7 @@ public record ForwardBatchCommand(
       ImmutableMap<RequestId, Inputs> inputsByRequest,
       ImmutableMap<RequestId, String> skipReasonsByRequest,
       DependantChain dependantChain) {
-    this(nodeId, inputsByRequest, skipReasonsByRequest, dependantChain, Optional.empty());
+    this(nodeId, inputsByRequest, dependantChain, skipReasonsByRequest, Optional.empty());
   }
 
   @Override

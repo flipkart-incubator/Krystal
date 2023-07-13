@@ -132,10 +132,10 @@ final class GranularNode implements Node<GranularNodeCommand, GranularNodeRespon
   }
 
   @Override
-  public void executeCommand(Flush nodeCommand) {
-    flushedDependantChain.put(nodeCommand.nodeDependants(), true);
-    flushAllDependenciesIfNeeded(nodeCommand.nodeDependants());
-    flushDecoratorsIfNeeded(nodeCommand.nodeDependants());
+  public void executeCommand(Flush flushCommand) {
+    flushedDependantChain.put(flushCommand.nodeDependants(), true);
+    flushAllDependenciesIfNeeded(flushCommand.nodeDependants());
+    flushDecoratorsIfNeeded(flushCommand.nodeDependants());
   }
 
   @Override

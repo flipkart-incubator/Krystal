@@ -100,7 +100,7 @@ final class BatchNode implements Node<BatchNodeCommand, BatchNodeResponse> {
   }
 
   @Override
-  public void executeCommand(Flush nodeCommand) {}
+  public void executeCommand(Flush flushCommand) {}
 
   @Override
   public CompletableFuture<BatchNodeResponse> executeCommand(BatchNodeCommand nodeCommand) {

@@ -1,7 +1,9 @@
 package com.flipkart.krystal.krystex.node;
 
 import static com.flipkart.krystal.utils.Futures.linkFutures;
+import static com.flipkart.krystal.utils.Futures.propagateCancellation;
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.union;
 import static java.util.concurrent.CompletableFuture.allOf;
@@ -9,14 +11,18 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.groupingBy;
 
 import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.commands.Flush;
+import com.flipkart.krystal.krystex.commands.ForwardBatchCommand;
 import com.flipkart.krystal.krystex.commands.ForwardGranularCommand;
 import com.flipkart.krystal.krystex.commands.GranularNodeCommand;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
+import com.flipkart.krystal.krystex.commands.NodeDataCommand;
 import com.flipkart.krystal.krystex.commands.SkipGranularCommand;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
@@ -77,7 +83,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
               MainLogicDecorator>>
       requestScopedMainDecorators = new LinkedHashMap<>();
 
-  private final NodeRegistry nodeRegistry = new NodeRegistry();
+  private final NodeRegistry<?> nodeRegistry = new NodeRegistry<>();
   private final KrystalNodeExecutorMetrics krystalNodeMetrics;
   private volatile boolean closed;
   private final Map<RequestId, NodeResult> allRequests = new LinkedHashMap<>();
@@ -166,7 +172,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                                 .formatted(instanceId, executionId)));
                   } else {
                     allRequests.put(
-                        requestId, new NodeResult(nodeId, inputs, executionConfig, future));
+                        requestId,
+                        new NodeResult(nodeId, requestId, inputs, executionConfig, future));
                     unFlushedRequests.add(requestId);
                   }
                   return future;
@@ -180,15 +187,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     // If a dependantChain is disabled, don't create that node and its dependency nodes
     if (!union(executorConfig.disabledDependantChains(), executionConfig.disabledDependantChains())
         .contains(dependantChain)) {
-      nodeRegistry.createIfAbsent(
-          nodeId,
-          _n ->
-              new GranularNode(
-                  nodeDefinition,
-                  this,
-                  this::getRequestScopedDecorators,
-                  executorConfig.logicDecorationOrdering(),
-                  executorConfig.resolverExecStrategy()));
+      createNodeIfAbsent(nodeId, nodeDefinition);
       ImmutableMap<String, NodeId> dependencyNodes = nodeDefinition.dependencyNodes();
       dependencyNodes.forEach(
           (dependencyName, depNodeId) ->
@@ -200,6 +199,37 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     }
   }
 
+  @SuppressWarnings("unchecked")
+  private void createNodeIfAbsent(NodeId nodeId, NodeDefinition nodeDefinition) {
+    if (isGranular()) {
+      ((NodeRegistry<GranularNode>) nodeRegistry)
+          .createIfAbsent(
+              nodeId,
+              _n ->
+                  new GranularNode(
+                      nodeDefinition,
+                      this,
+                      this::getRequestScopedDecorators,
+                      executorConfig.logicDecorationOrdering(),
+                      executorConfig.resolverExecStrategy()));
+    } else {
+      ((NodeRegistry<BatchNode>) nodeRegistry)
+          .createIfAbsent(
+              nodeId,
+              _n ->
+                  new BatchNode(
+                      nodeDefinition,
+                      this,
+                      this::getRequestScopedDecorators,
+                      executorConfig.logicDecorationOrdering(),
+                      executorConfig.resolverExecStrategy()));
+    }
+  }
+
+  private boolean isGranular() {
+    return NodeExecStrategy.GRANULAR.equals(executorConfig.nodeExecStrategy());
+  }
+
   /**
    * Enqueues the provided NodeRequestCommand supplier into the command queue. This method is
    * intended to be called in threads other than the main thread of this KrystalNodeExecutor.(for
@@ -208,9 +238,10 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
    * dependents. That is when this method is used - ensuring that all further processing of the
    * nodeCammand happens in the main thread.
    */
-  CompletableFuture<GranularNodeResponse> enqueueNodeCommand(
+  <R extends NodeResponse> CompletableFuture<R> enqueueNodeCommand(
       Supplier<GranularNodeCommand> nodeCommand) {
-    return enqueueCommand(() -> _executeCommand(nodeCommand.get())).thenCompose(identity());
+    return enqueueCommand((Supplier<CompletableFuture<R>>) () -> _executeCommand(nodeCommand.get()))
+        .thenCompose(identity());
   }
 
   /**
@@ -223,19 +254,22 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
    * inside the command queue,thus avoiding unnecessary contention in the thread-safe structures
    * inside the command queue.
    */
-  CompletableFuture<GranularNodeResponse> executeCommand(NodeCommand nodeCommand) {
+  <T extends NodeResponse> CompletableFuture<T> executeCommand(NodeCommand nodeCommand) {
     krystalNodeMetrics.commandQueueBypassed();
     return _executeCommand(nodeCommand);
   }
 
-  private CompletableFuture<GranularNodeResponse> _executeCommand(NodeCommand nodeCommand) {
+  private <R extends NodeResponse> CompletableFuture<R> _executeCommand(NodeCommand nodeCommand) {
     try {
       validate(nodeCommand);
     } catch (Throwable e) {
       return failedFuture(e);
     }
-    if (nodeCommand instanceof GranularNodeCommand granularNodeCommand) {
-      return nodeRegistry.get(nodeCommand.nodeId()).executeCommand(granularNodeCommand);
+    if (nodeCommand instanceof NodeDataCommand dataCommand) {
+      @SuppressWarnings("unchecked")
+      Node<NodeDataCommand, R> node =
+          (Node<NodeDataCommand, R>) nodeRegistry.get(nodeCommand.nodeId());
+      return node.executeCommand(dataCommand);
     } else if (nodeCommand instanceof Flush flush) {
       nodeRegistry.get(flush.nodeId()).executeCommand(flush);
       return completedFuture(null);
@@ -278,59 +312,91 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   public void flush() {
-    enqueueCommand(
+    enqueueRunnable(
         () -> {
-          unFlushedRequests.forEach(
-              requestId -> {
-                NodeResult nodeResult = allRequests.get(requestId);
-                NodeId nodeId = nodeResult.nodeId();
-                if (nodeResult.future().isDone()) {
-                  return;
-                }
-                NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
-                CompletableFuture<Object> submissionResult =
-                    executeCommand(
-                            new ForwardGranularCommand(
-                                nodeId,
-                                nodeDefinition.getMainLogicDefinition().inputNames().stream()
-                                    .filter(s -> !nodeDefinition.dependencyNodes().containsKey(s))
-                                    .collect(toImmutableSet()),
-                                nodeResult.inputs(),
-                                nodeDefinitionRegistry.getDependantChainsStart(),
-                                requestId))
-                        .thenApply(GranularNodeResponse::response)
-                        .thenApply(
-                            valueOrError -> {
-                              if (valueOrError.error().isPresent()) {
-                                throw new RuntimeException(valueOrError.error().get());
-                              } else {
-                                return valueOrError.value().orElse(null);
-                              }
-                            });
-                linkFutures(submissionResult, nodeResult.future());
-              });
-          List<CompletableFuture<?>> futures = new ArrayList<>();
+          if (isGranular()) {
+            unFlushedRequests.forEach(
+                requestId -> {
+                  NodeResult nodeResult = allRequests.get(requestId);
+                  NodeId nodeId = nodeResult.nodeId();
+                  if (nodeResult.future().isDone()) {
+                    return;
+                  }
+                  NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
+                  submitGranular(requestId, nodeResult, nodeId, nodeDefinition);
+                });
+          } else {
+            submitBatch(unFlushedRequests);
+          }
           unFlushedRequests.stream()
               .map(requestId -> allRequests.get(requestId).nodeId())
               .distinct()
               .forEach(
                   nodeId ->
-                      futures.add(
-                          executeCommand(
-                              new Flush(
-                                  nodeId, nodeDefinitionRegistry.getDependantChainsStart()))));
-          return null;
-          //          unFlushedRequests.stream()
-          //              .map(allRequests::get)
-          //              .map(NodeResult::future)
-          //              .forEach(futures::add);
-          //          return allOf(futures.toArray(CompletableFuture[]::new))
-          //              .whenComplete(
-          //                  (_v, _t) -> {
-          //                    dependantChainsPerNode.clear();
-          //                    unFlushedRequests.clear();
-          //                  });
+                      executeCommand(
+                          new Flush(nodeId, nodeDefinitionRegistry.getDependantChainsStart())));
         });
+  }
+
+  private void submitGranular(
+      RequestId requestId, NodeResult nodeResult, NodeId nodeId, NodeDefinition nodeDefinition) {
+    CompletableFuture<Object> submissionResult =
+        this.<GranularNodeResponse>executeCommand(
+                new ForwardGranularCommand(
+                    nodeId,
+                    nodeDefinition.getMainLogicDefinition().inputNames().stream()
+                        .filter(s -> !nodeDefinition.dependencyNodes().containsKey(s))
+                        .collect(toImmutableSet()),
+                    nodeResult.inputs(),
+                    nodeDefinitionRegistry.getDependantChainsStart(),
+                    requestId))
+            .thenApply(GranularNodeResponse::response)
+            .thenApply(
+                valueOrError -> {
+                  if (valueOrError.error().isPresent()) {
+                    throw new RuntimeException(valueOrError.error().get());
+                  } else {
+                    return valueOrError.value().orElse(null);
+                  }
+                });
+    linkFutures(submissionResult, nodeResult.future());
+  }
+
+  private void submitBatch(Set<RequestId> unFlushedRequests) {
+    unFlushedRequests.stream()
+        .map(allRequests::get)
+        .collect(groupingBy(NodeResult::nodeId))
+        .forEach(
+            (nodeId, nodeResults) -> {
+              CompletableFuture<BatchNodeResponse> batchResponseFuture =
+                  this.executeCommand(
+                      new ForwardBatchCommand(
+                          nodeId,
+                          nodeResults.stream()
+                              .collect(toImmutableMap(NodeResult::requestId, NodeResult::inputs)),
+                          ImmutableMap.of(),
+                          nodeDefinitionRegistry.getDependantChainsStart()));
+              batchResponseFuture
+                  .thenApply(BatchNodeResponse::responses)
+                  .whenComplete(
+                      (responses, throwable) -> {
+                        for (NodeResult nodeResult : nodeResults) {
+                          if (throwable != null) {
+                            nodeResult.future().completeExceptionally(throwable);
+                          } else {
+                            ValueOrError<Object> result =
+                                responses.getOrDefault(nodeResult.inputs(), ValueOrError.empty());
+                            nodeResult.future().complete(result.value().orElse(null));
+                          }
+                        }
+                      });
+              propagateCancellation(
+                  allOf(
+                      nodeResults.stream()
+                          .map(NodeResult::future)
+                          .toArray(CompletableFuture[]::new)),
+                  batchResponseFuture);
+            });
   }
 
   public KrystalNodeExecutorMetrics getKrystalNodeMetrics() {
@@ -357,6 +423,14 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                 .whenComplete((unused, throwable) -> commandQueueLease.close()));
   }
 
+  private CompletableFuture<Void> enqueueRunnable(Runnable command) {
+    return enqueueCommand(
+        () -> {
+          command.run();
+          return null;
+        });
+  }
+
   private <T> CompletableFuture<T> enqueueCommand(Supplier<T> command) {
     return supplyAsync(
         () -> {
@@ -368,6 +442,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
   private record NodeResult(
       NodeId nodeId,
+      RequestId requestId,
       Inputs inputs,
       NodeExecutionConfig executionConfig,
       CompletableFuture<Object> future) {}
