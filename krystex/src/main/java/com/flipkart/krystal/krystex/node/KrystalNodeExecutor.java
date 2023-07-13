@@ -251,14 +251,15 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   /**
-   * This method can be called only from the main thread of this KrystalNodeExecutor. Calling this
-   * method from any other thread (for example: IO reactor threads) will cause race conditions,
-   * multithreaded access of non-thread-safe data structures, and resulting unspecified behaviour.
+   * When using {@link GraphTraversalStrategy#DEPTH}, this method can be called only from the main
+   * thread of this KrystalNodeExecutor. Calling this method from any other thread (for example: IO
+   * reactor threads) will cause race conditions, multithreaded access of non-thread-safe data
+   * structures, and resulting unspecified behaviour.
    *
-   * <p>This is an optimal version on {@link #enqueueNodeCommand(Supplier)} which bypasses the
-   * command queue for the special case that the command is originating from the same main thread
-   * inside the command queue,thus avoiding unnecessary contention in the thread-safe structures
-   * inside the command queue.
+   * <p>When using {@link GraphTraversalStrategy#DEPTH}, this is a more optimal version of {@link
+   * #enqueueNodeCommand(Supplier)} as it bypasses the command queue for the special case that the
+   * command is originating from the same main thread inside the command queue,thus avoiding the
+   * pontentially unnecessary contention in the thread-safe structures inside the command queue.
    */
   <T extends NodeResponse> CompletableFuture<T> executeCommand(NodeCommand nodeCommand) {
     if (BREADTH.equals(executorConfig.graphTraversalStrategy())) {
