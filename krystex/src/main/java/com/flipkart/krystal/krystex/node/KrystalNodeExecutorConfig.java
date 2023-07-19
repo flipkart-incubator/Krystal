@@ -23,7 +23,8 @@ public record KrystalNodeExecutorConfig(
     ImmutableSet<DependantChain> disabledDependantChains,
     ResolverExecStrategy resolverExecStrategy,
     NodeExecStrategy nodeExecStrategy,
-    GraphTraversalStrategy graphTraversalStrategy) {
+    GraphTraversalStrategy graphTraversalStrategy,
+    boolean debug) {
 
   public KrystalNodeExecutorConfig {
     if (nodeExecStrategy == null) {

@@ -25,13 +25,15 @@ import com.flipkart.krystal.krystex.commands.ForwardGranularCommand;
 import com.flipkart.krystal.krystex.commands.GranularNodeCommand;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
 import com.flipkart.krystal.krystex.commands.NodeDataCommand;
-import com.flipkart.krystal.krystex.commands.SkipGranularCommand;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig.DecoratorContext;
+import com.flipkart.krystal.krystex.request.IntReqGenerator;
 import com.flipkart.krystal.krystex.request.RequestId;
+import com.flipkart.krystal.krystex.request.RequestIdGenerator;
+import com.flipkart.krystal.krystex.request.StringReqGenerator;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.utils.MultiLeasePool.Lease;
 import com.google.common.collect.ImmutableMap;
@@ -96,6 +98,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   private final Map<RequestId, NodeResult> allRequests = new LinkedHashMap<>();
   private final Set<RequestId> unFlushedRequests = new LinkedHashSet<>();
   private final Map<NodeId, Set<DependantChain>> dependantChainsPerNode = new LinkedHashMap<>();
+  private final RequestIdGenerator preferredReqGenerator;
 
   public KrystalNodeExecutor(
       NodeDefinitionRegistry nodeDefinitionRegistry,
@@ -109,6 +112,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     this.requestScopedLogicDecoratorConfigs =
         ImmutableMap.copyOf(executorConfig.requestScopedLogicDecoratorConfigs());
     this.krystalNodeMetrics = new KrystalNodeExecutorMetrics();
+    this.preferredReqGenerator =
+        executorConfig.debug() ? new StringReqGenerator() : new IntReqGenerator();
   }
 
   private ImmutableMap<String, MainLogicDecorator> getRequestScopedDecorators(
@@ -162,7 +167,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
 
     String executionId = executionConfig.executionId();
     checkArgument(executionId != null, "executionConfig.executionId can not be null");
-    RequestId requestId = new RequestId("%s:%s".formatted(instanceId, executionId));
+    RequestId requestId =
+        preferredReqGenerator.newRequest("%s:%s".formatted(instanceId, executionId));
 
     //noinspection unchecked
     return (CompletableFuture<T>)
@@ -229,7 +235,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                   this,
                   this::getRequestScopedDecorators,
                   executorConfig.logicDecorationOrdering(),
-                  executorConfig.resolverExecStrategy()));
+                  executorConfig.resolverExecStrategy(),
+                  preferredReqGenerator));
     }
   }
 

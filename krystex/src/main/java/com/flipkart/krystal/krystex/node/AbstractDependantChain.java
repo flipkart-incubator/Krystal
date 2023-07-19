@@ -9,7 +9,7 @@ public abstract sealed class AbstractDependantChain implements DependantChain
     permits DefaultDependantChain, DependantChainStart {
 
   @EqualsAndHashCode.Exclude @ToString.Exclude
-  private final Map<NodeId, Map<String, DependantChain>> dependenciesInternPool =
+  private final Map<NodeId, ConcurrentHashMap<String, DependantChain>> dependenciesInternPool =
       new ConcurrentHashMap<>();
 
   @Override

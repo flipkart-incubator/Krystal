@@ -31,6 +31,7 @@ import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.ResolverExecStrategy;
 import com.flipkart.krystal.krystex.request.RequestId;
+import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
 import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
 import com.flipkart.krystal.krystex.resolution.ResolverCommand;
@@ -87,13 +88,15 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
       Function<LogicExecutionContext, ImmutableMap<String, MainLogicDecorator>>
           requestScopedDecoratorsSupplier,
       LogicDecorationOrdering logicDecorationOrdering,
-      ResolverExecStrategy resolverExecStrategy) {
+      ResolverExecStrategy resolverExecStrategy,
+      RequestIdGenerator requestIdGenerator) {
     super(
         nodeDefinition,
         krystalNodeExecutor,
         requestScopedDecoratorsSupplier,
         logicDecorationOrdering,
-        resolverExecStrategy);
+        resolverExecStrategy,
+        requestIdGenerator);
   }
 
   @Override
@@ -249,7 +252,8 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
       ResolverCommand resolverCommand = entry.getValue();
       if (resolverCommand instanceof SkipDependency skipDependency) {
         RequestId depReqId =
-            incomingReqIds.iterator().next().newSubRequest("%s[skip]".formatted(depName));
+            requestIdGenerator.newSubRequest(
+                incomingReqIds.iterator().next(), () -> "%s[skip]".formatted(depName));
         incomingReqIds.forEach(
             incomingReqId ->
                 depReqsByIncomingReq
@@ -260,13 +264,17 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
         int count = 0;
         for (RequestId incomingReqId : incomingReqIds) {
           if (resolverCommand.getInputs().isEmpty()) {
-            RequestId depReqId = incomingReqId.newSubRequest("%s[skip]".formatted(depName));
+            RequestId depReqId =
+                requestIdGenerator.newSubRequest(
+                    incomingReqId, () -> "%s[skip]".formatted(depName));
             skipReasonsByReq.put(
                 depReqId, "Resolvers for dependency %s resolved to empty list".formatted(depName));
           } else {
             for (Inputs inputs : resolverCommand.getInputs()) {
+              int currentCount = count++;
               RequestId depReqId =
-                  incomingReqId.newSubRequest("%s[%s]".formatted(depName, count++));
+                  requestIdGenerator.newSubRequest(
+                      incomingReqId, () -> "%s[%s]".formatted(depName, currentCount));
               depReqsByIncomingReq
                   .computeIfAbsent(incomingReqId, _k -> new LinkedHashSet<>())
                   .add(depReqId);

@@ -28,6 +28,7 @@ import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.ResolverExecStrategy;
 import com.flipkart.krystal.krystex.request.RequestId;
+import com.flipkart.krystal.krystex.request.StringReqGenerator;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
 import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
 import com.flipkart.krystal.krystex.resolution.ResolverCommand;
@@ -96,7 +97,8 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
         krystalNodeExecutor,
         requestScopedDecoratorsSupplier,
         logicDecorationOrdering,
-        resolverExecStrategy);
+        resolverExecStrategy,
+        new StringReqGenerator());
   }
 
   private static SkippedExecutionException skipNodeException(SkipGranularCommand skipNode) {
@@ -391,7 +393,8 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
         Set<RequestId> requestIdSet =
             new HashSet<>(dependencyNodeExecutions.individualCallResponses().keySet());
         RequestId dependencyRequestId =
-            requestId.newSubRequest("%s[%s]".formatted(dependencyName, 0));
+            requestIdGenerator.newSubRequest(
+                requestId, () -> "%s[%s]".formatted(dependencyName, 0));
         /*Skipping Current resolver, as its a skip, we dont need to iterate
          * over fanout requests as the input is empty*/
         requestIdSet.add(dependencyRequestId);
@@ -421,7 +424,10 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
       long executionsInProgress = dependencyNodeExecutions.executionCounter().longValue();
       Map<RequestId, Inputs> oldInputs = new LinkedHashMap<>();
       for (int i = 0; i < executionsInProgress; i++) {
-        RequestId rid = requestId.newSubRequest("%s[%s]".formatted(dependencyName, i));
+        int iFinal = i;
+        RequestId rid =
+            requestIdGenerator.newSubRequest(
+                requestId, () -> "%s[%s]".formatted(dependencyName, iFinal));
         oldInputs.put(
             rid,
             new Inputs(
@@ -434,13 +440,18 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
       long batchSize = max(executionsInProgress, 1);
       int requestCounter = 0;
       for (int j = 0; j < inputList.size(); j++) {
+        int jFinal = j;
         Inputs inputs = inputList.get(j);
         for (int i = 0; i < batchSize; i++) {
+          int iFinal = i;
           RequestId dependencyRequestId =
-              requestId.newSubRequest("%s[%s]".formatted(dependencyName, j * batchSize + i));
+              requestIdGenerator.newSubRequest(
+                  requestId, () -> "%s[%s]".formatted(dependencyName, jFinal * batchSize + iFinal));
           RequestId inProgressRequestId;
           if (executionsInProgress > 0) {
-            inProgressRequestId = requestId.newSubRequest("%s[%s]".formatted(dependencyName, i));
+            inProgressRequestId =
+                requestIdGenerator.newSubRequest(
+                    requestId, () -> "%s[%s]".formatted(dependencyName, iFinal));
           } else {
             inProgressRequestId = dependencyRequestId;
           }
@@ -582,7 +593,8 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
               if (!dependencyValuesCollector
                   .getOrDefault(requestId, ImmutableMap.of())
                   .containsKey(depName)) {
-                RequestId dependencyRequestId = requestId.newSubRequest("%s".formatted(depName));
+                RequestId dependencyRequestId =
+                    requestIdGenerator.newSubRequest(requestId, () -> "%s".formatted(depName));
                 CompletableFuture<GranularNodeResponse> nodeResponse =
                     krystalNodeExecutor.executeCommand(
                         new ForwardGranularCommand(
