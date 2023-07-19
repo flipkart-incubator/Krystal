@@ -2,10 +2,13 @@ package com.flipkart.krystal.krystex.node;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 public abstract sealed class AbstractDependantChain implements DependantChain
     permits DefaultDependantChain, DependantChainStart {
 
+  @EqualsAndHashCode.Exclude @ToString.Exclude
   private final Map<NodeId, Map<String, DependantChain>> dependenciesInternPool =
       new ConcurrentHashMap<>();
 

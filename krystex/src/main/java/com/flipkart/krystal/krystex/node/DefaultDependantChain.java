@@ -1,5 +1,9 @@
 package com.flipkart.krystal.krystex.node;
 
+import lombok.EqualsAndHashCode;
+import lombok.EqualsAndHashCode.CacheStrategy;
+
+@EqualsAndHashCode(callSuper = true, cacheStrategy = CacheStrategy.LAZY)
 public final class DefaultDependantChain extends AbstractDependantChain {
   private final NodeId nodeId;
   private final String dependencyName;

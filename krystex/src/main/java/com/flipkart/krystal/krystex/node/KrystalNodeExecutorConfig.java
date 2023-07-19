@@ -1,5 +1,10 @@
 package com.flipkart.krystal.krystex.node;
 
+import static com.flipkart.krystal.krystex.node.KrystalNodeExecutor.GraphTraversalStrategy.DEPTH;
+import static com.flipkart.krystal.krystex.node.KrystalNodeExecutor.NodeExecStrategy.BATCH;
+import static com.flipkart.krystal.krystex.node.KrystalNodeExecutor.NodeExecStrategy.GRANULAR;
+import static com.flipkart.krystal.krystex.node.KrystalNodeExecutor.ResolverExecStrategy.MULTI;
+
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.GraphTraversalStrategy;
@@ -17,17 +22,18 @@ public record KrystalNodeExecutorConfig(
     Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs,
     ImmutableSet<DependantChain> disabledDependantChains,
     ResolverExecStrategy resolverExecStrategy,
-    NodeExecStrategy nodeExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
+    NodeExecStrategy nodeExecStrategy,
+    GraphTraversalStrategy graphTraversalStrategy) {
 
   public KrystalNodeExecutorConfig {
-    if (resolverExecStrategy == null) {
-      resolverExecStrategy = ResolverExecStrategy.MULTI;
-    }
     if (nodeExecStrategy == null) {
-      nodeExecStrategy = NodeExecStrategy.GRANULAR;
+      nodeExecStrategy = BATCH;
     }
-    if(graphTraversalStrategy == null){
-      graphTraversalStrategy = GraphTraversalStrategy.DEPTH;
+    if (resolverExecStrategy == null || BATCH.equals(nodeExecStrategy)) {
+      resolverExecStrategy = MULTI;
+    }
+    if (graphTraversalStrategy == null) {
+      graphTraversalStrategy = DEPTH;
     }
   }
 

@@ -1,8 +1,6 @@
 package com.flipkart.krystal.krystex.commands;
 
-import com.flipkart.krystal.krystex.node.DependantChain;
 import com.flipkart.krystal.krystex.request.RequestId;
-import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 
 public sealed interface BatchNodeCommand extends NodeDataCommand
@@ -10,5 +8,5 @@ public sealed interface BatchNodeCommand extends NodeDataCommand
 
   Set<RequestId> requestIds();
 
-  DependantChain dependantChain();
+  Set<String> inputNames();
 }

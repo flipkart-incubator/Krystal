@@ -12,10 +12,6 @@ public record Inputs(ImmutableMap<String, InputValue<Object>> values) {
 
   private static final Inputs EMPTY = new Inputs(ImmutableMap.of());
 
-  public InputValue<?> get(String inputName) {
-    return values.getOrDefault(inputName, ValueOrError.empty());
-  }
-
   public <T> ValueOrError<T> getInputValue(String inputName) {
     InputValue<?> inputValue = values.getOrDefault(inputName, ValueOrError.empty());
     if (inputValue instanceof ValueOrError<?> voe) {

@@ -4,8 +4,7 @@ import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.NodeDataCommand;
 import java.util.concurrent.CompletableFuture;
 
-sealed interface Node<C extends NodeDataCommand, R extends NodeResponse>
-    permits BatchNode, GranularNode {
+sealed interface Node<C extends NodeDataCommand, R extends NodeResponse> permits AbstractNode {
 
   void executeCommand(Flush flushCommand);
 

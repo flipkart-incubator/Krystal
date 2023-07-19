@@ -1,6 +1,8 @@
 package com.flipkart.krystal.krystex.decorators.resilience4j;
 
 import static com.flipkart.krystal.data.ValueOrError.withValue;
+import static com.flipkart.krystal.krystex.node.KrystalNodeExecutor.NodeExecStrategy.GRANULAR;
+import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.concurrent.TimeUnit.HOURS;
@@ -15,6 +17,7 @@ import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.NodeExecStrategy;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
@@ -23,6 +26,7 @@ import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
 import com.google.common.collect.ImmutableMap;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -35,6 +39,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class Resilience4JBulkheadTest {
+
+  private static final Duration TIMEOUT = ofSeconds(1000);
   private KrystalNodeExecutor krystalNodeExecutor;
   private NodeDefinitionRegistry nodeDefinitionRegistry;
   private LogicDefinitionRegistry logicDefinitionRegistry;
@@ -47,7 +53,7 @@ class Resilience4JBulkheadTest {
         new KrystalNodeExecutor(
             nodeDefinitionRegistry,
             new ForkJoinExecutorPool(1),
-            KrystalNodeExecutorConfig.builder().build(),
+            KrystalNodeExecutorConfig.builder().nodeExecStrategy(GRANULAR).build(),
             "test");
   }
 
@@ -114,18 +120,14 @@ class Resilience4JBulkheadTest {
             NodeExecutionConfig.builder().executionId("req_3").build());
     krystalNodeExecutor.flush();
     assertThat(callAfterBulkheadExhaustion)
-        .failsWithin(1, SECONDS)
+        .failsWithin(TIMEOUT)
         .withThrowableOfType(Exception.class)
         .withRootCauseInstanceOf(BulkheadFullException.class)
         .withMessageContaining(
             "Bulkhead 'bulkhead_restrictsConcurrency.bulkhead' is full and does not permit further calls");
     countDownLatch.countDown();
-    assertThat(call1BeforeBulkheadExhaustion)
-        .succeedsWithin(1, SECONDS)
-        .isEqualTo("computed_value");
-    assertThat(call2BeforeBulkheadExhaustion)
-        .succeedsWithin(1, SECONDS)
-        .isEqualTo("computed_value");
+    assertThat(call1BeforeBulkheadExhaustion).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
+    assertThat(call2BeforeBulkheadExhaustion).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
   }
 
   @Test

@@ -475,7 +475,7 @@ class KrystexVajramExecutorTest {
   }
 
   @Test
-  void close_sequentialDependency_flushesBatcher(TestInfo testInfo) throws Exception {
+  void close_sequentialDependency_flushesBatcher(TestInfo testInfo) {
     VajramNodeGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",

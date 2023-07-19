@@ -8,6 +8,7 @@ import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder.add;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderRequest.chainSum_n;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderRequest.sum_n;
+import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,6 +35,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -68,7 +70,9 @@ class ChainAdderTest {
     NodeExecutionReport nodeExecutionReport = new DefaultNodeExecutionReport(Clock.systemUTC());
     MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(nodeExecutionReport);
     graph.registerInputModulators(
-        vajramID(Adder.ID), InputModulatorConfig.simple(() -> new Batcher<>(100)));
+        vajramID(Adder.ID),
+        InputModulatorConfig.sharedModulator(
+            () -> new Batcher<>(100), "adderBatcher", getBatchedDepChains()));
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
         graph.createExecutor(
             new RequestContext("chainAdderTest"),
@@ -85,8 +89,8 @@ class ChainAdderTest {
                 .build())) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
-    assertThat(future.get()).isEqualTo(55);
-    //    assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
+    assertThat(future).succeedsWithin(ofSeconds(1000)).isEqualTo(55);
+    assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
     System.out.println(
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
   }
@@ -268,7 +272,7 @@ class ChainAdderTest {
       return add(numbers.get(0), numbers.get(1));
     } else {
       return chainAdd(numbers.subList(0, numbers.size() - 1))
-             + add(numbers.get(numbers.size() - 1), 0);
+          + add(numbers.get(numbers.size() - 1), 0);
     }
   }
 
@@ -322,44 +326,44 @@ class ChainAdderTest {
 
   private DependantChain[] getBatchedDepChains() {
     return new DependantChain[] {
-        graph.computeDependantChain(ChainAdder.ID, sum_n),
-        graph.computeDependantChain(ChainAdder.ID, chainSum_n, sum_n),
-        graph.computeDependantChain(ChainAdder.ID, chainSum_n, chainSum_n, sum_n),
-        graph.computeDependantChain(ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, sum_n),
-        graph.computeDependantChain(
-            ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
-        graph.computeDependantChain(
-            ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
-        graph.computeDependantChain(
-            ChainAdder.ID,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            sum_n),
-        graph.computeDependantChain(
-            ChainAdder.ID,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            sum_n),
-        graph.computeDependantChain(
-            ChainAdder.ID,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            sum_n)
+      graph.computeDependantChain(ChainAdder.ID, sum_n),
+      graph.computeDependantChain(ChainAdder.ID, chainSum_n, sum_n),
+      graph.computeDependantChain(ChainAdder.ID, chainSum_n, chainSum_n, sum_n),
+      graph.computeDependantChain(ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, sum_n),
+      graph.computeDependantChain(
+          ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
+      graph.computeDependantChain(
+          ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
+      graph.computeDependantChain(
+          ChainAdder.ID,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          sum_n),
+      graph.computeDependantChain(
+          ChainAdder.ID,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          sum_n),
+      graph.computeDependantChain(
+          ChainAdder.ID,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          chainSum_n,
+          sum_n)
     };
   }
 }

@@ -8,6 +8,7 @@ import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder.add;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderRequest.splitSum1_n;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderRequest.splitSum2_n;
+import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,6 +33,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -80,10 +82,9 @@ class SplitAdderTest {
                 .build())) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
-    Integer result = future.get();
+    assertThat(future).succeedsWithin(ofSeconds(1)).isEqualTo(55);
     System.out.println(
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
-    assertThat(result).isEqualTo(55);
   }
 
   @Disabled("Long running benchmark")

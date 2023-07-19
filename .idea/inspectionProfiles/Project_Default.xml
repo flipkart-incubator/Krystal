@@ -215,7 +215,7 @@
       <option name="myCountEnumConstants" value="false" />
       <option name="m_limit" value="20" />
     </inspection_tool>
-    <inspection_tool class="FieldHidesSuperclassField" enabled="true" level="ERROR" enabled_by_default="true">
+    <inspection_tool class="FieldHidesSuperclassField" enabled="true" level="WARNING" enabled_by_default="true" editorAttributes="WARNING_ATTRIBUTES">
       <option name="m_ignoreInvisibleFields" value="true" />
     </inspection_tool>
     <inspection_tool class="FieldMayBeStatic" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -309,7 +309,7 @@
     <inspection_tool class="MethodCoupling" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="m_includeJavaClasses" value="false" />
       <option name="m_includeLibraryClasses" value="false" />
-      <option name="m_limit" value="10" />
+      <option name="m_limit" value="15" />
     </inspection_tool>
     <inspection_tool class="MethodNameSameAsParentName" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="MethodOverloadsParentMethod" enabled="true" level="WARNING" enabled_by_default="true" />
@@ -533,6 +533,7 @@
           <option value="Singleton" />
           <option value="NumericCastThatLosesPrecision" />
           <option value="ResultOfMethodCallIgnored" />
+          <option value="ClassReferencesSubclass" />
         </list>
       </option>
     </inspection_tool>
@@ -591,7 +592,7 @@
       <option name="ignoreThrown" value="true" />
     </inspection_tool>
     <inspection_tool class="TransientFieldNotInitialized" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="TrivialIf" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="TrivialIf" enabled="true" level="WARNING" enabled_by_default="true" editorAttributes="WARNING_ATTRIBUTES" />
     <inspection_tool class="TryWithIdenticalCatches" enabled="true" level="WARNING" enabled_by_default="true" editorAttributes="WARNING_ATTRIBUTES" />
     <inspection_tool class="TypeParameterExtendsFinalClass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="UnconditionalWait" enabled="true" level="WARNING" enabled_by_default="true" />

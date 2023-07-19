@@ -18,6 +18,7 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.commands.BatchNodeCommand;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardBatchCommand;
 import com.flipkart.krystal.krystex.commands.ForwardGranularCommand;
@@ -219,16 +220,16 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                       executorConfig.logicDecorationOrdering(),
                       executorConfig.resolverExecStrategy()));
     } else {
-      ((NodeRegistry<BatchNode>) nodeRegistry)
-          .createIfAbsent(
-              nodeId,
-              _n ->
-                  new BatchNode(
-                      nodeDefinition,
-                      this,
-                      this::getRequestScopedDecorators,
-                      executorConfig.logicDecorationOrdering(),
-                      executorConfig.resolverExecStrategy()));
+      NodeRegistry<BatchNode> batchNodeRegistry = (NodeRegistry<BatchNode>) nodeRegistry;
+      batchNodeRegistry.createIfAbsent(
+          nodeId,
+          _n ->
+              new BatchNode(
+                  nodeDefinition,
+                  this,
+                  this::getRequestScopedDecorators,
+                  executorConfig.logicDecorationOrdering(),
+                  executorConfig.resolverExecStrategy()));
     }
   }
 
@@ -291,20 +292,24 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   private void validate(NodeCommand nodeCommand) {
-    if (nodeCommand instanceof GranularNodeCommand granularNodeCommand) {
-      DependantChain dependantChain = null;
-      RequestId requestId = granularNodeCommand.requestId();
-      if (nodeCommand instanceof ForwardGranularCommand forwardGranularCommand) {
-        dependantChain = forwardGranularCommand.dependantChain();
-      } else if (nodeCommand instanceof SkipGranularCommand skipNode) {
-        dependantChain = skipNode.dependantChain();
+    if (nodeCommand instanceof NodeDataCommand dataCommand) {
+      DependantChain dependantChain = dataCommand.dependantChain();
+      RequestId originRequest;
+      if (nodeCommand instanceof GranularNodeCommand granular) {
+        originRequest = granular.requestId().originatedFrom();
+      } else if (nodeCommand instanceof BatchNodeCommand batch) {
+        originRequest =
+            batch.requestIds().stream()
+                .map(RequestId::originatedFrom)
+                .findAny()
+                .orElseThrow(
+                    () -> new IllegalStateException("All request should have some origin request"));
+      } else {
+        throw new UnsupportedOperationException();
       }
       if (union(
               executorConfig.disabledDependantChains(),
-              allRequests
-                  .get(requestId.originatedFrom())
-                  .executionConfig()
-                  .disabledDependantChains())
+              allRequests.get(originRequest).executionConfig().disabledDependantChains())
           .contains(dependantChain)) {
         throw new DisabledDependantChainException(dependantChain);
       }
@@ -379,14 +384,18 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
         .collect(groupingBy(NodeResult::nodeId))
         .forEach(
             (nodeId, nodeResults) -> {
+              NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
               CompletableFuture<BatchNodeResponse> batchResponseFuture =
                   this.executeCommand(
                       new ForwardBatchCommand(
                           nodeId,
+                          nodeDefinition.getMainLogicDefinition().inputNames().stream()
+                              .filter(s -> !nodeDefinition.dependencyNodes().containsKey(s))
+                              .collect(toImmutableSet()),
                           nodeResults.stream()
                               .collect(toImmutableMap(NodeResult::requestId, NodeResult::inputs)),
-                          ImmutableMap.of(),
-                          nodeDefinitionRegistry.getDependantChainsStart()));
+                          nodeDefinitionRegistry.getDependantChainsStart(),
+                          ImmutableMap.of()));
               batchResponseFuture
                   .thenApply(BatchNodeResponse::responses)
                   .whenComplete(
@@ -396,7 +405,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                             nodeResult.future().completeExceptionally(throwable);
                           } else {
                             ValueOrError<Object> result =
-                                responses.getOrDefault(nodeResult.inputs(), ValueOrError.empty());
+                                responses.getOrDefault(
+                                    nodeResult.requestId(), ValueOrError.empty());
                             nodeResult.future().complete(result.value().orElse(null));
                           }
                         }

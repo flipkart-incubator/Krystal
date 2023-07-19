@@ -1,10 +1,9 @@
 package com.flipkart.krystal.krystex.node;
 
 import static com.flipkart.krystal.data.ValueOrError.withError;
-import static com.flipkart.krystal.krystex.node.NodeUtils.createResolverDefinitionsByInputs;
+import static com.flipkart.krystal.krystex.node.NodeUtils.enqueueOrExecuteCommand;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.lang.Math.max;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.CompletableFuture.*;
@@ -16,13 +15,11 @@ import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.data.ValueOrError;
-import com.flipkart.krystal.krystex.ComputeLogicDefinition;
-import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.commands.CallbackGranularCommand;
-import com.flipkart.krystal.krystex.commands.ForwardGranularCommand;
 import com.flipkart.krystal.krystex.commands.Flush;
+import com.flipkart.krystal.krystex.commands.ForwardGranularCommand;
 import com.flipkart.krystal.krystex.commands.GranularNodeCommand;
 import com.flipkart.krystal.krystex.commands.SkipGranularCommand;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
@@ -36,7 +33,6 @@ import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
 import com.flipkart.krystal.krystex.resolution.ResolverCommand;
 import com.flipkart.krystal.krystex.resolution.ResolverCommand.SkipDependency;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
-import com.flipkart.krystal.utils.ImmutableMapView;
 import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -46,37 +42,15 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collector;
 
-final class GranularNode implements Node<GranularNodeCommand, GranularNodeResponse> {
-
-  private final NodeId nodeId;
-
-  private final NodeDefinition nodeDefinition;
-
-  private final KrystalNodeExecutor krystalNodeExecutor;
-
-  /** decoratorType -> Decorator */
-  private final Function<LogicExecutionContext, ImmutableMap<String, MainLogicDecorator>>
-      requestScopedDecoratorsSupplier;
-
-  private final ImmutableMapView<Optional<String>, List<ResolverDefinition>>
-      resolverDefinitionsByInput;
-  private final ImmutableMapView<String, ImmutableSet<ResolverDefinition>>
-      resolverDefinitionsByDependencies;
-  private final ResolverExecStrategy resolverExecStrategy;
-  private final LogicDecorationOrdering logicDecorationOrdering;
+final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeResponse> {
 
   private final Map<RequestId, Map<String, DependencyNodeExecutions>> dependencyExecutions =
       new LinkedHashMap<>();
@@ -117,18 +91,16 @@ final class GranularNode implements Node<GranularNodeCommand, GranularNodeRespon
           requestScopedDecoratorsSupplier,
       LogicDecorationOrdering logicDecorationOrdering,
       ResolverExecStrategy resolverExecStrategy) {
-    this.nodeId = nodeDefinition.nodeId();
-    this.nodeDefinition = nodeDefinition;
-    this.krystalNodeExecutor = krystalNodeExecutor;
-    this.requestScopedDecoratorsSupplier = requestScopedDecoratorsSupplier;
-    this.logicDecorationOrdering = logicDecorationOrdering;
-    this.resolverDefinitionsByInput =
-        createResolverDefinitionsByInputs(nodeDefinition.resolverDefinitions());
-    this.resolverDefinitionsByDependencies =
-        ImmutableMapView.viewOf(
-            nodeDefinition.resolverDefinitions().stream()
-                .collect(groupingBy(ResolverDefinition::dependencyName, toImmutableSet())));
-    this.resolverExecStrategy = resolverExecStrategy;
+    super(
+        nodeDefinition,
+        krystalNodeExecutor,
+        requestScopedDecoratorsSupplier,
+        logicDecorationOrdering,
+        resolverExecStrategy);
+  }
+
+  private static SkippedExecutionException skipNodeException(SkipGranularCommand skipNode) {
+    return new SkippedExecutionException(skipNode.skipDependencyCommand().reason());
   }
 
   @Override
@@ -163,7 +135,8 @@ final class GranularNode implements Node<GranularNodeCommand, GranularNodeRespon
         requestsByDependantChain
             .computeIfAbsent(forwardGranularCommand.dependantChain(), k -> new LinkedHashSet<>())
             .add(requestId);
-        dependantChainByRequest.computeIfAbsent(requestId, r -> forwardGranularCommand.dependantChain());
+        dependantChainByRequest.computeIfAbsent(
+            requestId, r -> forwardGranularCommand.dependantChain());
         executeWithInputs(requestId, forwardGranularCommand);
       } else {
         throw new UnsupportedOperationException(
@@ -215,10 +188,6 @@ final class GranularNode implements Node<GranularNodeCommand, GranularNodeRespon
     return resultForRequest;
   }
 
-  private static SkippedExecutionException skipNodeException(SkipGranularCommand skipNode) {
-    return new SkippedExecutionException(skipNode.skipDependencyCommand().reason());
-  }
-
   private void flushDecoratorsIfNeeded(DependantChain dependantChain) {
     if (!flushedDependantChain.getOrDefault(dependantChain, false)) {
       return;
@@ -240,12 +209,15 @@ final class GranularNode implements Node<GranularNodeCommand, GranularNodeRespon
     }
   }
 
-  private void executeWithInputs(RequestId requestId, ForwardGranularCommand forwardGranularCommand) {
-    collectInputValues(requestId, forwardGranularCommand.inputNames(), forwardGranularCommand.values());
+  private void executeWithInputs(
+      RequestId requestId, ForwardGranularCommand forwardGranularCommand) {
+    collectInputValues(
+        requestId, forwardGranularCommand.inputNames(), forwardGranularCommand.values());
     execute(requestId, forwardGranularCommand.inputNames());
   }
 
-  private void executeWithDependency(RequestId requestId, CallbackGranularCommand executeWithInput) {
+  private void executeWithDependency(
+      RequestId requestId, CallbackGranularCommand executeWithInput) {
     String dependencyName = executeWithInput.dependencyName();
     ImmutableSet<String> inputNames = ImmutableSet.of(dependencyName);
     if (dependencyValuesCollector
@@ -294,8 +266,6 @@ final class GranularNode implements Node<GranularNodeCommand, GranularNodeRespon
         this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
 
     Set<ResolverDefinition> pendingResolvers;
-    Collector<ResolverDefinition, ?, Map<NodeLogicId, ResolverDefinition>> resolverCollector =
-        toMap(ResolverDefinition::resolverNodeLogicId, identity(), (o1, o2) -> o1);
     Set<ResolverDefinition> pendingUnboundResolvers =
         resolverDefinitionsByInput.getOrDefault(Optional.<String>empty(), emptyList()).stream()
             .filter(
@@ -343,8 +313,8 @@ final class GranularNode implements Node<GranularNodeCommand, GranularNodeRespon
     }
     MultiResolverDefinition multiResolver = multiResolverOpt.get();
 
-    Map<String, List<ResolverDefinition>> resolversByDependency =
-        pendingResolvers.stream().collect(groupingBy(ResolverDefinition::dependencyName));
+    Map<String, Set<ResolverDefinition>> resolversByDependency =
+        pendingResolvers.stream().collect(groupingBy(ResolverDefinition::dependencyName, toSet()));
     Optional<SkipGranularCommand> skipRequested =
         this.skipLogicRequested.getOrDefault(requestId, Optional.empty());
     Map<String, ResolverCommand> resolverCommands;
@@ -394,13 +364,13 @@ final class GranularNode implements Node<GranularNodeCommand, GranularNodeRespon
               .resolve(inputsForResolver);
     }
     String dependencyName = resolverDefinition.dependencyName();
-    handleResolverCommand(requestId, dependencyName, List.of(resolverDefinition), resolverCommand);
+    handleResolverCommand(requestId, dependencyName, Set.of(resolverDefinition), resolverCommand);
   }
 
   private void handleResolverCommand(
       RequestId requestId,
       String dependencyName,
-      List<ResolverDefinition> resolverDefinitions,
+      Set<ResolverDefinition> resolverDefinitions,
       ResolverCommand resolverCommand) {
     NodeId depNodeId = nodeDefinition.dependencyNodes().get(dependencyName);
     Map<ResolverDefinition, ResolverCommand> resolverResults =
@@ -421,7 +391,7 @@ final class GranularNode implements Node<GranularNodeCommand, GranularNodeRespon
         Set<RequestId> requestIdSet =
             new HashSet<>(dependencyNodeExecutions.individualCallResponses().keySet());
         RequestId dependencyRequestId =
-            requestId.createNewRequest("%s[%s]".formatted(dependencyName, 0));
+            requestId.newSubRequest("%s[%s]".formatted(dependencyName, 0));
         /*Skipping Current resolver, as its a skip, we dont need to iterate
          * over fanout requests as the input is empty*/
         requestIdSet.add(dependencyRequestId);
@@ -451,7 +421,7 @@ final class GranularNode implements Node<GranularNodeCommand, GranularNodeRespon
       long executionsInProgress = dependencyNodeExecutions.executionCounter().longValue();
       Map<RequestId, Inputs> oldInputs = new LinkedHashMap<>();
       for (int i = 0; i < executionsInProgress; i++) {
-        RequestId rid = requestId.createNewRequest("%s[%s]".formatted(dependencyName, i));
+        RequestId rid = requestId.newSubRequest("%s[%s]".formatted(dependencyName, i));
         oldInputs.put(
             rid,
             new Inputs(
@@ -467,10 +437,10 @@ final class GranularNode implements Node<GranularNodeCommand, GranularNodeRespon
         Inputs inputs = inputList.get(j);
         for (int i = 0; i < batchSize; i++) {
           RequestId dependencyRequestId =
-              requestId.createNewRequest("%s[%s]".formatted(dependencyName, j * batchSize + i));
+              requestId.newSubRequest("%s[%s]".formatted(dependencyName, j * batchSize + i));
           RequestId inProgressRequestId;
           if (executionsInProgress > 0) {
-            inProgressRequestId = requestId.createNewRequest("%s[%s]".formatted(dependencyName, i));
+            inProgressRequestId = requestId.newSubRequest("%s[%s]".formatted(dependencyName, i));
           } else {
             inProgressRequestId = dependencyRequestId;
           }
@@ -531,29 +501,21 @@ final class GranularNode implements Node<GranularNodeCommand, GranularNodeRespon
                                             GranularNodeResponse::response)));
                       }
                       return new CallbackGranularCommand(
-                          this.nodeId, dependencyName, results, requestId);
+                          this.nodeId,
+                          dependencyName,
+                          results,
+                          requestId,
+                          dependantChainByRequest.get(requestId));
                     },
-                    depNodeId);
+                    depNodeId,
+                    nodeDefinition,
+                    krystalNodeExecutor);
               });
 
       flushDependencyIfNeeded(
           dependencyName,
           dependantChainByRequest.getOrDefault(
               requestId, nodeDefinition.nodeDefinitionRegistry().getDependantChainsStart()));
-    }
-  }
-
-  private void enqueueOrExecuteCommand(
-      Supplier<GranularNodeCommand> commandGenerator, NodeId depNodeId) {
-    MainLogicDefinition<Object> depMainLogic =
-        nodeDefinition.nodeDefinitionRegistry().get(depNodeId).getMainLogicDefinition();
-    if (depMainLogic instanceof IOLogicDefinition<Object>) {
-      krystalNodeExecutor.enqueueNodeCommand(commandGenerator);
-    } else if (depMainLogic instanceof ComputeLogicDefinition<Object>) {
-      krystalNodeExecutor.executeCommand(commandGenerator.get());
-    } else {
-      throw new UnsupportedOperationException(
-          "Unknown logicDefinition type %s".formatted(depMainLogic.getClass()));
     }
   }
 
@@ -620,7 +582,7 @@ final class GranularNode implements Node<GranularNodeCommand, GranularNodeRespon
               if (!dependencyValuesCollector
                   .getOrDefault(requestId, ImmutableMap.of())
                   .containsKey(depName)) {
-                RequestId dependencyRequestId = requestId.createNewRequest("%s".formatted(depName));
+                RequestId dependencyRequestId = requestId.newSubRequest("%s".formatted(depName));
                 CompletableFuture<GranularNodeResponse> nodeResponse =
                     krystalNodeExecutor.executeCommand(
                         new ForwardGranularCommand(
@@ -643,9 +605,12 @@ final class GranularNode implements Node<GranularNodeCommand, GranularNodeRespon
                                     this.nodeId,
                                     depName,
                                     new Results<>(ImmutableMap.of(Inputs.empty(), valueOrError)),
-                                    requestId);
+                                    requestId,
+                                    dependantChainByRequest.get(requestId));
                               },
-                              depNodeId);
+                              depNodeId,
+                              nodeDefinition,
+                              krystalNodeExecutor);
                         });
               }
             });
@@ -657,20 +622,19 @@ final class GranularNode implements Node<GranularNodeCommand, GranularNodeRespon
     MainLogicInputs mainLogicInputs = getInputsForMainLogic(requestId);
     // Retrieve existing result from cache if result for this set of inputs has already been
     // calculated
-    CompletableFuture<Object> resultFuture =
-        resultsCache.get(mainLogicInputs.nonDependencyInputs());
+    CompletableFuture<Object> resultFuture = resultsCache.get(mainLogicInputs.providedInputs());
     if (resultFuture == null) {
       resultFuture =
           executeDecoratedMainLogic(
               mainLogicInputs.allInputsAndDependencies(), mainLogicDefinition, requestId);
-      resultsCache.put(mainLogicInputs.nonDependencyInputs(), resultFuture);
+      resultsCache.put(mainLogicInputs.providedInputs(), resultFuture);
     }
     resultFuture
         .handle(ValueOrError::valueOrError)
         .thenAccept(
             value ->
                 resultForRequest.complete(
-                    new GranularNodeResponse(mainLogicInputs.nonDependencyInputs(), value)));
+                    new GranularNodeResponse(mainLogicInputs.providedInputs(), value)));
     mainLogicExecuted.put(requestId, true);
     flushDecoratorsIfNeeded(dependantChainByRequest.get(requestId));
   }
@@ -709,26 +673,6 @@ final class GranularNode implements Node<GranularNodeCommand, GranularNodeRespon
     }
   }
 
-  private NavigableSet<MainLogicDecorator> getSortedDecorators(DependantChain dependantChain) {
-    MainLogicDefinition<Object> mainLogicDefinition = nodeDefinition.getMainLogicDefinition();
-    Map<String, MainLogicDecorator> decorators =
-        new LinkedHashMap<>(
-            mainLogicDefinition.getSessionScopedLogicDecorators(nodeDefinition, dependantChain));
-    // If the same decoratorType is configured for session and request scope, request scope
-    // overrides session scope.
-    decorators.putAll(
-        requestScopedDecoratorsSupplier.apply(
-            new LogicExecutionContext(
-                nodeId,
-                mainLogicDefinition.logicTags(),
-                dependantChain,
-                nodeDefinition.nodeDefinitionRegistry())));
-    TreeSet<MainLogicDecorator> sortedDecorators =
-        new TreeSet<>(logicDecorationOrdering.decorationOrder());
-    sortedDecorators.addAll(decorators.values());
-    return sortedDecorators;
-  }
-
   private record DependencyNodeExecutions(
       LongAdder executionCounter,
       Set<ResolverDefinition> executedResolvers,
@@ -739,6 +683,4 @@ final class GranularNode implements Node<GranularNodeCommand, GranularNodeRespon
       this(new LongAdder(), new LinkedHashSet<>(), new LinkedHashMap<>(), new LinkedHashMap<>());
     }
   }
-
-  private record MainLogicInputs(Inputs nonDependencyInputs, Inputs allInputsAndDependencies) {}
 }

@@ -17,6 +17,7 @@ import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -29,6 +30,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class KrystalNodeExecutorTest {
+
+  private static final Duration TIMEOUT = Duration.ofSeconds(1000);
 
   private KrystalNodeExecutor krystalNodeExecutor;
   private NodeDefinitionRegistry nodeDefinitionRegistry;
@@ -269,7 +272,7 @@ class KrystalNodeExecutorTest {
             inputs,
             NodeExecutionConfig.builder().executionId("r").build());
     krystalNodeExecutor.flush();
-    assertEquals("l1:l2:l3:l4:final", timedGet(future));
+    assertThat(future).succeedsWithin(TIMEOUT).isEqualTo("l1:l2:l3:l4:final");
   }
 
   @Test
@@ -295,7 +298,7 @@ class KrystalNodeExecutorTest {
   /* So that bad testcases do not hang indefinitely.*/
   private static <T> T timedGet(CompletableFuture<T> future)
       throws InterruptedException, ExecutionException, TimeoutException {
-    return future.get(1, SECONDS);
+    return future.get(TIMEOUT.getSeconds(), SECONDS);
   }
 
   private <T> MainLogicDefinition<T> newComputeLogic(

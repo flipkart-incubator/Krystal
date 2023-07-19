@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
-final class NodeRegistry<T extends Node<? extends NodeCommand,? extends NodeResponse>> {
+final class NodeRegistry<T extends Node<? extends NodeCommand, ? extends NodeResponse>> {
 
   private final Map<NodeId, T> nodes = new LinkedHashMap<>();
 
