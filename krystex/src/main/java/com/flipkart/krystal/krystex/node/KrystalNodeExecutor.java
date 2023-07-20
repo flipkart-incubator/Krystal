@@ -301,23 +301,24 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   private void validate(NodeCommand nodeCommand) {
     if (nodeCommand instanceof NodeDataCommand dataCommand) {
       DependantChain dependantChain = dataCommand.dependantChain();
-      RequestId originRequest;
+      Set<RequestId> originRequests = new LinkedHashSet<>();
       if (nodeCommand instanceof GranularNodeCommand granular) {
-        originRequest = granular.requestId().originatedFrom();
+        originRequests = Set.of(granular.requestId().originatedFrom());
       } else if (nodeCommand instanceof BatchNodeCommand batch) {
-        originRequest =
-            batch.requestIds().stream()
-                .map(RequestId::originatedFrom)
-                .findAny()
-                .orElseThrow(
-                    () -> new IllegalStateException("All request should have some origin request"));
+        batch.requestIds().stream().map(RequestId::originatedFrom).forEach(originRequests::add);
       } else {
         throw new UnsupportedOperationException();
       }
-      if (union(
-              executorConfig.disabledDependantChains(),
-              allRequests.get(originRequest).executionConfig().disabledDependantChains())
-          .contains(dependantChain)) {
+      if (originRequests.stream()
+          .allMatch(
+              originRequest ->
+                  union(
+                          executorConfig.disabledDependantChains(),
+                          allRequests
+                              .get(originRequest)
+                              .executionConfig()
+                              .disabledDependantChains())
+                      .contains(dependantChain))) {
         throw new DisabledDependantChainException(dependantChain);
       }
     } else if (nodeCommand instanceof Flush flush) {
