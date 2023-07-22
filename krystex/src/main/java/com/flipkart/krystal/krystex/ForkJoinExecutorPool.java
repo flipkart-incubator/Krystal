@@ -30,7 +30,7 @@ public final class ForkJoinExecutorPool extends MultiLeasePool<ExecutorService> 
                 1, // Default is 0. We set to one because we know we will need one thread.
                 1 /*
                   maximumPoolSize - Make sure not more than 1 thread is active,
-                  as Krystex/KrsytalNodeExecutor is not thread safe */,
+                  as KryonExecutor is not thread safe */,
                 1, // Same as default
                 null, // Same as default
                 1, // Same as default

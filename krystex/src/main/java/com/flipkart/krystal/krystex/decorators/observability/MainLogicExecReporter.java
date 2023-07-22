@@ -10,30 +10,30 @@ import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
-import com.flipkart.krystal.krystex.node.NodeId;
-import com.flipkart.krystal.krystex.node.NodeLogicId;
+import com.flipkart.krystal.krystex.kryon.KryonId;
+import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 
 public class MainLogicExecReporter implements MainLogicDecorator {
 
-  private final NodeExecutionReport nodeExecutionReport;
+  private final KryonExecutionReport kryonExecutionReport;
 
-  public MainLogicExecReporter(NodeExecutionReport nodeExecutionReport) {
-    this.nodeExecutionReport = nodeExecutionReport;
+  public MainLogicExecReporter(KryonExecutionReport kryonExecutionReport) {
+    this.kryonExecutionReport = kryonExecutionReport;
   }
 
   @Override
   public MainLogic<Object> decorateLogic(
       MainLogic<Object> logicToDecorate, MainLogicDefinition<Object> originalLogicDefinition) {
     return inputs -> {
-      NodeId nodeId = originalLogicDefinition.nodeLogicId().nodeId();
-      NodeLogicId nodeLogicId = originalLogicDefinition.nodeLogicId();
+      KryonId kryonId = originalLogicDefinition.kryonLogicId().kryonId();
+      KryonLogicId kryonLogicId = originalLogicDefinition.kryonLogicId();
       /*
        Report logic start
       */
-      nodeExecutionReport.reportMainLogicStart(nodeId, nodeLogicId, inputs);
+      kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, inputs);
 
       /*
        Execute logic
@@ -45,9 +45,9 @@ public class MainLogicExecReporter implements MainLogicDecorator {
       allOf(results.values().toArray(CompletableFuture[]::new))
           .whenComplete(
               (unused, throwable) -> {
-                nodeExecutionReport.reportMainLogicEnd(
-                    nodeId,
-                    nodeLogicId,
+                kryonExecutionReport.reportMainLogicEnd(
+                    kryonId,
+                    kryonLogicId,
                     new Results<>(
                         results.entrySet().stream()
                             .collect(

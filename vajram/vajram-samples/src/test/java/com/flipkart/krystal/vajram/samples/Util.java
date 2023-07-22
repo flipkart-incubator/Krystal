@@ -4,8 +4,8 @@ import static java.time.Duration.ofNanos;
 import static java.util.Arrays.stream;
 import static java.util.concurrent.CompletableFuture.allOf;
 
-import com.flipkart.krystal.krystex.node.KrystalNodeExecutorMetrics;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -44,10 +44,10 @@ public final class Util {
 
   public static void printStats(
       int loopCount,
-      VajramNodeGraph graph,
+      VajramKryonGraph graph,
       long javaNativeTimeNs,
       long javaFuturesTimeNs,
-      KrystalNodeExecutorMetrics[] metrics,
+      KryonExecutorMetrics[] metrics,
       long timeToCreateExecutors,
       long timeToEnqueueVajram,
       long vajramTimeNs) {
@@ -66,10 +66,10 @@ public final class Util {
   public static void printStats(
       int outerLoopCount,
       int innerLoopCount,
-      VajramNodeGraph graph,
+      VajramKryonGraph graph,
       long javaNativeTimeNs,
       long javaFuturesTimeNs,
-      KrystalNodeExecutorMetrics[] metrics,
+      KryonExecutorMetrics[] metrics,
       long timeToCreateExecutors,
       long timeToEnqueueVajram,
       long vajramTimeNs) {
@@ -84,11 +84,11 @@ public final class Util {
             loopCount * Duration.ofSeconds(1).toNanos() / ofNanos(vajramTimeNs).toNanos())
         .printf(
             "CommandsQueuedCount: %,d%n",
-            stream(metrics).mapToInt(KrystalNodeExecutorMetrics::getCommandQueuedCount).sum())
+            stream(metrics).mapToInt(KryonExecutorMetrics::getCommandQueuedCount).sum())
         .printf(
             "CommandQueueBypassedCount: %,d%n",
             stream(metrics)
-                .mapToInt(KrystalNodeExecutorMetrics::getCommandQueueBypassedCount)
+                .mapToInt(KryonExecutorMetrics::getCommandQueueBypassedCount)
                 .sum())
         .printf(
             "Platform overhead over native code: %,.0f ns per request%n",

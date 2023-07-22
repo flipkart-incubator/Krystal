@@ -1,7 +1,7 @@
 module flipkart.krystal.krystex {
   exports com.flipkart.krystal.krystex to
       flipkart.krystal.vajramexecutor.krystex;
-  exports com.flipkart.krystal.krystex.node to
+  exports com.flipkart.krystal.krystex.kryon to
       flipkart.krystal.vajramexecutor.krystex;
   exports com.flipkart.krystal.krystex.decoration to
       flipkart.krystal.vajramexecutor.krystex;

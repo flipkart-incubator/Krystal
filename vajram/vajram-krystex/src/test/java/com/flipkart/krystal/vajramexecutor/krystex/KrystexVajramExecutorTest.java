@@ -21,20 +21,20 @@ import com.flipkart.krystal.krystex.decoration.LogicDecoratorCommand;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
-import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutionReport;
+import com.flipkart.krystal.krystex.decorators.observability.DefaultKryonExecutionReport;
 import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
-import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
+import com.flipkart.krystal.krystex.decorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.decorators.resilience4j.Resilience4JCircuitBreaker;
-import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
-import com.flipkart.krystal.krystex.node.NodeExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
+import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
 import com.flipkart.krystal.vajram.modulation.Batcher;
 import com.flipkart.krystal.vajram.tags.Service;
 import com.flipkart.krystal.vajram.tags.ServiceApi;
 import com.flipkart.krystal.vajram.tags.VajramTags;
 import com.flipkart.krystal.vajram.tags.VajramTags.VajramTypes;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceVajram;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloVajram;
@@ -97,7 +97,7 @@ class KrystexVajramExecutorTest {
 
   @Test
   void executeCompute_noDependencies_success() {
-    VajramNodeGraph graph =
+    VajramKryonGraph graph =
         loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello").build();
     CompletableFuture<String> result;
     requestContext.requestId("vajramWithNoDependencies");
@@ -110,7 +110,7 @@ class KrystexVajramExecutorTest {
 
   @Test
   void executeCompute_optionalInputProvided_success() throws Exception {
-    VajramNodeGraph graph =
+    VajramKryonGraph graph =
         loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello").build();
     CompletableFuture<String> result;
     requestContext.requestId("vajramWithNoDependencies");
@@ -127,7 +127,7 @@ class KrystexVajramExecutorTest {
 
   @Test
   void executeIo_singleRequestNoModulator_success() throws Exception {
-    VajramNodeGraph graph =
+    VajramKryonGraph graph =
         loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice")
             .build();
     CompletableFuture<TestUserInfo> userInfo123;
@@ -146,7 +146,7 @@ class KrystexVajramExecutorTest {
 
   @Test
   void executeIo_withModulatorMultipleRequests_calledOnlyOnce() {
-    VajramNodeGraph graph =
+    VajramKryonGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends")
@@ -177,7 +177,7 @@ class KrystexVajramExecutorTest {
 
   @Test
   void executeCompute_sequentialDependency_success() throws Exception {
-    VajramNodeGraph graph =
+    VajramKryonGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
@@ -202,7 +202,7 @@ class KrystexVajramExecutorTest {
 
   @Test
   void executeCompute_missingMandatoryInput_throwsException() {
-    VajramNodeGraph graph =
+    VajramKryonGraph graph =
         loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello").build();
     CompletableFuture<String> result;
     requestContext.requestId("vajramWithNoDependencies");
@@ -221,7 +221,7 @@ class KrystexVajramExecutorTest {
 
   @Test
   void execute_multiRequestNoInputModulator_cacheHitSuccess() throws Exception {
-    VajramNodeGraph graph =
+    VajramKryonGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends")
@@ -235,13 +235,13 @@ class KrystexVajramExecutorTest {
           krystexVajramExecutor.execute(
               vajramID(TestUserServiceVajram.ID),
               testRequestContext -> TestUserServiceRequest.builder().userId("user_id_1").build(),
-              NodeExecutionConfig.builder().executionId("req_1").build());
+              KryonExecutionConfig.builder().executionId("req_1").build());
       helloFriends =
           krystexVajramExecutor.execute(
               vajramID(HelloFriendsVajram.ID),
               testRequestContext ->
                   HelloFriendsRequest.builder().userId("user_id_1").numberOfFriends(0).build(),
-              NodeExecutionConfig.builder().executionId("req_2").build());
+              KryonExecutionConfig.builder().executionId("req_2").build());
     }
     assertThat(userInfo)
         .succeedsWithin(TIMEOUT)
@@ -255,7 +255,7 @@ class KrystexVajramExecutorTest {
 
   @Test
   void execute_multiRequestWithModulator_cacheHitSuccess() throws Exception {
-    VajramNodeGraph graph =
+    VajramKryonGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends")
@@ -270,13 +270,13 @@ class KrystexVajramExecutorTest {
               vajramID(TestUserServiceVajram.ID),
               testRequestContext ->
                   TestUserServiceRequest.builder().userId("user_id_1:friend_1").build(),
-              NodeExecutionConfig.builder().executionId("req_1").build());
+              KryonExecutionConfig.builder().executionId("req_1").build());
       helloFriends =
           krystexVajramExecutor.execute(
               vajramID(HelloFriendsVajram.ID),
               testRequestContext ->
                   HelloFriendsRequest.builder().userId("user_id_1").numberOfFriends(1).build(),
-              NodeExecutionConfig.builder().executionId("req_2").build());
+              KryonExecutionConfig.builder().executionId("req_2").build());
     }
     assertThat(userInfo)
         .succeedsWithin(TIMEOUT)
@@ -296,7 +296,7 @@ class KrystexVajramExecutorTest {
 
   @Test
   void execute_multiResolverFanouts_permutesTheFanouts() throws Exception {
-    VajramNodeGraph graph =
+    VajramKryonGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
@@ -306,12 +306,12 @@ class KrystexVajramExecutorTest {
         vajramID(TestUserServiceVajram.ID), InputModulatorConfig.simple(() -> new Batcher<>(6)));
     CompletableFuture<String> multiHellos;
     requestContext.requestId("execute_multiResolverFanouts_permutesTheFanouts");
-    NodeExecutionReport nodeExecutionReport = new DefaultNodeExecutionReport(Clock.systemUTC());
-    MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(nodeExecutionReport);
+    KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
+    MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(kryonExecutionReport);
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
             requestContext,
-            KrystalNodeExecutorConfig.builder()
+            KryonExecutorConfig.builder()
                 .requestScopedLogicDecoratorConfigs(
                     ImmutableMap.of(
                         mainLogicExecReporter.decoratorType(),
@@ -339,13 +339,13 @@ class KrystexVajramExecutorTest {
             Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1)
             Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1), Firstname Lastname (user_id_2:friend_2)""");
     System.out.println(
-        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
+        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
   }
 
   @Test
   void flush_singleDepthParallelDependencyDefaultInputModulatorConfig_flushes2Batchers(
       TestInfo testInfo) throws Exception {
-    VajramNodeGraph graph =
+    VajramKryonGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
@@ -385,7 +385,7 @@ class KrystexVajramExecutorTest {
   @Test
   void flush_singleDepthParallelDependencySharedInputModulatorConfig_flushes1Batcher(
       TestInfo testInfo) throws Exception {
-    VajramNodeGraph graph =
+    VajramKryonGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
@@ -434,7 +434,7 @@ class KrystexVajramExecutorTest {
   @Test
   void flush_singleDepthSkipParallelDependencySharedInputModulatorConfig_flushes1Batcher(
       TestInfo testInfo) throws Exception {
-    VajramNodeGraph graph =
+    VajramKryonGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
@@ -476,7 +476,7 @@ class KrystexVajramExecutorTest {
 
   @Test
   void close_sequentialDependency_flushesBatcher(TestInfo testInfo) {
-    VajramNodeGraph graph =
+    VajramKryonGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
@@ -510,7 +510,7 @@ class KrystexVajramExecutorTest {
 
   @Test
   void flush_sequentialDependency_flushesSharedBatchers(TestInfo testInfo) throws Exception {
-    VajramNodeGraph graph =
+    VajramKryonGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
@@ -552,7 +552,7 @@ class KrystexVajramExecutorTest {
 
   @Test
   void flush_sequentialSkipDependency_flushesSharedBatchers(TestInfo testInfo) throws Exception {
-    VajramNodeGraph graph =
+    VajramKryonGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
@@ -594,7 +594,7 @@ class KrystexVajramExecutorTest {
   void flush_skippingADependency_flushesCompleteCallGraph(TestInfo testInfo) {
     CompletableFuture<FlushCommand> friendServiceFlushCommand = new CompletableFuture<>();
     CompletableFuture<FlushCommand> userServiceFlushCommand = new CompletableFuture<>();
-    VajramNodeGraph graph =
+    VajramKryonGraph graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
@@ -702,8 +702,8 @@ class KrystexVajramExecutorTest {
         .build();
   }
 
-  private static VajramNodeGraph.Builder loadFromClasspath(String... packagePrefixes) {
-    Builder builder = VajramNodeGraph.builder();
+  private static VajramKryonGraph.Builder loadFromClasspath(String... packagePrefixes) {
+    Builder builder = VajramKryonGraph.builder();
     Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
     Predicate<LogicExecutionContext> isIOVajram =
         (context) ->

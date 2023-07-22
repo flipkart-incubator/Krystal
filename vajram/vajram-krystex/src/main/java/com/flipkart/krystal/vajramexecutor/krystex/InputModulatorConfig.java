@@ -3,10 +3,10 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig.DecoratorContext;
-import com.flipkart.krystal.krystex.node.DefaultDependantChain;
-import com.flipkart.krystal.krystex.node.DependantChain;
-import com.flipkart.krystal.krystex.node.DependantChainStart;
-import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
+import com.flipkart.krystal.krystex.kryon.DefaultDependantChain;
+import com.flipkart.krystal.krystex.kryon.DependantChain;
+import com.flipkart.krystal.krystex.kryon.DependantChainStart;
+import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
@@ -42,7 +42,7 @@ public record InputModulatorConfig(
         logicExecutionContext ->
             generateInstanceId(
                     logicExecutionContext.dependants(),
-                    logicExecutionContext.nodeDefinitionRegistry())
+                    logicExecutionContext.kryonDefinitionRegistry())
                 .toString(),
         _x -> true,
         modulatorContext -> {
@@ -93,31 +93,31 @@ public record InputModulatorConfig(
    *     [Start]>vajramId_1:dep_1>vajramId_2:dep_2>....>vajramId_n:dep_n}
    */
   private static StringBuilder generateInstanceId(
-      DependantChain dependantChain, NodeDefinitionRegistry nodeDefinitionRegistry) {
+      DependantChain dependantChain, KryonDefinitionRegistry kryonDefinitionRegistry) {
     if (dependantChain instanceof DependantChainStart dependantChainStart) {
       return new StringBuilder(dependantChainStart.toString());
     } else if (dependantChain instanceof DefaultDependantChain defaultDependantChain) {
       if (defaultDependantChain.dependantChain() instanceof DependantChainStart) {
         String vajramId =
             Optional.ofNullable(
-                    nodeDefinitionRegistry
-                        .get(defaultDependantChain.nodeId())
+                    kryonDefinitionRegistry
+                        .get(defaultDependantChain.kryonId())
                         .getMainLogicDefinition()
                         .logicTags()
                         .get(VajramTags.VAJRAM_ID))
                 .orElseThrow(
                     () ->
                         new NoSuchElementException(
-                            "Could not find tag %s for node %s"
-                                .formatted(VajramTags.VAJRAM_ID, defaultDependantChain.nodeId())))
+                            "Could not find tag %s for kryon %s"
+                                .formatted(VajramTags.VAJRAM_ID, defaultDependantChain.kryonId())))
                 .tagValue();
-        return generateInstanceId(defaultDependantChain.dependantChain(), nodeDefinitionRegistry)
+        return generateInstanceId(defaultDependantChain.dependantChain(), kryonDefinitionRegistry)
             .append('>')
             .append(vajramId)
             .append(':')
             .append(defaultDependantChain.dependencyName());
       } else {
-        return generateInstanceId(defaultDependantChain.dependantChain(), nodeDefinitionRegistry)
+        return generateInstanceId(defaultDependantChain.dependantChain(), kryonDefinitionRegistry)
             .append('>')
             .append(defaultDependantChain.dependencyName());
       }

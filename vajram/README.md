@@ -175,7 +175,7 @@ public abstract class GreetingVajram extends ComputeVajram {
 
 One of the core tenets of Krystal is to allow for a reactive execution environment to minimize usage
 of resources like
-threads. The vajram (and [krystex node](../krystex/README.md#node)) abstractions are designed to
+threads. The vajram (and [krystex kryon](../krystex/README.md#kryon)) abstractions are designed to
 allow for this optimization. By requiring inputs and dependencies to be declared statically, the
 Krystal framework is able to load the complete call graph as a directed acyclic graph (DAG) *
 *without** having to execute any part of the code. This has multiple advantages:
