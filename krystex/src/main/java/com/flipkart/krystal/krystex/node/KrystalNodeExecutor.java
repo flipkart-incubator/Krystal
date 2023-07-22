@@ -24,7 +24,6 @@ import com.flipkart.krystal.krystex.commands.ForwardBatchCommand;
 import com.flipkart.krystal.krystex.commands.ForwardGranularCommand;
 import com.flipkart.krystal.krystex.commands.GranularNodeCommand;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
-import com.flipkart.krystal.krystex.commands.NodeDataCommand;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
@@ -43,6 +42,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -99,6 +99,7 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   private final Set<RequestId> unFlushedRequests = new LinkedHashSet<>();
   private final Map<NodeId, Set<DependantChain>> dependantChainsPerNode = new LinkedHashMap<>();
   private final RequestIdGenerator preferredReqGenerator;
+  private final Set<DependantChain> depChainsDisabledInAllExecutions = new LinkedHashSet<>();
 
   public KrystalNodeExecutor(
       NodeDefinitionRegistry nodeDefinitionRegistry,
@@ -284,60 +285,27 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     } catch (Throwable e) {
       return failedFuture(e);
     }
-    if (nodeCommand instanceof NodeDataCommand dataCommand) {
-      @SuppressWarnings("unchecked")
-      Node<NodeDataCommand, R> node =
-          (Node<NodeDataCommand, R>) nodeRegistry.get(nodeCommand.nodeId());
-      return node.executeCommand(dataCommand);
-    } else if (nodeCommand instanceof Flush flush) {
+    if (nodeCommand instanceof Flush flush) {
       nodeRegistry.get(flush.nodeId()).executeCommand(flush);
       return completedFuture(null);
     } else {
-      throw new UnsupportedOperationException(
-          "Unknown NodeCommand type %s".formatted(nodeCommand.getClass()));
+      @SuppressWarnings("unchecked")
+      Node<NodeCommand, R> node = (Node<NodeCommand, R>) nodeRegistry.get(nodeCommand.nodeId());
+      return node.executeCommand(nodeCommand);
     }
   }
 
   private void validate(NodeCommand nodeCommand) {
-    if (nodeCommand instanceof NodeDataCommand dataCommand) {
-      DependantChain dependantChain = dataCommand.dependantChain();
-      Set<RequestId> originRequests = new LinkedHashSet<>();
-      if (nodeCommand instanceof GranularNodeCommand granular) {
-        originRequests = Set.of(granular.requestId().originatedFrom());
-      } else if (nodeCommand instanceof BatchNodeCommand batch) {
-        batch.requestIds().stream().map(RequestId::originatedFrom).forEach(originRequests::add);
-      } else {
-        throw new UnsupportedOperationException();
-      }
-      if (originRequests.stream()
-          .allMatch(
-              originRequest ->
-                  union(
-                          executorConfig.disabledDependantChains(),
-                          allRequests
-                              .get(originRequest)
-                              .executionConfig()
-                              .disabledDependantChains())
-                      .contains(dependantChain))) {
-        throw new DisabledDependantChainException(dependantChain);
-      }
-    } else if (nodeCommand instanceof Flush flush) {
-      DependantChain dependantChain = flush.nodeDependants();
-      if (executorConfig.disabledDependantChains().contains(dependantChain)) {
-        throw new DisabledDependantChainException(dependantChain);
-      }
-      if (allRequests.values().stream()
-          .map(NodeResult::executionConfig)
-          .map(NodeExecutionConfig::disabledDependantChains)
-          .allMatch(disableDepChains -> disableDepChains.contains(dependantChain))) {
-        throw new DisabledDependantChainException(dependantChain);
-      }
+    DependantChain dependantChain = nodeCommand.dependantChain();
+    if (depChainsDisabledInAllExecutions.contains(dependantChain)) {
+      throw new DisabledDependantChainException(dependantChain);
     }
   }
 
   public void flush() {
     enqueueRunnable(
         () -> {
+          computeDisabledDependantChains();
           if (isGranular()) {
             unFlushedRequests.forEach(
                 requestId -> {
@@ -360,6 +328,28 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                       executeCommand(
                           new Flush(nodeId, nodeDefinitionRegistry.getDependantChainsStart())));
         });
+  }
+
+  private void computeDisabledDependantChains() {
+    depChainsDisabledInAllExecutions.clear();
+    List<ImmutableSet<DependantChain>> disabledDependantChainsPerExecution =
+        unFlushedRequests.stream()
+            .map(allRequests::get)
+            .filter(Objects::nonNull)
+            .map(NodeResult::executionConfig)
+            .map(NodeExecutionConfig::disabledDependantChains)
+            .toList();
+    disabledDependantChainsPerExecution.stream()
+        .filter(x -> !x.isEmpty())
+        .findAny()
+        .ifPresent(depChainsDisabledInAllExecutions::addAll);
+    for (Set<DependantChain> disabledDepChains : disabledDependantChainsPerExecution) {
+      if (depChainsDisabledInAllExecutions.isEmpty()) {
+        break;
+      }
+      depChainsDisabledInAllExecutions.retainAll(disabledDepChains);
+    }
+    depChainsDisabledInAllExecutions.addAll(executorConfig.disabledDependantChains());
   }
 
   private void submitGranular(

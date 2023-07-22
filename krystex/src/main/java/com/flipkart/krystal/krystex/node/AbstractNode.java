@@ -5,7 +5,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.groupingBy;
 
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.commands.NodeDataCommand;
+import com.flipkart.krystal.krystex.commands.NodeCommand;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
@@ -23,7 +23,7 @@ import java.util.Optional;
 import java.util.TreeSet;
 import java.util.function.Function;
 
-abstract sealed class AbstractNode<C extends NodeDataCommand, R extends NodeResponse>
+abstract sealed class AbstractNode<C extends NodeCommand, R extends NodeResponse>
     implements Node<C, R> permits BatchNode, GranularNode {
 
   protected final NodeDefinition nodeDefinition;

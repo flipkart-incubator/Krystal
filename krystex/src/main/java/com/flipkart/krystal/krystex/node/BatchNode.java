@@ -79,7 +79,7 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
   private final Map<DependantChain, Set<RequestId>> requestsByDependantChain =
       new LinkedHashMap<>();
 
-  private final Map<DependantChain, Boolean> flushedDependantChain = new LinkedHashMap<>();
+  private final Set<DependantChain> flushedDependantChain = new LinkedHashSet<>();
   private final Map<DependantChain, Boolean> mainLogicExecuted = new LinkedHashMap<>();
 
   BatchNode(
@@ -101,9 +101,9 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
 
   @Override
   public void executeCommand(Flush flushCommand) {
-    flushedDependantChain.put(flushCommand.nodeDependants(), true);
-    flushAllDependenciesIfNeeded(flushCommand.nodeDependants());
-    flushDecoratorsIfNeeded(flushCommand.nodeDependants());
+    flushedDependantChain.add(flushCommand.dependantChain());
+    flushAllDependenciesIfNeeded(flushCommand.dependantChain());
+    flushDecoratorsIfNeeded(flushCommand.dependantChain());
   }
 
   @Override
@@ -425,7 +425,7 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
   }
 
   private void flushDependencyIfNeeded(String dependencyName, DependantChain dependantChain) {
-    if (!flushedDependantChain.getOrDefault(dependantChain, false)) {
+    if (!flushedDependantChain.contains(dependantChain)) {
       return;
     }
     if (executedDependencies.getOrDefault(dependantChain, Set.of()).contains(dependencyName)) {
@@ -437,7 +437,7 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
   }
 
   private void flushDecoratorsIfNeeded(DependantChain dependantChain) {
-    if (!flushedDependantChain.getOrDefault(dependantChain, false)) {
+    if (!flushedDependantChain.contains(dependantChain)) {
       return;
     }
     if (mainLogicExecuted.getOrDefault(dependantChain, false)

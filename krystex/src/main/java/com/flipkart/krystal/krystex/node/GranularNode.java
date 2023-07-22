@@ -80,7 +80,7 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
   private final Map<RequestId, Map<ResolverDefinition, ResolverCommand>> resolverResults =
       new LinkedHashMap<>();
 
-  private final Map<DependantChain, Boolean> flushedDependantChain = new LinkedHashMap<>();
+  private final Set<DependantChain> flushedDependantChain = new LinkedHashSet<>();
   private final Map<DependantChain, Set<RequestId>> requestsByDependantChain =
       new LinkedHashMap<>();
   private final Map<RequestId, DependantChain> dependantChainByRequest = new LinkedHashMap<>();
@@ -107,9 +107,9 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
 
   @Override
   public void executeCommand(Flush flushCommand) {
-    flushedDependantChain.put(flushCommand.nodeDependants(), true);
-    flushAllDependenciesIfNeeded(flushCommand.nodeDependants());
-    flushDecoratorsIfNeeded(flushCommand.nodeDependants());
+    flushedDependantChain.add(flushCommand.dependantChain());
+    flushAllDependenciesIfNeeded(flushCommand.dependantChain());
+    flushDecoratorsIfNeeded(flushCommand.dependantChain());
   }
 
   @Override
@@ -191,7 +191,7 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
   }
 
   private void flushDecoratorsIfNeeded(DependantChain dependantChain) {
-    if (!flushedDependantChain.getOrDefault(dependantChain, false)) {
+    if (!flushedDependantChain.contains(dependantChain)) {
       return;
     }
     Set<RequestId> requestIds = requestsByDependantChain.get(dependantChain);
@@ -538,7 +538,7 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
   }
 
   private void flushDependencyIfNeeded(String dependencyName, DependantChain dependantChain) {
-    if (!flushedDependantChain.getOrDefault(dependantChain, false)) {
+    if (!flushedDependantChain.contains(dependantChain)) {
       return;
     }
     Set<RequestId> requestsForDependantChain =

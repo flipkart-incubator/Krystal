@@ -534,6 +534,7 @@
           <option value="NumericCastThatLosesPrecision" />
           <option value="ResultOfMethodCallIgnored" />
           <option value="ClassReferencesSubclass" />
+          <option value="NonSynchronizedMethodOverridesSynchronizedMethod" />
         </list>
       </option>
     </inspection_tool>
