@@ -9,13 +9,13 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import java.util.Set;
 
-public record ForwardBatchCommand(
+public record ForwardBatch(
     NodeId nodeId,
     ImmutableSet<String> inputNames,
     ImmutableMap<RequestId, Inputs> executableRequests,
     DependantChain dependantChain,
     ImmutableMap<RequestId, String> skippedRequests)
-    implements BatchNodeCommand {
+    implements BatchCommand {
 
   @Override
   public Set<RequestId> requestIds() {

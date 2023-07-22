@@ -8,12 +8,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 
-public record CallbackBatchCommand(
+public record CallbackBatch(
     NodeId nodeId,
     String dependencyName,
     ImmutableMap<RequestId, Results<Object>> resultsByRequest,
     DependantChain dependantChain)
-    implements BatchNodeCommand {
+    implements BatchCommand {
 
   @Override
   public ImmutableSet<RequestId> requestIds() {

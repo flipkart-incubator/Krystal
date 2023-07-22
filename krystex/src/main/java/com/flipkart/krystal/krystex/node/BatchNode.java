@@ -21,10 +21,10 @@ import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.commands.BatchNodeCommand;
-import com.flipkart.krystal.krystex.commands.CallbackBatchCommand;
+import com.flipkart.krystal.krystex.commands.BatchCommand;
+import com.flipkart.krystal.krystex.commands.CallbackBatch;
 import com.flipkart.krystal.krystex.commands.Flush;
-import com.flipkart.krystal.krystex.commands.ForwardBatchCommand;
+import com.flipkart.krystal.krystex.commands.ForwardBatch;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
@@ -54,18 +54,18 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> {
+final class BatchNode extends AbstractNode<BatchCommand, BatchResponse> {
 
   private final Map<DependantChain, Set<String>> availableInputsByDepChain = new LinkedHashMap<>();
 
-  private final Map<DependantChain, ForwardBatchCommand> inputsValueCollector =
+  private final Map<DependantChain, ForwardBatch> inputsValueCollector =
       new LinkedHashMap<>();
 
-  private final Map<DependantChain, Map<String, CallbackBatchCommand>> dependencyValuesCollector =
+  private final Map<DependantChain, Map<String, CallbackBatch>> dependencyValuesCollector =
       new LinkedHashMap<>();
 
   /** A unique Result future for every dependant chain. */
-  private final Map<DependantChain, CompletableFuture<BatchNodeResponse>> resultsByDepChain =
+  private final Map<DependantChain, CompletableFuture<BatchResponse>> resultsByDepChain =
       new LinkedHashMap<>();
 
   /**
@@ -107,20 +107,20 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
   }
 
   @Override
-  public CompletableFuture<BatchNodeResponse> executeCommand(BatchNodeCommand nodeCommand) {
+  public CompletableFuture<BatchResponse> executeCommand(BatchCommand nodeCommand) {
     DependantChain dependantChain = nodeCommand.dependantChain();
-    final CompletableFuture<BatchNodeResponse> resultForDepChain =
+    final CompletableFuture<BatchResponse> resultForDepChain =
         resultsByDepChain.computeIfAbsent(dependantChain, r -> new CompletableFuture<>());
     try {
-      if (nodeCommand instanceof ForwardBatchCommand forwardBatchCommand) {
-        collectInputValues(forwardBatchCommand);
-      } else if (nodeCommand instanceof CallbackBatchCommand callbackBatchCommand) {
-        collectDependencyValues(callbackBatchCommand);
+      if (nodeCommand instanceof ForwardBatch forwardBatch) {
+        collectInputValues(forwardBatch);
+      } else if (nodeCommand instanceof CallbackBatch callbackBatch) {
+        collectDependencyValues(callbackBatch);
       }
       triggerDependencies(
           dependantChain, getTriggerableDependencies(dependantChain, nodeCommand.inputNames()));
 
-      Optional<CompletableFuture<BatchNodeResponse>> mainLogicFuture =
+      Optional<CompletableFuture<BatchResponse>> mainLogicFuture =
           executeMainLogicIfPossible(dependantChain);
       mainLogicFuture.ifPresent(f -> linkFutures(f, resultForDepChain));
     } catch (Throwable e) {
@@ -159,7 +159,7 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
 
   private void triggerDependencies(
       DependantChain dependantChain, Map<String, Set<ResolverDefinition>> triggerableDependencies) {
-    ForwardBatchCommand forwardBatchCommand = getForwardCommand(dependantChain);
+    ForwardBatch forwardBatch = getForwardCommand(dependantChain);
 
     Optional<MultiResolverDefinition> multiResolverOpt =
         nodeDefinition
@@ -170,8 +170,8 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
                         .nodeDefinitionRegistry()
                         .logicDefinitionRegistry()
                         .getMultiResolver(nodeLogicId));
-    ImmutableMap<RequestId, String> skippedRequests = forwardBatchCommand.skippedRequests();
-    ImmutableSet<RequestId> executableRequests = forwardBatchCommand.executableRequests().keySet();
+    ImmutableMap<RequestId, String> skippedRequests = forwardBatch.skippedRequests();
+    ImmutableSet<RequestId> executableRequests = forwardBatch.executableRequests().keySet();
     Map<String, Map<Set<RequestId>, ResolverCommand>> commandsByDependency = new LinkedHashMap<>();
     if (!skippedRequests.isEmpty()) {
       SkipDependency skip = skip(String.join(", ", skippedRequests.values()));
@@ -230,12 +230,12 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
     }
   }
 
-  private ForwardBatchCommand getForwardCommand(DependantChain dependantChain) {
-    ForwardBatchCommand forwardBatchCommand = inputsValueCollector.get(dependantChain);
-    if (forwardBatchCommand == null) {
+  private ForwardBatch getForwardCommand(DependantChain dependantChain) {
+    ForwardBatch forwardBatch = inputsValueCollector.get(dependantChain);
+    if (forwardBatch == null) {
       throw new IllegalArgumentException("Missing Forward command. This should not be possible.");
     }
-    return forwardBatchCommand;
+    return forwardBatch;
   }
 
   private void triggerDependency(
@@ -285,9 +285,9 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
       }
     }
     executedDependencies.computeIfAbsent(dependantChain, _k -> new LinkedHashSet<>()).add(depName);
-    CompletableFuture<BatchNodeResponse> depResponse =
+    CompletableFuture<BatchResponse> depResponse =
         krystalNodeExecutor.executeCommand(
-            new ForwardBatchCommand(
+            new ForwardBatch(
                 depNodeId,
                 resolverDefinitions.stream()
                     .map(ResolverDefinition::resolvedInputNames)
@@ -328,7 +328,7 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
                           }));
 
           enqueueOrExecuteCommand(
-              () -> new CallbackBatchCommand(nodeId, depName, results, dependantChain),
+              () -> new CallbackBatch(nodeId, depName, results, dependantChain),
               depNodeId,
               nodeDefinition,
               krystalNodeExecutor);
@@ -336,9 +336,9 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
     flushDependencyIfNeeded(depName, dependantChain);
   }
 
-  private Optional<CompletableFuture<BatchNodeResponse>> executeMainLogicIfPossible(
+  private Optional<CompletableFuture<BatchResponse>> executeMainLogicIfPossible(
       DependantChain dependantChain) {
-    ForwardBatchCommand forwardCommand = getForwardCommand(dependantChain);
+    ForwardBatch forwardCommand = getForwardCommand(dependantChain);
     // If all the inputs and dependency values are available, then prepare run mainLogic
     ImmutableSet<String> inputNames = nodeDefinition.getMainLogicDefinition().inputNames();
     if (availableInputsByDepChain
@@ -354,7 +354,7 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
     return Optional.empty();
   }
 
-  private CompletableFuture<BatchNodeResponse> executeMainLogic(
+  private CompletableFuture<BatchResponse> executeMainLogic(
       Set<RequestId> requestIds, DependantChain dependantChain) {
 
     MainLogicDefinition<Object> mainLogicDefinition = nodeDefinition.getMainLogicDefinition();
@@ -364,7 +364,7 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
     for (RequestId requestId : requestIds) {
       mainLogicInputs.put(requestId, getInputsForMainLogic(dependantChain, requestId));
     }
-    CompletableFuture<BatchNodeResponse> resultForBatch = new CompletableFuture<>();
+    CompletableFuture<BatchResponse> resultForBatch = new CompletableFuture<>();
     Map<RequestId, CompletableFuture<ValueOrError<Object>>> results =
         executeDecoratedMainLogic(mainLogicDefinition, mainLogicInputs, dependantChain);
 
@@ -372,7 +372,7 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
         .whenComplete(
             (unused, throwable) -> {
               resultForBatch.complete(
-                  new BatchNodeResponse(
+                  new BatchResponse(
                       mainLogicInputs.keySet().stream()
                           .collect(
                               toImmutableMap(
@@ -454,20 +454,20 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
       DependantChain dependantChain, RequestId requestId, Set<String> boundFrom) {
     Inputs resolvableInputs =
         Optional.ofNullable(inputsValueCollector.get(dependantChain))
-            .map(ForwardBatchCommand::executableRequests)
+            .map(ForwardBatch::executableRequests)
             .map(inputsByRequest -> inputsByRequest.get(requestId))
             .orElse(Inputs.empty());
-    Map<String, CallbackBatchCommand> depValues =
+    Map<String, CallbackBatch> depValues =
         dependencyValuesCollector.getOrDefault(dependantChain, Map.of());
     Map<String, InputValue<Object>> inputValues = new LinkedHashMap<>();
     for (String boundFromInput : boundFrom) {
       InputValue<Object> voe = resolvableInputs.values().get(boundFromInput);
       if (voe == null) {
-        CallbackBatchCommand callbackBatchCommand = depValues.get(boundFromInput);
-        if (callbackBatchCommand != null) {
+        CallbackBatch callbackBatch = depValues.get(boundFromInput);
+        if (callbackBatch != null) {
           inputValues.put(
               boundFromInput,
-              callbackBatchCommand.resultsByRequest().getOrDefault(requestId, Results.empty()));
+              callbackBatch.resultsByRequest().getOrDefault(requestId, Results.empty()));
         }
       } else {
         inputValues.put(boundFromInput, voe);
@@ -478,7 +478,7 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
 
   private MainLogicInputs getInputsForMainLogic(
       DependantChain dependantChain, RequestId requestId) {
-    ForwardBatchCommand forwardBatchCommand = inputsValueCollector.get(dependantChain);
+    ForwardBatch forwardBatch = inputsValueCollector.get(dependantChain);
     ImmutableMap<String, Results<Object>> depValues =
         dependencyValuesCollector
             .getOrDefault(dependantChain, ImmutableMap.of())
@@ -489,47 +489,47 @@ final class BatchNode extends AbstractNode<BatchNodeCommand, BatchNodeResponse> 
                     Entry::getKey,
                     e -> e.getValue().resultsByRequest().getOrDefault(requestId, Results.empty())));
     Inputs inputValues =
-        forwardBatchCommand.executableRequests().getOrDefault(requestId, Inputs.empty());
+        forwardBatch.executableRequests().getOrDefault(requestId, Inputs.empty());
     Inputs allInputsAndDependencies = Inputs.union(depValues, inputValues.values());
     return new MainLogicInputs(inputValues, allInputsAndDependencies);
   }
 
-  private void collectInputValues(ForwardBatchCommand forwardBatchCommand) {
+  private void collectInputValues(ForwardBatch forwardBatch) {
     if (requestsByDependantChain.putIfAbsent(
-            forwardBatchCommand.dependantChain(), forwardBatchCommand.requestIds())
+            forwardBatch.dependantChain(), forwardBatch.requestIds())
         != null) {
       throw new DuplicateRequestException(
           "Duplicate batch request received for dependant chain %s"
-              .formatted(forwardBatchCommand.dependantChain()));
+              .formatted(forwardBatch.dependantChain()));
     }
-    ImmutableSet<String> inputNames = forwardBatchCommand.inputNames();
-    if (inputsValueCollector.putIfAbsent(forwardBatchCommand.dependantChain(), forwardBatchCommand)
+    ImmutableSet<String> inputNames = forwardBatch.inputNames();
+    if (inputsValueCollector.putIfAbsent(forwardBatch.dependantChain(), forwardBatch)
         != null) {
       throw new DuplicateRequestException(
           "Duplicate data for inputs %s of node %s in dependant chain %s"
-              .formatted(inputNames, nodeId, forwardBatchCommand.dependantChain()));
+              .formatted(inputNames, nodeId, forwardBatch.dependantChain()));
     }
     availableInputsByDepChain
-        .computeIfAbsent(forwardBatchCommand.dependantChain(), _k -> new LinkedHashSet<>())
+        .computeIfAbsent(forwardBatch.dependantChain(), _k -> new LinkedHashSet<>())
         .addAll(inputNames);
   }
 
-  private static String getSkipMessage(ForwardBatchCommand forwardBatchCommand) {
-    return String.join(", ", forwardBatchCommand.skippedRequests().values());
+  private static String getSkipMessage(ForwardBatch forwardBatch) {
+    return String.join(", ", forwardBatch.skippedRequests().values());
   }
 
-  private void collectDependencyValues(CallbackBatchCommand callbackBatchCommand) {
-    String dependencyName = callbackBatchCommand.dependencyName();
+  private void collectDependencyValues(CallbackBatch callbackBatch) {
+    String dependencyName = callbackBatch.dependencyName();
     availableInputsByDepChain
-        .computeIfAbsent(callbackBatchCommand.dependantChain(), _k -> new LinkedHashSet<>())
+        .computeIfAbsent(callbackBatch.dependantChain(), _k -> new LinkedHashSet<>())
         .add(dependencyName);
     if (dependencyValuesCollector
-            .computeIfAbsent(callbackBatchCommand.dependantChain(), k -> new LinkedHashMap<>())
-            .putIfAbsent(dependencyName, callbackBatchCommand)
+            .computeIfAbsent(callbackBatch.dependantChain(), k -> new LinkedHashMap<>())
+            .putIfAbsent(dependencyName, callbackBatch)
         != null) {
       throw new DuplicateRequestException(
           "Duplicate data for dependency %s of node %s in dependant chain %s"
-              .formatted(dependencyName, nodeId, callbackBatchCommand.dependantChain()));
+              .formatted(dependencyName, nodeId, callbackBatch.dependantChain()));
     }
   }
 }

@@ -18,11 +18,9 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.commands.BatchNodeCommand;
 import com.flipkart.krystal.krystex.commands.Flush;
-import com.flipkart.krystal.krystex.commands.ForwardBatchCommand;
-import com.flipkart.krystal.krystex.commands.ForwardGranularCommand;
-import com.flipkart.krystal.krystex.commands.GranularNodeCommand;
+import com.flipkart.krystal.krystex.commands.ForwardBatch;
+import com.flipkart.krystal.krystex.commands.ForwardGranule;
 import com.flipkart.krystal.krystex.commands.NodeCommand;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
@@ -95,8 +93,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   private final NodeRegistry<?> nodeRegistry = new NodeRegistry<>();
   private final KrystalNodeExecutorMetrics krystalNodeMetrics;
   private volatile boolean closed;
-  private final Map<RequestId, NodeResult> allRequests = new LinkedHashMap<>();
-  private final Set<RequestId> unFlushedRequests = new LinkedHashSet<>();
+  private final Map<RequestId, NodeExecution> allExecutions = new LinkedHashMap<>();
+  private final Set<RequestId> unFlushedExecutions = new LinkedHashSet<>();
   private final Map<NodeId, Set<DependantChain>> dependantChainsPerNode = new LinkedHashMap<>();
   private final RequestIdGenerator preferredReqGenerator;
   private final Set<DependantChain> depChainsDisabledInAllExecutions = new LinkedHashSet<>();
@@ -179,16 +177,16 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                   createDependencyNodes(
                       nodeId, nodeDefinitionRegistry.getDependantChainsStart(), executionConfig);
                   CompletableFuture<Object> future = new CompletableFuture<>();
-                  if (allRequests.containsKey(requestId)) {
+                  if (allExecutions.containsKey(requestId)) {
                     future.completeExceptionally(
                         new IllegalArgumentException(
                             "Received duplicate requests for same instanceId '%s' and execution Id '%s'"
                                 .formatted(instanceId, executionId)));
                   } else {
-                    allRequests.put(
+                    allExecutions.put(
                         requestId,
-                        new NodeResult(nodeId, requestId, inputs, executionConfig, future));
-                    unFlushedRequests.add(requestId);
+                        new NodeExecution(nodeId, requestId, inputs, executionConfig, future));
+                    unFlushedExecutions.add(requestId);
                   }
                   return future;
                 })
@@ -307,21 +305,21 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
         () -> {
           computeDisabledDependantChains();
           if (isGranular()) {
-            unFlushedRequests.forEach(
+            unFlushedExecutions.forEach(
                 requestId -> {
-                  NodeResult nodeResult = allRequests.get(requestId);
-                  NodeId nodeId = nodeResult.nodeId();
-                  if (nodeResult.future().isDone()) {
+                  NodeExecution nodeExecution = allExecutions.get(requestId);
+                  NodeId nodeId = nodeExecution.nodeId();
+                  if (nodeExecution.future().isDone()) {
                     return;
                   }
                   NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
-                  submitGranular(requestId, nodeResult, nodeId, nodeDefinition);
+                  submitGranular(requestId, nodeExecution, nodeId, nodeDefinition);
                 });
           } else {
-            submitBatch(unFlushedRequests);
+            submitBatch(unFlushedExecutions);
           }
-          unFlushedRequests.stream()
-              .map(requestId -> allRequests.get(requestId).nodeId())
+          unFlushedExecutions.stream()
+              .map(requestId -> allExecutions.get(requestId).nodeId())
               .distinct()
               .forEach(
                   nodeId ->
@@ -333,10 +331,10 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   private void computeDisabledDependantChains() {
     depChainsDisabledInAllExecutions.clear();
     List<ImmutableSet<DependantChain>> disabledDependantChainsPerExecution =
-        unFlushedRequests.stream()
-            .map(allRequests::get)
+        unFlushedExecutions.stream()
+            .map(allExecutions::get)
             .filter(Objects::nonNull)
-            .map(NodeResult::executionConfig)
+            .map(NodeExecution::executionConfig)
             .map(NodeExecutionConfig::disabledDependantChains)
             .toList();
     disabledDependantChainsPerExecution.stream()
@@ -353,18 +351,21 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
   }
 
   private void submitGranular(
-      RequestId requestId, NodeResult nodeResult, NodeId nodeId, NodeDefinition nodeDefinition) {
+      RequestId requestId,
+      NodeExecution nodeExecution,
+      NodeId nodeId,
+      NodeDefinition nodeDefinition) {
     CompletableFuture<Object> submissionResult =
-        this.<GranularNodeResponse>executeCommand(
-                new ForwardGranularCommand(
+        this.<GranuleResponse>executeCommand(
+                new ForwardGranule(
                     nodeId,
                     nodeDefinition.getMainLogicDefinition().inputNames().stream()
                         .filter(s -> !nodeDefinition.dependencyNodes().containsKey(s))
                         .collect(toImmutableSet()),
-                    nodeResult.inputs(),
+                    nodeExecution.inputs(),
                     nodeDefinitionRegistry.getDependantChainsStart(),
                     requestId))
-            .thenApply(GranularNodeResponse::response)
+            .thenApply(GranuleResponse::response)
             .thenApply(
                 valueOrError -> {
                   if (valueOrError.error().isPresent()) {
@@ -373,46 +374,48 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
                     return valueOrError.value().orElse(null);
                   }
                 });
-    linkFutures(submissionResult, nodeResult.future());
+    linkFutures(submissionResult, nodeExecution.future());
   }
 
   private void submitBatch(Set<RequestId> unFlushedRequests) {
     unFlushedRequests.stream()
-        .map(allRequests::get)
-        .collect(groupingBy(NodeResult::nodeId))
+        .map(allExecutions::get)
+        .collect(groupingBy(NodeExecution::nodeId))
         .forEach(
             (nodeId, nodeResults) -> {
               NodeDefinition nodeDefinition = nodeDefinitionRegistry.get(nodeId);
-              CompletableFuture<BatchNodeResponse> batchResponseFuture =
+              CompletableFuture<BatchResponse> batchResponseFuture =
                   this.executeCommand(
-                      new ForwardBatchCommand(
+                      new ForwardBatch(
                           nodeId,
                           nodeDefinition.getMainLogicDefinition().inputNames().stream()
                               .filter(s -> !nodeDefinition.dependencyNodes().containsKey(s))
                               .collect(toImmutableSet()),
                           nodeResults.stream()
-                              .collect(toImmutableMap(NodeResult::requestId, NodeResult::inputs)),
+                              .collect(
+                                  toImmutableMap(
+                                      NodeExecution::instanceExecutionId, NodeExecution::inputs)),
                           nodeDefinitionRegistry.getDependantChainsStart(),
                           ImmutableMap.of()));
               batchResponseFuture
-                  .thenApply(BatchNodeResponse::responses)
+                  .thenApply(BatchResponse::responses)
                   .whenComplete(
                       (responses, throwable) -> {
-                        for (NodeResult nodeResult : nodeResults) {
+                        for (NodeExecution nodeExecution : nodeResults) {
                           if (throwable != null) {
-                            nodeResult.future().completeExceptionally(throwable);
+                            nodeExecution.future().completeExceptionally(throwable);
                           } else {
                             ValueOrError<Object> result =
                                 responses.getOrDefault(
-                                    nodeResult.requestId(), ValueOrError.empty());
-                            nodeResult.future().complete(result.value().orElse(null));
+                                    nodeExecution.instanceExecutionId(), ValueOrError.empty());
+                            nodeExecution.future().complete(result.value().orElse(null));
                           }
                         }
                       });
               propagateCancellation(
                   allOf(
                       nodeResults.stream()
-                          .map(NodeResult::future)
+                          .map(NodeExecution::future)
                           .toArray(CompletableFuture[]::new)),
                   batchResponseFuture);
             });
@@ -436,8 +439,8 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
     enqueueCommand(
         () ->
             allOf(
-                    allRequests.values().stream()
-                        .map(NodeResult::future)
+                    allExecutions.values().stream()
+                        .map(NodeExecution::future)
                         .toArray(CompletableFuture[]::new))
                 .whenComplete((unused, throwable) -> commandQueueLease.close()));
   }
@@ -459,9 +462,9 @@ public final class KrystalNodeExecutor implements KrystalExecutor {
         commandQueueLease.get());
   }
 
-  private record NodeResult(
+  private record NodeExecution(
       NodeId nodeId,
-      RequestId requestId,
+      RequestId instanceExecutionId,
       Inputs inputs,
       NodeExecutionConfig executionConfig,
       CompletableFuture<Object> future) {}

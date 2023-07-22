@@ -17,11 +17,11 @@ import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.commands.CallbackGranularCommand;
+import com.flipkart.krystal.krystex.commands.CallbackGranule;
 import com.flipkart.krystal.krystex.commands.Flush;
-import com.flipkart.krystal.krystex.commands.ForwardGranularCommand;
-import com.flipkart.krystal.krystex.commands.GranularNodeCommand;
-import com.flipkart.krystal.krystex.commands.SkipGranularCommand;
+import com.flipkart.krystal.krystex.commands.ForwardGranule;
+import com.flipkart.krystal.krystex.commands.GranularCommand;
+import com.flipkart.krystal.krystex.commands.SkipGranule;
 import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
@@ -51,7 +51,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 
-final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeResponse> {
+final class GranularNode extends AbstractNode<GranularCommand, GranuleResponse> {
 
   private final Map<RequestId, Map<String, DependencyNodeExecutions>> dependencyExecutions =
       new LinkedHashMap<>();
@@ -63,7 +63,7 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
       new LinkedHashMap<>();
 
   /** A unique Result future for every requestId. */
-  private final Map<RequestId, CompletableFuture<GranularNodeResponse>> resultsByRequest =
+  private final Map<RequestId, CompletableFuture<GranuleResponse>> resultsByRequest =
       new LinkedHashMap<>();
 
   /**
@@ -74,7 +74,7 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
 
   private final Map<RequestId, Boolean> mainLogicExecuted = new LinkedHashMap<>();
 
-  private final Map<RequestId, Optional<SkipGranularCommand>> skipLogicRequested =
+  private final Map<RequestId, Optional<SkipGranule>> skipLogicRequested =
       new LinkedHashMap<>();
 
   private final Map<RequestId, Map<ResolverDefinition, ResolverCommand>> resolverResults =
@@ -101,7 +101,7 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
         new StringReqGenerator());
   }
 
-  private static SkippedExecutionException skipNodeException(SkipGranularCommand skipNode) {
+  private static SkippedExecutionException skipNodeException(SkipGranule skipNode) {
     return new SkippedExecutionException(skipNode.skipDependencyCommand().reason());
   }
 
@@ -113,9 +113,9 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
   }
 
   @Override
-  public CompletableFuture<GranularNodeResponse> executeCommand(GranularNodeCommand nodeCommand) {
+  public CompletableFuture<GranuleResponse> executeCommand(GranularCommand nodeCommand) {
     RequestId requestId = nodeCommand.requestId();
-    final CompletableFuture<GranularNodeResponse> resultForRequest =
+    final CompletableFuture<GranuleResponse> resultForRequest =
         resultsByRequest.computeIfAbsent(requestId, r -> new CompletableFuture<>());
     if (resultForRequest.isDone()) {
       // This is possible if this node was already skipped, for example.
@@ -124,22 +124,22 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
       return resultForRequest;
     }
     try {
-      if (nodeCommand instanceof SkipGranularCommand skipNode) {
+      if (nodeCommand instanceof SkipGranule skipNode) {
         requestsByDependantChain
             .computeIfAbsent(skipNode.dependantChain(), k -> new LinkedHashSet<>())
             .add(requestId);
         dependantChainByRequest.put(requestId, skipNode.dependantChain());
         skipLogicRequested.put(requestId, Optional.of(skipNode));
         return handleSkipDependency(requestId, skipNode, resultForRequest);
-      } else if (nodeCommand instanceof CallbackGranularCommand callbackGranularCommand) {
-        executeWithDependency(requestId, callbackGranularCommand);
-      } else if (nodeCommand instanceof ForwardGranularCommand forwardGranularCommand) {
+      } else if (nodeCommand instanceof CallbackGranule callbackGranule) {
+        executeWithDependency(requestId, callbackGranule);
+      } else if (nodeCommand instanceof ForwardGranule forwardGranule) {
         requestsByDependantChain
-            .computeIfAbsent(forwardGranularCommand.dependantChain(), k -> new LinkedHashSet<>())
+            .computeIfAbsent(forwardGranule.dependantChain(), k -> new LinkedHashSet<>())
             .add(requestId);
         dependantChainByRequest.computeIfAbsent(
-            requestId, r -> forwardGranularCommand.dependantChain());
-        executeWithInputs(requestId, forwardGranularCommand);
+            requestId, r -> forwardGranule.dependantChain());
+        executeWithInputs(requestId, forwardGranule);
       } else {
         throw new UnsupportedOperationException(
             "Unknown type of nodeCommand: %s".formatted(nodeCommand));
@@ -152,7 +152,7 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
   }
 
   private void executeMainLogicIfPossible(
-      RequestId requestId, CompletableFuture<GranularNodeResponse> resultForRequest) {
+      RequestId requestId, CompletableFuture<GranuleResponse> resultForRequest) {
     // If all the inputs and dependency values are available, then prepare run mainLogic
     MainLogicDefinition<Object> mainLogicDefinition = nodeDefinition.getMainLogicDefinition();
     ImmutableSet<String> inputNames = mainLogicDefinition.inputNames();
@@ -165,10 +165,10 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
     }
   }
 
-  private CompletableFuture<GranularNodeResponse> handleSkipDependency(
+  private CompletableFuture<GranuleResponse> handleSkipDependency(
       RequestId requestId,
-      SkipGranularCommand skipNode,
-      CompletableFuture<GranularNodeResponse> resultForRequest) {
+      SkipGranule skipNode,
+      CompletableFuture<GranuleResponse> resultForRequest) {
 
     // Since this node is skipped, we need to get all the pending resolvers (irrespective of
     // whether their inputs are available or not) and mark them resolved.
@@ -212,14 +212,14 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
   }
 
   private void executeWithInputs(
-      RequestId requestId, ForwardGranularCommand forwardGranularCommand) {
+      RequestId requestId, ForwardGranule forwardGranule) {
     collectInputValues(
-        requestId, forwardGranularCommand.inputNames(), forwardGranularCommand.values());
-    execute(requestId, forwardGranularCommand.inputNames());
+        requestId, forwardGranule.inputNames(), forwardGranule.values());
+    execute(requestId, forwardGranule.inputNames());
   }
 
   private void executeWithDependency(
-      RequestId requestId, CallbackGranularCommand executeWithInput) {
+      RequestId requestId, CallbackGranule executeWithInput) {
     String dependencyName = executeWithInput.dependencyName();
     ImmutableSet<String> inputNames = ImmutableSet.of(dependencyName);
     if (dependencyValuesCollector
@@ -317,7 +317,7 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
 
     Map<String, Set<ResolverDefinition>> resolversByDependency =
         pendingResolvers.stream().collect(groupingBy(ResolverDefinition::dependencyName, toSet()));
-    Optional<SkipGranularCommand> skipRequested =
+    Optional<SkipGranule> skipRequested =
         this.skipLogicRequested.getOrDefault(requestId, Optional.empty());
     Map<String, ResolverCommand> resolverCommands;
     if (skipRequested.isPresent()) {
@@ -352,7 +352,7 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
   private void executeResolver(RequestId requestId, ResolverDefinition resolverDefinition) {
     NodeLogicId nodeLogicId = resolverDefinition.resolverNodeLogicId();
     ResolverCommand resolverCommand;
-    Optional<SkipGranularCommand> skipRequested =
+    Optional<SkipGranule> skipRequested =
         this.skipLogicRequested.getOrDefault(requestId, Optional.empty());
     if (skipRequested.isPresent()) {
       resolverCommand = ResolverCommand.skip(skipRequested.get().skipDependencyCommand().reason());
@@ -399,8 +399,8 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
          * over fanout requests as the input is empty*/
         requestIdSet.add(dependencyRequestId);
         for (RequestId depRequestId : requestIdSet) {
-          SkipGranularCommand skipNode =
-              new SkipGranularCommand(
+          SkipGranule skipNode =
+              new SkipGranule(
                   depNodeId,
                   depRequestId,
                   dependantChainByRequest
@@ -471,7 +471,7 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
               .putIfAbsent(
                   dependencyRequestId,
                   krystalNodeExecutor.executeCommand(
-                      new ForwardGranularCommand(
+                      new ForwardGranule(
                           depNodeId,
                           newInputs.values().keySet(),
                           newInputs,
@@ -505,13 +505,13 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
                         results =
                             new Results<>(
                                 dependencyNodeExecutions.individualCallResponses().values().stream()
-                                    .map(cf -> cf.getNow(new GranularNodeResponse()))
+                                    .map(cf -> cf.getNow(new GranuleResponse()))
                                     .collect(
                                         toImmutableMap(
-                                            GranularNodeResponse::inputs,
-                                            GranularNodeResponse::response)));
+                                            GranuleResponse::inputs,
+                                            GranuleResponse::response)));
                       }
-                      return new CallbackGranularCommand(
+                      return new CallbackGranule(
                           this.nodeId,
                           dependencyName,
                           results,
@@ -595,16 +595,16 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
                   .containsKey(depName)) {
                 RequestId dependencyRequestId =
                     requestIdGenerator.newSubRequest(requestId, () -> "%s".formatted(depName));
-                CompletableFuture<GranularNodeResponse> nodeResponse =
+                CompletableFuture<GranuleResponse> nodeResponse =
                     krystalNodeExecutor.executeCommand(
-                        new ForwardGranularCommand(
+                        new ForwardGranule(
                             depNodeId,
                             ImmutableSet.of(),
                             Inputs.empty(),
                             dependantChainByRequest.get(requestId).extend(nodeId, depName),
                             dependencyRequestId));
                 nodeResponse
-                    .thenApply(GranularNodeResponse::response)
+                    .thenApply(GranuleResponse::response)
                     .whenComplete(
                         (response, throwable) -> {
                           enqueueOrExecuteCommand(
@@ -613,7 +613,7 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
                                 if (throwable != null) {
                                   valueOrError = withError(throwable);
                                 }
-                                return new CallbackGranularCommand(
+                                return new CallbackGranule(
                                     this.nodeId,
                                     depName,
                                     new Results<>(ImmutableMap.of(Inputs.empty(), valueOrError)),
@@ -629,7 +629,7 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
   }
 
   private void executeMainLogic(
-      CompletableFuture<GranularNodeResponse> resultForRequest, RequestId requestId) {
+      CompletableFuture<GranuleResponse> resultForRequest, RequestId requestId) {
     MainLogicDefinition<Object> mainLogicDefinition = nodeDefinition.getMainLogicDefinition();
     MainLogicInputs mainLogicInputs = getInputsForMainLogic(requestId);
     // Retrieve existing result from cache if result for this set of inputs has already been
@@ -646,7 +646,7 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
         .thenAccept(
             value ->
                 resultForRequest.complete(
-                    new GranularNodeResponse(mainLogicInputs.providedInputs(), value)));
+                    new GranuleResponse(mainLogicInputs.providedInputs(), value)));
     mainLogicExecuted.put(requestId, true);
     flushDecoratorsIfNeeded(dependantChainByRequest.get(requestId));
   }
@@ -689,7 +689,7 @@ final class GranularNode extends AbstractNode<GranularNodeCommand, GranularNodeR
       LongAdder executionCounter,
       Set<ResolverDefinition> executedResolvers,
       Map<RequestId, Inputs> individualCallInputs,
-      Map<RequestId, CompletableFuture<GranularNodeResponse>> individualCallResponses) {
+      Map<RequestId, CompletableFuture<GranuleResponse>> individualCallResponses) {
 
     private DependencyNodeExecutions() {
       this(new LongAdder(), new LinkedHashSet<>(), new LinkedHashMap<>(), new LinkedHashMap<>());

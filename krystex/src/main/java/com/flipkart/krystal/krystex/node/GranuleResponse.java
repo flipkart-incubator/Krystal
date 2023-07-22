@@ -3,10 +3,10 @@ package com.flipkart.krystal.krystex.node;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 
-public record GranularNodeResponse(Inputs inputs, ValueOrError<Object> response)
+public record GranuleResponse(Inputs inputs, ValueOrError<Object> response)
     implements NodeResponse {
 
-  public GranularNodeResponse() {
+  public GranuleResponse() {
     this(Inputs.empty(), ValueOrError.empty());
   }
 }

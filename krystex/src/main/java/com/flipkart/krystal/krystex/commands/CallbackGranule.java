@@ -5,10 +5,10 @@ import com.flipkart.krystal.krystex.node.DependantChain;
 import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.request.RequestId;
 
-public record CallbackGranularCommand(
+public record CallbackGranule(
     NodeId nodeId,
     String dependencyName,
     Results<Object> results,
     RequestId requestId,
     DependantChain dependantChain)
-    implements GranularNodeCommand {}
+    implements GranularCommand {}
