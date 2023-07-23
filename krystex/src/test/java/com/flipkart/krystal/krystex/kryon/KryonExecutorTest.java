@@ -15,19 +15,27 @@ import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
+import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
+import com.flipkart.krystal.krystex.kryon.KryonExecutor.ResolverExecStrategy;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class KryonExecutorTest {
 
@@ -41,22 +49,23 @@ class KryonExecutorTest {
   void setUp() {
     this.logicDefinitionRegistry = new LogicDefinitionRegistry();
     this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
-    this.kryonExecutor =
-        new KryonExecutor(
-            kryonDefinitionRegistry,
-            new ForkJoinExecutorPool(1),
-            KryonExecutorConfig.builder().build(),
-            "test");
   }
 
   @AfterEach
   void tearDown() {
-    this.kryonExecutor.close();
+    Optional.ofNullable(kryonExecutor).ifPresent(KryonExecutor::close);
   }
 
   /** Executing same kryon multiple times in a single execution */
-  @Test
-  void multiRequestExecution() throws Exception {
+  @ParameterizedTest
+  @MethodSource("executorConfigsToTest")
+  void multiRequestExecution(
+      KryonExecStrategy kryonExecStrategy,
+      ResolverExecStrategy resolverExecStrategy,
+      GraphTraversalStrategy graphTraversalStrategy)
+      throws Exception {
+    this.kryonExecutor =
+        getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
     KryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newKryonDefinition(
             "kryon",
@@ -80,8 +89,13 @@ class KryonExecutorTest {
     assertEquals("computed_value", timedGet(future2));
   }
 
-  @Test
-  void multiRequestExecutionWithNullRequestId() {
+  @ParameterizedTest
+  @MethodSource("executorConfigsToTest")
+  void multiRequestExecutionWithNullRequestId(
+      KryonExecStrategy kryonExecStrategy,
+      ResolverExecStrategy resolverExecStrategy,
+      GraphTraversalStrategy graphTraversalStrategy) {
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
     KryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newKryonDefinition(
             "kryon",
@@ -102,8 +116,14 @@ class KryonExecutorTest {
     assertThat(future1).succeedsWithin(1, SECONDS).isEqualTo("computed_value");
   }
 
-  @Test
-  void requestExecution_noDependencies_success() throws Exception {
+  @ParameterizedTest
+  @MethodSource("executorConfigsToTest")
+  void requestExecution_noDependencies_success(
+      KryonExecStrategy kryonExecStrategy,
+      ResolverExecStrategy resolverExecStrategy,
+      GraphTraversalStrategy graphTraversalStrategy)
+      throws Exception {
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
     KryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newKryonDefinition(
             "kryon",
@@ -120,8 +140,14 @@ class KryonExecutorTest {
     assertEquals("computed_value", timedGet(future));
   }
 
-  @Test
-  void requestExecution_unboundInputs_success() throws Exception {
+  @ParameterizedTest
+  @MethodSource("executorConfigsToTest")
+  void requestExecution_unboundInputs_success(
+      KryonExecStrategy kryonExecStrategy,
+      ResolverExecStrategy resolverExecStrategy,
+      GraphTraversalStrategy graphTraversalStrategy)
+      throws Exception {
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
     String logicId = "requestExecution_noDependencies_success_nodeName";
     KryonId kryonId =
         kryonDefinitionRegistry
@@ -147,8 +173,14 @@ class KryonExecutorTest {
     assertEquals("computed_values: a=1;b=2;c=3", timedGet(future));
   }
 
-  @Test
-  void requestExecution_singleDependency_success() throws Exception {
+  @ParameterizedTest
+  @MethodSource("executorConfigsToTest")
+  void requestExecution_singleDependency_success(
+      KryonExecStrategy kryonExecStrategy,
+      ResolverExecStrategy resolverExecStrategy,
+      GraphTraversalStrategy graphTraversalStrategy)
+      throws Exception {
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
     KryonDefinition n1 =
         kryonDefinitionRegistry.newKryonDefinition(
             "n1",
@@ -182,8 +214,14 @@ class KryonExecutorTest {
     assertEquals("dependency_value:computed_value", timedGet(future));
   }
 
-  @Test
-  void requestExecution_multiLevelDependencies_success() throws Exception {
+  @ParameterizedTest
+  @MethodSource("executorConfigsToTest")
+  void requestExecution_multiLevelDependencies_success(
+      KryonExecStrategy kryonExecStrategy,
+      ResolverExecStrategy resolverExecStrategy,
+      GraphTraversalStrategy graphTraversalStrategy)
+      throws Exception {
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
     String l1Dep = "requestExecution_multiLevelDependencies_level1";
     kryonDefinitionRegistry.newKryonDefinition(
         l1Dep,
@@ -275,8 +313,13 @@ class KryonExecutorTest {
     assertThat(future).succeedsWithin(TIMEOUT).isEqualTo("l1:l2:l3:l4:final");
   }
 
-  @Test
-  void close_preventsNewExecutionRequests() {
+  @ParameterizedTest
+  @MethodSource("executorConfigsToTest")
+  void close_preventsNewExecutionRequests(
+      KryonExecStrategy kryonExecStrategy,
+      ResolverExecStrategy resolverExecStrategy,
+      GraphTraversalStrategy graphTraversalStrategy) {
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
     kryonExecutor.close();
     assertThrows(
         Exception.class,
@@ -317,5 +360,44 @@ class KryonExecutorTest {
 
     logicDefinitionRegistry.addMainLogic(def);
     return def;
+  }
+
+  private KryonExecutor getKryonExecutor(
+      KryonExecStrategy kryonExecStrategy,
+      ResolverExecStrategy resolverExecStrategy,
+      GraphTraversalStrategy graphTraversalStrategy) {
+    return new KryonExecutor(
+        kryonDefinitionRegistry,
+        new ForkJoinExecutorPool(1),
+        KryonExecutorConfig.builder()
+            .kryonExecStrategy(kryonExecStrategy)
+            .resolverExecStrategy(resolverExecStrategy)
+            .graphTraversalStrategy(graphTraversalStrategy)
+            .build(),
+        "test");
+  }
+
+  public static Stream<Arguments> executorConfigsToTest() {
+    return Stream.of(
+        Arguments.of(
+            KryonExecStrategy.BATCH, ResolverExecStrategy.SINGLE, GraphTraversalStrategy.DEPTH),
+        Arguments.of(
+            KryonExecStrategy.BATCH, ResolverExecStrategy.MULTI, GraphTraversalStrategy.DEPTH),
+        Arguments.of(
+            KryonExecStrategy.BATCH, ResolverExecStrategy.SINGLE, GraphTraversalStrategy.BREADTH),
+        Arguments.of(
+            KryonExecStrategy.BATCH, ResolverExecStrategy.MULTI, GraphTraversalStrategy.BREADTH),
+        Arguments.of(
+            KryonExecStrategy.GRANULAR, ResolverExecStrategy.SINGLE, GraphTraversalStrategy.DEPTH),
+        Arguments.of(
+            KryonExecStrategy.GRANULAR, ResolverExecStrategy.MULTI, GraphTraversalStrategy.DEPTH),
+        Arguments.of(
+            KryonExecStrategy.GRANULAR,
+            ResolverExecStrategy.SINGLE,
+            GraphTraversalStrategy.BREADTH),
+        Arguments.of(
+            KryonExecStrategy.GRANULAR,
+            ResolverExecStrategy.MULTI,
+            GraphTraversalStrategy.BREADTH));
   }
 }
