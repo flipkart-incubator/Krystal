@@ -64,6 +64,12 @@ class KryonExecutorTest {
       ResolverExecStrategy resolverExecStrategy,
       GraphTraversalStrategy graphTraversalStrategy)
       throws Exception {
+    // This is redundant. This should Ideally move to a paramterized @BeforeEach method or after
+    // parametrizing this at the test class level.
+    // This is currently not supported in jupiter-junit:5.9.x.
+    // It is planned to be supported in jupiter-junit:5.10
+    // (Ref: https://github.com/junit-team/junit5/issues/878)
+    // Move this to the @BeforeEach method after 5.10 is released.
     this.kryonExecutor =
         getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
     KryonDefinition kryonDefinition =
@@ -95,7 +101,8 @@ class KryonExecutorTest {
       KryonExecStrategy kryonExecStrategy,
       ResolverExecStrategy resolverExecStrategy,
       GraphTraversalStrategy graphTraversalStrategy) {
-    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
+    this.kryonExecutor =
+        getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
     KryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newKryonDefinition(
             "kryon",
@@ -123,7 +130,8 @@ class KryonExecutorTest {
       ResolverExecStrategy resolverExecStrategy,
       GraphTraversalStrategy graphTraversalStrategy)
       throws Exception {
-    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
+    this.kryonExecutor =
+        getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
     KryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newKryonDefinition(
             "kryon",
@@ -147,7 +155,8 @@ class KryonExecutorTest {
       ResolverExecStrategy resolverExecStrategy,
       GraphTraversalStrategy graphTraversalStrategy)
       throws Exception {
-    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
+    this.kryonExecutor =
+        getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
     String logicId = "requestExecution_noDependencies_success_nodeName";
     KryonId kryonId =
         kryonDefinitionRegistry
@@ -180,7 +189,8 @@ class KryonExecutorTest {
       ResolverExecStrategy resolverExecStrategy,
       GraphTraversalStrategy graphTraversalStrategy)
       throws Exception {
-    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
+    this.kryonExecutor =
+        getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
     KryonDefinition n1 =
         kryonDefinitionRegistry.newKryonDefinition(
             "n1",
@@ -221,7 +231,8 @@ class KryonExecutorTest {
       ResolverExecStrategy resolverExecStrategy,
       GraphTraversalStrategy graphTraversalStrategy)
       throws Exception {
-    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
+    this.kryonExecutor =
+        getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
     String l1Dep = "requestExecution_multiLevelDependencies_level1";
     kryonDefinitionRegistry.newKryonDefinition(
         l1Dep,
@@ -319,7 +330,8 @@ class KryonExecutorTest {
       KryonExecStrategy kryonExecStrategy,
       ResolverExecStrategy resolverExecStrategy,
       GraphTraversalStrategy graphTraversalStrategy) {
-    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
+    this.kryonExecutor =
+        getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
     kryonExecutor.close();
     assertThrows(
         Exception.class,
