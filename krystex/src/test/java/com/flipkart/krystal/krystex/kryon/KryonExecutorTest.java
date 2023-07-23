@@ -6,8 +6,6 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStr
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.GRANULAR;
-import static com.flipkart.krystal.krystex.kryon.KryonExecutor.ResolverExecStrategy.MULTI;
-import static com.flipkart.krystal.krystex.kryon.KryonExecutor.ResolverExecStrategy.SINGLE;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
@@ -23,7 +21,6 @@ import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
-import com.flipkart.krystal.krystex.kryon.KryonExecutor.ResolverExecStrategy;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.time.Duration;
@@ -38,7 +35,6 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -66,9 +62,7 @@ class KryonExecutorTest {
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void multiRequestExecution(
-      KryonExecStrategy kryonExecStrategy,
-      ResolverExecStrategy resolverExecStrategy,
-      GraphTraversalStrategy graphTraversalStrategy)
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy)
       throws Exception {
     // This is redundant. This should Ideally move to a paramterized @BeforeEach method or after
     // parametrizing this at the test class level.
@@ -76,8 +70,7 @@ class KryonExecutorTest {
     // It is planned to be supported in jupiter-junit:5.10
     // (Ref: https://github.com/junit-team/junit5/issues/878)
     // Move this to the @BeforeEach method after 5.10 is released.
-    this.kryonExecutor =
-        getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
     KryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newKryonDefinition(
             "kryon",
@@ -104,11 +97,8 @@ class KryonExecutorTest {
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void multiRequestExecutionWithNullRequestId(
-      KryonExecStrategy kryonExecStrategy,
-      ResolverExecStrategy resolverExecStrategy,
-      GraphTraversalStrategy graphTraversalStrategy) {
-    this.kryonExecutor =
-        getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
     KryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newKryonDefinition(
             "kryon",
@@ -132,12 +122,9 @@ class KryonExecutorTest {
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void requestExecution_noDependencies_success(
-      KryonExecStrategy kryonExecStrategy,
-      ResolverExecStrategy resolverExecStrategy,
-      GraphTraversalStrategy graphTraversalStrategy)
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy)
       throws Exception {
-    this.kryonExecutor =
-        getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
     KryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newKryonDefinition(
             "kryon",
@@ -157,12 +144,9 @@ class KryonExecutorTest {
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void requestExecution_unboundInputs_success(
-      KryonExecStrategy kryonExecStrategy,
-      ResolverExecStrategy resolverExecStrategy,
-      GraphTraversalStrategy graphTraversalStrategy)
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy)
       throws Exception {
-    this.kryonExecutor =
-        getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
     String logicId = "requestExecution_noDependencies_success_nodeName";
     KryonId kryonId =
         kryonDefinitionRegistry
@@ -191,12 +175,9 @@ class KryonExecutorTest {
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void requestExecution_singleDependency_success(
-      KryonExecStrategy kryonExecStrategy,
-      ResolverExecStrategy resolverExecStrategy,
-      GraphTraversalStrategy graphTraversalStrategy)
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy)
       throws Exception {
-    this.kryonExecutor =
-        getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
     KryonDefinition n1 =
         kryonDefinitionRegistry.newKryonDefinition(
             "n1",
@@ -233,12 +214,8 @@ class KryonExecutorTest {
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void requestExecution_multiLevelDependencies_success(
-      KryonExecStrategy kryonExecStrategy,
-      ResolverExecStrategy resolverExecStrategy,
-      GraphTraversalStrategy graphTraversalStrategy)
-      throws Exception {
-    this.kryonExecutor =
-        getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
     String l1Dep = "requestExecution_multiLevelDependencies_level1";
     kryonDefinitionRegistry.newKryonDefinition(
         l1Dep,
@@ -333,11 +310,8 @@ class KryonExecutorTest {
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void close_preventsNewExecutionRequests(
-      KryonExecStrategy kryonExecStrategy,
-      ResolverExecStrategy resolverExecStrategy,
-      GraphTraversalStrategy graphTraversalStrategy) {
-    this.kryonExecutor =
-        getKryonExecutor(kryonExecStrategy, resolverExecStrategy, graphTraversalStrategy);
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
     kryonExecutor.close();
     assertThrows(
         Exception.class,
@@ -381,15 +355,12 @@ class KryonExecutorTest {
   }
 
   private KryonExecutor getKryonExecutor(
-      KryonExecStrategy kryonExecStrategy,
-      ResolverExecStrategy resolverExecStrategy,
-      GraphTraversalStrategy graphTraversalStrategy) {
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     return new KryonExecutor(
         kryonDefinitionRegistry,
         new ForkJoinExecutorPool(1),
         KryonExecutorConfig.builder()
             .kryonExecStrategy(kryonExecStrategy)
-            .resolverExecStrategy(resolverExecStrategy)
             .graphTraversalStrategy(graphTraversalStrategy)
             .build(),
         "test");
@@ -397,13 +368,13 @@ class KryonExecutorTest {
 
   public static Stream<Arguments> executorConfigsToTest() {
     return Stream.of(
-        Arguments.of(BATCH, SINGLE, DEPTH),
-        Arguments.of(BATCH, MULTI, DEPTH),
-        Arguments.of(BATCH, SINGLE, BREADTH),
-        Arguments.of(BATCH, MULTI, BREADTH),
-        Arguments.of(GRANULAR, SINGLE, DEPTH),
-        Arguments.of(GRANULAR, MULTI, DEPTH),
-        Arguments.of(GRANULAR, SINGLE, BREADTH),
-        Arguments.of(GRANULAR, MULTI, BREADTH));
+        Arguments.of(BATCH, DEPTH),
+        Arguments.of(BATCH, DEPTH),
+        Arguments.of(BATCH, BREADTH),
+        Arguments.of(BATCH, BREADTH),
+        Arguments.of(GRANULAR, DEPTH),
+        Arguments.of(GRANULAR, DEPTH),
+        Arguments.of(GRANULAR, BREADTH),
+        Arguments.of(GRANULAR, BREADTH));
   }
 }

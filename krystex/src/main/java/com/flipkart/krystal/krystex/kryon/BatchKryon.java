@@ -29,7 +29,6 @@ import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
-import com.flipkart.krystal.krystex.kryon.KryonExecutor.ResolverExecStrategy;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
@@ -58,8 +57,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
 
   private final Map<DependantChain, Set<String>> availableInputsByDepChain = new LinkedHashMap<>();
 
-  private final Map<DependantChain, ForwardBatch> inputsValueCollector =
-      new LinkedHashMap<>();
+  private final Map<DependantChain, ForwardBatch> inputsValueCollector = new LinkedHashMap<>();
 
   private final Map<DependantChain, Map<String, CallbackBatch>> dependencyValuesCollector =
       new LinkedHashMap<>();
@@ -88,14 +86,12 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       Function<LogicExecutionContext, ImmutableMap<String, MainLogicDecorator>>
           requestScopedDecoratorsSupplier,
       LogicDecorationOrdering logicDecorationOrdering,
-      ResolverExecStrategy resolverExecStrategy,
       RequestIdGenerator requestIdGenerator) {
     super(
         kryonDefinition,
         kryonExecutor,
         requestScopedDecoratorsSupplier,
         logicDecorationOrdering,
-        resolverExecStrategy,
         requestIdGenerator);
   }
 
@@ -488,8 +484,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
                 toImmutableMap(
                     Entry::getKey,
                     e -> e.getValue().resultsByRequest().getOrDefault(requestId, Results.empty())));
-    Inputs inputValues =
-        forwardBatch.executableRequests().getOrDefault(requestId, Inputs.empty());
+    Inputs inputValues = forwardBatch.executableRequests().getOrDefault(requestId, Inputs.empty());
     Inputs allInputsAndDependencies = Inputs.union(depValues, inputValues.values());
     return new MainLogicInputs(inputValues, allInputsAndDependencies);
   }
@@ -503,8 +498,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
               .formatted(forwardBatch.dependantChain()));
     }
     ImmutableSet<String> inputNames = forwardBatch.inputNames();
-    if (inputsValueCollector.putIfAbsent(forwardBatch.dependantChain(), forwardBatch)
-        != null) {
+    if (inputsValueCollector.putIfAbsent(forwardBatch.dependantChain(), forwardBatch) != null) {
       throw new DuplicateRequestException(
           "Duplicate data for inputs %s of kryon %s in dependant chain %s"
               .formatted(inputNames, kryonId, forwardBatch.dependantChain()));

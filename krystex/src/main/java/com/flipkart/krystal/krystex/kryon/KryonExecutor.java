@@ -53,11 +53,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class KryonExecutor implements KrystalExecutor {
 
-  public enum ResolverExecStrategy {
-    SINGLE,
-    MULTI
-  }
-
   public enum KryonExecStrategy {
     GRANULAR,
     BATCH
@@ -222,8 +217,7 @@ public final class KryonExecutor implements KrystalExecutor {
                       kryonDefinition,
                       this,
                       this::getRequestScopedDecorators,
-                      executorConfig.logicDecorationOrdering(),
-                      executorConfig.resolverExecStrategy()));
+                      executorConfig.logicDecorationOrdering()));
     } else {
       KryonRegistry<BatchKryon> batchKryonRegistry = (KryonRegistry<BatchKryon>) kryonRegistry;
       batchKryonRegistry.createIfAbsent(
@@ -234,7 +228,6 @@ public final class KryonExecutor implements KrystalExecutor {
                   this,
                   this::getRequestScopedDecorators,
                   executorConfig.logicDecorationOrdering(),
-                  executorConfig.resolverExecStrategy(),
                   preferredReqGenerator));
     }
   }
@@ -244,16 +237,17 @@ public final class KryonExecutor implements KrystalExecutor {
   }
 
   /**
-   * Enqueues the provided KryonCommand supplier into the command queue. This method is
-   * intended to be called in threads other than the main thread of this KryonExecutor.(for
-   * example IO reactor threads). When a non-blocking IO call is made by a kryon, a callback is added
-   * to the resulting CompletableFuture which generates an ExecuteWithDependency command for its
-   * dependents. That is when this method is used - ensuring that all further processing of the
-   * kryonCammand happens in the main thread.
+   * Enqueues the provided KryonCommand supplier into the command queue. This method is intended to
+   * be called in threads other than the main thread of this KryonExecutor.(for example IO reactor
+   * threads). When a non-blocking IO call is made by a kryon, a callback is added to the resulting
+   * CompletableFuture which generates an ExecuteWithDependency command for its dependents. That is
+   * when this method is used - ensuring that all further processing of the kryonCammand happens in
+   * the main thread.
    */
   <R extends KryonResponse> CompletableFuture<R> enqueueKryonCommand(
       Supplier<? extends KryonCommand> kryonCommand) {
-    return enqueueCommand((Supplier<CompletableFuture<R>>) () -> _executeCommand(kryonCommand.get()))
+    return enqueueCommand(
+            (Supplier<CompletableFuture<R>>) () -> _executeCommand(kryonCommand.get()))
         .thenCompose(identity());
   }
 
@@ -277,7 +271,8 @@ public final class KryonExecutor implements KrystalExecutor {
     }
   }
 
-  private <R extends KryonResponse> CompletableFuture<R> _executeCommand(KryonCommand kryonCommand) {
+  private <R extends KryonResponse> CompletableFuture<R> _executeCommand(
+      KryonCommand kryonCommand) {
     try {
       validate(kryonCommand);
     } catch (Throwable e) {
@@ -288,7 +283,8 @@ public final class KryonExecutor implements KrystalExecutor {
       return completedFuture(null);
     } else {
       @SuppressWarnings("unchecked")
-      Kryon<KryonCommand, R> kryon = (Kryon<KryonCommand, R>) kryonRegistry.get(kryonCommand.kryonId());
+      Kryon<KryonCommand, R> kryon =
+          (Kryon<KryonCommand, R>) kryonRegistry.get(kryonCommand.kryonId());
       return kryon.executeCommand(kryonCommand);
     }
   }

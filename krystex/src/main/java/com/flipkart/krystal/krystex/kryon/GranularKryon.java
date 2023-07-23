@@ -26,7 +26,6 @@ import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
-import com.flipkart.krystal.krystex.kryon.KryonExecutor.ResolverExecStrategy;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.request.StringReqGenerator;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
@@ -89,14 +88,12 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
       KryonExecutor kryonExecutor,
       Function<LogicExecutionContext, ImmutableMap<String, MainLogicDecorator>>
           requestScopedDecoratorsSupplier,
-      LogicDecorationOrdering logicDecorationOrdering,
-      ResolverExecStrategy resolverExecStrategy) {
+      LogicDecorationOrdering logicDecorationOrdering) {
     super(
         kryonDefinition,
         kryonExecutor,
         requestScopedDecoratorsSupplier,
         logicDecorationOrdering,
-        resolverExecStrategy,
         new StringReqGenerator());
   }
 
@@ -180,9 +177,6 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                         .containsKey(resolverDefinition))
             .collect(toSet());
 
-    //    for (ResolverDefinition resolverDefinition : pendingResolvers) {
-    //      executeResolver(requestId, resolverDefinition);
-    //    }
     executeResolvers(requestId, pendingResolvers);
     resultForRequest.completeExceptionally(skipKryonException(skipGranule));
     return resultForRequest;
@@ -254,7 +248,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
    * @param newInputNames The input names for which new values were just made available.
    * @param availableInputs The inputs for which values are available.
    * @return the resolver definitions which need at least one of the provided {@code inputNames} and
-   *     all of whose inputs' values are available. i.e resolvers which should be executed
+   *     all of whose inputs' values are available. i.e. resolvers which should be executed
    *     immediately
    */
   private Set<ResolverDefinition> getPendingResolvers(
@@ -287,12 +281,6 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
   }
 
   private void executeResolvers(RequestId requestId, Set<ResolverDefinition> pendingResolvers) {
-    if (ResolverExecStrategy.SINGLE.equals(resolverExecStrategy)) {
-      for (ResolverDefinition resolverDefinition : pendingResolvers) {
-        executeResolver(requestId, resolverDefinition);
-      }
-      return;
-    }
     if (pendingResolvers.isEmpty()) {
       return;
     }
@@ -345,26 +333,6 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
         });
   }
 
-  private void executeResolver(RequestId requestId, ResolverDefinition resolverDefinition) {
-    KryonLogicId kryonLogicId = resolverDefinition.resolverKryonLogicId();
-    ResolverCommand resolverCommand;
-    Optional<SkipGranule> skipRequested =
-        this.skipLogicRequested.getOrDefault(requestId, Optional.empty());
-    if (skipRequested.isPresent()) {
-      resolverCommand = ResolverCommand.skip(skipRequested.get().skipDependencyCommand().reason());
-    } else {
-      Inputs inputsForResolver = getInputsForResolver(resolverDefinition, requestId);
-      resolverCommand =
-          kryonDefinition
-              .kryonDefinitionRegistry()
-              .logicDefinitionRegistry()
-              .getResolver(kryonLogicId)
-              .resolve(inputsForResolver);
-    }
-    String dependencyName = resolverDefinition.dependencyName();
-    handleResolverCommand(requestId, dependencyName, Set.of(resolverDefinition), resolverCommand);
-  }
-
   private void handleResolverCommand(
       RequestId requestId,
       String dependencyName,
@@ -384,14 +352,14 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
     if (resolverCommand instanceof SkipDependency) {
       if (dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).get(dependencyName)
           == null) {
-        /* This is for the case where for some resolvers the input has already been resolved but we
+        /* This is for the case where for some resolvers the input has already been resolved, but we
         do need to skip them as well, as our current resolver is skipped.*/
         Set<RequestId> requestIdSet =
             new HashSet<>(dependencyKryonExecutions.individualCallResponses().keySet());
         RequestId dependencyRequestId =
             requestIdGenerator.newSubRequest(
                 requestId, () -> "%s[%s]".formatted(dependencyName, 0));
-        /*Skipping Current resolver, as its a skip, we dont need to iterate
+        /*Skipping Current resolver, as it's a skip, we don't need to iterate
          * over fanout requests as the input is empty*/
         requestIdSet.add(dependencyRequestId);
         for (RequestId depRequestId : requestIdSet) {
@@ -559,11 +527,6 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
       kryonExecutor.executeCommand(
           new Flush(depKryonId, dependantChain.extend(kryonId, dependencyName)));
     }
-  }
-
-  private Inputs getInputsForResolver(ResolverDefinition resolverDefinition, RequestId requestId) {
-    ImmutableSet<String> boundFrom = resolverDefinition.boundFrom();
-    return getInputsFor(requestId, boundFrom);
   }
 
   private Inputs getInputsFor(RequestId requestId, Set<String> boundFrom) {

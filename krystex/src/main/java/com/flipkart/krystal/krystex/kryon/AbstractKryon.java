@@ -9,7 +9,6 @@ import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
-import com.flipkart.krystal.krystex.kryon.KryonExecutor.ResolverExecStrategy;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.flipkart.krystal.utils.ImmutableMapView;
@@ -34,7 +33,6 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
       requestScopedDecoratorsSupplier;
 
   protected final LogicDecorationOrdering logicDecorationOrdering;
-  protected final ResolverExecStrategy resolverExecStrategy;
 
   protected final ImmutableMapView<Optional<String>, List<ResolverDefinition>>
       resolverDefinitionsByInput;
@@ -49,14 +47,12 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
       Function<LogicExecutionContext, ImmutableMap<String, MainLogicDecorator>>
           requestScopedDecoratorsSupplier,
       LogicDecorationOrdering logicDecorationOrdering,
-      ResolverExecStrategy resolverExecStrategy,
       RequestIdGenerator requestIdGenerator) {
     this.kryonDefinition = kryonDefinition;
     this.kryonId = kryonDefinition.kryonId();
     this.kryonExecutor = kryonExecutor;
     this.requestScopedDecoratorsSupplier = requestScopedDecoratorsSupplier;
     this.logicDecorationOrdering = logicDecorationOrdering;
-    this.resolverExecStrategy = resolverExecStrategy;
     this.resolverDefinitionsByInput =
         createResolverDefinitionsByInputs(kryonDefinition.resolverDefinitions());
     this.resolverDefinitionsByDependencies =
