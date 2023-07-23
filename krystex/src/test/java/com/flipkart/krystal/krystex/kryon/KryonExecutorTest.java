@@ -2,6 +2,12 @@ package com.flipkart.krystal.krystex.kryon;
 
 import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static com.flipkart.krystal.data.ValueOrError.withValue;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.GRANULAR;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.ResolverExecStrategy.MULTI;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.ResolverExecStrategy.SINGLE;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
@@ -391,25 +397,13 @@ class KryonExecutorTest {
 
   public static Stream<Arguments> executorConfigsToTest() {
     return Stream.of(
-        Arguments.of(
-            KryonExecStrategy.BATCH, ResolverExecStrategy.SINGLE, GraphTraversalStrategy.DEPTH),
-        Arguments.of(
-            KryonExecStrategy.BATCH, ResolverExecStrategy.MULTI, GraphTraversalStrategy.DEPTH),
-        Arguments.of(
-            KryonExecStrategy.BATCH, ResolverExecStrategy.SINGLE, GraphTraversalStrategy.BREADTH),
-        Arguments.of(
-            KryonExecStrategy.BATCH, ResolverExecStrategy.MULTI, GraphTraversalStrategy.BREADTH),
-        Arguments.of(
-            KryonExecStrategy.GRANULAR, ResolverExecStrategy.SINGLE, GraphTraversalStrategy.DEPTH),
-        Arguments.of(
-            KryonExecStrategy.GRANULAR, ResolverExecStrategy.MULTI, GraphTraversalStrategy.DEPTH),
-        Arguments.of(
-            KryonExecStrategy.GRANULAR,
-            ResolverExecStrategy.SINGLE,
-            GraphTraversalStrategy.BREADTH),
-        Arguments.of(
-            KryonExecStrategy.GRANULAR,
-            ResolverExecStrategy.MULTI,
-            GraphTraversalStrategy.BREADTH));
+        Arguments.of(BATCH, SINGLE, DEPTH),
+        Arguments.of(BATCH, MULTI, DEPTH),
+        Arguments.of(BATCH, SINGLE, BREADTH),
+        Arguments.of(BATCH, MULTI, BREADTH),
+        Arguments.of(GRANULAR, SINGLE, DEPTH),
+        Arguments.of(GRANULAR, MULTI, DEPTH),
+        Arguments.of(GRANULAR, SINGLE, BREADTH),
+        Arguments.of(GRANULAR, MULTI, BREADTH));
   }
 }
