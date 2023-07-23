@@ -39,7 +39,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 class KryonExecutorTest {
 
-  private static final Duration TIMEOUT = Duration.ofSeconds(1000);
+  private static final Duration TIMEOUT = Duration.ofSeconds(1);
 
   private KryonExecutor kryonExecutor;
   private KryonDefinitionRegistry kryonDefinitionRegistry;

@@ -72,7 +72,7 @@ import org.junit.jupiter.api.TestInfo;
 
 class KrystexVajramExecutorTest {
 
-  private static final Duration TIMEOUT = ofSeconds(1000);
+  private static final Duration TIMEOUT = ofSeconds(1);
   private TestRequestContext requestContext;
   private ObjectMapper objectMapper;
 
