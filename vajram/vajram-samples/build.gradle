@@ -8,18 +8,10 @@ version project.krystal_version
 dependencies {
     implementation project(':krystal-common')
     implementation project(':vajram')
-    implementation 'com.google.guava:guava:31.1-jre'
-
-    compileOnly 'org.projectlombok:lombok:1.18.24'
-    annotationProcessor 'org.projectlombok:lombok:1.18.24'
 
     testImplementation project(':vajram-krystex')
     testImplementation project(':krystex')
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
-    testImplementation 'org.assertj:assertj-core:3.23.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
-    testCompileOnly 'org.projectlombok:lombok:1.18.24'
-    testAnnotationProcessor 'org.projectlombok:lombok:1.18.24'
+
     implementation 'com.google.inject:guice:5.1.0'
 
     def jacksonVersion = '2.14.2'
