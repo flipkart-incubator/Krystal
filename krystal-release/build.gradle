@@ -1,0 +1,37 @@
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.flipkart.krystal:vajram:' + project.krystal_version
+    }
+}
+
+plugins {
+    id 'java-gradle-plugin'
+    id 'groovy'
+}
+
+group 'com.flipkart.krystal'
+version '0.0.1-SNAPSHOT'
+
+gradlePlugin {
+    plugins {
+        simplePlugin {
+            id = 'com.flipkart.krystalrelease'
+            implementationClass = 'com.flipkart.krystal.krystalrelease.KrystalReleaser'
+        }
+    }
+}
+
+
+dependencies {
+
+    api 'com.vdurmont:semver4j:3.1.0'
+    implementation 'org.eclipse.jgit:org.eclipse.jgit:6.6.0.202305301015-r'
+    def jacksonVersion = '2.14.2'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:' + jacksonVersion
+    implementation 'com.fasterxml.jackson.core:jackson-databind:' + jacksonVersion
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:' + jacksonVersion
+}
