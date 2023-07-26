@@ -19,8 +19,7 @@ final class MojoPublishPlugin implements Plugin<Project> {
                 println "Publish destination: MavenLocal"
                 publisher.executePublish((PublishTask) it, PublishStage.PRODUCTION)
             }
-            finalizedBy("publishToMavenLocal")
-
+            finalizedBy("publishToLocalAndCleanup")
         }
 
         project.tasks.register('mojoSnapshotToLocal', PublishTask) {
@@ -29,7 +28,7 @@ final class MojoPublishPlugin implements Plugin<Project> {
                 println "Publish destination: MavenLocal"
                 publisher.executePublish((PublishTask) it, PublishStage.DEV)
             }
-            finalizedBy("publishToMavenLocal")
+            finalizedBy("publishToLocalAndCleanup")
 
         }
 
@@ -39,7 +38,7 @@ final class MojoPublishPlugin implements Plugin<Project> {
                 println "Publish destinations: MavenLocal, MavenCentral"
                 publisher.executePublish((PublishTask) it, PublishStage.PRODUCTION)
             }
-            finalizedBy("publishToMavenLocal", "publish")
+            finalizedBy("publishToAllAndCleanup")
         }
 
         project.tasks.register('mojoSnapshotToAll', PublishTask) {
@@ -48,12 +47,25 @@ final class MojoPublishPlugin implements Plugin<Project> {
                 println "Publish destinations: MavenLocal, MavenCentral"
                 publisher.executePublish((PublishTask) it, PublishStage.DEV)
             }
-            finalizedBy("publishToMavenLocal", "publish")
+            finalizedBy("publishToAllAndCleanup")
+        }
+
+        project.tasks.register('publishToLocalAndCleanup') {
+            group = 'mojoInternal'
+            mustRunAfter('publishToMavenLocal')
+            publisher.cleanUpAfterLocalPublish()
+        }
+
+        project.tasks.register('publishToAllAndCleanup') {
+            group = 'mojoInternal'
+            mustRunAfter('publishToMavenLocal', 'publish')
+            publisher.cleanUpAfterAllPublish()
         }
 
         project.tasks.register('printCurrentMojoVersion') {
             group = 'mojo'
             println getCurrentProjectVersion(project)
         }
+
     }
 }

@@ -2,14 +2,13 @@ package com.flipkart.krystal.mojo;
 
 import static com.flipkart.krystal.mojo.PublishStage.DEV;
 import static com.flipkart.krystal.mojo.PublishStage.PRODUCTION;
-import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Preconditions.checkArgument;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 import com.vdurmont.semver4j.Semver;
@@ -25,7 +24,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectReader;
@@ -54,11 +52,12 @@ final class Publisher {
   private final MultiProjectInfo multiProjectInfo;
 
   Publisher(Project rootProject) throws IOException {
-    assert rootProject.equals(rootProject.getRootProject())
-        : """
+    checkArgument(
+        rootProject.equals(rootProject.getRootProject()),
+        """
             mojo-publish plugin can only be applied on root projects.
             {%s} is not a root project. You can apply the plugin on its root project {%s} instead"""
-            .formatted(rootProject, rootProject.getRootProject());
+            .formatted(rootProject, rootProject.getRootProject()));
     this.rootProject = rootProject;
     this.multiProjectInfo = readRepoInfoOrDefault(rootProject);
   }
@@ -75,7 +74,7 @@ final class Publisher {
 
     try (Git git =
         Git.open(new FileRepositoryBuilder().findGitDir(rootProject.getRootDir()).getGitDir())) {
-      validate(git);
+      validatePrePublish(git);
       Set<Project> projectsToPublish =
           new LinkedHashSet<>(findProjectsToPublish(publishStage, git));
       if (projectsToPublish.isEmpty()) {
@@ -98,11 +97,39 @@ final class Publisher {
     }
   }
 
-  private void validate(Git git) throws GitAPIException {
-    checkState(
+  void cleanUpAfterLocalPublish() throws IOException, GitAPIException {
+    try (Git git =
+        Git.open(new FileRepositoryBuilder().findGitDir(rootProject.getRootDir()).getGitDir())) {
+      rootProject
+          .getLogger()
+          .lifecycle("Published only local... So undoing all local changes with git checkout -f");
+      git.checkout().setForced(true).call();
+    }
+  }
+
+  void cleanUpAfterAllPublish() throws IOException, GitAPIException {
+    try (Git git =
+        Git.open(new FileRepositoryBuilder().findGitDir(rootProject.getRootDir()).getGitDir())) {
+      rootProject
+          .getLogger()
+          .lifecycle(
+              """
+                Published to all repos (including remote)... So committing local changes local changes with git commit.
+                You can push the changes if you prefer, or squash multiple such commits before pushing""");
+      if (!git.status().call().isClean()) {
+        git.commit()
+            .setAll(true)
+            .setMessage(
+                "[Mojo AutoPublish] Updating multi_project_info.mojo.yaml with latest auto-published versions");
+      }
+    }
+  }
+
+  private void validatePrePublish(Git git) throws GitAPIException {
+    checkArgument(
         RepositoryState.SAFE.equals(git.getRepository().getRepositoryState()),
         "Repository is not in stable state. Please finish any unfinished merge/rebase/revert etc.");
-    checkState(
+    checkArgument(
         git.status().call().isClean(),
         """
           Cannot publish when git working tree is not clean.
