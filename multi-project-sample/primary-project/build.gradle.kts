@@ -17,3 +17,13 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "com.flipkart.krystalrelease"
+            artifactId = "primary-product"
+            from(components["java"])
+        }
+    }
+}

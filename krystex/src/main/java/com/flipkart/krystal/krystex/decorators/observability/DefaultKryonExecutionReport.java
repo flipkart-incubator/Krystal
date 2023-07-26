@@ -61,7 +61,8 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
   }
 
   @Override
-  public void reportMainLogicEnd(KryonId kryonId, KryonLogicId kryonLogicId, Results<Object> result) {
+  public void reportMainLogicEnd(
+      KryonId kryonId, KryonLogicId kryonLogicId, Results<Object> result) {
     KryonExecution kryonExecution =
         new KryonExecution(
             kryonId,
@@ -83,7 +84,8 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     logicExecInfo.setResult(convertResult(result));
   }
 
-  private record KryonExecution(KryonId kryonId, ImmutableList<ImmutableMap<String, Object>> inputs) {
+  private record KryonExecution(
+      KryonId kryonId, ImmutableList<ImmutableMap<String, Object>> inputs) {
     @Override
     public String toString() {
       return "%s(%s)".formatted(kryonId.value(), inputs);

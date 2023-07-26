@@ -3,18 +3,24 @@ package com.flipkart.krystal.mojo;
 import static com.flipkart.krystal.mojo.PublishStage.DEV;
 import static com.flipkart.krystal.mojo.PublishStage.PRODUCTION;
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Comparator.comparing;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
-import com.google.common.collect.Iterators;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.collect.Sets;
 import com.vdurmont.semver4j.Semver;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -24,6 +30,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectReader;
@@ -37,41 +44,80 @@ import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.artifacts.ProjectDependency;
+import org.gradle.api.publish.VariantVersionMappingStrategy;
+import org.gradle.api.publish.maven.MavenPublication;
+import org.gradle.api.publish.maven.internal.publication.MavenPublicationInternal;
 import org.gradle.api.publish.maven.tasks.AbstractPublishToMaven;
 
 final class Publisher {
 
+  public static final String DEFAULT_VERSION = "0.0.0";
   private final Map<Project, Set<Project>> projectDependencies = new LinkedHashMap<>();
   private final Map<Project, Set<Project>> projectToDependendents = new LinkedHashMap<>();
   private final Map<Path, Project> absolutePathToProject = new LinkedHashMap<>();
 
   private static final ObjectMapper OBJECT_MAPPER =
       new YAMLMapper(new YAMLFactory().enable(YAMLGenerator.Feature.MINIMIZE_QUOTES))
-          .setSerializationInclusion(Include.NON_EMPTY);
+          .setSerializationInclusion(Include.NON_EMPTY)
+          .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+          .registerModule(new JavaTimeModule())
+          .registerModule(new Jdk8Module())
+          .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
   private final Project rootProject;
-  private final MultiProjectInfo multiProjectInfo;
+  private MultiProjectInfo multiProjectInfo;
+  private PublishStage publishStage;
 
-  Publisher(Project rootProject) throws IOException {
-    checkArgument(
-        rootProject.equals(rootProject.getRootProject()),
-        """
-            mojo-publish plugin can only be applied on root projects.
-            {%s} is not a root project. You can apply the plugin on its root project {%s} instead"""
-            .formatted(rootProject, rootProject.getRootProject()));
-    this.rootProject = rootProject;
-    this.multiProjectInfo = readRepoInfoOrDefault(rootProject);
+  Publisher(Project project) {
+    this.rootProject = project.getRootProject();
+    scanAllProjects(project.getRootProject());
   }
 
-  static Semver getCurrentProjectVersion(Project project) throws IOException {
-    return new Semver(
-        getProjectInfoOrDefault(readRepoInfoOrDefault(project), project).getVersion());
+  Map<Project, Semver> getCurrentProjectVersions(PublishStage publishStage) throws IOException {
+    Map<Project, Semver> map = new HashMap<>();
+    for (Project p : getAllProjects()) {
+      if (map.put(p, getCurrentProjectVersion(p, publishStage, getMultiProjectInfo())) != null) {
+        throw new IllegalStateException("Duplicate key");
+      }
+    }
+    return map;
+  }
+
+  private MultiProjectInfo getMultiProjectInfo() throws IOException {
+    if (multiProjectInfo == null) {
+      this.multiProjectInfo = readRepoInfoOrDefault(rootProject);
+    }
+    return multiProjectInfo;
+  }
+
+  private Set<Project> getAllProjects() {
+    return projectDependencies.keySet();
+  }
+
+  String getMojoVersion(Project project) throws IOException {
+    return getCurrentProjectVersion(
+            project,
+            publishStage != null
+                ? publishStage
+                : getLatestStage(getProjectInfoOrDefault(getMultiProjectInfo(), project)),
+            getMultiProjectInfo())
+        .getValue();
   }
 
   void executePublish(PublishTask publishTask, PublishStage publishStage)
       throws IOException, GitAPIException {
-    assert rootProject.equals(publishTask.getProject());
-    findAllProjects(rootProject.getRootProject());
-
+    this.publishStage = publishStage;
+    if (!isRootProject(publishTask.getProject())) {
+      publishTask.getLogger().debug("This is not the root project, so this is a no-op");
+      return;
+    }
+    rootProject
+        .getLogger()
+        .lifecycle(
+            "Publish destinations: {}",
+            switch (publishStage) {
+              case DEV -> "MavenLocal";
+              case PRODUCTION -> "MavenLocal, MavenCentral";
+            });
     try (Git git =
         Git.open(new FileRepositoryBuilder().findGitDir(rootProject.getRootDir()).getGitDir())) {
       validatePrePublish(git);
@@ -83,31 +129,46 @@ final class Publisher {
       }
 
       Optional<Project> nextProjectToRelease = getNextProjectReadyToPublish(projectsToPublish);
-      MultiProjectInfo multiProjectInfo = readRepoInfoOrDefault(rootProject);
       while (nextProjectToRelease.isPresent()) {
         computePublishVersion(
             publishTask,
-            publishStage,
             nextProjectToRelease.get(),
             git,
-            getProjectInfoOrDefault(multiProjectInfo, nextProjectToRelease.get()));
+            getProjectInfoOrDefault(getMultiProjectInfo(), nextProjectToRelease.get()));
         nextProjectToRelease = getNextProjectReadyToPublish(projectsToPublish);
       }
-      OBJECT_MAPPER.writeValue(getDefaultRepoInfoFilePath(rootProject).toFile(), multiProjectInfo);
+      OBJECT_MAPPER.writeValue(
+          getProjectInfoAbsolutePath(rootProject).toFile(), getMultiProjectInfo());
     }
   }
 
-  void cleanUpAfterLocalPublish() throws IOException, GitAPIException {
-    try (Git git =
-        Git.open(new FileRepositoryBuilder().findGitDir(rootProject.getRootDir()).getGitDir())) {
+  boolean isRootProject(Project project) {
+    return rootProject.equals(project.getProject());
+  }
+
+  void cleanUpAfterLocalPublish(Project project) throws GitAPIException, IOException {
+    if (!isRootProject(project)) {
+      project.getLogger().debug("This is not a root project, hence not cleaning up");
+      return;
+    }
+    File gitDir = new FileRepositoryBuilder().findGitDir(rootProject.getRootDir()).getGitDir();
+    Path repoRoot = gitDir.toPath().getParent().toAbsolutePath();
+    try (Git git = Git.open(gitDir)) {
       rootProject
           .getLogger()
           .lifecycle("Published only local... So undoing all local changes with git checkout -f");
-      git.checkout().setForced(true).call();
+      git.checkout()
+          .setForced(true)
+          .addPath(repoRoot.relativize(getProjectInfoAbsolutePath(rootProject)).toString())
+          .call();
     }
   }
 
-  void cleanUpAfterAllPublish() throws IOException, GitAPIException {
+  void cleanUpAfterAllPublish(Project project) throws IOException, GitAPIException {
+    if (!isRootProject(project)) {
+      project.getLogger().debug("This is not a root project, hence not cleaning up");
+      return;
+    }
     try (Git git =
         Git.open(new FileRepositoryBuilder().findGitDir(rootProject.getRootDir()).getGitDir())) {
       rootProject
@@ -120,17 +181,51 @@ final class Publisher {
         git.commit()
             .setAll(true)
             .setMessage(
-                "[Mojo AutoPublish] Updating multi_project_info.mojo.yaml with latest auto-published versions");
+                "[Mojo AutoPublish] Updating multi_project_info.mojo.yaml with latest auto-published versions. Root version: "
+                    + getCurrentProjectVersion(rootProject, publishStage, getMultiProjectInfo())
+                        .getValue())
+            .call();
       }
     }
+  }
+
+  private static Semver getCurrentProjectVersion(
+      Project project, PublishStage publishStage, MultiProjectInfo multiProjectInfo) {
+    ProjectInfo projectInfo = getProjectInfoOrDefault(multiProjectInfo, project);
+    return new Semver(
+        projectInfo
+            .getStageInfo(publishStage)
+            .map(ProjectStageInfo::getVersion)
+            .or(() -> projectInfo.getStageInfo(PRODUCTION).map(ProjectStageInfo::getVersion))
+            .orElse(DEFAULT_VERSION));
+  }
+
+  void updatePublicationVersions(Project project) throws IOException {
+    ProjectInfo projectInfo = getProjectInfoOrDefault(getMultiProjectInfo(), project);
+    updatePublishTaskVersions(
+        project, projectInfo.getStageInfo(getLatestStage(projectInfo)).orElseThrow().getVersion());
+  }
+
+  private static PublishStage getLatestStage(ProjectInfo projectInfo) {
+    return projectInfo.getStageInfos().stream()
+        .max(
+            comparing(
+                projectStageInfo ->
+                    Optional.ofNullable(projectStageInfo.getPublishTime()).orElse(Instant.MIN)))
+        .orElseThrow()
+        .getStage();
   }
 
   private void validatePrePublish(Git git) throws GitAPIException {
     checkArgument(
         RepositoryState.SAFE.equals(git.getRepository().getRepositoryState()),
         "Repository is not in stable state. Please finish any unfinished merge/rebase/revert etc.");
+    Status status = git.status().call();
     checkArgument(
-        git.status().call().isClean(),
+        status.isClean()
+            || (status.getModified().size() == 1
+                && isProjectInfoPath(Path.of(status.getModified().iterator().next()), git)
+                && status.getUntracked().isEmpty()),
         """
           Cannot publish when git working tree is not clean.
           Please make sure 'git status' reports a clean working tree before mojo publish""");
@@ -152,7 +247,7 @@ final class Publisher {
                 projectsToPublish.contains(p) || hasDependencyPendingRelease(p, projectsToPublish));
   }
 
-  private void findAllProjects(Project project) {
+  private void scanAllProjects(Project project) {
     ConfigurationContainer configurations = project.getConfigurations();
     Set<ProjectDependency> dependencies =
         Sets.union(
@@ -176,53 +271,55 @@ final class Publisher {
                 .computeIfAbsent(p.getDependencyProject(), _p -> new LinkedHashSet<>())
                 .add(project));
 
-    project.getSubprojects().forEach(this::findAllProjects);
+    project.getSubprojects().forEach(this::scanAllProjects);
   }
 
   private Set<Project> findProjectsToPublish(PublishStage publishStage, Git git)
       throws IOException, GitAPIException {
-    if (DEV.equals(publishStage)) {
-      return projectDependencies.keySet();
-    }
-    ProjectInfo projectInfo = getProjectInfoOrDefault(multiProjectInfo, rootProject);
     ObjectReader reader = git.getRepository().newObjectReader();
 
-    String baseCommitId = projectInfo.getBaseCommitId(publishStage);
+    Set<Project> projectsToPublish = new LinkedHashSet<>();
+    String baseCommitId = getMultiProjectInfo().getBaseCommitId();
     if (baseCommitId == null) {
-      baseCommitId = Iterators.getLast(git.log().call().iterator()).getName();
       rootProject
           .getLogger()
           .lifecycle(
-              "Base commit id is missing for {} in stage {}. Using the oldest commit instead {}",
+              "Base commit id is missing for {} in stage {}. Force publishing all projects",
               rootProject,
-              publishStage,
-              baseCommitId);
-    }
-    AbstractTreeIterator baseTree =
-        getCanonicalTreeParser(git.getRepository().resolve(baseCommitId), reader, git);
+              publishStage);
+      projectsToPublish.addAll(getAllProjects());
+    } else {
+      AbstractTreeIterator baseTree =
+          getCanonicalTreeParser(git.getRepository().resolve(baseCommitId), reader, git);
 
-    AbstractTreeIterator headTree =
-        getCanonicalTreeParser(git.getRepository().resolve("HEAD"), reader, git);
+      AbstractTreeIterator headTree =
+          getCanonicalTreeParser(git.getRepository().resolve("HEAD"), reader, git);
 
-    Iterable<Project> changedProjects =
-        git.diff().setShowNameOnly(true).setOldTree(baseTree).setNewTree(headTree).call().stream()
-                .flatMap(d -> Stream.of(d.getOldPath(), d.getNewPath()))
-                .map(Path::of)
-                .distinct()
-                .peek(path -> rootProject.getLogger().debug("Found changed file {}", path))
-                .map(p -> getProjectOf(p, git))
-                .peek(
-                    p ->
-                        rootProject.getLogger().debug("Resolved project for the above path: {}", p))
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-            ::iterator;
-
-    Set<Project> projectsToPublish = new LinkedHashSet<>();
-    for (Project changedProject : changedProjects) {
-      collectDependentsTransitively(projectsToPublish, changedProject);
+      git.diff().setShowNameOnly(true).setOldTree(baseTree).setNewTree(headTree).call().stream()
+          .flatMap(d -> Stream.of(d.getOldPath(), d.getNewPath()))
+          .map(Path::of)
+          .distinct()
+          .filter(path -> !isProjectInfoPath(path, git))
+          .peek(path -> rootProject.getLogger().debug("Found changed file {}", path))
+          .map(p -> getProjectOf(p, git))
+          .peek(p -> rootProject.getLogger().debug("Resolved project for the above path: {}", p))
+          .filter(Optional::isPresent)
+          .map(Optional::get)
+          .distinct()
+          .forEach(project -> collectDependentsTransitively(project, projectsToPublish));
     }
     return projectsToPublish;
+  }
+
+  private boolean isProjectInfoPath(Path path, Git git) {
+    Path projectInfoAbsolutePath = getProjectInfoAbsolutePath(rootProject);
+    return path.equals(projectInfoAbsolutePath)
+        || git.getRepository()
+            .getDirectory()
+            .toPath()
+            .getParent()
+            .relativize(projectInfoAbsolutePath)
+            .equals(path);
   }
 
   private AbstractTreeIterator getCanonicalTreeParser(
@@ -234,10 +331,10 @@ final class Publisher {
     }
   }
 
-  private void collectDependentsTransitively(Set<Project> collector, Project project) {
+  private void collectDependentsTransitively(Project project, Set<Project> collector) {
     collector.add(project);
     for (Project p : projectToDependendents.getOrDefault(project, Set.of())) {
-      collectDependentsTransitively(collector, p);
+      collectDependentsTransitively(p, collector);
     }
   }
 
@@ -253,16 +350,16 @@ final class Publisher {
     return Optional.empty();
   }
 
-  private static void computePublishVersion(
-      PublishTask publishTask,
-      PublishStage publishStage,
-      Project project,
-      Git git,
-      ProjectInfo projectInfo)
+  private void computePublishVersion(
+      PublishTask publishTask, Project project, Git git, ProjectInfo projectInfo)
       throws IOException {
-    Semver currentVersion = getCurrentProjectVersion(project);
-    PublishStage prevPublishStage = projectInfo.getPublishStage();
-    boolean shouldIncrementVersion = PRODUCTION.equals(prevPublishStage);
+    Semver currentVersion = getCurrentProjectVersion(project, publishStage, getMultiProjectInfo());
+    boolean shouldIncrementVersion =
+        PRODUCTION.equals(
+            projectInfo
+                .getStageInfo(publishStage)
+                .map(ProjectStageInfo::getStage)
+                .orElse(PRODUCTION));
     Semver nextVersion =
         shouldIncrementVersion
             ? publishTask.getPublishLevel().toNextVersion(currentVersion)
@@ -272,15 +369,24 @@ final class Publisher {
       featureName = git.getRepository().getBranch();
     }
     String semVerString = publishStage.decorateVersion(nextVersion, featureName).getValue();
-    updatePublishTaskVersions(project, semVerString);
-    projectInfo.setVersion(semVerString);
-    projectInfo.setPublishStage(publishStage);
+    ProjectStageInfo projectStageInfo =
+        projectInfo
+            .getStageInfo(publishStage)
+            .orElseGet(
+                () -> {
+                  ProjectStageInfo stageInfo = new ProjectStageInfo();
+                  stageInfo.setStage(publishStage);
+                  projectInfo.getStageInfos().add(stageInfo);
+                  return stageInfo;
+                });
+    projectStageInfo.setVersion(semVerString);
     String commitId = git.getRepository().resolve("HEAD").name();
-    projectInfo.setDevBaseCommitId(commitId);
+    projectStageInfo.setCommitId(commitId);
+    projectStageInfo.setPublishTime(Instant.now());
     if (PRODUCTION.equals(publishStage)) {
-      projectInfo.setProductionBaseCommitId(commitId);
+      getMultiProjectInfo().setBaseCommitId(commitId);
+      projectInfo.getStageInfos().removeIf(stageInfo -> DEV.equals(stageInfo.getStage()));
     }
-
     project
         .getLogger()
         .lifecycle("Publishing {} with version {}", project.getDisplayName(), semVerString);
@@ -288,11 +394,22 @@ final class Publisher {
 
   private static void updatePublishTaskVersions(Project project, String versionString) {
     project
+        .getLogger()
+        .lifecycle("Updating publications of {} to version {}", project, versionString);
+    project.setVersion(versionString);
+    project
         .getTasks()
         .withType(AbstractPublishToMaven.class)
         .forEach(
             publishTask -> {
-              publishTask.getPublication().setVersion(versionString);
+              MavenPublication publication = publishTask.getPublication();
+              publication.setVersion(versionString);
+              if (publication instanceof MavenPublicationInternal internalPublication) {
+                internalPublication.getMavenProjectIdentity().getVersion().set(versionString);
+                internalPublication
+                    .getVersionMappingStrategy()
+                    .allVariants(VariantVersionMappingStrategy::fromResolutionResult);
+              }
             });
   }
 
@@ -303,15 +420,17 @@ final class Publisher {
     ProjectInfo projectInfo =
         projects.stream().filter(p -> projectName.equals(p.getName())).findAny().orElse(null);
     if (projectInfo == null) {
-      projectInfo = new ProjectInfo();
-      projectInfo.setName(projectName);
+      projectInfo = new ProjectInfo(projectName);
+      projectInfo
+          .getStageInfos()
+          .add(new ProjectStageInfo(PRODUCTION, DEFAULT_VERSION, null, Instant.now()));
       projects.add(projectInfo);
     }
     return projectInfo;
   }
 
   private static MultiProjectInfo readRepoInfoOrDefault(Project project) throws IOException {
-    File repoInfoFile = getDefaultRepoInfoFilePath(project).toFile();
+    File repoInfoFile = getProjectInfoAbsolutePath(project).toFile();
     if (repoInfoFile.exists()) {
       return OBJECT_MAPPER.readValue(repoInfoFile, MultiProjectInfo.class);
     } else {
@@ -319,7 +438,7 @@ final class Publisher {
     }
   }
 
-  private static Path getDefaultRepoInfoFilePath(Project project) {
+  private static Path getProjectInfoAbsolutePath(Project project) {
     return project.getRootDir().toPath().resolve("multi_project_info.mojo.yaml");
   }
 }

@@ -2,69 +2,61 @@ package com.flipkart.krystal.mojo
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-
-import static Publisher.getCurrentProjectVersion
-
+import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.internal.artifacts.configurations.DefaultConfiguration
+import org.gradle.jvm.tasks.Jar
 
 final class MojoPublishPlugin implements Plugin<Project> {
 
     private Publisher publisher
 
     void apply(Project project) {
+
+        project.pluginManager.apply("maven-publish")
+
         publisher = new Publisher(project)
 
-        project.tasks.register('mojoReleaseToLocal', PublishTask) {
+        project.version = publisher.getMojoVersion(project)
+
+        project.tasks.register('mojoReleaseVersion', PublishTask) {
             group = 'mojo'
-            doLast {
-                println "Publish destination: MavenLocal"
+            doFirst {
                 publisher.executePublish((PublishTask) it, PublishStage.PRODUCTION)
             }
-            finalizedBy("publishToLocalAndCleanup")
         }
 
-        project.tasks.register('mojoSnapshotToLocal', PublishTask) {
+        project.tasks.register('mojoSnapshotVersion', PublishTask) {
             group = 'mojo'
-            doLast {
-                println "Publish destination: MavenLocal"
+            doFirst {
                 publisher.executePublish((PublishTask) it, PublishStage.DEV)
             }
-            finalizedBy("publishToLocalAndCleanup")
-
         }
 
-        project.tasks.register('mojoReleaseToAll', PublishTask) {
+        project.tasks.register('updatePublicationVersions') {
+            doLast {
+                publisher.updatePublicationVersions(project)
+            }
+        }
+
+        project.tasks.register('printCurrentMojoVersions') {
             group = 'mojo'
             doLast {
-                println "Publish destinations: MavenLocal, MavenCentral"
-                publisher.executePublish((PublishTask) it, PublishStage.PRODUCTION)
+                if (!publisher.isRootProject(project)) {
+                    project.logger.debug("Not printing mojo versions since this is not the root project")
+                    return
+                }
+                project.logger.lifecycle("PRODUCTION Versions")
+                project.logger.lifecycle("___________________")
+                publisher.getCurrentProjectVersions(PublishStage.PRODUCTION).forEach { p, version ->
+                    project.logger.lifecycle("  {} : {} ", p.getDisplayName(), version)
+                }
+
+                project.logger.lifecycle("DEV Versions")
+                project.logger.lifecycle("____________")
+                publisher.getCurrentProjectVersions(PublishStage.DEV).forEach { p, version ->
+                    project.logger.lifecycle("  {} : {} ", p.getDisplayName(), version)
+                }
             }
-            finalizedBy("publishToAllAndCleanup")
-        }
-
-        project.tasks.register('mojoSnapshotToAll', PublishTask) {
-            group = 'mojo'
-            doLast {
-                println "Publish destinations: MavenLocal, MavenCentral"
-                publisher.executePublish((PublishTask) it, PublishStage.DEV)
-            }
-            finalizedBy("publishToAllAndCleanup")
-        }
-
-        project.tasks.register('publishToLocalAndCleanup') {
-            group = 'mojo internal'
-            mustRunAfter('publishToMavenLocal')
-            publisher.cleanUpAfterLocalPublish()
-        }
-
-        project.tasks.register('publishToAllAndCleanup') {
-            group = 'mojo internal'
-            mustRunAfter('publishToMavenLocal', 'publish')
-            publisher.cleanUpAfterAllPublish()
-        }
-
-        project.tasks.register('printCurrentMojoVersion') {
-            group = 'mojo'
-            println getCurrentProjectVersion(project)
         }
 
     }

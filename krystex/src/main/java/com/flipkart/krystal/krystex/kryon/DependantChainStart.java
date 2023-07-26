@@ -8,8 +8,8 @@ import com.flipkart.krystal.krystex.KrystalExecutor;
  *
  * <p>All {@link DependantChain}s are guaranteed to begin with a {@link DependantChainStart}
  *
- * <p>{@link GranularKryon}s which are executed explicitly using {@link KrystalExecutor#executeKryon}
- * have this as their dependantChain.
+ * <p>{@link GranularKryon}s which are executed explicitly using {@link
+ * KrystalExecutor#executeKryon} have this as their dependantChain.
  */
 public final class DependantChainStart extends AbstractDependantChain {
 

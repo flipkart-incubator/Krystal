@@ -8,7 +8,8 @@ import com.google.common.collect.ImmutableList;
 
 public sealed interface KryonExecutionReport permits DefaultKryonExecutionReport {
 
-  void reportMainLogicStart(KryonId kryonId, KryonLogicId kryonLogicId, ImmutableList<Inputs> inputs);
+  void reportMainLogicStart(
+      KryonId kryonId, KryonLogicId kryonLogicId, ImmutableList<Inputs> inputs);
 
   void reportMainLogicEnd(KryonId kryonId, KryonLogicId kryonLogicId, Results<Object> results);
 }

@@ -8,7 +8,7 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             groupId = "com.flipkart.krystalrelease"
-            artifactId = "mod1"
+            artifactId = "mod3"
             from(components["java"])
         }
     }

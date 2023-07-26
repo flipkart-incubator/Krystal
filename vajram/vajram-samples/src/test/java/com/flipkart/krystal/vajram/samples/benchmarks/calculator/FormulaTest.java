@@ -9,9 +9,9 @@ import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
-import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.modulation.Batcher;
 import com.flipkart.krystal.vajram.samples.Util;
@@ -70,8 +70,7 @@ class FormulaTest {
           graph.createExecutor(new FormulaRequestContext(100, 20, 5, "formulaTest"))) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[value] =
-            ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor())
-                .getKryonMetrics();
+            ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         long enqueueStart = System.nanoTime();
         futures[value] = executeVajram(krystexVajramExecutor, value);
         timeToEnqueueVajram += System.nanoTime() - enqueueStart;
@@ -139,8 +138,7 @@ class FormulaTest {
           graph.createExecutor(new FormulaRequestContext(100, 20, 5, "formulaTest"))) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[outer_i] =
-            ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor())
-                .getKryonMetrics();
+            ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         for (int inner_i = 0; inner_i < innerLoopCount; inner_i++) {
           int iterationNum = outer_i * innerLoopCount + inner_i;
           long enqueueStart = System.nanoTime();

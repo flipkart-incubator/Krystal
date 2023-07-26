@@ -6,5 +6,6 @@ import lombok.Data;
 
 @Data
 public final class MultiProjectInfo {
+  private String baseCommitId;
   private List<ProjectInfo> projects = new ArrayList<>();
 }
