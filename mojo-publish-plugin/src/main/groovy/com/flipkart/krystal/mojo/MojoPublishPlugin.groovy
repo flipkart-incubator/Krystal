@@ -51,13 +51,13 @@ final class MojoPublishPlugin implements Plugin<Project> {
         }
 
         project.tasks.register('publishToLocalAndCleanup') {
-            group = 'mojoInternal'
+            group = 'mojo internal'
             mustRunAfter('publishToMavenLocal')
             publisher.cleanUpAfterLocalPublish()
         }
 
         project.tasks.register('publishToAllAndCleanup') {
-            group = 'mojoInternal'
+            group = 'mojo internal'
             mustRunAfter('publishToMavenLocal', 'publish')
             publisher.cleanUpAfterAllPublish()
         }
