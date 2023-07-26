@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystalrelease;
+package com.flipkart.krystal.mojo;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -10,9 +10,9 @@ import org.gradle.api.tasks.options.Option;
 @SuppressWarnings({"FieldMayBeFinal", "unused"})
 @Getter
 @Setter
-public class ReleaseProjectTask extends DefaultTask {
+public class PublishTask extends DefaultTask {
   @Option(description = "Is this a MAJOR/MINOR/PATCH release?")
-  private ReleaseLevel releaseLevel = ReleaseLevel.MINOR;
+  private PublishLevel publishLevel = PublishLevel.MINOR;
 
   @Option(
       description =
@@ -26,7 +26,7 @@ public class ReleaseProjectTask extends DefaultTask {
   }
 
   @Input
-  public ReleaseLevel getReleaseLevel() {
-    return releaseLevel;
+  public PublishLevel getPublishLevel() {
+    return publishLevel;
   }
 }

@@ -1,10 +1,10 @@
-package com.flipkart.krystal.krystalrelease;
+package com.flipkart.krystal.mojo;
 
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Data;
 
 @Data
-public final class RepoInfo {
+public final class MultiProjectInfo {
   private List<ProjectInfo> projects = new ArrayList<>();
 }

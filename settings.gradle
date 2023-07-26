@@ -38,5 +38,4 @@ project(':vajram-lang').projectDir = file('vajram/vajram-lang')
 
 include 'caramel-samples'
 project(':caramel-samples').projectDir = file('caramel/caramel-samples')
-include 'krystal-release'
 

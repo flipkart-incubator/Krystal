@@ -1,0 +1,31 @@
+---
+projects:
+- name: mod1
+  version: 0.5.0-release.automation.SNAPSHOT
+  publishStage: DEV
+  devBaseCommitId: b29edc873ac1bb6494f73c2c62ae5edc8e84bd61
+  productionBaseCommitId: b29edc873ac1bb6494f73c2c62ae5edc8e84bd61
+- name: mod2
+  version: 0.5.0-release.automation.SNAPSHOT
+  publishStage: DEV
+  devBaseCommitId: b29edc873ac1bb6494f73c2c62ae5edc8e84bd61
+  productionBaseCommitId: b29edc873ac1bb6494f73c2c62ae5edc8e84bd61
+- name: mod3
+  version: 0.5.0-release.automation.SNAPSHOT
+  publishStage: DEV
+  devBaseCommitId: b29edc873ac1bb6494f73c2c62ae5edc8e84bd61
+  productionBaseCommitId: b29edc873ac1bb6494f73c2c62ae5edc8e84bd61
+- name: multi-project-sample
+  version: 0.1.0-release.automation.SNAPSHOT
+  publishStage: DEV
+  devBaseCommitId: b29edc873ac1bb6494f73c2c62ae5edc8e84bd61
+- name: business-logic
+  version: 0.1.0-release.automation.SNAPSHOT
+  publishStage: DEV
+  devBaseCommitId: b29edc873ac1bb6494f73c2c62ae5edc8e84bd61
+  productionBaseCommitId: b29edc873ac1bb6494f73c2c62ae5edc8e84bd61
+- name: primary-project
+  version: 0.1.0-release.automation.SNAPSHOT
+  publishStage: DEV
+  devBaseCommitId: b29edc873ac1bb6494f73c2c62ae5edc8e84bd61
+  productionBaseCommitId: b29edc873ac1bb6494f73c2c62ae5edc8e84bd61

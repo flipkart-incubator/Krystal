@@ -1,14 +1,5 @@
-buildscript {
-    repositories {
-        mavenLocal()
-    }
-}
 
-plugins {
-    id("com.flipkart.krystalrelease") version "0.0.1-SNAPSHOT"
-}
-
-group = "org.example"
+group = "com.flipkart.krystalrelease"
 
 repositories {
     mavenCentral()

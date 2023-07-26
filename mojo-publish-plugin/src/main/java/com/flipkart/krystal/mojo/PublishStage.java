@@ -1,11 +1,11 @@
-package com.flipkart.krystal.krystalrelease;
+package com.flipkart.krystal.mojo;
 
 import com.vdurmont.semver4j.Semver;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public enum ReleaseStage {
+public enum PublishStage {
   DEV,
   PRODUCTION;
 

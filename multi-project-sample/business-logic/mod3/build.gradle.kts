@@ -1,18 +1,17 @@
-buildscript {
-    repositories {
-        mavenLocal()
-    }
-}
-plugins {
-    id("com.flipkart.krystalrelease") version "0.0.1-SNAPSHOT"
-
-}
-
-group = "org.example"
-version = "1.0-SNAPSHOT"
+group = "com.flipkart.krystalrelease"
 
 repositories {
     mavenCentral()
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "com.flipkart.krystalrelease"
+            artifactId = "mod1"
+            from(components["java"])
+        }
+    }
 }
 
 dependencies {

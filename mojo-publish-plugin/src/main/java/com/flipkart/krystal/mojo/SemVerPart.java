@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystalrelease;
+package com.flipkart.krystal.mojo;
 
 
 import static java.util.function.UnaryOperator.identity;
