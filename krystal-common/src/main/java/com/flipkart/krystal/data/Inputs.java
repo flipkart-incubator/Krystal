@@ -3,11 +3,15 @@ package com.flipkart.krystal.data;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.Optional;
+import lombok.EqualsAndHashCode;
+import lombok.EqualsAndHashCode.CacheStrategy;
 
-public record Inputs(ImmutableMap<String, InputValue<Object>> values) {
+@EqualsAndHashCode(callSuper = false, cacheStrategy = CacheStrategy.LAZY)
+public final class Inputs {
+  private final ImmutableMap<String, InputValue<Object>> values;
 
   public Inputs(Map<String, InputValue<Object>> values) {
-    this(ImmutableMap.copyOf(values));
+    this.values = ImmutableMap.copyOf(values);
   }
 
   private static final Inputs EMPTY = new Inputs(ImmutableMap.of());
@@ -56,6 +60,10 @@ public record Inputs(ImmutableMap<String, InputValue<Object>> values) {
 
   public static Inputs empty() {
     return EMPTY;
+  }
+
+  public ImmutableMap<String, InputValue<Object>> values() {
+    return values;
   }
 
   @Override

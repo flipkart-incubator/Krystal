@@ -13,6 +13,7 @@ import lombok.EqualsAndHashCode.CacheStrategy;
  * <p>{@link GranularNode}s which are executed explicitly using {@link KrystalExecutor#executeNode}
  * have this as their dependantChain.
  */
+@EqualsAndHashCode(callSuper = false, cacheStrategy = CacheStrategy.LAZY)
 public final class DependantChainStart extends AbstractDependantChain {
 
   DependantChainStart() {}
