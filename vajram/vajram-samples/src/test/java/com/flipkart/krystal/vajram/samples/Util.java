@@ -87,9 +87,7 @@ public final class Util {
             stream(metrics).mapToInt(KryonExecutorMetrics::getCommandQueuedCount).sum())
         .printf(
             "CommandQueueBypassedCount: %,d%n",
-            stream(metrics)
-                .mapToInt(KryonExecutorMetrics::getCommandQueueBypassedCount)
-                .sum())
+            stream(metrics).mapToInt(KryonExecutorMetrics::getCommandQueueBypassedCount).sum())
         .printf(
             "Platform overhead over native code: %,.0f ns per request%n",
             (1.0 * vajramTimeNs - javaNativeTimeNs) / loopCount)

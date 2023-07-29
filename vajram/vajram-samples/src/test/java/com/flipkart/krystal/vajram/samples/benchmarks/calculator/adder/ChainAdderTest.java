@@ -19,13 +19,13 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.decorators.observability.DefaultKryonExecutionReport;
-import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.decorators.observability.KryonExecutionReport;
+import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
+import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
-import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.modulation.Batcher;
 import com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig;
@@ -115,8 +115,7 @@ class ChainAdderTest {
       try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
           graph.createExecutor(new RequestContext("chainAdderTest"))) {
         metrics[value] =
-            ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor())
-                .getKryonMetrics();
+            ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         long enqueueStart = System.nanoTime();
         futures[value] = executeVajram(krystexVajramExecutor, value);
@@ -186,8 +185,7 @@ class ChainAdderTest {
           graph.createExecutor(new RequestContext("chainAdderTest"))) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[outer_i] =
-            ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor())
-                .getKryonMetrics();
+            ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         for (int inner_i = 0; inner_i < innerLoopCount; inner_i++) {
           int iterationNum = outer_i * innerLoopCount + inner_i;
           long enqueueStart = System.nanoTime();

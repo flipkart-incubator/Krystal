@@ -27,10 +27,10 @@ import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
-import com.flipkart.krystal.krystex.kryon.KryonId;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
+import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
 import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
@@ -215,7 +215,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
       KryonId depKryonId = currentKryon.dependencyKryons().get(previousDepName);
       if (depKryonId == null) {
         throw new IllegalStateException(
-            "Unable find kryon for dependency %s of kryon %s".formatted(currentDepName, currentKryon));
+            "Unable find kryon for dependency %s of kryon %s"
+                .formatted(currentDepName, currentKryon));
       }
       currentDepChain = currentDepChain.extend(depKryonId, currentDepName);
       currentKryon = kryonDefinitionRegistry.get(depKryonId);
@@ -244,8 +245,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
   }
 
   /**
-   * If necessary, creates the kryons for the given vajram and, recursively for its dependencies, and
-   * returns the {@link KryonId} of the {@link KryonDefinition} corresponding to this vajram.
+   * If necessary, creates the kryons for the given vajram and, recursively for its dependencies,
+   * and returns the {@link KryonId} of the {@link KryonDefinition} corresponding to this vajram.
    *
    * <p>This method should be called once all necessary vajrams have been registered using the
    * {@link #registerVajram(Vajram)} method. If a dependency of a vajram is not registered before
@@ -587,7 +588,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
       }
       Vajram dependencyVajram = dependencyVajrams.values().iterator().next();
 
-      depNameToProviderKryon.put(dependencyName, _getVajramExecutionGraph(dependencyVajram.getId()));
+      depNameToProviderKryon.put(
+          dependencyName, _getVajramExecutionGraph(dependencyVajram.getId()));
     }
     return ImmutableMap.copyOf(depNameToProviderKryon);
   }
