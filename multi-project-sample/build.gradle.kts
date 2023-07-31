@@ -1,9 +1,3 @@
-buildscript {
-    repositories {
-        mavenLocal()
-    }
-}
-
 plugins {
     id("maven-publish")
     id("com.flipkart.mojopublish") version "0.0.1-SNAPSHOT"
@@ -16,6 +10,7 @@ group = "com.flipkart.krystalrelease"
 repositories {
     mavenLocal()
     mavenCentral()
+    maven {url=uri("https://clojars.org/repo")}
 }
 
 subprojects {

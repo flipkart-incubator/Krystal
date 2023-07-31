@@ -1,67 +1,43 @@
 ---
+baseCommitId: 0f1f622138499e13452a46a9a6a4dfbf2862a8fb
 projects:
 - name: mod1
-  baseCommitId: b168f185229722c2d6fc94e343f9d2abdadf1893
-  stageInfos:
-  - stage: PRODUCTION
-    version: 0.8.0
-    commitId: b168f185229722c2d6fc94e343f9d2abdadf1893
-    publishTime: 2023-07-28T08:19:12.472959Z
-  - stage: DEV
-    version: 0.9.0-release-automation-SNAPSHOT
-    commitId: d9f7936de502946c3a662d71a9f2e2c2b247b1e1
-    publishTime: 2023-07-29T10:16:05.750921Z
-- name: mod2
-  baseCommitId: b168f185229722c2d6fc94e343f9d2abdadf1893
-  stageInfos:
-  - stage: PRODUCTION
-    version: 0.7.0
-    commitId: b168f185229722c2d6fc94e343f9d2abdadf1893
-    publishTime: 2023-07-28T08:19:12.473041Z
-  - stage: DEV
-    version: 0.8.0-release-automation-SNAPSHOT
-    commitId: d9f7936de502946c3a662d71a9f2e2c2b247b1e1
-    publishTime: 2023-07-29T10:16:05.751099Z
-- name: mod3
-  baseCommitId: b168f185229722c2d6fc94e343f9d2abdadf1893
-  stageInfos:
-  - stage: PRODUCTION
-    version: 0.2.0
-    commitId: b168f185229722c2d6fc94e343f9d2abdadf1893
-    publishTime: 2023-07-28T08:19:12.473121Z
-  - stage: DEV
-    version: 0.3.0-release-automation-SNAPSHOT
-    commitId: d9f7936de502946c3a662d71a9f2e2c2b247b1e1
-    publishTime: 2023-07-29T10:16:05.751241Z
-- name: multi-project-sample
   stageInfos:
   - stage: PRODUCTION
     version: 0.10.0
-    commitId: b168f185229722c2d6fc94e343f9d2abdadf1893
-    publishTime: 2023-07-28T08:19:12.472758Z
-  - stage: DEV
-    version: 0.11.0-release-automation-SNAPSHOT
-    commitId: d9f7936de502946c3a662d71a9f2e2c2b247b1e1
-    publishTime: 2023-07-29T10:16:05.750567Z
+    commitId: 0f1f622138499e13452a46a9a6a4dfbf2862a8fb
+    publishTime: 2023-08-01T09:18:37.977457Z
+    pendingTargets:
+    - REMOTE
+- name: mod2
+  stageInfos:
+  - stage: PRODUCTION
+    version: 0.9.0
+    commitId: 0f1f622138499e13452a46a9a6a4dfbf2862a8fb
+    publishTime: 2023-08-01T09:18:37.977553Z
+    pendingTargets:
+    - REMOTE
+- name: mod3
+  stageInfos:
+  - stage: PRODUCTION
+    version: 0.4.0
+    commitId: 0f1f622138499e13452a46a9a6a4dfbf2862a8fb
+    publishTime: 2023-08-01T09:18:37.977642Z
+    pendingTargets:
+    - REMOTE
 - name: business-logic
-  baseCommitId: b168f185229722c2d6fc94e343f9d2abdadf1893
   stageInfos:
   - stage: PRODUCTION
-    version: 0.5.0
-    commitId: b168f185229722c2d6fc94e343f9d2abdadf1893
-    publishTime: 2023-07-28T08:19:12.472867Z
-  - stage: DEV
-    version: 0.6.0-release-automation-SNAPSHOT
-    commitId: d9f7936de502946c3a662d71a9f2e2c2b247b1e1
-    publishTime: 2023-07-29T10:16:05.750757Z
+    version: 0.7.0
+    commitId: 0f1f622138499e13452a46a9a6a4dfbf2862a8fb
+    publishTime: 2023-08-01T09:18:37.977160Z
+    pendingTargets:
+    - REMOTE
 - name: primary-project
-  baseCommitId: b168f185229722c2d6fc94e343f9d2abdadf1893
   stageInfos:
   - stage: PRODUCTION
-    version: 0.11.0
-    commitId: b168f185229722c2d6fc94e343f9d2abdadf1893
-    publishTime: 2023-07-28T08:19:12.473205Z
-  - stage: DEV
-    version: 0.12.0-release-automation-SNAPSHOT
-    commitId: d9f7936de502946c3a662d71a9f2e2c2b247b1e1
-    publishTime: 2023-07-29T10:16:05.751387Z
+    version: 0.13.0
+    commitId: 0f1f622138499e13452a46a9a6a4dfbf2862a8fb
+    publishTime: 2023-08-01T09:18:37.977728Z
+    pendingTargets:
+    - REMOTE

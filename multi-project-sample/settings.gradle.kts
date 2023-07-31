@@ -1,6 +1,7 @@
 pluginManagement {
     repositories {
         mavenLocal()
+        maven {url=uri("https://clojars.org/repo")}
         mavenCentral()
     }
 }

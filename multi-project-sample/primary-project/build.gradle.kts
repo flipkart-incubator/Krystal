@@ -3,7 +3,6 @@ plugins {
 }
 
 group = "com.flipkart"
-version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -22,7 +21,7 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             groupId = "com.flipkart.krystalrelease"
-            artifactId = "primary-product"
+            artifactId = "primary-project"
             from(components["java"])
         }
     }

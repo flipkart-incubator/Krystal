@@ -13,7 +13,7 @@ plugins {
     id 'maven-publish'
 }
 
-group 'com.flipkart.krystal'
+group 'com.flipkart.mojopublish'
 version '0.0.1-SNAPSHOT'
 
 gradlePlugin {
