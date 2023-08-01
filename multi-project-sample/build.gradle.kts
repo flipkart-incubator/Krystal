@@ -1,8 +1,8 @@
 plugins {
     id("maven-publish")
-    id("com.flipkart.mojopublish") version "0.0.1-SNAPSHOT"
     id("java-library")
     id("idea")
+    id("com.flipkart.mojopublish") version "1.0.0"
 }
 
 group = "com.flipkart.krystalrelease"
