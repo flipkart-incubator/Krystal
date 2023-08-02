@@ -1,8 +1,11 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello;
 
 import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
+import static com.flipkart.krystal.vajram.inputs.MultiExecute.skipFanout;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello.ID;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.friendIds_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.hellos_n;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.skip_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.userIds_n;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
@@ -18,11 +21,14 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHel
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@VajramDef("MutualFriendsHello")
+@VajramDef(ID)
 public abstract class MutualFriendsHello extends ComputeVajram<String> {
+
+  public static final String ID = "MutualFriendsHello";
 
   @VajramLogic
   public static String sayHelloToMutualFriends(
@@ -46,7 +52,11 @@ public abstract class MutualFriendsHello extends ComputeVajram<String> {
 
   @Resolve(depName = hellos_n, depInputs = HelloFriendsV2Request.userId_n)
   public static MultiExecute<String> userIDForHelloService(
-      @Using(friendIds_n) DependencyResponse<FriendsServiceRequest, Set<String>> friendIdMap) {
+      @Using(friendIds_n) DependencyResponse<FriendsServiceRequest, Set<String>> friendIdMap,
+      @Using(skip_n) Optional<Boolean> skip) {
+    if (skip.orElse(false)) {
+      return skipFanout("skip requested");
+    }
 
     Set<String> friendIds =
         friendIdMap.values().asList().stream()

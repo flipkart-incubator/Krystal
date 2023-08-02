@@ -3,7 +3,7 @@ description 'The default execution engine to execute synchronous workflows'
 dependencies {
     api project(':krystal-common')
 
-    def r4j_version = '1.7.1'
+    def r4j_version = '2.0.2'
     implementation 'io.github.resilience4j:resilience4j-all:' + r4j_version
     implementation 'io.github.resilience4j:resilience4j-circuitbreaker:' + r4j_version
     implementation 'io.github.resilience4j:resilience4j-bulkhead:' + r4j_version

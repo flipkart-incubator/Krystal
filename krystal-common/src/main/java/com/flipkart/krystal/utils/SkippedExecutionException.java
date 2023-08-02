@@ -1,6 +1,8 @@
 package com.flipkart.krystal.utils;
 
-public class SkippedExecutionException extends RuntimeException {
+import com.flipkart.krystal.except.StackTracelessException;
+
+public class SkippedExecutionException extends StackTracelessException {
 
   public SkippedExecutionException(String message) {
     super(message);

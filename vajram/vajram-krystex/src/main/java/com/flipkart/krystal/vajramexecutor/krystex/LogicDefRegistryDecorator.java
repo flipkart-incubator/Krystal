@@ -6,34 +6,45 @@ import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.ResolverLogic;
-import com.flipkart.krystal.krystex.ResolverLogicDefinition;
-import com.flipkart.krystal.krystex.node.NodeId;
-import com.flipkart.krystal.krystex.node.NodeLogicId;
+import com.flipkart.krystal.krystex.kryon.KryonId;
+import com.flipkart.krystal.krystex.kryon.KryonLogicId;
+import com.flipkart.krystal.krystex.resolution.MultiResolver;
+import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
+import com.flipkart.krystal.krystex.resolution.ResolverLogic;
+import com.flipkart.krystal.krystex.resolution.ResolverLogicDefinition;
 import com.google.common.collect.ImmutableMap;
 import java.util.Set;
 
 public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
 
   public <T> ResolverLogicDefinition newResolverLogic(
-      String nodeId, String nodeLogicId, Set<String> inputs, ResolverLogic logic) {
+      String kryonId, String kryonLogicId, Set<String> inputs, ResolverLogic logic) {
     ResolverLogicDefinition def =
         new ResolverLogicDefinition(
-            new NodeLogicId(new NodeId(nodeId), nodeLogicId), inputs, logic, ImmutableMap.of());
+            new KryonLogicId(new KryonId(kryonId), kryonLogicId), inputs, logic, ImmutableMap.of());
     delegate.addResolver(def);
+    return def;
+  }
+
+  public <T> MultiResolverDefinition newMultiResolver(
+      String kryonId, String kryonLogicId, Set<String> inputs, MultiResolver logic) {
+    MultiResolverDefinition def =
+        new MultiResolverDefinition(
+            new KryonLogicId(new KryonId(kryonId), kryonLogicId), inputs, logic, ImmutableMap.of());
+    delegate.addMultiResolver(def);
     return def;
   }
 
   public <T> MainLogicDefinition<T> newMainLogic(
       boolean isIOLogic,
-      NodeLogicId nodeLogicId,
+      KryonLogicId kryonLogicId,
       Set<String> inputs,
-      MainLogic<T> nodeLogic,
+      MainLogic<T> kryonLogic,
       ImmutableMap<String, Tag> logicTags) {
     MainLogicDefinition<T> def =
         isIOLogic
-            ? new IOLogicDefinition<>(nodeLogicId, inputs, nodeLogic, logicTags)
-            : new ComputeLogicDefinition<>(nodeLogicId, inputs, nodeLogic, logicTags);
+            ? new IOLogicDefinition<>(kryonLogicId, inputs, kryonLogic, logicTags)
+            : new ComputeLogicDefinition<>(kryonLogicId, inputs, kryonLogic, logicTags);
     delegate.addMainLogic(def);
     return def;
   }

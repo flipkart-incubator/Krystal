@@ -10,7 +10,7 @@ import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode(callSuper = true)
 @JsonTypeInfo(use = Id.NAME, property = "depType")
-@JsonSubTypes({@Type(value = VajramDependencyDef.class)})
+@JsonSubTypes(@Type(VajramDependencyDef.class))
 public abstract sealed class DependencyDef extends AbstractInput permits VajramDependencyDef {
   abstract DataAccessSpec toDataAccessSpec();
 

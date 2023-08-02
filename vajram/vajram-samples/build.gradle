@@ -19,3 +19,9 @@ dependencies {
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:' + jacksonVersion
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jacksonVersion
 }
+
+test {
+    minHeapSize = "128m" // initial heap size
+    maxHeapSize = "4g" // maximum heap size
+}
+

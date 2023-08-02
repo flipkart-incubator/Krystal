@@ -1,8 +1,5 @@
 description 'Common data structures and utilities used across krystal components.'
 
-dependencies {
-    api 'com.google.guava:guava:31.1-jre'
-}
 
 publishing {
     publications {

@@ -4,8 +4,9 @@ import static java.time.Duration.ofNanos;
 import static java.util.Arrays.stream;
 import static java.util.concurrent.CompletableFuture.allOf;
 
-import com.flipkart.krystal.krystex.node.KrystalNodeExecutorMetrics;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -43,27 +44,50 @@ public final class Util {
 
   public static void printStats(
       int loopCount,
-      VajramNodeGraph graph,
+      VajramKryonGraph graph,
       long javaNativeTimeNs,
       long javaFuturesTimeNs,
-      KrystalNodeExecutorMetrics[] metrics,
+      KryonExecutorMetrics[] metrics,
       long timeToCreateExecutors,
       long timeToEnqueueVajram,
       long vajramTimeNs) {
+    printStats(
+        loopCount,
+        1,
+        graph,
+        javaNativeTimeNs,
+        javaFuturesTimeNs,
+        metrics,
+        timeToCreateExecutors,
+        timeToEnqueueVajram,
+        vajramTimeNs);
+  }
+
+  public static void printStats(
+      int outerLoopCount,
+      int innerLoopCount,
+      VajramKryonGraph graph,
+      long javaNativeTimeNs,
+      long javaFuturesTimeNs,
+      KryonExecutorMetrics[] metrics,
+      long timeToCreateExecutors,
+      long timeToEnqueueVajram,
+      long vajramTimeNs) {
+    int loopCount = outerLoopCount * innerLoopCount;
     System.out
         .printf("Loop Count: %,d%n", loopCount)
-        .printf("Avg. time to Create Executors:%,d ns%n", timeToCreateExecutors / loopCount)
+        .printf("Avg. time to Create Executors:%,d ns%n", timeToCreateExecutors / outerLoopCount)
         .printf("Avg. time to Enqueue vajrams:%,d ns%n", timeToEnqueueVajram / loopCount)
         .printf("Avg. time to execute vajrams:%,d ns%n", vajramTimeNs / loopCount)
-        .printf("Throughput executions/s: %d%n", loopCount / ofNanos(vajramTimeNs).toSeconds())
+        .printf(
+            "Throughput executions/s: %d%n",
+            loopCount * Duration.ofSeconds(1).toNanos() / ofNanos(vajramTimeNs).toNanos())
         .printf(
             "CommandsQueuedCount: %,d%n",
-            stream(metrics).mapToInt(KrystalNodeExecutorMetrics::getCommandQueuedCount).sum())
+            stream(metrics).mapToInt(KryonExecutorMetrics::getCommandQueuedCount).sum())
         .printf(
             "CommandQueueBypassedCount: %,d%n",
-            stream(metrics)
-                .mapToInt(KrystalNodeExecutorMetrics::getCommandQueueBypassedCount)
-                .sum())
+            stream(metrics).mapToInt(KryonExecutorMetrics::getCommandQueueBypassedCount).sum())
         .printf(
             "Platform overhead over native code: %,.0f ns per request%n",
             (1.0 * vajramTimeNs - javaNativeTimeNs) / loopCount)

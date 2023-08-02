@@ -158,6 +158,6 @@ public final class ImmutableMapView<K, V> implements Map<K, V> {
   }
 
   private static UnsupportedOperationException uoe() {
-    throw new UnsupportedOperationException();
+    return new UnsupportedOperationException();
   }
 }
