@@ -1,7 +1,9 @@
 package com.flipkart.krystal.krystex.decorators.resilience4j;
 
 import static com.flipkart.krystal.data.ValueOrError.withValue;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
+import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -26,10 +28,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +38,6 @@ class Resilience4JBulkheadTest {
   private KrystalNodeExecutor krystalNodeExecutor;
   private NodeDefinitionRegistry nodeDefinitionRegistry;
   private LogicDefinitionRegistry logicDefinitionRegistry;
-  private ExecutorService executorService;
 
   @BeforeEach
   void setUp() {
@@ -51,15 +50,15 @@ class Resilience4JBulkheadTest {
             new ForkJoinExecutorPool(1),
             "test",
             ImmutableMap.of());
-    this.executorService = Executors.newSingleThreadExecutor();
   }
 
   @Test
   void bulkhead_restrictsConcurrency() {
     CountDownLatch countDownLatch = new CountDownLatch(1);
+    ExecutorService executorService = Executors.newSingleThreadExecutor();
     MainLogicDefinition<String> mainLogic =
         newAsyncLogic(
-            "nodeLogic",
+            "bulkhead_restrictsConcurrency",
             Set.of("input"),
             dependencyValues ->
                 supplyAsync(
@@ -73,15 +72,18 @@ class Resilience4JBulkheadTest {
                       return "computed_value";
                     },
                     executorService));
-    Resilience4JBulkhead resilience4JBulkhead = new Resilience4JBulkhead("");
+    Resilience4JBulkhead resilience4JBulkhead =
+        new Resilience4JBulkhead("bulkhead_restrictsConcurrency");
     resilience4JBulkhead.onConfigUpdate(
         new ConfigProvider() {
           @SuppressWarnings("unchecked")
           @Override
           public <T> Optional<T> getConfig(String key) {
             return switch (key) {
-              case ".bulkhead.max_concurrency" -> (Optional<T>) Optional.of(2);
-              case ".bulkhead.enabled" -> (Optional<T>) Optional.of(true);
+              case "bulkhead_restrictsConcurrency.bulkhead.max_concurrency" -> (Optional<T>)
+                  Optional.of(2);
+              case "bulkhead_restrictsConcurrency.bulkhead.enabled" -> (Optional<T>)
+                  Optional.of(true);
               default -> Optional.empty();
             };
           }
@@ -110,7 +112,77 @@ class Resilience4JBulkheadTest {
         .failsWithin(1, SECONDS)
         .withThrowableOfType(Exception.class)
         .withRootCauseInstanceOf(BulkheadFullException.class)
-        .withMessageContaining("Bulkhead '.bulkhead' is full and does not permit further calls");
+        .withMessageContaining(
+            "Bulkhead 'bulkhead_restrictsConcurrency.bulkhead' is full and does not permit further calls");
+    countDownLatch.countDown();
+    assertThat(call1BeforeBulkheadExhaustion)
+        .succeedsWithin(1, SECONDS)
+        .isEqualTo("computed_value");
+    assertThat(call2BeforeBulkheadExhaustion)
+        .succeedsWithin(1, SECONDS)
+        .isEqualTo("computed_value");
+  }
+
+  @Test
+  void threadpoolBulkhead_restrictsConcurrency() {
+    CountDownLatch countDownLatch = new CountDownLatch(1);
+    MainLogicDefinition<String> mainLogic =
+        newAsyncLogic(
+            "threadpoolBulkhead_restrictsConcurrency",
+            Set.of("input"),
+            dependencyValues -> {
+              while (countDownLatch.getCount() > 0) {
+                try {
+                  countDownLatch.await();
+                } catch (InterruptedException ignored) {
+                }
+              }
+              return completedFuture("computed_value");
+            });
+    Resilience4JBulkhead resilience4JBulkhead =
+        new Resilience4JBulkhead("threadpoolBulkhead_restrictsConcurrency");
+    resilience4JBulkhead.onConfigUpdate(
+        new ConfigProvider() {
+          @SuppressWarnings("unchecked")
+          @Override
+          public <T> Optional<T> getConfig(String key) {
+            return switch (key) {
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.max_concurrency" -> (Optional<
+                      T>)
+                  Optional.of(2);
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.enabled" -> (Optional<T>)
+                  Optional.of(true);
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.type" -> (Optional<T>)
+                  Optional.of("THREADPOOL");
+              default -> Optional.empty();
+            };
+          }
+        });
+    mainLogic.registerRequestScopedDecorator(
+        List.of(
+            new MainLogicDecoratorConfig(
+                Resilience4JBulkhead.DECORATOR_TYPE,
+                (logicExecutionContext) -> true,
+                logicExecutionContext -> "",
+                decoratorContext -> resilience4JBulkhead)));
+    NodeDefinition nodeDefinition =
+        nodeDefinitionRegistry.newNodeDefinition("node", mainLogic.nodeLogicId());
+
+    CompletableFuture<Object> call1BeforeBulkheadExhaustion =
+        krystalNodeExecutor.executeNode(
+            nodeDefinition.nodeId(), new Inputs(ImmutableMap.of("input", withValue(1))), "req_1");
+    CompletableFuture<Object> call2BeforeBulkheadExhaustion =
+        krystalNodeExecutor.executeNode(
+            nodeDefinition.nodeId(), new Inputs(ImmutableMap.of("input", withValue(2))), "req_2");
+    CompletableFuture<Object> callAfterBulkheadExhaustion =
+        krystalNodeExecutor.executeNode(
+            nodeDefinition.nodeId(), new Inputs(ImmutableMap.of("input", withValue(3))), "req_3");
+    krystalNodeExecutor.flush();
+    assertThat(callAfterBulkheadExhaustion)
+        .failsWithin(1, HOURS)
+        .withThrowableOfType(Exception.class)
+        .withMessageContaining(
+            "Bulkhead 'threadpoolBulkhead_restrictsConcurrency.bulkhead' is full and does not permit further calls");
     countDownLatch.countDown();
     assertThat(call1BeforeBulkheadExhaustion)
         .succeedsWithin(1, SECONDS)
@@ -132,11 +204,5 @@ class Resilience4JBulkheadTest {
             ImmutableMap.of());
     logicDefinitionRegistry.addMainLogic(def);
     return def;
-  }
-
-  /* So that bad testcases do not hang indefinitely.*/
-  private static <T> T timedGet(CompletableFuture<T> future)
-      throws InterruptedException, ExecutionException, TimeoutException {
-    return future.get(1, SECONDS);
   }
 }

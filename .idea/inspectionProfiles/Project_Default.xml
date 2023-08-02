@@ -648,6 +648,7 @@
           <option value="UnstableApiUsage" />
           <option value="Singleton" />
           <option value="NumericCastThatLosesPrecision" />
+          <option value="ResultOfMethodCallIgnored" />
         </list>
       </option>
     </inspection_tool>
