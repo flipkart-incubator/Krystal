@@ -11,6 +11,7 @@ import com.flipkart.krystal.krystex.KrystalExecutor;
  * <p>{@link GranularKryon}s which are executed explicitly using {@link
  * KrystalExecutor#executeKryon} have this as their dependantChain.
  */
+@EqualsAndHashCode(callSuper = false, cacheStrategy = CacheStrategy.LAZY)
 public final class DependantChainStart extends AbstractDependantChain {
 
   DependantChainStart() {}
