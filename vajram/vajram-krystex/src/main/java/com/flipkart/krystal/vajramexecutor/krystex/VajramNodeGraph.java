@@ -4,6 +4,7 @@ import static com.flipkart.krystal.data.ValueOrError.withValue;
 import static com.flipkart.krystal.krystex.resolution.ResolverCommand.multiExecuteWith;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.VajramLoader.loadVajramsFromClassPath;
+import static com.flipkart.krystal.vajram.inputs.InputSource.CLIENT;
 import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.inputs.SingleExecute.executeWith;
 import static com.flipkart.krystal.vajram.inputs.SingleExecute.skipExecution;
@@ -207,7 +208,8 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
       String firstVajramId, String firstDependencyName, String... subsequentDependencyNames) {
     NodeId firstNodeId = _getVajramExecutionGraph(vajramID(firstVajramId));
     NodeDefinition currentNode = nodeDefinitionRegistry.get(firstNodeId);
-    DependantChain currentDepChain = DependantChain.start(firstNodeId, firstDependencyName);
+    DependantChain currentDepChain =
+        nodeDefinitionRegistry.getDependantChainsStart().extend(firstNodeId, firstDependencyName);
     String previousDepName = firstDependencyName;
     for (String currentDepName : subsequentDependencyNames) {
       NodeId depNodeId = currentNode.dependencyNodes().get(previousDepName);
@@ -215,7 +217,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
         throw new IllegalStateException(
             "Unable find node for dependency %s of node %s".formatted(currentDepName, currentNode));
       }
-      currentDepChain = DependantChain.extend(currentDepChain, depNodeId, currentDepName);
+      currentDepChain = currentDepChain.extend(depNodeId, currentDepName);
       currentNode = nodeDefinitionRegistry.get(depNodeId);
       previousDepName = currentDepName;
     }
@@ -329,7 +331,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
                                 DependencyCommand<Inputs> dependencyCommand;
                                 try {
                                   if (inputResolverDefinition
-                                      instanceof SimpleInputResolver inputResolver) {
+                                      instanceof SimpleInputResolver<?, ?, ?, ?> inputResolver) {
                                     ResolutionResult resolutionResult =
                                         multiResolve(
                                             List.of(
@@ -510,7 +512,10 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     ImmutableCollection<VajramInputDefinition> inputDefinitions =
         vajramDefinition.getVajram().getInputDefinitions();
     ImmutableSet<String> inputNames =
-        inputDefinitions.stream().map(VajramInputDefinition::name).collect(toImmutableSet());
+        inputDefinitions.stream()
+            .filter(this::isVisibleToKrystex)
+            .map(VajramInputDefinition::name)
+            .collect(toImmutableSet());
     NodeLogicId vajramLogicNodeName = new NodeLogicId(nodeId, "%s:vajramLogic".formatted(vajramId));
     // Step 4: Create and register node for the main vajram logic
     MainLogicDefinition<?> vajramLogic =
@@ -528,6 +533,13 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
         .values()
         .forEach(vajramLogic::registerSessionScopedLogicDecorator);
     return vajramLogic;
+  }
+
+  private boolean isVisibleToKrystex(VajramInputDefinition vajramInputDefinition) {
+    if (vajramInputDefinition instanceof Input<?> input) {
+      return input.sources().contains(CLIENT);
+    }
+    return true;
   }
 
   private <T> void registerInputInjector(MainLogicDefinition<T> logicDefinition, Vajram<?> vajram) {

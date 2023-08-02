@@ -1,6 +1,8 @@
 package com.flipkart.krystal.krystex.node;
 
 import com.flipkart.krystal.krystex.KrystalExecutor;
+import lombok.EqualsAndHashCode;
+import lombok.EqualsAndHashCode.CacheStrategy;
 
 /**
  * An instance of this class represents the start of a {@link DependantChain}. A {@link
@@ -8,17 +10,13 @@ import com.flipkart.krystal.krystex.KrystalExecutor;
  *
  * <p>All {@link DependantChain}s are guaranteed to begin with a {@link DependantChainStart}
  *
- * <p>{@link Node}s which are executed explicitly using {@link KrystalExecutor#executeNode} have
- * this as their dependantChain.
+ * <p>{@link GranularNode}s which are executed explicitly using {@link KrystalExecutor#executeNode}
+ * have this as their dependantChain.
  */
-@SuppressWarnings("Singleton")
-public final class DependantChainStart implements DependantChain {
+@EqualsAndHashCode(callSuper = false, cacheStrategy = CacheStrategy.LAZY)
+public final class DependantChainStart extends AbstractDependantChain {
 
-  private static final DependantChainStart INSTANCE = new DependantChainStart();
-
-  public static DependantChainStart instance() {
-    return INSTANCE;
-  }
+  DependantChainStart() {}
 
   /**
    * @return A string representation that depicts the beginning of the DependantChain.
@@ -27,11 +25,4 @@ public final class DependantChainStart implements DependantChain {
   public String toString() {
     return "[Start]";
   }
-
-  @Override
-  public boolean contains(NodeId nodeId) {
-    return false;
-  }
-
-  private DependantChainStart() {}
 }

@@ -1,9 +1,11 @@
 package com.flipkart.krystal.krystex.request;
 
-public record RequestId(String asString, RequestId originatedFrom) {
+import java.util.Objects;
 
-  public RequestId(String requestId) {
-    this(requestId, null);
+public record RequestId(Object id, RequestId originatedFrom) {
+
+  public RequestId(Object content) {
+    this(content, null);
   }
 
   @Override
@@ -14,7 +16,22 @@ public record RequestId(String asString, RequestId originatedFrom) {
     return originatedFrom;
   }
 
-  public RequestId createNewRequest(Object suffix) {
-    return new RequestId("%s:%s".formatted(asString, suffix), originatedFrom());
+  @Override
+  public String toString() {
+    return String.valueOf(id);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof RequestId requestId)) {
+      return false;
+    }
+    return Objects.equals(id, requestId.id);
+  }
+
+  @Override
+  public int hashCode() {
+    return id.hashCode();
   }
 }

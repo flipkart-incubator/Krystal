@@ -40,7 +40,6 @@ public final class VajramDefinition {
 
   @Getter private final Vajram<?> vajram;
 
-  // TODO populate input resolvers from vajram
   @Getter private final ImmutableCollection<InputResolverDefinition> inputResolverDefinitions;
 
   @Getter private final ImmutableMap<String, Tag> mainLogicTags;

@@ -6,6 +6,7 @@ import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutorMetrics;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -78,7 +79,9 @@ public final class Util {
         .printf("Avg. time to Create Executors:%,d ns%n", timeToCreateExecutors / outerLoopCount)
         .printf("Avg. time to Enqueue vajrams:%,d ns%n", timeToEnqueueVajram / loopCount)
         .printf("Avg. time to execute vajrams:%,d ns%n", vajramTimeNs / loopCount)
-        .printf("Throughput executions/s: %d%n", loopCount / ofNanos(vajramTimeNs).toSeconds())
+        .printf(
+            "Throughput executions/s: %d%n",
+            loopCount * Duration.ofSeconds(1).toNanos() / ofNanos(vajramTimeNs).toNanos())
         .printf(
             "CommandsQueuedCount: %,d%n",
             stream(metrics).mapToInt(KrystalNodeExecutorMetrics::getCommandQueuedCount).sum())

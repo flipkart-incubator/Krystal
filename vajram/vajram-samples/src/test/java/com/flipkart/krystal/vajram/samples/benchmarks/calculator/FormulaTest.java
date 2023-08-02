@@ -30,7 +30,6 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
-@TestMethodOrder(OrderAnnotation.class)
 class FormulaTest {
 
   private Builder graph;
@@ -42,7 +41,6 @@ class FormulaTest {
   }
 
   @Test
-  @Order(1)
   void formula_success() throws Exception {
     CompletableFuture<Integer> future;
     VajramNodeGraph graph = this.graph.build();
@@ -56,9 +54,8 @@ class FormulaTest {
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
   }
 
-//  @Disabled("Long running benchmark (~16s)")
+  @Disabled("Long running benchmark (~16s)")
   @Test
-  @Order(2)
   void vajram_benchmark() throws Exception {
     int loopCount = 1_000_000;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(5).build();
@@ -124,10 +121,9 @@ class FormulaTest {
 
   @Disabled("Long running benchmark (~16s)")
   @Test
-  @Order(3)
   void vajram_benchmark_2() throws Exception {
-    int outerLoopCount = 10_000;
-    int innerLoopCount = 100;
+    int outerLoopCount = 1000;
+    int innerLoopCount = 1000;
     int loopCount = outerLoopCount * innerLoopCount;
     VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();
     graph.registerInputModulators(

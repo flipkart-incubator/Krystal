@@ -8,6 +8,7 @@ import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder.add;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderRequest.splitSum1_n;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderRequest.splitSum2_n;
+import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,12 +43,15 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class SplitAdderTest {
-  private Builder graph;
+  private VajramNodeGraph graph;
   private ObjectMapper objectMapper;
 
   @BeforeEach
   void setUp() {
-    graph = loadFromClasspath("com.flipkart.krystal.vajram.samples.benchmarks.calculator");
+    graph =
+        loadFromClasspath("com.flipkart.krystal.vajram.samples.benchmarks.calculator")
+            .maxParallelismPerCore(1)
+            .build();
     objectMapper =
         new ObjectMapper()
             .registerModule(new JavaTimeModule())
@@ -61,7 +65,6 @@ class SplitAdderTest {
     CompletableFuture<Integer> future;
     NodeExecutionReport nodeExecutionReport = new DefaultNodeExecutionReport(Clock.systemUTC());
     MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(nodeExecutionReport);
-    VajramNodeGraph graph = this.graph.build();
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
         graph.createExecutor(
             new RequestContext("chainAdderTest"),
@@ -80,17 +83,15 @@ class SplitAdderTest {
                 .build())) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
-    Integer result = future.get();
+    assertThat(future).succeedsWithin(ofSeconds(1)).isEqualTo(55);
     System.out.println(
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
-    assertThat(result).isEqualTo(55);
   }
 
   @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
-    VajramNodeGraph graph = this.graph.maxParallelismPerCore(0.5).build();
     long javaNativeTimeNs = javaMethodBenchmark(this::splitAdd, loopCount);
     long javaFuturesTimeNs = javaFuturesBenchmark(this::splitAddAsync, loopCount);
     //noinspection unchecked
@@ -103,7 +104,7 @@ class SplitAdderTest {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
           graph.createExecutor(
-              new RequestContext("chainAdderTest"),
+              new RequestContext("splitAdderTest"),
               KrystalNodeExecutorConfig.builder()
                   .disabledDependantChains(disabledDepChains(graph))
                   .build())) {
@@ -145,6 +146,80 @@ class SplitAdderTest {
      */
     printStats(
         loopCount,
+        graph,
+        javaNativeTimeNs,
+        javaFuturesTimeNs,
+        metrics,
+        timeToCreateExecutors,
+        timeToEnqueueVajram,
+        vajramTimeNs);
+  }
+
+  @Disabled("Long running benchmark")
+  @Test
+  void vajram_benchmark_2() throws Exception {
+    int outerLoopCount = 100;
+    int innerLoopCount = 500;
+    int loopCount = outerLoopCount * innerLoopCount;
+
+    long javaNativeTimeNs = javaMethodBenchmark(this::splitAdd, loopCount);
+    long javaFuturesTimeNs = javaFuturesBenchmark(this::splitAddAsync, loopCount);
+    //noinspection unchecked
+    CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
+    KrystalNodeExecutorMetrics[] metrics = new KrystalNodeExecutorMetrics[outerLoopCount];
+    long startTime = System.nanoTime();
+    long timeToCreateExecutors = 0;
+    long timeToEnqueueVajram = 0;
+    for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
+      long iterStartTime = System.nanoTime();
+      try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
+          graph.createExecutor(
+              new RequestContext("splitAdderTest"),
+              KrystalNodeExecutorConfig.builder()
+                  .disabledDependantChains(disabledDepChains(graph))
+                  .build())) {
+        timeToCreateExecutors += System.nanoTime() - iterStartTime;
+        metrics[outer_i] =
+            ((KrystalNodeExecutor) krystexVajramExecutor.getKrystalExecutor())
+                .getKrystalNodeMetrics();
+        for (int inner_i = 0; inner_i < innerLoopCount; inner_i++) {
+          int iterationNum = outer_i * innerLoopCount + inner_i;
+          long enqueueStart = System.nanoTime();
+          futures[iterationNum] = executeVajram(krystexVajramExecutor, iterationNum);
+          timeToEnqueueVajram += System.nanoTime() - enqueueStart;
+        }
+      }
+    }
+    allOf(futures).join();
+    long vajramTimeNs = System.nanoTime() - startTime;
+    /*
+     * Benchmark config:
+     *    loopCount = 50_000
+     *    maxParallelismPerCore = 0.5
+     *    Processor: 2.6 GHz 6-Core Intel Core i7
+     * Best Benchmark result:
+     *    platform overhead over reactive code = ~764 µs  per request
+     *    maxPoolSize = 6
+     *    maxActiveLeasesPerObject: 4085
+     *    peakAvgActiveLeasesPerObject: 4083.25
+     *    Avg. time to Enqueue vajrams: 28,183 ns
+     *    Avg. time to execute vajrams: 765,979 ns
+     *    Throughput executions/sec: 1315
+     *    CommandsQueuedCount: 150,000
+     *    CommandQueueBypassedCount: 9,950,000
+     */
+    allOf(futures)
+        .whenComplete(
+            (unused, throwable) -> {
+              for (int i = 0; i < futures.length; i++) {
+                CompletableFuture<Integer> future = futures[i];
+                assertThat(future.getNow(0)).isEqualTo((i * 100) + 55);
+              }
+            })
+        .get();
+    printStats(
+        outerLoopCount,
+        innerLoopCount,
         graph,
         javaNativeTimeNs,
         javaFuturesTimeNs,

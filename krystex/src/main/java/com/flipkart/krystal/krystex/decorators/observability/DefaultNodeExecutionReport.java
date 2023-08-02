@@ -123,7 +123,7 @@ public final class DefaultNodeExecutionReport implements NodeExecutionReport {
       Throwable throwable = voe.error().get();
       return verbose ? getStackTraceAsString(throwable) : throwable.toString();
     } else {
-      return voe.value().orElse(null);
+      return voe.value().orElse("null");
     }
   }
 
