@@ -19,10 +19,6 @@ import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.RequestId;
-import com.flipkart.krystal.krystex.ResolverCommand;
-import com.flipkart.krystal.krystex.ResolverCommand.SkipDependency;
-import com.flipkart.krystal.krystex.ResolverDefinition;
 import com.flipkart.krystal.krystex.commands.ExecuteWithDependency;
 import com.flipkart.krystal.krystex.commands.ExecuteWithInputs;
 import com.flipkart.krystal.krystex.commands.Flush;
@@ -32,11 +28,19 @@ import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutor.ResolverExecStrategy;
+import com.flipkart.krystal.krystex.request.RequestId;
+import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
+import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
+import com.flipkart.krystal.krystex.resolution.ResolverCommand;
+import com.flipkart.krystal.krystex.resolution.ResolverCommand.SkipDependency;
+import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.flipkart.krystal.utils.ImmutableMapView;
 import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -54,13 +58,12 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
-import java.util.stream.Stream;
 
 class Node {
 
   private final NodeId nodeId;
 
-  private NodeDefinition nodeDefinition;
+  private final NodeDefinition nodeDefinition;
 
   private final KrystalNodeExecutor krystalNodeExecutor;
 
@@ -72,6 +75,7 @@ class Node {
       resolverDefinitionsByInput;
   private final ImmutableMapView<String, ImmutableSet<ResolverDefinition>>
       resolverDefinitionsByDependencies;
+  private final ResolverExecStrategy resolverExecStrategy;
   private final LogicDecorationOrdering logicDecorationOrdering;
 
   private final Map<RequestId, Map<String, DependencyNodeExecutions>> dependencyExecutions =
@@ -97,7 +101,7 @@ class Node {
 
   private final Map<RequestId, Optional<SkipNode>> skipLogicRequested = new LinkedHashMap<>();
 
-  private final Map<RequestId, Map<NodeLogicId, ResolverCommand>> resolverResults =
+  private final Map<RequestId, Map<ResolverDefinition, ResolverCommand>> resolverResults =
       new LinkedHashMap<>();
 
   private final Map<DependantChain, Boolean> flushedDependantChain = new LinkedHashMap<>();
@@ -110,7 +114,8 @@ class Node {
       KrystalNodeExecutor krystalNodeExecutor,
       Function<LogicExecutionContext, ImmutableMap<String, MainLogicDecorator>>
           requestScopedDecoratorsSupplier,
-      LogicDecorationOrdering logicDecorationOrdering) {
+      LogicDecorationOrdering logicDecorationOrdering,
+      ResolverExecStrategy resolverExecStrategy) {
     this.nodeId = nodeDefinition.nodeId();
     this.nodeDefinition = nodeDefinition;
     this.krystalNodeExecutor = krystalNodeExecutor;
@@ -122,6 +127,7 @@ class Node {
         ImmutableMapView.viewOf(
             nodeDefinition.resolverDefinitions().stream()
                 .collect(groupingBy(ResolverDefinition::dependencyName, toImmutableSet())));
+    this.resolverExecStrategy = resolverExecStrategy;
   }
 
   void executeCommand(Flush nodeCommand) {
@@ -181,35 +187,25 @@ class Node {
     }
   }
 
-  public void markRecursive() {
-    this.nodeDefinition = nodeDefinition.toRecursive();
-  }
-
   private CompletableFuture<NodeResponse> handleSkipDependency(
       RequestId requestId, SkipNode skipNode, CompletableFuture<NodeResponse> resultForRequest) {
-    /*
-     Do not propagate skipNode command to recursive dependencies as this can lead to an infinite loop.
-     Propagating skipNode is important so that the flush command works as expected.
-     Flushing is anyway not supported for nodes which are recusive, so there is no need for
-     this.
-    */
-    if (!nodeDefinition.isRecursive()) {
-      // Since this node is skipped, we need to get all the pending resolvers (irrespective of
-      // whether their inputs are available or not) and mark them resolved.
-      Set<ResolverDefinition> pendingResolvers =
-          resolverDefinitionsByInput.values().stream()
-              .flatMap(Collection::stream)
-              .filter(
-                  resolverDefinition ->
-                      !this.resolverResults
-                          .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
-                          .containsKey(resolverDefinition.resolverNodeLogicId()))
-              .collect(toSet());
 
-      for (ResolverDefinition resolverDefinition : pendingResolvers) {
-        executeResolver(requestId, resolverDefinition);
-      }
-    }
+    // Since this node is skipped, we need to get all the pending resolvers (irrespective of
+    // whether their inputs are available or not) and mark them resolved.
+    Set<ResolverDefinition> pendingResolvers =
+        resolverDefinitionsByInput.values().stream()
+            .flatMap(Collection::stream)
+            .filter(
+                resolverDefinition ->
+                    !this.resolverResults
+                        .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
+                        .containsKey(resolverDefinition))
+            .collect(toSet());
+
+    //    for (ResolverDefinition resolverDefinition : pendingResolvers) {
+    //      executeResolver(requestId, resolverDefinition);
+    //    }
+    executeResolvers(requestId, pendingResolvers);
     resultForRequest.completeExceptionally(skipNodeException(skipNode));
     return resultForRequest;
   }
@@ -266,9 +262,7 @@ class Node {
     Map<String, Results<Object>> allDependencies =
         dependencyValuesCollector.computeIfAbsent(requestId, k -> new LinkedHashMap<>());
     ImmutableSet<String> allInputNames = mainLogicDefinition.inputNames();
-    Set<String> availableInputs =
-        Stream.concat(allInputs.keySet().stream(), allDependencies.keySet().stream())
-            .collect(toSet());
+    Set<String> availableInputs = Sets.union(allInputs.keySet(), allDependencies.keySet());
     if (availableInputs.isEmpty()) {
       if (!allInputNames.isEmpty()
           && nodeDefinition.resolverDefinitions().isEmpty()
@@ -278,11 +272,7 @@ class Node {
       return;
     }
 
-    Map<NodeLogicId, ResolverDefinition> pendingResolvers =
-        getPendingResolvers(requestId, newInputNames, availableInputs);
-    for (ResolverDefinition pendingResolver : pendingResolvers.values()) {
-      executeResolver(requestId, pendingResolver);
-    }
+    executeResolvers(requestId, getPendingResolvers(requestId, newInputNames, availableInputs));
   }
 
   /**
@@ -290,24 +280,23 @@ class Node {
    * @param newInputNames The input names for which new values were just made available.
    * @param availableInputs The inputs for which values are available.
    * @return the resolver definitions which need at least one of the provided {@code inputNames} and
-   *     all of whose inputs' values are available.
+   *     all of whose inputs' values are available. i.e resolvers which should be executed
+   *     immediately
    */
-  private Map<NodeLogicId, ResolverDefinition> getPendingResolvers(
+  private Set<ResolverDefinition> getPendingResolvers(
       RequestId requestId, ImmutableSet<String> newInputNames, Set<String> availableInputs) {
-    Map<NodeLogicId, ResolverCommand> nodeResults =
+    Map<ResolverDefinition, ResolverCommand> nodeResults =
         this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
 
-    Map<NodeLogicId, ResolverDefinition> pendingResolvers;
+    Set<ResolverDefinition> pendingResolvers;
     Collector<ResolverDefinition, ?, Map<NodeLogicId, ResolverDefinition>> resolverCollector =
         toMap(ResolverDefinition::resolverNodeLogicId, identity(), (o1, o2) -> o1);
-    Map<NodeLogicId, ResolverDefinition> pendingUnboundResolvers =
+    Set<ResolverDefinition> pendingUnboundResolvers =
         resolverDefinitionsByInput.getOrDefault(Optional.<String>empty(), emptyList()).stream()
             .filter(
                 resolverDefinition -> availableInputs.containsAll(resolverDefinition.boundFrom()))
-            .filter(
-                resolverDefinition ->
-                    !nodeResults.containsKey(resolverDefinition.resolverNodeLogicId()))
-            .collect(resolverCollector);
+            .filter(resolverDefinition -> !nodeResults.containsKey(resolverDefinition))
+            .collect(toSet());
     pendingResolvers =
         newInputNames.stream()
             .flatMap(
@@ -318,19 +307,72 @@ class Node {
                         .filter(
                             resolverDefinition ->
                                 availableInputs.containsAll(resolverDefinition.boundFrom()))
-                        .filter(
-                            resolverDefinition ->
-                                !nodeResults.containsKey(resolverDefinition.resolverNodeLogicId())))
-            .collect(resolverCollector);
-    pendingResolvers.putAll(pendingUnboundResolvers);
+                        .filter(resolverDefinition -> !nodeResults.containsKey(resolverDefinition)))
+            .collect(toSet());
+    pendingResolvers.addAll(pendingUnboundResolvers);
     return pendingResolvers;
   }
 
+  private void executeResolvers(RequestId requestId, Set<ResolverDefinition> pendingResolvers) {
+    if (ResolverExecStrategy.SINGLE.equals(resolverExecStrategy)) {
+      for (ResolverDefinition resolverDefinition : pendingResolvers) {
+        executeResolver(requestId, resolverDefinition);
+      }
+      return;
+    }
+    if (pendingResolvers.isEmpty()) {
+      return;
+    }
+
+    Optional<MultiResolverDefinition> multiResolverOpt =
+        nodeDefinition
+            .multiResolverLogicId()
+            .map(
+                nodeLogicId ->
+                    nodeDefinition
+                        .nodeDefinitionRegistry()
+                        .logicDefinitionRegistry()
+                        .getMultiResolver(nodeLogicId));
+    if (multiResolverOpt.isEmpty()) {
+      return;
+    }
+    MultiResolverDefinition multiResolver = multiResolverOpt.get();
+
+    Map<String, List<ResolverDefinition>> resolversByDependency =
+        pendingResolvers.stream().collect(groupingBy(ResolverDefinition::dependencyName));
+    Optional<SkipNode> skipRequested =
+        this.skipLogicRequested.getOrDefault(requestId, Optional.empty());
+    Map<String, ResolverCommand> resolverCommands;
+    if (skipRequested.isPresent()) {
+      SkipDependency skip =
+          ResolverCommand.skip(skipRequested.get().skipDependencyCommand().reason());
+      resolverCommands =
+          resolversByDependency.keySet().stream().collect(toMap(identity(), _k -> skip));
+    } else {
+      Inputs inputs =
+          getInputsFor(
+              requestId,
+              pendingResolvers.stream()
+                  .map(ResolverDefinition::boundFrom)
+                  .flatMap(Collection::stream)
+                  .collect(toSet()));
+      resolverCommands =
+          multiResolver
+              .logic()
+              .resolve(
+                  resolversByDependency.entrySet().stream()
+                      .map(e -> new DependencyResolutionRequest(e.getKey(), e.getValue()))
+                      .toList(),
+                  inputs);
+    }
+    resolverCommands.forEach(
+        (depName, resolverCommand) -> {
+          handleResolverCommand(
+              requestId, depName, resolversByDependency.get(depName), resolverCommand);
+        });
+  }
+
   private void executeResolver(RequestId requestId, ResolverDefinition resolverDefinition) {
-    Map<NodeLogicId, ResolverCommand> nodeResults =
-        this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
-    String dependencyName = resolverDefinition.dependencyName();
-    NodeId depNodeId = nodeDefinition.dependencyNodes().get(dependencyName);
     NodeLogicId nodeLogicId = resolverDefinition.resolverNodeLogicId();
     ResolverCommand resolverCommand;
     Optional<SkipNode> skipRequested =
@@ -346,20 +388,35 @@ class Node {
               .getResolver(nodeLogicId)
               .resolve(inputsForResolver);
     }
-    nodeResults.put(nodeLogicId, resolverCommand);
+    String dependencyName = resolverDefinition.dependencyName();
+    handleResolverCommand(requestId, dependencyName, List.of(resolverDefinition), resolverCommand);
+  }
+
+  private void handleResolverCommand(
+      RequestId requestId,
+      String dependencyName,
+      List<ResolverDefinition> resolverDefinitions,
+      ResolverCommand resolverCommand) {
+    NodeId depNodeId = nodeDefinition.dependencyNodes().get(dependencyName);
+    Map<ResolverDefinition, ResolverCommand> resolverResults =
+        this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
+    resolverDefinitions.forEach(
+        resolverDefinition -> resolverResults.put(resolverDefinition, resolverCommand));
+
     DependencyNodeExecutions dependencyNodeExecutions =
         dependencyExecutions
             .computeIfAbsent(requestId, k -> new LinkedHashMap<>())
             .computeIfAbsent(dependencyName, k -> new DependencyNodeExecutions());
-    dependencyNodeExecutions.executedResolvers().add(resolverDefinition);
+    dependencyNodeExecutions.executedResolvers().addAll(resolverDefinitions);
     if (resolverCommand instanceof SkipDependency) {
       if (dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).get(dependencyName)
           == null) {
         /* This is for the case where for some resolvers the input has already been resolved but we
         do need to skip them as well, as our current resolver is skipped.*/
-        Set<RequestId> requestIdSet = new HashSet<>();
-        requestIdSet.addAll(dependencyNodeExecutions.individualCallResponses().keySet());
-        RequestId dependencyRequestId = requestId.append("%s[%s]".formatted(dependencyName, 0));
+        Set<RequestId> requestIdSet =
+            new HashSet<>(dependencyNodeExecutions.individualCallResponses().keySet());
+        RequestId dependencyRequestId =
+            requestId.createNewRequest("%s[%s]".formatted(dependencyName, 0));
         /*Skipping Current resolver, as its a skip, we dont need to iterate
          * over fanout requests as the input is empty*/
         requestIdSet.add(dependencyRequestId);
@@ -389,7 +446,7 @@ class Node {
       long executionsInProgress = dependencyNodeExecutions.executionCounter().longValue();
       Map<RequestId, Inputs> oldInputs = new LinkedHashMap<>();
       for (int i = 0; i < executionsInProgress; i++) {
-        RequestId rid = requestId.append("%s[%s]".formatted(dependencyName, i));
+        RequestId rid = requestId.createNewRequest("%s[%s]".formatted(dependencyName, i));
         oldInputs.put(
             rid,
             new Inputs(
@@ -405,10 +462,10 @@ class Node {
         Inputs inputs = inputList.get(j);
         for (int i = 0; i < batchSize; i++) {
           RequestId dependencyRequestId =
-              requestId.append("%s[%s]".formatted(dependencyName, j * batchSize + i));
+              requestId.createNewRequest("%s[%s]".formatted(dependencyName, j * batchSize + i));
           RequestId inProgressRequestId;
           if (executionsInProgress > 0) {
-            inProgressRequestId = requestId.append("%s[%s]".formatted(dependencyName, i));
+            inProgressRequestId = requestId.createNewRequest("%s[%s]".formatted(dependencyName, i));
           } else {
             inProgressRequestId = dependencyRequestId;
           }
@@ -525,9 +582,13 @@ class Node {
   }
 
   private Inputs getInputsForResolver(ResolverDefinition resolverDefinition, RequestId requestId) {
+    ImmutableSet<String> boundFrom = resolverDefinition.boundFrom();
+    return getInputsFor(requestId, boundFrom);
+  }
+
+  private Inputs getInputsFor(RequestId requestId, Set<String> boundFrom) {
     Map<String, InputValue<Object>> allInputs =
         inputsValueCollector.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
-    ImmutableSet<String> boundFrom = resolverDefinition.boundFrom();
     Map<String, InputValue<Object>> inputValues = new LinkedHashMap<>();
     for (String boundFromInput : boundFrom) {
       InputValue<Object> voe = allInputs.get(boundFromInput);
@@ -552,7 +613,7 @@ class Node {
               if (!dependencyValuesCollector
                   .getOrDefault(requestId, ImmutableMap.of())
                   .containsKey(depName)) {
-                RequestId dependencyRequestId = requestId.append("%s".formatted(depName));
+                RequestId dependencyRequestId = requestId.createNewRequest("%s".formatted(depName));
                 CompletableFuture<NodeResponse> nodeResponse =
                     krystalNodeExecutor.executeCommand(
                         new ExecuteWithInputs(

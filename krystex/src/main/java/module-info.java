@@ -8,6 +8,10 @@ module flipkart.krystal.krystex {
   exports com.flipkart.krystal.krystex.decorators.resilience4j;
   exports com.flipkart.krystal.krystex.decorators.observability to
       flipkart.krystal.vajramexecutor.krystex;
+  exports com.flipkart.krystal.krystex.request to
+      flipkart.krystal.vajramexecutor.krystex;
+  exports com.flipkart.krystal.krystex.resolution to
+      flipkart.krystal.vajramexecutor.krystex;
 
   requires com.google.common;
   requires org.checkerframework.checker.qual;

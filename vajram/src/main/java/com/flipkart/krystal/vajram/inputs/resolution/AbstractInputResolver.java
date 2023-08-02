@@ -13,11 +13,6 @@ public abstract class AbstractInputResolver implements InputResolver {
     this.resolutionTarget = resolutionTarget;
   }
 
-  protected AbstractInputResolver(String source, QualifiedInputs resolutionTarget) {
-    this.sources = ImmutableSet.of(source);
-    this.resolutionTarget = resolutionTarget;
-  }
-
   @Override
   public ImmutableSet<String> sources() {
     return sources;

@@ -2,7 +2,6 @@ package com.flipkart.krystal.vajram.inputs.resolution;
 
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
-import com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.SkipPredicate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -37,9 +36,9 @@ public final class FanoutResolverStage<S, T, CV extends Vajram<?>, DV extends Va
     return this;
   }
 
-  public InputResolverSpec<S, T, CV, DV> with(
+  public SimpleInputResolverSpec<S, T, CV, DV> with(
       Function<Optional<S>, ? extends Collection<? extends T>> transformer) {
-    return new InputResolverSpec<>(targetInput, sourceInput, skipConditions, null, transformer);
+    return new SimpleInputResolverSpec<>(targetInput, sourceInput, skipConditions, null, transformer);
   }
 
   public static final class ResolveFanoutStage<T, DV extends Vajram<?>> {

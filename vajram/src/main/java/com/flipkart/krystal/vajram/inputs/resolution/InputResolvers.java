@@ -24,7 +24,7 @@ public final class InputResolvers {
   @SafeVarargs
   public static <T, CV extends Vajram<?>, DV extends Vajram<T>> List<InputResolver> dep(
       VajramDependencyTypeSpec<T, CV, DV> dependency,
-      InputResolverSpec<?, ?, CV, DV>... resolverStages) {
+      SimpleInputResolverSpec<?, ?, CV, DV>... resolverStages) {
     return stream(resolverStages)
         .map(
             spec -> {
@@ -48,11 +48,10 @@ public final class InputResolvers {
    *
    * @param depInput spec of the dependency target input being resolved
    * @param <T> Target Type: The DataType of the dependency target input being resolved
-   * @param <CV> CurrentVajram: The current vajram which is resolving the input
    * @param <DV> DependencyVajram: The vajram whose input is being resolved
    */
-  public static <T, CV extends Vajram<?>, DV extends Vajram<?>>
-      ResolveFanoutStage<T, DV> resolveFanout(VajramInputTypeSpec<T, DV> depInput) {
+  public static <T, DV extends Vajram<?>> ResolveFanoutStage<T, DV> resolveFanout(
+      VajramInputTypeSpec<T, DV> depInput) {
     return new ResolveFanoutStage<>(depInput);
   }
 

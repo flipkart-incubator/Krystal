@@ -1,16 +1,14 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
 import com.flipkart.krystal.krystex.KrystalExecutor;
-import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
+import com.flipkart.krystal.krystex.node.NodeExecutionConfig;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.exec.VajramExecutor;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
@@ -24,36 +22,36 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
 
   public KrystexVajramExecutor(
       VajramNodeGraph vajramNodeGraph,
-      LogicDecorationOrdering logicDecorationOrdering,
-      MultiLeasePool<? extends ExecutorService> executorServicePool,
       C applicationRequestContext,
-      Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs) {
+      MultiLeasePool<? extends ExecutorService> executorServicePool,
+      KrystalNodeExecutorConfig config) {
     this.vajramNodeGraph = vajramNodeGraph;
     this.applicationRequestContext = applicationRequestContext;
     this.krystalExecutor =
         new KrystalNodeExecutor(
             vajramNodeGraph.getNodeDefinitionRegistry(),
-            logicDecorationOrdering,
             executorServicePool,
-            applicationRequestContext.requestId(),
-            requestScopedLogicDecoratorConfigs);
+            config,
+            applicationRequestContext.requestId());
   }
 
   @Override
   public <T> CompletableFuture<T> execute(
       VajramID vajramId, Function<C, VajramRequest> vajramRequestBuilder) {
-    return krystalExecutor.executeNode(
-        vajramNodeGraph.getNodeId(vajramId),
-        vajramRequestBuilder.apply(applicationRequestContext).toInputValues());
+    return execute(
+        vajramId,
+        vajramRequestBuilder,
+        NodeExecutionConfig.builder().executionId("defaultExecution").build());
   }
 
-  @Override
   public <T> CompletableFuture<T> execute(
-      VajramID vajramId, Function<C, VajramRequest> vajramRequestBuilder, String requestId) {
+      VajramID vajramId,
+      Function<C, VajramRequest> vajramRequestBuilder,
+      NodeExecutionConfig executionConfig) {
     return krystalExecutor.executeNode(
         vajramNodeGraph.getNodeId(vajramId),
         vajramRequestBuilder.apply(applicationRequestContext).toInputValues(),
-        requestId);
+        executionConfig);
   }
 
   public KrystalExecutor getKrystalExecutor() {

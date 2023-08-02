@@ -1,28 +1,41 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
+import static com.flipkart.krystal.data.ValueOrError.withValue;
+import static com.flipkart.krystal.krystex.resolution.ResolverCommand.multiExecuteWith;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.VajramLoader.loadVajramsFromClassPath;
+import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
+import static com.flipkart.krystal.vajram.inputs.SingleExecute.executeWith;
 import static com.flipkart.krystal.vajram.inputs.SingleExecute.skipExecution;
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.collectDepInputs;
+import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.multiResolve;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 
+import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.ResolverCommand;
-import com.flipkart.krystal.krystex.ResolverDefinition;
-import com.flipkart.krystal.krystex.ResolverLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.node.DependantChain;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
 import com.flipkart.krystal.krystex.node.NodeDefinition;
 import com.flipkart.krystal.krystex.node.NodeDefinitionRegistry;
 import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
+import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
+import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
+import com.flipkart.krystal.krystex.resolution.ResolverCommand;
+import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
+import com.flipkart.krystal.krystex.resolution.ResolverLogicDefinition;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.IOVajram;
@@ -42,6 +55,9 @@ import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolverDefinition;
+import com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.ResolutionResult;
+import com.flipkart.krystal.vajram.inputs.resolution.ResolutionRequest;
+import com.flipkart.krystal.vajram.inputs.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig.ModulatorContext;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjector;
@@ -50,16 +66,19 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import lombok.Getter;
 
 /** The execution graph encompassing all registered vajrams. */
@@ -100,6 +119,29 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     inputInjector = new InputInjector(this, inputInjectionProvider);
   }
 
+  private static DependencyCommand<Inputs> toDependencyCommand(
+      List<Map<String, Object>> depInputs) {
+    DependencyCommand<Inputs> dependencyCommand;
+    if (depInputs.isEmpty()) {
+      dependencyCommand = executeFanoutWith(ImmutableList.of());
+    } else if (depInputs.size() == 1) {
+      Map<String, InputValue<Object>> collect =
+          depInputs.get(0).entrySet().stream()
+              .collect(toMap(Entry::getKey, e -> withValue(e.getValue())));
+      dependencyCommand = executeWith(new Inputs(collect));
+    } else {
+      List<Inputs> inputsList = new ArrayList<>();
+      for (Map<String, Object> depInput : depInputs) {
+        inputsList.add(
+            new Inputs(
+                depInput.entrySet().stream()
+                    .collect(toMap(Entry::getKey, e -> withValue(e.getValue())))));
+      }
+      dependencyCommand = executeFanoutWith(inputsList);
+    }
+    return dependencyCommand;
+  }
+
   public MultiLeasePool<? extends ExecutorService> getExecutorPool() {
     return executorPool;
   }
@@ -107,22 +149,21 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   @Override
   public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
       C requestContext) {
-    return createExecutor(requestContext, ImmutableMap.of());
+    return createExecutor(requestContext, KrystalNodeExecutorConfig.builder().build());
   }
 
   public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
-      C requestContext,
-      Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs) {
-    return new KrystexVajramExecutor<>(
-        this,
-        logicDecorationOrdering,
-        executorPool,
-        requestContext,
-        requestScopedLogicDecoratorConfigs);
+      C requestContext, KrystalNodeExecutorConfig krystexConfig) {
+    if (logicDecorationOrdering != null
+        && LogicDecorationOrdering.none().equals(krystexConfig.logicDecorationOrdering())) {
+      krystexConfig =
+          krystexConfig.toBuilder().logicDecorationOrdering(logicDecorationOrdering).build();
+    }
+    return new KrystexVajramExecutor<>(this, requestContext, executorPool, krystexConfig);
   }
 
   public void registerInputModulators(VajramID vajramID, InputModulatorConfig... inputModulators) {
-    NodeId nodeId = _getVajramExecutionGraph(vajramID);
+    NodeId nodeId = getNodeId(vajramID);
     VajramDefinition vajramDefinition = vajramDefinitions.get(vajramID);
     MainLogicDefinition<Object> mainLogicDefinition =
         nodeDefinitionRegistry.get(nodeId).getMainLogicDefinition();
@@ -133,12 +174,12 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     List<MainLogicDecoratorConfig> mainLogicDecoratorConfigList = new ArrayList<>();
     for (InputModulatorConfig inputModulatorConfig : inputModulators) {
       Predicate<LogicExecutionContext> biFunction =
-          (nodeExecutionContext) -> {
+          logicExecutionContext -> {
             return vajram.getInputDefinitions().stream()
                     .filter(inputDefinition -> inputDefinition instanceof Input<?>)
                     .map(inputDefinition -> (Input<?>) inputDefinition)
                     .anyMatch(Input::needsModulation)
-                && inputModulatorConfig.shouldModulate().test(nodeExecutionContext);
+                && inputModulatorConfig.shouldModulate().test(logicExecutionContext);
           };
       mainLogicDecoratorConfigList.add(
           new MainLogicDecoratorConfig(
@@ -245,7 +286,8 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
             nodeId.value(),
             vajramLogicMainLogicDefinition.nodeLogicId(),
             depNameToProviderNode,
-            inputResolverCreationResult.resolverDefinitions());
+            inputResolverCreationResult.resolverDefinitions(),
+            inputResolverCreationResult.multiResolver());
     return nodeDefinition.nodeId();
   }
 
@@ -259,60 +301,181 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
     List<InputResolverDefinition> inputResolvers =
         new ArrayList<>(vajramDefinition.getInputResolverDefinitions());
 
-    ImmutableList<ResolverDefinition> resolverDefinitions =
+    ImmutableMap<ResolverDefinition, InputResolverDefinition> resolversByResolverDefs =
         inputResolvers.stream()
-            .map(
-                inputResolverDefinition -> {
-                  String dependencyName =
-                      inputResolverDefinition.resolutionTarget().dependencyName();
-                  ImmutableSet<String> resolvedInputNames =
-                      inputResolverDefinition.resolutionTarget().inputNames();
-                  ImmutableSet<String> sources = inputResolverDefinition.sources();
-                  ImmutableCollection<VajramInputDefinition> requiredInputs =
-                      inputDefinitions.stream()
-                          .filter(def -> sources.contains(def.name()))
-                          .collect(toImmutableList());
-                  ResolverLogicDefinition inputResolverNode =
-                      logicRegistryDecorator.newResolverLogic(
-                          vajramId.vajramId(),
-                          "%s:dep(%s):inputResolver(%s)"
-                              .formatted(
-                                  vajramId, dependencyName, String.join(",", resolvedInputNames)),
-                          sources,
-                          inputValues -> {
-                            validateMandatory(vajramId, inputValues, requiredInputs);
-                            DependencyCommand<Inputs> dependencyCommand;
-                            try {
-                              if (inputResolverDefinition instanceof InputResolver inputResolver) {
-                                dependencyCommand =
-                                    inputResolver.resolve(
-                                        dependencyName, resolvedInputNames, inputValues);
-                              } else {
-                                dependencyCommand =
-                                    vajram.resolveInputOfDependency(
-                                        dependencyName, resolvedInputNames, inputValues);
-                              }
-                            } catch (Throwable t) {
-                              dependencyCommand =
-                                  skipExecution(
-                                      "Resolver threw exception: %s"
-                                          .formatted(getStackTraceAsString(t)));
-                            }
+            .collect(
+                toImmutableMap(
+                    inputResolverDefinition -> {
+                      String dependencyName =
+                          inputResolverDefinition.resolutionTarget().dependencyName();
+                      ImmutableSet<String> resolvedInputNames =
+                          inputResolverDefinition.resolutionTarget().inputNames();
+                      ImmutableSet<String> sources = inputResolverDefinition.sources();
+                      ImmutableCollection<VajramInputDefinition> requiredInputs =
+                          inputDefinitions.stream()
+                              .filter(def -> sources.contains(def.name()))
+                              .collect(toImmutableList());
+                      ResolverLogicDefinition inputResolverNode =
+                          logicRegistryDecorator.newResolverLogic(
+                              vajramId.vajramId(),
+                              "%s:dep(%s):inputResolver(%s)"
+                                  .formatted(
+                                      vajramId,
+                                      dependencyName,
+                                      String.join(",", resolvedInputNames)),
+                              sources,
+                              inputValues -> {
+                                validateMandatory(vajramId, inputValues, requiredInputs);
+                                DependencyCommand<Inputs> dependencyCommand;
+                                try {
+                                  if (inputResolverDefinition
+                                      instanceof SimpleInputResolver inputResolver) {
+                                    ResolutionResult resolutionResult =
+                                        multiResolve(
+                                            List.of(
+                                                new ResolutionRequest(
+                                                    dependencyName, resolvedInputNames)),
+                                            ImmutableMap.of(
+                                                dependencyName, ImmutableList.of(inputResolver)),
+                                            inputValues);
+                                    if (resolutionResult
+                                        .skippedDependencies()
+                                        .containsKey(dependencyName)) {
+                                      dependencyCommand =
+                                          resolutionResult
+                                              .skippedDependencies()
+                                              .get(dependencyName);
+                                    } else {
+                                      dependencyCommand =
+                                          toDependencyCommand(
+                                              resolutionResult
+                                                  .results()
+                                                  .values()
+                                                  .iterator()
+                                                  .next());
+                                    }
 
-                            if (dependencyCommand.shouldSkip()) {
-                              return ResolverCommand.skip(dependencyCommand.doc());
-                            }
-                            return ResolverCommand.multiExecuteWith(
-                                dependencyCommand.inputs().stream()
-                                    .filter(Optional::isPresent)
-                                    .map(Optional::get)
-                                    .collect(toImmutableList()));
-                          });
-                  return new ResolverDefinition(
-                      inputResolverNode.nodeLogicId(), sources, dependencyName, resolvedInputNames);
-                })
-            .collect(toImmutableList());
-    return new InputResolverCreationResult(resolverDefinitions);
+                                  } else if (inputResolverDefinition
+                                      instanceof InputResolver inputResolver) {
+                                    dependencyCommand =
+                                        inputResolver.resolve(
+                                            dependencyName, resolvedInputNames, inputValues);
+                                  } else {
+                                    dependencyCommand =
+                                        vajram.resolveInputOfDependency(
+                                            dependencyName, resolvedInputNames, inputValues);
+                                  }
+                                } catch (Throwable t) {
+                                  dependencyCommand =
+                                      skipExecution(
+                                          "Resolver threw exception: %s"
+                                              .formatted(getStackTraceAsString(t)));
+                                }
+                                return toResolverCommand(dependencyCommand);
+                              });
+                      return new ResolverDefinition(
+                          inputResolverNode.nodeLogicId(),
+                          sources,
+                          dependencyName,
+                          resolvedInputNames);
+                    },
+                    identity()));
+    MultiResolverDefinition multiResolverDefinition =
+        logicRegistryDecorator.newMultiResolver(
+            vajramId.vajramId(),
+            vajramId.vajramId() + ":multiResolver",
+            inputDefinitions.stream().map(VajramInputDefinition::name).collect(toImmutableSet()),
+            (resolutionRequests, inputs) -> {
+              Set<ResolverDefinition> allResolverDefs =
+                  resolutionRequests.stream()
+                      .map(DependencyResolutionRequest::resolverDefinitions)
+                      .flatMap(Collection::stream)
+                      .collect(Collectors.toSet());
+              Map<String, List<ResolverDefinition>> simpleResolverDefsByDep = new HashMap<>();
+              List<ResolverDefinition> complexResolverDefs = new ArrayList<>();
+              for (ResolverDefinition resolverDefinition : allResolverDefs) {
+                if (resolversByResolverDefs.get(resolverDefinition)
+                    instanceof SimpleInputResolver) {
+                  simpleResolverDefsByDep
+                      .computeIfAbsent(resolverDefinition.dependencyName(), k -> new ArrayList<>())
+                      .add(resolverDefinition);
+                } else {
+                  complexResolverDefs.add(resolverDefinition);
+                }
+              }
+              ResolutionResult simpleResolutions =
+                  multiResolve(
+                      simpleResolverDefsByDep.entrySet().stream()
+                          .map(
+                              entry ->
+                                  new ResolutionRequest(
+                                      entry.getKey(),
+                                      entry.getValue().stream()
+                                          .map(ResolverDefinition::resolvedInputNames)
+                                          .flatMap(Collection::stream)
+                                          .collect(toImmutableSet())))
+                          .toList(),
+                      simpleResolverDefsByDep.entrySet().stream()
+                          .collect(
+                              toMap(
+                                  Entry::getKey,
+                                  e ->
+                                      e.getValue().stream()
+                                          .map(resolversByResolverDefs::get)
+                                          .map(ird -> (SimpleInputResolver<?, ?, ?, ?>) ird)
+                                          .toList())),
+                      inputs);
+              Map<String, List<Map<String, Object>>> results = simpleResolutions.results();
+              Map<String, DependencyCommand<Inputs>> skippedDependencies =
+                  simpleResolutions.skippedDependencies();
+
+              Map<String, ResolverCommand> resolverCommands = new LinkedHashMap<>();
+              for (ResolverDefinition resolverDef : complexResolverDefs) {
+                String dependencyName = resolverDef.dependencyName();
+                if (skippedDependencies.containsKey(dependencyName)) {
+                  continue;
+                }
+                ImmutableSet<String> resolvables = resolverDef.resolvedInputNames();
+                DependencyCommand<Inputs> command;
+                if (resolversByResolverDefs.get(resolverDef)
+                    instanceof InputResolver inputResolver) {
+                  command = inputResolver.resolve(dependencyName, resolvables, inputs);
+                } else {
+                  command = vajram.resolveInputOfDependency(dependencyName, resolvables, inputs);
+                }
+                if (command.shouldSkip()) {
+                  skippedDependencies.put(dependencyName, command);
+                  results.remove(dependencyName);
+                } else {
+                  collectDepInputs(
+                      results.computeIfAbsent(dependencyName, _k -> new ArrayList<>()),
+                      null,
+                      command);
+                }
+              }
+              results.forEach(
+                  (key, value) ->
+                      resolverCommands.put(key, toResolverCommand(toDependencyCommand(value))));
+              skippedDependencies.forEach(
+                  (depName, command) -> {
+                    resolverCommands.put(depName, ResolverCommand.skip(command.doc()));
+                  });
+              return ImmutableMap.copyOf(resolverCommands);
+            });
+    return new InputResolverCreationResult(
+        ImmutableList.copyOf(resolversByResolverDefs.keySet()),
+        multiResolverDefinition.nodeLogicId());
+  }
+
+  private static ResolverCommand toResolverCommand(DependencyCommand<Inputs> dependencyCommand) {
+    if (dependencyCommand.shouldSkip()) {
+      return ResolverCommand.skip(dependencyCommand.doc());
+    }
+    return multiExecuteWith(
+        dependencyCommand.inputs().stream()
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .collect(toImmutableList()));
   }
 
   private void validateMandatory(
@@ -417,7 +580,7 @@ public final class VajramNodeGraph implements VajramExecutableGraph {
   }
 
   private record InputResolverCreationResult(
-      ImmutableList<ResolverDefinition> resolverDefinitions) {}
+      ImmutableList<ResolverDefinition> resolverDefinitions, NodeLogicId multiResolver) {}
 
   public Optional<VajramDefinition> getVajramDefinition(VajramID vajramId) {
     return Optional.ofNullable(vajramDefinitions.get(vajramId));

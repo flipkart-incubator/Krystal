@@ -6,6 +6,8 @@ import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder.add;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderRequest.splitSum1_n;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderRequest.splitSum2_n;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,13 +20,17 @@ import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutionReport;
 import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
+import com.flipkart.krystal.krystex.node.DependantChain;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
+import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
 import com.flipkart.krystal.krystex.node.KrystalNodeExecutorMetrics;
+import com.flipkart.krystal.krystex.node.NodeExecutionConfig;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderTest.RequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -55,31 +61,36 @@ class SplitAdderTest {
     CompletableFuture<Integer> future;
     NodeExecutionReport nodeExecutionReport = new DefaultNodeExecutionReport(Clock.systemUTC());
     MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(nodeExecutionReport);
+    VajramNodeGraph graph = this.graph.build();
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-        graph
-            .build()
-            .createExecutor(
-                new RequestContext(""),
-                ImmutableMap.of(
-                    mainLogicExecReporter.decoratorType(),
-                    List.of(
-                        new MainLogicDecoratorConfig(
-                            mainLogicExecReporter.decoratorType(),
-                            logicExecutionContext -> true,
-                            logicExecutionContext -> mainLogicExecReporter.decoratorType(),
-                            decoratorContext -> mainLogicExecReporter))))) {
+        graph.createExecutor(
+            new RequestContext("chainAdderTest"),
+            KrystalNodeExecutorConfig.builder()
+                .requestScopedLogicDecoratorConfigs(
+                    ImmutableMap.of(
+                        mainLogicExecReporter.decoratorType(),
+                        List.of(
+                            new MainLogicDecoratorConfig(
+                                mainLogicExecReporter.decoratorType(),
+                                logicExecutionContext -> true,
+                                logicExecutionContext -> mainLogicExecReporter.decoratorType(),
+                                decoratorContext -> mainLogicExecReporter))))
+                // Tests whether instasnce level disabled dependant chains is working
+                .disabledDependantChains(disabledDepChains(graph))
+                .build())) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
-    assertThat(future.get()).isEqualTo(55);
+    Integer result = future.get();
     System.out.println(
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
+    assertThat(result).isEqualTo(55);
   }
 
   @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
-    VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();
+    VajramNodeGraph graph = this.graph.maxParallelismPerCore(0.5).build();
     long javaNativeTimeNs = javaMethodBenchmark(this::splitAdd, loopCount);
     long javaFuturesTimeNs = javaFuturesBenchmark(this::splitAddAsync, loopCount);
     //noinspection unchecked
@@ -91,7 +102,11 @@ class SplitAdderTest {
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-          graph.createExecutor(new RequestContext(""))) {
+          graph.createExecutor(
+              new RequestContext("chainAdderTest"),
+              KrystalNodeExecutorConfig.builder()
+                  .disabledDependantChains(disabledDepChains(graph))
+                  .build())) {
         metrics[value] =
             ((KrystalNodeExecutor) krystexVajramExecutor.getKrystalExecutor())
                 .getKrystalNodeMetrics();
@@ -118,13 +133,15 @@ class SplitAdderTest {
      *    maxParallelismPerCore = 0.5
      *    Processor: 2.6 GHz 6-Core Intel Core i7 (with hyperthreading - 12 virtual cores)
      * Best Benchmark result:
-     *    platform overhead = ~300 µs per request
+     *    platform overhead = ~641 µs per request
      *    maxPoolSize = 6
-     *    maxActiveLeasesPerObject: 4114
-     *    peakAvgActiveLeasesPerObject: 4110.5
-     *    Avg. time to Enqueue vajrams: 7,289 ns
-     *    Avg. time to execute vajrams: 358,405 ns
-     *    Throughput executions/sec: 2900
+     *    maxActiveLeasesPerObject: 8094
+     *    peakAvgActiveLeasesPerObject: 8091.67
+     *    Avg. time to Enqueue vajrams: 13,534 ns
+     *    Avg. time to execute vajrams: 643,995 ns
+     *    Throughput executions/sec: 1562
+     *    CommandsQueuedCount: 150,000
+     *    CommandQueueBypassedCount: 9,650,000
      */
     printStats(
         loopCount,
@@ -149,7 +166,7 @@ class SplitAdderTest {
                             .map(integer -> integer + multiplier * 10)
                             .toList()))
                 .build(),
-        "chainAdderTest" + multiplier);
+        NodeExecutionConfig.builder().executionId(String.valueOf(multiplier)).build());
   }
 
   private void splitAdd(Integer value) {
@@ -200,5 +217,73 @@ class SplitAdderTest {
     Builder builder = VajramNodeGraph.builder();
     Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
     return builder;
+  }
+
+  private static ImmutableSet<DependantChain> disabledDepChains(VajramNodeGraph graph) {
+    return ImmutableSet.of(
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum1_n, splitSum1_n, splitSum1_n, splitSum1_n, splitSum1_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum1_n, splitSum1_n, splitSum1_n, splitSum1_n, splitSum2_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum1_n, splitSum1_n, splitSum1_n, splitSum2_n, splitSum1_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum1_n, splitSum1_n, splitSum1_n, splitSum2_n, splitSum2_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum1_n, splitSum1_n, splitSum2_n, splitSum1_n, splitSum1_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum1_n, splitSum1_n, splitSum2_n, splitSum1_n, splitSum2_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum1_n, splitSum1_n, splitSum2_n, splitSum2_n, splitSum1_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum1_n, splitSum1_n, splitSum2_n, splitSum2_n, splitSum2_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum1_n, splitSum2_n, splitSum1_n, splitSum1_n, splitSum1_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum1_n, splitSum2_n, splitSum1_n, splitSum1_n, splitSum2_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum1_n, splitSum2_n, splitSum1_n, splitSum2_n, splitSum1_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum1_n, splitSum2_n, splitSum1_n, splitSum2_n, splitSum2_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum1_n, splitSum2_n, splitSum2_n, splitSum1_n, splitSum1_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum1_n, splitSum2_n, splitSum2_n, splitSum1_n, splitSum2_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum1_n, splitSum2_n, splitSum2_n, splitSum2_n, splitSum1_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum1_n, splitSum2_n, splitSum2_n, splitSum2_n, splitSum2_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum2_n, splitSum1_n, splitSum1_n, splitSum1_n, splitSum1_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum2_n, splitSum1_n, splitSum1_n, splitSum1_n, splitSum2_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum2_n, splitSum1_n, splitSum1_n, splitSum2_n, splitSum1_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum2_n, splitSum1_n, splitSum1_n, splitSum2_n, splitSum2_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum2_n, splitSum1_n, splitSum2_n, splitSum1_n, splitSum1_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum2_n, splitSum1_n, splitSum2_n, splitSum1_n, splitSum2_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum2_n, splitSum1_n, splitSum2_n, splitSum2_n, splitSum1_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum2_n, splitSum1_n, splitSum2_n, splitSum2_n, splitSum2_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum2_n, splitSum2_n, splitSum1_n, splitSum1_n, splitSum1_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum2_n, splitSum2_n, splitSum1_n, splitSum1_n, splitSum2_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum2_n, splitSum2_n, splitSum1_n, splitSum2_n, splitSum1_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum2_n, splitSum2_n, splitSum1_n, splitSum2_n, splitSum2_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum2_n, splitSum2_n, splitSum2_n, splitSum1_n, splitSum1_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum2_n, splitSum2_n, splitSum2_n, splitSum1_n, splitSum2_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum2_n, splitSum2_n, splitSum2_n, splitSum2_n, splitSum1_n),
+        graph.computeDependantChain(
+            SplitAdder.ID, splitSum2_n, splitSum2_n, splitSum2_n, splitSum2_n, splitSum2_n));
   }
 }

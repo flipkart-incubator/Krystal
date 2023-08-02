@@ -6,10 +6,12 @@ import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.ResolverLogic;
-import com.flipkart.krystal.krystex.ResolverLogicDefinition;
 import com.flipkart.krystal.krystex.node.NodeId;
 import com.flipkart.krystal.krystex.node.NodeLogicId;
+import com.flipkart.krystal.krystex.resolution.MultiResolver;
+import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
+import com.flipkart.krystal.krystex.resolution.ResolverLogic;
+import com.flipkart.krystal.krystex.resolution.ResolverLogicDefinition;
 import com.google.common.collect.ImmutableMap;
 import java.util.Set;
 
@@ -21,6 +23,15 @@ public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
         new ResolverLogicDefinition(
             new NodeLogicId(new NodeId(nodeId), nodeLogicId), inputs, logic, ImmutableMap.of());
     delegate.addResolver(def);
+    return def;
+  }
+
+  public <T> MultiResolverDefinition newMultiResolver(
+      String nodeId, String nodeLogicId, Set<String> inputs, MultiResolver logic) {
+    MultiResolverDefinition def =
+        new MultiResolverDefinition(
+            new NodeLogicId(new NodeId(nodeId), nodeLogicId), inputs, logic, ImmutableMap.of());
+    delegate.addMultiResolver(def);
     return def;
   }
 

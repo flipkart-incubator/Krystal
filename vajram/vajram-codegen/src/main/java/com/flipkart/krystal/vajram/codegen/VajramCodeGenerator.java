@@ -1223,8 +1223,9 @@ public class VajramCodeGenerator {
       TypeAndName javaType = getTypeName(abstractInput.toDataType());
       ClassName vajramClassName = ClassName.get(packageName, vajramName);
 
+      String inputNameFieldName = inputJavaName + INPUT_NAME_SUFFIX;
       FieldSpec.Builder inputNameField =
-          FieldSpec.builder(String.class, inputJavaName + INPUT_NAME_SUFFIX)
+          FieldSpec.builder(String.class, inputNameFieldName)
               .initializer("\"$L\"", abstractInput.getName());
 
       FieldSpec.Builder inputSpecField;
@@ -1240,7 +1241,7 @@ public class VajramCodeGenerator {
                 .initializer(
                     "new $T<>($L, $T.class, $T.class)",
                     VajramDependencyTypeSpec.class,
-                    inputJavaName + INPUT_NAME_SUFFIX,
+                    inputNameFieldName,
                     vajramClassName,
                     ClassName.bestGuess(vajramDepDef.getVajramClass()));
 
@@ -1255,7 +1256,7 @@ public class VajramCodeGenerator {
                 .initializer(
                     "new $T<>($L, $T.class)",
                     VajramInputTypeSpec.class,
-                    inputJavaName + INPUT_NAME_SUFFIX,
+                    inputNameFieldName,
                     vajramClassName);
       }
       inputNameFields.add(inputNameField.addModifiers(STATIC, FINAL));

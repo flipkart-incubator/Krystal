@@ -1,24 +1,35 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2;
 
+import static com.flipkart.krystal.data.ValueOrError.valueOrError;
+import static com.flipkart.krystal.vajram.inputs.SingleExecute.executeWith;
 import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.dep;
-import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.fanout;
 import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.resolve;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.friendIds_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.friendIds_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.friendInfos_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.userId_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.userId_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Vajram.ID;
 import static java.util.stream.Collectors.joining;
 
+import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
+import com.flipkart.krystal.vajram.inputs.DependencyCommand;
+import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
+import com.flipkart.krystal.vajram.inputs.resolution.AbstractInputResolver;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2InputUtil.HelloFriendsV2Inputs;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
 import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -29,13 +40,35 @@ public abstract class HelloFriendsV2Vajram extends ComputeVajram<String> {
 
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
-    return resolve(
-        dep(friendIds_s, depInput(FriendsServiceRequest.userId_s).usingAsIs(userId_s).asResolver()),
-        dep(
-            friendInfos_s,
-            fanout(TestUserServiceRequest.userId_s)
-                .using(friendIds_s)
-                .with(Optional::orElseThrow)));
+    List<InputResolver> resolvers =
+        new ArrayList<>(
+            resolve(
+                dep(
+                    friendInfos_s,
+                    fanout(TestUserServiceRequest.userId_s)
+                        .using(friendIds_s)
+                        .with(Optional::orElseThrow))));
+    /*
+     Following is not a preferred way to write resolvers by application developers.
+     But it is mentioned here because some platform code might contain resolvers
+     written in this way (for example as a result of some code generation).
+     We write the below resolver so that these kind of resolvers are also tested in the unit tests.
+    */
+    resolvers.add(
+        new AbstractInputResolver(
+            ImmutableSet.of(userId_n),
+            new QualifiedInputs(friendIds_n, FriendsServiceRequest.userId_n)) {
+          @Override
+          public DependencyCommand<Inputs> resolve(
+              String dependencyName, ImmutableSet<String> inputsToResolve, Inputs inputs) {
+            return executeWith(
+                new Inputs(
+                    ImmutableMap.of(
+                        FriendsServiceRequest.userId_n,
+                        valueOrError(() -> inputs.getInputValue(userId_n).getValueOrThrow()))));
+          }
+        });
+    return ImmutableList.copyOf(resolvers);
   }
 
   @VajramLogic
