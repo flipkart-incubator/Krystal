@@ -58,93 +58,93 @@ and then translate/compile these abstractions into Krystal native entities for r
 The [KrystalExecutor interface](src/main/java/com/flipkart/krystal/krystex/KrystalExecutor.java) is
 the only entry point for all Krystex execution requests. The default and, currently, the only
 implementation of KrystalExecutor is
-the [KrystalNodeExecutor](src/main/java/com/flipkart/krystal/krystex/node/KrystalNodeExecutor.java).
-The remaining part of this document focuses on the KrystalNodeExecutor and its internals.
+the [KryonExecutor](src/main/java/com/flipkart/krystal/krystex/kryon/KryonExecutor.java).
+The remaining part of this document focuses on the KryonExecutor and its internals.
 
-### Node
+### Kryon
 
-A node is the atomic unit of work in a krystex. It
-has [inputs](#node-input), [dependencies](#node-dependency), [resolvers](#dependency-input-resolver-logic)
+A kryon is the atomic unit of work in a krystex. It
+has [inputs](#kryon-input), [dependencies](#kryon-dependency), [resolvers](#dependency-input-resolver-logic)
 
-### NodeDefinition
+### KryonDefinition
 
-A node definition represents the definition of one unit of work in krystex and holds the following
+A kryon definition represents the definition of one unit of work in krystex and holds the following
 information
 
-* a nodeId - a unique identifier for every node. In a given KrystalNodeExecutor, there can only be
-  on instance of a node having a given nodeId.
+* a kryonId - a unique identifier for every kryon. In a given KryonExecutor, there can only be
+  on instance of a kryon having a given kryonId.
 * a reference to a stateless logic/function (the unit of work) - called
-  the [main logic](#node-main-logic) of the node
-* references to other node definitions which are [dependencies](#node-dependency) of this node
+  the [main logic](#kryon-main-logic) of the kryon
+* references to other kryon definitions which are [dependencies](#kryon-dependency) of this kryon
   definition
 * references to [resolver functions](#dependency-input-resolver-logic)
 
 As you can see, none of the above information is request-specific, since there are no references to
-inputs and outputs. For this reason, node definitions are created once and cached for the lifecycle
-of the application. And are used as templates for [Nodes](#node) which are created afresh for every
-new instance of the KrystalNodeExecutor.
+inputs and outputs. For this reason, kryon definitions are created once and cached for the lifecycle
+of the application. And are used as templates for [Kryons](#kryon) which are created afresh for every
+new instance of the KryonExecutor.
 
-### Node Main Logic
+### Kryon Main Logic
 
-Every node has exactly one function which has the responsibility of computing the output of the
-node. This called the main logic. If the main logic fails with an Exception, then the node is
+Every kryon has exactly one function which has the responsibility of computing the output of the
+kryon. This called the main logic. If the main logic fails with an Exception, then the kryon is
 considered to have failed with the same exception.
 
-### Node Input
+### Kryon Input
 
 (or just **input**)
 
-* A node can optionally declare inputs.
+* A kryon can optionally declare inputs.
 * Every input has a name which must not clash with the name of any other input
-  or [dependency](#node-dependency) of this node.
-* A node can complete execution only after values for all its
-  inputs are made available to it. Clients of the node (either via KrystalNodeExecutor or other
-  nodes
-  which [depend](#node-dependency) on this node) are expected to provide one value each for EVERY
-  input of the node - only then the node is executed. The provided values could potentially be null
-* A node can be executed multiple times with different sets of inputs.
-* All the inputs need not be provided to a node together. Different input values can be provided to
-  the node at different points in time. The node will greedily perform any intermediate operations (
-  See [resolvers](#dependency-input-resolver-logic)) that it can with the provided inputs. The node
+  or [dependency](#kryon-dependency) of this kryon.
+* A kryon can complete execution only after values for all its
+  inputs are made available to it. Clients of the kryon (either via KryonExecutor or other
+  kryons
+  which [depend](#kryon-dependency) on this kryon) are expected to provide one value each for EVERY
+  input of the kryon - only then the kryon is executed. The provided values could potentially be null
+* A kryon can be executed multiple times with different sets of inputs.
+* All the inputs need not be provided to a kryon together. Different input values can be provided to
+  the kryon at different points in time. The kryon will greedily perform any intermediate operations (
+  See [resolvers](#dependency-input-resolver-logic)) that it can with the provided inputs. The kryon
   will
-  complete execution only once values for all the inputs are provided. Till then the node will
+  complete execution only once values for all the inputs are provided. Till then the kryon will
   remain in an intermediate (semi-executed) state.
 
-### Node Dependency
+### Kryon Dependency
 
 (or just **dependency**)
 
-* Nodes can optionally declare dependencies, which are nodes on which this node depends.
+* Kryons can optionally declare dependencies, which are kryons on which this kryon depends.
 * Every dependency has a name which must not conflict with the name of any
-  other [input](#node-input) or dependency of this node.
-* A node can complete execution only after all of its dependencies have completed execution (either
+  other [input](#kryon-input) or dependency of this kryon.
+* A kryon can complete execution only after all of its dependencies have completed execution (either
   successfully, with an error, or explicitly skipped.)
 
 ### Dependency-Input resolver logic
 
 (or just **resolver**)
 
-* A resolver in a node is a function that is responsible for computing (resolving) the inputs of a
-  dependency of the node.
+* A resolver in a kryon is a function that is responsible for computing (resolving) the inputs of a
+  dependency of the kryon.
 * One resolver can resolve the inputs of exactly one dependency.
 * One resolver can resolve one or more inputs of a dependency - this might be all the inputs of a
   dependency or a subset of those inputs. In case a resolver resolves only a subset of a
   dependency's inputs, more than one resolver is needed to completely
   resolve that dependency.
-* A node which has `N` dependencies each with at least one input, must have at least `N` resolvers -
-  one for each dependency of the node.
+* A kryon which has `N` dependencies each with at least one input, must have at least `N` resolvers -
+  one for each dependency of the kryon.
 * Every input of every dependency must be resolved by exactly one resolver. In other words, all the
-  resolvers of a node must together resolve ALL the inputs of all the dependencies of the
-  node. Any input of any dependency must not be left unresolved - Krystex will wait indefinitely if
+  resolvers of a kryon must together resolve ALL the inputs of all the dependencies of the
+  kryon. Any input of any dependency must not be left unresolved - Krystex will wait indefinitely if
   this happens. It is the responsibility of the clients of krystex to perform necessary checks at
   development/build time to prevent this scenario from happening.
 
 ### Logic Decorator
 
 Logic decorators are a simple yet powerful way to extend Krystex. Krystex allows clients to define
-and plug-in decorators which wrap the main logic of nodes. In this wrapped logic, clients are free
+and plug-in decorators which wrap the main logic of kryons. In this wrapped logic, clients are free
 to add functionality to the framework. The decisions like which logic decorators should decorate
-which nodes, in which order and how a logic decorator instance is shared across hoe many nodes, etc.
+which kryons, in which order and how a logic decorator instance is shared across hoe many kryons, etc.
 are completely left to clients, making this a very powerful feature.
 
 Example use-cases include:
@@ -154,18 +154,18 @@ Example use-cases include:
 3. Implementing metric collectors
 4. Wrapping blocking operations inside a thread-pool etc.
 
-* Logic decorators can be uniquer per node, or can be shared across nodes.
+* Logic decorators can be uniquer per kryon, or can be shared across kryons.
 * Logic decorators can be request-scoped or session-scoped (last for the application lifetime.)
-* Logic decorators, unlike node logics (like resolvers and main logics) can be stateful.
+* Logic decorators, unlike kryon logics (like resolvers and main logics) can be stateful.
 
 <!--TODO-->
 
-## How KrystalNodeExecutor Works
+## How KryonExecutor Works
 
 ### Command Queue - (SingleThreadExecutor)
 
-The KrystalNodeExecutor executes all the required nodes in a single thread using the event loop
-pattern. This means that none of the resolver logics or main logics of any node are allowed to block
+The KryonExecutor executes all the required kryons in a single thread using the event loop
+pattern. This means that none of the resolver logics or main logics of any kryon are allowed to block
 for
 any amount of time. They are expected to return instantly after wrapping any long-running operation
 in a `CompletableFuture`. All long-running operations like I/O should either be performed using
@@ -190,21 +190,21 @@ The data structures are as follows:
    completed version of a `CompletedFuture`. All empty values are supposed to be represented
    by `ValueOrError#emtpty()`. krystex assumes `null`s are never returned.
 3. [`Inputs`](../krystal-common/src/main/java/com/flipkart/krystal/data/Inputs.java) - A container
-   object which can holds input and dependency values of a node.
+   object which can holds input and dependency values of a kryon.
 4. [`Results`](../krystal-common/src/main/java/com/flipkart/krystal/data/Results.java) - A container
-   object which holds the results of executing a given dependency of a node multiple times in a
+   object which holds the results of executing a given dependency of a kryon multiple times in a
    '[fanout](#dependency-fanouts)' pattern.
 
 ### Example execution
 
-Following is a logic view of a representative krystex node `N`:
+Following is a logic view of a representative krystex kryon `N`:
 
-![Krystal_Node.png](assets/Krystal_Node.png)
+![Krystal Kryon.png](assets/Krystal_Kryon.png)
 
-* Node `N` has four inputs `i1`, `i2`, `i3` and `i4`.
+* Kryon `N` has four inputs `i1`, `i2`, `i3` and `i4`.
 * It also has three dependencies `d1`,`d2`, and `d3`.
-* Dependency `d1` is on node `N1`, `d2` is on node `N2` and `d3` is again on `N1`. This means that
-  this node can call node `N1` twice.
+* Dependency `d1` is on kryon `N1`, `d2` is on kryon `N2` and `d3` is again on `N1`. This means that
+  this kryon can call kryon `N1` twice.
 * Both `N1` and `N2` have one input each.
 * `N` has three resolvers:
     * `r1` resolves the input of `d1` using inputs `i1` and `i2`.
@@ -213,22 +213,22 @@ Following is a logic view of a representative krystex node `N`:
 * The main logic has access to all the four input values and three dependency results.
 
 For the purpose of this example, let us assume `N1`, and `N2` themselves have no other dependencies.
-When we trigger the node `N` with a set of inputs (all inputs need not be provided at the same
+When we trigger the kryon `N` with a set of inputs (all inputs need not be provided at the same
 time). This is how the execution proceeds:
 
 1. Wait for `i1` and `i2` to be provided.
 2. Execute `r1` (Do not wait for `i3` and `i4`). `r1` finishes immediately since resolvers are not
    allowed to make blocking calls.
-3. Take the output of `r1` and provide it to node `N1`
+3. Take the output of `r1` and provide it to kryon `N1`
 4. `N1` has no resolvers/dependencies. Execute main logic of `N1`
 5. Wait for main logic of `N1` to finish.
 6. Wait for `i3` to be provided.
 7. Execute `r2` with `i3` and results of `d1` (`N1`). `r2` finishes immediately.
-8. Take the output of `r2` and provide it to node `N2`
+8. Take the output of `r2` and provide it to kryon `N2`
 9. `N2` has no resolvers/dependencies. Execute main logic on `N1`. Wait for this to complete.
 10. Wait for `i4` to be provided.
 11. Execute `r3` with `i3`, `i4` and the results of `d2`(`N2`). `r3` finishes immediately.
-12. Take output of `r3` and provide it to node `N1`.
+12. Take output of `r3` and provide it to kryon `N1`.
 13. `N1` has no resolvers/dependencies. Execute main logic of `N1` with the provided input. Wait for
     this to complete.
 14. Execute the main logic of `N`

@@ -7,11 +7,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 public interface VajramExecutor<C extends ApplicationRequestContext> extends AutoCloseable {
-  <T> CompletableFuture<T> execute(
-      VajramID vajramId, Function<C, VajramRequest> vajramInputProviders);
 
   <T> CompletableFuture<T> execute(
-      VajramID vajramId, Function<C, VajramRequest> vajramInputProviders, String requestId);
+      VajramID vajramId, Function<C, VajramRequest> vajramInputProviders);
 
   /** Flushes any pending requests */
   void flush();

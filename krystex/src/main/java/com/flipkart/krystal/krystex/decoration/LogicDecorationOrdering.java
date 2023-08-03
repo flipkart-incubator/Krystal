@@ -1,6 +1,8 @@
 package com.flipkart.krystal.krystex.decoration;
 
 import static java.util.Comparator.comparingInt;
+import static java.util.Optional.ofNullable;
+import static lombok.EqualsAndHashCode.CacheStrategy.LAZY;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -8,9 +10,13 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import lombok.EqualsAndHashCode;
 
+@EqualsAndHashCode(cacheStrategy = LAZY)
 public class LogicDecorationOrdering {
+
+  private static final LogicDecorationOrdering EMPTY =
+      new LogicDecorationOrdering(ImmutableSet.of());
 
   private final ImmutableMap<String, Integer> decoratorTypeIndices;
 
@@ -25,8 +31,10 @@ public class LogicDecorationOrdering {
 
   public Comparator<LogicDecorator<?, ?>> decorationOrder() {
     return comparingInt(
-        key ->
-            Optional.ofNullable(decoratorTypeIndices.get(key.decoratorType()))
-                .orElse(Integer.MIN_VALUE));
+        key -> ofNullable(decoratorTypeIndices.get(key.decoratorType())).orElse(Integer.MIN_VALUE));
+  }
+
+  public static LogicDecorationOrdering none() {
+    return EMPTY;
   }
 }
