@@ -1,0 +1,8 @@
+import org.checkerframework.checker.nullness.qual.PolyNull;
+
+package com.google.common.collect;
+
+class ImmutableMap<K, V>{
+
+  @PolyNull V getOrDefault(Object key, @PolyNull V defaultValue);
+}

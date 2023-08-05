@@ -10,7 +10,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 public record UnmodulatedInput<
         InputsNeedingModulation extends InputValuesAdaptor,
         CommonInputs extends InputValuesAdaptor>(
-    @NonNull InputsNeedingModulation inputsNeedingModulation, @NonNull CommonInputs commonInputs)
+    InputsNeedingModulation inputsNeedingModulation, CommonInputs commonInputs)
     implements InputValuesAdaptor {
 
   @Override

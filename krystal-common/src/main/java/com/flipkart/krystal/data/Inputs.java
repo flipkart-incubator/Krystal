@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.EqualsAndHashCode;
 import lombok.EqualsAndHashCode.CacheStrategy;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @EqualsAndHashCode(callSuper = false, cacheStrategy = CacheStrategy.LAZY)
 public final class Inputs {
@@ -33,7 +34,7 @@ public final class Inputs {
     return this.<T>getInputValue(inputName).getValueOrThrow().orElseThrow();
   }
 
-  public <T> T getInputValueOrDefault(String inputName, T defaultValue) {
+  public <T> @Nullable T getInputValueOrDefault(String inputName, @Nullable T defaultValue) {
     return this.<T>getInputValueOpt(inputName).orElse(defaultValue);
   }
 

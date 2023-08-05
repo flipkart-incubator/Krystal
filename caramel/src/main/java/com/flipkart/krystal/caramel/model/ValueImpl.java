@@ -1,16 +1,19 @@
 package com.flipkart.krystal.caramel.model;
 
 import java.util.Optional;
+import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
+import org.checkerframework.checker.initialization.qual.UnderInitialization;
+import org.checkerframework.checker.initialization.qual.UnknownInitialization;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 public final class ValueImpl<T, P extends WorkflowPayload> implements Value<T, P> {
 
   private final CaramelField<T, P> field;
-  private final P payload;
+  @NotOnlyInitialized private final P payload;
 
   @MonotonicNonNull private T value;
 
-  public ValueImpl(CaramelField<T, P> field, P payload) {
+  public ValueImpl(CaramelField<T, P> field, @UnknownInitialization P payload) {
     this.field = field;
     this.payload = payload;
   }
@@ -20,7 +23,9 @@ public final class ValueImpl<T, P extends WorkflowPayload> implements Value<T, P
     if (this.value != null) {
       throw new ImmutabilityViolationException(this);
     }
-    this.value = value;
+    if (value != null) {
+      this.value = value;
+    }
   }
 
   @Override
@@ -39,7 +44,7 @@ public final class ValueImpl<T, P extends WorkflowPayload> implements Value<T, P
   }
 
   @Override
-  public P payload() {
+  public @UnknownInitialization P payload() {
     return payload;
   }
 }

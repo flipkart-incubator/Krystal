@@ -2,8 +2,11 @@ package com.flipkart.krystal.vajram.das;
 
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -29,10 +32,10 @@ public final class VajramIndex {
 
   public <T extends DataAccessSpec> AccessSpecMatchingResult<T> getVajrams(T accessSpec) {
     //noinspection unchecked
-    return ((AccessSpecIndex<T>) accessSpecIndices.get(accessSpec.getClass()))
-        .getVajrams(accessSpec);
+    return Optional.ofNullable((AccessSpecIndex<T>) accessSpecIndices.get(accessSpec.getClass()))
+        .map(index -> index.getVajrams(accessSpec)).orElse(new AccessSpecMatchingResult<>(
+            ImmutableMap.of(),ImmutableMap.of(), ImmutableList.of(accessSpec)));
   }
-
   public void add(Vajram vajram) {
     accessSpecIndices.values().forEach(accessSpecIndex -> accessSpecIndex.add(vajram));
   }

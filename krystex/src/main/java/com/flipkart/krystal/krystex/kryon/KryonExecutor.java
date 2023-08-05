@@ -40,14 +40,15 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Default implementation of Krystal executor which */
 @Slf4j
@@ -142,7 +143,10 @@ public final class KryonExecutor implements KrystalExecutor {
                                                   instanceId, logicExecutionContext)));
                       mainLogicDecorator.executeCommand(
                           new InitiateActiveDepChains(
-                              kryonId, ImmutableSet.copyOf(dependantChainsPerKryon.get(kryonId))));
+                              kryonId,
+                              ImmutableSet.copyOf(
+                                  dependantChainsPerKryon.getOrDefault(
+                                      kryonId, ImmutableSet.of()))));
                       decorators.putIfAbsent(decoratorType, mainLogicDecorator);
                     }
                   });
@@ -151,7 +155,7 @@ public final class KryonExecutor implements KrystalExecutor {
   }
 
   @Override
-  public <T> CompletableFuture<T> executeKryon(
+  public <T> CompletableFuture<@Nullable T> executeKryon(
       KryonId kryonId, Inputs inputs, KryonExecutionConfig executionConfig) {
     if (closed) {
       throw new RejectedExecutionException("KryonExecutor is already closed");
@@ -164,14 +168,15 @@ public final class KryonExecutor implements KrystalExecutor {
     RequestId requestId =
         preferredReqGenerator.newRequest("%s:%s".formatted(instanceId, executionId));
 
-    //noinspection unchecked
-    return (CompletableFuture<T>)
-        enqueueCommand( // Perform all datastructure manipulations in the command queue to avoid
-                // multi-thread access
-                () -> {
+    //noinspection RedundantCast: This is to avoid nullChecker failing compilation.
+    return enqueueCommand(
+            // Perform all datastructure manipulations in the command queue to avoid multi-thread
+            // access
+            (Supplier<CompletableFuture<@Nullable T>>)
+                (() -> {
                   createDependencyKryons(
                       kryonId, kryonDefinitionRegistry.getDependantChainsStart(), executionConfig);
-                  CompletableFuture<Object> future = new CompletableFuture<>();
+                  CompletableFuture<@Nullable Object> future = new CompletableFuture<>();
                   if (allExecutions.containsKey(requestId)) {
                     future.completeExceptionally(
                         new IllegalArgumentException(
@@ -183,9 +188,10 @@ public final class KryonExecutor implements KrystalExecutor {
                         new KryonExecution(kryonId, requestId, inputs, executionConfig, future));
                     unFlushedExecutions.add(requestId);
                   }
-                  return future;
-                })
-            .thenCompose(identity());
+                  //noinspection unchecked
+                  return (CompletableFuture<@Nullable T>) future;
+                }))
+        .thenCompose(identity());
   }
 
   private void createDependencyKryons(
@@ -280,7 +286,8 @@ public final class KryonExecutor implements KrystalExecutor {
     }
     if (kryonCommand instanceof Flush flush) {
       kryonRegistry.get(flush.kryonId()).executeCommand(flush);
-      return completedFuture(null);
+      //noinspection unchecked
+      return (CompletableFuture<R>) completedFuture(FlushResponse.getInstance());
     } else {
       @SuppressWarnings("unchecked")
       Kryon<KryonCommand, R> kryon =
@@ -303,7 +310,7 @@ public final class KryonExecutor implements KrystalExecutor {
           if (isGranular()) {
             unFlushedExecutions.forEach(
                 requestId -> {
-                  KryonExecution kryonExecution = allExecutions.get(requestId);
+                  KryonExecution kryonExecution = getKryonExecution(requestId);
                   KryonId kryonId = kryonExecution.kryonId();
                   if (kryonExecution.future().isDone()) {
                     return;
@@ -315,7 +322,7 @@ public final class KryonExecutor implements KrystalExecutor {
             submitBatch(unFlushedExecutions);
           }
           unFlushedExecutions.stream()
-              .map(requestId -> allExecutions.get(requestId).kryonId())
+              .map(requestId -> getKryonExecution(requestId).kryonId())
               .distinct()
               .forEach(
                   kryonId ->
@@ -328,8 +335,7 @@ public final class KryonExecutor implements KrystalExecutor {
     depChainsDisabledInAllExecutions.clear();
     List<ImmutableSet<DependantChain>> disabledDependantChainsPerExecution =
         unFlushedExecutions.stream()
-            .map(allExecutions::get)
-            .filter(Objects::nonNull)
+            .map(this::getKryonExecution)
             .map(KryonExecution::executionConfig)
             .map(KryonExecutionConfig::disabledDependantChains)
             .toList();
@@ -346,12 +352,20 @@ public final class KryonExecutor implements KrystalExecutor {
     depChainsDisabledInAllExecutions.addAll(executorConfig.disabledDependantChains());
   }
 
+  private KryonExecution getKryonExecution(RequestId requestId) {
+    KryonExecution kryonExecution = allExecutions.get(requestId);
+    if (kryonExecution == null) {
+      throw new AssertionError("No kryon execution found for requestId " + requestId);
+    }
+    return kryonExecution;
+  }
+
   private void submitGranular(
       RequestId requestId,
       KryonExecution kryonExecution,
       KryonId kryonId,
       KryonDefinition kryonDefinition) {
-    CompletableFuture<Object> submissionResult =
+    CompletableFuture<@Nullable Object> submissionResult =
         this.<GranuleResponse>executeCommand(
                 new ForwardGranule(
                     kryonId,
@@ -375,7 +389,7 @@ public final class KryonExecutor implements KrystalExecutor {
 
   private void submitBatch(Set<RequestId> unFlushedRequests) {
     unFlushedRequests.stream()
-        .map(allExecutions::get)
+        .map(this::getKryonExecution)
         .collect(groupingBy(KryonExecution::kryonId))
         .forEach(
             (kryonId, kryonResults) -> {
@@ -409,10 +423,7 @@ public final class KryonExecutor implements KrystalExecutor {
                         }
                       });
               propagateCancellation(
-                  allOf(
-                      kryonResults.stream()
-                          .map(KryonExecution::future)
-                          .toArray(CompletableFuture[]::new)),
+                  allOf(kryonResults.stream().map(getFuture()).toArray(CompletableFuture[]::new)),
                   batchResponseFuture);
             });
   }
@@ -436,16 +447,20 @@ public final class KryonExecutor implements KrystalExecutor {
         () ->
             allOf(
                     allExecutions.values().stream()
-                        .map(KryonExecution::future)
+                        .map(getFuture())
                         .toArray(CompletableFuture[]::new))
                 .whenComplete((unused, throwable) -> commandQueueLease.close()));
   }
 
-  private CompletableFuture<Void> enqueueRunnable(Runnable command) {
-    return enqueueCommand(
+  private static Function<KryonExecution, CompletableFuture<@Nullable Object>> getFuture() {
+    return KryonExecution::future;
+  }
+
+  private void enqueueRunnable(Runnable command) {
+    enqueueCommand(
         () -> {
           command.run();
-          return null;
+          return new Object();
         });
   }
 
@@ -463,5 +478,5 @@ public final class KryonExecutor implements KrystalExecutor {
       RequestId instanceExecutionId,
       Inputs inputs,
       KryonExecutionConfig executionConfig,
-      CompletableFuture<Object> future) {}
+      CompletableFuture<@Nullable Object> future) {}
 }

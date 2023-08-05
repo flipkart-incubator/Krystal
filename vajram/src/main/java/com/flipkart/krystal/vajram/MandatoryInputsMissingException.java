@@ -36,9 +36,10 @@ public class MandatoryInputsMissingException extends RuntimeException {
                             "%s (Cause: %s)"
                                 .formatted(
                                     s,
-                                    failedMandatoryInputs
-                                        .getOrDefault(s, new RuntimeException())
-                                        .getMessage()))
+                                    String.valueOf(
+                                        failedMandatoryInputs
+                                            .getOrDefault(s, new RuntimeException())
+                                            .getMessage())))
                     .toList()));
   }
 }

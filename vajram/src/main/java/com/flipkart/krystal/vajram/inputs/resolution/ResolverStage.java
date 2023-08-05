@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * @param <S> Source Type: The DataType of the source input being used for resolution
@@ -42,7 +43,8 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
    *     value of target data type {@code T} (no fanout)
    * @return The resultant {@link SimpleInputResolverSpec}
    */
-  public SimpleInputResolverSpec<S, T, CV, DV> with(Function<Optional<S>, T> transformer) {
+  public SimpleInputResolverSpec<S, T, CV, DV> with(
+      Function<Optional<S>, @Nullable T> transformer) {
     return new SimpleInputResolverSpec<>(
         targetInput, sourceInput, skipConditions, transformer, null);
   }

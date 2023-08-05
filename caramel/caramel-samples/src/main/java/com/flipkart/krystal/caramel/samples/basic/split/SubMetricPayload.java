@@ -5,8 +5,14 @@ import com.flipkart.krystal.caramel.model.SimpleCaramelField;
 import com.flipkart.krystal.caramel.model.Value;
 import com.flipkart.krystal.caramel.model.ValueImpl;
 import com.flipkart.krystal.caramel.samples.basic.Metric;
+import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
 
 public class SubMetricPayload implements SubMetricPayloadDefinition {
+
+  public SubMetricPayload() {
+    init = new ValueImpl<>(SubMetricFields.init, this);
+    metric = new ValueImpl<>(SubMetricFields.metric, this);
+  }
 
   public interface SubMetricFields {
     CaramelField<Metric, SubMetricPayload> init =
@@ -17,9 +23,8 @@ public class SubMetricPayload implements SubMetricPayloadDefinition {
             "metric", SubMetricPayload.class, SubMetricPayload::init, SubMetricPayload::setInit);
   }
 
-  private final Value<Metric, SubMetricPayload> init = new ValueImpl<>(SubMetricFields.init, this);
-  private final Value<Metric, SubMetricPayload> metric =
-      new ValueImpl<>(SubMetricFields.metric, this);
+  @NotOnlyInitialized private final Value<Metric, SubMetricPayload> init;
+  @NotOnlyInitialized private final Value<Metric, SubMetricPayload> metric;
 
   @Override
   public Metric init() {

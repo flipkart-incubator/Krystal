@@ -4,8 +4,9 @@ import com.flipkart.krystal.data.Inputs;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.concurrent.CompletableFuture;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @FunctionalInterface
 public non-sealed interface MainLogic<T> extends Logic {
-  ImmutableMap<Inputs, CompletableFuture<T>> execute(ImmutableList<Inputs> inputs);
+  ImmutableMap<Inputs, CompletableFuture<@Nullable T>> execute(ImmutableList<Inputs> inputs);
 }

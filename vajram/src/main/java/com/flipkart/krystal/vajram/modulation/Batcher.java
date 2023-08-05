@@ -9,12 +9,15 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Consumer;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class Batcher<I, C> implements InputModulator<I, C> {
 
   private static final int DEFAULT_BATCH_SIZE = 1;
-  private Consumer<ImmutableList<ModulatedInput<I, C>>> modulationListener;
+  private @Nullable Consumer<ImmutableList<ModulatedInput<I, C>>> modulationListener;
   private final Map<C, List<I>> unModulatedRequests = new HashMap<>();
   private int minBatchSize = DEFAULT_BATCH_SIZE;
 
@@ -33,8 +36,11 @@ public final class Batcher<I, C> implements InputModulator<I, C> {
   }
 
   private ImmutableList<ModulatedInput<I, C>> getModulatedInputs(C commonInputs, boolean force) {
+    if (commonInputs == null) {
+      return ImmutableList.of();
+    }
     ImmutableList<I> inputsNeedingModulations =
-        ImmutableList.copyOf(unModulatedRequests.get(commonInputs));
+        ImmutableList.copyOf(unModulatedRequests.getOrDefault(commonInputs, ImmutableList.of()));
     if (force || inputsNeedingModulations.size() >= minBatchSize) {
       unModulatedRequests.put(commonInputs, new ArrayList<>());
       return ImmutableList.of(new ModulatedInput<>(inputsNeedingModulations, commonInputs));

@@ -9,6 +9,7 @@ import static java.util.Optional.ofNullable;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
+import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.Vajram;
@@ -21,6 +22,7 @@ import com.flipkart.krystal.vajram.inputs.VajramDependencyTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +30,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputResolverUtil {
 
@@ -36,13 +39,13 @@ public final class InputResolverUtil {
       Map<String, Collection<? extends SimpleInputResolver<?, ?, ?, ?>>> resolvers,
       Inputs inputs) {
 
-    Map<String, List<Map<String, Object>>> results = new LinkedHashMap<>();
+    Map<String, List<Map<String, @Nullable Object>>> results = new LinkedHashMap<>();
     Map<String, DependencyCommand<Inputs>> skippedDependencies = new LinkedHashMap<>();
     for (ResolutionRequest resolutionRequest : resolutionRequests) {
       String dependencyName = resolutionRequest.dependencyName();
-      List<Map<String, Object>> depInputs = new ArrayList<>();
+      List<Map<String, @Nullable Object>> depInputs = new ArrayList<>();
       Collection<? extends SimpleInputResolver<?, ?, ?, ?>> depResolvers =
-          resolvers.get(dependencyName);
+          resolvers.getOrDefault(dependencyName, List.of());
       for (SimpleInputResolver<?, ?, ?, ?> simpleResolver : depResolvers) {
         String resolvable = simpleResolver.getResolverSpec().getTargetInput().name();
         DependencyCommand<?> command =
@@ -67,7 +70,9 @@ public final class InputResolverUtil {
   }
 
   public static void collectDepInputs(
-      List<Map<String, Object>> depInputs, String resolvable, DependencyCommand<?> command) {
+      List<Map<String, @Nullable Object>> depInputs,
+      String resolvable,
+      DependencyCommand<?> command) {
     if (command.shouldSkip()) {
       return;
     }
@@ -81,21 +86,21 @@ public final class InputResolverUtil {
       if (depInputs.isEmpty()) {
         objects.forEach(
             o -> {
-              LinkedHashMap<String, Object> e = new LinkedHashMap<>();
+              LinkedHashMap<String, @Nullable Object> e = new LinkedHashMap<>();
               depInputs.add(e);
               handleResolverReturn(resolvable, o, e);
             });
       } else {
-        List<Map<String, Object>> more =
+        List<Map<String, @Nullable Object>> more =
             new ArrayList<>(depInputs.size() * objects.size() - depInputs.size());
-        for (Map<String, Object> depInput : depInputs) {
+        for (Map<String, @Nullable Object> depInput : depInputs) {
           boolean first = true;
           for (Object object : objects) {
             if (first) {
               first = false;
               handleResolverReturn(resolvable, object, depInput);
             } else {
-              LinkedHashMap<String, Object> e = new LinkedHashMap<>(depInput);
+              LinkedHashMap<String, @Nullable Object> e = new LinkedHashMap<>(depInput);
               more.add(e);
               handleResolverReturn(resolvable, object, e);
             }
@@ -107,22 +112,23 @@ public final class InputResolverUtil {
   }
 
   private static void handleResolverReturn(
-      String resolvable, Object o, Map<String, Object> valuesMap) {
+      String resolvable, @Nullable Object o, Map<String, @Nullable Object> valuesMap) {
     if (o instanceof Inputs inputs) {
-      //noinspection unchecked,rawtypes
-      valuesMap.putAll(
-          inputs.values().entrySet().stream()
-              .collect(
-                  toMap(Entry::getKey, e -> ((ValueOrError) e.getValue()).value().orElse(null))));
+      for (Entry<String, InputValue<Object>> e : inputs.values().entrySet()) {
+        //noinspection unchecked,rawtypes
+        if (valuesMap.put(e.getKey(), ((ValueOrError) e.getValue()).value().orElse(null)) != null) {
+          throw new IllegalStateException("Duplicate key");
+        }
+      }
     } else {
       valuesMap.put(resolvable, o);
     }
   }
 
   static <T> DependencyCommand<T> _resolutionHelper(
-      VajramInputTypeSpec<?, ?> sourceInput,
-      Function<? extends Optional<?>, ?> oneToOneTransformer,
-      Function<? extends Optional<?>, ? extends Collection<?>> fanoutTransformer,
+      @Nullable VajramInputTypeSpec<?, ?> sourceInput,
+      @Nullable Function<? extends Optional<?>, ?> oneToOneTransformer,
+      @Nullable Function<? extends Optional<?>, ? extends Collection<?>> fanoutTransformer,
       List<? extends SkipPredicate<?>> skipPredicates,
       Inputs inputs) {
     boolean fanout = fanoutTransformer != null;
@@ -135,8 +141,8 @@ public final class InputResolverUtil {
           Optional.of(
               inputs.getDepValue(sourceInput.name()).values().values().stream()
                   .map(ValueOrError::value)
-                  .map(o -> o.orElse(null))
-                  .filter(Objects::nonNull)
+                  .filter(Optional::isPresent)
+                  .map(Optional::get)
                   .toList());
     } else if (sourceInput != null) {
       inputValue = inputs.getInputValue(sourceInput.name()).value();
@@ -194,7 +200,7 @@ public final class InputResolverUtil {
   }
 
   public record ResolutionResult(
-      Map<String, List<Map<String, Object>>> results,
+      Map<String, List<Map<String, @Nullable Object>>> results,
       Map<String, DependencyCommand<Inputs>> skippedDependencies) {}
 
   private InputResolverUtil() {}

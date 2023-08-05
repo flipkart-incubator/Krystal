@@ -7,13 +7,13 @@ import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayload
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.initialTransformedProduct;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.isEnableValidation;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.metricNames;
+import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.metrics;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.nextProduct;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.productUpdateEvents;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.secondString;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.string;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.triggerUserId;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayload.TestPayloadFields.x1String;
-import static com.flipkart.krystal.caramel.samples.basic.TestPayload.metrics;
 import static com.flipkart.krystal.caramel.samples.basic.classification.ProductClassification2WorkflowBuilder.classifyProduct2;
 import static com.flipkart.krystal.caramel.samples.basic.classification.ProductClassificationWorkflowBuilder.classifyProduct;
 import static com.flipkart.krystal.caramel.samples.basic.split.SplitWorkflowBuilder.splitter;
@@ -177,7 +177,7 @@ public class ProductProcessingWorkflowBuilder {
   }
 
   private static TransformedProduct newTransformedProduct(String x1String) {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   private static Stream<ProductUpdateEvent> toProductEvents(

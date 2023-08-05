@@ -13,6 +13,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.concurrent.CompletableFuture;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public sealed interface Vajram<T> permits AbstractVajram {
 
@@ -29,7 +30,7 @@ public sealed interface Vajram<T> permits AbstractVajram {
 
   ImmutableCollection<VajramInputDefinition> getInputDefinitions();
 
-  ImmutableMap<Inputs, CompletableFuture<T>> execute(ImmutableList<Inputs> inputs);
+  ImmutableMap<Inputs, CompletableFuture<@Nullable T>> execute(ImmutableList<Inputs> inputs);
 
   default InputsConverter<? extends InputValuesAdaptor, ? extends InputValuesAdaptor>
       getInputsConvertor() {

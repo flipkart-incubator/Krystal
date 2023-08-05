@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import lombok.Getter;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * The specification of a resolver which resolves exactly one input of a dependency.
@@ -20,17 +21,19 @@ import lombok.Getter;
 public final class SimpleInputResolverSpec<S, T, CV extends Vajram<?>, DV extends Vajram<?>> {
 
   private final VajramInputTypeSpec<T, DV> targetInput;
-  private final VajramInputTypeSpec<S, CV> sourceInput;
+  @Nullable private final VajramInputTypeSpec<S, CV> sourceInput;
   private final List<SkipPredicate<S>> skipConditions;
-  private final Function<Optional<S>, T> transformer;
+  @Nullable private final Function<Optional<S>, @Nullable T> transformer;
+
+  @Nullable
   private final Function<Optional<S>, ? extends Collection<? extends T>> fanoutTransformer;
 
   SimpleInputResolverSpec(
       VajramInputTypeSpec<T, DV> targetInput,
-      VajramInputTypeSpec<S, CV> sourceInput,
+      @Nullable VajramInputTypeSpec<S, CV> sourceInput,
       List<SkipPredicate<S>> skipConditions,
-      Function<Optional<S>, T> transformer,
-      Function<Optional<S>, ? extends Collection<? extends T>> fanoutTransformer) {
+      @Nullable Function<Optional<S>, @Nullable T> transformer,
+      @Nullable Function<Optional<S>, ? extends Collection<? extends T>> fanoutTransformer) {
     this.targetInput = targetInput;
     this.sourceInput = sourceInput;
     this.skipConditions = skipConditions;

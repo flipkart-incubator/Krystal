@@ -81,6 +81,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import lombok.Getter;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** The execution graph encompassing all registered vajrams. */
 public final class VajramKryonGraph implements VajramExecutableGraph {
@@ -121,7 +122,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
   }
 
   private static DependencyCommand<Inputs> toDependencyCommand(
-      List<Map<String, Object>> depInputs) {
+      List<Map<String, @Nullable Object>> depInputs) {
     DependencyCommand<Inputs> dependencyCommand;
     if (depInputs.isEmpty()) {
       dependencyCommand = executeFanoutWith(ImmutableList.of());
@@ -428,7 +429,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                                           .map(ird -> (SimpleInputResolver<?, ?, ?, ?>) ird)
                                           .toList())),
                       inputs);
-              Map<String, List<Map<String, Object>>> results = simpleResolutions.results();
+              Map<String, List<Map<String, @Nullable Object>>> results =
+                  simpleResolutions.results();
               Map<String, DependencyCommand<Inputs>> skippedDependencies =
                   simpleResolutions.skippedDependencies();
 

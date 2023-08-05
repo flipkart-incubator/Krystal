@@ -9,13 +9,15 @@ public final class Vajrams {
     VajramDef annotation;
     Class<?> annotationClass = aClass;
     do {
-
       annotation = annotationClass.getAnnotation(VajramDef.class);
       annotationClass = annotationClass.getSuperclass();
-      if (!Vajram.class.isAssignableFrom(annotationClass)) {
-        annotationClass = null;
+      if (annotationClass == null) {
+        break;
       }
-    } while (annotation == null && annotationClass != null);
+      if (!Vajram.class.isAssignableFrom(annotationClass)) {
+        break;
+      }
+    } while (annotation == null);
     return Optional.ofNullable(annotation).map(VajramDef::value);
   }
 
