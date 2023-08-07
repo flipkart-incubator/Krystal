@@ -2,7 +2,6 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.utils.Futures.linkFutures;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.config.NestedConfig;
@@ -27,10 +26,12 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputModulationDecorator<
         I /*InputsNeedingModulation*/ extends InputValuesAdaptor,
@@ -42,8 +43,8 @@ public final class InputModulationDecorator<
   private final InputModulator<I, C> inputModulator;
   private final InputsConverter<I, C> inputsConverter;
   private final Predicate<DependantChain> isApplicableToDependantChain;
-  private final Map<Inputs, CompletableFuture<Object>> futureCache = new HashMap<>();
-  private ImmutableSet<DependantChain> activeDependantChains;
+  private final Map<Inputs, CompletableFuture<@Nullable Object>> futureCache = new HashMap<>();
+  private ImmutableSet<DependantChain> activeDependantChains = ImmutableSet.of();
   private final Set<DependantChain> flushedDependantChains = new LinkedHashSet<>();
 
   public InputModulationDecorator(
@@ -75,13 +76,22 @@ public final class InputModulationDecorator<
               .toList();
       requests.forEach(
           request ->
-              futureCache.computeIfAbsent(request.toInputValues(), e -> new CompletableFuture<>()));
+              futureCache.computeIfAbsent(
+                  request.toInputValues(), e -> new CompletableFuture<@Nullable Object>()));
       for (ModulatedInput<I, C> modulatedInput : modulatedInputs) {
         modulateInputsList(logicToDecorate, modulatedInput);
       }
       return requests.stream()
           .map(UnmodulatedInput::toInputValues)
-          .collect(toImmutableMap(Function.identity(), futureCache::get));
+          .collect(
+              ImmutableMap.<Inputs, Inputs, CompletableFuture<@Nullable Object>>toImmutableMap(
+                  Function.identity(),
+                  key ->
+                      Optional.ofNullable(futureCache.get(key))
+                          .orElseThrow(
+                              () ->
+                                  new AssertionError(
+                                      "Future cache has been primed with values. This should never happen"))));
     };
   }
 
@@ -108,15 +118,16 @@ public final class InputModulationDecorator<
         modulatedInput.modInputs().stream()
             .map(each -> new UnmodulatedInput<>(each, modulatedInput.commonInputs()))
             .collect(toImmutableList());
-    ImmutableMap<Inputs, CompletableFuture<Object>> originalFutures =
-        logicToDecorate.execute(
-            requests.stream().map(UnmodulatedInput::toInputValues).collect(toImmutableList()));
-    originalFutures.forEach(
-        (inputs, resultFuture) -> {
-          CompletableFuture<Object> cachedResult =
-              futureCache.computeIfAbsent(inputs, request -> new CompletableFuture<>());
-          linkFutures(resultFuture, cachedResult);
-        });
+    logicToDecorate
+        .execute(requests.stream().map(UnmodulatedInput::toInputValues).collect(toImmutableList()))
+        .forEach(
+            (inputs, resultFuture) -> {
+              //noinspection RedundantTypeArguments: To Handle nullChecker errors
+              linkFutures(
+                  resultFuture,
+                  futureCache.<CompletableFuture<@Nullable Object>>computeIfAbsent(
+                      inputs, request -> new CompletableFuture<@Nullable Object>()));
+            });
   }
 
   @Override

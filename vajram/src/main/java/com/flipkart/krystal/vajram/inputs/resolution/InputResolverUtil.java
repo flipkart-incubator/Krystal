@@ -68,7 +68,7 @@ public final class InputResolverUtil {
 
   public static void collectDepInputs(
       List<Map<String, @Nullable Object>> depInputs,
-      String resolvable,
+      @Nullable String resolvable,
       DependencyCommand<?> command) {
     if (command.shouldSkip()) {
       return;
@@ -109,7 +109,7 @@ public final class InputResolverUtil {
   }
 
   private static void handleResolverReturn(
-      String resolvable, @Nullable Object o, Map<String, @Nullable Object> valuesMap) {
+      @Nullable String resolvable, @Nullable Object o, Map<String, @Nullable Object> valuesMap) {
     if (o instanceof Inputs inputs) {
       for (Entry<String, InputValue<Object>> e : inputs.values().entrySet()) {
         //noinspection unchecked,rawtypes
@@ -117,8 +117,11 @@ public final class InputResolverUtil {
           throw new IllegalStateException("Duplicate key");
         }
       }
-    } else {
+    } else if (resolvable != null) {
       valuesMap.put(resolvable, o);
+    } else {
+      throw new AssertionError(
+          "Resolvable is null and resolver return is not of Inputs. This should not be possible");
     }
   }
 

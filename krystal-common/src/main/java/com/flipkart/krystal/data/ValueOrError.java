@@ -61,7 +61,7 @@ public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error)
     return s -> valueOrError(() -> valueComputer.apply(s));
   }
 
-  public static <T> ValueOrError<T> withValue(T t) {
+  public static <T> ValueOrError<T> withValue(@Nullable T t) {
     return valueOrError(t, null);
   }
 

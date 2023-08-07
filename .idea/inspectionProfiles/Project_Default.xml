@@ -544,6 +544,7 @@
           <option value="RedundantTypeArguments" />
           <option value="initialization" />
           <option value="nullness" />
+          <option value="Convert2Diamond" />
         </list>
       </option>
     </inspection_tool>

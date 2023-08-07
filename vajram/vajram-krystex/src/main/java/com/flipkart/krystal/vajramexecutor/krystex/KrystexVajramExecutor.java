@@ -12,6 +12,7 @@ import com.flipkart.krystal.vajram.exec.VajramExecutor;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class KrystexVajramExecutor<C extends ApplicationRequestContext>
     implements VajramExecutor<C> {
@@ -36,7 +37,7 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
   }
 
   @Override
-  public <T> CompletableFuture<T> execute(
+  public <T> CompletableFuture<@Nullable T> execute(
       VajramID vajramId, Function<C, VajramRequest> vajramRequestBuilder) {
     return execute(
         vajramId,
@@ -44,7 +45,7 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
         KryonExecutionConfig.builder().executionId("defaultExecution").build());
   }
 
-  public <T> CompletableFuture<T> execute(
+  public <T> CompletableFuture<@Nullable T> execute(
       VajramID vajramId,
       Function<C, VajramRequest> vajramRequestBuilder,
       KryonExecutionConfig executionConfig) {

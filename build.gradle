@@ -46,6 +46,7 @@ subprojects {
         extraJavacArgs = [
                 "-Astubs=${rootDir}/config/checker/stubs",
         ]
+        excludeTests = true
     }
 
     dependencies {

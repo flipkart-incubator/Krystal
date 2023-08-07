@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex.inputinjection;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.data.InputValue;
@@ -24,18 +25,23 @@ import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
+import org.checkerframework.checker.initialization.qual.UnderInitialization;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputInjector implements MainLogicDecorator {
 
   public static final String DECORATOR_TYPE = InputInjector.class.getName();
   public static final String INJECT_NAMED_KEY = "inject.named";
-  private VajramKryonGraph vajramKryonGraph;
-  private final InputInjectionProvider inputInjectionProvider;
+  @NotOnlyInitialized private final VajramKryonGraph vajramKryonGraph;
+  private final @Nullable InputInjectionProvider inputInjectionProvider;
 
   public InputInjector(
-      VajramKryonGraph vajramKryonGraph, InputInjectionProvider inputInjectionProvider) {
+      @UnderInitialization VajramKryonGraph vajramKryonGraph,
+      @Nullable InputInjectionProvider inputInjectionProvider) {
     this.vajramKryonGraph = vajramKryonGraph;
     this.inputInjectionProvider = inputInjectionProvider;
   }
@@ -65,15 +71,14 @@ public final class InputInjector implements MainLogicDecorator {
                   })
               .collect(toImmutableList());
 
-      ImmutableMap<Inputs, CompletableFuture<Object>> result = logicToDecorate.execute(inputValues);
+      ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> result =
+          logicToDecorate.execute(inputValues);
 
       // Change the Map key back to the original Inputs list as SESSION inputs were injected
-      Map<Inputs, CompletableFuture<Object>> newResult = new HashMap<>();
-      result.forEach(
-          (key, value) -> {
-            newResult.put(newInputsToOldInputs.getOrDefault(key, key), value);
-          });
-      return ImmutableMap.copyOf(newResult);
+      return result.entrySet().stream()
+          .collect(
+              toImmutableMap(
+                  e -> newInputsToOldInputs.getOrDefault(e.getKey(), e.getKey()), Entry::getValue));
     };
   }
 
@@ -82,7 +87,7 @@ public final class InputInjector implements MainLogicDecorator {
     return InputInjector.class.getName();
   }
 
-  private Inputs injectFromSession(VajramDefinition vajramDefinition, Inputs inputs) {
+  private Inputs injectFromSession(@Nullable VajramDefinition vajramDefinition, Inputs inputs) {
     Map<String, InputValue<Object>> newValues = new HashMap<>();
     Optional.ofNullable(vajramDefinition)
         .map(VajramDefinition::getVajram)
@@ -123,7 +128,7 @@ public final class InputInjector implements MainLogicDecorator {
   }
 
   private ValueOrError<Object> getFromInjectionAdaptor(
-      JavaDataType<?> dataType, String injectionName) {
+      JavaDataType<?> dataType, @Nullable String injectionName) {
     if (inputInjectionProvider == null) {
       return ValueOrError.withError(
           new Exception("Dependency injector is null, cannot resolve SESSION input"));
@@ -133,12 +138,14 @@ public final class InputInjector implements MainLogicDecorator {
       return ValueOrError.withError(new Exception("Data type not found"));
     }
     Optional<Type> type = dataType.javaType();
-    Object resolvedObject = null;
-    if (injectionName != null) {
-      resolvedObject = inputInjectionProvider.getInstance((Class<?>) type.get(), injectionName);
-    }
-    if (resolvedObject == null) {
-      resolvedObject = inputInjectionProvider.getInstance(((Class<?>) type.get()));
+    @Nullable Object resolvedObject = null;
+    if (type.isPresent()) {
+      if (injectionName != null) {
+        resolvedObject = inputInjectionProvider.getInstance((Class<?>) type.get(), injectionName);
+      }
+      if (resolvedObject == null) {
+        resolvedObject = inputInjectionProvider.getInstance(((Class<?>) type.get()));
+      }
     }
     return ValueOrError.withValue(resolvedObject);
   }
