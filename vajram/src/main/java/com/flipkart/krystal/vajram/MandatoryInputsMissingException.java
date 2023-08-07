@@ -8,7 +8,7 @@ public class MandatoryInputsMissingException extends RuntimeException {
 
   private final VajramID vajramID;
   private final ImmutableMap<String, Throwable> failedMandatoryInputs;
-  @MonotonicNonNull private String detailedMessage;
+  private @MonotonicNonNull String detailedMessage;
 
   public MandatoryInputsMissingException(
       VajramID vajramID, Map<String, Throwable> failedMandatoryInputs) {

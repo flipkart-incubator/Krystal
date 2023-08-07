@@ -13,6 +13,7 @@ dependencies {
     testImplementation project(':krystex')
 
     implementation 'com.google.inject:guice:5.1.0'
+    implementation 'org.checkerframework:checker-qual:3.37.0'
 
     def jacksonVersion = '2.14.2'
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations:' + jacksonVersion

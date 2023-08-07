@@ -176,7 +176,6 @@ public final class Resilience4JBulkhead implements MainLogicDecorator {
       } else {
         throw new IllegalStateException(
             "Either bulkheadConfig or threadPoolBulkheadConfig must be non-null");
-
       }
     }
 

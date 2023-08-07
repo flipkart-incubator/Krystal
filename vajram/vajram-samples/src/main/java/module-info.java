@@ -5,4 +5,5 @@ module flipkart.krystal.vajram.vajram_samples {
   requires static lombok;
   requires java.logging;
   requires com.google.guice;
+  requires org.checkerframework.checker.qual;
 }

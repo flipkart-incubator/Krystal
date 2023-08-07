@@ -7,7 +7,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 abstract sealed class AbstractVajram<T> implements Vajram<T> permits ComputeVajram, IOVajram {
 
-  @MonotonicNonNull private VajramID id;
+  private @MonotonicNonNull VajramID id;
 
   @Override
   public final VajramID getId() {

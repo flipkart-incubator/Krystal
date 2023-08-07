@@ -12,6 +12,7 @@ import com.flipkart.krystal.vajram.samples.greeting.UserServiceInputUtil.UserSer
 import com.google.common.collect.ImmutableMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -21,7 +22,7 @@ public abstract class UserServiceVajram extends IOVajram<UserInfo> {
   public static final String ID = "userServiceVajram";
 
   @VajramLogic
-  public static ImmutableMap<UserServiceModInputs, CompletableFuture<UserInfo>> callUserService(
+  static ImmutableMap<UserServiceModInputs, CompletableFuture<UserInfo>> callUserService(
       ModulatedInput<UserServiceModInputs, UserServiceCommonInputs> modulatedRequest) {
 
     // Make a call to user service and get user info
@@ -38,7 +39,11 @@ public abstract class UserServiceVajram extends IOVajram<UserInfo> {
                             userInfo -> userInfo)));
     return modulatedRequest.modInputs().stream()
         .collect(
-            toImmutableMap(im -> im, im -> resultsFuture.thenApply(results -> results.get(im))));
+            toImmutableMap(
+                im -> im,
+                im ->
+                    resultsFuture.thenApply(
+                        results -> Optional.ofNullable(results.get(im)).orElseThrow())));
   }
 
   private static CompletableFuture<List<UserInfo>> batchServiceCall(
