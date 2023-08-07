@@ -65,14 +65,16 @@ public final class Resilience4JBulkhead implements MainLogicDecorator {
   }
 
   private void updateBulkhead(ConfigProvider configProvider) {
-    BulkheadAdapter bulkhead = this.adaptedBulkhead;
     Optional<BulkheadAdapterConfig> newBulkheadConfig = getBulkheadConfig(configProvider);
     if (newBulkheadConfig.isPresent()) {
+      BulkheadAdapter bulkhead = this.adaptedBulkhead;
       if (bulkhead == null) {
         this.adaptedBulkhead = new BulkheadAdapter(newBulkheadConfig.get());
       } else {
         bulkhead.changeConfig(newBulkheadConfig.get());
       }
+    } else {
+      this.adaptedBulkhead = null;
     }
   }
 
@@ -126,6 +128,9 @@ public final class Resilience4JBulkhead implements MainLogicDecorator {
         if (threadPoolBulkheadConfig != null) {
           this.threadPoolBulkhead =
               newThreadPoolBulkhead(threadPoolBulkheadConfig, getBulkheadId());
+        } else {
+          throw new IllegalArgumentException(
+              "Either bulkheadConfig or threadPoolBulkheadConfig must be non-null");
         }
       }
     }
@@ -143,8 +148,6 @@ public final class Resilience4JBulkhead implements MainLogicDecorator {
             && !config.threadPoolBulkheadConfig().equals(localTPBulkhead.getBulkheadConfig())) {
           threadPoolBulkhead =
               newThreadPoolBulkhead(config.threadPoolBulkheadConfig(), getBulkheadId());
-        } else {
-          throw new IllegalStateException();
         }
       }
     }
@@ -152,15 +155,15 @@ public final class Resilience4JBulkhead implements MainLogicDecorator {
     @SuppressWarnings("RedundantTypeArguments") // Avoid nullChecker errors
     CompletionStage<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>> decorate(
         MainLogic<Object> logicToDecorate, ImmutableList<Inputs> inputsList) {
-      ThreadPoolBulkhead localTPBulkhead = threadPoolBulkhead;
-      if (localTPBulkhead != null) {
-        return localTPBulkhead
+      ThreadPoolBulkhead threadPoolBulkhead = this.threadPoolBulkhead;
+      Bulkhead bulkhead = this.bulkhead;
+      if (threadPoolBulkhead != null) {
+        return threadPoolBulkhead
             .<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>>executeCallable(
                 () -> logicToDecorate.execute(inputsList));
-      }
-      Bulkhead localBulkhead = bulkhead;
-      if (localBulkhead != null) {
-        Decorators.<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>>ofCompletionStage(
+      } else if (bulkhead != null) {
+        return Decorators
+            .<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>>ofCompletionStage(
                 () -> {
                   ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> result =
                       logicToDecorate.execute(inputsList);
@@ -168,18 +171,13 @@ public final class Resilience4JBulkhead implements MainLogicDecorator {
                       .<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>>handle(
                           (unused, throwable) -> result);
                 })
-            .withBulkhead(localBulkhead);
+            .withBulkhead(bulkhead)
+            .get();
+      } else {
+        throw new IllegalStateException(
+            "Either bulkheadConfig or threadPoolBulkheadConfig must be non-null");
+
       }
-      return Decorators
-          .<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>>ofCompletionStage(
-              () -> {
-                ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> result =
-                    logicToDecorate.execute(inputsList);
-                return allOf(result.values().toArray(CompletableFuture[]::new))
-                    .<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>>handle(
-                        (unused, throwable) -> result);
-              })
-          .get();
     }
 
     private static ThreadPoolBulkhead newThreadPoolBulkhead(
