@@ -12,9 +12,11 @@ import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
 public class TransformedProductPayload implements TransformedProductPayloadDefinition {
 
   public TransformedProductPayload() {
-    finalTransformedProduct = new ValueImpl<>(TransformedProductPayloadFields.finalTransformedProduct, this);
+    finalTransformedProduct =
+        new ValueImpl<>(TransformedProductPayloadFields.finalTransformedProduct, this);
     x2String = new ValueImpl<>(TransformedProductPayloadFields.x2String, this);
-    initialTransformedProduct = new ValueImpl<>(TransformedProductPayloadFields.initialTransformedProduct, this);
+    initialTransformedProduct =
+        new ValueImpl<>(TransformedProductPayloadFields.initialTransformedProduct, this);
   }
 
   interface TransformedProductPayloadFields {
@@ -41,8 +43,11 @@ public class TransformedProductPayload implements TransformedProductPayloadDefin
             TransformedProductPayload::setFinalTransformedProduct);
   }
 
-  @NotOnlyInitialized private final Value<TransformedProduct, TransformedProductPayload> initialTransformedProduct;
+  @NotOnlyInitialized
+  private final Value<TransformedProduct, TransformedProductPayload> initialTransformedProduct;
+
   @NotOnlyInitialized private final Value<String, TransformedProductPayload> x2String;
+
   @NotOnlyInitialized
   private final Value<TransformedProduct, TransformedProductPayload> finalTransformedProduct;
 

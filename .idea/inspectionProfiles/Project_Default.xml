@@ -542,6 +542,8 @@
           <option value="unused" />
           <option value="RedundantCast" />
           <option value="RedundantTypeArguments" />
+          <option value="initialization" />
+          <option value="nullness" />
         </list>
       </option>
     </inspection_tool>

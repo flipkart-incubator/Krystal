@@ -2,7 +2,6 @@ package com.flipkart.krystal.krystex.decorators.resilience4j;
 
 import static com.flipkart.krystal.krystex.decorators.resilience4j.R4JUtils.extractResponseMap;
 import static com.google.common.base.Preconditions.checkArgument;
-import static io.github.resilience4j.decorators.Decorators.ofCompletionStage;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.config.ConfigProvider;
@@ -18,7 +17,6 @@ import io.github.resilience4j.bulkhead.BulkheadConfig.Builder;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkhead;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkheadConfig;
 import io.github.resilience4j.decorators.Decorators;
-import io.github.resilience4j.decorators.Decorators.DecorateCompletionStage;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;

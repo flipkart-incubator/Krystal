@@ -32,6 +32,7 @@ class VajramPlugin implements Plugin<Project> {
             doLast {
                 VajramCodeGenFacade.codeGenModels(
                         project.sourceSets.main.java.srcDirs,
+                        compiledMainDir,
                         mainGeneratedSrcDir)
             }
         }
@@ -69,6 +70,7 @@ class VajramPlugin implements Plugin<Project> {
             doLast {
                 VajramCodeGenFacade.codeGenModels(
                         project.sourceSets.test.java.srcDirs,
+                        compiledTestDir,
                         testGeneratedSrcDir)
             }
         }

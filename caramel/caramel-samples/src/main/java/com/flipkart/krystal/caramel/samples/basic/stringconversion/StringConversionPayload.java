@@ -34,8 +34,7 @@ class StringConversionPayload implements StringConversionPayloadDefinition {
   }
 
   @NotOnlyInitialized private final Value<Object, StringConversionPayload> _input;
-  @NotOnlyInitialized
-  private final Value<String, StringConversionPayload> _output;
+  @NotOnlyInitialized private final Value<String, StringConversionPayload> _output;
 
   @Override
   public Object input() {

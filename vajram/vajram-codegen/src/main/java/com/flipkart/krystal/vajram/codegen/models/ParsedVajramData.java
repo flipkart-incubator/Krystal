@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.codegen.models;
 
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.codegen.utils.CodegenUtils;
 import com.flipkart.krystal.vajram.codegen.utils.Constants;
@@ -23,7 +22,7 @@ public record ParsedVajramData(
     String vajramName,
     List<Method> resolveMethods,
     Method vajramLogic,
-    Class vajramClass,
+    Class<? extends Vajram<?>> vajramClass,
     String packageName,
     Map<String, Field> fields) {
 
@@ -33,12 +32,12 @@ public record ParsedVajramData(
       ClassLoader classLoader, VajramInputFile inputFile) {
     String packageName =
         CodegenUtils.getPackageFromPath(inputFile.inputFilePath().relativeFilePath());
-    Class<? extends Vajram> result = null;
-    ClassLoader systemClassLoader = VajramID.class.getClassLoader();
+    Class<? extends Vajram<?>> result;
     Map<String, Field> fields = new HashMap<>();
     try {
+      //noinspection unchecked
       result =
-          (Class<? extends Vajram>)
+          (Class<? extends Vajram<?>>)
               classLoader.loadClass(packageName + DOT_SEPARATOR + inputFile.vajramName());
 
       for (Method method : result.getDeclaredMethods()) {
@@ -50,9 +49,6 @@ public record ParsedVajramData(
                   .formatted(inputFile.vajramName(), method.getName()));
       }
 
-      String inputUtilClass =
-          packageName + DOT_SEPARATOR + CodegenUtils.getInputUtilClassName(inputFile.vajramName());
-      final Class<?> inputUtilCls = classLoader.loadClass(inputUtilClass);
       boolean needsModulation =
           inputFile.vajramInputsDef().inputs().stream().anyMatch(InputDef::isNeedsModulation);
       if (needsModulation) {
@@ -85,22 +81,30 @@ public record ParsedVajramData(
     }
 
     List<Method> resolveMethods = new ArrayList<>();
+    Method vajramLogic = getVajramLogicAndResolverMethods(result, resolveMethods);
+    return Optional.of(
+        new ParsedVajramData(
+            inputFile.vajramName(), resolveMethods, vajramLogic, result, packageName, fields));
+  }
+
+  public static Method getVajramLogicAndResolverMethods(
+      Class<? extends Vajram<?>> vajramCalss, List<Method> resolveMethods) {
     Method vajramLogic = null;
-    for (Method method : result.getDeclaredMethods()) {
+    for (Method method : vajramCalss.getDeclaredMethods()) {
       if (method.isAnnotationPresent(Resolve.class)) {
         resolveMethods.add(method);
       } else if (method.isAnnotationPresent(VajramLogic.class)) {
         if (vajramLogic == null) {
           vajramLogic = method;
         } else {
-          throw new RuntimeException(
-              "Multiple VajramLogic annotated methods found in "
-                  + result.getClass().getSimpleName());
+          throw new VajramValidationException(
+              "Multiple VajramLogic annotated methods found in " + vajramCalss.getSimpleName());
         }
       }
     }
-    return Optional.of(
-        new ParsedVajramData(
-            inputFile.vajramName(), resolveMethods, vajramLogic, result, packageName, fields));
+    if (vajramLogic == null) {
+      throw new VajramValidationException("Missing vajram logic method");
+    }
+    return vajramLogic;
   }
 }

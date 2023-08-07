@@ -17,8 +17,7 @@ public final class LogicDefinitionRegistry {
   public <T> MainLogicDefinition<T> getMain(KryonLogicId kryonLogicId) {
     MainLogicDefinition<?> mainLogicDefinition = mainLogicDefinitions.get(kryonLogicId);
     if (mainLogicDefinition == null) {
-      throw new NoSuchElementException(
-          "Could not find mainLogicDefinition for " + kryonLogicId);
+      throw new NoSuchElementException("Could not find mainLogicDefinition for " + kryonLogicId);
     }
     //noinspection unchecked
     return (MainLogicDefinition<T>) mainLogicDefinition;

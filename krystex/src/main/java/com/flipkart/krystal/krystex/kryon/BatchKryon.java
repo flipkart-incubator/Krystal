@@ -46,7 +46,6 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -71,7 +70,8 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
    * A unique {@link CompletableFuture} for every new set of Inputs. This acts as a cache so that
    * the same computation is not repeated multiple times .
    */
-  private final Map<Inputs, CompletableFuture<@Nullable Object>> resultsCache = new LinkedHashMap<>();
+  private final Map<Inputs, CompletableFuture<@Nullable Object>> resultsCache =
+      new LinkedHashMap<>();
 
   private final Map<DependantChain, Set<String>> executedDependencies = new LinkedHashMap<>();
 

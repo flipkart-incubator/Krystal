@@ -39,7 +39,8 @@ public class MainLogicExecReporter implements MainLogicDecorator {
       /*
        Execute logic
       */
-      ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> results = logicToDecorate.execute(inputs);
+      ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> results =
+          logicToDecorate.execute(inputs);
       /*
        Report logic end
       */

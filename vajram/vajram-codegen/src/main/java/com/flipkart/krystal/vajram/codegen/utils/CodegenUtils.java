@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.codegen.utils;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.COMMON_INPUTS;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_NEEDING_MODULATION;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
@@ -41,7 +42,11 @@ public final class CodegenUtils {
   private CodegenUtils() {}
 
   public static String getPackageFromPath(Path filePath) {
-    Path parentDir = filePath.getParent();
+    Path parentDir =
+        checkNotNull(
+            filePath.getParent(),
+            "Cannot get package for a file %s as it does not have a parent directory",
+            filePath);
     return IntStream.range(0, parentDir.getNameCount())
         .mapToObj(i -> parentDir.getName(i).toString())
         .collect(Collectors.joining(DOT));
@@ -195,7 +200,7 @@ public final class CodegenUtils {
                     input -> {
                       String key = toJavaName(input);
                       if (fields.containsKey(key)) {
-                        Field field = fields.get(toJavaName(input));
+                        Field field = fields.get(key);
                         if (typeName.equals(getType(field.getType())) && !fanout.get()) {
                           fanout.set(true);
                         }

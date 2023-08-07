@@ -44,7 +44,6 @@ subprojects {
                 'org.checkerframework.checker.nullness.NullnessChecker',
         ]
         extraJavacArgs = [
-                '-AstubDebug',
                 "-Astubs=${rootDir}/config/checker/stubs",
         ]
     }

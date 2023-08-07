@@ -33,9 +33,12 @@ public final class VajramIndex {
   public <T extends DataAccessSpec> AccessSpecMatchingResult<T> getVajrams(T accessSpec) {
     //noinspection unchecked
     return Optional.ofNullable((AccessSpecIndex<T>) accessSpecIndices.get(accessSpec.getClass()))
-        .map(index -> index.getVajrams(accessSpec)).orElse(new AccessSpecMatchingResult<>(
-            ImmutableMap.of(),ImmutableMap.of(), ImmutableList.of(accessSpec)));
+        .map(index -> index.getVajrams(accessSpec))
+        .orElse(
+            new AccessSpecMatchingResult<>(
+                ImmutableMap.of(), ImmutableMap.of(), ImmutableList.of(accessSpec)));
   }
+
   public void add(Vajram vajram) {
     accessSpecIndices.values().forEach(accessSpecIndex -> accessSpecIndex.add(vajram));
   }

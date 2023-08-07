@@ -42,8 +42,7 @@ class SplitPayload implements SplitPayloadDefinition {
   @NotOnlyInitialized private final Value<String, SplitPayload> initString;
   @NotOnlyInitialized private final Value<Metric, SplitPayload> metric;
   @NotOnlyInitialized private final Value<ProductUpdateEvent, SplitPayload> initProductEvent;
-  @NotOnlyInitialized
-  private final Value<Collection<Metric>, SplitPayload> metrics;
+  @NotOnlyInitialized private final Value<Collection<Metric>, SplitPayload> metrics;
 
   @Override
   public String initString() {

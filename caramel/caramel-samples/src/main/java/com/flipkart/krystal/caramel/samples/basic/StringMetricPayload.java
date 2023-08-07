@@ -30,8 +30,7 @@ public class StringMetricPayload implements StringMetricPayloadDefinition {
   }
 
   @NotOnlyInitialized private final Value<String, StringMetricPayload> initString;
-  @NotOnlyInitialized
-  private final Value<Metric, StringMetricPayload> metric;
+  @NotOnlyInitialized private final Value<Metric, StringMetricPayload> metric;
 
   @Override
   public String initString() {
