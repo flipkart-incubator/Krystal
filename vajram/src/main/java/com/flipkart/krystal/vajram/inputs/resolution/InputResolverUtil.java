@@ -7,6 +7,7 @@ import static com.flipkart.krystal.vajram.inputs.SingleExecute.skipExecution;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Optional.ofNullable;
 import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
@@ -19,6 +20,7 @@ import com.flipkart.krystal.vajram.inputs.VajramDepFanoutTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramDepSingleTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramDependencyTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
+import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -92,12 +94,13 @@ public final class InputResolverUtil {
             new ArrayList<>(depInputs.size() * objects.size() - depInputs.size());
         for (Map<String, @Nullable Object> depInput : depInputs) {
           boolean first = true;
+          ImmutableMap<String, @Nullable Object> originalDepInput = ImmutableMap.copyOf(depInput);
           for (Object object : objects) {
             if (first) {
               first = false;
               handleResolverReturn(resolvable, object, depInput);
             } else {
-              LinkedHashMap<String, @Nullable Object> e = new LinkedHashMap<>(depInput);
+              LinkedHashMap<String, @Nullable Object> e = new LinkedHashMap<>(originalDepInput);
               more.add(e);
               handleResolverReturn(resolvable, object, e);
             }

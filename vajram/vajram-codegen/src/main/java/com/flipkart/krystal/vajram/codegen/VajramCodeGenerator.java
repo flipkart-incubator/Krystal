@@ -41,6 +41,7 @@ import static com.flipkart.krystal.vajram.codegen.utils.Constants.METHOD_GET_INP
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.METHOD_RESOLVE_INPUT_OF_DEPENDENCY;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.MOD_INPUT;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.MULTI_EXEC_CMD;
+import static com.flipkart.krystal.vajram.codegen.utils.Constants.OPTIONAL;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.REQUEST;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.RESOLVABLE_INPUTS;
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.RESPONSE;
@@ -300,7 +301,10 @@ public class VajramCodeGenerator {
 
     if (IOVajram.class.isAssignableFrom(getParsedVajramData().vajramClass())) {
       methodSpecs.add(
-          createIOVajramExecuteMethod(inputsNeedingModulation, commonInputs, vajramResponseType));
+          createIOVajramExecuteMethod(
+              inputsNeedingModulation,
+              commonInputs,
+              vajramResponseType.annotated(AnnotationSpec.builder(Nullable.class).build())));
     } else {
       methodSpecs.add(
           createComputeVajramExecuteMethod(
@@ -378,6 +382,9 @@ public class VajramCodeGenerator {
       valueMap.put(MAP, ClassName.get(Map.class));
       valueMap.put(LIST, ClassName.get(List.class));
       valueMap.put(VAL_ERR, ValueOrError.class);
+      valueMap.put(FUNCTION, ClassName.get(Function.class));
+      valueMap.put(OPTIONAL, ClassName.get(Optional.class));
+
       checkState(
           Map.class.isAssignableFrom(getParsedVajramData().vajramLogic().getReturnType()),
           "Any vajram supporting input modulation must return map",
@@ -639,6 +646,8 @@ public class VajramCodeGenerator {
       valueMap.put(MAP, ClassName.get(Map.class));
       valueMap.put(LIST, ClassName.get(List.class));
       valueMap.put(VAL_ERR, ValueOrError.class);
+      valueMap.put(FUNCTION, ClassName.get(Function.class));
+      valueMap.put(OPTIONAL, ClassName.get(Optional.class));
 
       checkState(
           Map.class.isAssignableFrom(getParsedVajramData().vajramLogic().getReturnType()),
@@ -1827,7 +1836,8 @@ public class VajramCodeGenerator {
     return classBuilder(CodegenUtils.getVajramImplClassName(vajramName))
         .addField(
             FieldSpec.builder(
-                    ParameterizedTypeName.get(ImmutableList.class, VajramInputDefinition.class),
+                    ParameterizedTypeName.get(ImmutableList.class, VajramInputDefinition.class)
+                        .annotated(AnnotationSpec.builder(Nullable.class).build()),
                     INPUT_DEFINITIONS_VAR)
                 .addModifiers(PRIVATE)
                 .build());

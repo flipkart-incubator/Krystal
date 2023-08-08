@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.EqualsAndHashCode;
 import lombok.EqualsAndHashCode.CacheStrategy;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.PolyNull;
 
 @EqualsAndHashCode(callSuper = false, cacheStrategy = CacheStrategy.LAZY)
@@ -30,8 +31,8 @@ public final class Inputs {
     return this.<T>getInputValue(inputName).value();
   }
 
-  public <T> T getInputValueOrThrow(String inputName) {
-    return this.<T>getInputValue(inputName)
+  public <T> @NonNull T getInputValueOrThrow(String inputName) {
+    return this.<@NonNull T>getInputValue(inputName)
         .getValueOrThrow()
         .orElseThrow(
             () -> new IllegalStateException("Could not find input value %s".formatted(inputName)));
