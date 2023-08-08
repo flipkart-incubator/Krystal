@@ -40,6 +40,8 @@ import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Sets.SetView;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -520,6 +522,14 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       throw new DuplicateRequestException(
           "Duplicate data for inputs %s of kryon %s in dependant chain %s"
               .formatted(inputNames, kryonId, forwardBatch.dependantChain()));
+    }
+    SetView<String> resolvableInputNames =
+        Sets.difference(
+            kryonDefinition.getMainLogicDefinition().inputNames(),
+            kryonDefinition.dependencyKryons().keySet());
+    if (!inputNames.containsAll(resolvableInputNames)) {
+      throw new IllegalArgumentException(
+          "Did not receive inputs " + Sets.difference(resolvableInputNames, inputNames));
     }
     availableInputsByDepChain
         .computeIfAbsent(forwardBatch.dependantChain(), _k -> new LinkedHashSet<>())

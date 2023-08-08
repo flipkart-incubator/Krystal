@@ -3,5 +3,3 @@ inputs:
     dataType: string
     mandatory: true
     needsModulation: true
-  - name: unused
-    dataType: string
