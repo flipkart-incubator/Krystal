@@ -10,15 +10,15 @@ import com.flipkart.krystal.datatypes.JavaDataType;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
-import com.flipkart.krystal.krystex.node.NodeId;
-import com.flipkart.krystal.krystex.node.NodeLogicId;
+import com.flipkart.krystal.krystex.kryon.KryonId;
+import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Type;
@@ -31,12 +31,12 @@ public final class InputInjector implements MainLogicDecorator {
 
   public static final String DECORATOR_TYPE = InputInjector.class.getName();
   public static final String INJECT_NAMED_KEY = "inject.named";
-  private VajramNodeGraph vajramNodeGraph;
+  private VajramKryonGraph vajramKryonGraph;
   private final InputInjectionProvider inputInjectionProvider;
 
   public InputInjector(
-      VajramNodeGraph vajramNodeGraph, InputInjectionProvider inputInjectionProvider) {
-    this.vajramNodeGraph = vajramNodeGraph;
+      VajramKryonGraph vajramKryonGraph, InputInjectionProvider inputInjectionProvider) {
+    this.vajramKryonGraph = vajramKryonGraph;
     this.inputInjectionProvider = inputInjectionProvider;
   }
 
@@ -51,12 +51,12 @@ public final class InputInjector implements MainLogicDecorator {
                   inputs -> {
                     Inputs newInputs =
                         injectFromSession(
-                            vajramNodeGraph
+                            vajramKryonGraph
                                 .getVajramDefinition(
                                     VajramID.vajramID(
-                                        Optional.ofNullable(originalLogicDefinition.nodeLogicId())
-                                            .map(NodeLogicId::nodeId)
-                                            .map(NodeId::value)
+                                        Optional.ofNullable(originalLogicDefinition.kryonLogicId())
+                                            .map(KryonLogicId::kryonId)
+                                            .map(KryonId::value)
                                             .orElse("")))
                                 .orElse(null),
                             inputs);

@@ -7,7 +7,7 @@ public class IntReqGenerator implements RequestIdGenerator {
 
   @Override
   public RequestId newSubRequest(RequestId parent, Supplier<String> suffix) {
-    return new RequestId(nextCounter++, parent.originatedFrom());
+    return new RequestId(nextCounter++);
   }
 
   @Override

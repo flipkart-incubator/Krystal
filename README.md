@@ -103,7 +103,7 @@ return
   bake(oven, base + cheese + toppings, 20min, 200degCel)
   
 ```
-As you can see, each piece of business logic is owned by a separate owner. And no single owner knows the complete end to end workflow. With each node declaring their local dependencies and interacting with those dependencies, the final pizza get's made without any single developer knowing the complete recipe. They just need to focus on their part of the problem statement (recipe).
+As you can see, each piece of business logic is owned by a separate owner. And no single owner knows the complete end to end workflow. With each kryon declaring their local dependencies and interacting with those dependencies, the final pizza get's made without any single developer knowing the complete recipe. They just need to focus on their part of the problem statement (recipe).
 
 
 Topdown programming
@@ -140,8 +140,8 @@ Components of the Krystal Project try to adhere to the following design goals:
     * Concurrency mode (multithreaded thread-per-task model, vs. reactive vs. hybrid model)
     * Batching and batch size of dependency inputs
 1. Minimize lateral and upward impact of code changes: If all the business logic executing to fulfill a request is seen
-   as a Directed acyclic graph, a code change being made in a node in the graph should not impact the implementation of
-   any other node in the graph which is a direct descendant of it.
+   as a Directed acyclic graph, a code change being made in a kryon in the graph should not impact the implementation of
+   any other kryon in the graph which is a direct descendant of it.
 1. Zero glue code: If there is business logic A and business logic B, all the relevant business logic should be
    contained within the artefact which represents each piece of business logic.
 1. Out-of the box Non-intrusive batching of service-call inputs

@@ -9,26 +9,23 @@ import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
-import com.flipkart.krystal.krystex.node.KrystalNodeExecutorMetrics;
-import com.flipkart.krystal.krystex.node.NodeExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.KryonExecutor;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.modulation.Batcher;
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder;
 import com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 
 class FormulaTest {
 
@@ -43,7 +40,7 @@ class FormulaTest {
   @Test
   void formula_success() throws Exception {
     CompletableFuture<Integer> future;
-    VajramNodeGraph graph = this.graph.build();
+    VajramKryonGraph graph = this.graph.build();
     graph.registerInputModulators(
         vajramID(Adder.ID), InputModulatorConfig.simple(() -> new Batcher<>(100)));
     try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
@@ -58,12 +55,12 @@ class FormulaTest {
   @Test
   void vajram_benchmark() throws Exception {
     int loopCount = 1_000_000;
-    VajramNodeGraph graph = this.graph.maxParallelismPerCore(5).build();
+    VajramKryonGraph graph = this.graph.maxParallelismPerCore(5).build();
     long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
     long javaFuturesTimeNs = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
     //noinspection unchecked
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
-    KrystalNodeExecutorMetrics[] metrics = new KrystalNodeExecutorMetrics[loopCount];
+    KryonExecutorMetrics[] metrics = new KryonExecutorMetrics[loopCount];
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
     long startTime = System.nanoTime();
@@ -73,8 +70,7 @@ class FormulaTest {
           graph.createExecutor(new FormulaRequestContext(100, 20, 5, "formulaTest"))) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[value] =
-            ((KrystalNodeExecutor) krystexVajramExecutor.getKrystalExecutor())
-                .getKrystalNodeMetrics();
+            ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         long enqueueStart = System.nanoTime();
         futures[value] = executeVajram(krystexVajramExecutor, value);
         timeToEnqueueVajram += System.nanoTime() - enqueueStart;
@@ -125,14 +121,14 @@ class FormulaTest {
     int outerLoopCount = 1000;
     int innerLoopCount = 1000;
     int loopCount = outerLoopCount * innerLoopCount;
-    VajramNodeGraph graph = this.graph.maxParallelismPerCore(1).build();
+    VajramKryonGraph graph = this.graph.maxParallelismPerCore(1).build();
     graph.registerInputModulators(
         vajramID(Adder.ID), InputModulatorConfig.simple(() -> new Batcher<>(innerLoopCount)));
     long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
     long javaFuturesTimeNs = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
     //noinspection unchecked
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
-    KrystalNodeExecutorMetrics[] metrics = new KrystalNodeExecutorMetrics[outerLoopCount];
+    KryonExecutorMetrics[] metrics = new KryonExecutorMetrics[outerLoopCount];
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
     long startTime = System.nanoTime();
@@ -142,8 +138,7 @@ class FormulaTest {
           graph.createExecutor(new FormulaRequestContext(100, 20, 5, "formulaTest"))) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[outer_i] =
-            ((KrystalNodeExecutor) krystexVajramExecutor.getKrystalExecutor())
-                .getKrystalNodeMetrics();
+            ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         for (int inner_i = 0; inner_i < innerLoopCount; inner_i++) {
           int iterationNum = outer_i * innerLoopCount + inner_i;
           long enqueueStart = System.nanoTime();
@@ -211,7 +206,7 @@ class FormulaTest {
     return krystexVajramExecutor.execute(
         vajramID(Formula.ID),
         rc -> FormulaRequest.builder().a(rc.a + value).p(rc.p + value).q(rc.q + value).build(),
-        NodeExecutionConfig.builder().executionId("formulaTest" + value).build());
+        KryonExecutionConfig.builder().executionId("formulaTest" + value).build());
   }
 
   private static void syncFormula(Integer value) {
@@ -233,7 +228,7 @@ class FormulaTest {
       implements ApplicationRequestContext {}
 
   private static Builder loadFromClasspath(String... packagePrefixes) {
-    Builder builder = VajramNodeGraph.builder();
+    Builder builder = VajramKryonGraph.builder();
     Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
     return builder;
   }

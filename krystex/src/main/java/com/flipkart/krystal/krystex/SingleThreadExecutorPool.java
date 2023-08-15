@@ -12,12 +12,11 @@ public final class SingleThreadExecutorPool extends MultiLeasePool<ExecutorServi
   private static int executorServiceCounter = 0;
 
   public SingleThreadExecutorPool(int maxActiveLeasesPerObject) {
-    //noinspection AssignmentToStaticFieldFromInstanceMethod
     super(
         () ->
             newSingleThreadExecutor(
                 new ThreadFactoryBuilder()
-                    .setNameFormat("KrystalNodeExecutor-%s".formatted(executorServiceCounter++))
+                    .setNameFormat("KryonExecutor-%s".formatted(executorServiceCounter++))
                     .build()),
         new PreferObjectReuse(maxActiveLeasesPerObject, Optional.empty()),
         ExecutorService::shutdown);

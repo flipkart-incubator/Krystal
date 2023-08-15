@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.commands;
 
-import com.flipkart.krystal.krystex.node.DependantChain;
-import com.flipkart.krystal.krystex.node.NodeId;
+import com.flipkart.krystal.krystex.kryon.DependantChain;
+import com.flipkart.krystal.krystex.kryon.KryonId;
 
-public record Flush(NodeId nodeId, DependantChain dependantChain) implements NodeCommand {}
+public record Flush(KryonId kryonId, DependantChain dependantChain) implements KryonCommand {}

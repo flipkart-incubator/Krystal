@@ -6,8 +6,7 @@ public class StringReqGenerator implements RequestIdGenerator {
 
   @Override
   public RequestId newSubRequest(RequestId parent, Supplier<String> suffixSupplier) {
-    return new RequestId(
-        "%s:%s".formatted(parent.id(), suffixSupplier.get()), parent.originatedFrom());
+    return new RequestId("%s:%s".formatted(parent.id(), suffixSupplier.get()));
   }
 
   @Override

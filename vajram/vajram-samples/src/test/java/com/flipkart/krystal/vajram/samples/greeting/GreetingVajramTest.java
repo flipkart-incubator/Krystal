@@ -11,15 +11,15 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
-import com.flipkart.krystal.krystex.decorators.observability.DefaultNodeExecutionReport;
+import com.flipkart.krystal.krystex.decorators.observability.DefaultKryonExecutionReport;
+import com.flipkart.krystal.krystex.decorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.decorators.observability.MainLogicExecReporter;
-import com.flipkart.krystal.krystex.decorators.observability.NodeExecutionReport;
-import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
-import com.flipkart.krystal.krystex.node.NodeExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjector;
 import com.google.common.collect.ImmutableMap;
@@ -44,7 +44,7 @@ public class GreetingVajramTest {
   @BeforeEach
   public void setUp() {
     graph =
-        new VajramNodeGraph.Builder()
+        new VajramKryonGraph.Builder()
             .loadFromPackage("com.flipkart.krystal.vajram.samples.greeting")
             .injectInputsWith(wrapInjector(createInjector(new GuiceModule())))
             .logicDecorationOrdering(
@@ -65,14 +65,14 @@ public class GreetingVajramTest {
   @Test
   public void greetingVajram_success() throws Exception {
     CompletableFuture<String> future;
-    NodeExecutionReport nodeExecutionReport = new DefaultNodeExecutionReport(Clock.systemUTC());
-    MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(nodeExecutionReport);
+    KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
+    MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(kryonExecutionReport);
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
         graph
             .build()
             .createExecutor(
                 new RequestContext("greetingTest"),
-                KrystalNodeExecutorConfig.builder()
+                KryonExecutorConfig.builder()
                     .requestScopedLogicDecoratorConfigs(
                         ImmutableMap.of(
                             mainLogicExecReporter.decoratorType(),
@@ -87,7 +87,7 @@ public class GreetingVajramTest {
     }
     assertThat(future.get()).contains("user@123");
     System.out.println(
-        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(nodeExecutionReport));
+        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
   }
 
   private static class GuiceModule extends AbstractModule {
@@ -113,7 +113,7 @@ public class GreetingVajramTest {
     return krystexVajramExecutor.execute(
         vajramID(GreetingVajram.ID),
         rc -> GreetingRequest.builder().userId("user@123").build(),
-        NodeExecutionConfig.builder().executionId("req_1").build());
+        KryonExecutionConfig.builder().executionId("req_1").build());
   }
 
   private static InputInjectionProvider wrapInjector(Injector injector) {

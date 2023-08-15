@@ -6,9 +6,9 @@ import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig.DecoratorContext;
-import com.flipkart.krystal.krystex.node.DependantChain;
-import com.flipkart.krystal.krystex.node.NodeDefinition;
-import com.flipkart.krystal.krystex.node.NodeLogicId;
+import com.flipkart.krystal.krystex.kryon.DependantChain;
+import com.flipkart.krystal.krystex.kryon.KryonDefinition;
+import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
@@ -25,11 +25,11 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<Main
     permits IOLogicDefinition, ComputeLogicDefinition {
 
   protected MainLogicDefinition(
-      NodeLogicId nodeLogicId,
+      KryonLogicId kryonLogicId,
       Set<String> inputs,
       ImmutableMap<String, Tag> logicTags,
       MainLogic<T> mainLogic) {
-    super(nodeLogicId, inputs, logicTags, mainLogic);
+    super(kryonLogicId, inputs, logicTags, mainLogic);
   }
 
   public final ImmutableMap<Inputs, CompletableFuture<T>> execute(ImmutableList<Inputs> inputs) {
@@ -52,16 +52,16 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<Main
   }
 
   public ImmutableMap<String, MainLogicDecorator> getSessionScopedLogicDecorators(
-      NodeDefinition nodeDefinition, @Nullable DependantChain dependants) {
+      KryonDefinition kryonDefinition, @Nullable DependantChain dependants) {
     Map<String, MainLogicDecorator> decorators = new LinkedHashMap<>();
     sessionScopedLogicDecoratorConfigs.forEach(
         (s, decoratorConfig) -> {
           LogicExecutionContext logicExecutionContext =
               new LogicExecutionContext(
-                  nodeDefinition.nodeId(),
+                  kryonDefinition.kryonId(),
                   logicTags(),
                   dependants,
-                  nodeDefinition.nodeDefinitionRegistry());
+                  kryonDefinition.kryonDefinitionRegistry());
           String instanceId = decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
 
           if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {

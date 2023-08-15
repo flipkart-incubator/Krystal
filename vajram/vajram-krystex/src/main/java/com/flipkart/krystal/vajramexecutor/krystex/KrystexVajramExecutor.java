@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
 import com.flipkart.krystal.krystex.KrystalExecutor;
-import com.flipkart.krystal.krystex.node.KrystalNodeExecutor;
-import com.flipkart.krystal.krystex.node.KrystalNodeExecutorConfig;
-import com.flipkart.krystal.krystex.node.NodeExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
+import com.flipkart.krystal.krystex.kryon.KryonExecutor;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.VajramID;
@@ -16,20 +16,20 @@ import java.util.function.Function;
 public class KrystexVajramExecutor<C extends ApplicationRequestContext>
     implements VajramExecutor<C> {
 
-  private final VajramNodeGraph vajramNodeGraph;
+  private final VajramKryonGraph vajramKryonGraph;
   private final C applicationRequestContext;
   private final KrystalExecutor krystalExecutor;
 
   public KrystexVajramExecutor(
-      VajramNodeGraph vajramNodeGraph,
+      VajramKryonGraph vajramKryonGraph,
       C applicationRequestContext,
       MultiLeasePool<? extends ExecutorService> executorServicePool,
-      KrystalNodeExecutorConfig config) {
-    this.vajramNodeGraph = vajramNodeGraph;
+      KryonExecutorConfig config) {
+    this.vajramKryonGraph = vajramKryonGraph;
     this.applicationRequestContext = applicationRequestContext;
     this.krystalExecutor =
-        new KrystalNodeExecutor(
-            vajramNodeGraph.getNodeDefinitionRegistry(),
+        new KryonExecutor(
+            vajramKryonGraph.getKryonDefinitionRegistry(),
             executorServicePool,
             config,
             applicationRequestContext.requestId());
@@ -41,15 +41,15 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
     return execute(
         vajramId,
         vajramRequestBuilder,
-        NodeExecutionConfig.builder().executionId("defaultExecution").build());
+        KryonExecutionConfig.builder().executionId("defaultExecution").build());
   }
 
   public <T> CompletableFuture<T> execute(
       VajramID vajramId,
       Function<C, VajramRequest> vajramRequestBuilder,
-      NodeExecutionConfig executionConfig) {
-    return krystalExecutor.executeNode(
-        vajramNodeGraph.getNodeId(vajramId),
+      KryonExecutionConfig executionConfig) {
+    return krystalExecutor.executeKryon(
+        vajramKryonGraph.getKryonId(vajramId),
         vajramRequestBuilder.apply(applicationRequestContext).toInputValues(),
         executionConfig);
   }

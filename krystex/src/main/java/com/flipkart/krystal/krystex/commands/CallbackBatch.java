@@ -1,15 +1,15 @@
 package com.flipkart.krystal.krystex.commands;
 
 import com.flipkart.krystal.data.Results;
-import com.flipkart.krystal.krystex.node.DependantChain;
-import com.flipkart.krystal.krystex.node.NodeId;
+import com.flipkart.krystal.krystex.kryon.DependantChain;
+import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 
 public record CallbackBatch(
-    NodeId nodeId,
+    KryonId kryonId,
     String dependencyName,
     ImmutableMap<RequestId, Results<Object>> resultsByRequest,
     DependantChain dependantChain)

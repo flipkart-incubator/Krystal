@@ -1,17 +1,17 @@
 package com.flipkart.krystal.krystex;
 
 import com.flipkart.krystal.config.Tag;
-import com.flipkart.krystal.krystex.node.NodeLogicId;
+import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.google.common.collect.ImmutableMap;
 import java.util.Set;
 
 public final class ComputeLogicDefinition<T> extends MainLogicDefinition<T> {
 
   public ComputeLogicDefinition(
-      NodeLogicId nodeLogicId,
+      KryonLogicId kryonLogicId,
       Set<String> inputs,
-      MainLogic<T> nodeLogic,
+      MainLogic<T> mainLogic,
       ImmutableMap<String, Tag> logicTags) {
-    super(nodeLogicId, inputs, logicTags, nodeLogic);
+    super(kryonLogicId, inputs, logicTags, mainLogic);
   }
 }

@@ -2,19 +2,7 @@ package com.flipkart.krystal.krystex.request;
 
 import java.util.Objects;
 
-public record RequestId(Object id, RequestId originatedFrom) {
-
-  public RequestId(Object content) {
-    this(content, null);
-  }
-
-  @Override
-  public RequestId originatedFrom() {
-    if (originatedFrom == null) {
-      return this;
-    }
-    return originatedFrom;
-  }
+public record RequestId(Object id) {
 
   @Override
   public String toString() {
