@@ -6,6 +6,7 @@ import java.util.Deque;
 import java.util.LinkedList;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class MultiLeasePool<T> implements AutoCloseable {
@@ -39,7 +40,7 @@ public class MultiLeasePool<T> implements AutoCloseable {
         if (head == null) {
           continue;
         }
-        processNonNullHead(head);
+        processNonNullHead();
       } while (head != null && --count > 0 && !canLeaseOut(head));
       PooledObject<T> leasable;
       if (head == null || !canLeaseOut(head)) {
@@ -57,13 +58,16 @@ public class MultiLeasePool<T> implements AutoCloseable {
     }
   }
 
-  private void processNonNullHead(PooledObject<T> head) {
+  private void processNonNullHead() {
+    PooledObject<T> head = queue.poll();
+    if (head == null) {
+      return;
+    }
     boolean shouldPushToLast =
         !canLeaseOut(head)
             || (leasePolicy instanceof DistributeLeases distributeLeases
                 && distributeLeases.maxActiveObjects() == queue.size());
     if (shouldPushToLast) {
-      head = queue.poll();
       if (!shouldDelete(head)) {
         queue.add(head);
       }
@@ -143,10 +147,10 @@ public class MultiLeasePool<T> implements AutoCloseable {
 
   public static final class Lease<T> implements AutoCloseable {
 
-    private PooledObject<T> pooledObject;
+    private @Nullable PooledObject<T> pooledObject;
     private final Consumer<PooledObject<T>> giveback;
 
-    private Lease(PooledObject<T> pooledObject, Consumer<PooledObject<T>> giveback) {
+    private Lease(@NonNull PooledObject<T> pooledObject, Consumer<PooledObject<T>> giveback) {
       this.pooledObject = pooledObject;
       this.giveback = giveback;
     }
@@ -160,10 +164,11 @@ public class MultiLeasePool<T> implements AutoCloseable {
 
     @Override
     public void close() {
+      PooledObject<T> pooledObject = this.pooledObject;
       if (pooledObject != null) {
         giveback.accept(pooledObject);
         pooledObject.decrementActiveLeases();
-        pooledObject = null;
+        this.pooledObject = null;
       }
     }
   }

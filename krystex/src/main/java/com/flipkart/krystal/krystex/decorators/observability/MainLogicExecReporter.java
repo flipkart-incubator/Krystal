@@ -15,6 +15,7 @@ import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class MainLogicExecReporter implements MainLogicDecorator {
 
@@ -38,9 +39,10 @@ public class MainLogicExecReporter implements MainLogicDecorator {
       /*
        Execute logic
       */
-      ImmutableMap<Inputs, CompletableFuture<Object>> results = logicToDecorate.execute(inputs);
+      ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> results =
+          logicToDecorate.execute(inputs);
       /*
-       Report logic start
+       Report logic end
       */
       allOf(results.values().toArray(CompletableFuture[]::new))
           .whenComplete(

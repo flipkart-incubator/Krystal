@@ -5,9 +5,10 @@ public class WorkflowMeta<P extends WorkflowPayload> {
   private String name;
   private final Class<P> payloadType;
 
-  public WorkflowMeta(String name, Class<P> payloadType) {
+  public WorkflowMeta(String name, Class<P> payloadType, String version) {
     this.name = name;
     this.payloadType = payloadType;
+    this.version = version;
   }
 
   /**
@@ -21,7 +22,7 @@ public class WorkflowMeta<P extends WorkflowPayload> {
    */
   public static <P extends WorkflowPayload> WorkflowMeta<P> workflow(
       String name, Class<P> payloadType) {
-    return new WorkflowMeta<>(name, payloadType);
+    return new WorkflowMeta<>(name, payloadType, "0.0.1");
   }
 
   public WorkflowMeta<P> version(String version) {

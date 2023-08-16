@@ -4,8 +4,15 @@ import com.flipkart.krystal.caramel.model.CaramelField;
 import com.flipkart.krystal.caramel.model.SimpleCaramelField;
 import com.flipkart.krystal.caramel.model.Value;
 import com.flipkart.krystal.caramel.model.ValueImpl;
+import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
 
 public class StringMetricPayload implements StringMetricPayloadDefinition {
+
+  public StringMetricPayload() {
+    metric = new ValueImpl<>(StringMetricFields.metric, this);
+    initString = new ValueImpl<>(StringMetricFields.initString, this);
+  }
+
   interface StringMetricFields {
     CaramelField<String, StringMetricPayload> initString =
         new SimpleCaramelField<>(
@@ -22,10 +29,8 @@ public class StringMetricPayload implements StringMetricPayloadDefinition {
             StringMetricPayload::setMetric);
   }
 
-  private final Value<String, StringMetricPayload> initString =
-      new ValueImpl<>(StringMetricFields.initString, this);
-  private final Value<Metric, StringMetricPayload> metric =
-      new ValueImpl<>(StringMetricFields.metric, this);
+  @NotOnlyInitialized private final Value<String, StringMetricPayload> initString;
+  @NotOnlyInitialized private final Value<Metric, StringMetricPayload> metric;
 
   @Override
   public String initString() {

@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Accessors(fluent = true)
 public final class JavaType<T> implements JavaDataType<T> {
@@ -90,7 +91,14 @@ public final class JavaType<T> implements JavaDataType<T> {
     if (clazz == null) {
       try {
         //noinspection unchecked
-        Class<T> type = (Class<T>) this.getClass().getClassLoader().loadClass(className());
+        Class<T> type =
+            (Class<T>)
+                Optional.ofNullable(this.getClass().getClassLoader())
+                    .orElseThrow(
+                        () ->
+                            new IllegalStateException(
+                                "null classloader returned. Cannot proceed further"))
+                    .loadClass(className());
         this.clazz = type;
         if (!typeParameters.isEmpty()) {
           if (typeParameters.stream().map(TypeUtils::getJavaType).allMatch(Optional::isPresent)) {
@@ -111,6 +119,7 @@ public final class JavaType<T> implements JavaDataType<T> {
                   }
 
                   @Override
+                  @Nullable
                   public Type getOwnerType() {
                     return null;
                   }

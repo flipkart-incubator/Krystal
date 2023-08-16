@@ -81,6 +81,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import lombok.Getter;
+import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
+import org.checkerframework.checker.initialization.qual.UnderInitialization;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** The execution graph encompassing all registered vajrams. */
 public final class VajramKryonGraph implements VajramExecutableGraph {
@@ -100,13 +103,13 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
 
   private final LogicDecorationOrdering logicDecorationOrdering;
   private final MultiLeasePool<? extends ExecutorService> executorPool;
-  private final InputInjector inputInjector;
+  @NotOnlyInitialized private final InputInjector inputInjector;
 
   private VajramKryonGraph(
       String[] packagePrefixes,
       ImmutableMap<String, MainLogicDecoratorConfig> sessionScopedDecorators,
       LogicDecorationOrdering logicDecorationOrdering,
-      InputInjectionProvider inputInjectionProvider,
+      @Nullable InputInjectionProvider inputInjectionProvider,
       double maxParallelismPerCore) {
     this.sessionScopedDecoratorConfigs = sessionScopedDecorators;
     this.logicDecorationOrdering = logicDecorationOrdering;
@@ -117,30 +120,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     for (String packagePrefix : packagePrefixes) {
       loadVajramsFromClassPath(packagePrefix).forEach(this::registerVajram);
     }
-    inputInjector = new InputInjector(this, inputInjectionProvider);
-  }
-
-  private static DependencyCommand<Inputs> toDependencyCommand(
-      List<Map<String, Object>> depInputs) {
-    DependencyCommand<Inputs> dependencyCommand;
-    if (depInputs.isEmpty()) {
-      dependencyCommand = executeFanoutWith(ImmutableList.of());
-    } else if (depInputs.size() == 1) {
-      Map<String, InputValue<Object>> collect =
-          depInputs.get(0).entrySet().stream()
-              .collect(toMap(Entry::getKey, e -> withValue(e.getValue())));
-      dependencyCommand = executeWith(new Inputs(collect));
-    } else {
-      List<Inputs> inputsList = new ArrayList<>();
-      for (Map<String, Object> depInput : depInputs) {
-        inputsList.add(
-            new Inputs(
-                depInput.entrySet().stream()
-                    .collect(toMap(Entry::getKey, e -> withValue(e.getValue())))));
-      }
-      dependencyCommand = executeFanoutWith(inputsList);
-    }
-    return dependencyCommand;
+    this.inputInjector = new InputInjector(this, inputInjectionProvider);
   }
 
   public MultiLeasePool<? extends ExecutorService> getExecutorPool() {
@@ -168,7 +148,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     VajramDefinition vajramDefinition = vajramDefinitions.get(vajramID);
     MainLogicDefinition<Object> mainLogicDefinition =
         kryonDefinitionRegistry.get(kryonId).getMainLogicDefinition();
-    if (kryonId == null || vajramDefinition == null || mainLogicDefinition == null) {
+    if (kryonId == null || vajramDefinition == null) {
       throw new IllegalArgumentException("Unable to find vajram with id %s".formatted(vajramID));
     }
     Vajram<?> vajram = vajramDefinition.getVajram();
@@ -236,7 +216,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
    *
    * @param vajram The vajram to be registered for future execution.
    */
-  private void registerVajram(Vajram vajram) {
+  private void registerVajram(@UnderInitialization VajramKryonGraph this, Vajram vajram) {
     if (vajramDefinitions.containsKey(vajram.getId())) {
       return;
     }
@@ -318,7 +298,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                           inputDefinitions.stream()
                               .filter(def -> sources.contains(def.name()))
                               .collect(toImmutableList());
-                      ResolverLogicDefinition inputResolverKryon =
+                      ResolverLogicDefinition inputResolverLogic =
                           logicRegistryDecorator.newResolverLogic(
                               vajramId.vajramId(),
                               "%s:dep(%s):inputResolver(%s)"
@@ -377,7 +357,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                                 return toResolverCommand(dependencyCommand);
                               });
                       return new ResolverDefinition(
-                          inputResolverKryon.kryonLogicId(),
+                          inputResolverLogic.kryonLogicId(),
                           sources,
                           dependencyName,
                           resolvedInputNames);
@@ -424,11 +404,19 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                                   Entry::getKey,
                                   e ->
                                       e.getValue().stream()
-                                          .map(resolversByResolverDefs::get)
+                                          .map(
+                                              def ->
+                                                  Optional.ofNullable(
+                                                          resolversByResolverDefs.get(def))
+                                                      .orElseThrow(
+                                                          () ->
+                                                              new AssertionError(
+                                                                  "Could not find resolver for resolver definition. This should not happen")))
                                           .map(ird -> (SimpleInputResolver<?, ?, ?, ?>) ird)
                                           .toList())),
                       inputs);
-              Map<String, List<Map<String, Object>>> results = simpleResolutions.results();
+              Map<String, List<Map<String, @Nullable Object>>> results =
+                  simpleResolutions.results();
               Map<String, DependencyCommand<Inputs>> skippedDependencies =
                   simpleResolutions.skippedDependencies();
 
@@ -450,8 +438,10 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                   skippedDependencies.put(dependencyName, command);
                   results.remove(dependencyName);
                 } else {
+                  //noinspection Convert2Diamond : To handle NullChecker errors.
                   collectDepInputs(
-                      results.computeIfAbsent(dependencyName, _k -> new ArrayList<>()),
+                      results.computeIfAbsent(
+                          dependencyName, _k -> new ArrayList<Map<String, @Nullable Object>>()),
                       null,
                       command);
                 }
@@ -560,6 +550,29 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
             decoratorContext -> inputInjector));
   }
 
+  private static DependencyCommand<Inputs> toDependencyCommand(
+      List<Map<String, @Nullable Object>> depInputs) {
+    DependencyCommand<Inputs> dependencyCommand;
+    if (depInputs.isEmpty()) {
+      dependencyCommand = executeFanoutWith(ImmutableList.of());
+    } else if (depInputs.size() == 1) {
+      Map<String, InputValue<Object>> collect =
+          depInputs.get(0).entrySet().stream()
+              .collect(toMap(Entry::getKey, e -> withValue(e.getValue())));
+      dependencyCommand = executeWith(new Inputs(collect));
+    } else {
+      List<Inputs> inputsList = new ArrayList<>();
+      for (Map<String, @Nullable Object> depInput : depInputs) {
+        inputsList.add(
+            new Inputs(
+                depInput.entrySet().stream()
+                    .collect(toMap(Entry::getKey, e -> withValue(e.getValue())))));
+      }
+      dependencyCommand = executeFanoutWith(inputsList);
+    }
+    return dependencyCommand;
+  }
+
   private ImmutableMap<String, KryonId> createKryonDefinitionsForDependencies(
       VajramDefinition vajramDefinition) {
     List<Dependency> dependencies = new ArrayList<>();
@@ -611,7 +624,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
         new HashMap<>();
     private LogicDecorationOrdering logicDecorationOrdering =
         new LogicDecorationOrdering(ImmutableSet.of());
-    private InputInjectionProvider inputInjectionProvider;
+    private @Nullable InputInjectionProvider inputInjectionProvider;
     private double maxParallelismPerCore = 1;
 
     public Builder loadFromPackage(String packagePrefix) {

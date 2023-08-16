@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A wrapper object representing a value or an error. This can be seen as a 'completed' version of a
@@ -60,7 +61,7 @@ public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error)
     return s -> valueOrError(() -> valueComputer.apply(s));
   }
 
-  public static <T> ValueOrError<T> withValue(T t) {
+  public static <T> ValueOrError<T> withValue(@Nullable T t) {
     return valueOrError(t, null);
   }
 
@@ -68,7 +69,8 @@ public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error)
     return valueOrError(null, t);
   }
 
-  public static <T> ValueOrError<T> valueOrError(Object t, Throwable throwable) {
+  public static <T> ValueOrError<T> valueOrError(
+      @Nullable Object t, @Nullable Throwable throwable) {
     //noinspection unchecked,rawtypes
     return new ValueOrError<T>(
         (t instanceof Optional o) ? o : (Optional<T>) Optional.ofNullable(t),
@@ -80,7 +82,7 @@ public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error)
    *     {@link #error()} if it is present, or completed normally with contents of {@link #value()}
    *     (or null if it is empty)
    */
-  public CompletableFuture<T> toFuture() {
+  public CompletableFuture<@Nullable T> toFuture() {
     if (error().isPresent()) {
       return CompletableFuture.failedFuture(error().get());
     } else {

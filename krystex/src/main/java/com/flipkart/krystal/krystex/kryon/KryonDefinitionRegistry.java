@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class KryonDefinitionRegistry {
 
@@ -44,7 +45,7 @@ public final class KryonDefinitionRegistry {
       KryonLogicId mainLogicId,
       ImmutableMap<String, KryonId> dependencyKryons,
       ImmutableList<ResolverDefinition> resolverDefinitions,
-      KryonLogicId mulitResolverId) {
+      @Nullable KryonLogicId mulitResolverId) {
     if (!resolverDefinitions.isEmpty() && mulitResolverId == null) {
       throw new IllegalArgumentException("missing multi resolver logic");
     }

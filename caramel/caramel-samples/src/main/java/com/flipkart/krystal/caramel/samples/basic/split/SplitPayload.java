@@ -7,8 +7,17 @@ import com.flipkart.krystal.caramel.model.ValueImpl;
 import com.flipkart.krystal.caramel.samples.basic.Metric;
 import com.flipkart.krystal.caramel.samples.basic.ProductUpdateEvent;
 import java.util.Collection;
+import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
 
 class SplitPayload implements SplitPayloadDefinition {
+
+  SplitPayload() {
+    metrics = new ValueImpl<>(SplitPayloadFields.metrics, this);
+    initProductEvent = new ValueImpl<>(SplitPayloadFields.initProductEvent, this);
+    metric = new ValueImpl<>(SplitPayloadFields.metric, this);
+    initString = new ValueImpl<>(SplitPayloadFields.initString, this);
+  }
+
   interface SplitPayloadFields {
     CaramelField<String, SplitPayload> initString =
         new SimpleCaramelField<>(
@@ -30,14 +39,10 @@ class SplitPayload implements SplitPayloadDefinition {
             "metrics", SplitPayload.class, SplitPayload::metrics, SplitPayload::setMetrics);
   }
 
-  private final Value<String, SplitPayload> initString =
-      new ValueImpl<>(SplitPayloadFields.initString, this);
-  private final Value<Metric, SplitPayload> metric =
-      new ValueImpl<>(SplitPayloadFields.metric, this);
-  private final Value<ProductUpdateEvent, SplitPayload> initProductEvent =
-      new ValueImpl<>(SplitPayloadFields.initProductEvent, this);
-  private final Value<Collection<Metric>, SplitPayload> metrics =
-      new ValueImpl<>(SplitPayloadFields.metrics, this);
+  @NotOnlyInitialized private final Value<String, SplitPayload> initString;
+  @NotOnlyInitialized private final Value<Metric, SplitPayload> metric;
+  @NotOnlyInitialized private final Value<ProductUpdateEvent, SplitPayload> initProductEvent;
+  @NotOnlyInitialized private final Value<Collection<Metric>, SplitPayload> metrics;
 
   @Override
   public String initString() {

@@ -20,7 +20,7 @@ public abstract class Adder extends ComputeVajram<Integer> {
   public static final LongAdder CALL_COUNTER = new LongAdder();
 
   @VajramLogic
-  public static Map<AdderModInputs, Integer> add(
+  static Map<AdderModInputs, Integer> add(
       ModulatedInput<AdderModInputs, AdderCommonInputs> modulatedInput) {
     CALL_COUNTER.increment();
     return modulatedInput.modInputs().stream()

@@ -66,6 +66,9 @@ public final class VajramDefinition {
 
     for (Method resolverMethod : resolverMethods) {
       Resolve resolver = resolverMethod.getAnnotation(Resolve.class);
+      if (resolver == null) {
+        throw new AssertionError();
+      }
       String targetDependency = resolver.depName();
       Dependency<?> dependency = inputDefinitions.get(targetDependency);
       if (dependency == null) {
@@ -135,7 +138,7 @@ public final class VajramDefinition {
 
   private static Class<?> getVajramSourceClass(Class<?> vajramClass) {
     Class<?> superclass = vajramClass.getSuperclass();
-    if (Object.class.equals(superclass)) {
+    if (Object.class.equals(superclass) || superclass == null) {
       throw new IllegalArgumentException();
     }
     if (IOVajram.class.equals(superclass) || ComputeVajram.class.equals(superclass)) {

@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class ListType<T> implements JavaDataType<ArrayList<T>> {
@@ -43,6 +44,7 @@ public class ListType<T> implements JavaDataType<ArrayList<T>> {
                     }
 
                     @Override
+                    @Nullable
                     public Type getOwnerType() {
                       return null;
                     }

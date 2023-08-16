@@ -40,7 +40,7 @@ public record VajramInputsDef(
     return Stream.concat(inputs.stream(), dependencies.stream());
   }
 
-  public static record InputFilePath(Path srcDir, Path relativeFilePath) {
+  public record InputFilePath(Path srcDir, Path relativeFilePath) {
 
     public Path absolutePath() {
       return srcDir.resolve(relativeFilePath);
