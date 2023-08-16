@@ -32,9 +32,7 @@
     </inspection_tool>
     <inspection_tool class="AssignmentToLambdaParameter" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="AssignmentToNull" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="AutoCloseableResource" enabled="true" level="ERROR" enabled_by_default="true">
-      <option name="METHOD_MATCHER_CONFIG" value="java.util.Formatter,format,java.io.Writer,append,com.google.common.base.Preconditions,checkNotNull,org.hibernate.Session,close,java.io.PrintWriter,printf,java.io.PrintStream,printf,com.flipkart.krystal.vajramexecutor.krystex.VajramNodeGraph.Builder,build" />
-    </inspection_tool>
+    <inspection_tool class="AutoCloseableResource" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="AwaitNotInLoop" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="BadExceptionCaught" enabled="true" level="ERROR" enabled_by_default="true">
       <option name="exceptionsString" value="" />
@@ -67,7 +65,7 @@
     <inspection_tool class="BooleanVariableAlwaysNegated" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="BreakStatementWithLabel" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="CallToNativeMethodWhileLocked" enabled="true" level="WARNING" enabled_by_default="true" />
-    <inspection_tool class="CallToSimpleGetterInClass" enabled="true" level="ERROR" enabled_by_default="true">
+    <inspection_tool class="CallToSimpleGetterInClass" enabled="false" level="ERROR" enabled_by_default="false">
       <option name="ignoreGetterCallsOnOtherObjects" value="true" />
       <option name="onlyReportPrivateGetter" value="true" />
     </inspection_tool>
@@ -535,6 +533,9 @@
           <option value="ResultOfMethodCallIgnored" />
           <option value="ClassReferencesSubclass" />
           <option value="NonSynchronizedMethodOverridesSynchronizedMethod" />
+          <option value="SuspiciousGetterSetter" />
+          <option value="FieldMayBeFinal" />
+          <option value="unused" />
         </list>
       </option>
     </inspection_tool>

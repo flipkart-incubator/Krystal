@@ -1,0 +1,18 @@
+pluginManagement {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven {url 'https://clojars.org/repo'}
+    }
+}
+
+
+dependencyResolutionManagement {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven {url 'https://clojars.org/repo'}
+    }
+}
+
+rootProject.name = 'mojo-publish-plugin'

@@ -1,5 +1,7 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import lombok.EqualsAndHashCode;
+
 public final class DefaultDependantChain extends AbstractDependantChain {
   private final KryonId kryonId;
   private final String dependencyName;
