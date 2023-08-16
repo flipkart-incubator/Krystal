@@ -12,3 +12,4 @@ dependencies:
     depType: vajram
     vajramClass: com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Vajram
     dataType: string
+    canFanout: true

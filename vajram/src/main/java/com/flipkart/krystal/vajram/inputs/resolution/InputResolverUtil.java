@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.inputs.resolution;
 
-import static com.flipkart.krystal.data.ValueOrError.empty;
 import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.inputs.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajram.inputs.SingleExecute.executeWith;
@@ -10,14 +9,18 @@ import static java.util.Optional.ofNullable;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
+import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.MultiExecute;
 import com.flipkart.krystal.vajram.inputs.SingleExecute;
+import com.flipkart.krystal.vajram.inputs.VajramDepFanoutTypeSpec;
+import com.flipkart.krystal.vajram.inputs.VajramDepSingleTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramDependencyTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
+import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -26,6 +29,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputResolverUtil {
 
@@ -34,13 +38,13 @@ public final class InputResolverUtil {
       Map<String, Collection<? extends SimpleInputResolver<?, ?, ?, ?>>> resolvers,
       Inputs inputs) {
 
-    Map<String, List<Map<String, Object>>> results = new LinkedHashMap<>();
+    Map<String, List<Map<String, @Nullable Object>>> results = new LinkedHashMap<>();
     Map<String, DependencyCommand<Inputs>> skippedDependencies = new LinkedHashMap<>();
     for (ResolutionRequest resolutionRequest : resolutionRequests) {
       String dependencyName = resolutionRequest.dependencyName();
-      List<Map<String, Object>> depInputs = new ArrayList<>();
+      List<Map<String, @Nullable Object>> depInputs = new ArrayList<>();
       Collection<? extends SimpleInputResolver<?, ?, ?, ?>> depResolvers =
-          resolvers.get(dependencyName);
+          resolvers.getOrDefault(dependencyName, List.of());
       for (SimpleInputResolver<?, ?, ?, ?> simpleResolver : depResolvers) {
         String resolvable = simpleResolver.getResolverSpec().getTargetInput().name();
         DependencyCommand<?> command =
@@ -65,7 +69,9 @@ public final class InputResolverUtil {
   }
 
   public static void collectDepInputs(
-      List<Map<String, Object>> depInputs, String resolvable, DependencyCommand<?> command) {
+      List<Map<String, @Nullable Object>> depInputs,
+      @Nullable String resolvable,
+      DependencyCommand<?> command) {
     if (command.shouldSkip()) {
       return;
     }
@@ -79,21 +85,22 @@ public final class InputResolverUtil {
       if (depInputs.isEmpty()) {
         objects.forEach(
             o -> {
-              LinkedHashMap<String, Object> e = new LinkedHashMap<>();
+              LinkedHashMap<String, @Nullable Object> e = new LinkedHashMap<>();
               depInputs.add(e);
               handleResolverReturn(resolvable, o, e);
             });
       } else {
-        List<Map<String, Object>> more =
+        List<Map<String, @Nullable Object>> more =
             new ArrayList<>(depInputs.size() * objects.size() - depInputs.size());
-        for (Map<String, Object> depInput : depInputs) {
+        for (Map<String, @Nullable Object> depInput : depInputs) {
           boolean first = true;
+          ImmutableMap<String, @Nullable Object> originalDepInput = ImmutableMap.copyOf(depInput);
           for (Object object : objects) {
             if (first) {
               first = false;
               handleResolverReturn(resolvable, object, depInput);
             } else {
-              LinkedHashMap<String, Object> e = new LinkedHashMap<>(depInput);
+              LinkedHashMap<String, @Nullable Object> e = new LinkedHashMap<>(originalDepInput);
               more.add(e);
               handleResolverReturn(resolvable, object, e);
             }
@@ -105,44 +112,52 @@ public final class InputResolverUtil {
   }
 
   private static void handleResolverReturn(
-      String resolvable, Object o, Map<String, Object> valuesMap) {
+      @Nullable String resolvable, @Nullable Object o, Map<String, @Nullable Object> valuesMap) {
     if (o instanceof Inputs inputs) {
-      //noinspection unchecked,rawtypes
-      valuesMap.putAll(
-          inputs.values().entrySet().stream()
-              .collect(
-                  toMap(Entry::getKey, e -> ((ValueOrError) e.getValue()).value().orElse(null))));
-    } else {
+      for (Entry<String, InputValue<Object>> e : inputs.values().entrySet()) {
+        //noinspection unchecked,rawtypes
+        if (valuesMap.put(e.getKey(), ((ValueOrError) e.getValue()).value().orElse(null)) != null) {
+          throw new IllegalStateException("Duplicate key");
+        }
+      }
+    } else if (resolvable != null) {
       valuesMap.put(resolvable, o);
+    } else {
+      throw new AssertionError(
+          "Resolvable is null and resolver return is not of Inputs. This should not be possible");
     }
   }
 
-  static <S, T, CV extends Vajram<?>, DV extends Vajram<?>> InputResolver toResolver(
-      VajramDependencyTypeSpec<?, CV, DV> dependency, SimpleInputResolverSpec<S, T, CV, DV> spec) {
-    return new SimpleInputResolver<>(dependency, spec);
-  }
-
   static <T> DependencyCommand<T> _resolutionHelper(
-      VajramInputTypeSpec<?, ?> sourceInput,
-      Function<? extends Optional<?>, ?> oneToOneTransformer,
-      Function<? extends Optional<?>, ? extends Collection<?>> fanoutTransformer,
+      @Nullable VajramInputTypeSpec<?, ?> sourceInput,
+      @Nullable Function<? extends Optional<?>, ?> oneToOneTransformer,
+      @Nullable Function<? extends Optional<?>, ? extends Collection<?>> fanoutTransformer,
       List<? extends SkipPredicate<?>> skipPredicates,
       Inputs inputs) {
     boolean fanout = fanoutTransformer != null;
-    ValueOrError<Object> inputValue;
-    if (sourceInput instanceof VajramDependencyTypeSpec<?, ?, ?>) {
-      inputValue = inputs.getDepValue(sourceInput.name()).values().values().iterator().next();
+    final Optional<Object> inputValue;
+    if (sourceInput instanceof VajramDepSingleTypeSpec<?, ?, ?>) {
+      inputValue =
+          inputs.getDepValue(sourceInput.name()).values().values().iterator().next().value();
+    } else if (sourceInput instanceof VajramDepFanoutTypeSpec<?, ?, ?>) {
+      inputValue =
+          Optional.of(
+              inputs.getDepValue(sourceInput.name()).values().values().stream()
+                  .map(ValueOrError::value)
+                  .filter(Optional::isPresent)
+                  .map(Optional::get)
+                  .toList());
     } else if (sourceInput != null) {
-      inputValue = inputs.getInputValue(sourceInput.name());
+      inputValue = inputs.getInputValue(sourceInput.name()).value();
     } else {
-      inputValue = empty();
+      inputValue = Optional.empty();
     }
 
     //noinspection unchecked
     Optional<SkipPredicate<Object>> skipPredicate =
         skipPredicates.stream()
             .map(p -> (SkipPredicate<Object>) p)
-            .filter(sSkipPredicate -> sSkipPredicate.condition().test(inputValue.value()))
+            .filter(sSkipPredicate -> sSkipPredicate.condition().test(inputValue))
             .findFirst();
     if (skipPredicate.isPresent()) {
       if (fanout) {
@@ -167,13 +182,7 @@ public final class InputResolverUtil {
     if (sourceInput == null) {
       transformedInput = ofNullable(transformer.apply(Optional.empty()));
     } else {
-      transformedInput =
-          inputValue
-              .value()
-              .map(
-                  t -> {
-                    return transformer.apply(Optional.of(t));
-                  });
+      transformedInput = inputValue.map(t -> transformer.apply(Optional.of(t)));
     }
     if (fanout) {
       //noinspection unchecked
@@ -187,8 +196,14 @@ public final class InputResolverUtil {
     }
   }
 
+  static <S, T, CV extends Vajram<?>, DV extends Vajram<?>> InputResolver toResolver(
+      VajramDependencyTypeSpec<?, ?, CV, DV> dependency,
+      SimpleInputResolverSpec<S, T, CV, DV> spec) {
+    return new SimpleInputResolver<>(dependency, spec);
+  }
+
   public record ResolutionResult(
-      Map<String, List<Map<String, Object>>> results,
+      Map<String, List<Map<String, @Nullable Object>>> results,
       Map<String, DependencyCommand<Inputs>> skippedDependencies) {}
 
   private InputResolverUtil() {}

@@ -1,7 +1,7 @@
 package com.flipkart.krystal.krystex.decorators.resilience4j;
 
 import static com.flipkart.krystal.krystex.decorators.resilience4j.R4JUtils.extractResponseMap;
-import static io.github.resilience4j.decorators.Decorators.ofCompletionStage;
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.config.ConfigProvider;
@@ -16,9 +16,11 @@ import io.github.resilience4j.bulkhead.BulkheadConfig;
 import io.github.resilience4j.bulkhead.BulkheadConfig.Builder;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkhead;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkheadConfig;
+import io.github.resilience4j.decorators.Decorators;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class Resilience4JBulkhead implements MainLogicDecorator {
 
@@ -31,7 +33,7 @@ public final class Resilience4JBulkhead implements MainLogicDecorator {
 
   private final String instanceId;
 
-  private BulkheadAdapter bulkhead;
+  @Nullable private BulkheadAdapter adaptedBulkhead;
 
   /**
    * @param instanceId The tag because of which this logic decorator was applied.
@@ -43,7 +45,7 @@ public final class Resilience4JBulkhead implements MainLogicDecorator {
   @Override
   public MainLogic<Object> decorateLogic(
       MainLogic<Object> logicToDecorate, MainLogicDefinition<Object> originalLogicDefinition) {
-    BulkheadAdapter bulkhead = this.bulkhead;
+    BulkheadAdapter bulkhead = this.adaptedBulkhead;
     if (bulkhead != null) {
       return inputsList ->
           extractResponseMap(inputsList, bulkhead.decorate(logicToDecorate, inputsList));
@@ -63,14 +65,16 @@ public final class Resilience4JBulkhead implements MainLogicDecorator {
   }
 
   private void updateBulkhead(ConfigProvider configProvider) {
-    BulkheadAdapter bulkhead = this.bulkhead;
     Optional<BulkheadAdapterConfig> newBulkheadConfig = getBulkheadConfig(configProvider);
     if (newBulkheadConfig.isPresent()) {
+      BulkheadAdapter bulkhead = this.adaptedBulkhead;
       if (bulkhead == null) {
-        this.bulkhead = new BulkheadAdapter(newBulkheadConfig.get());
+        this.adaptedBulkhead = new BulkheadAdapter(newBulkheadConfig.get());
       } else {
         bulkhead.changeConfig(newBulkheadConfig.get());
       }
+    } else {
+      this.adaptedBulkhead = null;
     }
   }
 
@@ -112,63 +116,85 @@ public final class Resilience4JBulkhead implements MainLogicDecorator {
   }
 
   private final class BulkheadAdapter {
-    private Bulkhead bulkhead;
-    private ThreadPoolBulkhead threadPoolBulkhead;
+    @Nullable private Bulkhead bulkhead;
+    @Nullable private ThreadPoolBulkhead threadPoolBulkhead;
 
     private BulkheadAdapter(BulkheadAdapterConfig config) {
-      if (config.bulkheadConfig() != null) {
-        this.bulkhead = Bulkhead.of(getBulkheadId(), config.bulkheadConfig());
-      } else if (config.threadPoolBulkheadConfig() != null) {
-        this.threadPoolBulkhead = newThreadPoolBulkhead(config.threadPoolBulkheadConfig());
+      BulkheadConfig bulkheadConfig = config.bulkheadConfig();
+      if (bulkheadConfig != null) {
+        this.bulkhead = Bulkhead.of(getBulkheadId(), bulkheadConfig);
+      } else {
+        ThreadPoolBulkheadConfig threadPoolBulkheadConfig = config.threadPoolBulkheadConfig();
+        if (threadPoolBulkheadConfig != null) {
+          this.threadPoolBulkhead =
+              newThreadPoolBulkhead(threadPoolBulkheadConfig, getBulkheadId());
+        } else {
+          throw new IllegalArgumentException(
+              "Either bulkheadConfig or threadPoolBulkheadConfig must be non-null");
+        }
       }
     }
 
     private void changeConfig(BulkheadAdapterConfig config) {
+      Bulkhead localBulkHead = bulkhead;
       if ((config.bulkheadConfig() != null)
-          && bulkhead != null
-          && !config.bulkheadConfig().equals(bulkhead.getBulkheadConfig())) {
-        bulkhead.changeConfig(config.bulkheadConfig());
-      } else if (config.threadPoolBulkheadConfig() != null
-          && threadPoolBulkhead != null
-          && !config.threadPoolBulkheadConfig().equals(threadPoolBulkhead.getBulkheadConfig())) {
-        threadPoolBulkhead = newThreadPoolBulkhead(config.threadPoolBulkheadConfig());
+          && localBulkHead != null
+          && !config.bulkheadConfig().equals(localBulkHead.getBulkheadConfig())) {
+        localBulkHead.changeConfig(config.bulkheadConfig());
       } else {
-        throw new IllegalStateException();
+        ThreadPoolBulkhead localTPBulkhead = threadPoolBulkhead;
+        if (config.threadPoolBulkheadConfig() != null
+            && localTPBulkhead != null
+            && !config.threadPoolBulkheadConfig().equals(localTPBulkhead.getBulkheadConfig())) {
+          threadPoolBulkhead =
+              newThreadPoolBulkhead(config.threadPoolBulkheadConfig(), getBulkheadId());
+        }
       }
     }
 
-    CompletionStage<ImmutableMap<Inputs, CompletableFuture<Object>>> decorate(
+    @SuppressWarnings("RedundantTypeArguments") // Avoid nullChecker errors
+    CompletionStage<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>> decorate(
         MainLogic<Object> logicToDecorate, ImmutableList<Inputs> inputsList) {
-      if (bulkhead != null) {
-        return ofCompletionStage(
+      ThreadPoolBulkhead threadPoolBulkhead = this.threadPoolBulkhead;
+      Bulkhead bulkhead = this.bulkhead;
+      if (threadPoolBulkhead != null) {
+        return threadPoolBulkhead
+            .<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>>executeCallable(
+                () -> logicToDecorate.execute(inputsList));
+      } else if (bulkhead != null) {
+        return Decorators
+            .<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>>ofCompletionStage(
                 () -> {
-                  ImmutableMap<Inputs, CompletableFuture<Object>> result =
+                  ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> result =
                       logicToDecorate.execute(inputsList);
                   return allOf(result.values().toArray(CompletableFuture[]::new))
-                      .handle((unused, throwable) -> result);
+                      .<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>>handle(
+                          (unused, throwable) -> result);
                 })
             .withBulkhead(bulkhead)
             .get();
-      } else if (threadPoolBulkhead != null) {
-        return threadPoolBulkhead.executeCallable(() -> logicToDecorate.execute(inputsList));
+      } else {
+        throw new IllegalStateException(
+            "Either bulkheadConfig or threadPoolBulkheadConfig must be non-null");
       }
-      return null;
     }
 
-    private ThreadPoolBulkhead newThreadPoolBulkhead(ThreadPoolBulkheadConfig config) {
-      return ThreadPoolBulkhead.of(getBulkheadId(), config);
-    }
-
-    private String getBulkheadId() {
-      return instanceId + ".bulkhead";
+    private static ThreadPoolBulkhead newThreadPoolBulkhead(
+        ThreadPoolBulkheadConfig config, String bulkheadId) {
+      return ThreadPoolBulkhead.of(bulkheadId, config);
     }
   }
 
+  private String getBulkheadId() {
+    return instanceId + ".bulkhead";
+  }
+
   private record BulkheadAdapterConfig(
-      BulkheadConfig bulkheadConfig, ThreadPoolBulkheadConfig threadPoolBulkheadConfig) {
+      @Nullable BulkheadConfig bulkheadConfig,
+      @Nullable ThreadPoolBulkheadConfig threadPoolBulkheadConfig) {
     BulkheadAdapterConfig {
-      assert bulkheadConfig == null || threadPoolBulkheadConfig == null;
-      assert bulkheadConfig != null || threadPoolBulkheadConfig != null;
+      checkArgument(bulkheadConfig == null || threadPoolBulkheadConfig == null);
+      checkArgument(bulkheadConfig != null || threadPoolBulkheadConfig != null);
     }
 
     private BulkheadAdapterConfig(BulkheadConfig bulkheadConfig) {

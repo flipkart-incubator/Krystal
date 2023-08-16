@@ -1,6 +1,7 @@
 package com.flipkart.krystal.krystex.request;
 
 import java.util.Objects;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record RequestId(Object id) {
 
@@ -10,7 +11,7 @@ public record RequestId(Object id) {
   }
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(@Nullable Object o) {
     if (this == o) return true;
     if (!(o instanceof RequestId requestId)) {
       return false;

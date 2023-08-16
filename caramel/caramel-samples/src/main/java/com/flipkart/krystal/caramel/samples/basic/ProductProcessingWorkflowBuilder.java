@@ -13,7 +13,7 @@ import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.TestPayl
 import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.TestPayloadFields.string;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.TestPayloadFields.triggerUserId;
 import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.TestPayloadFields.x1String;
-import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.metrics;
+import static com.flipkart.krystal.caramel.samples.basic.TestPayloadBkp.TestPayloadFields.metrics;
 import static com.flipkart.krystal.caramel.samples.basic.classification.ProductClassification2WorkflowBuilder.classifyProduct2;
 import static com.flipkart.krystal.caramel.samples.basic.classification.ProductClassificationWorkflowBuilder.classifyProduct;
 import static com.flipkart.krystal.caramel.samples.basic.split.SplitWorkflowBuilder.splitter;
@@ -178,7 +178,7 @@ public class ProductProcessingWorkflowBuilder {
   }
 
   private static TransformedProduct newTransformedProduct(String x1String) {
-    return null;
+    throw new UnsupportedOperationException();
   }
 
   private static Stream<ProductUpdateEvent> toProductEvents(

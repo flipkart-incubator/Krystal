@@ -13,6 +13,8 @@ plugins {
     id 'groovy'
 }
 
+group 'com.flipkart.krystal'
+version project.krystal_version
 description
 '''Gradle plugin for projects using the Krystal framework. 
 Includes Vajram code generator and validator. 
@@ -41,6 +43,13 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-annotations:' + jacksonVersion
     implementation 'com.fasterxml.jackson.core:jackson-databind:' + jacksonVersion
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:' + jacksonVersion
+}
+
+checkerFramework {
+    extraJavacArgs = [
+            "-Astubs=${rootDir}/config/checker/stubs",
+            '-AresolveReflection',
+    ]
 }
 
 publishing {

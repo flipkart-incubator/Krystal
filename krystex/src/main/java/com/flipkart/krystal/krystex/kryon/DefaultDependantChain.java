@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
-import lombok.EqualsAndHashCode;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class DefaultDependantChain extends AbstractDependantChain {
   private final KryonId kryonId;
@@ -27,7 +27,7 @@ public final class DefaultDependantChain extends AbstractDependantChain {
   }
 
   @Override
-  public boolean equals(Object obj) {
+  public boolean equals(@Nullable Object obj) {
     return super.equals(obj);
   }
 

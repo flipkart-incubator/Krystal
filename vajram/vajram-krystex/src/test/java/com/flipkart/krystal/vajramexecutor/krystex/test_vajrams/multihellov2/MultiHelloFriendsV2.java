@@ -27,8 +27,8 @@ public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
 
   @Resolve(depName = hellos_n, depInputs = HelloFriendsV2Request.userId_n)
   public static MultiExecute<String> userIdsForHellos(
-      @Using(userIds_n) Set<String> userIds, @Using(skip_n) Optional<Boolean> skip) {
-    if (skip.orElse(false)) {
+      @Using(userIds_n) Set<String> userIds, @Using(skip_n) Optional<Boolean> shouldSkip) {
+    if (shouldSkip.orElse(false)) {
       return skipFanout("skip requested");
     }
     return executeFanoutWith(userIds);

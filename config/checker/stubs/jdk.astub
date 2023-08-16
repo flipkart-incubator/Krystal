@@ -1,0 +1,17 @@
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+package java.util.concurrent;
+
+class ForkJoinPool{
+
+  ForkJoinPool(int parallelism,
+      ForkJoinWorkerThreadFactory factory,
+      @Nullable UncaughtExceptionHandler handler,
+      boolean asyncMode,
+      int corePoolSize,
+      int maximumPoolSize,
+      int minimumRunnable,
+      @Nullable Predicate<? super ForkJoinPool> saturate,
+      long keepAliveTime,
+      TimeUnit unit);
+}

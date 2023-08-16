@@ -32,6 +32,7 @@ public final class Constants {
   public static final String VARIABLE = "variable";
   public static final String DEP_RESPONSE = "depResponse";
   public static final String SKIPPED_EXCEPTION = "skippedException";
+  public static final String ILLEGAL_ARGUMENT = "illegalArgument";
   public static final String REQUEST = "request";
   public static final String RESPONSES_SUFFIX = "Responses";
   public static final String RESPONSE_SUFFIX = "Response";
@@ -51,13 +52,13 @@ public final class Constants {
   public static final String IM_LIST = "imList";
   public static final String DEP_COMMAND = "depCommand";
   public static final String FUNCTION = "function";
+  public static final String OPTIONAL = "optional";
   public static final String SINGLE_EXEC_CMD = "singleExecCmd";
   public static final String MULTI_EXEC_CMD = "multiExecCmd";
 
   public static final String INPUT_MODULATION_CODE_BLOCK =
       """
                 $map:T<$inputModulation:T, $inputs:T> mapping = new $hashMap:T<>();
-                $list:T<$inputModulation:T> ims = new $arrayList:T<>();
                 $commonInput:T commonInputs = null;
                 for ($inputs:T inputs : inputsList) {
                   $unmodInput:T<$inputModulation:T, $commonInput:T> allInputs =
@@ -65,13 +66,14 @@ public final class Constants {
                   commonInputs = allInputs.commonInputs();
                   $inputModulation:T im = allInputs.inputsNeedingModulation();
                   mapping.put(im, inputs);
-                  ims.add(im);
                 }
                 $map:T<$inputs:T, $valErr:T<$returnType:T>> returnValue = new $linkHashMap:T<>();
 
                 if (commonInputs != null) {
-                  var results = $vajramLogicMethod:L(new $modInput:T<>($imList:T.copyOf(ims), commonInputs));
-                  results.forEach((im, value) -> returnValue.put(mapping.get(im), $valErr:T.withValue(value)));
+                  var results = $vajramLogicMethod:L(new $modInput:T<>($imList:T.copyOf(mapping.keySet()), commonInputs));
+                  results.forEach((im, value) -> returnValue.put(
+                       $optional:T.ofNullable(mapping.get(im)).orElseThrow(),
+                       $valErr:T.withValue(value)));
                 }
                 return $imMap:T.copyOf(returnValue);
             """;
@@ -79,7 +81,6 @@ public final class Constants {
   public static final String INPUT_MODULATION_FUTURE_CODE_BLOCK =
       """
                 $map:T<$inputModulation:T, $inputs:T> mapping = new $hashMap:T<>();
-                $list:T<$inputModulation:T> ims = new $arrayList:T<>();
                 $commonInput:T commonInputs = null;
                 for ($inputs:T inputs : inputsList) {
                   $unmodInput:T<$inputModulation:T, $commonInput:T> allInputs =
@@ -87,13 +88,14 @@ public final class Constants {
                   commonInputs = allInputs.commonInputs();
                   $inputModulation:T im = allInputs.inputsNeedingModulation();
                   mapping.put(im, inputs);
-                  ims.add(im);
                 }
                 $map:T<$inputs:T, $comFuture:T<$returnType:T>> returnValue = new $linkHashMap:T<>();
 
                 if (commonInputs != null) {
-                  var results = $vajramLogicMethod:L(new $modInput:T<>($imList:T.copyOf(ims), commonInputs));
-                  results.forEach((im, future) -> returnValue.put(mapping.get(im), future));
+                  var results = $vajramLogicMethod:L(new $modInput:T<>($imList:T.copyOf(mapping.keySet()), commonInputs));
+                  results.forEach((im, future) -> returnValue.put(
+                        $optional:T.ofNullable(mapping.get(im)).orElseThrow(),
+                        future.<$returnType:T>thenApply($function:T.identity())));
                 }
                 return $imMap:T.copyOf(returnValue);
             """;

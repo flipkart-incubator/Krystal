@@ -6,13 +6,14 @@ import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import java.util.Collection;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class VajramID implements DataAccessSpec {
 
   private @MonotonicNonNull String vajramId;
   private final @MonotonicNonNull String className;
 
-  private VajramID(String vajramId, String className) {
+  private VajramID(@Nullable String vajramId, @Nullable String className) {
     this.vajramId = vajramId;
     this.className = className;
   }
@@ -34,12 +35,14 @@ public final class VajramID implements DataAccessSpec {
           vajramId =
               getVajramIdString(
                       (Class<? extends Vajram>)
-                          this.getClass().getClassLoader().loadClass(className.get()))
+                          Optional.ofNullable(this.getClass().getClassLoader())
+                              .orElseThrow()
+                              .loadClass(className.get()))
                   .orElseThrow(
                       () ->
                           new IllegalStateException(
                               "Couldn't find vajram Id in vajram class %s"
-                                  .formatted(this.className)));
+                                  .formatted(className.get())));
         } catch (ClassNotFoundException e) {
           throw new RuntimeException(e);
         }
@@ -51,7 +54,7 @@ public final class VajramID implements DataAccessSpec {
   }
 
   @Override
-  public boolean equals(Object obj) {
+  public boolean equals(@Nullable Object obj) {
     if (this == obj) {
       return true;
     }

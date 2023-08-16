@@ -8,14 +8,17 @@ inputs:
     dataType: bool
 dependencies:
   - name: friend_ids
+    mandatory: true
     depType: vajram
     vajramClass: com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceVajram
     dataType: custom_java
     customDataType: java.util.Set
     typeParameters:
       dataType: string
+    canFanout: false
   - name: hellos
     mandatory: true
     depType: vajram
     vajramClass: com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Vajram
     dataType: string
+    canFanout: true

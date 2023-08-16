@@ -1,21 +1,16 @@
 package com.flipkart.krystal.krystex.kryon;
 
-import static com.flipkart.krystal.krystex.kryon.KryonUtils.createResolverDefinitionsByInputs;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static java.util.stream.Collectors.groupingBy;
-
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.kryon.KryonDefinition.KryonDefinitionView;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
-import com.flipkart.krystal.utils.ImmutableMapView;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Optional;
@@ -34,9 +29,9 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
 
   protected final LogicDecorationOrdering logicDecorationOrdering;
 
-  protected final ImmutableMapView<Optional<String>, List<ResolverDefinition>>
+  protected final ImmutableMap<Optional<String>, ImmutableSet<ResolverDefinition>>
       resolverDefinitionsByInput;
-  protected final ImmutableMapView<String, ImmutableSet<ResolverDefinition>>
+  protected final ImmutableMap<String, ImmutableSet<ResolverDefinition>>
       resolverDefinitionsByDependencies;
   protected final ImmutableSet<String> dependenciesWithNoResolvers;
   protected final RequestIdGenerator requestIdGenerator;
@@ -53,20 +48,11 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
     this.kryonExecutor = kryonExecutor;
     this.requestScopedDecoratorsSupplier = requestScopedDecoratorsSupplier;
     this.logicDecorationOrdering = logicDecorationOrdering;
-    this.resolverDefinitionsByInput =
-        createResolverDefinitionsByInputs(kryonDefinition.resolverDefinitions());
+    KryonDefinitionView kryonDefinitionView = kryonDefinition.kryonDefinitionView();
+    this.resolverDefinitionsByInput = kryonDefinitionView.resolverDefinitionsByInput();
     this.resolverDefinitionsByDependencies =
-        ImmutableMapView.viewOf(
-            kryonDefinition.resolverDefinitions().stream()
-                .collect(groupingBy(ResolverDefinition::dependencyName, toImmutableSet())));
-    this.dependenciesWithNoResolvers =
-        kryonDefinition.dependencyKryons().keySet().stream()
-            .filter(
-                depName ->
-                    resolverDefinitionsByDependencies
-                        .getOrDefault(depName, ImmutableSet.of())
-                        .isEmpty())
-            .collect(toImmutableSet());
+        kryonDefinitionView.resolverDefinitionsByDependencies();
+    this.dependenciesWithNoResolvers = kryonDefinitionView.dependenciesWithNoResolvers();
     this.requestIdGenerator = requestIdGenerator;
   }
 

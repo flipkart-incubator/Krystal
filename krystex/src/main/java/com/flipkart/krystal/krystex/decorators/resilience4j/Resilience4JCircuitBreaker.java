@@ -11,6 +11,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.internal.CircuitBreakerStateMachine;
 import java.util.Optional;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class Resilience4JCircuitBreaker implements MainLogicDecorator {
 
@@ -18,7 +19,7 @@ public final class Resilience4JCircuitBreaker implements MainLogicDecorator {
 
   private final String instanceId;
 
-  private CircuitBreaker circuitBreaker;
+  @Nullable private CircuitBreaker circuitBreaker;
 
   /**
    * @param instanceId The tag because of which this logic decorator was applied.
@@ -61,9 +62,9 @@ public final class Resilience4JCircuitBreaker implements MainLogicDecorator {
   }
 
   private Optional<CircuitBreakerConfig> getCircuitBreakerConfig(ConfigProvider configProvider) {
-    boolean circuitBreakerEnabled =
-        configProvider.<Boolean>getConfig(instanceId + ".circuit_breaker.enabled").orElse(true);
-    if (!circuitBreakerEnabled) {
+    boolean circuitBreakerDisabled =
+        !configProvider.<Boolean>getConfig(instanceId + ".circuit_breaker.enabled").orElse(true);
+    if (circuitBreakerDisabled) {
       return Optional.empty();
     }
     return Optional.of(CircuitBreakerConfig.ofDefaults());

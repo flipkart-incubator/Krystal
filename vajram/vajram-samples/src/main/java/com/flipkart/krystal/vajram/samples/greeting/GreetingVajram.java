@@ -4,7 +4,6 @@ import static com.flipkart.krystal.vajram.samples.greeting.GreetingRequest.userI
 import static com.flipkart.krystal.vajram.samples.greeting.GreetingRequest.userInfo_n;
 import static com.flipkart.krystal.vajram.samples.greeting.GreetingVajram.ID;
 
-import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
@@ -12,6 +11,7 @@ import com.flipkart.krystal.vajram.inputs.Using;
 import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
 import com.flipkart.krystal.vajram.samples.greeting.GreetingInputUtil.GreetingInputs;
 import java.lang.System.Logger.Level;
+import java.util.Optional;
 
 /**
  * Given a userId, this Vajram composes and returns a 'Hello!' greeting addressing the user by name
@@ -44,12 +44,9 @@ public abstract class GreetingVajram extends ComputeVajram<String> {
   @VajramLogic
   public static String createGreetingMessage(GreetingInputs inputs) {
     String userId = inputs.userId();
-    ValueOrError<UserInfo> userInfo =
-        inputs.userInfo().get(UserServiceRequest.builder().userId(userId).build());
+    Optional<UserInfo> userInfo = inputs.userInfo();
     String greeting =
-        "Hello "
-            + userInfo.value().map(UserInfo::userName).orElse("friend")
-            + "! Hope you are doing well!";
+        "Hello " + userInfo.map(UserInfo::userName).orElse("friend") + "! Hope you are doing well!";
     inputs.log().ifPresent(l -> l.log(Level.INFO, "Greeting user " + userId));
     inputs.analyticsEventSink().pushEvent("event_type", new GreetingEvent(userId, greeting));
     return greeting;

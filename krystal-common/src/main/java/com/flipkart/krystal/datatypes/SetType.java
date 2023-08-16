@@ -7,6 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class SetType<T> implements JavaDataType<LinkedHashSet<T>> {
@@ -43,6 +44,7 @@ public class SetType<T> implements JavaDataType<LinkedHashSet<T>> {
                     }
 
                     @Override
+                    @Nullable
                     public Type getOwnerType() {
                       return null;
                     }

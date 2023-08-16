@@ -9,12 +9,15 @@ dependencies:
     depType: vajram
     vajramClass: com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdder
     dataType: integer
+    canFanout: false
   - name: split_sum_2
     depType: vajram
     vajramClass: com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdder
     dataType: integer
+    canFanout: false
   - name: sum
     depType: vajram
     vajramClass: com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder
     dataType: integer
+    canFanout: false
 

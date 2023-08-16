@@ -14,8 +14,11 @@ dependencies:
     depType: vajram
     vajramClass: com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder
     dataType: integer
+    canFanout: false
   - name: quotient
     mandatory: true
     depType: vajram
     vajramClass: com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.Divider
     dataType: integer
+    canFanout: false
+

@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<MainLogic<T>>
@@ -32,10 +33,12 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<Main
     super(kryonLogicId, inputs, logicTags, mainLogic);
   }
 
-  public final ImmutableMap<Inputs, CompletableFuture<T>> execute(ImmutableList<Inputs> inputs) {
+  public final ImmutableMap<Inputs, CompletableFuture<@Nullable T>> execute(
+      ImmutableList<Inputs> inputs) {
     return logic().execute(inputs);
   }
 
+  @Getter
   private ImmutableMap<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs =
       ImmutableMap.of();
 
@@ -46,13 +49,8 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<Main
   private final Map<String, Map<String, MainLogicDecorator>> sessionScopedDecorators =
       new LinkedHashMap<>();
 
-  public ImmutableMap<String, List<MainLogicDecoratorConfig>>
-      getRequestScopedLogicDecoratorConfigs() {
-    return requestScopedLogicDecoratorConfigs;
-  }
-
   public ImmutableMap<String, MainLogicDecorator> getSessionScopedLogicDecorators(
-      KryonDefinition kryonDefinition, @Nullable DependantChain dependants) {
+      KryonDefinition kryonDefinition, DependantChain dependants) {
     Map<String, MainLogicDecorator> decorators = new LinkedHashMap<>();
     sessionScopedLogicDecoratorConfigs.forEach(
         (s, decoratorConfig) -> {
