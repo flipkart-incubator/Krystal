@@ -37,6 +37,11 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
     return this;
   }
 
+  /**
+   * @param transformer The logic to use to tranform the source data type {@code S} to a single
+   *     value of target data type {@code T} (no fanout)
+   * @return The resultant {@link SimpleInputResolverSpec}
+   */
   public SimpleInputResolverSpec<S, T, CV, DV> with(Function<Optional<S>, T> transformer) {
     return new SimpleInputResolverSpec<>(
         targetInput, sourceInput, skipConditions, transformer, null);
@@ -60,6 +65,12 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
     }
   }
 
+  /**
+   * The stage which can be used to further specify the non-fanout resolver of the given targetInput
+   *
+   * @param <T> The data type of the input being resolved.
+   * @param <DV> The dependency whose input is being resolved.
+   */
   public static final class ResolveStage<T, DV extends Vajram<?>> {
     private final VajramInputTypeSpec<T, DV> targetInput;
 
@@ -84,13 +95,22 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
     /**
      * Use the value of the source input and transform it to compute the resolved value.
      *
-     * @param sourceInput the spec of the source input being used for resolution
+     * @param sourceInput the spec of the source input whose value is used to resolve the dependency
+     *     input.
      */
     public <S, CV extends Vajram<?>> ResolverStage<S, T, CV, DV> using(
         VajramInputTypeSpec<S, CV> sourceInput) {
       return new ResolverStage<>(targetInput, sourceInput);
     }
 
+    /**
+     * Creates a resolver spec which does not have any source. This is useful when we want to
+     * statically bind a value to a depdency input
+     *
+     * @param with a supplier which provides the value which is used to resolve the dependency input
+     * @return The resultant {@link SimpleInputResolverSpec}
+     * @param <CV> The current vajram which is doing the resolution
+     */
     public <CV extends Vajram<?>> SimpleInputResolverSpec<Void, T, CV, DV> with(Supplier<T> with) {
       return new SimpleInputResolverSpec<>(targetInput, null, List.of(), o -> with.get(), null);
     }

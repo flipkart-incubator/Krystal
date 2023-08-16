@@ -190,7 +190,7 @@ class KrystexVajramExecutorTest {
         sharedModulator(
             () -> new Batcher<>(3),
             TestUserServiceVajram.ID + "Batcher",
-            graph.computeDependantChain(HelloFriendsVajram.ID, "user_infos"),
+            graph.computeDependantChain(HelloFriendsVajram.ID, "user_info"),
             graph.computeDependantChain(HelloFriendsVajram.ID, "friend_infos")));
 
     CompletableFuture<String> helloString;
@@ -455,7 +455,7 @@ class KrystexVajramExecutorTest {
              Default InputModulatorConfig allocates one InputModulationDecorator for each
              dependant call chain.
              TestUserServiceVajram is called via two dependantChains:
-             [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_infos
+             [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_info
              [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos
             */);
   }
@@ -477,7 +477,7 @@ class KrystexVajramExecutorTest {
         sharedModulator(
             () -> new Batcher<>(100),
             TestUserServiceVajram.ID + "Batcher",
-            graph.computeDependantChain(MultiHelloFriends.ID, "hellos", "user_infos"),
+            graph.computeDependantChain(MultiHelloFriends.ID, "hellos", "user_info"),
             graph.computeDependantChain(MultiHelloFriends.ID, "hellos", "friend_infos")));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
@@ -509,7 +509,7 @@ class KrystexVajramExecutorTest {
         .isEqualTo(
             /*
              TestUserServiceVajram is called via two dependantChains:
-             ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_infos)
+             ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_info)
              ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos)
              Since input modulator is shared across these dependantChains, only one call must be
              made

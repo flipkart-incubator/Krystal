@@ -15,8 +15,10 @@ inputs:
     sources: SESSION
 dependencies:
   - name: user_info
-    mandatory: true
+    mandatory: false
     depType: vajram
     vajramClass: com.flipkart.krystal.vajram.samples.greeting.UserServiceVajram
     dataType: custom_java
     customDataType: com.flipkart.krystal.vajram.samples.greeting.UserInfo
+    canFanout: false
+

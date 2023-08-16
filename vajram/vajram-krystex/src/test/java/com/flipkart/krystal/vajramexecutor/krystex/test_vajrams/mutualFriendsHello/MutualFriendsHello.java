@@ -34,8 +34,7 @@ public abstract class MutualFriendsHello extends ComputeVajram<String> {
   public static String sayHelloToMutualFriends(
       MutualFriendsHelloInputs mutualFriendsHelloAllInputs) {
     List<String> result = new ArrayList<>();
-    for (String userId :
-        mutualFriendsHelloAllInputs.friendIds().values().asList().get(0).value().get()) {
+    for (String userId : mutualFriendsHelloAllInputs.friendIds()) {
       mutualFriendsHelloAllInputs
           .hellos()
           .get(HelloFriendsV2Request.builder().userId(userId).build())

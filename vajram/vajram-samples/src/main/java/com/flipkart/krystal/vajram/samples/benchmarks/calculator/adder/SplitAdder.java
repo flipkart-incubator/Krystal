@@ -8,7 +8,6 @@ import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Sp
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderRequest.splitSum1_n;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderRequest.splitSum2_n;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderRequest.sum_n;
-import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -19,7 +18,6 @@ import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderInputUtil.SplitAdderInputs;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 
 @VajramDef(SplitAdder.ID)
 public abstract class SplitAdder extends ComputeVajram<Integer> {
@@ -68,12 +66,8 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
 
   @VajramLogic
   public static Integer add(SplitAdderInputs allInputs) {
-    return Stream.of(
-            allInputs.splitSum1().values().stream().map(voe -> voe.value().orElse(0)),
-            allInputs.splitSum2().values().stream().map(voe -> voe.value().orElse(0)),
-            allInputs.sum().values().stream().map(voe -> voe.value().orElse(0)))
-        .flatMap(identity())
-        .mapToInt(value -> value)
-        .sum();
+    return allInputs.splitSum1().orElse(0)
+        + allInputs.splitSum2().orElse(0)
+        + allInputs.sum().orElse(0);
   }
 }

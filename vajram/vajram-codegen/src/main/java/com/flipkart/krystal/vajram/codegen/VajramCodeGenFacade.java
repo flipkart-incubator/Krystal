@@ -359,14 +359,14 @@ public final class VajramCodeGenFacade {
         Paths.get(generatedSrcDir.toString(), vajramCodeGenerator.getPackageName().split("\\."))
             .toFile();
     if (vajramJavaDir.isDirectory() || vajramJavaDir.mkdirs()) {
-      String vajramRequestJavaCode = vajramCodeGenerator.codeGenInputUtil();
-      File vajramImplSourceFile =
+      String inputUtilJavaCode = vajramCodeGenerator.codeGenInputUtil();
+      File inputUtilSourceFile =
           new File(
               vajramJavaDir,
               CodegenUtils.getInputUtilClassName(vajramCodeGenerator.getVajramName())
                   + Constants.JAVA_EXT);
       Files.writeString(
-          vajramImplSourceFile.toPath(), vajramRequestJavaCode, CREATE, TRUNCATE_EXISTING, WRITE);
+          inputUtilSourceFile.toPath(), inputUtilJavaCode, CREATE, TRUNCATE_EXISTING, WRITE);
     }
   }
 

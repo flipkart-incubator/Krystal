@@ -36,12 +36,23 @@ public final class FanoutResolverStage<S, T, CV extends Vajram<?>, DV extends Va
     return this;
   }
 
+  /**
+   * @param transformer The logic to use to tranform the source data type {@code S} and fanout to a
+   *     collection of the target data type {@code T}
+   * @return The resultant {@link SimpleInputResolverSpec}
+   */
   public SimpleInputResolverSpec<S, T, CV, DV> with(
       Function<Optional<S>, ? extends Collection<? extends T>> transformer) {
     return new SimpleInputResolverSpec<>(
         targetInput, sourceInput, skipConditions, null, transformer);
   }
 
+  /**
+   * The stage which can be used to further specify the fanout resolver of the given targetInput
+   *
+   * @param <T> The data type of the input being resolved.
+   * @param <DV> The dependency whose input is being resolved.
+   */
   public static final class ResolveFanoutStage<T, DV extends Vajram<?>> {
 
     private final VajramInputTypeSpec<T, DV> targetInput;

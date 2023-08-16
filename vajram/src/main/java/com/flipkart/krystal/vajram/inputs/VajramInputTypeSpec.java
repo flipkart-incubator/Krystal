@@ -6,6 +6,13 @@ import com.flipkart.krystal.schema.InputTypeSpec;
 import com.flipkart.krystal.vajram.Vajram;
 import lombok.EqualsAndHashCode;
 
+/**
+ * Represents an input of the current vajram. This may also represent a depenedency of this vajram
+ * (See: {@link VajramDependencyTypeSpec})
+ *
+ * @param <T> The data type of the input.
+ * @param <V> The current vajram whose input this is.
+ */
 @EqualsAndHashCode(cacheStrategy = LAZY)
 public sealed class VajramInputTypeSpec<T, V extends Vajram<?>> implements InputTypeSpec<T>
     permits VajramDependencyTypeSpec {

@@ -28,11 +28,11 @@ import java.util.concurrent.atomic.LongAdder;
 public final class SimpleInputResolver<S, T, CV extends Vajram<?>, DV extends Vajram<?>>
     extends AbstractInputResolver {
   public static final LongAdder TIME = new LongAdder();
-  private final VajramDependencyTypeSpec<?, CV, DV> dependency;
+  private final VajramDependencyTypeSpec<?, ?, CV, DV> dependency;
   private final SimpleInputResolverSpec<S, T, CV, DV> resolverSpec;
 
   SimpleInputResolver(
-      VajramDependencyTypeSpec<?, CV, DV> dependency,
+      VajramDependencyTypeSpec<?, ?, CV, DV> dependency,
       SimpleInputResolverSpec<S, T, CV, DV> resolverSpec) {
     super(
         ofNullable(resolverSpec.getSourceInput()).stream()
@@ -43,7 +43,7 @@ public final class SimpleInputResolver<S, T, CV extends Vajram<?>, DV extends Va
     this.resolverSpec = resolverSpec;
   }
 
-  public VajramDependencyTypeSpec<?, ?, ?> getDependency() {
+  public VajramDependencyTypeSpec<?, ?, ?, ?> getDependency() {
     return dependency;
   }
 

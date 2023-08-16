@@ -1,6 +1,8 @@
 package com.flipkart.krystal.krystex.kryon;
 
 import com.flipkart.krystal.krystex.KrystalExecutor;
+import lombok.EqualsAndHashCode;
+import lombok.EqualsAndHashCode.CacheStrategy;
 
 /**
  * An instance of this class represents the start of a {@link DependantChain}. A {@link

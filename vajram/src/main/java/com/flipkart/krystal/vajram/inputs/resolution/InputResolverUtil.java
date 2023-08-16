@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.inputs.resolution;
 
-import static com.flipkart.krystal.data.ValueOrError.empty;
 import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.inputs.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajram.inputs.SingleExecute.executeWith;
@@ -16,6 +15,8 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.MultiExecute;
 import com.flipkart.krystal.vajram.inputs.SingleExecute;
+import com.flipkart.krystal.vajram.inputs.VajramDepFanoutTypeSpec;
+import com.flipkart.krystal.vajram.inputs.VajramDepSingleTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramDependencyTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
 import java.util.ArrayList;
@@ -24,6 +25,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -117,11 +119,6 @@ public final class InputResolverUtil {
     }
   }
 
-  static <S, T, CV extends Vajram<?>, DV extends Vajram<?>> InputResolver toResolver(
-      VajramDependencyTypeSpec<?, CV, DV> dependency, SimpleInputResolverSpec<S, T, CV, DV> spec) {
-    return new SimpleInputResolver<>(dependency, spec);
-  }
-
   static <T> DependencyCommand<T> _resolutionHelper(
       VajramInputTypeSpec<?, ?> sourceInput,
       Function<? extends Optional<?>, ?> oneToOneTransformer,
@@ -129,20 +126,29 @@ public final class InputResolverUtil {
       List<? extends SkipPredicate<?>> skipPredicates,
       Inputs inputs) {
     boolean fanout = fanoutTransformer != null;
-    ValueOrError<Object> inputValue;
-    if (sourceInput instanceof VajramDependencyTypeSpec<?, ?, ?>) {
-      inputValue = inputs.getDepValue(sourceInput.name()).values().values().iterator().next();
+    final Optional<Object> inputValue;
+    if (sourceInput instanceof VajramDepSingleTypeSpec<?, ?, ?>) {
+      inputValue =
+          inputs.getDepValue(sourceInput.name()).values().values().iterator().next().value();
+    } else if (sourceInput instanceof VajramDepFanoutTypeSpec<?, ?, ?>) {
+      inputValue =
+          Optional.of(
+              inputs.getDepValue(sourceInput.name()).values().values().stream()
+                  .map(ValueOrError::value)
+                  .map(o -> o.orElse(null))
+                  .filter(Objects::nonNull)
+                  .toList());
     } else if (sourceInput != null) {
-      inputValue = inputs.getInputValue(sourceInput.name());
+      inputValue = inputs.getInputValue(sourceInput.name()).value();
     } else {
-      inputValue = empty();
+      inputValue = Optional.empty();
     }
 
     //noinspection unchecked
     Optional<SkipPredicate<Object>> skipPredicate =
         skipPredicates.stream()
             .map(p -> (SkipPredicate<Object>) p)
-            .filter(sSkipPredicate -> sSkipPredicate.condition().test(inputValue.value()))
+            .filter(sSkipPredicate -> sSkipPredicate.condition().test(inputValue))
             .findFirst();
     if (skipPredicate.isPresent()) {
       if (fanout) {
@@ -167,13 +173,7 @@ public final class InputResolverUtil {
     if (sourceInput == null) {
       transformedInput = ofNullable(transformer.apply(Optional.empty()));
     } else {
-      transformedInput =
-          inputValue
-              .value()
-              .map(
-                  t -> {
-                    return transformer.apply(Optional.of(t));
-                  });
+      transformedInput = inputValue.map(t -> transformer.apply(Optional.of(t)));
     }
     if (fanout) {
       //noinspection unchecked
@@ -185,6 +185,12 @@ public final class InputResolverUtil {
       //noinspection unchecked
       return executeWith((T) transformedInput.orElse(null));
     }
+  }
+
+  static <S, T, CV extends Vajram<?>, DV extends Vajram<?>> InputResolver toResolver(
+      VajramDependencyTypeSpec<?, ?, CV, DV> dependency,
+      SimpleInputResolverSpec<S, T, CV, DV> spec) {
+    return new SimpleInputResolver<>(dependency, spec);
   }
 
   public record ResolutionResult(

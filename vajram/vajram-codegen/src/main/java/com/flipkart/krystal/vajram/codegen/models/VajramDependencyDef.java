@@ -12,8 +12,15 @@ import lombok.EqualsAndHashCode;
 public final class VajramDependencyDef extends DependencyDef {
   private String vajramClass;
 
+  private boolean canFanout;
+
   @Override
   public DataAccessSpec toDataAccessSpec() {
     return VajramID.fromClass(vajramClass);
+  }
+
+  @Override
+  public boolean canFanout() {
+    return canFanout;
   }
 }

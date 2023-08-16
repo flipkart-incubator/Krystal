@@ -369,12 +369,8 @@ class KryonExecutorTest {
   public static Stream<Arguments> executorConfigsToTest() {
     return Stream.of(
         Arguments.of(BATCH, DEPTH),
-        Arguments.of(BATCH, DEPTH),
-        Arguments.of(BATCH, BREADTH),
         Arguments.of(BATCH, BREADTH),
         Arguments.of(GRANULAR, DEPTH),
-        Arguments.of(GRANULAR, DEPTH),
-        Arguments.of(GRANULAR, BREADTH),
         Arguments.of(GRANULAR, BREADTH));
   }
 }

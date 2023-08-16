@@ -14,12 +14,15 @@ import lombok.EqualsAndHashCode;
 public abstract sealed class DependencyDef extends AbstractInput permits VajramDependencyDef {
   abstract DataAccessSpec toDataAccessSpec();
 
+  public abstract boolean canFanout();
+
   @Override
   public Dependency<?> toInputDefinition() {
     return Dependency.builder()
         .name(getName())
         .isMandatory(isMandatory())
         .documentation(getDoc())
+        .canFanout(canFanout())
         .dataAccessSpec(toDataAccessSpec())
         .build();
   }

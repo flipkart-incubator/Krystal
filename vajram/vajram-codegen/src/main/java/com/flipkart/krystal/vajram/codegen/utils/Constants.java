@@ -32,6 +32,7 @@ public final class Constants {
   public static final String VARIABLE = "variable";
   public static final String DEP_RESPONSE = "depResponse";
   public static final String SKIPPED_EXCEPTION = "skippedException";
+  public static final String ILLEGAL_ARGUMENT = "illegalArgument";
   public static final String REQUEST = "request";
   public static final String RESPONSES_SUFFIX = "Responses";
   public static final String RESPONSE_SUFFIX = "Response";
