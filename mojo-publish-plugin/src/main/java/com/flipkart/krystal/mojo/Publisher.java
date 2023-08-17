@@ -319,8 +319,8 @@ final class Publisher {
     if (project.getPlugins().hasPlugin(MOJOPUBLISH_PLUGIN)) {
       allProjects.add(project);
       absolutePathToProject.put(project.getProjectDir().toPath(), project);
-      project.getSubprojects().forEach(this::_scanAllProjects);
     }
+    project.getSubprojects().forEach(this::_scanAllProjects);
   }
 
   private static boolean hasPublications(Project project) {
