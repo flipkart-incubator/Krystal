@@ -316,9 +316,11 @@ final class Publisher {
   }
 
   private void _scanAllProjects(Project project) {
-    allProjects.add(project);
-    absolutePathToProject.put(project.getProjectDir().toPath(), project);
-    project.getSubprojects().forEach(this::_scanAllProjects);
+    if (project.getPlugins().hasPlugin("com.flipkart.mojopublish")) {
+      allProjects.add(project);
+      absolutePathToProject.put(project.getProjectDir().toPath(), project);
+      project.getSubprojects().forEach(this::_scanAllProjects);
+    }
   }
 
   private static boolean hasPublications(Project project) {
@@ -497,7 +499,7 @@ final class Publisher {
       throws IOException {
     File repoInfoFile = getProjectInfoAbsolutePath(project).toFile();
     if (repoInfoFile.exists()) {
-      return OBJECT_MAPPER.readValue(repoInfoFile, MultiProjectInfo.class);
+     return OBJECT_MAPPER.readValue(repoInfoFile, MultiProjectInfo.class);
     } else {
       return new MultiProjectInfo();
     }
