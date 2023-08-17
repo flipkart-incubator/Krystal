@@ -40,7 +40,6 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Repository;
@@ -61,6 +60,7 @@ import org.gradle.api.publish.PublishingExtension;
 final class Publisher {
 
   public static final String DEFAULT_VERSION = "0.0.0";
+  public static final String MOJOPUBLISH_PLUGIN = "com.flipkart.mojopublish";
   private final Set<Project> allProjects = new LinkedHashSet<>();
   private final Map<Project, Set<Project>> projectDependencies = new LinkedHashMap<>();
   private final Map<Project, Set<Project>> projectToDependendents = new LinkedHashMap<>();
@@ -316,7 +316,7 @@ final class Publisher {
   }
 
   private void _scanAllProjects(Project project) {
-    if (project.getPlugins().hasPlugin("com.flipkart.mojopublish")) {
+    if (project.getPlugins().hasPlugin(MOJOPUBLISH_PLUGIN)) {
       allProjects.add(project);
       absolutePathToProject.put(project.getProjectDir().toPath(), project);
       project.getSubprojects().forEach(this::_scanAllProjects);
