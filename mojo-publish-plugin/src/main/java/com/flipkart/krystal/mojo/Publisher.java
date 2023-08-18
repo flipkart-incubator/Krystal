@@ -5,7 +5,6 @@ import static com.flipkart.krystal.mojo.PublishStage.PRODUCTION;
 import static com.flipkart.krystal.mojo.PublishTarget.LOCAL;
 import static com.flipkart.krystal.mojo.PublishTarget.REMOTE;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Comparator.comparing;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -60,7 +59,6 @@ import org.gradle.api.publish.PublishingExtension;
 final class Publisher {
 
   public static final String DEFAULT_VERSION = "0.0.0";
-  public static final String MOJOPUBLISH_PLUGIN = "com.flipkart.mojopublish";
   private final Set<Project> allProjects = new LinkedHashSet<>();
   private final Map<Project, Set<Project>> projectDependencies = new LinkedHashMap<>();
   private final Map<Project, Set<Project>> projectToDependendents = new LinkedHashMap<>();
