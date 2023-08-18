@@ -282,13 +282,6 @@ final class Publisher {
         """
           Cannot publish when git working tree is not clean.
           Please make sure 'git status' reports a clean working tree before mojo publish""");
-
-    getAllProjects()
-        .forEach(
-            project ->
-                checkState(
-                    getPublications(project).count() <= 1,
-                    "Mojo publish does not know how to handle projects with multiple publications. Aborting!"));
   }
 
   private Optional<Project> getNextProjectReadyToPublish(Set<Project> projectsToPublish) {
@@ -316,10 +309,8 @@ final class Publisher {
   }
 
   private void _scanAllProjects(Project project) {
-    if (project.getPlugins().hasPlugin(MOJOPUBLISH_PLUGIN)) {
-      allProjects.add(project);
-      absolutePathToProject.put(project.getProjectDir().toPath(), project);
-    }
+    allProjects.add(project);
+    absolutePathToProject.put(project.getProjectDir().toPath(), project);
     project.getSubprojects().forEach(this::_scanAllProjects);
   }
 
@@ -499,7 +490,7 @@ final class Publisher {
       throws IOException {
     File repoInfoFile = getProjectInfoAbsolutePath(project).toFile();
     if (repoInfoFile.exists()) {
-     return OBJECT_MAPPER.readValue(repoInfoFile, MultiProjectInfo.class);
+      return OBJECT_MAPPER.readValue(repoInfoFile, MultiProjectInfo.class);
     } else {
       return new MultiProjectInfo();
     }
