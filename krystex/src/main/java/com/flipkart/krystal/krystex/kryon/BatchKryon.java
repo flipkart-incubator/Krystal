@@ -17,7 +17,6 @@ import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.data.ValueOrError;
-import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.commands.BatchCommand;
@@ -239,14 +238,8 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
           });
       Inputs inputs =
           getInputsFor(
-              dependantChain,
-              requestId,
-              triggerableDependencies.values().stream()
-                  .flatMap(Collection::stream)
-                  .map(ResolverDefinition::boundFrom)
-                  .flatMap(Collection::stream)
-                  .collect(toSet()));
-      getStringResolverCommandImmutableMap(triggerableDependencies, multiResolverOpt, inputs)
+              dependantChain, requestId, getInputsOfTriggerableDependency(triggerableDependencies));
+      getResolverCommandImmutableMap(triggerableDependencies, multiResolverOpt, inputs)
           .forEach(
               (depName, resolverCommand) -> {
                 commandsByDependency
@@ -265,7 +258,22 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     }
   }
 
-  private static ImmutableMap<String, ResolverCommand> getStringResolverCommandImmutableMap(
+  private static Set<String> getInputsOfTriggerableDependency(
+      Map<String, Set<ResolverDefinition>> triggerableDependencies) {
+    Set<String> inputs = new HashSet<>();
+    triggerableDependencies
+        .values()
+        .forEach(
+            resolverDefinitionSet -> {
+              resolverDefinitionSet.forEach(
+                  resolverDefinition -> {
+                    inputs.addAll(resolverDefinition.boundFrom());
+                  });
+            });
+    return inputs;
+  }
+
+  private static ImmutableMap<String, ResolverCommand> getResolverCommandImmutableMap(
       Map<String, Set<ResolverDefinition>> triggerableDependencies,
       Optional<MultiResolverDefinition> multiResolverOpt,
       Inputs inputs) {

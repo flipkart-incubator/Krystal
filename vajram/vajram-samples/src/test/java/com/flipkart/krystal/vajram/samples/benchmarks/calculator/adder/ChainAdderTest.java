@@ -94,7 +94,7 @@ class ChainAdderTest {
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
   }
 
-  @Disabled("Long running benchmark")
+//  @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
