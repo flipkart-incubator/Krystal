@@ -36,6 +36,7 @@ import com.flipkart.krystal.utils.MultiLeasePool.Lease;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -392,9 +393,12 @@ public final class KryonExecutor implements KrystalExecutor {
   }
 
   private void submitBatch(Set<RequestId> unFlushedRequests) {
-    unFlushedRequests.stream()
-        .map(this::getKryonExecution)
-        .collect(groupingBy(KryonExecution::kryonId))
+    Map<KryonId, List<KryonExecution>> map = new HashMap<>();
+    for (RequestId unFlushedRequest : unFlushedRequests) {
+      KryonExecution execution = getKryonExecution(unFlushedRequest);
+      map.computeIfAbsent(execution.kryonId(), k -> new ArrayList<>()).add(execution);
+    }
+    map
         .forEach(
             (kryonId, kryonResults) -> {
               KryonDefinition kryonDefinition = kryonDefinitionRegistry.get(kryonId);

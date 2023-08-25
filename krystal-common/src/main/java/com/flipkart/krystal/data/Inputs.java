@@ -1,6 +1,7 @@
 package com.flipkart.krystal.data;
 
 import com.google.common.collect.ImmutableMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import lombok.EqualsAndHashCode;

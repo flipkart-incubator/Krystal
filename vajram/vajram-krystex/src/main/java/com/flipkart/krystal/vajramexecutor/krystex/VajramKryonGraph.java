@@ -315,7 +315,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                                       String.join(",", resolvedInputNames)),
                               sources,
                               inputValues -> {
-                                validateMandatory(vajramId, inputValues, requiredInputs);
+//                                validateMandatory(vajramId, inputValues, requiredInputs);
                                 DependencyCommand<Inputs> dependencyCommand;
                                 try {
                                   if (inputResolverDefinition
@@ -530,9 +530,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
             vajramLogicKryonName,
             inputNames,
             inputsList -> {
-              for (Inputs inputs : inputsList) {
-                validateMandatory(vajramId, inputs, inputDefinitions);
-              }
+//              for (Inputs inputs : inputsList) {
+//                validateMandatory(vajramId, inputs, inputDefinitions);
+//              }
               return vajramDefinition.getVajram().execute(inputsList);
             },
             vajramDefinition.getMainLogicTags());
