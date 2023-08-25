@@ -8,6 +8,8 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -18,8 +20,18 @@ public abstract non-sealed class ComputeVajram<T> extends AbstractVajram<T> {
   public final ImmutableMap<Inputs, CompletableFuture<@Nullable T>> execute(
       ImmutableList<Inputs> inputsList) {
     try {
-      return executeCompute(inputsList).entrySet().stream()
-          .collect(toImmutableMap(Entry::getKey, ComputeVajram::toFuture));
+//      return executeCompute(inputsList).entrySet().stream()
+//          .collect(toImmutableMap(Entry::getKey, ComputeVajram::toFuture));
+
+      Map<Inputs, CompletableFuture<@Nullable T>> result = new HashMap<>();
+      executeCompute(inputsList)
+          .entrySet()
+          .forEach(
+              inputsValueOrErrorEntry ->
+                  result.put(
+                      inputsValueOrErrorEntry.getKey(),
+                      ComputeVajram.toFuture(inputsValueOrErrorEntry)));
+      return ImmutableMap.copyOf(result);
     } catch (Throwable e) {
       return inputsList.stream().collect(toImmutableMap(identity(), i -> failedFuture(e)));
     }

@@ -333,16 +333,20 @@ public final class KryonExecutor implements KrystalExecutor {
 
   private void computeDisabledDependantChains() {
     depChainsDisabledInAllExecutions.clear();
-    List<ImmutableSet<DependantChain>> disabledDependantChainsPerExecution =
-        unFlushedExecutions.stream()
-            .map(this::getKryonExecution)
-            .map(KryonExecution::executionConfig)
-            .map(KryonExecutionConfig::disabledDependantChains)
-            .toList();
-    disabledDependantChainsPerExecution.stream()
-        .filter(x -> !x.isEmpty())
-        .findAny()
-        .ifPresent(depChainsDisabledInAllExecutions::addAll);
+    List<ImmutableSet<DependantChain>> disabledDependantChainsPerExecution = new ArrayList<>();
+    for (RequestId unFlushedExecution : unFlushedExecutions) {
+      KryonExecution kryonExecution = getKryonExecution(unFlushedExecution);
+      KryonExecutionConfig executionConfig = kryonExecution.executionConfig();
+      ImmutableSet<DependantChain> disabledDependantChains =
+          executionConfig.disabledDependantChains();
+      disabledDependantChainsPerExecution.add(disabledDependantChains);
+    }
+    disabledDependantChainsPerExecution.forEach(
+        dependantChains -> {
+          if (!dependantChains.isEmpty()) {
+            depChainsDisabledInAllExecutions.addAll(dependantChains);
+          }
+        });
     for (Set<DependantChain> disabledDepChains : disabledDependantChainsPerExecution) {
       if (depChainsDisabledInAllExecutions.isEmpty()) {
         break;

@@ -25,14 +25,17 @@ import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import lombok.Getter;
 
@@ -76,21 +79,29 @@ public final class VajramDefinition {
             "Could not find dependency with name %s".formatted(targetDependency));
       }
       String[] targetInputs = resolver.depInputs();
-      ImmutableSet<String> sources =
-          Arrays.stream(resolverMethod.getParameters())
-              .map(Parameter::getAnnotations)
-              .map(
-                  annotations ->
-                      Arrays.stream(annotations)
-                          .filter(annotation -> annotation instanceof Using)
-                          .map(annotation -> (Using) annotation)
-                          .findAny())
-              .filter(Optional::isPresent)
-              .map(Optional::orElseThrow)
-              .toList()
-              .stream()
-              .map(Using::value)
-              .collect(toImmutableSet());
+      Set<String> sourcesToAdd = new HashSet<>();
+      for (Parameter parameter : resolverMethod.getParameters()) {
+        for (Annotation annotation : parameter.getAnnotations()) {
+          if (annotation instanceof Using using) {
+            sourcesToAdd.add(using.value());
+          }
+        }
+      }
+      ImmutableSet<String> sources = ImmutableSet.copyOf(sourcesToAdd);
+      //          Arrays.stream(resolverMethod.getParameters())
+      //              .map(Parameter::getAnnotations)
+      //              .map(
+      //                  annotations ->
+      //                      Arrays.stream(annotations)
+      //                          .filter(annotation -> annotation instanceof Using)
+      //                          .map(annotation -> (Using) annotation)
+      //                          .findAny())
+      //              .filter(Optional::isPresent)
+      //              .map(Optional::orElseThrow)
+      //              .toList()
+      //              .stream()
+      //              .map(Using::value)
+      //              .collect(toImmutableSet());
       inputResolvers.add(
           new DefaultInputResolverDefinition(
               sources,

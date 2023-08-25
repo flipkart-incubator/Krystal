@@ -69,6 +69,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -118,7 +119,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
     this.logicRegistryDecorator = new LogicDefRegistryDecorator(logicDefinitionRegistry);
     for (String packagePrefix : packagePrefixes) {
-      loadVajramsFromClassPath(packagePrefix).forEach(this::registerVajram);
+      for (Vajram vajram : loadVajramsFromClassPath(packagePrefix)) {
+        registerVajram(vajram);
+      }
     }
     this.inputInjector = new InputInjector(this, inputInjectionProvider);
   }
@@ -130,7 +133,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
   @Override
   public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
       C requestContext) {
-    return createExecutor(requestContext, KryonExecutorConfig.builder().build());
+    return createExecutor(requestContext, KryonExecutorConfig.builder().debug(false).build());
   }
 
   public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
@@ -156,11 +159,15 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     for (InputModulatorConfig inputModulatorConfig : inputModulators) {
       Predicate<LogicExecutionContext> biFunction =
           logicExecutionContext -> {
-            return vajram.getInputDefinitions().stream()
-                    .filter(inputDefinition -> inputDefinition instanceof Input<?>)
-                    .map(inputDefinition -> (Input<?>) inputDefinition)
-                    .anyMatch(Input::needsModulation)
-                && inputModulatorConfig.shouldModulate().test(logicExecutionContext);
+            for (VajramInputDefinition inputDefinition : vajram.getInputDefinitions()) {
+              if (inputDefinition instanceof Input<?>) {
+                Input<?> definition = (Input<?>) inputDefinition;
+                if (definition.needsModulation()) {
+                  return inputModulatorConfig.shouldModulate().test(logicExecutionContext);
+                }
+              }
+            }
+            return false;
           };
       mainLogicDecoratorConfigList.add(
           new MainLogicDecoratorConfig(
@@ -370,10 +377,13 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
             inputDefinitions.stream().map(VajramInputDefinition::name).collect(toImmutableSet()),
             (resolutionRequests, inputs) -> {
               Set<ResolverDefinition> allResolverDefs =
-                  resolutionRequests.stream()
-                      .map(DependencyResolutionRequest::resolverDefinitions)
-                      .flatMap(Collection::stream)
-                      .collect(Collectors.toSet());
+                  new HashSet<>();
+              for (DependencyResolutionRequest dependencyResolutionRequest : resolutionRequests) {
+                Set<ResolverDefinition> resolverDefinitions = dependencyResolutionRequest.resolverDefinitions();
+                for (ResolverDefinition definition : resolverDefinitions) {
+                  allResolverDefs.add(definition);
+                }
+              }
               Map<String, List<ResolverDefinition>> simpleResolverDefsByDep = new HashMap<>();
               List<ResolverDefinition> complexResolverDefs = new ArrayList<>();
               for (ResolverDefinition resolverDefinition : allResolverDefs) {
@@ -386,34 +396,38 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                   complexResolverDefs.add(resolverDefinition);
                 }
               }
+              List<ResolutionRequest> result = new ArrayList<>();
+              for (Entry<String, List<ResolverDefinition>> stringListEntry : simpleResolverDefsByDep.entrySet()) {
+                ResolutionRequest resolutionRequest = new ResolutionRequest(
+                    stringListEntry.getKey(),
+                    stringListEntry.getValue().stream()
+                        .map(ResolverDefinition::resolvedInputNames)
+                        .flatMap(Collection::stream)
+                        .collect(toImmutableSet()));
+                result.add(resolutionRequest);
+              }
               ResolutionResult simpleResolutions =
                   multiResolve(
-                      simpleResolverDefsByDep.entrySet().stream()
-                          .map(
-                              entry ->
-                                  new ResolutionRequest(
-                                      entry.getKey(),
-                                      entry.getValue().stream()
-                                          .map(ResolverDefinition::resolvedInputNames)
-                                          .flatMap(Collection::stream)
-                                          .collect(toImmutableSet())))
-                          .toList(),
+                      result,
                       simpleResolverDefsByDep.entrySet().stream()
                           .collect(
                               toMap(
                                   Entry::getKey,
                                   e ->
-                                      e.getValue().stream()
-                                          .map(
-                                              def ->
-                                                  Optional.ofNullable(
-                                                          resolversByResolverDefs.get(def))
-                                                      .orElseThrow(
-                                                          () ->
-                                                              new AssertionError(
-                                                                  "Could not find resolver for resolver definition. This should not happen")))
-                                          .map(ird -> (SimpleInputResolver<?, ?, ?, ?>) ird)
-                                          .toList())),
+                                  {
+                                    List<SimpleInputResolver<?, ?, ?, ?>> list = new ArrayList<>();
+                                    for (ResolverDefinition def : e.getValue()) {
+                                      InputResolverDefinition ird = Optional.ofNullable(
+                                              resolversByResolverDefs.get(def))
+                                          .orElseThrow(
+                                              () ->
+                                                  new AssertionError(
+                                                      "Could not find resolver for resolver definition. This should not happen"));
+                                      SimpleInputResolver<?, ?, ?, ?> simpleInputResolver = (SimpleInputResolver<?, ?, ?, ?>) ird;
+                                      list.add(simpleInputResolver);
+                                    }
+                                    return list;
+                                  })),
                       inputs);
               Map<String, List<Map<String, @Nullable Object>>> results =
                   simpleResolutions.results();
@@ -516,14 +530,17 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
             vajramLogicKryonName,
             inputNames,
             inputsList -> {
-              inputsList.forEach(inputs -> validateMandatory(vajramId, inputs, inputDefinitions));
+              for (Inputs inputs : inputsList) {
+                validateMandatory(vajramId, inputs, inputDefinitions);
+              }
               return vajramDefinition.getVajram().execute(inputsList);
             },
             vajramDefinition.getMainLogicTags());
     registerInputInjector(vajramLogic, vajramDefinition.getVajram());
-    sessionScopedDecoratorConfigs
-        .values()
-        .forEach(vajramLogic::registerSessionScopedLogicDecorator);
+    for (MainLogicDecoratorConfig mainLogicDecoratorConfig : sessionScopedDecoratorConfigs
+        .values()) {
+      vajramLogic.registerSessionScopedLogicDecorator(mainLogicDecoratorConfig);
+    }
     return vajramLogic;
   }
 
@@ -539,13 +556,18 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
         new MainLogicDecoratorConfig(
             InputInjector.DECORATOR_TYPE,
             logicExecutionContext ->
-                vajram.getInputDefinitions().stream()
-                    .filter(inputDefinition -> inputDefinition instanceof Input<?>)
-                    .map(inputDefinition -> ((Input<?>) inputDefinition))
-                    .anyMatch(
-                        input ->
-                            input.sources() != null
-                                && input.sources().contains(InputSource.SESSION)),
+            {
+              for (VajramInputDefinition inputDefinition : vajram.getInputDefinitions()) {
+                if (inputDefinition instanceof Input<?>) {
+                  Input<?> input = ((Input<?>) inputDefinition);
+                  if (input.sources() != null
+                      && input.sources().contains(InputSource.SESSION)) {
+                    return true;
+                  }
+                }
+              }
+              return false;
+            },
             logicExecutionContext -> logicExecutionContext.kryonId().value(),
             decoratorContext -> inputInjector));
   }

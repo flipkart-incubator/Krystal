@@ -50,10 +50,17 @@ public class MultiLeasePool<T> implements AutoCloseable {
         leasable.incrementActiveLeases();
       }
       maxActiveLeasesPerObject = max(maxActiveLeasesPerObject, leasable.activeLeases());
+      long sum = 0;
+      long count1 = 0;
+      for (PooledObject<T> tPooledObject : queue) {
+        int activeLeases = tPooledObject.activeLeases();
+        sum += activeLeases;
+        count1++;
+      }
       peakAvgActiveLeasesPerObject =
           max(
               peakAvgActiveLeasesPerObject,
-              queue.stream().mapToInt(PooledObject::activeLeases).average().orElse(0));
+              count1 > 0 ? (double) sum / count1 : 0);
       return new Lease<>(leasable, this::giveBack);
     }
   }

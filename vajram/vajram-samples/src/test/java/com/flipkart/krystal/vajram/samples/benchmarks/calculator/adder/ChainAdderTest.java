@@ -85,7 +85,7 @@ class ChainAdderTest {
                                 logicExecutionContext -> true,
                                 logicExecutionContext -> mainLogicExecReporter.decoratorType(),
                                 decoratorContext -> mainLogicExecReporter))))
-                .build())) {
+                .debug(false).build())) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
     assertThat(future).succeedsWithin(ofSeconds(1000)).isEqualTo(55);
@@ -160,10 +160,10 @@ class ChainAdderTest {
         vajramTimeNs);
   }
 
-  @Disabled("Long running benchmark")
+//  @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark_2() throws Exception {
-    int outerLoopCount = 100;
+    int outerLoopCount = 300;
     int innerLoopCount = 500;
     int loopCount = outerLoopCount * innerLoopCount;
 

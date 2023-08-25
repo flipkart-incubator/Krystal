@@ -50,7 +50,13 @@ public record ParsedVajramData(
       }
 
       boolean needsModulation =
-          inputFile.vajramInputsDef().inputs().stream().anyMatch(InputDef::isNeedsModulation);
+          false;
+      for (InputDef inputDef : inputFile.vajramInputsDef().inputs()) {
+        if (inputDef.isNeedsModulation()) {
+          needsModulation = true;
+          break;
+        }
+      }
       if (needsModulation) {
         final Class<?> inputsCls =
             classLoader.loadClass(
@@ -59,8 +65,9 @@ public record ParsedVajramData(
                     + CodegenUtils.getInputUtilClassName(inputFile.vajramName())
                     + Constants.DOLLAR
                     + CodegenUtils.getInputModulationClassname(inputFile.vajramName()));
-        Arrays.stream(inputsCls.getDeclaredFields())
-            .forEach(field -> fields.put(field.getName(), field));
+        for (Field field : inputsCls.getDeclaredFields()) {
+          fields.put(field.getName(), field);
+        }
       } else {
         final Class<?> allInputsCls =
             classLoader.loadClass(
@@ -69,8 +76,9 @@ public record ParsedVajramData(
                     + CodegenUtils.getInputUtilClassName(inputFile.vajramName())
                     + Constants.DOLLAR
                     + CodegenUtils.getAllInputsClassname(inputFile.vajramName()));
-        Arrays.stream(allInputsCls.getDeclaredFields())
-            .forEach(field -> fields.put(field.getName(), field));
+        for (Field field : allInputsCls.getDeclaredFields()) {
+          fields.put(field.getName(), field);
+        }
       }
       String requestClass =
           packageName + DOT_SEPARATOR + CodegenUtils.getRequestClassName(inputFile.vajramName());

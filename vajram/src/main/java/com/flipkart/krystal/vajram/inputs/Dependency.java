@@ -26,5 +26,10 @@ public record Dependency<T>(
       this.isMandatory = isMandatory;
       return this;
     }
+
+    public DependencyBuilder<T> canFanout(boolean canFanout) {
+      this.canFanout = canFanout;
+      return this;
+    }
   }
 }
