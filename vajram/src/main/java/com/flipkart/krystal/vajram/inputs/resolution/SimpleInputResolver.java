@@ -19,6 +19,7 @@ import com.flipkart.krystal.vajram.inputs.VajramDependencyTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -80,16 +81,18 @@ public final class SimpleInputResolver<S, T, CV extends Vajram<?>, DV extends Va
       } else {
         if (shouldSkip) {
           return skipFanout(depCommand.doc());
-        } else
+        } else {
+          List<Inputs> resolvedInputList = new ArrayList<>();
+          for (Optional<Object> input : depCommand.inputs()) {
+            Inputs resolvingInput = new Inputs(
+                ImmutableMap.of(
+                    resolverSpec.getTargetInput().name(),
+                    new ValueOrError<>(input, Optional.empty())));
+            resolvedInputList.add(resolvingInput);
+          }
           return executeFanoutWith(
-              depCommand.inputs().stream()
-                  .map(
-                      o ->
-                          new Inputs(
-                              ImmutableMap.of(
-                                  resolverSpec.getTargetInput().name(),
-                                  new ValueOrError<>(o, Optional.empty()))))
-                  .toList());
+              resolvedInputList);
+        }
       }
     } finally {
       TIME.add(System.nanoTime() - start);

@@ -56,12 +56,26 @@ public final class Inputs {
       Map<String, ? extends InputValue<Object>> inputs1,
       Map<String, ? extends InputValue<Object>> inputs2) {
     //noinspection UnstableApiUsage
-    return new Inputs(
-        ImmutableMap.<String, InputValue<Object>>builderWithExpectedSize(
-                inputs1.size() + inputs2.size())
-            .putAll(inputs1)
-            .putAll(inputs2)
-            .build());
+    if (inputs1 == null && inputs2 == null) {
+      return new Inputs(new HashMap<>());
+    }
+    if (inputs1 == null) {
+      Map<String, InputValue<Object>> inputValueMap = new HashMap<>(inputs2);
+      return new Inputs(inputValueMap);
+    }
+    if (inputs2 == null) {
+      Map<String, InputValue<Object>> inputValueMap = new HashMap<>(inputs1);
+      return new Inputs(inputValueMap);
+    }
+    Map<String, InputValue<Object>> inputValueMap = new HashMap<>(inputs1);
+    inputValueMap.putAll(inputs2);
+    return new Inputs(inputValueMap);
+    //    return new Inputs(
+    //        ImmutableMap.<String, InputValue<Object>>builderWithExpectedSize(
+    //                inputs1.size() + inputs2.size())
+    //            .putAll(inputs1)
+    //            .putAll(inputs2)
+    //            .build());
   }
 
   public static Inputs empty() {

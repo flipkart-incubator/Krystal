@@ -2,6 +2,7 @@ package com.flipkart.krystal.krystex.resolution;
 
 import com.flipkart.krystal.data.Inputs;
 import com.google.common.collect.ImmutableList;
+import java.util.List;
 
 @SuppressWarnings("ClassReferencesSubclass")
 @FunctionalInterface
@@ -13,7 +14,7 @@ public interface ResolverCommand {
     return new SkipDependency(reason);
   }
 
-  static ExecuteDependency multiExecuteWith(ImmutableList<Inputs> inputs) {
+  static ExecuteDependency multiExecuteWith(List<Inputs> inputs) {
     return new ExecuteDependency(inputs);
   }
 
@@ -23,9 +24,9 @@ public interface ResolverCommand {
     }
   }
 
-  record ExecuteDependency(ImmutableList<Inputs> inputs) implements ResolverCommand {
+  record ExecuteDependency(List<Inputs> inputs) implements ResolverCommand {
     public ImmutableList<Inputs> getInputs() {
-      return inputs;
+      return ImmutableList.copyOf(inputs);
     }
   }
 }

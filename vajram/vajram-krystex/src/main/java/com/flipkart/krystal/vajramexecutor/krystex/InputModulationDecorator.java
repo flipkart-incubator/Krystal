@@ -21,6 +21,7 @@ import com.flipkart.krystal.vajram.modulation.UnmodulatedInput;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -64,16 +65,21 @@ public final class InputModulationDecorator<
     inputModulator.onModulation(
         requests -> requests.forEach(request -> modulateInputsList(logicToDecorate, request)));
     return inputsList -> {
-      List<UnmodulatedInput<I, C>> requests = inputsList.stream().map(inputsConverter).toList();
+      List<UnmodulatedInput<I, C>> requests = new ArrayList<>();
+      for (Inputs inputs : inputsList) {
+        UnmodulatedInput<I, C> icUnmodulatedInput = inputsConverter.apply(inputs);
+        requests.add(icUnmodulatedInput);
+      }
       List<ModulatedInput<I, C>> modulatedInputs =
-          requests.stream()
-              .map(
-                  unmodulatedInput ->
-                      inputModulator.add(
-                          unmodulatedInput.inputsNeedingModulation(),
-                          unmodulatedInput.commonInputs()))
-              .flatMap(Collection::stream)
-              .toList();
+          new ArrayList<>();
+      for (UnmodulatedInput<I, C> unmodulatedInput : requests) {
+        ImmutableList<ModulatedInput<I, C>> add = inputModulator.add(
+            unmodulatedInput.inputsNeedingModulation(),
+            unmodulatedInput.commonInputs());
+        for (ModulatedInput<I, C> icModulatedInput : add) {
+          modulatedInputs.add(icModulatedInput);
+        }
+      }
       requests.forEach(
           request ->
               futureCache.computeIfAbsent(
