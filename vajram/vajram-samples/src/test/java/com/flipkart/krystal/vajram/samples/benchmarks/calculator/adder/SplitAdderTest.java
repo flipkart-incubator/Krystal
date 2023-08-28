@@ -50,7 +50,7 @@ class SplitAdderTest {
   void setUp() {
     graph =
         loadFromClasspath("com.flipkart.krystal.vajram.samples.benchmarks.calculator")
-            .maxParallelismPerCore(1)
+            .maxParallelismPerCore(0.5)
             .build();
     objectMapper =
         new ObjectMapper()
@@ -80,7 +80,7 @@ class SplitAdderTest {
                                 decoratorContext -> mainLogicExecReporter))))
                 // Tests whether instasnce level disabled dependant chains is working
                 .disabledDependantChains(disabledDepChains(graph))
-                .build())) {
+                .debug(false).build())) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
     assertThat(future).succeedsWithin(ofSeconds(1)).isEqualTo(55);
@@ -107,7 +107,7 @@ class SplitAdderTest {
               new RequestContext("splitAdderTest"),
               KryonExecutorConfig.builder()
                   .disabledDependantChains(disabledDepChains(graph))
-                  .build())) {
+                  .debug(false).build())) {
         metrics[value] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
@@ -154,10 +154,10 @@ class SplitAdderTest {
         vajramTimeNs);
   }
 
-  @Disabled("Long running benchmark")
+//  @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark_2() throws Exception {
-    int outerLoopCount = 100;
+    int outerLoopCount = 300;
     int innerLoopCount = 500;
     int loopCount = outerLoopCount * innerLoopCount;
 
@@ -176,7 +176,7 @@ class SplitAdderTest {
               new RequestContext("splitAdderTest"),
               KryonExecutorConfig.builder()
                   .disabledDependantChains(disabledDepChains(graph))
-                  .build())) {
+                  .debug(false).build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[outer_i] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
