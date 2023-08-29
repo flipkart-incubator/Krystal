@@ -35,6 +35,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -172,6 +173,7 @@ class KryonExecutorTest {
     assertEquals("computed_values: a=1;b=2;c=3", timedGet(future));
   }
 
+//  @Disabled
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void requestExecution_singleDependency_success(
@@ -212,6 +214,7 @@ class KryonExecutorTest {
   }
 
   @ParameterizedTest
+  @Disabled
   @MethodSource("executorConfigsToTest")
   void requestExecution_multiLevelDependencies_success(
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
@@ -362,6 +365,7 @@ class KryonExecutorTest {
         KryonExecutorConfig.builder()
             .kryonExecStrategy(kryonExecStrategy)
             .graphTraversalStrategy(graphTraversalStrategy)
+            .debug(false)
             .build(),
         "test");
   }

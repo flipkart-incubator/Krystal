@@ -22,7 +22,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -70,12 +69,11 @@ public final class InputModulationDecorator<
         UnmodulatedInput<I, C> icUnmodulatedInput = inputsConverter.apply(inputs);
         requests.add(icUnmodulatedInput);
       }
-      List<ModulatedInput<I, C>> modulatedInputs =
-          new ArrayList<>();
+      List<ModulatedInput<I, C>> modulatedInputs = new ArrayList<>();
       for (UnmodulatedInput<I, C> unmodulatedInput : requests) {
-        ImmutableList<ModulatedInput<I, C>> add = inputModulator.add(
-            unmodulatedInput.inputsNeedingModulation(),
-            unmodulatedInput.commonInputs());
+        ImmutableList<ModulatedInput<I, C>> add =
+            inputModulator.add(
+                unmodulatedInput.inputsNeedingModulation(), unmodulatedInput.commonInputs());
         for (ModulatedInput<I, C> icModulatedInput : add) {
           modulatedInputs.add(icModulatedInput);
         }

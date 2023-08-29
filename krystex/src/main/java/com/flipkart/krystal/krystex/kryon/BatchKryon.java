@@ -11,7 +11,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.failedFuture;
-import static java.util.stream.Collectors.toSet;
 
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
@@ -154,22 +153,23 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
           availableInputs, executedDeps, triggerableDependencies, dependency);
     }
     return triggerableDependencies;
-    //    return Stream.concat(dependencyInputNames.stream(), dependenciesWithNoResolvers.stream())
-    //        .distinct()
-    //        .filter(depName -> !executedDeps.contains(depName))
-    //        .filter(
-    //            depName ->
-    //                resolverDefinitionsByDependencies.getOrDefault(depName,
-    // ImmutableSet.of()).stream()
-    //                    .map(ResolverDefinition::boundFrom)
-    //                    .flatMap(Collection::stream)
-    //                    .allMatch(availableInputs::contains))
-    //        .collect(
-    //            toMap(
-    //                identity(),
+    //        return Stream.concat(dependencyInputNames.stream(),
+    // dependenciesWithNoResolvers.stream())
+    //            .distinct()
+    //            .filter(depName -> !executedDeps.contains(depName))
+    //            .filter(
     //                depName ->
     //                    resolverDefinitionsByDependencies.getOrDefault(depName,
-    // ImmutableSet.of())));
+    //     ImmutableSet.of()).stream()
+    //                        .map(ResolverDefinition::boundFrom)
+    //                        .flatMap(Collection::stream)
+    //                        .allMatch(availableInputs::contains))
+    //            .collect(
+    //                toMap(
+    //                    identity(),
+    //                    depName ->
+    //                        resolverDefinitionsByDependencies.getOrDefault(depName,
+    //     ImmutableSet.of())));
   }
 
   private void getDependenciesWithAllResolvers(
@@ -186,11 +186,11 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
             resolverDefinition -> {
               boundFrom.addAll(resolverDefinition.boundFrom());
             });
-        if (availableInputs.containsAll(boundFrom)) {
-          triggerableDependencies.put(
-              dependency,
-              resolverDefinitionsByDependencies.getOrDefault(dependency, ImmutableSet.of()));
-        }
+      }
+      if (availableInputs.containsAll(boundFrom)) {
+        triggerableDependencies.put(
+            dependency,
+            resolverDefinitionsByDependencies.getOrDefault(dependency, ImmutableSet.of()));
       }
     }
   }

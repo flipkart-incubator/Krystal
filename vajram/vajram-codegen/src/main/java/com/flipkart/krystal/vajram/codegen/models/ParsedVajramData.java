@@ -10,7 +10,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,8 +48,7 @@ public record ParsedVajramData(
                   .formatted(inputFile.vajramName(), method.getName()));
       }
 
-      boolean needsModulation =
-          false;
+      boolean needsModulation = false;
       for (InputDef inputDef : inputFile.vajramInputsDef().inputs()) {
         if (inputDef.isNeedsModulation()) {
           needsModulation = true;

@@ -1,7 +1,5 @@
 package com.flipkart.krystal.vajram.inputs;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
@@ -16,9 +14,10 @@ public record MultiExecute<T>(Collection<T> multiInputs, boolean shouldSkip, Str
   @Override
   public ImmutableCollection<Optional<T>> inputs() {
     List<Optional<T>> collection = new ArrayList<>();
-    multiInputs.forEach(input -> {
-        collection.add(Optional.ofNullable(input));
-    });
+    multiInputs.forEach(
+        input -> {
+          collection.add(Optional.ofNullable(input));
+        });
     return ImmutableList.copyOf(collection);
   }
 

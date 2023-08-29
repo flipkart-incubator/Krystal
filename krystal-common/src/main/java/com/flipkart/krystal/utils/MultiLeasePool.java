@@ -58,9 +58,7 @@ public class MultiLeasePool<T> implements AutoCloseable {
         count1++;
       }
       peakAvgActiveLeasesPerObject =
-          max(
-              peakAvgActiveLeasesPerObject,
-              count1 > 0 ? (double) sum / count1 : 0);
+          max(peakAvgActiveLeasesPerObject, count1 > 0 ? (double) sum / count1 : 0);
       return new Lease<>(leasable, this::giveBack);
     }
   }

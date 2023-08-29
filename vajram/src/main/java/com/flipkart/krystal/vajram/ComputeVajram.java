@@ -20,8 +20,8 @@ public abstract non-sealed class ComputeVajram<T> extends AbstractVajram<T> {
   public final ImmutableMap<Inputs, CompletableFuture<@Nullable T>> execute(
       ImmutableList<Inputs> inputsList) {
     try {
-//      return executeCompute(inputsList).entrySet().stream()
-//          .collect(toImmutableMap(Entry::getKey, ComputeVajram::toFuture));
+      //      return executeCompute(inputsList).entrySet().stream()
+      //          .collect(toImmutableMap(Entry::getKey, ComputeVajram::toFuture));
 
       Map<Inputs, CompletableFuture<@Nullable T>> result = new HashMap<>();
       executeCompute(inputsList)

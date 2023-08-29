@@ -12,7 +12,6 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.groupingBy;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
@@ -398,42 +397,41 @@ public final class KryonExecutor implements KrystalExecutor {
       KryonExecution execution = getKryonExecution(unFlushedRequest);
       map.computeIfAbsent(execution.kryonId(), k -> new ArrayList<>()).add(execution);
     }
-    map
-        .forEach(
-            (kryonId, kryonResults) -> {
-              KryonDefinition kryonDefinition = kryonDefinitionRegistry.get(kryonId);
-              CompletableFuture<BatchResponse> batchResponseFuture =
-                  this.executeCommand(
-                      new ForwardBatch(
-                          kryonId,
-                          kryonDefinition.getMainLogicDefinition().inputNames().stream()
-                              .filter(s -> !kryonDefinition.dependencyKryons().containsKey(s))
-                              .collect(toImmutableSet()),
-                          kryonResults.stream()
-                              .collect(
-                                  toImmutableMap(
-                                      KryonExecution::instanceExecutionId, KryonExecution::inputs)),
-                          kryonDefinitionRegistry.getDependantChainsStart(),
-                          ImmutableMap.of()));
-              batchResponseFuture
-                  .thenApply(BatchResponse::responses)
-                  .whenComplete(
-                      (responses, throwable) -> {
-                        for (KryonExecution kryonExecution : kryonResults) {
-                          if (throwable != null) {
-                            kryonExecution.future().completeExceptionally(throwable);
-                          } else {
-                            ValueOrError<Object> result =
-                                responses.getOrDefault(
-                                    kryonExecution.instanceExecutionId(), ValueOrError.empty());
-                            kryonExecution.future().complete(result.value().orElse(null));
-                          }
-                        }
-                      });
-              propagateCancellation(
-                  allOf(kryonResults.stream().map(getFuture()).toArray(CompletableFuture[]::new)),
-                  batchResponseFuture);
-            });
+    map.forEach(
+        (kryonId, kryonResults) -> {
+          KryonDefinition kryonDefinition = kryonDefinitionRegistry.get(kryonId);
+          CompletableFuture<BatchResponse> batchResponseFuture =
+              this.executeCommand(
+                  new ForwardBatch(
+                      kryonId,
+                      kryonDefinition.getMainLogicDefinition().inputNames().stream()
+                          .filter(s -> !kryonDefinition.dependencyKryons().containsKey(s))
+                          .collect(toImmutableSet()),
+                      kryonResults.stream()
+                          .collect(
+                              toImmutableMap(
+                                  KryonExecution::instanceExecutionId, KryonExecution::inputs)),
+                      kryonDefinitionRegistry.getDependantChainsStart(),
+                      ImmutableMap.of()));
+          batchResponseFuture
+              .thenApply(BatchResponse::responses)
+              .whenComplete(
+                  (responses, throwable) -> {
+                    for (KryonExecution kryonExecution : kryonResults) {
+                      if (throwable != null) {
+                        kryonExecution.future().completeExceptionally(throwable);
+                      } else {
+                        ValueOrError<Object> result =
+                            responses.getOrDefault(
+                                kryonExecution.instanceExecutionId(), ValueOrError.empty());
+                        kryonExecution.future().complete(result.value().orElse(null));
+                      }
+                    }
+                  });
+          propagateCancellation(
+              allOf(kryonResults.stream().map(getFuture()).toArray(CompletableFuture[]::new)),
+              batchResponseFuture);
+        });
   }
 
   public KryonExecutorMetrics getKryonMetrics() {

@@ -84,14 +84,14 @@ public final class SimpleInputResolver<S, T, CV extends Vajram<?>, DV extends Va
         } else {
           List<Inputs> resolvedInputList = new ArrayList<>();
           for (Optional<Object> input : depCommand.inputs()) {
-            Inputs resolvingInput = new Inputs(
-                ImmutableMap.of(
-                    resolverSpec.getTargetInput().name(),
-                    new ValueOrError<>(input, Optional.empty())));
+            Inputs resolvingInput =
+                new Inputs(
+                    ImmutableMap.of(
+                        resolverSpec.getTargetInput().name(),
+                        new ValueOrError<>(input, Optional.empty())));
             resolvedInputList.add(resolvingInput);
           }
-          return executeFanoutWith(
-              resolvedInputList);
+          return executeFanoutWith(resolvedInputList);
         }
       }
     } finally {

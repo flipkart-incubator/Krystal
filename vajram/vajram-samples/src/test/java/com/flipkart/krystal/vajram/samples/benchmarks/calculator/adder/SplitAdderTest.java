@@ -80,7 +80,8 @@ class SplitAdderTest {
                                 decoratorContext -> mainLogicExecReporter))))
                 // Tests whether instasnce level disabled dependant chains is working
                 .disabledDependantChains(disabledDepChains(graph))
-                .debug(false).build())) {
+                .debug(false)
+                .build())) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
     assertThat(future).succeedsWithin(ofSeconds(1)).isEqualTo(55);
@@ -107,7 +108,8 @@ class SplitAdderTest {
               new RequestContext("splitAdderTest"),
               KryonExecutorConfig.builder()
                   .disabledDependantChains(disabledDepChains(graph))
-                  .debug(false).build())) {
+                  .debug(false)
+                  .build())) {
         metrics[value] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
@@ -176,7 +178,8 @@ class SplitAdderTest {
               new RequestContext("splitAdderTest"),
               KryonExecutorConfig.builder()
                   .disabledDependantChains(disabledDepChains(graph))
-                  .debug(false).build())) {
+                  .debug(false)
+                  .build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[outer_i] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
