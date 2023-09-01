@@ -50,7 +50,7 @@ class SplitAdderTest {
   void setUp() {
     graph =
         loadFromClasspath("com.flipkart.krystal.vajram.samples.benchmarks.calculator")
-            .maxParallelismPerCore(0.5)
+            .maxParallelismPerCore(1)
             .build();
     objectMapper =
         new ObjectMapper()
@@ -89,7 +89,7 @@ class SplitAdderTest {
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
   }
 
-  @Disabled("Long running benchmark")
+//  @Disabled("Long running benchmark")
   @Test
   void vajram_benchmark() throws Exception {
     int loopCount = 50_000;
