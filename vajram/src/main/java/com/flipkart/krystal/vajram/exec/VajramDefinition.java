@@ -84,6 +84,7 @@ public final class VajramDefinition {
         for (Annotation annotation : parameter.getAnnotations()) {
           if (annotation instanceof Using using) {
             sourcesToAdd.add(using.value());
+            break;
           }
         }
       }

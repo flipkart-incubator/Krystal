@@ -154,10 +154,14 @@ public final class InputResolverUtil {
 
     //noinspection unchecked
     Optional<SkipPredicate<Object>> skipPredicate =
-        skipPredicates.stream()
-            .map(p -> (SkipPredicate<Object>) p)
-            .filter(sSkipPredicate -> sSkipPredicate.condition().test(inputValue))
-            .findFirst();
+        Optional.empty();
+    for (SkipPredicate<?> p : skipPredicates) {
+      SkipPredicate<Object> sSkipPredicate = (SkipPredicate<Object>) p;
+      if (sSkipPredicate.condition().test(inputValue)) {
+        skipPredicate = Optional.of(sSkipPredicate);
+        break;
+      }
+    }
     if (skipPredicate.isPresent()) {
       if (fanout) {
         return skipFanout(skipPredicate.get().reason());
