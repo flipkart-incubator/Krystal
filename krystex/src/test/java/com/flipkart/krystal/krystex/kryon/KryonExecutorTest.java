@@ -173,7 +173,6 @@ class KryonExecutorTest {
     assertEquals("computed_values: a=1;b=2;c=3", timedGet(future));
   }
 
-//  @Disabled
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void requestExecution_singleDependency_success(
@@ -214,7 +213,6 @@ class KryonExecutorTest {
   }
 
   @ParameterizedTest
-  @Disabled
   @MethodSource("executorConfigsToTest")
   void requestExecution_multiLevelDependencies_success(
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
