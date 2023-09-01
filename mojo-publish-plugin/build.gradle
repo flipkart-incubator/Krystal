@@ -42,14 +42,14 @@ dependencies {
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jacksonVersion
 }
 
-//publishing {
-//    repositories {
-//        maven {
-//            url "https://clojars.org/repo"
-//            credentials {
-//                username = rootProject.ext.clojarsusername
-//                password = rootProject.ext.clojarspassword
-//            }
-//        }
-//    }
-//}
+publishing {
+    repositories {
+        maven {
+            url "https://clojars.org/repo"
+            credentials {
+                username = rootProject.ext.clojarsusername
+                password = rootProject.ext.clojarspassword
+            }
+        }
+    }
+}
