@@ -497,11 +497,13 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
 
   private void validateMandatory(
       VajramID vajramID, Inputs inputs, ImmutableCollection<VajramInputDefinition> requiredInputs) {
-    Iterable<VajramInputDefinition> mandatoryInputs =
-        requiredInputs.stream()
-                .filter(inputDefinition -> inputDefinition instanceof Input<?>)
-                .filter(VajramInputDefinition::isMandatory)
-            ::iterator;
+    List<VajramInputDefinition> mandatoryInputs = new ArrayList<>();
+
+    for (VajramInputDefinition vajramInputDefinition : mandatoryInputs) {
+      if (vajramInputDefinition instanceof Input<?> && vajramInputDefinition.isMandatory()) {
+        mandatoryInputs.add(vajramInputDefinition);
+      }
+    }
     Map<String, Throwable> missingMandatoryValues = new HashMap<>();
     for (VajramInputDefinition mandatoryInput : mandatoryInputs) {
       ValueOrError<?> value = inputs.getInputValue(mandatoryInput.name());

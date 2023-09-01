@@ -153,8 +153,7 @@ public final class InputResolverUtil {
     }
 
     //noinspection unchecked
-    Optional<SkipPredicate<Object>> skipPredicate =
-        Optional.empty();
+    Optional<SkipPredicate<Object>> skipPredicate = Optional.empty();
     for (SkipPredicate<?> p : skipPredicates) {
       SkipPredicate<Object> sSkipPredicate = (SkipPredicate<Object>) p;
       if (sSkipPredicate.condition().test(inputValue)) {
