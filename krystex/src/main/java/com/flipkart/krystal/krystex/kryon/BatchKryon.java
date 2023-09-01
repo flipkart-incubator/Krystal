@@ -153,23 +153,6 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
           availableInputs, executedDeps, triggerableDependencies, dependency);
     }
     return triggerableDependencies;
-    //        return Stream.concat(dependencyInputNames.stream(),
-    // dependenciesWithNoResolvers.stream())
-    //            .distinct()
-    //            .filter(depName -> !executedDeps.contains(depName))
-    //            .filter(
-    //                depName ->
-    //                    resolverDefinitionsByDependencies.getOrDefault(depName,
-    //     ImmutableSet.of()).stream()
-    //                        .map(ResolverDefinition::boundFrom)
-    //                        .flatMap(Collection::stream)
-    //                        .allMatch(availableInputs::contains))
-    //            .collect(
-    //                toMap(
-    //                    identity(),
-    //                    depName ->
-    //                        resolverDefinitionsByDependencies.getOrDefault(depName,
-    //     ImmutableSet.of())));
   }
 
   private void getDependenciesWithAllResolvers(
@@ -568,12 +551,6 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       CallbackBatch value = entry.getValue();
       depValues.put(key, value.resultsByRequest().getOrDefault(requestId, Results.empty()));
     }
-    //            .stream()
-    //            .collect(
-    //                toImmutableMap(
-    //                    Entry::getKey,
-    //                    e -> e.getValue().resultsByRequest().getOrDefault(requestId,
-    // Results.empty())));
     Inputs inputValues = forwardBatch.executableRequests().getOrDefault(requestId, Inputs.empty());
     Inputs allInputsAndDependencies = Inputs.union(depValues, inputValues.values());
     return new MainLogicInputs(inputValues, allInputsAndDependencies);

@@ -70,12 +70,6 @@ public final class Inputs {
     Map<String, InputValue<Object>> inputValueMap = new HashMap<>(inputs1);
     inputValueMap.putAll(inputs2);
     return new Inputs(inputValueMap);
-    //    return new Inputs(
-    //        ImmutableMap.<String, InputValue<Object>>builderWithExpectedSize(
-    //                inputs1.size() + inputs2.size())
-    //            .putAll(inputs1)
-    //            .putAll(inputs2)
-    //            .build());
   }
 
   public static Inputs empty() {

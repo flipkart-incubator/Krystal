@@ -89,20 +89,6 @@ public final class VajramDefinition {
         }
       }
       ImmutableSet<String> sources = ImmutableSet.copyOf(sourcesToAdd);
-      //          Arrays.stream(resolverMethod.getParameters())
-      //              .map(Parameter::getAnnotations)
-      //              .map(
-      //                  annotations ->
-      //                      Arrays.stream(annotations)
-      //                          .filter(annotation -> annotation instanceof Using)
-      //                          .map(annotation -> (Using) annotation)
-      //                          .findAny())
-      //              .filter(Optional::isPresent)
-      //              .map(Optional::orElseThrow)
-      //              .toList()
-      //              .stream()
-      //              .map(Using::value)
-      //              .collect(toImmutableSet());
       inputResolvers.add(
           new DefaultInputResolverDefinition(
               sources,
