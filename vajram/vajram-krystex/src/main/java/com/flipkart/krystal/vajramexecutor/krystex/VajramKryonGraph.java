@@ -11,6 +11,7 @@ import static com.flipkart.krystal.vajram.inputs.SingleExecute.skipExecution;
 import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.collectDepInputs;
 import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.multiResolve;
 import static com.google.common.base.Throwables.getStackTraceAsString;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.function.Function.identity;
@@ -297,11 +298,10 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                       ImmutableSet<String> resolvedInputNames =
                           inputResolverDefinition.resolutionTarget().inputNames();
                       ImmutableSet<String> sources = inputResolverDefinition.sources();
-                      //                      ImmutableCollection<VajramInputDefinition>
-                      // requiredInputs =
-                      //                          inputDefinitions.stream()
-                      //                              .filter(def -> sources.contains(def.name()))
-                      //                              .collect(toImmutableList());
+                      ImmutableCollection<VajramInputDefinition> requiredInputs =
+                          inputDefinitions.stream()
+                              .filter(def -> sources.contains(def.name()))
+                              .collect(toImmutableList());
                       ResolverLogicDefinition inputResolverLogic =
                           logicRegistryDecorator.newResolverLogic(
                               vajramId.vajramId(),
@@ -312,8 +312,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                                       String.join(",", resolvedInputNames)),
                               sources,
                               inputValues -> {
-                                //                                validateMandatory(vajramId,
-                                // inputValues, requiredInputs);
+                                validateMandatory(vajramId, inputValues, requiredInputs);
                                 DependencyCommand<Inputs> dependencyCommand;
                                 try {
                                   if (inputResolverDefinition
@@ -541,9 +540,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
             vajramLogicKryonName,
             inputNames,
             inputsList -> {
-              //              for (Inputs inputs : inputsList) {
-              //                validateMandatory(vajramId, inputs, inputDefinitions);
-              //              }
+              for (Inputs inputs : inputsList) {
+                validateMandatory(vajramId, inputs, inputDefinitions);
+              }
               return vajramDefinition.getVajram().execute(inputsList);
             },
             vajramDefinition.getMainLogicTags());
