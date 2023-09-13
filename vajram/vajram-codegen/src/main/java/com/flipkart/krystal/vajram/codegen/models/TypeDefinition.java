@@ -11,8 +11,8 @@ public sealed class TypeDefinition permits AbstractInput {
   private List<String> customDataType = new ArrayList<>();
   private List<TypeDefinition> typeParameters = new ArrayList<>();
 
-  public DataType toDataType() {
-    List<? extends DataType> typeParameterDataTypes =
+  public DataType<?> toDataType() {
+    List<? extends DataType<?>> typeParameterDataTypes =
         typeParameters.stream().map(TypeDefinition::toDataType).toList();
     return dataType.toDataType(customDataType, typeParameterDataTypes);
   }

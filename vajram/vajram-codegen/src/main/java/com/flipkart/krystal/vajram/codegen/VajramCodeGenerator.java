@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.codegen;
 
-import static com.flipkart.krystal.datatypes.TypeUtils.getJavaType;
 import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.COMMA;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.CONVERTER;
@@ -70,21 +69,16 @@ import static javax.lang.model.element.Modifier.STATIC;
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.datatypes.CustomType;
 import com.flipkart.krystal.datatypes.DataType;
-import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
-import com.flipkart.krystal.vajram.codegen.models.AbstractInput;
-import com.flipkart.krystal.vajram.codegen.models.DependencyDef;
-import com.flipkart.krystal.vajram.codegen.models.InputDef;
 import com.flipkart.krystal.vajram.codegen.models.ParsedVajramData;
-import com.flipkart.krystal.vajram.codegen.models.VajramDependencyDef;
-import com.flipkart.krystal.vajram.codegen.models.VajramInputFile;
-import com.flipkart.krystal.vajram.codegen.models.VajramInputsDef;
+import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.utils.CodegenUtils;
 import com.flipkart.krystal.vajram.codegen.utils.Constants;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
@@ -127,7 +121,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -143,19 +136,18 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@SuppressWarnings({"HardcodedLineSeparator", "OverlyComplexClass", "OverlyCoupledClass"})
+@SuppressWarnings({"HardcodedLineSeparator", "OverlyComplexClass"})
 @Slf4j
 public class VajramCodeGenerator {
   private final String packageName;
   private final String requestClassName;
-  private final VajramInputFile vajramInputFile;
+  private final VajramInfo vajramInputFile;
   private final String vajramName;
   private final Map<String, ParsedVajramData> vajramDefs;
   private final Map<String, ImmutableList<VajramInputDefinition>> vajramInputsDefinitions;
@@ -164,36 +156,27 @@ public class VajramCodeGenerator {
   private final boolean needsModulation;
 
   public VajramCodeGenerator(
-      VajramInputFile vajramInputFile,
+      VajramInfo vajramInfo,
       Map<String, ParsedVajramData> vajramDefs,
       Map<String, ImmutableList<VajramInputDefinition>> vajramInputsDefinitions) {
-    this.vajramInputFile = vajramInputFile;
-    Path filePath = vajramInputFile.inputFilePath().relativeFilePath();
-    Path parentDir =
-        checkNotNull(filePath.getParent(), "File path %s does not have a parent dir", filePath);
-    this.vajramName = vajramInputFile.vajramName();
-    this.packageName =
-        IntStream.range(0, parentDir.getNameCount())
-            .mapToObj(i -> parentDir.getName(i).toString())
-            .collect(Collectors.joining(DOT));
+    this.vajramInputFile = vajramInfo;
+    this.vajramName = vajramInfo.vajramName();
+    this.packageName = vajramInfo.packageName();
     this.requestClassName = CodegenUtils.getRequestClassName(vajramName);
     // All parsed Vajram data loaded from all Vajram class files with vajram name as key
     this.vajramDefs = Collections.unmodifiableMap(vajramDefs);
     this.vajramInputsDefinitions = Collections.unmodifiableMap(vajramInputsDefinitions);
     // All the present Vajram -> VajramInputDefinitions map with name as key
     this.inputDefsMap =
-        vajramInputFile
-            .vajramInputsDef()
+        vajramInfo
             .allInputsStream()
-            .map(AbstractInput::toInputDefinition)
             .collect(
                 Collectors.toMap(
                     VajramInputDefinition::name,
                     Function.identity(),
                     (o1, o2) -> o1,
                     LinkedHashMap::new)); // need ordered map for dependencies
-    this.needsModulation =
-        vajramInputFile.vajramInputsDef().inputs().stream().anyMatch(InputDef::isNeedsModulation);
+    this.needsModulation = vajramInfo.inputs().stream().anyMatch(Input::needsModulation);
     clsDeps.put(INPUTS, ClassName.get(Inputs.class));
     clsDeps.put(UNMOD_INPUT, ClassName.get(UnmodulatedInput.class));
     clsDeps.put(MOD_INPUT, ClassName.get(ModulatedInput.class));
@@ -1181,9 +1164,7 @@ public class VajramCodeGenerator {
         inputDefBuilder.add(code, ClassName.get(VajramID.class), vajramID.vajramId());
       }
     }
-    if (dependency.isMandatory()) {
-      inputDefBuilder.add(".isMandatory()");
-    }
+    inputDefBuilder.add(".isMandatory($L)", dependency.isMandatory());
     // build() as last step
     inputDefBuilder.add(".build()");
   }
@@ -1217,9 +1198,9 @@ public class VajramCodeGenerator {
       inputDefBuilder.addNamed(sources, ImmutableMap.of(INPUT_SRC, InputSource.class)).add(")");
     }
     // handle data type
-    DataType dataType = input.type();
+    DataType<?> dataType = input.type();
     inputDefBuilder.add(".type(");
-    if (dataType instanceof JavaType<?> javaType) {
+    if (dataType instanceof CustomType<?> javaType) {
       // custom handling
       ClassName className;
       if (!javaType.enclosingClasses().isEmpty() || javaType.simpleName().isPresent()) {
@@ -1232,7 +1213,7 @@ public class VajramCodeGenerator {
       } else {
         className = ClassName.bestGuess(javaType.className());
       }
-      inputDefBuilder.add("$1T.java($2T.class)", ClassName.get(JavaType.class), className);
+      inputDefBuilder.add("$1T.create($2T.class)", ClassName.get(CustomType.class), className);
     } else {
       String simpleName = dataType.getClass().getSimpleName();
       String name = simpleName.substring(0, simpleName.length() - 4).toLowerCase();
@@ -1258,12 +1239,8 @@ public class VajramCodeGenerator {
       }
     }
     inputDefBuilder.add(")");
-    if (input.isMandatory()) {
-      inputDefBuilder.add(".isMandatory()");
-    }
-    if (input.needsModulation()) {
-      inputDefBuilder.add(".needsModulation()");
-    }
+    inputDefBuilder.add(".isMandatory($L)", input.isMandatory());
+    inputDefBuilder.add(".needsModulation($L)", input.needsModulation());
     if (input.tags() != null && !input.tags().isEmpty()) {
       inputDefBuilder.add(".tags($T.of(", ClassName.get(Map.class));
       String tags =
@@ -1281,8 +1258,8 @@ public class VajramCodeGenerator {
   }
 
   public String codeGenVajramRequest() {
-    VajramInputsDef vajramInputsDef = vajramInputFile.vajramInputsDef();
-    ImmutableList<InputDef> inputDefs = vajramInputsDef.inputs();
+    VajramInfo vajramFacetsDef = vajramInputFile;
+    ImmutableList<Input<?>> inputDefs = vajramFacetsDef.inputs();
     Builder requestConstructor = constructorBuilder().addModifiers(PRIVATE);
     ClassName builderClassType =
         ClassName.get(packageName + Constants.DOT_SEPARATOR + requestClassName, "Builder");
@@ -1303,40 +1280,39 @@ public class VajramCodeGenerator {
             .addAnnotation(EqualsAndHashCode.class)
             .addMethod(constructorBuilder().addModifiers(PRIVATE).build());
     Set<String> inputNames = new LinkedHashSet<>();
-    List<AbstractInput> allInputs = vajramInputsDef.allInputsStream().toList();
+    List<VajramInputDefinition> allInputs = vajramFacetsDef.allInputsStream().toList();
     List<FieldSpec.Builder> inputNameFields = new ArrayList<>(allInputs.size());
     List<FieldSpec.Builder> inputSpecFields = new ArrayList<>(allInputs.size());
-    for (AbstractInput abstractInput : allInputs) {
-      String inputJavaName = toJavaName(abstractInput.getName());
-      TypeAndName javaType = getTypeName(abstractInput.toDataType());
+    for (VajramInputDefinition abstractInput : allInputs) {
+      String inputJavaName = toJavaName(abstractInput.name());
+      TypeAndName javaType = getTypeName(getDataType(abstractInput));
       ClassName vajramClassName = ClassName.get(packageName, vajramName);
 
       String inputNameFieldName = inputJavaName + INPUT_NAME_SUFFIX;
       FieldSpec.Builder inputNameField =
           FieldSpec.builder(String.class, inputNameFieldName)
-              .initializer("\"$L\"", abstractInput.getName());
+              .initializer("\"$L\"", abstractInput.name());
 
       FieldSpec.Builder inputSpecField;
-      if (abstractInput instanceof VajramDependencyDef vajramDepDef) {
+      if (abstractInput instanceof Dependency<?> vajramDepDef
+          && vajramDepDef.dataAccessSpec() instanceof VajramID vajramID) {
         ClassName specType =
             ClassName.get(
                 vajramDepDef.canFanout()
                     ? VajramDepFanoutTypeSpec.class
                     : VajramDepSingleTypeSpec.class);
+        ClassName depVajramClass = ClassName.bestGuess(vajramID.className().orElseThrow());
         inputSpecField =
             FieldSpec.builder(
                     ParameterizedTypeName.get(
-                        specType,
-                        javaType.typeName(),
-                        vajramClassName,
-                        ClassName.bestGuess(vajramDepDef.getVajramClass())),
+                        specType, javaType.typeName(), vajramClassName, depVajramClass),
                     inputJavaName + INPUT_SPEC_SUFFIX)
                 .initializer(
                     "new $T<>($L, $T.class, $T.class)",
                     specType,
                     inputNameFieldName,
                     vajramClassName,
-                    ClassName.bestGuess(vajramDepDef.getVajramClass()));
+                    depVajramClass);
 
       } else {
         inputSpecField =
@@ -1354,8 +1330,7 @@ public class VajramCodeGenerator {
       }
       inputNameFields.add(inputNameField.addModifiers(STATIC, FINAL));
       inputSpecFields.add(inputSpecField.addModifiers(STATIC, FINAL));
-      if (abstractInput instanceof InputDef input
-          && input.toInputDefinition().sources().contains(InputSource.CLIENT)) {
+      if (abstractInput instanceof Input<?> input && input.sources().contains(InputSource.CLIENT)) {
         inputSpecField.addModifiers(PUBLIC);
         inputNameField.addModifiers(PUBLIC);
       } else {
@@ -1429,8 +1404,7 @@ public class VajramCodeGenerator {
     FromAndTo fromAndTo =
         fromAndToMethods(
             inputDefs.stream()
-                .filter(
-                    inputDef -> inputDef.toInputDefinition().sources().contains(InputSource.CLIENT))
+                .filter(inputDef -> inputDef.sources().contains(InputSource.CLIENT))
                 .toList(),
             ClassName.get(packageName, requestClassName));
     try {
@@ -1450,6 +1424,18 @@ public class VajramCodeGenerator {
     return writer.toString();
   }
 
+  private DataType<?> getDataType(VajramInputDefinition abstractInput) {
+    if (abstractInput instanceof Input<?> input) {
+      return input.type();
+    } else if (abstractInput instanceof Dependency<?> dep
+        && dep.dataAccessSpec() instanceof VajramID vajramID) {
+      return vajramID.responseType();
+    } else {
+      throw new UnsupportedOperationException(
+          "Unable to extract datatype from facet : %s".formatted(abstractInput));
+    }
+  }
+
   private static TypeAndName wrapPrimitive(TypeAndName javaType) {
     if (javaType.type().isPresent() && javaType.type().get() instanceof Class<?> clazz) {
       Class<?> wrapped = Primitives.wrap(clazz);
@@ -1467,7 +1453,7 @@ public class VajramCodeGenerator {
   }
 
   private FromAndTo fromAndToMethods(
-      List<? extends AbstractInput> inputDefs, ClassName enclosingClass) {
+      List<? extends VajramInputDefinition> inputDefs, ClassName enclosingClass) {
     //noinspection rawtypes
     Builder toInputValues =
         methodBuilder("toInputValues")
@@ -1484,17 +1470,17 @@ public class VajramCodeGenerator {
             .returns(enclosingClass)
             .addModifiers(PUBLIC, STATIC)
             .addParameter(Inputs.class, "values");
-    for (AbstractInput input : inputDefs) {
-      String inputJavaName = toJavaName(input.getName());
+    for (VajramInputDefinition input : inputDefs) {
+      String inputJavaName = toJavaName(input.name());
       toInputValues.addStatement(
           "builder.put($S, $T.withValue(this.$L))",
-          input.getName(),
+          input.name(),
           ValueOrError.class,
           inputJavaName);
     }
     toInputValues.addStatement("return new $T(builder)", Inputs.class);
 
-    List<String> inputNames = inputDefs.stream().map(AbstractInput::getName).toList();
+    List<String> inputNames = inputDefs.stream().map(VajramInputDefinition::name).toList();
     fromInputValues.addStatement(
         "return new $T(%s)"
             .formatted(
@@ -1505,31 +1491,32 @@ public class VajramCodeGenerator {
     return new FromAndTo(fromInputValues.build(), toInputValues.build());
   }
 
-  private static TypeAndName getTypeName(DataType dataType) {
+  private static TypeAndName getTypeName(DataType<?> dataType) {
     return getTypeName(dataType, List.of());
   }
 
-  private static TypeAndName getTypeName(DataType dataType, List<AnnotationSpec> typeAnnotations) {
-    if (dataType instanceof JavaType<?> javaType) {
-      Optional<String> simpleName = javaType.simpleName();
+  private static TypeAndName getTypeName(
+      DataType<?> dataType, List<AnnotationSpec> typeAnnotations) {
+    if (dataType instanceof CustomType<?> customType) {
+      Optional<String> simpleName = customType.simpleName();
       ClassName className;
       if (simpleName.isPresent()) {
         List<String> classNames =
-            Stream.concat(javaType.enclosingClasses().stream(), Stream.of(simpleName.get()))
+            Stream.concat(customType.enclosingClasses().stream(), Stream.of(simpleName.get()))
                 .toList();
         className =
             ClassName.get(
-                javaType.packageName().orElse(""),
+                customType.packageName().orElse(""),
                 classNames.get(0),
                 classNames.subList(1, classNames.size()).toArray(String[]::new));
       } else {
-        className = ClassName.bestGuess(javaType.className());
+        className = ClassName.bestGuess(customType.className());
       }
-      if (!javaType.typeParameters().isEmpty()) {
+      if (!customType.typeParameters().isEmpty()) {
         return new TypeAndName(
             ParameterizedTypeName.get(
                     className,
-                    javaType.typeParameters().stream()
+                    customType.typeParameters().stream()
                         .map(VajramCodeGenerator::getTypeName)
                         .map(TypeAndName::typeName)
                         .toArray(TypeName[]::new))
@@ -1538,7 +1525,7 @@ public class VajramCodeGenerator {
         return new TypeAndName(className.annotated(typeAnnotations));
       }
     } else {
-      Optional<Type> javaType = getJavaType(dataType);
+      Optional<Type> javaType = dataType.javaType();
       return new TypeAndName(
           javaType
               .map(type -> (type instanceof Class<?> clazz) ? Primitives.wrap(clazz) : type)
@@ -1554,11 +1541,11 @@ public class VajramCodeGenerator {
   }
 
   private static MethodSpec getterCodeForInput(
-      AbstractInput input, String name, TypeAndName typeAndName) {
+      VajramInputDefinition input, String name, TypeAndName typeAndName) {
     boolean wrapWithOptional =
         !input.isMandatory()
-            && (input instanceof InputDef
-                || (input instanceof DependencyDef dependencyDef && !dependencyDef.canFanout()));
+            && (input instanceof Input<?>
+                || (input instanceof Dependency<?> dependencyDef && !dependencyDef.canFanout()));
     return methodBuilder(name)
         .returns(
             (wrapWithOptional
@@ -1604,11 +1591,7 @@ public class VajramCodeGenerator {
 
   public String codeGenInputUtil() {
     boolean doInputsNeedModulation =
-        vajramInputFile
-            .vajramInputsDef()
-            .allInputsStream()
-            .map(AbstractInput::toInputDefinition)
-            .anyMatch(VajramInputDefinition::needsModulation);
+        vajramInputFile.allInputsStream().anyMatch(VajramInputDefinition::needsModulation);
     if (doInputsNeedModulation) {
       return codeGenModulatedInputUtil();
     } else {
@@ -1622,27 +1605,25 @@ public class VajramCodeGenerator {
     TypeSpec.Builder allInputsClass =
         classBuilder(className).addModifiers(FINAL, STATIC).addAnnotations(recordAnnotations());
     List<FieldTypeName> fieldsList = new ArrayList<>();
-    VajramInputsDef vajramInputsDef = vajramInputFile.vajramInputsDef();
-    vajramInputsDef
+    vajramInputFile
         .inputs()
         .forEach(
             inputDef -> {
-              String inputJavaName = toJavaName(inputDef.getName());
+              String inputJavaName = toJavaName(inputDef.name());
               TypeAndName javaType =
                   getTypeName(
-                      inputDef.toInputDefinition().type(),
-                      List.of(AnnotationSpec.builder(Nullable.class).build()));
+                      inputDef.type(), List.of(AnnotationSpec.builder(Nullable.class).build()));
               allInputsClass.addField(javaType.typeName(), inputJavaName, PRIVATE, FINAL);
               allInputsClass.addMethod(getterCodeForInput(inputDef, inputJavaName, javaType));
               fieldsList.add(new FieldTypeName(javaType.typeName(), inputJavaName));
             });
 
-    vajramInputsDef
+    vajramInputFile
         .dependencies()
         .forEach(
             dependencyDef -> {
               TypeAndName typeAndName = getDependencyOutputsType(dependencyDef);
-              String inputJavaName = toJavaName(dependencyDef.getName());
+              String inputJavaName = toJavaName(dependencyDef.name());
               allInputsClass.addField(typeAndName.typeName(), inputJavaName, PRIVATE, FINAL);
               allInputsClass.addMethod(
                   getterCodeForInput(dependencyDef, inputJavaName, typeAndName));
@@ -1681,10 +1662,10 @@ public class VajramCodeGenerator {
     return Optional.of(constructor.build());
   }
 
-  private static TypeAndName getDependencyOutputsType(DependencyDef dependencyDef) {
-    if (dependencyDef instanceof VajramDependencyDef vajramDepSpec) {
-      if (vajramDepSpec.canFanout()) {
-        String depVajramClass = vajramDepSpec.getVajramClass();
+  private static TypeAndName getDependencyOutputsType(Dependency<?> dependencyDef) {
+    if (dependencyDef.dataAccessSpec() instanceof VajramID vajramID) {
+      if (dependencyDef.canFanout()) {
+        String depVajramClass = vajramID.className().orElseThrow();
         int lastDotIndex = depVajramClass.lastIndexOf(Constants.DOT_SEPARATOR);
         String depRequestClass =
             CodegenUtils.getRequestClassName(depVajramClass.substring(lastDotIndex + 1));
@@ -1693,10 +1674,10 @@ public class VajramCodeGenerator {
             ParameterizedTypeName.get(
                 ClassName.get(DependencyResponse.class),
                 ClassName.get(depPackageName, depRequestClass),
-                getTypeName(vajramDepSpec.toDataType()).typeName()));
+                getTypeName(vajramID.responseType()).typeName()));
       } else {
         return getTypeName(
-            vajramDepSpec.toDataType(), List.of(AnnotationSpec.builder(Nullable.class).build()));
+            vajramID.responseType(), List.of(AnnotationSpec.builder(Nullable.class).build()));
       }
     } else {
       throw new UnsupportedOperationException(
@@ -1708,12 +1689,12 @@ public class VajramCodeGenerator {
     StringWriter writer = new StringWriter();
     try {
       TypeSpec.Builder inputUtilClass = createInputUtilClass();
-      VajramInputsDef vajramInputsDef = vajramInputFile.vajramInputsDef();
+      VajramInfo vajramFacetsDef = vajramInputFile;
       String imClassName = getInputModulationClassname(vajramName);
       String ciClassName = getCommonInputsClassname(vajramName);
       FromAndTo imFromAndTo =
           fromAndToMethods(
-              vajramInputsDef.inputs().stream().filter(InputDef::isNeedsModulation).toList(),
+              vajramFacetsDef.inputs().stream().filter(Input::needsModulation).toList(),
               ClassName.get(packageName, getInputUtilClassName(vajramName), imClassName));
       TypeSpec.Builder inputsNeedingModulation =
           classBuilder(imClassName)
@@ -1726,8 +1707,8 @@ public class VajramCodeGenerator {
       FromAndTo ciFromAndTo =
           fromAndToMethods(
               Stream.concat(
-                      vajramInputsDef.inputs().stream().filter(input -> !input.isNeedsModulation()),
-                      vajramInputsDef.dependencies().stream())
+                      vajramFacetsDef.inputs().stream().filter(input -> !input.needsModulation()),
+                      vajramFacetsDef.dependencies().stream())
                   .toList(),
               ClassName.get(packageName, getInputUtilClassName(vajramName), ciClassName));
       TypeSpec.Builder commonInputs =
@@ -1741,16 +1722,15 @@ public class VajramCodeGenerator {
       ClassName ciType = ClassName.get(packageName, getInputUtilClassName(vajramName), ciClassName);
       List<FieldTypeName> ciFieldsList = new ArrayList<>();
       List<FieldTypeName> imFieldsList = new ArrayList<>();
-      vajramInputsDef
+      vajramFacetsDef
           .inputs()
           .forEach(
               inputDef -> {
-                String inputJavaName = toJavaName(inputDef.getName());
+                String inputJavaName = toJavaName(inputDef.name());
                 TypeAndName javaType =
                     getTypeName(
-                        inputDef.toInputDefinition().type(),
-                        List.of(AnnotationSpec.builder(Nullable.class).build()));
-                if (inputDef.isNeedsModulation()) {
+                        inputDef.type(), List.of(AnnotationSpec.builder(Nullable.class).build()));
+                if (inputDef.needsModulation()) {
                   inputsNeedingModulation.addField(
                       javaType.typeName(), inputJavaName, PRIVATE, FINAL);
                   inputsNeedingModulation.addMethod(
@@ -1762,12 +1742,12 @@ public class VajramCodeGenerator {
                   ciFieldsList.add(new FieldTypeName(javaType.typeName(), inputJavaName));
                 }
               });
-      vajramInputsDef
+      vajramFacetsDef
           .dependencies()
           .forEach(
               dependencyDef -> {
                 TypeAndName typeAndName = getDependencyOutputsType(dependencyDef);
-                String inputJavaName = toJavaName(dependencyDef.getName());
+                String inputJavaName = toJavaName(dependencyDef.name());
                 commonInputs.addField(typeAndName.typeName(), inputJavaName, PRIVATE, FINAL);
                 commonInputs.addMethod(
                     getterCodeForInput(dependencyDef, inputJavaName, typeAndName));

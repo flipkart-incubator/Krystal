@@ -2,6 +2,8 @@ package com.flipkart.krystal.vajram;
 
 import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 
+import com.flipkart.krystal.datatypes.DataType;
+import com.flipkart.krystal.datatypes.ObjectType;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import java.util.Collection;
 import java.util.Optional;
@@ -12,18 +14,25 @@ public final class VajramID implements DataAccessSpec {
 
   private @MonotonicNonNull String vajramId;
   private final @MonotonicNonNull String className;
+  private final DataType<?> responseType;
 
-  private VajramID(@Nullable String vajramId, @Nullable String className) {
+  private VajramID(
+      @Nullable String vajramId, @Nullable String className, DataType<?> responseType) {
     this.vajramId = vajramId;
     this.className = className;
+    this.responseType = responseType;
   }
 
   public static VajramID vajramID(String id) {
-    return new VajramID(id, null);
+    return new VajramID(id, null, ObjectType.object());
   }
 
-  public static VajramID fromClass(String vajramClassName) {
-    return new VajramID(null, vajramClassName);
+  public static VajramID vajramID(String id, DataType<?> responseType) {
+    return new VajramID(id, null, responseType);
+  }
+
+  public static VajramID fromClass(String vajramClassName, DataType<?> responseType) {
+    return new VajramID(null, vajramClassName, responseType);
   }
 
   public String vajramId() {
@@ -34,7 +43,7 @@ public final class VajramID implements DataAccessSpec {
           //noinspection unchecked
           vajramId =
               getVajramIdString(
-                      (Class<? extends Vajram>)
+                      (Class<? extends Vajram<?>>)
                           Optional.ofNullable(this.getClass().getClassLoader())
                               .orElseThrow()
                               .loadClass(className.get()))
@@ -81,5 +90,9 @@ public final class VajramID implements DataAccessSpec {
 
   public Optional<String> className() {
     return Optional.ofNullable(className);
+  }
+
+  public DataType<?> responseType() {
+    return responseType;
   }
 }

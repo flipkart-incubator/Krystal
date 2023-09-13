@@ -8,6 +8,8 @@ dependencies {
     api project(':vajram')
     api project(':krystex')
 
+    annotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
+
     def jacksonVersion = '2.14.2'
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations:' + jacksonVersion
     testImplementation 'com.fasterxml.jackson.core:jackson-databind:' + jacksonVersion

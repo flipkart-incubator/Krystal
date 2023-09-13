@@ -544,6 +544,7 @@
           <option value="initialization" />
           <option value="nullness" />
           <option value="Convert2Diamond" />
+          <option value="NonBooleanMethodNameMayNotStartWithQuestion" />
         </list>
       </option>
     </inspection_tool>

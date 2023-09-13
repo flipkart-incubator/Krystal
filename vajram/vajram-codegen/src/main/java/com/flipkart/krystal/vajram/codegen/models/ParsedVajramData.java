@@ -5,6 +5,7 @@ import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.codegen.utils.CodegenUtils;
 import com.flipkart.krystal.vajram.codegen.utils.Constants;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
+import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -29,11 +30,10 @@ public record ParsedVajramData(
   public static final String DOT_SEPARATOR = ".";
 
   public static Optional<ParsedVajramData> fromVajram(
-      ClassLoader classLoader, VajramInputFile inputFile) {
-    String packageName =
-        CodegenUtils.getPackageFromPath(inputFile.inputFilePath().relativeFilePath());
+      ClassLoader classLoader, VajramInfo inputFile) {
     Class<? extends Vajram<?>> result;
     Map<String, Field> fields = new HashMap<>();
+    String packageName = inputFile.packageName();
     try {
       //noinspection unchecked
       result =
@@ -49,8 +49,7 @@ public record ParsedVajramData(
                   .formatted(inputFile.vajramName(), method.getName()));
       }
 
-      boolean needsModulation =
-          inputFile.vajramInputsDef().inputs().stream().anyMatch(InputDef::isNeedsModulation);
+      boolean needsModulation = inputFile.inputs().stream().anyMatch(Input::needsModulation);
       if (needsModulation) {
         final Class<?> inputsCls =
             classLoader.loadClass(

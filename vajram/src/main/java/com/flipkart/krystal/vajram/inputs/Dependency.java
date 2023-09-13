@@ -16,15 +16,4 @@ public record Dependency<T>(
   public boolean needsModulation() {
     return false;
   }
-
-  public static class DependencyBuilder<T> {
-    public DependencyBuilder<T> isMandatory() {
-      return isMandatory(true);
-    }
-
-    public DependencyBuilder<T> isMandatory(boolean isMandatory) {
-      this.isMandatory = isMandatory;
-      return this;
-    }
-  }
 }
