@@ -20,10 +20,14 @@
     <option name="commentsEnabled" value="true" />
   </component>
   <component name="EntryPointsManager">
-    <list size="2">
-      <item index="0" class="java.lang.String" itemvalue="com.google.inject.Provides" />
-      <item index="1" class="java.lang.String" itemvalue="java.beans.ConstructorProperties" />
+    <list size="3">
+      <item index="0" class="java.lang.String" itemvalue="com.flipkart.krystal.vajram.Input" />
+      <item index="1" class="java.lang.String" itemvalue="com.google.inject.Provides" />
+      <item index="2" class="java.lang.String" itemvalue="java.beans.ConstructorProperties" />
     </list>
+    <writeAnnotations>
+      <writeAnnotation name="com.flipkart.krystal.vajram.Input" />
+    </writeAnnotations>
   </component>
   <component name="ExternalStorageConfigurationManager" enabled="true" />
   <component name="FrameworkDetectionExcludesConfiguration">

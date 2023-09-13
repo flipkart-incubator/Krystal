@@ -3,7 +3,8 @@ package com.flipkart.krystal.datatypes;
 import java.lang.reflect.Type;
 import java.util.Optional;
 
-public final class BooleanType implements JavaDataType<Boolean>, DataType {
+@SuppressWarnings("Singleton")
+public final class BooleanType implements DataType<Boolean> {
   private static final BooleanType INSTANCE = new BooleanType();
 
   public static BooleanType bool() {
@@ -14,6 +15,6 @@ public final class BooleanType implements JavaDataType<Boolean>, DataType {
 
   @Override
   public Optional<Type> javaType() {
-    return Optional.of(Boolean.class);
+    return Optional.of(Boolean.TYPE);
   }
 }

@@ -22,7 +22,7 @@ import java.util.List;
 @VajramDef(SplitAdder.ID)
 public abstract class SplitAdder extends ComputeVajram<Integer> {
 
-  public static final String ID = "splitAdder";
+  public static final String ID = "SplitAdder";
 
   @Resolve(depName = splitSum1_n, depInputs = numbers_n)
   public static SingleExecute<ArrayList<Integer>> numbersForSubSplitter1(

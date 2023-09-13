@@ -21,7 +21,7 @@ public final class InputDef extends AbstractInput {
     return Input.builder()
         .name(getName())
         .type(toDataType())
-        .mandatory(isMandatory())
+        .isMandatory(isMandatory())
         .needsModulation(isNeedsModulation())
         .documentation(getDoc())
         .sources(getSources())

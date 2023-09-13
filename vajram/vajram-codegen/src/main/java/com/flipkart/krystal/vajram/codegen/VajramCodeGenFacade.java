@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.DOT;
+import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getRequestClassName;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getVajramImplClassName;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -11,11 +12,12 @@ import static java.util.Arrays.stream;
 
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
-import com.flipkart.krystal.vajram.codegen.models.AbstractInput;
+import com.flipkart.krystal.vajram.codegen.models.DependencyDef;
+import com.flipkart.krystal.vajram.codegen.models.InputDef;
 import com.flipkart.krystal.vajram.codegen.models.ParsedVajramData;
-import com.flipkart.krystal.vajram.codegen.models.VajramInputFile;
-import com.flipkart.krystal.vajram.codegen.models.VajramInputsDef;
-import com.flipkart.krystal.vajram.codegen.models.VajramInputsDef.InputFilePath;
+import com.flipkart.krystal.vajram.codegen.models.VajramFacetsDef;
+import com.flipkart.krystal.vajram.codegen.models.VajramFacetsDef.InputFilePath;
+import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.utils.CodegenUtils;
 import com.flipkart.krystal.vajram.codegen.utils.Constants;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
@@ -52,6 +54,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.jetbrains.annotations.NotNull;
 
 @Slf4j
 public final class VajramCodeGenFacade {
@@ -177,17 +180,17 @@ public final class VajramCodeGenFacade {
   }
 
   private void codeGenModels() throws Exception {
-    ImmutableList<VajramInputFile> inputFiles = getInputDefinitions();
-    for (VajramInputFile inputFile : inputFiles) {
+    ImmutableList<VajramInfo> inputFiles = getInputDefinitions();
+    for (VajramInfo inputFile : inputFiles) {
       codeGenModels(inputFile);
     }
   }
 
   private void codeGenModels(Path srcDir, Path vajramInputRelativePath) throws IOException {
-    codeGenModels(toVajramInputFile(new InputFilePath(srcDir, vajramInputRelativePath)));
+    codeGenModels(toVajramInfo(new InputFilePath(srcDir, vajramInputRelativePath)));
   }
 
-  private void codeGenModels(VajramInputFile inputFile) {
+  private void codeGenModels(VajramInfo inputFile) {
     try {
       VajramCodeGenerator vajramCodeGenerator =
           new VajramCodeGenerator(inputFile, Collections.emptyMap(), Collections.emptyMap());
@@ -196,7 +199,7 @@ public final class VajramCodeGenFacade {
     } catch (Throwable e) {
       throw new RuntimeException(
           "Could not generate code for file %s"
-              .formatted(inputFile.inputFilePath().relativeFilePath()),
+              .formatted(inputFile.packageName() + '.' + inputFile.vajramName()),
           e);
     }
   }
@@ -220,7 +223,7 @@ public final class VajramCodeGenFacade {
 
   @SuppressWarnings({"unchecked", "rawtypes"})
   private void codeGenVajramImpl() throws Exception {
-    ImmutableList<VajramInputFile> inputFiles = getInputDefinitions();
+    ImmutableList<VajramInfo> inputFiles = getInputDefinitions();
     ClassLoader systemClassLoader = checkNotNull(VajramID.class.getClassLoader());
     List<URL> urls = new ArrayList<>();
     // Adding src dirs to classloader urls
@@ -255,29 +258,22 @@ public final class VajramCodeGenFacade {
       // invoked
       //  to fetch the vajram input definitions
       inputFiles.forEach(
-          vajramInputFile -> {
+          vajramInfo -> {
             Optional<ParsedVajramData> parsedVajramData =
-                ParsedVajramData.fromVajram(urlcl, vajramInputFile);
+                ParsedVajramData.fromVajram(urlcl, vajramInfo);
             if (parsedVajramData.isEmpty()) {
-              log.warn("VajramImpl codegen will be skipped for {}. ", vajramInputFile.vajramName());
+              log.warn("VajramImpl codegen will be skipped for {}. ", vajramInfo.vajramName());
             } else {
               vajramDefs.put(parsedVajramData.get().vajramName(), parsedVajramData.get());
               vajramInputsDef.put(
-                  vajramInputFile.vajramName(),
-                  vajramInputFile
-                      .vajramInputsDef()
-                      .allInputsStream()
-                      .map(AbstractInput::toInputDefinition)
-                      .collect(toImmutableList()));
+                  vajramInfo.vajramName(), vajramInfo.allInputsStream().collect(toImmutableList()));
             }
           });
       // add vajram input dependency vajram definitions from dependent modules/jars
       inputFiles.forEach(
-          vajramInputFile -> {
-            vajramInputFile
-                .vajramInputsDef()
+          vajramInfo -> {
+            vajramInfo
                 .allInputsStream()
-                .map(AbstractInput::toInputDefinition)
                 .forEach(
                     inputDef -> {
                       if (inputDef instanceof Dependency dependency
@@ -318,7 +314,7 @@ public final class VajramCodeGenFacade {
                             Class<? extends Vajram<?>> parsedVajramImpl =
                                 (Class<? extends Vajram<?>>)
                                     urlcl.loadClass(
-                                        depPackageName + DOT + getVajramImplClassName(vajramName));
+                                        depPackageName + DOT + getRequestClassName(vajramName));
                             Method getInputDefinitions =
                                 parsedVajramImpl.getDeclaredMethod("getInputDefinitions");
                             Vajram vajram = parsedVajramImpl.getConstructor().newInstance();
@@ -349,7 +345,7 @@ public final class VajramCodeGenFacade {
               } catch (Throwable e) {
                 throw new RuntimeException(
                     "Could not generate vajram impl for file %s"
-                        .formatted(inputFile.inputFilePath().relativeFilePath()),
+                        .formatted(inputFile.packageName() + '.' + inputFile.vajramName()),
                     e);
               }
             }
@@ -369,8 +365,7 @@ public final class VajramCodeGenFacade {
       File vajramImplSourceFile =
           new File(
               vajramJavaDir,
-              CodegenUtils.getVajramImplClassName(vajramCodeGenerator.getVajramName())
-                  + Constants.JAVA_EXT);
+              getVajramImplClassName(vajramCodeGenerator.getVajramName()) + Constants.JAVA_EXT);
       Files.writeString(
           vajramImplSourceFile.toPath(), vajramImplCode, CREATE, TRUNCATE_EXISTING, WRITE);
     }
@@ -392,24 +387,39 @@ public final class VajramCodeGenFacade {
     }
   }
 
-  ImmutableList<VajramInputFile> getInputDefinitions() throws Exception {
-    Collection<VajramInputFile> vajramInputFiles = new ArrayList<>();
-    Set<VajramInputsDef.InputFilePath> inputFiles = getInputsYamlFiles();
-    for (VajramInputsDef.InputFilePath inputFile : inputFiles) {
-      vajramInputFiles.add(toVajramInputFile(inputFile));
+  ImmutableList<VajramInfo> getInputDefinitions() throws Exception {
+    Collection<VajramInfo> vajramInputFiles = new ArrayList<>();
+    Set<VajramFacetsDef.InputFilePath> inputFiles = getInputsYamlFiles();
+    for (VajramFacetsDef.InputFilePath inputFile : inputFiles) {
+      vajramInputFiles.add(toVajramInfo(inputFile));
     }
     return ImmutableList.copyOf(vajramInputFiles);
   }
 
-  private static VajramInputFile toVajramInputFile(InputFilePath inputFile) throws IOException {
+  private static VajramInfo toVajramInfo(InputFilePath inputFile) throws IOException {
     String fileName = String.valueOf(checkNotNull(inputFile.relativeFilePath().getFileName()));
     String vajramName = fileName.substring(0, fileName.length() - INPUTS_FILE_EXTENSION.length());
-    return new VajramInputFile(
-        vajramName, inputFile, VajramInputsDef.from(inputFile.absolutePath().toFile()));
+    File vajramInputFile = inputFile.absolutePath().toFile();
+    String packageName = CodegenUtils.getPackageFromPath(inputFile.relativeFilePath());
+    return toVajramInfo(vajramInputFile, vajramName, packageName);
   }
 
-  private Set<VajramInputsDef.InputFilePath> getInputsYamlFiles() throws IOException {
-    Set<VajramInputsDef.InputFilePath> inputFilePaths = new LinkedHashSet<>();
+  public static VajramInfo toVajramInfo(File vajramInputFile, String vajramName, String packageName)
+      throws IOException {
+    VajramFacetsDef vajramFacetsDef = VajramFacetsDef.from(vajramInputFile);
+    return new VajramInfo(
+        vajramName,
+        packageName,
+        vajramFacetsDef.inputs().stream()
+            .map(InputDef::toInputDefinition)
+            .collect(toImmutableList()),
+        vajramFacetsDef.dependencies().stream()
+            .map(DependencyDef::toInputDefinition)
+            .collect(toImmutableList()));
+  }
+
+  private Set<VajramFacetsDef.InputFilePath> getInputsYamlFiles() throws IOException {
+    Set<VajramFacetsDef.InputFilePath> inputFilePaths = new LinkedHashSet<>();
     for (Path srcDir : srcDirs) {
       if (srcDir.toFile().isDirectory()) {
         try (Stream<Path> vajramInputPathStream =
@@ -427,7 +437,7 @@ public final class VajramCodeGenFacade {
           vajramInputPathStream.forEach(
               p ->
                   inputFilePaths.add(
-                      new VajramInputsDef.InputFilePath(srcDir, srcDir.relativize(p))));
+                      new VajramFacetsDef.InputFilePath(srcDir, srcDir.relativize(p))));
         }
       }
     }

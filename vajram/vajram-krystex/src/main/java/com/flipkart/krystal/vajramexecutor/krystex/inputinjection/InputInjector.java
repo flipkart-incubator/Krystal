@@ -7,7 +7,7 @@ import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
-import com.flipkart.krystal.datatypes.JavaDataType;
+import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
@@ -105,11 +105,10 @@ public final class InputInjector implements MainLogicDecorator {
                     // Input was not resolved by another vajram. Check if it is resolvable
                     // by SESSION
                   }
-                  if (input.sources().contains(InputSource.SESSION)
-                      && input.type() instanceof JavaDataType<?>) {
+                  if (input.sources().contains(InputSource.SESSION)) {
                     ValueOrError<Object> value =
                         getFromInjectionAdaptor(
-                            ((JavaDataType<?>) input.type()),
+                            input.type(),
                             Optional.ofNullable(input.tags())
                                 .map(tags -> tags.get(INJECT_NAMED_KEY))
                                 .map(Tag::tagValue)
@@ -128,7 +127,7 @@ public final class InputInjector implements MainLogicDecorator {
   }
 
   private ValueOrError<Object> getFromInjectionAdaptor(
-      JavaDataType<?> dataType, @Nullable String injectionName) {
+      DataType<?> dataType, @Nullable String injectionName) {
     if (inputInjectionProvider == null) {
       return ValueOrError.withError(
           new Exception("Dependency injector is null, cannot resolve SESSION input"));

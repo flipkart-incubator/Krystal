@@ -14,7 +14,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 
-public record VajramInputsDef(
+public record VajramFacetsDef(
     ImmutableList<InputDef> inputs, ImmutableList<DependencyDef> dependencies) {
   private static final ObjectMapper OBJECT_MAPPER =
       new ObjectMapper(new YAMLFactory())
@@ -22,15 +22,15 @@ public record VajramInputsDef(
 
   @JsonCreator
   @ConstructorProperties({"inputs", "dependencies"})
-  public VajramInputsDef(
+  public VajramFacetsDef(
       @JsonSetter(nulls = Nulls.AS_EMPTY) List<InputDef> inputs,
       @JsonSetter(nulls = Nulls.AS_EMPTY) List<DependencyDef> dependencies) {
     this(ImmutableList.copyOf(inputs), ImmutableList.copyOf(dependencies));
   }
 
-  public static VajramInputsDef from(File file) throws IOException {
+  public static VajramFacetsDef from(File file) throws IOException {
     try {
-      return OBJECT_MAPPER.readValue(file, VajramInputsDef.class);
+      return OBJECT_MAPPER.readValue(file, VajramFacetsDef.class);
     } catch (IOException e) {
       throw new IOException("Error wile loading .vajram.yaml file: %s".formatted(file), e);
     }

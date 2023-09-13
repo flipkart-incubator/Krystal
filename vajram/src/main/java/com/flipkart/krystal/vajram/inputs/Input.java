@@ -12,7 +12,7 @@ import lombok.Builder;
 @Builder
 public record Input<T>(
     String name,
-    DataType type,
+    DataType<?> type,
     ImmutableMap<String, Tag> tags,
     boolean isMandatory,
     T defaultValue,
@@ -36,24 +36,6 @@ public record Input<T>(
   }
 
   public static class InputBuilder<T> {
-
-    public InputBuilder<T> isMandatory() {
-      return mandatory(true);
-    }
-
-    public InputBuilder<T> mandatory(boolean isMandatory) {
-      this.isMandatory = isMandatory;
-      return this;
-    }
-
-    public InputBuilder<T> needsModulation(boolean needsModulation) {
-      this.needsModulation = needsModulation;
-      return this;
-    }
-
-    public InputBuilder<T> needsModulation() {
-      return needsModulation(true);
-    }
 
     public InputBuilder<T> sources(InputSource... inputSources) {
       if (inputSources != null) {

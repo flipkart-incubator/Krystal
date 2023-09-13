@@ -9,6 +9,8 @@ dependencies {
     implementation project(':krystal-common')
     implementation project(':vajram')
 
+    annotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
+
     testImplementation project(':vajram-krystex')
     testImplementation project(':krystex')
 

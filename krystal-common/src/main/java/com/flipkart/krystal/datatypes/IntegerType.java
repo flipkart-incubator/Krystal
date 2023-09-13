@@ -3,7 +3,8 @@ package com.flipkart.krystal.datatypes;
 import java.lang.reflect.Type;
 import java.util.Optional;
 
-public final class IntegerType implements JavaDataType<Integer> {
+@SuppressWarnings("Singleton")
+public final class IntegerType implements DataType<Integer> {
 
   private static final IntegerType INSTANCE = new IntegerType();
 
