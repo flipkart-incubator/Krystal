@@ -82,7 +82,7 @@ public class GreetingVajramTest {
                                     logicExecutionContext -> true,
                                     logicExecutionContext -> mainLogicExecReporter.decoratorType(),
                                     decoratorContext -> mainLogicExecReporter))))
-                    .build())) {
+                    .debug(false).build())) {
       future = executeVajram(krystexVajramExecutor);
     }
     assertThat(future.get()).contains("user@123");
