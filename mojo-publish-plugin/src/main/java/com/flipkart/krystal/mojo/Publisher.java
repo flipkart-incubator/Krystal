@@ -5,7 +5,6 @@ import static com.flipkart.krystal.mojo.PublishStage.PRODUCTION;
 import static com.flipkart.krystal.mojo.PublishTarget.LOCAL;
 import static com.flipkart.krystal.mojo.PublishTarget.REMOTE;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Comparator.comparing;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -40,7 +39,6 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Repository;
@@ -282,13 +280,6 @@ final class Publisher {
         """
           Cannot publish when git working tree is not clean.
           Please make sure 'git status' reports a clean working tree before mojo publish""");
-
-    getAllProjects()
-        .forEach(
-            project ->
-                checkState(
-                    getPublications(project).count() <= 1,
-                    "Mojo publish does not know how to handle projects with multiple publications. Aborting!"));
   }
 
   private Optional<Project> getNextProjectReadyToPublish(Set<Project> projectsToPublish) {
