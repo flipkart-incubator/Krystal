@@ -100,4 +100,10 @@ public class CodegenUtilsTest {
       private String name;
     }
   }
+
+  @Test
+  public void getExceptionClassNameTest() {
+    Assertions.assertEquals("GetUserAddressException", CodegenUtils.getExceptionClassName("GetUserAddressVajram"));
+    Assertions.assertEquals("GetUserAddressException", CodegenUtils.getExceptionClassName("GetUserAddress"));
+  }
 }

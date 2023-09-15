@@ -38,6 +38,7 @@ public final class CodegenUtils {
   public static final String INPUT_UTIL = "InputUtil";
   public static final String VAJRAM = "vajram";
   public static final String CONVERTER = "CONVERTER";
+  public static final String EXCEPTION = "Exception";
 
   private CodegenUtils() {}
 
@@ -57,6 +58,13 @@ public final class CodegenUtils {
             ? vajramName.substring(0, vajramName.length() - 6)
             : vajramName)
         + INPUT_UTIL;
+  }
+
+  public static String getExceptionClassName(String vajramName) {
+    return (vajramName.toLowerCase().endsWith(VAJRAM)
+            ? vajramName.substring(0, vajramName.length() - 6)
+            : vajramName)
+        + EXCEPTION;
   }
 
   public static String getRequestClassName(String vajramName) {

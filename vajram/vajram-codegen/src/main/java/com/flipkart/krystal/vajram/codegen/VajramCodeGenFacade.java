@@ -193,6 +193,7 @@ public final class VajramCodeGenFacade {
           new VajramCodeGenerator(inputFile, Collections.emptyMap(), Collections.emptyMap());
       codeGenRequest(vajramCodeGenerator);
       codeGenUtil(vajramCodeGenerator);
+      codeGenException(vajramCodeGenerator);
     } catch (Throwable e) {
       throw new RuntimeException(
           "Could not generate code for file %s"
@@ -215,6 +216,22 @@ public final class VajramCodeGenFacade {
           CREATE,
           TRUNCATE_EXISTING,
           WRITE);
+    }
+  }
+
+  private void codeGenException(VajramCodeGenerator vajramCodeGenerator) throws IOException {
+    File vajramJavaDir =
+        Paths.get(generatedSrcDir.toString(), vajramCodeGenerator.getPackageName().split("\\."))
+            .toFile();
+    if (vajramJavaDir.isDirectory() || vajramJavaDir.mkdirs()) {
+      String vajramException = vajramCodeGenerator.codeGenVajramException();
+      File vajramExceptionSourceFile =
+          new File(
+              vajramJavaDir,
+              CodegenUtils.getExceptionClassName(vajramCodeGenerator.getVajramName())
+                  + Constants.JAVA_EXT);
+      Files.writeString(
+          vajramExceptionSourceFile.toPath(), vajramException, CREATE, TRUNCATE_EXISTING, WRITE);
     }
   }
 

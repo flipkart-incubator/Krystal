@@ -8,6 +8,7 @@ import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.DOT;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getAllInputsClassname;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getClassGenericArgumentsType;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getCommonInputsClassname;
+import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getExceptionClassName;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getInputModulationClassname;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getInputUtilClassName;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getMethodReturnType;
@@ -153,6 +154,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings({"HardcodedLineSeparator", "OverlyComplexClass", "OverlyCoupledClass"})
 @Slf4j
 public class VajramCodeGenerator {
+
   private final String packageName;
   private final String requestClassName;
   private final VajramInputFile vajramInputFile;
@@ -412,10 +414,10 @@ public class VajramCodeGenerator {
         CodeBlock.builder()
             .add(
                 """
-                return inputsList.stream().collect(
-                     $T.toImmutableMap($T.identity(),
-                     element -> {
-                """,
+                    return inputsList.stream().collect(
+                         $T.toImmutableMap($T.identity(),
+                         element -> {
+                    """,
                 ImmutableMap.class,
                 Function.class);
     List<CodeBlock> inputCodeBlocks = new ArrayList<>();
@@ -452,19 +454,19 @@ public class VajramCodeGenerator {
                     CodeBlock.Builder codeBlock = CodeBlock.builder();
                     codeBlock.addNamed(
                         """
-                              $depResp:T<$request:T, $response:T> $depResponse:L =
-                                   new $depResp:T<>(
-                                       element.<$response:T>getDepValue($variable:S).values().entrySet().stream()
-                                           .filter(
-                                               e ->
-                                                   e.getValue()
-                                                       .error()
-                                                       .filter(t -> t instanceof $skippedException:T)
-                                                       .isEmpty())
-                                           .collect(
-                                               $imMap:T.toImmutableMap(
-                                                   e -> $request:T.from(e.getKey()), java.util.Map.Entry::getValue)));
-                               """,
+                            $depResp:T<$request:T, $response:T> $depResponse:L =
+                                 new $depResp:T<>(
+                                     element.<$response:T>getDepValue($variable:S).values().entrySet().stream()
+                                         .filter(
+                                             e ->
+                                                 e.getValue()
+                                                     .error()
+                                                     .filter(t -> t instanceof $skippedException:T)
+                                                     .isEmpty())
+                                         .collect(
+                                             $imMap:T.toImmutableMap(
+                                                 e -> $request:T.from(e.getKey()), java.util.Map.Entry::getValue)));
+                             """,
                         ImmutableMap.of(
                             DEP_RESP,
                             DependencyResponse.class,
@@ -511,14 +513,14 @@ public class VajramCodeGenerator {
                           CodeBlock.builder()
                               .addNamed(
                                   """
-                                    element.<$response:T>getDepValue($variable:S)
-                                        .values()
-                                        .entrySet()
-                                        .iterator()
-                                        .next()
-                                        .getValue()
-                                        .value()
-                                        .orElse(null)""",
+                                      element.<$response:T>getDepValue($variable:S)
+                                          .values()
+                                          .entrySet()
+                                          .iterator()
+                                          .next()
+                                          .getValue()
+                                          .value()
+                                          .orElse(null)""",
                                   ImmutableMap.of(
                                       RESPONSE, typeArgument, VARIABLE, inputDef.name()))
                               .build());
@@ -895,11 +897,11 @@ public class VajramCodeGenerator {
         if (DependencyResponse.class.isAssignableFrom(parameter.getType())) {
           String depValueAccessorCode =
               """
-              $1T $2L =
-               new $3T<>(inputs.<$4T>getDepValue($5S)
-                    .values().entrySet().stream()
-                    .collect($6T.toImmutableMap(e -> $7T.from(e.getKey()),
-                    $8T::getValue)))""";
+                  $1T $2L =
+                   new $3T<>(inputs.<$4T>getDepValue($5S)
+                        .values().entrySet().stream()
+                        .collect($6T.toImmutableMap(e -> $7T.from(e.getKey()),
+                        $8T::getValue)))""";
           ifBlockBuilder.addStatement(
               depValueAccessorCode,
               ParameterizedTypeName.get(
@@ -916,13 +918,13 @@ public class VajramCodeGenerator {
         } else {
           String depValueAccessorCode =
               """
-              $1T $2L =
-                inputs.<$3T>getDepValue($4S)
-                   .values()
-                   .entrySet()
-                   .iterator()
-                   .next()
-                   .getValue()""";
+                  $1T $2L =
+                    inputs.<$3T>getDepValue($4S)
+                       .values()
+                       .entrySet()
+                       .iterator()
+                       .next()
+                       .getValue()""";
           if (usingDepType.equals(TypeName.get(parameter.getType()))) {
             // This means this dependency in "Using" annotation is not a fanout and the dev has
             // requested the value directly. So we extract the only value from dependency response
@@ -932,8 +934,8 @@ public class VajramCodeGenerator {
               String code =
                   depValueAccessorCode
                       + """
-                              .getValueOrThrow().orElseThrow(() ->
-                                  new $5T("Received null value for mandatory dependency '$6L' of vajram '$7L'"))""";
+                      .getValueOrThrow().orElseThrow(() ->
+                          new $5T("Received null value for mandatory dependency '$6L' of vajram '$7L'"))""";
               ifBlockBuilder.addStatement(
                   code,
                   usingDepType,
@@ -1084,10 +1086,10 @@ public class VajramCodeGenerator {
       } else if (SingleExecute.class.isAssignableFrom(klass)) {
         ifBlockBuilder.addStatement(
             """
-          return $T.executeWith(new Inputs(
-           $T.of($S, $T.withValue(
-              $L.inputs().iterator().next().orElse(null)))))
-        """,
+                  return $T.executeWith(new Inputs(
+                   $T.of($S, $T.withValue(
+                      $L.inputs().iterator().next().orElse(null)))))
+                """,
             SingleExecute.class,
             ImmutableMap.class,
             inputs[0],
@@ -1450,6 +1452,86 @@ public class VajramCodeGenerator {
     return writer.toString();
   }
 
+  public String codeGenVajramException() {
+    TypeSpec.Builder exceptionClass =
+        classBuilder(getExceptionClassName(vajramName))
+            .addModifiers(PUBLIC)
+            .superclass(ClassName.get(Exception.class));
+    exceptionClass.addMethod(
+        constructorBuilder()
+            .addModifiers(PUBLIC)
+            .addJavadoc(
+                """
+                    Constructs a new exception with the specified detail message and cause.  <p>Note that the detail message
+                    associated with {@code cause} is <i>not</i> automatically incorporated in this exception's detail message.
+                    The stack trace is not filled when using this method.
+
+                    """)
+            .addJavadoc(
+                """
+                    @param message the detail message (which is saved for later retrieval by the {@link #getMessage()} method).
+                    @since 1.4
+                    """)
+            .addParameter(String.class, "message")
+            .addStatement("super(message, null, false, false)")
+            .build());
+
+    exceptionClass.addMethod(
+        constructorBuilder()
+            .addModifiers(PUBLIC)
+            .addJavadoc(
+                """
+                    Constructs a new exception with the specified detail message and cause.  <p>Note that the detail message
+                    associated with {@code cause} is <i>not</i> automatically incorporated in this exception's detail message.
+                    The stack trace is not filled when using this method.
+
+                    """)
+            .addJavadoc(
+                """
+                    @param message the detail message (which is saved for later retrieval by the {@link #getMessage()} method).
+                    @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method).  (A {@code null}
+                    value is permitted, and indicates that the cause is nonexistent or unknown.)
+                    @since 1.4
+                    """)
+            .addParameter(String.class, "message")
+            .addParameter(Throwable.class, "cause")
+            .addStatement("super(message, cause, false, false)")
+            .build());
+
+    exceptionClass.addMethod(
+        constructorBuilder()
+            .addModifiers(PUBLIC)
+            .addJavadoc(
+                """
+                    Constructs a new exception with the specified detail message, cause, suppression enabled or disabled, and
+                    writable stack trace enabled or disabled.
+
+                    """)
+            .addJavadoc(
+                """
+                    @param message the detail message.
+                    @param cause the cause.  (A {@code null} value is permitted, and indicates that the cause is nonexistent or
+                    unknown.)
+                    @param enableSuppression whether or not suppression is enabled or disabled
+                    @param writableStackTrace whether or not the stack trace should be writable
+                    @since 1.7
+                    """)
+            .addParameter(String.class, "message")
+            .addParameter(Throwable.class, "cause")
+            .addParameter(boolean.class, "enableSuppression")
+            .addParameter(boolean.class, "writableStackTrace")
+            .addStatement("super(message, cause, enableSuppression, writableStackTrace)")
+            .build());
+
+    StringWriter writer = new StringWriter();
+    try {
+      JavaFile.builder(packageName, exceptionClass.build()).indent("  ").build().writeTo(writer);
+    } catch (IOException ignored) {
+
+    }
+    return writer.toString();
+  }
+
   private static TypeAndName wrapPrimitive(TypeAndName javaType) {
     if (javaType.type().isPresent() && javaType.type().get() instanceof Class<?> clazz) {
       Class<?> wrapped = Primitives.wrap(clazz);
@@ -1577,9 +1659,9 @@ public class VajramCodeGenerator {
             !wrapWithOptional
                 ? CodeBlock.of(
                     """
-                      if($L == null) {
-                        throw new IllegalStateException("The input '$L' is not optional, but has null value. This should not happen");
-                      }""",
+                    if($L == null) {
+                      throw new IllegalStateException("The input '$L' is not optional, but has null value. This should not happen");
+                    }""",
                     name,
                     name)
                 : CodeBlock.builder().build())
