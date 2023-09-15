@@ -532,7 +532,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
             inputNames,
             inputsList -> {
               List<Inputs> validInputs = new ArrayList<>();
-              Map<Inputs, CompletableFuture<Object>> failedValidations = new LinkedHashMap<>();
+              Map<Inputs, CompletableFuture<@Nullable Object>> failedValidations =
+                  new LinkedHashMap<>();
               inputsList.forEach(
                   inputs -> {
                     try {
@@ -544,10 +545,15 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                   });
               @SuppressWarnings("unchecked")
               Vajram<Object> vajram = (Vajram<Object>) vajramDefinition.getVajram();
-              return ImmutableMap.<Inputs, CompletableFuture<Object>>builder()
-                  .putAll(vajram.execute(ImmutableList.copyOf(validInputs)))
-                  .putAll(failedValidations)
-                  .build();
+              ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> validResults =
+                  vajram.execute(ImmutableList.copyOf(validInputs));
+
+              ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> result =
+                  ImmutableMap.<Inputs, CompletableFuture<@Nullable Object>>builder()
+                      .putAll(validResults)
+                      .putAll(failedValidations)
+                      .build();
+              return result;
             },
             vajramDefinition.getMainLogicTags());
     registerInputInjector(vajramLogic, vajramDefinition.getVajram());
