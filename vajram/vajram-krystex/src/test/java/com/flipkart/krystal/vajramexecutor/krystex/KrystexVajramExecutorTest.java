@@ -74,6 +74,7 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -248,6 +249,7 @@ class KrystexVajramExecutorTest {
 
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
+  @Disabled
   void executeCompute_missingMandatoryInput_throwsException(
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     graph =

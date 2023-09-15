@@ -41,11 +41,11 @@ public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
       Set<String> inputs,
       MainLogic<T> kryonLogic,
       ImmutableMap<String, Tag> logicTags) {
-    MainLogicDefinition<T> def =
+    MainLogicDefinition<?> def =
         isIOLogic
             ? new IOLogicDefinition<>(kryonLogicId, inputs, kryonLogic, logicTags)
             : new ComputeLogicDefinition<>(kryonLogicId, inputs, kryonLogic, logicTags);
     delegate.addMainLogic(def);
-    return def;
+    return (MainLogicDefinition<T>) def;
   }
 }

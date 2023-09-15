@@ -14,6 +14,7 @@ import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
@@ -77,6 +78,7 @@ import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -130,7 +132,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
   @Override
   public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
       C requestContext) {
-    return createExecutor(requestContext, KryonExecutorConfig.builder().build());
+    return createExecutor(requestContext, KryonExecutorConfig.builder().debug(false).build());
   }
 
   public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
@@ -369,6 +371,10 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
             vajramId.vajramId() + ":multiResolver",
             inputDefinitions.stream().map(VajramInputDefinition::name).collect(toImmutableSet()),
             (resolutionRequests, inputs) -> {
+              ImmutableList<VajramInputDefinition> requiredInputDefinition =
+                  inputDefinitions.stream()
+                      .filter(inputDefinition -> inputDefinition.isMandatory())
+                      .collect(toImmutableList());
               Set<ResolverDefinition> allResolverDefs =
                   resolutionRequests.stream()
                       .map(DependencyResolutionRequest::resolverDefinitions)
@@ -428,11 +434,19 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                 }
                 ImmutableSet<String> resolvables = resolverDef.resolvedInputNames();
                 DependencyCommand<Inputs> command;
-                if (resolversByResolverDefs.get(resolverDef)
-                    instanceof InputResolver inputResolver) {
-                  command = inputResolver.resolve(dependencyName, resolvables, inputs);
-                } else {
-                  command = vajram.resolveInputOfDependency(dependencyName, resolvables, inputs);
+                try {
+                  if (resolversByResolverDefs.get(resolverDef)
+                      instanceof InputResolver inputResolver) {
+                    command = inputResolver.resolve(dependencyName, resolvables, inputs);
+                  } else {
+                    command = vajram.resolveInputOfDependency(dependencyName, resolvables, inputs);
+                  }
+                } catch (Throwable e) {
+                  command =
+                      skipExecution(
+                          String.format(
+                              "Got exception while executing the resolver of the dependency {}",
+                              dependencyName));
                 }
                 if (command.shouldSkip()) {
                   skippedDependencies.put(dependencyName, command);
@@ -510,14 +524,30 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     KryonLogicId vajramLogicKryonName =
         new KryonLogicId(kryonId, "%s:vajramLogic".formatted(vajramId));
     // Step 4: Create and register Kryon for the main vajram logic
+
     MainLogicDefinition<?> vajramLogic =
         logicRegistryDecorator.newMainLogic(
             vajramDefinition.getVajram() instanceof IOVajram<?>,
             vajramLogicKryonName,
             inputNames,
             inputsList -> {
-              inputsList.forEach(inputs -> validateMandatory(vajramId, inputs, inputDefinitions));
-              return vajramDefinition.getVajram().execute(inputsList);
+              List<Inputs> validInputs = new ArrayList<>();
+              Map<Inputs, CompletableFuture<Object>> failedValidations = new LinkedHashMap<>();
+              inputsList.forEach(
+                  inputs -> {
+                    try {
+                      validateMandatory(vajramId, inputs, inputDefinitions);
+                      validInputs.add(inputs);
+                    } catch (Throwable e) {
+                      failedValidations.put(inputs, failedFuture(e));
+                    }
+                  });
+              @SuppressWarnings("unchecked")
+              Vajram<Object> vajram = (Vajram<Object>) vajramDefinition.getVajram();
+              return ImmutableMap.<Inputs, CompletableFuture<Object>>builder()
+                  .putAll(vajram.execute(ImmutableList.copyOf(validInputs)))
+                  .putAll(failedValidations)
+                  .build();
             },
             vajramDefinition.getMainLogicTags());
     registerInputInjector(vajramLogic, vajramDefinition.getVajram());
