@@ -41,9 +41,9 @@ dependencies {
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:' + jacksonVersion
 }
 
-//checkerFramework {
-//    extraJavacArgs = [
-//            "-Astubs=${rootDir}/config/checker/stubs",
-//            '-AresolveReflection',
-//    ]
-//}
+checkerFramework {
+    extraJavacArgs = [
+            "-Astubs=${rootDir}/config/checker/stubs",
+            '-AresolveReflection',
+    ]
+}
