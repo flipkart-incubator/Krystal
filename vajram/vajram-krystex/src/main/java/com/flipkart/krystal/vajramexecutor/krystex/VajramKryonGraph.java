@@ -445,7 +445,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                   command =
                       skipExecution(
                           String.format(
-                              "Got exception while executing the resolver of the dependency {}",
+                              "Got exception while executing the resolver of the dependency %s",
                               dependencyName));
                 }
                 if (command.shouldSkip()) {
