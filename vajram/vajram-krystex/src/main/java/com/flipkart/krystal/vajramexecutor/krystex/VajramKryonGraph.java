@@ -70,6 +70,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -371,15 +372,14 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
             vajramId.vajramId() + ":multiResolver",
             inputDefinitions.stream().map(VajramInputDefinition::name).collect(toImmutableSet()),
             (resolutionRequests, inputs) -> {
-              ImmutableList<VajramInputDefinition> requiredInputDefinition =
-                  inputDefinitions.stream()
-                      .filter(inputDefinition -> inputDefinition.isMandatory())
-                      .collect(toImmutableList());
               Set<ResolverDefinition> allResolverDefs =
-                  resolutionRequests.stream()
-                      .map(DependencyResolutionRequest::resolverDefinitions)
-                      .flatMap(Collection::stream)
-                      .collect(Collectors.toSet());
+                  new HashSet<>();
+              for (DependencyResolutionRequest resolutionRequest : resolutionRequests) {
+                Set<ResolverDefinition> resolverDefinitions = resolutionRequest.resolverDefinitions();
+                for (ResolverDefinition definition : resolverDefinitions) {
+                  allResolverDefs.add(definition);
+                }
+              }
               Map<String, List<ResolverDefinition>> simpleResolverDefsByDep = new HashMap<>();
               List<ResolverDefinition> complexResolverDefs = new ArrayList<>();
               for (ResolverDefinition resolverDefinition : allResolverDefs) {
