@@ -413,7 +413,7 @@ public final class KryonExecutor implements KrystalExecutor {
                             ValueOrError<Object> result =
                                 responses.getOrDefault(
                                     kryonExecution.instanceExecutionId(), ValueOrError.empty());
-                            linkFutures(kryonExecution.future(), result.toFuture());
+                            linkFutures(result.toFuture(), kryonExecution.future());
                           }
                         }
                       });
