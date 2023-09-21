@@ -366,7 +366,7 @@ public final class KryonExecutor implements KrystalExecutor {
       KryonExecution kryonExecution,
       KryonId kryonId,
       KryonDefinition kryonDefinition) {
-    CompletableFuture<@NonNull Object> submissionResult =
+    CompletableFuture<@Nullable Object> submissionResult =
         this.<GranuleResponse>executeCommand(
                 new ForwardGranule(
                     kryonId,
