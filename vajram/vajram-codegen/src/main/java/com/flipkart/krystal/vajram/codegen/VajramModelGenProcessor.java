@@ -13,15 +13,18 @@ import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Dependency.DependencyType;
 import com.flipkart.krystal.vajram.Input;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
 import com.flipkart.krystal.vajram.inputs.Dependency.DependencyBuilder;
 import com.flipkart.krystal.vajram.inputs.Input.InputBuilder;
 import com.google.auto.service.AutoService;
+import com.squareup.javapoet.TypeName;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -37,7 +40,11 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
+import javax.lang.model.util.Types;
+import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
@@ -46,7 +53,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SupportedAnnotationTypes("com.flipkart.krystal.vajram.VajramDef")
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
-public class VajramAnnoProcessor extends AbstractProcessor {
+public class VajramModelGenProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -149,11 +156,11 @@ public class VajramAnnoProcessor extends AbstractProcessor {
                           }
                           return depBuilder.build();
                         })
-                    .collect(toImmutableList()));
+                    .collect(toImmutableList()),
+                getResponseType(vajramDefinition));
         note("VajramInfo: %s".formatted(vajramInfo));
       }
-      VajramCodeGenerator vajramCodeGenerator =
-          new VajramCodeGenerator(vajramInfo, Map.of(), Map.of());
+      VajramCodeGenerator vajramCodeGenerator = new VajramCodeGenerator(vajramInfo, Map.of());
 
       generateSourceFile(
           vajramCodeGenerator.getPackageName() + '.' + vajramCodeGenerator.getRequestClassName(),
@@ -169,6 +176,54 @@ public class VajramAnnoProcessor extends AbstractProcessor {
     return true;
   }
 
+  private TypeName getResponseType(TypeElement vajramDef) {
+    List<TypeMirror> currentTypes = List.of(vajramDef.asType());
+    note("VajramDef: %s".formatted(vajramDef));
+
+    Types typeUtils = processingEnv.getTypeUtils();
+    DeclaredType vajramInterface = null;
+    do {
+      List<TypeMirror> newSuperTypes = new ArrayList<>();
+      for (TypeMirror currentType : currentTypes) {
+        List<DeclaredType> superTypes =
+            processingEnv.getTypeUtils().directSupertypes(currentType).stream()
+                .filter(t -> (t instanceof DeclaredType))
+                .map(t -> (DeclaredType) t)
+                .toList();
+        newSuperTypes.addAll(superTypes);
+        for (DeclaredType superType : superTypes) {
+          note("SuperType: %s [%s]".formatted(superType, superType.getClass()));
+          Element element = typeUtils.asElement(superType);
+          if (element instanceof TypeElement typeElement) {
+            note("Element qualified name: %s".formatted(typeElement.getQualifiedName()));
+            if (typeElement.getQualifiedName().contentEquals(Vajram.class.getName())) {
+              vajramInterface = superType;
+              break;
+            }
+          }
+        }
+        note("CurrentElement: %s".formatted(currentType));
+      }
+      if (vajramInterface == null) {
+        currentTypes = newSuperTypes;
+      }
+    } while (!currentTypes.isEmpty() && vajramInterface == null);
+    if (vajramInterface != null) {
+      List<? extends TypeMirror> typeParameters = vajramInterface.getTypeArguments();
+      if (typeParameters.size() == 1) {
+        return TypeName.get(typeParameters.get(0));
+      } else {
+        log(
+            Kind.ERROR,
+            "Incorrect number of parameter types on Vajram interface. Expected 1, Found %s"
+                .formatted(typeParameters),
+            vajramDef);
+      }
+    }
+    log(Kind.ERROR, "Unable to infer response type for Vajram", vajramDef);
+    throw new RuntimeException();
+  }
+
   private void generateSourceFile(String className, String code, TypeElement vajramDefinition) {
     try {
       JavaFileObject requestFile =
@@ -178,7 +233,8 @@ public class VajramAnnoProcessor extends AbstractProcessor {
         out.println(code);
       }
     } catch (Exception e) {
-      warn(
+      log(
+          Kind.WARNING,
           "Error creating java file for className: %s. Error: %s".formatted(className, e),
           vajramDefinition);
     }
@@ -188,7 +244,7 @@ public class VajramAnnoProcessor extends AbstractProcessor {
     processingEnv.getMessager().printMessage(Kind.NOTE, message);
   }
 
-  private void warn(String message, TypeElement element) {
-    processingEnv.getMessager().printMessage(Kind.ERROR, message, element);
+  private void log(Diagnostic.Kind kind, String message, TypeElement element) {
+    processingEnv.getMessager().printMessage(kind, message, element);
   }
 }
