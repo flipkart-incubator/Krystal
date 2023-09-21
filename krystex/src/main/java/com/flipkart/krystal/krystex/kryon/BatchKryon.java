@@ -205,13 +205,14 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       multiResolverOpt
           .map(LogicDefinition::logic)
           .map(
-              logic ->
-                  logic.resolve(
-                      triggerableDependencies.entrySet().stream()
-                          .filter(e -> !e.getValue().isEmpty())
-                          .map(e -> new DependencyResolutionRequest(e.getKey(), e.getValue()))
-                          .toList(),
-                      inputs))
+              logic -> {
+                return logic.resolve(
+                    triggerableDependencies.entrySet().stream()
+                        .filter(e -> !e.getValue().isEmpty())
+                        .map(e -> new DependencyResolutionRequest(e.getKey(), e.getValue()))
+                        .toList(),
+                    inputs);
+              })
           .orElse(ImmutableMap.of())
           .forEach(
               (depName, resolverCommand) -> {
@@ -411,12 +412,16 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
           CompletableFuture<@Nullable Object> cachedResult =
               resultsCache.get(mainLogicInputs.providedInputs());
           if (cachedResult == null) {
-            cachedResult =
-                finalLogic
-                    .execute(ImmutableList.of(mainLogicInputs.allInputsAndDependencies()))
-                    .values()
-                    .iterator()
-                    .next();
+            try {
+              cachedResult =
+                  finalLogic
+                      .execute(ImmutableList.of(mainLogicInputs.allInputsAndDependencies()))
+                      .values()
+                      .iterator()
+                      .next();
+            } catch (Exception e) {
+              cachedResult = failedFuture(e);
+            }
             resultsCache.put(mainLogicInputs.providedInputs(), cachedResult);
           }
           resultsByRequest.put(requestId, cachedResult.handle(ValueOrError::valueOrError));
