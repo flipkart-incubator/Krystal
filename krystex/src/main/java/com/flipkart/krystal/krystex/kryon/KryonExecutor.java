@@ -377,7 +377,7 @@ public final class KryonExecutor implements KrystalExecutor {
                     kryonDefinitionRegistry.getDependantChainsStart(),
                     requestId))
             .thenApply(GranuleResponse::response)
-            .thenApply(ValueOrError::toFuture)
+            .<CompletableFuture<@Nullable Object>>thenApply(ValueOrError::toFuture)
             .thenCompose(identity());
     linkFutures(submissionResult, kryonExecution.future());
   }
