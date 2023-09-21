@@ -366,7 +366,7 @@ public final class KryonExecutor implements KrystalExecutor {
       KryonExecution kryonExecution,
       KryonId kryonId,
       KryonDefinition kryonDefinition) {
-    CompletableFuture<@NonNull ValueOrError<Object>> submissionResult =
+    CompletableFuture<@NonNull Object> submissionResult =
         this.<GranuleResponse>executeCommand(
                 new ForwardGranule(
                     kryonId,
@@ -377,16 +377,8 @@ public final class KryonExecutor implements KrystalExecutor {
                     kryonDefinitionRegistry.getDependantChainsStart(),
                     requestId))
             .thenApply(GranuleResponse::response)
-            .whenComplete(
-                (response, throwable) -> {
-                  if (throwable != null) {
-                    kryonExecution.future().completeExceptionally(throwable);
-                  } else if (response.error().isPresent()) {
-                    kryonExecution.future().completeExceptionally(response.error().get());
-                  } else {
-                    kryonExecution.future().complete(response.value().get());
-                  }
-                });
+            .thenApply(ValueOrError::toFuture)
+            .thenCompose(identity());
     linkFutures(submissionResult, kryonExecution.future());
   }
 
@@ -421,11 +413,7 @@ public final class KryonExecutor implements KrystalExecutor {
                             ValueOrError<Object> result =
                                 responses.getOrDefault(
                                     kryonExecution.instanceExecutionId(), ValueOrError.empty());
-                            if (result.error().isPresent()) {
-                              kryonExecution.future().completeExceptionally(result.error().get());
-                            } else {
-                              kryonExecution.future().complete(result.value().orElse(null));
-                            }
+                            linkFutures(kryonExecution.future(), result.toFuture());
                           }
                         }
                       });
