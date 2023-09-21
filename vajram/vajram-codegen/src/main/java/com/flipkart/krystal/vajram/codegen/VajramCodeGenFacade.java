@@ -1,15 +1,14 @@
 package com.flipkart.krystal.vajram.codegen;
 
-import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.DOT;
-import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getRequestClassName;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getVajramImplClassName;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.nio.file.StandardOpenOption.WRITE;
-import static java.util.Arrays.stream;
 
+import com.flipkart.krystal.vajram.ComputeVajram;
+import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.codegen.models.DependencyDef;
@@ -18,17 +17,20 @@ import com.flipkart.krystal.vajram.codegen.models.ParsedVajramData;
 import com.flipkart.krystal.vajram.codegen.models.VajramFacetsDef;
 import com.flipkart.krystal.vajram.codegen.models.VajramFacetsDef.InputFilePath;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
+import com.flipkart.krystal.vajram.codegen.models.VajramInfoLite;
 import com.flipkart.krystal.vajram.codegen.utils.CodegenUtils;
 import com.flipkart.krystal.vajram.codegen.utils.Constants;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.inputs.Dependency;
-import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
 import com.google.common.collect.ImmutableList;
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.TypeName;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.reflect.GenericDeclaration;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -36,6 +38,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -44,7 +47,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.CommandLine;
@@ -54,7 +56,6 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.jetbrains.annotations.NotNull;
 
 @Slf4j
 public final class VajramCodeGenFacade {
@@ -141,15 +142,6 @@ public final class VajramCodeGenFacade {
     }
   }
 
-  public static void codeGenModels(
-      Set<? extends File> srcDirs, String compileDir, String destinationDir) throws Exception {
-    new VajramCodeGenFacade(
-            srcDirs.stream().map(File::toPath).toList(),
-            Path.of(compileDir),
-            Path.of(destinationDir))
-        .codeGenModels();
-  }
-
   public static void codeGenVajramImpl(
       Set<? extends File> srcDirs,
       String compiledDir,
@@ -179,13 +171,6 @@ public final class VajramCodeGenFacade {
     this.compileClasspath = compileClasspath;
   }
 
-  private void codeGenModels() throws Exception {
-    ImmutableList<VajramInfo> inputFiles = getInputDefinitions();
-    for (VajramInfo inputFile : inputFiles) {
-      codeGenModels(inputFile);
-    }
-  }
-
   private void codeGenModels(Path srcDir, Path vajramInputRelativePath) throws IOException {
     codeGenModels(toVajramInfo(new InputFilePath(srcDir, vajramInputRelativePath)));
   }
@@ -193,7 +178,7 @@ public final class VajramCodeGenFacade {
   private void codeGenModels(VajramInfo inputFile) {
     try {
       VajramCodeGenerator vajramCodeGenerator =
-          new VajramCodeGenerator(inputFile, Collections.emptyMap(), Collections.emptyMap());
+          new VajramCodeGenerator(inputFile, Collections.emptyMap());
       codeGenRequest(vajramCodeGenerator);
       codeGenUtil(vajramCodeGenerator);
     } catch (Throwable e) {
@@ -223,7 +208,7 @@ public final class VajramCodeGenFacade {
 
   @SuppressWarnings({"unchecked", "rawtypes"})
   private void codeGenVajramImpl() throws Exception {
-    ImmutableList<VajramInfo> inputFiles = getInputDefinitions();
+    ImmutableList<VajramInfo> vajramInfos = getInputDefinitions();
     ClassLoader systemClassLoader = checkNotNull(VajramID.class.getClassLoader());
     List<URL> urls = new ArrayList<>();
     // Adding src dirs to classloader urls
@@ -251,26 +236,23 @@ public final class VajramCodeGenFacade {
 
     //noinspection ClassLoaderInstantiation
     try (URLClassLoader urlcl = new URLClassLoader(urls.toArray(URL[]::new), systemClassLoader)) {
-      Map<String, ParsedVajramData> vajramDefs = new HashMap<>();
-      Map<String, ImmutableList<VajramInputDefinition>> vajramInputsDef = new HashMap<>();
+      Map<String, VajramInfoLite> vajramDefs = new HashMap<>();
       // The input defs are first fetched from config file. If
       // it is not found, then the VajramImpl class is loaded and "getInputDefinitions" method is
-      // invoked
-      //  to fetch the vajram input definitions
-      inputFiles.forEach(
+      // invoked to fetch the vajram input definitions
+      vajramInfos.forEach(
           vajramInfo -> {
             Optional<ParsedVajramData> parsedVajramData =
                 ParsedVajramData.fromVajram(urlcl, vajramInfo);
             if (parsedVajramData.isEmpty()) {
               log.warn("VajramImpl codegen will be skipped for {}. ", vajramInfo.vajramName());
             } else {
-              vajramDefs.put(parsedVajramData.get().vajramName(), parsedVajramData.get());
-              vajramInputsDef.put(
-                  vajramInfo.vajramName(), vajramInfo.allInputsStream().collect(toImmutableList()));
+              String vajramName = parsedVajramData.get().vajramName();
+              vajramDefs.put(vajramName, new VajramInfoLite(vajramName, vajramInfo.responseType()));
             }
           });
       // add vajram input dependency vajram definitions from dependent modules/jars
-      inputFiles.forEach(
+      vajramInfos.forEach(
           vajramInfo -> {
             vajramInfo
                 .allInputsStream()
@@ -287,65 +269,34 @@ public final class VajramCodeGenFacade {
                                             "Vajram class missing in VajramInputDefinition for :"
                                                 + vajramID));
                         String[] splits = Constants.DOT_PATTERN.split(depVajramClass);
-                        String depPackageName =
-                            stream(splits, 0, splits.length - 1).collect(Collectors.joining(DOT));
                         String vajramName = splits[splits.length - 1];
                         if (!vajramDefs.containsKey(vajramName)) {
                           try {
                             Class<? extends Vajram<?>> vajramClass =
                                 (Class<? extends Vajram<?>>) urlcl.loadClass(depVajramClass);
-                            Map<String, Field> fields = new HashMap<>();
-                            stream(vajramClass.getDeclaredFields())
-                                .forEach(field -> fields.put(field.getName(), field));
-                            ArrayList<Method> resolveMethods = new ArrayList<>();
-                            Method vajramLogic =
-                                ParsedVajramData.getVajramLogicAndResolverMethods(
-                                    vajramClass, resolveMethods);
                             vajramDefs.put(
                                 vajramName,
-                                new ParsedVajramData(
-                                    vajramName,
-                                    resolveMethods,
-                                    vajramLogic,
-                                    vajramClass,
-                                    depPackageName,
-                                    fields));
-                            // load impl class and fetch input definitions
-                            Class<? extends Vajram<?>> parsedVajramImpl =
-                                (Class<? extends Vajram<?>>)
-                                    urlcl.loadClass(
-                                        depPackageName + DOT + getRequestClassName(vajramName));
-                            Method getInputDefinitions =
-                                parsedVajramImpl.getDeclaredMethod("getInputDefinitions");
-                            Vajram vajram = parsedVajramImpl.getConstructor().newInstance();
-                            vajramInputsDef.put(
-                                vajramName,
-                                (ImmutableList<VajramInputDefinition>)
-                                    Optional.ofNullable(getInputDefinitions.invoke(vajram))
-                                        .orElse(ImmutableList.of()));
-                          } catch (ClassNotFoundException
-                              | InvocationTargetException
-                              | NoSuchMethodException
-                              | IllegalAccessException
-                              | InstantiationException e) {
+                                new VajramInfoLite(
+                                    vajramName, TypeName.get(getVajramResponseType(vajramClass))));
+                          } catch (ClassNotFoundException e) {
                             throw new RuntimeException(e);
                           }
                         }
                       }
                     });
           });
-      inputFiles.forEach(
-          inputFile -> {
+      vajramInfos.forEach(
+          vajramInfo -> {
             // check to call VajramImpl codegen if Vajram class exists
-            if (vajramDefs.containsKey(inputFile.vajramName())) {
+            if (vajramDefs.containsKey(vajramInfo.vajramName())) {
               try {
                 VajramCodeGenerator vajramCodeGenerator =
-                    new VajramCodeGenerator(inputFile, vajramDefs, vajramInputsDef);
+                    new VajramCodeGenerator(vajramInfo, vajramDefs);
                 codeGenVajramImpl(vajramCodeGenerator, urlcl);
               } catch (Throwable e) {
                 throw new RuntimeException(
                     "Could not generate vajram impl for file %s"
-                        .formatted(inputFile.packageName() + '.' + inputFile.vajramName()),
+                        .formatted(vajramInfo.packageName() + '.' + vajramInfo.vajramName()),
                     e);
               }
             }
@@ -353,6 +304,93 @@ public final class VajramCodeGenFacade {
     } catch (IOException e) {
       throw new RuntimeException("Exception while generating vajram impl", e);
     }
+  }
+
+  /**
+   * To get the response type of vajram, we need to retrieve the actual type mapped to the type
+   * parameter of the {@link Vajram} interface. A vajram might not directly extend the {@link
+   * Vajram} interface. It might do so via a more elaboarate hierarchy ({@link ComputeVajram}/{@link
+   * IOVajram}, AbstractVajram etc.) where each intermediate type can be a class or an interface and
+   * have more than one type variable, each with its own type variable name. For example: <br>
+   * <br>
+   *
+   * <p>{@code XYZVajram<A,P> extends Vajram<P>}<br>
+   * <br>
+   *
+   * <p>This means we cannot just use {@link Class#getGenericInterfaces()}, instead we need to
+   * iteratively traverse the type hierarchy till we reach {@link Vajram}, and at each level map the
+   * type variable with the parent's type variables
+   *
+   * <p>To understand this method's implementation, see <a
+   * href="https://stackoverflow.com/a/25974010" >this </a>
+   *
+   * @return The response Type of the vajram represented by {@code vajramClass}
+   */
+  private Type getVajramResponseType(Class<? extends Vajram<?>> vajramClass) {
+    return getGenericClassParameter(vajramClass);
+  }
+
+  private static Class<?> getGenericClassParameter(final Class<?> parameterizedSubClass) {
+    // a mapping from type variables to actual values (classes)
+    Map<TypeVariable<?>, Class<?>> mapping = new HashMap<>();
+
+    List<Class<?>> klasses = List.of(parameterizedSubClass);
+    while (!klasses.isEmpty()) {
+      List<Class<?>> newSuperKlasses = new ArrayList<>();
+      for (Class<?> klass : klasses) {
+        List<Type> superTypes =
+            Stream.concat(
+                    Arrays.stream(klass.getGenericInterfaces()),
+                    Stream.of(klass.getGenericSuperclass()))
+                .toList();
+        for (Type type : superTypes) {
+          if (type instanceof ParameterizedType parType) {
+            Type rawType = parType.getRawType();
+            if (rawType == Vajram.class) {
+              // found
+              Type t =
+                  parType
+                      .getActualTypeArguments()[
+                      // Since Vajram interface has exactly one type param
+                      0];
+              if (t instanceof Class<?>) {
+                return (Class<?>) t;
+              } else {
+                return Optional.ofNullable(mapping.get((TypeVariable<?>) t))
+                    .orElseThrow(
+                        () ->
+                            new IllegalStateException(
+                                "Could not find mapping for type variable %s".formatted(t)));
+              }
+            }
+            // resolve
+            Type[] vars = ((GenericDeclaration) (parType.getRawType())).getTypeParameters();
+            Type[] args = parType.getActualTypeArguments();
+            for (int i = 0; i < vars.length; i++) {
+              if (args[i] instanceof Class<?>) {
+                mapping.put((TypeVariable<?>) vars[i], (Class<?>) args[i]);
+              } else {
+                TypeVariable<?> tVar = (TypeVariable<?>) (args[i]);
+                mapping.put(
+                    (TypeVariable<?>) vars[i],
+                    Optional.ofNullable(mapping.get(tVar))
+                        .orElseThrow(
+                            () ->
+                                new IllegalStateException(
+                                    "Could not find mapping for type variable %s"
+                                        .formatted(tVar))));
+              }
+            }
+            newSuperKlasses.add((Class<?>) rawType);
+          } else {
+            newSuperKlasses.add((Class<?>) type);
+          }
+        }
+      }
+      klasses = newSuperKlasses;
+    }
+    throw new IllegalArgumentException(
+        "no generic supertype for " + parameterizedSubClass + " of type " + Vajram.class);
   }
 
   private void codeGenVajramImpl(VajramCodeGenerator vajramCodeGenerator, ClassLoader classLoader)
@@ -415,7 +453,8 @@ public final class VajramCodeGenFacade {
             .collect(toImmutableList()),
         vajramFacetsDef.dependencies().stream()
             .map(DependencyDef::toInputDefinition)
-            .collect(toImmutableList()));
+            .collect(toImmutableList()),
+        ClassName.get(Object.class));
   }
 
   private Set<VajramFacetsDef.InputFilePath> getInputsYamlFiles() throws IOException {

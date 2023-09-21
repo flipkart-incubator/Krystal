@@ -93,6 +93,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
   private final LogicDefRegistryDecorator logicRegistryDecorator;
 
   private final Map<VajramID, VajramDefinition> vajramDefinitions = new LinkedHashMap<>();
+
   /** These are those call graphs of a vajram where no other vajram depends on this. */
   private final Map<VajramID, KryonId> vajramExecutables = new LinkedHashMap<>();
 

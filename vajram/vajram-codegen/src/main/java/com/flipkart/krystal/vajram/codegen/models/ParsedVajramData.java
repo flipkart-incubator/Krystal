@@ -30,15 +30,15 @@ public record ParsedVajramData(
   public static final String DOT_SEPARATOR = ".";
 
   public static Optional<ParsedVajramData> fromVajram(
-      ClassLoader classLoader, VajramInfo inputFile) {
+      ClassLoader classLoader, VajramInfo vajramInfo) {
     Class<? extends Vajram<?>> result;
     Map<String, Field> fields = new HashMap<>();
-    String packageName = inputFile.packageName();
+    String packageName = vajramInfo.packageName();
     try {
       //noinspection unchecked
       result =
           (Class<? extends Vajram<?>>)
-              classLoader.loadClass(packageName + DOT_SEPARATOR + inputFile.vajramName());
+              classLoader.loadClass(packageName + DOT_SEPARATOR + vajramInfo.vajramName());
 
       for (Method method : result.getDeclaredMethods()) {
         if ((method.isAnnotationPresent(VajramLogic.class)
@@ -46,18 +46,18 @@ public record ParsedVajramData(
             && !Modifier.isStatic(method.getModifiers()))
           throw new VajramValidationException(
               "Vajram class %s has non-static method %s"
-                  .formatted(inputFile.vajramName(), method.getName()));
+                  .formatted(vajramInfo.vajramName(), method.getName()));
       }
 
-      boolean needsModulation = inputFile.inputs().stream().anyMatch(Input::needsModulation);
+      boolean needsModulation = vajramInfo.inputs().stream().anyMatch(Input::needsModulation);
       if (needsModulation) {
         final Class<?> inputsCls =
             classLoader.loadClass(
                 packageName
                     + DOT_SEPARATOR
-                    + CodegenUtils.getInputUtilClassName(inputFile.vajramName())
+                    + CodegenUtils.getInputUtilClassName(vajramInfo.vajramName())
                     + Constants.DOLLAR
-                    + CodegenUtils.getInputModulationClassname(inputFile.vajramName()));
+                    + CodegenUtils.getInputModulationClassname(vajramInfo.vajramName()));
         Arrays.stream(inputsCls.getDeclaredFields())
             .forEach(field -> fields.put(field.getName(), field));
       } else {
@@ -65,17 +65,14 @@ public record ParsedVajramData(
             classLoader.loadClass(
                 packageName
                     + DOT_SEPARATOR
-                    + CodegenUtils.getInputUtilClassName(inputFile.vajramName())
+                    + CodegenUtils.getInputUtilClassName(vajramInfo.vajramName())
                     + Constants.DOLLAR
-                    + CodegenUtils.getAllInputsClassname(inputFile.vajramName()));
+                    + CodegenUtils.getAllInputsClassname(vajramInfo.vajramName()));
         Arrays.stream(allInputsCls.getDeclaredFields())
             .forEach(field -> fields.put(field.getName(), field));
       }
-      String requestClass =
-          packageName + DOT_SEPARATOR + CodegenUtils.getRequestClassName(inputFile.vajramName());
-      classLoader.loadClass(requestClass);
     } catch (ClassNotFoundException e) {
-      log.warn("Vajram class not found for {}", inputFile.vajramName(), e);
+      log.warn("Vajram class not found for {}", vajramInfo.vajramName(), e);
       return Optional.empty();
     }
 
@@ -83,7 +80,7 @@ public record ParsedVajramData(
     Method vajramLogic = getVajramLogicAndResolverMethods(result, resolveMethods);
     return Optional.of(
         new ParsedVajramData(
-            inputFile.vajramName(), resolveMethods, vajramLogic, result, packageName, fields));
+            vajramInfo.vajramName(), resolveMethods, vajramLogic, result, packageName, fields));
   }
 
   public static Method getVajramLogicAndResolverMethods(
