@@ -47,6 +47,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -365,7 +366,7 @@ public final class KryonExecutor implements KrystalExecutor {
       KryonExecution kryonExecution,
       KryonId kryonId,
       KryonDefinition kryonDefinition) {
-    CompletableFuture<@Nullable Object> submissionResult =
+    CompletableFuture<@NonNull ValueOrError<Object>> submissionResult =
         this.<GranuleResponse>executeCommand(
                 new ForwardGranule(
                     kryonId,
@@ -376,12 +377,14 @@ public final class KryonExecutor implements KrystalExecutor {
                     kryonDefinitionRegistry.getDependantChainsStart(),
                     requestId))
             .thenApply(GranuleResponse::response)
-            .thenApply(
-                valueOrError -> {
-                  if (valueOrError.error().isPresent()) {
-                    throw new RuntimeException(valueOrError.error().get());
+            .whenComplete(
+                (response, throwable) -> {
+                  if (throwable != null) {
+                    kryonExecution.future().completeExceptionally(throwable);
+                  } else if (response.error().isPresent()) {
+                    kryonExecution.future().completeExceptionally(response.error().get());
                   } else {
-                    return valueOrError.value().orElse(null);
+                    kryonExecution.future().complete(response.value().get());
                   }
                 });
     linkFutures(submissionResult, kryonExecution.future());
@@ -418,7 +421,11 @@ public final class KryonExecutor implements KrystalExecutor {
                             ValueOrError<Object> result =
                                 responses.getOrDefault(
                                     kryonExecution.instanceExecutionId(), ValueOrError.empty());
-                            kryonExecution.future().complete(result.value().orElse(null));
+                            if (result.error().isPresent()) {
+                              kryonExecution.future().completeExceptionally(result.error().get());
+                            } else {
+                              kryonExecution.future().complete(result.value().orElse(null));
+                            }
                           }
                         }
                       });

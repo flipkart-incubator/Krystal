@@ -82,7 +82,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
 import org.checkerframework.checker.initialization.qual.UnderInitialization;
@@ -372,10 +371,10 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
             vajramId.vajramId() + ":multiResolver",
             inputDefinitions.stream().map(VajramInputDefinition::name).collect(toImmutableSet()),
             (resolutionRequests, inputs) -> {
-              Set<ResolverDefinition> allResolverDefs =
-                  new HashSet<>();
+              Set<ResolverDefinition> allResolverDefs = new HashSet<>();
               for (DependencyResolutionRequest resolutionRequest : resolutionRequests) {
-                Set<ResolverDefinition> resolverDefinitions = resolutionRequest.resolverDefinitions();
+                Set<ResolverDefinition> resolverDefinitions =
+                    resolutionRequest.resolverDefinitions();
                 for (ResolverDefinition definition : resolverDefinitions) {
                   allResolverDefs.add(definition);
                 }
