@@ -94,6 +94,11 @@ public final class SimpleInputResolver<S, T, CV extends Vajram<?>, DV extends Va
           return executeFanoutWith(resolvedInputList);
         }
       }
+    } catch (Exception e) {
+      return skipExecution(
+          String.format(
+              "Got exception %s while executing the resolver of the dependency %s",
+              e, dependency.name()));
     } finally {
       TIME.add(System.nanoTime() - start);
     }

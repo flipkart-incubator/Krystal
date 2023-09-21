@@ -464,12 +464,16 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
           CompletableFuture<@Nullable Object> cachedResult =
               resultsCache.get(mainLogicInputs.providedInputs());
           if (cachedResult == null) {
-            cachedResult =
-                finalLogic
-                    .execute(ImmutableList.of(mainLogicInputs.allInputsAndDependencies()))
-                    .values()
-                    .iterator()
-                    .next();
+            try {
+              cachedResult =
+                  finalLogic
+                      .execute(ImmutableList.of(mainLogicInputs.allInputsAndDependencies()))
+                      .values()
+                      .iterator()
+                      .next();
+            } catch (Exception e) {
+              cachedResult = failedFuture(e);
+            }
             resultsCache.put(mainLogicInputs.providedInputs(), cachedResult);
           }
           resultsByRequest.put(requestId, cachedResult.handle(ValueOrError::valueOrError));

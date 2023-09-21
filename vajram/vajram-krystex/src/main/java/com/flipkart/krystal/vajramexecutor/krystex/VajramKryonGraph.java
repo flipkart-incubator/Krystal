@@ -12,7 +12,10 @@ import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.co
 import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.multiResolve;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.concurrent.CompletableFuture.failedFuture;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
 import com.flipkart.krystal.data.InputValue;
@@ -76,6 +79,7 @@ import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
 import lombok.Getter;
@@ -286,14 +290,85 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     List<InputResolverDefinition> inputResolvers =
         new ArrayList<>(vajramDefinition.getInputResolverDefinitions());
 
-    Map<ResolverDefinition, InputResolverDefinition> resolversByResolverDefs =
-        new LinkedHashMap<>();
-    inputResolvers.forEach(
-        inputResolverDefinition -> {
-          resolversByResolverDefs.put(
-              getResolverDefinition(vajram, vajramId, inputDefinitions, inputResolverDefinition),
-              inputResolverDefinition);
-        });
+    ImmutableMap<ResolverDefinition, InputResolverDefinition> resolversByResolverDefs =
+        inputResolvers.stream()
+            .collect(
+                toImmutableMap(
+                    inputResolverDefinition -> {
+                      String dependencyName =
+                          inputResolverDefinition.resolutionTarget().dependencyName();
+                      ImmutableSet<String> resolvedInputNames =
+                          inputResolverDefinition.resolutionTarget().inputNames();
+                      ImmutableSet<String> sources = inputResolverDefinition.sources();
+                      ImmutableCollection<VajramInputDefinition> requiredInputs =
+                          inputDefinitions.stream()
+                              .filter(def -> sources.contains(def.name()))
+                              .collect(toImmutableList());
+                      ResolverLogicDefinition inputResolverLogic =
+                          logicRegistryDecorator.newResolverLogic(
+                              vajramId.vajramId(),
+                              "%s:dep(%s):inputResolver(%s)"
+                                  .formatted(
+                                      vajramId,
+                                      dependencyName,
+                                      String.join(",", resolvedInputNames)),
+                              sources,
+                              inputValues -> {
+                                validateMandatory(vajramId, inputValues, requiredInputs);
+                                DependencyCommand<Inputs> dependencyCommand;
+                                try {
+                                  if (inputResolverDefinition
+                                      instanceof SimpleInputResolver<?, ?, ?, ?> inputResolver) {
+                                    ResolutionResult resolutionResult =
+                                        multiResolve(
+                                            List.of(
+                                                new ResolutionRequest(
+                                                    dependencyName, resolvedInputNames)),
+                                            ImmutableMap.of(
+                                                dependencyName, ImmutableList.of(inputResolver)),
+                                            inputValues);
+                                    if (resolutionResult
+                                        .skippedDependencies()
+                                        .containsKey(dependencyName)) {
+                                      dependencyCommand =
+                                          resolutionResult
+                                              .skippedDependencies()
+                                              .get(dependencyName);
+                                    } else {
+                                      dependencyCommand =
+                                          toDependencyCommand(
+                                              resolutionResult
+                                                  .results()
+                                                  .values()
+                                                  .iterator()
+                                                  .next());
+                                    }
+
+                                  } else if (inputResolverDefinition
+                                      instanceof InputResolver inputResolver) {
+                                    dependencyCommand =
+                                        inputResolver.resolve(
+                                            dependencyName, resolvedInputNames, inputValues);
+                                  } else {
+                                    dependencyCommand =
+                                        vajram.resolveInputOfDependency(
+                                            dependencyName, resolvedInputNames, inputValues);
+                                  }
+                                } catch (Throwable t) {
+                                  dependencyCommand =
+                                      skipExecution(
+                                          "Resolver threw exception: %s"
+                                              .formatted(getStackTraceAsString(t)));
+                                }
+                                return toResolverCommand(dependencyCommand);
+                              });
+                      return new ResolverDefinition(
+                          inputResolverLogic.kryonLogicId(),
+                          sources,
+                          dependencyName,
+                          resolvedInputNames);
+                    },
+                    identity()));
     MultiResolverDefinition multiResolverDefinition =
         logicRegistryDecorator.newMultiResolver(
             vajramId.vajramId(),
@@ -301,10 +376,12 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
             inputDefinitions.stream().map(VajramInputDefinition::name).collect(toImmutableSet()),
             (resolutionRequests, inputs) -> {
               Set<ResolverDefinition> allResolverDefs = new HashSet<>();
-              for (DependencyResolutionRequest dependencyResolutionRequest : resolutionRequests) {
+              for (DependencyResolutionRequest resolutionRequest : resolutionRequests) {
                 Set<ResolverDefinition> resolverDefinitions =
-                    dependencyResolutionRequest.resolverDefinitions();
-                allResolverDefs.addAll(resolverDefinitions);
+                    resolutionRequest.resolverDefinitions();
+                for (ResolverDefinition definition : resolverDefinitions) {
+                  allResolverDefs.add(definition);
+                }
               }
               Map<String, List<ResolverDefinition>> simpleResolverDefsByDep = new HashMap<>();
               List<ResolverDefinition> complexResolverDefs = new ArrayList<>();
@@ -353,11 +430,19 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                 }
                 ImmutableSet<String> resolvables = resolverDef.resolvedInputNames();
                 DependencyCommand<Inputs> command;
-                if (resolversByResolverDefs.get(resolverDef)
-                    instanceof InputResolver inputResolver) {
-                  command = inputResolver.resolve(dependencyName, resolvables, inputs);
-                } else {
-                  command = vajram.resolveInputOfDependency(dependencyName, resolvables, inputs);
+                try {
+                  if (resolversByResolverDefs.get(resolverDef)
+                      instanceof InputResolver inputResolver) {
+                    command = inputResolver.resolve(dependencyName, resolvables, inputs);
+                  } else {
+                    command = vajram.resolveInputOfDependency(dependencyName, resolvables, inputs);
+                  }
+                } catch (Throwable e) {
+                  command =
+                      skipExecution(
+                          String.format(
+                              "Got exception %s while executing the resolver of the dependency %s",
+                              e, dependencyName));
                 }
                 if (command.shouldSkip()) {
                   skippedDependencies.put(dependencyName, command);
@@ -383,62 +468,6 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     return new InputResolverCreationResult(
         ImmutableList.copyOf(resolversByResolverDefs.keySet()),
         multiResolverDefinition.kryonLogicId());
-  }
-
-  private ResolverDefinition getResolverDefinition(
-      Vajram<?> vajram,
-      VajramID vajramId,
-      ImmutableCollection<VajramInputDefinition> inputDefinitions,
-      InputResolverDefinition inputResolverDefinition) {
-    String dependencyName = inputResolverDefinition.resolutionTarget().dependencyName();
-    ImmutableSet<String> resolvedInputNames =
-        inputResolverDefinition.resolutionTarget().inputNames();
-    ImmutableSet<String> sources = inputResolverDefinition.sources();
-    ImmutableCollection<VajramInputDefinition> requiredInputs =
-        inputDefinitions.stream()
-            .filter(def -> sources.contains(def.name()))
-            .collect(toImmutableList());
-    ResolverLogicDefinition inputResolverLogic =
-        logicRegistryDecorator.newResolverLogic(
-            vajramId.vajramId(),
-            "%s:dep(%s):inputResolver(%s)"
-                .formatted(vajramId, dependencyName, String.join(",", resolvedInputNames)),
-            sources,
-            inputValues -> {
-              validateMandatory(vajramId, inputValues, requiredInputs);
-              DependencyCommand<Inputs> dependencyCommand;
-              try {
-                if (inputResolverDefinition
-                    instanceof SimpleInputResolver<?, ?, ?, ?> inputResolver) {
-                  ResolutionResult resolutionResult =
-                      multiResolve(
-                          List.of(new ResolutionRequest(dependencyName, resolvedInputNames)),
-                          ImmutableMap.of(dependencyName, ImmutableList.of(inputResolver)),
-                          inputValues);
-                  if (resolutionResult.skippedDependencies().containsKey(dependencyName)) {
-                    dependencyCommand = resolutionResult.skippedDependencies().get(dependencyName);
-                  } else {
-                    dependencyCommand =
-                        toDependencyCommand(resolutionResult.results().values().iterator().next());
-                  }
-
-                } else if (inputResolverDefinition instanceof InputResolver inputResolver) {
-                  dependencyCommand =
-                      inputResolver.resolve(dependencyName, resolvedInputNames, inputValues);
-                } else {
-                  dependencyCommand =
-                      vajram.resolveInputOfDependency(
-                          dependencyName, resolvedInputNames, inputValues);
-                }
-              } catch (Throwable t) {
-                dependencyCommand =
-                    skipExecution(
-                        "Resolver threw exception: %s".formatted(getStackTraceAsString(t)));
-              }
-              return toResolverCommand(dependencyCommand);
-            });
-    return new ResolverDefinition(
-        inputResolverLogic.kryonLogicId(), sources, dependencyName, resolvedInputNames);
   }
 
   private static Map<String, Collection<? extends SimpleInputResolver<?, ?, ?, ?>>> getResolvers(
@@ -520,16 +549,36 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     KryonLogicId vajramLogicKryonName =
         new KryonLogicId(kryonId, "%s:vajramLogic".formatted(vajramId));
     // Step 4: Create and register Kryon for the main vajram logic
+
     MainLogicDefinition<?> vajramLogic =
         logicRegistryDecorator.newMainLogic(
             vajramDefinition.getVajram() instanceof IOVajram<?>,
             vajramLogicKryonName,
             inputNames,
             inputsList -> {
-              for (Inputs inputs : inputsList) {
-                validateMandatory(vajramId, inputs, inputDefinitions);
-              }
-              return vajramDefinition.getVajram().execute(inputsList);
+              List<Inputs> validInputs = new ArrayList<>();
+              Map<Inputs, CompletableFuture<@Nullable Object>> failedValidations =
+                  new LinkedHashMap<>();
+              inputsList.forEach(
+                  inputs -> {
+                    try {
+                      validateMandatory(vajramId, inputs, inputDefinitions);
+                      validInputs.add(inputs);
+                    } catch (Throwable e) {
+                      failedValidations.put(inputs, failedFuture(e));
+                    }
+                  });
+              @SuppressWarnings("unchecked")
+              Vajram<Object> vajram = (Vajram<Object>) vajramDefinition.getVajram();
+              ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> validResults =
+                  vajram.execute(ImmutableList.copyOf(validInputs));
+
+              ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> result =
+                  ImmutableMap.<Inputs, CompletableFuture<@Nullable Object>>builder()
+                      .putAll(validResults)
+                      .putAll(failedValidations)
+                      .build();
+              return result;
             },
             vajramDefinition.getMainLogicTags());
     registerInputInjector(vajramLogic, vajramDefinition.getVajram());
