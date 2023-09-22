@@ -362,6 +362,7 @@ class KryonExecutorTest {
         KryonExecutorConfig.builder()
             .kryonExecStrategy(kryonExecStrategy)
             .graphTraversalStrategy(graphTraversalStrategy)
+            .debug(false)
             .build(),
         "test");
   }

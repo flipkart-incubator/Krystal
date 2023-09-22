@@ -82,6 +82,7 @@ public class GreetingVajramTest {
                                     logicExecutionContext -> true,
                                     logicExecutionContext -> mainLogicExecReporter.decoratorType(),
                                     decoratorContext -> mainLogicExecReporter))))
+                    .debug(false)
                     .build())) {
       future = executeVajram(krystexVajramExecutor);
     }

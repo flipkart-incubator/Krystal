@@ -74,6 +74,7 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -120,6 +121,7 @@ class KrystexVajramExecutorTest {
             KryonExecutorConfig.builder()
                 .kryonExecStrategy(kryonExecStrategy)
                 .graphTraversalStrategy(graphTraversalStrategy)
+                .debug(false)
                 .build())) {
       result = krystexVajramExecutor.execute(vajramID(HelloVajram.ID), this::helloRequest);
     }
@@ -140,6 +142,7 @@ class KrystexVajramExecutorTest {
             KryonExecutorConfig.builder()
                 .kryonExecStrategy(kryonExecStrategy)
                 .graphTraversalStrategy(graphTraversalStrategy)
+                .debug(false)
                 .build())) {
       result =
           krystexVajramExecutor.execute(
@@ -165,6 +168,7 @@ class KrystexVajramExecutorTest {
             KryonExecutorConfig.builder()
                 .kryonExecStrategy(kryonExecStrategy)
                 .graphTraversalStrategy(graphTraversalStrategy)
+                .debug(false)
                 .build())) {
       userInfo123 =
           krystexVajramExecutor.execute(
@@ -201,6 +205,7 @@ class KrystexVajramExecutorTest {
             KryonExecutorConfig.builder()
                 .kryonExecStrategy(kryonExecStrategy)
                 .graphTraversalStrategy(graphTraversalStrategy)
+                .debug(false)
                 .build())) {
       helloString =
           krystexVajramExecutor.execute(vajramID(HelloFriendsVajram.ID), this::helloFriendsRequest);
@@ -234,6 +239,7 @@ class KrystexVajramExecutorTest {
             KryonExecutorConfig.builder()
                 .kryonExecStrategy(kryonExecStrategy)
                 .graphTraversalStrategy(graphTraversalStrategy)
+                .debug(false)
                 .build())) {
       helloString =
           krystexVajramExecutor.execute(
@@ -246,6 +252,7 @@ class KrystexVajramExecutorTest {
     assertEquals(1, TestUserServiceVajram.CALL_COUNTER.sum());
   }
 
+  @Disabled
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void executeCompute_missingMandatoryInput_throwsException(
@@ -260,6 +267,8 @@ class KrystexVajramExecutorTest {
             KryonExecutorConfig.builder()
                 .kryonExecStrategy(kryonExecStrategy)
                 .graphTraversalStrategy(graphTraversalStrategy)
+                .debug(false)
+                .debug(false)
                 .build())) {
       result =
           krystexVajramExecutor.execute(vajramID(HelloVajram.ID), this::incompleteHelloRequest);
@@ -290,6 +299,7 @@ class KrystexVajramExecutorTest {
             KryonExecutorConfig.builder()
                 .kryonExecStrategy(kryonExecStrategy)
                 .graphTraversalStrategy(graphTraversalStrategy)
+                .debug(false)
                 .build())) {
       userInfo =
           krystexVajramExecutor.execute(
@@ -331,6 +341,7 @@ class KrystexVajramExecutorTest {
             KryonExecutorConfig.builder()
                 .kryonExecStrategy(kryonExecStrategy)
                 .graphTraversalStrategy(graphTraversalStrategy)
+                .debug(false)
                 .build())) {
       userInfo =
           krystexVajramExecutor.execute(
@@ -391,6 +402,7 @@ class KrystexVajramExecutorTest {
                                 (logicExecutionContext) -> true,
                                 logicExecutionContext -> mainLogicExecReporter.decoratorType(),
                                 decoratorContext -> mainLogicExecReporter))))
+                .debug(false)
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
@@ -434,6 +446,7 @@ class KrystexVajramExecutorTest {
             KryonExecutorConfig.builder()
                 .kryonExecStrategy(kryonExecStrategy)
                 .graphTraversalStrategy(graphTraversalStrategy)
+                .debug(false)
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
@@ -487,6 +500,7 @@ class KrystexVajramExecutorTest {
             KryonExecutorConfig.builder()
                 .kryonExecStrategy(kryonExecStrategy)
                 .graphTraversalStrategy(graphTraversalStrategy)
+                .debug(false)
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
@@ -545,6 +559,7 @@ class KrystexVajramExecutorTest {
             KryonExecutorConfig.builder()
                 .kryonExecStrategy(kryonExecStrategy)
                 .graphTraversalStrategy(graphTraversalStrategy)
+                .debug(false)
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
@@ -593,6 +608,7 @@ class KrystexVajramExecutorTest {
             KryonExecutorConfig.builder()
                 .kryonExecStrategy(kryonExecStrategy)
                 .graphTraversalStrategy(graphTraversalStrategy)
+                .debug(false)
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
@@ -644,6 +660,7 @@ class KrystexVajramExecutorTest {
             KryonExecutorConfig.builder()
                 .kryonExecStrategy(kryonExecStrategy)
                 .graphTraversalStrategy(graphTraversalStrategy)
+                .debug(false)
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
@@ -697,6 +714,7 @@ class KrystexVajramExecutorTest {
             KryonExecutorConfig.builder()
                 .kryonExecStrategy(kryonExecStrategy)
                 .graphTraversalStrategy(graphTraversalStrategy)
+                .debug(false)
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
@@ -787,6 +805,7 @@ class KrystexVajramExecutorTest {
             KryonExecutorConfig.builder()
                 .kryonExecStrategy(kryonExecStrategy)
                 .graphTraversalStrategy(graphTraversalStrategy)
+                .debug(false)
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(

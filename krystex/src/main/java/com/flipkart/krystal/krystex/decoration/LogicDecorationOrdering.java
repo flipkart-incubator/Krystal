@@ -6,6 +6,7 @@ import static lombok.EqualsAndHashCode.CacheStrategy.LAZY;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -21,7 +22,10 @@ public class LogicDecorationOrdering {
   private final ImmutableMap<String, Integer> decoratorTypeIndices;
 
   public LogicDecorationOrdering(ImmutableSet<String> orderedDecoratorIds) {
-    List<String> strings = orderedDecoratorIds.stream().toList();
+    List<String> strings = new ArrayList<>();
+    for (String orderedDecoratorId : orderedDecoratorIds) {
+      strings.add(orderedDecoratorId);
+    }
     Map<String, Integer> indices = new HashMap<>();
     for (int i = 0; i < orderedDecoratorIds.size(); i++) {
       indices.put(strings.get(i), i);
