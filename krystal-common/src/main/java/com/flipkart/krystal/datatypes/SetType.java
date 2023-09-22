@@ -11,6 +11,9 @@ import lombok.AllArgsConstructor;
 
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SetType<T> implements DataType<LinkedHashSet<T>> {
+
+  public static final Class<?> COLLECTION_TYPE = LinkedHashSet.class;
+
   private final DataType<?> type;
 
   public static <T> SetType<T> set(DataType<?> type) {
@@ -28,6 +31,6 @@ public final class SetType<T> implements DataType<LinkedHashSet<T>> {
                 return t;
               }
             })
-        .map(t -> getJavaType(LinkedHashSet.class, t));
+        .map(t -> getJavaType(COLLECTION_TYPE, t));
   }
 }

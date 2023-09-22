@@ -11,6 +11,8 @@ import lombok.AllArgsConstructor;
 
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ListType<T> implements DataType<ArrayList<T>> {
+
+  public static final Class<ArrayList> COLLECTION_TYPE = ArrayList.class;
   private final DataType<?> typeParam;
 
   public static <T> ListType<T> list(DataType<?> type) {
@@ -29,6 +31,6 @@ public final class ListType<T> implements DataType<ArrayList<T>> {
                 return t;
               }
             })
-        .map(t -> getJavaType(ArrayList.class, t));
+        .map(t -> getJavaType(COLLECTION_TYPE, t));
   }
 }
