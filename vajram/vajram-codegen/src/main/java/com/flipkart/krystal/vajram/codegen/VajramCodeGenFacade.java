@@ -23,7 +23,6 @@ import com.flipkart.krystal.vajram.codegen.utils.Constants;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.google.common.collect.ImmutableList;
-import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeName;
 import java.io.File;
 import java.io.IOException;
@@ -445,6 +444,10 @@ public final class VajramCodeGenFacade {
   public static VajramInfo toVajramInfo(File vajramInputFile, String vajramName, String packageName)
       throws IOException {
     VajramFacetsDef vajramFacetsDef = VajramFacetsDef.from(vajramInputFile);
+    TypeName responseType = vajramFacetsDef.output().toTypeName();
+    System.out.println("******************************");
+    System.out.println(responseType);
+    System.out.println("******************************");
     return new VajramInfo(
         vajramName,
         packageName,
@@ -454,7 +457,7 @@ public final class VajramCodeGenFacade {
         vajramFacetsDef.dependencies().stream()
             .map(DependencyDef::toInputDefinition)
             .collect(toImmutableList()),
-        ClassName.get(Object.class));
+        responseType);
   }
 
   private Set<VajramFacetsDef.InputFilePath> getInputsYamlFiles() throws IOException {

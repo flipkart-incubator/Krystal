@@ -142,6 +142,8 @@ import java.util.stream.Stream;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SuppressWarnings({"HardcodedLineSeparator", "OverlyComplexClass"})
@@ -155,7 +157,7 @@ public class VajramCodeGenerator {
   private final Map<String, VajramInputDefinition> inputDefsMap;
   private final Map<String, ClassName> clsDeps = new HashMap<>();
   private final boolean needsModulation;
-  private @Nullable ParsedVajramData parsedVajramData;
+  private @MonotonicNonNull ParsedVajramData parsedVajramData;
 
   public VajramCodeGenerator(VajramInfo vajramInfo, Map<String, VajramInfoLite> vajramDefs) {
     this.vajramInfo = vajramInfo;
@@ -200,6 +202,7 @@ public class VajramCodeGenerator {
    * @return Class code as string
    */
   public String codeGenVajramImpl(ClassLoader classLoader) {
+    initParsedVajramData(classLoader);
     final TypeSpec.Builder vajramImplClass = createVajramImplClass();
     List<MethodSpec> methodSpecs = new ArrayList<>();
     // Add superclass
@@ -268,11 +271,10 @@ public class VajramCodeGenerator {
     return writer.toString();
   }
 
-  private ParsedVajramData getParsedVajramData() {
+  private @NonNull ParsedVajramData initParsedVajramData(ClassLoader classLoader) {
     if (parsedVajramData == null) {
       this.parsedVajramData =
-          Optional.ofNullable(getClass().getClassLoader())
-              .flatMap(classLoader -> fromVajram(classLoader, vajramInfo))
+          fromVajram(classLoader, vajramInfo)
               .orElseThrow(
                   () ->
                       new VajramValidationException(
@@ -282,6 +284,16 @@ public class VajramCodeGenerator {
                               .formatted(vajramInfo.vajramName())));
     }
     return parsedVajramData;
+  }
+
+  private ParsedVajramData getParsedVajramData() {
+    return Optional.ofNullable(parsedVajramData)
+        .orElseGet(
+            () ->
+                // This should not happen since this method is only ever called after
+                // initParsedVajramData is called. But we still implement a best effort fallback
+                initParsedVajramData(
+                    Optional.ofNullable(getClass().getClassLoader()).orElseThrow()));
   }
 
   private static ImmutableSet<String> getResolverSources(Method resolve) {
@@ -396,7 +408,7 @@ public class VajramCodeGenerator {
                           vajramDefs.get(depVajramClassName),
                           "Could not find ParsedVajramData for %s",
                           depVajramClass);
-                  final TypeName responseType = vajramInfoLite.responseType();
+                  final TypeName boxedResponseType = vajramInfoLite.responseType().box();
                   final String variableName = CodegenUtils.toJavaName(inputDef.name());
                   final String depVariableName = variableName + RESPONSES_SUFFIX;
                   if (inputDefDependency.canFanout()) {
@@ -422,7 +434,7 @@ public class VajramCodeGenerator {
                             REQUEST,
                             ClassName.get(depPackageName, depRequestClass),
                             RESPONSE,
-                            responseType,
+                            boxedResponseType,
                             VARIABLE,
                             inputDef.name(),
                             DEP_RESPONSE,
@@ -449,7 +461,7 @@ public class VajramCodeGenerator {
                                           .orElseThrow(() -> new $illegalArgument:T("Missing mandatory dependency '$variable:L' in vajram '$vajram:L'"))""",
                                   ImmutableMap.of(
                                       RESPONSE,
-                                      responseType,
+                                      boxedResponseType,
                                       VARIABLE,
                                       inputDef.name(),
                                       ILLEGAL_ARGUMENT,
@@ -471,7 +483,7 @@ public class VajramCodeGenerator {
                                         .value()
                                         .orElse(null)""",
                                   ImmutableMap.of(
-                                      RESPONSE, responseType, VARIABLE, inputDef.name()))
+                                      RESPONSE, boxedResponseType, VARIABLE, inputDef.name()))
                               .build());
                     }
                   }
@@ -1234,7 +1246,7 @@ public class VajramCodeGenerator {
             .addModifiers(PUBLIC, FINAL)
             .addSuperinterface(
                 ParameterizedTypeName.get(
-                    ClassName.get(VajramRequest.class), vajramInfo.responseType()))
+                    ClassName.get(VajramRequest.class), vajramInfo.responseType().box()))
             .addAnnotation(EqualsAndHashCode.class)
             .addMethod(
                 methodBuilder("builder")

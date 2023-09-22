@@ -28,8 +28,8 @@ class VajramPlugin implements Plugin<Project> {
         String compiledTestDir = project.buildDir.getPath() + '/classes/java/test/'
 
         project.tasks.register('codeGenVajramModels', JavaCompile) {
-            group = 'krystal'
             //Compile the generatedCode
+            group = 'krystal'
             source project.sourceSets.main.allSource.srcDirs
             classpath = project.configurations.compileClasspath
             destinationDirectory = project.tasks.compileJava.destinationDirectory
@@ -38,7 +38,6 @@ class VajramPlugin implements Plugin<Project> {
             options.generatedSourceOutputDirectory.fileValue(project.file(mainGeneratedSrcDir))
         }
 
-        project.tasks.named("sourcesJar").configure { it.dependsOn("codeGenVajramModels") }
 
         // add a new task to generate vajram impl as this step needs to run after model generation
         // and compile
@@ -58,30 +57,22 @@ class VajramPlugin implements Plugin<Project> {
         project.tasks.compileJava.dependsOn 'codeGenVajramImpl'
 
         project.tasks.register('testCodeGenVajramModels', JavaCompile) {
-            group = 'krystal'
             //Compile the generatedCode
-            source project.sourceSets.test.allSource.srcDirs
-            classpath = project.configurations.compileClasspath
-            destinationDirectory = project.tasks.compileJava.destinationDirectory
-            //For lombok processing of EqualsAndHashCode
-            options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
-            options.generatedSourceOutputDirectory.fileValue(project.file(testGeneratedSrcDir))
-        }
-
-        project.tasks.register('testCompileVajramModels', JavaCompile) {
             group = 'krystal'
-            dependsOn it.project.tasks.testCodeGenVajramModels
-            //Compile the generatedCode
-            source project.sourceSets.test.allSource.srcDirs
-            classpath = project.tasks.compileTestJava.classpath
+            dependsOn it.project.tasks.compileJava
+            source project.sourceSets.test.allSource.srcDirs + project.sourceSets.main.allSource.srcDirs
+            classpath = project.configurations.testCompileClasspath + project.configurations.compileClasspath
+            println 'Compile classpath: ' + classpath.toList()
             destinationDirectory = project.tasks.compileTestJava.destinationDirectory
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileTestJava.options.annotationProcessorPath
+            options.generatedSourceOutputDirectory.fileValue(project.file(testGeneratedSrcDir))
+            mustRunAfter("createCheckerFrameworkManifest")
         }
 
         project.tasks.register('testCodeGenVajramImpl') {
             group = 'krystal'
-            dependsOn it.project.tasks.testCompileVajramModels
+            dependsOn it.project.tasks.testCodeGenVajramModels
             doLast {
                 VajramCodeGenFacade.codeGenVajramImpl(
                         project.sourceSets.test.java.srcDirs,
@@ -92,5 +83,8 @@ class VajramPlugin implements Plugin<Project> {
         }
 
         project.tasks.compileTestJava.dependsOn 'testCodeGenVajramImpl'
+
+        project.tasks.named("sourcesJar").configure { it.dependsOn("codeGenVajramImpl", "testCodeGenVajramImpl") }
+        project.tasks.named("jar").configure { it.dependsOn("codeGenVajramImpl", "testCodeGenVajramImpl") }
     }
 }

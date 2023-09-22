@@ -12,20 +12,27 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 public record VajramFacetsDef(
-    ImmutableList<InputDef> inputs, ImmutableList<DependencyDef> dependencies) {
+    TypeDefinition output,
+    ImmutableList<InputDef> inputs,
+    ImmutableList<DependencyDef> dependencies) {
   private static final ObjectMapper OBJECT_MAPPER =
       new ObjectMapper(new YAMLFactory())
           .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY);
 
   @JsonCreator
-  @ConstructorProperties({"inputs", "dependencies"})
+  @ConstructorProperties({"output", "inputs", "dependencies"})
   public VajramFacetsDef(
+      @JsonSetter TypeDefinition output,
       @JsonSetter(nulls = Nulls.AS_EMPTY) List<InputDef> inputs,
       @JsonSetter(nulls = Nulls.AS_EMPTY) List<DependencyDef> dependencies) {
-    this(ImmutableList.copyOf(inputs), ImmutableList.copyOf(dependencies));
+    this(
+        Optional.ofNullable(output).orElse(TypeDefinition.ofCustom(Object.class)),
+        ImmutableList.copyOf(inputs),
+        ImmutableList.copyOf(dependencies));
   }
 
   public static VajramFacetsDef from(File file) throws IOException {
