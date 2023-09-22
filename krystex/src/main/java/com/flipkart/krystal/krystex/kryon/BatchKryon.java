@@ -358,7 +358,9 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
             } else {
               Set<RequestId> depReqIds = depReqsByIncomingReq.getOrDefault(requestId, Set.of());
               resultsMap.put(
-                  requestId, new Results<>(getResult(batchResponse, depReqIds, inputsByDepReq)));
+                  requestId,
+                  new Results<>(
+                      ImmutableMap.copyOf(getResult(batchResponse, depReqIds, inputsByDepReq))));
             }
           }
           enqueueOrExecuteCommand(
@@ -558,11 +560,13 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       throw new AssertionError("Could not find forwardBatch. This is a bug.");
     }
     Map<String, Results<Object>> depValues = new HashMap<>();
-    for (Entry<String, CallbackBatch> entry :
-        dependencyValuesCollector.getOrDefault(dependantChain, ImmutableMap.of()).entrySet()) {
-      String key = entry.getKey();
-      CallbackBatch value = entry.getValue();
-      depValues.put(key, value.resultsByRequest().getOrDefault(requestId, Results.empty()));
+    Map<String, CallbackBatch> dependencyValues = dependencyValuesCollector.get(dependantChain);
+    if (dependencyValues != null) {
+      for (Entry<String, CallbackBatch> entry : dependencyValues.entrySet()) {
+        String key = entry.getKey();
+        CallbackBatch value = entry.getValue();
+        depValues.put(key, value.resultsByRequest().getOrDefault(requestId, Results.empty()));
+      }
     }
     Inputs inputValues = forwardBatch.executableRequests().getOrDefault(requestId, Inputs.empty());
     Inputs allInputsAndDependencies = Inputs.union(depValues, inputValues.values());

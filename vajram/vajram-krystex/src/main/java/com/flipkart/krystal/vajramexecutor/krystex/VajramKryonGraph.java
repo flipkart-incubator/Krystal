@@ -11,12 +11,7 @@ import static com.flipkart.krystal.vajram.inputs.SingleExecute.skipExecution;
 import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.collectDepInputs;
 import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.multiResolve;
 import static com.google.common.base.Throwables.getStackTraceAsString;
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.concurrent.CompletableFuture.failedFuture;
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
 
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
