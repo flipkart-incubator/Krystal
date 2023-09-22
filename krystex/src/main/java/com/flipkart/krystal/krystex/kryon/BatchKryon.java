@@ -6,8 +6,6 @@ import static com.flipkart.krystal.krystex.kryon.KryonUtils.enqueueOrExecuteComm
 import static com.flipkart.krystal.krystex.resolution.ResolverCommand.multiExecuteWith;
 import static com.flipkart.krystal.krystex.resolution.ResolverCommand.skip;
 import static com.flipkart.krystal.utils.Futures.linkFutures;
-import static com.google.common.base.Functions.identity;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.failedFuture;
@@ -64,10 +62,6 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
   private final Map<DependantChain, Map<String, CallbackBatch>> dependencyValuesCollector =
       new LinkedHashMap<>();
 
-  public long timeSpent;
-  private long globalTimeStart;
-  public long globalTimeSpent;
-
   /** A unique Result future for every dependant chain. */
   private final Map<DependantChain, CompletableFuture<BatchResponse>> resultsByDepChain =
       new LinkedHashMap<>();
@@ -111,7 +105,6 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
 
   @Override
   public CompletableFuture<BatchResponse> executeCommand(BatchCommand kryonCommand) {
-    globalTimeStart = System.currentTimeMillis();
     DependantChain dependantChain = kryonCommand.dependantChain();
     final CompletableFuture<BatchResponse> resultForDepChain =
         resultsByDepChain.computeIfAbsent(dependantChain, r -> new CompletableFuture<>());
@@ -418,8 +411,6 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
 
   private CompletableFuture<BatchResponse> executeMainLogic(
       Set<RequestId> requestIds, DependantChain dependantChain) {
-
-    long startTime = System.currentTimeMillis();
     MainLogicDefinition<Object> mainLogicDefinition = kryonDefinition.getMainLogicDefinition();
 
     Map<RequestId, MainLogicInputs> mainLogicInputs = new LinkedHashMap<>();
@@ -434,8 +425,6 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     allOf(results.values().toArray(CompletableFuture[]::new))
         .whenComplete(
             (unused, throwable) -> {
-              timeSpent = System.currentTimeMillis() - startTime;
-              globalTimeSpent = System.currentTimeMillis() - globalTimeStart;
               resultForBatch.complete(
                   new BatchResponse(
                       ImmutableMap.copyOf(getBatchResponseMap(mainLogicInputs, results))));
@@ -454,14 +443,6 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
           requestId, results.getOrDefault(requestId, new CompletableFuture<>()).getNow(empty()));
     }
     return result;
-    //    return mainLogicInputs.keySet().stream()
-    //        .collect(
-    //            toImmutableMap(
-    //                identity(),
-    //                requestId ->
-    //                    results
-    //                        .getOrDefault(requestId, new CompletableFuture<>())
-    //                        .getNow(empty())));
   }
 
   private Map<RequestId, CompletableFuture<ValueOrError<Object>>> executeDecoratedMainLogic(
