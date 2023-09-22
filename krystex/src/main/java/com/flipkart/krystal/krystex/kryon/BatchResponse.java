@@ -2,6 +2,7 @@ package com.flipkart.krystal.krystex.kryon;
 
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.request.RequestId;
+import com.google.common.collect.ImmutableMap;
 
-record BatchResponse(java.util.Map<RequestId, ValueOrError<Object>> responses)
+record BatchResponse(ImmutableMap<RequestId, ValueOrError<Object>> responses)
     implements KryonResponse {}

@@ -354,40 +354,48 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     depResponse.whenComplete(
         (batchResponse, throwable) -> {
           Set<RequestId> requestIds = new LinkedHashSet<>();
-          resolverCommandsByReq.keySet().forEach(requestIds::addAll);
-          ImmutableMap<RequestId, Results<Object>> results =
-              requestIds.stream()
-                  .collect(
-                      toImmutableMap(
-                          identity(),
-                          requestId -> {
-                            if (throwable != null) {
-                              return new Results<>(
-                                  ImmutableMap.of(Inputs.empty(), withError(throwable)));
-                            } else {
-                              Set<RequestId> depReqIds =
-                                  depReqsByIncomingReq.getOrDefault(requestId, Set.of());
-                              return new Results<>(
-                                  depReqIds.stream()
-                                      .collect(
-                                          toImmutableMap(
-                                              depReqId ->
-                                                  inputsByDepReq.getOrDefault(
-                                                      depReqId, Inputs.empty()),
-                                              depReqId ->
-                                                  batchResponse
-                                                      .responses()
-                                                      .getOrDefault(depReqId, empty()))));
-                            }
-                          }));
-
+          for (Set<RequestId> ids : resolverCommandsByReq.keySet()) {
+            requestIds.addAll(ids);
+          }
+          Map<RequestId, Results<Object>> resultsMap = new HashMap<>();
+          for (RequestId requestId : requestIds) {
+            if (throwable != null) {
+              resultsMap.put(
+                  requestId, new Results<>(ImmutableMap.of(Inputs.empty(), withError(throwable))));
+            } else {
+              Set<RequestId> depReqIds = depReqsByIncomingReq.getOrDefault(requestId, Set.of());
+              resultsMap.put(
+                  requestId, new Results<>(getResult(batchResponse, depReqIds, inputsByDepReq)));
+            }
+          }
           enqueueOrExecuteCommand(
-              () -> new CallbackBatch(kryonId, depName, results, dependantChain),
+              () ->
+                  new CallbackBatch(
+                      kryonId, depName, ImmutableMap.copyOf(resultsMap), dependantChain),
               depKryonId,
               kryonDefinition,
               kryonExecutor);
         });
     flushDependencyIfNeeded(depName, dependantChain);
+  }
+
+  private static Map<Inputs, ValueOrError<Object>> getResult(
+      BatchResponse batchResponse,
+      Set<RequestId> depReqIds,
+      Map<RequestId, Inputs> inputsByDepReq) {
+    Map<Inputs, ValueOrError<Object>> resultMap = new HashMap<>();
+    for (RequestId depReqId : depReqIds) {
+      resultMap.put(
+          inputsByDepReq.getOrDefault(depReqId, Inputs.empty()),
+          batchResponse.responses().getOrDefault(depReqId, empty()));
+    }
+    return resultMap;
+    //    return depReqIds.stream()
+    //        .collect(
+    //            toImmutableMap(
+    //                depReqId -> inputsByDepReq.getOrDefault(depReqId, Inputs.empty()),
+    //                depReqId ->
+    //                    batchResponse.responses().getOrDefault(depReqId, empty())));
   }
 
   private Optional<CompletableFuture<BatchResponse>> executeMainLogicIfPossible(
@@ -430,18 +438,30 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
               globalTimeSpent = System.currentTimeMillis() - globalTimeStart;
               resultForBatch.complete(
                   new BatchResponse(
-                      mainLogicInputs.keySet().stream()
-                          .collect(
-                              toImmutableMap(
-                                  identity(),
-                                  requestId ->
-                                      results
-                                          .getOrDefault(requestId, new CompletableFuture<>())
-                                          .getNow(empty())))));
+                      ImmutableMap.copyOf(getBatchResponseMap(mainLogicInputs, results))));
             });
     mainLogicExecuted.put(dependantChain, true);
     flushDecoratorsIfNeeded(dependantChain);
     return resultForBatch;
+  }
+
+  private static Map<RequestId, ValueOrError<Object>> getBatchResponseMap(
+      Map<RequestId, MainLogicInputs> mainLogicInputs,
+      Map<RequestId, CompletableFuture<ValueOrError<Object>>> results) {
+    Map<RequestId, ValueOrError<Object>> result = new LinkedHashMap<>();
+    for (RequestId requestId : mainLogicInputs.keySet()) {
+      result.put(
+          requestId, results.getOrDefault(requestId, new CompletableFuture<>()).getNow(empty()));
+    }
+    return result;
+    //    return mainLogicInputs.keySet().stream()
+    //        .collect(
+    //            toImmutableMap(
+    //                identity(),
+    //                requestId ->
+    //                    results
+    //                        .getOrDefault(requestId, new CompletableFuture<>())
+    //                        .getNow(empty())));
   }
 
   private Map<RequestId, CompletableFuture<ValueOrError<Object>>> executeDecoratedMainLogic(
@@ -457,35 +477,35 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     MainLogic<Object> finalLogic = logic;
     Map<RequestId, CompletableFuture<ValueOrError<Object>>> resultsByRequest =
         new LinkedHashMap<>();
-    inputs.forEach(
-        (requestId, mainLogicInputs) -> {
-          // Retrieve existing result from cache if result for this set of inputs has already been
-          // calculated
-          CompletableFuture<@Nullable Object> cachedResult =
-              resultsCache.get(mainLogicInputs.providedInputs());
-          if (cachedResult == null) {
-            try {
-              cachedResult =
-                  finalLogic
-                      .execute(ImmutableList.of(mainLogicInputs.allInputsAndDependencies()))
-                      .values()
-                      .iterator()
-                      .next();
-            } catch (Exception e) {
-              cachedResult = failedFuture(e);
-            }
-            resultsCache.put(mainLogicInputs.providedInputs(), cachedResult);
-          }
-          resultsByRequest.put(requestId, cachedResult.handle(ValueOrError::valueOrError));
-        });
+    for (Entry<RequestId, MainLogicInputs> entry : inputs.entrySet()) {
+      RequestId requestId = entry.getKey();
+      MainLogicInputs mainLogicInputs = entry.getValue();
+      // Retrieve existing result from cache if result for this set of inputs has already been
+      // calculated
+      CompletableFuture<@Nullable Object> cachedResult =
+          resultsCache.get(mainLogicInputs.providedInputs());
+      if (cachedResult == null) {
+        try {
+          cachedResult =
+              finalLogic
+                  .execute(ImmutableList.of(mainLogicInputs.allInputsAndDependencies()))
+                  .values()
+                  .iterator()
+                  .next();
+        } catch (Exception e) {
+          cachedResult = failedFuture(e);
+        }
+        resultsCache.put(mainLogicInputs.providedInputs(), cachedResult);
+      }
+      resultsByRequest.put(requestId, cachedResult.handle(ValueOrError::valueOrError));
+    }
     return resultsByRequest;
   }
 
   private void flushAllDependenciesIfNeeded(DependantChain dependantChain) {
-    kryonDefinition
-        .dependencyKryons()
-        .keySet()
-        .forEach(dependencyName -> flushDependencyIfNeeded(dependencyName, dependantChain));
+    for (String dependencyName : kryonDefinition.dependencyKryons().keySet()) {
+      flushDependencyIfNeeded(dependencyName, dependantChain);
+    }
   }
 
   private void flushDependencyIfNeeded(String dependencyName, DependantChain dependantChain) {

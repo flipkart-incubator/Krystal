@@ -203,9 +203,10 @@ public final class KryonExecutor implements KrystalExecutor {
       createKryonIfAbsent(kryonId, kryonDefinition);
       ImmutableMap<String, KryonId> dependencyKryons = kryonDefinition.dependencyKryons();
       dependencyKryons.forEach(
-          (dependencyName, depKryonId) ->
-              createDependencyKryons(
-                  depKryonId, dependantChain.extend(kryonId, dependencyName), executionConfig));
+          (dependencyName, depKryonId) -> {
+            createDependencyKryons(
+                depKryonId, dependantChain.extend(kryonId, dependencyName), executionConfig);
+          });
       dependantChainsPerKryon
           .computeIfAbsent(kryonId, _n -> new LinkedHashSet<>())
           .add(dependantChain);

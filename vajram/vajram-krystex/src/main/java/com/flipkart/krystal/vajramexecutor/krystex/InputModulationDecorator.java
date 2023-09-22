@@ -118,12 +118,12 @@ public final class InputModulationDecorator<
 
   private void modulateInputsList(
       MainLogic<Object> logicToDecorate, ModulatedInput<I, C> modulatedInput) {
-    ImmutableList<UnmodulatedInput<I, C>> requests =
-        modulatedInput.modInputs().stream()
-            .map(each -> new UnmodulatedInput<>(each, modulatedInput.commonInputs()))
-            .collect(toImmutableList());
+    List<UnmodulatedInput<I, C>> requests = new ArrayList<>();
+    for(I input : modulatedInput.modInputs()){
+      requests.add(new UnmodulatedInput<>(input, modulatedInput.commonInputs()));
+    }
     logicToDecorate
-        .execute(requests.stream().map(UnmodulatedInput::toInputValues).collect(toImmutableList()))
+        .execute(ImmutableList.copyOf(getInputs(requests)))
         .forEach(
             (inputs, resultFuture) -> {
               //noinspection RedundantTypeArguments: To Handle nullChecker errors
@@ -132,6 +132,17 @@ public final class InputModulationDecorator<
                   futureCache.<CompletableFuture<@Nullable Object>>computeIfAbsent(
                       inputs, request -> new CompletableFuture<@Nullable Object>()));
             });
+  }
+
+  private static <
+          I /*InputsNeedingModulation*/ extends InputValuesAdaptor,
+          C /*CommonInputs*/ extends InputValuesAdaptor>
+      List<Inputs> getInputs(List<UnmodulatedInput<I, C>> requests) {
+    List<Inputs> inputsList = new ArrayList<>();
+    for (UnmodulatedInput<I, C> unmodulatedInput : requests) {
+      inputsList.add(unmodulatedInput.toInputValues());
+    }
+    return inputsList;
   }
 
   @Override
