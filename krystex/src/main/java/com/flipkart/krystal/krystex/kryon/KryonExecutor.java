@@ -376,14 +376,8 @@ public final class KryonExecutor implements KrystalExecutor {
                     kryonDefinitionRegistry.getDependantChainsStart(),
                     requestId))
             .thenApply(GranuleResponse::response)
-            .thenApply(
-                valueOrError -> {
-                  if (valueOrError.error().isPresent()) {
-                    throw new RuntimeException(valueOrError.error().get());
-                  } else {
-                    return valueOrError.value().orElse(null);
-                  }
-                });
+            .<CompletableFuture<@Nullable Object>>thenApply(ValueOrError::toFuture)
+            .thenCompose(identity());
     linkFutures(submissionResult, kryonExecution.future());
   }
 
@@ -418,7 +412,7 @@ public final class KryonExecutor implements KrystalExecutor {
                             ValueOrError<Object> result =
                                 responses.getOrDefault(
                                     kryonExecution.instanceExecutionId(), ValueOrError.empty());
-                            kryonExecution.future().complete(result.value().orElse(null));
+                            linkFutures(result.toFuture(), kryonExecution.future());
                           }
                         }
                       });
