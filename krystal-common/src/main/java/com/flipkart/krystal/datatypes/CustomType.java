@@ -22,12 +22,12 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 public final class CustomType<T> implements DataType<T> {
 
   private final String className;
-  @MonotonicNonNull private String packageName;
-  @MonotonicNonNull private String simpleName;
+  private @MonotonicNonNull String packageName;
+  private @MonotonicNonNull String simpleName;
   private ImmutableList<String> enclosingClasses = ImmutableList.of();
   @Getter private ImmutableList<DataType<?>> typeParameters = ImmutableList.of();
 
-  @MonotonicNonNull private Type clazz;
+  private @MonotonicNonNull Type clazz;
 
   private CustomType(Class<T> clazz) {
     this(clazz.getPackageName(), clazz.getSimpleName(), getEnclosingClasses(clazz));

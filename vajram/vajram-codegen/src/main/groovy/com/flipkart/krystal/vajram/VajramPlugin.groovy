@@ -82,9 +82,7 @@ class VajramPlugin implements Plugin<Project> {
             }
         }
 
-        project.tasks.compileTestJava.dependsOn 'testCodeGenVajramImpl'
-
-        project.tasks.named("sourcesJar").configure { it.dependsOn("codeGenVajramImpl", "testCodeGenVajramImpl") }
-        project.tasks.named("jar").configure { it.dependsOn("codeGenVajramImpl", "testCodeGenVajramImpl") }
+        project.tasks.named("sourcesJar").configure { it.dependsOn("codeGenVajramImpl") }
+        project.tasks.named("jar").configure { it.dependsOn("codeGenVajramImpl") }
     }
 }

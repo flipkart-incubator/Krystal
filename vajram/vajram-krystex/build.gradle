@@ -15,6 +15,34 @@ dependencies {
     testImplementation 'com.fasterxml.jackson.core:jackson-databind:' + jacksonVersion
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:' + jacksonVersion
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jacksonVersion
+
+    testAnnotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
+}
+
+project.tasks.compileTestJava.dependsOn 'testCodeGenVajramImpl'
+tasks.named('testCodeGenVajramModels').configure {
+    doFirst {
+        def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
+        options.compilerArgs += [
+                '--add-reads', "$moduleName=flipkart.krystal.krystex",
+                '--add-reads', "$moduleName=org.junit.jupiter.api",
+
+                '--add-modules', 'com.fasterxml.jackson.annotation',
+                '--add-reads', "$moduleName=com.fasterxml.jackson.annotation",
+                '--add-modules', 'com.fasterxml.jackson.databind',
+                '--add-reads', "$moduleName=com.fasterxml.jackson.databind",
+                '--add-modules', 'com.fasterxml.jackson.datatype.jdk8',
+                '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jdk8",
+                '--add-modules', 'com.fasterxml.jackson.datatype.jsr310',
+                '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jsr310",
+                '--add-modules', 'org.junit.jupiter.params',
+                '--add-reads', "$moduleName=org.junit.jupiter.params",
+
+                '--add-modules', 'org.assertj.core',
+                '--add-reads', "$moduleName=org.assertj.core",
+
+        ]
+    }
 }
 
 publishing {
