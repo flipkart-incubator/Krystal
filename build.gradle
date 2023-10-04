@@ -6,7 +6,7 @@ plugins {
 ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
-    krystal_version = '4.1'
+    krystal_version = '4.2-SNAPSHOT'
 }
 
 checkerFramework {
@@ -48,8 +48,6 @@ subprojects {
 
         testCompileOnly 'org.projectlombok:lombok:1.18.24'
         testAnnotationProcessor 'org.projectlombok:lombok:1.18.24'
-
-
     }
 
     afterEvaluate {

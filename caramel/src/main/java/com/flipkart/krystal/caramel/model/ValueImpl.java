@@ -8,9 +8,9 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 public final class ValueImpl<T, P extends WorkflowPayload> implements Value<T, P> {
 
   private final CaramelField<T, P> field;
-  @NotOnlyInitialized private final P payload;
+  private @NotOnlyInitialized final P payload;
 
-  @MonotonicNonNull private T value;
+  private @MonotonicNonNull T value;
 
   public ValueImpl(CaramelField<T, P> field, @UnknownInitialization P payload) {
     this.field = field;

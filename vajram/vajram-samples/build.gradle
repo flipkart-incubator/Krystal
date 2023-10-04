@@ -24,6 +24,8 @@ dependencies {
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jacksonVersion
 }
 
+project.tasks.named("spotlessJava").configure { it.dependsOn("codeGenVajramImpl") }
+
 test {
     minHeapSize = "128m" // initial heap size
     maxHeapSize = "4g" // maximum heap size
