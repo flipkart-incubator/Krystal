@@ -100,7 +100,7 @@ import com.flipkart.krystal.vajram.Input;
  */
 @VajramDef("com.flipkart.greetingVajram") //Unique Id of this Vajram
 //SyncVajram means that this Vajram does not directly perform any blocking operations.
-public abstract class GreetingVajram extends ComputeVajram {
+public abstract class GreetingVajram extends ComputeVajram<String> {
 
   // Static declaration of all the facets (inputs and dependencies) of this Vajram.
   // This includes inputs provided by clients of this vajram, 
