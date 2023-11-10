@@ -957,7 +957,7 @@ public class VajramCodeGenerator {
                 depValueAccessorCode,
                 ParameterizedTypeName.get(ClassName.get(ValueOrError.class), usingDepType),
                 variableName,
-                getMethodReturnType(method).box(),
+                usingDepType,
                 usingInputName);
           } else if (Optional.class.isAssignableFrom(parameter.getType())) {
             // This means this dependency in "Using" annotation is not a fanout and the dev has
@@ -968,7 +968,7 @@ public class VajramCodeGenerator {
                 code,
                 ParameterizedTypeName.get(ClassName.get(Optional.class), usingDepType),
                 variableName,
-                getMethodReturnType(method).box(),
+                usingDepType,
                 usingInputName);
           } else {
             throw new VajramValidationException(
