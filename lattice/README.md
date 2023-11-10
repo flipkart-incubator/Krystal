@@ -8,7 +8,12 @@
 * All wire protocol schemas are auto-generated from Vajram definitions
 * Deep integration with the krystal framework
 * Easy definition and configuration of service objects via a simple fluent syntax.
-* Integration with a central repository of services and vajrams where vajrams are bound to services by the service descriptor
+* Integration with a central registry of services and vajrams.
+* Out of the box integration with
+  * resilience4j (via logic decorators)
+  * tracing (OpenTracing compatible)
+  * debugging with a standardized debugging header - both systemic and visual (with standardized "debug" header)
+* Ability to plug standardization policies which unify common behaviours (like headers, tooling, configs etc.) across teams.
 
 # Sample code
 This following is a proposal and is just indicative - to give an idea of how things work. It is subject to change in the future.
