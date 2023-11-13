@@ -24,7 +24,9 @@ dependencies {
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jacksonVersion
 }
 
+project.tasks.named("spotlessJava").configure { it.dependsOn("codeGenVajramModels") }
 project.tasks.named("spotlessJava").configure { it.dependsOn("codeGenVajramImpl") }
+project.tasks.named("createCheckerFrameworkManifest").configure { it.dependsOn("codeGenVajramModels") }
 
 test {
     minHeapSize = "128m" // initial heap size

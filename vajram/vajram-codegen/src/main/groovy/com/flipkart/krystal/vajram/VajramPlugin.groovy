@@ -36,6 +36,7 @@ class VajramPlugin implements Plugin<Project> {
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
             options.generatedSourceOutputDirectory.fileValue(project.file(mainGeneratedSrcDir))
+            options.compilerArgs += ['-processor', 'com.flipkart.krystal.vajram.codegen.VajramModelGenProcessor']
         }
 
 

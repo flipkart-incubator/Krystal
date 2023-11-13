@@ -1,6 +1,6 @@
 module flipkart.krystal.common {
   requires com.google.common;
-  requires lombok;
+  requires static lombok;
   requires org.checkerframework.checker.qual;
 
   exports com.flipkart.krystal.data;
