@@ -4,15 +4,19 @@ import static com.flipkart.krystal.datatypes.TypeUtils.getJavaType;
 
 import com.google.common.primitives.Primitives;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public final class ListType<T> implements DataType<ArrayList<T>> {
+public final class ListType<T> implements DataType<List<T>> {
 
-  public static final Class<ArrayList> COLLECTION_TYPE = ArrayList.class;
+  public static final Class<?> COLLECTION_TYPE = List.class;
+
   private final DataType<?> typeParam;
 
   public static <T> ListType<T> list(DataType<?> type) {
@@ -20,9 +24,9 @@ public final class ListType<T> implements DataType<ArrayList<T>> {
   }
 
   @Override
-  public Optional<Type> javaType() {
+  public Optional<Type> javaReflectType() {
     return typeParam
-        .javaType()
+        .javaReflectType()
         .map(
             t -> {
               if (t instanceof Class<?> clazz) {
@@ -32,5 +36,14 @@ public final class ListType<T> implements DataType<ArrayList<T>> {
               }
             })
         .map(t -> getJavaType(COLLECTION_TYPE, t));
+  }
+
+  @Override
+  public TypeMirror javaModelType(ProcessingEnvironment processingEnv) {
+    TypeElement typeElement =
+        processingEnv.getElementUtils().getTypeElement(COLLECTION_TYPE.getName());
+    return processingEnv
+        .getTypeUtils()
+        .getDeclaredType(typeElement, typeParam.javaModelType(processingEnv));
   }
 }

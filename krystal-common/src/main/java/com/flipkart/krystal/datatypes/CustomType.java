@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeMirror;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
@@ -21,7 +24,9 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 @ToString
 public final class CustomType<T> implements DataType<T> {
 
-  private final String className;
+  /** the fully qualified name of the class, i.e. pck.outer.inner. null for anonymous classes */
+  private final String canonicalClassName;
+
   private @MonotonicNonNull String packageName;
   private @MonotonicNonNull String simpleName;
   private ImmutableList<String> enclosingClasses = ImmutableList.of();
@@ -34,12 +39,12 @@ public final class CustomType<T> implements DataType<T> {
     this.clazz = clazz;
   }
 
-  public CustomType(String className) {
-    this.className = className;
+  public CustomType(String canonicalClassName) {
+    this.canonicalClassName = canonicalClassName;
   }
 
-  private CustomType(String className, List<? extends DataType<?>> typeParameters) {
-    this.className = className;
+  private CustomType(String canonicalClassName, List<? extends DataType<?>> typeParameters) {
+    this.canonicalClassName = canonicalClassName;
     this.typeParameters = ImmutableList.copyOf(typeParameters);
   }
 
@@ -95,8 +100,8 @@ public final class CustomType<T> implements DataType<T> {
     return new CustomType<>(className, typeParameters);
   }
 
-  public String className() {
-    return className;
+  public String canonicalClassName() {
+    return canonicalClassName;
   }
 
   public Optional<String> packageName() {
@@ -112,7 +117,7 @@ public final class CustomType<T> implements DataType<T> {
   }
 
   @Override
-  public Optional<Type> javaType() {
+  public Optional<Type> javaReflectType() {
     if (clazz == null) {
       if (!enclosingClasses.isEmpty()) {
         throw new UnsupportedOperationException(
@@ -127,9 +132,10 @@ public final class CustomType<T> implements DataType<T> {
                         () ->
                             new IllegalStateException(
                                 "null classloader returned. Cannot proceed further"))
-                    .loadClass(className());
+                    .loadClass(canonicalClassName());
 
-        List<Optional<Type>> types = typeParameters.stream().map(DataType::javaType).toList();
+        List<Optional<Type>> types =
+            typeParameters.stream().map(DataType::javaReflectType).toList();
         if (types.stream().allMatch(Optional::isPresent)) {
           this.clazz =
               getJavaType(type, types.stream().map(Optional::orElseThrow).toArray(Type[]::new));
@@ -141,6 +147,18 @@ public final class CustomType<T> implements DataType<T> {
       }
     }
     return Optional.of(clazz);
+  }
+
+  @Override
+  public TypeMirror javaModelType(ProcessingEnvironment processingEnv) {
+    TypeElement typeElement = processingEnv.getElementUtils().getTypeElement(canonicalClassName);
+    return processingEnv
+        .getTypeUtils()
+        .getDeclaredType(
+            typeElement,
+            typeParameters.stream()
+                .map(t -> t.javaModelType(processingEnv))
+                .toArray(TypeMirror[]::new));
   }
 
   private static ImmutableList<String> getEnclosingClasses(Class<?> clazz) {

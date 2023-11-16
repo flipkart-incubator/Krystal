@@ -14,7 +14,7 @@ dependencies {
     testImplementation project(':vajram-krystex')
     testImplementation project(':krystex')
 
-    implementation 'com.google.inject:guice:5.1.0'
+    implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
     implementation 'org.checkerframework:checker-qual:3.37.0'
 
     def jacksonVersion = '2.14.2'
@@ -23,10 +23,6 @@ dependencies {
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:' + jacksonVersion
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jacksonVersion
 }
-
-project.tasks.named("spotlessJava").configure { it.dependsOn("codeGenVajramModels") }
-project.tasks.named("spotlessJava").configure { it.dependsOn("codeGenVajramImpl") }
-project.tasks.named("createCheckerFrameworkManifest").configure { it.dependsOn("codeGenVajramModels") }
 
 test {
     minHeapSize = "128m" // initial heap size

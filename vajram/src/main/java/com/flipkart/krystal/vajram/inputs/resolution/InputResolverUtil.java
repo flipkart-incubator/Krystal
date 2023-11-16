@@ -17,8 +17,8 @@ import com.flipkart.krystal.vajram.inputs.MultiExecute;
 import com.flipkart.krystal.vajram.inputs.SingleExecute;
 import com.flipkart.krystal.vajram.inputs.VajramDepFanoutTypeSpec;
 import com.flipkart.krystal.vajram.inputs.VajramDepSingleTypeSpec;
-import com.flipkart.krystal.vajram.inputs.VajramDependencyTypeSpec;
-import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
+import com.flipkart.krystal.vajram.inputs.VajramDependencySpec;
+import com.flipkart.krystal.vajram.inputs.VajramFacetSpec;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,7 +34,7 @@ public final class InputResolverUtil {
 
   public static ResolutionResult multiResolve(
       List<ResolutionRequest> resolutionRequests,
-      Map<String, Collection<? extends SimpleInputResolver<?, ?, ?, ?>>> resolvers,
+      Map<String, Collection<? extends SimpleInputResolver<?, ?, ?>>> resolvers,
       Inputs inputs) {
 
     Map<String, List<Map<String, @Nullable Object>>> results = new LinkedHashMap<>();
@@ -42,9 +42,9 @@ public final class InputResolverUtil {
     for (ResolutionRequest resolutionRequest : resolutionRequests) {
       String dependencyName = resolutionRequest.dependencyName();
       List<Map<String, @Nullable Object>> depInputs = new ArrayList<>();
-      Collection<? extends SimpleInputResolver<?, ?, ?, ?>> depResolvers =
+      Collection<? extends SimpleInputResolver<?, ?, ?>> depResolvers =
           resolvers.getOrDefault(dependencyName, List.of());
-      for (SimpleInputResolver<?, ?, ?, ?> simpleResolver : depResolvers) {
+      for (SimpleInputResolver<?, ?, ?> simpleResolver : depResolvers) {
         String resolvable = simpleResolver.getResolverSpec().getTargetInput().name();
         DependencyCommand<?> command =
             _resolutionHelper(
@@ -128,17 +128,17 @@ public final class InputResolverUtil {
   }
 
   static <T> DependencyCommand<T> _resolutionHelper(
-      @Nullable VajramInputTypeSpec<?, ?> sourceInput,
+      @Nullable VajramFacetSpec<?> sourceInput,
       @Nullable Function<? extends Optional<?>, ?> oneToOneTransformer,
       @Nullable Function<? extends Optional<?>, ? extends Collection<?>> fanoutTransformer,
       List<? extends SkipPredicate<?>> skipPredicates,
       Inputs inputs) {
     boolean fanout = fanoutTransformer != null;
     final Optional<Object> inputValue;
-    if (sourceInput instanceof VajramDepSingleTypeSpec<?, ?, ?>) {
+    if (sourceInput instanceof VajramDepSingleTypeSpec<?, ?>) {
       inputValue =
           inputs.getDepValue(sourceInput.name()).values().values().iterator().next().value();
-    } else if (sourceInput instanceof VajramDepFanoutTypeSpec<?, ?, ?>) {
+    } else if (sourceInput instanceof VajramDepFanoutTypeSpec<?, ?>) {
       inputValue =
           Optional.of(
               inputs.getDepValue(sourceInput.name()).values().values().stream()
@@ -195,9 +195,8 @@ public final class InputResolverUtil {
     }
   }
 
-  static <S, T, CV extends Vajram<?>, DV extends Vajram<?>> InputResolver toResolver(
-      VajramDependencyTypeSpec<?, ?, CV, DV> dependency,
-      SimpleInputResolverSpec<S, T, CV, DV> spec) {
+  static <S, T, CV extends Vajram<?>> InputResolver toResolver(
+      VajramDependencySpec<?, CV> dependency, SimpleInputResolverSpec<S, T> spec) {
     return new SimpleInputResolver<>(dependency, spec);
   }
 

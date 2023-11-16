@@ -48,16 +48,12 @@ public final class TypeUtils {
     }
   }
 
-  public static DataType<?> getDataType(Type type) {
-    return getDataType(type.getTypeName(), List.of());
-  }
-
   public static DataType<?> getDataType(
-      String className, List<? extends DataType<?>> typeParameters) {
-    if (mappings.containsKey(className)) {
-      return mappings.get(className).apply(typeParameters);
+      String canonicalClassName, List<? extends DataType<?>> typeParameters) {
+    if (mappings.containsKey(canonicalClassName)) {
+      return mappings.get(canonicalClassName).apply(typeParameters);
     } else {
-      return CustomType.create(className, typeParameters);
+      return CustomType.create(canonicalClassName, typeParameters);
     }
   }
 

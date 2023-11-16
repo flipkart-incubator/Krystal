@@ -15,8 +15,8 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
 import com.flipkart.krystal.vajram.inputs.SingleExecute;
-import com.flipkart.krystal.vajram.inputs.VajramDependencyTypeSpec;
-import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
+import com.flipkart.krystal.vajram.inputs.VajramDependencySpec;
+import com.flipkart.krystal.vajram.inputs.VajramFacetSpec;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
@@ -25,29 +25,27 @@ import java.util.Optional;
 import java.util.concurrent.atomic.LongAdder;
 
 /** A resolver which resolves exactly one input of a dependency. */
-public final class SimpleInputResolver<S, T, CV extends Vajram<?>, DV extends Vajram<?>>
-    extends AbstractInputResolver {
+public final class SimpleInputResolver<S, T, CV extends Vajram<?>> extends AbstractInputResolver {
   public static final LongAdder TIME = new LongAdder();
-  private final VajramDependencyTypeSpec<?, ?, CV, DV> dependency;
-  private final SimpleInputResolverSpec<S, T, CV, DV> resolverSpec;
+  private final VajramDependencySpec<?, CV> dependency;
+  private final SimpleInputResolverSpec<S, T> resolverSpec;
 
   SimpleInputResolver(
-      VajramDependencyTypeSpec<?, ?, CV, DV> dependency,
-      SimpleInputResolverSpec<S, T, CV, DV> resolverSpec) {
+      VajramDependencySpec<?, CV> dependency, SimpleInputResolverSpec<S, T> resolverSpec) {
     super(
         ofNullable(resolverSpec.getSourceInput()).stream()
-            .map(VajramInputTypeSpec::name)
+            .map(VajramFacetSpec::name)
             .collect(toImmutableSet()),
         new QualifiedInputs(dependency.name(), resolverSpec.getTargetInput().name()));
     this.dependency = dependency;
     this.resolverSpec = resolverSpec;
   }
 
-  public VajramDependencyTypeSpec<?, ?, ?, ?> getDependency() {
+  public VajramDependencySpec<?, ?> getDependency() {
     return dependency;
   }
 
-  public SimpleInputResolverSpec<?, ?, ?, ?> getResolverSpec() {
+  public SimpleInputResolverSpec<?, ?> getResolverSpec() {
     return resolverSpec;
   }
 

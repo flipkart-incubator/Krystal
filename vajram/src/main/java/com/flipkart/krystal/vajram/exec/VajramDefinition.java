@@ -14,7 +14,7 @@ import com.flipkart.krystal.vajram.inputs.DefaultInputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.Dependency;
 import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
 import com.flipkart.krystal.vajram.inputs.Using;
-import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
+import com.flipkart.krystal.vajram.inputs.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
 import com.flipkart.krystal.vajram.tags.Service;
@@ -62,7 +62,7 @@ public final class VajramDefinition {
         vajram.getInputDefinitions().stream()
             .filter(vi -> vi instanceof Dependency)
             .map(vi -> (Dependency<?>) vi)
-            .collect(toImmutableMap(VajramInputDefinition::name, Function.identity()));
+            .collect(toImmutableMap(VajramFacetDefinition::name, Function.identity()));
 
     for (Method resolverMethod : resolverMethods) {
       Resolve resolver = resolverMethod.getAnnotation(Resolve.class);

@@ -7,19 +7,21 @@ import com.flipkart.krystal.datatypes.ObjectType;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import java.util.Collection;
 import java.util.Optional;
+import lombok.ToString;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+@ToString
 public final class VajramID implements DataAccessSpec {
 
   private @MonotonicNonNull String vajramId;
-  private final @MonotonicNonNull String className;
+  private final @MonotonicNonNull String vajramClassName;
   private final DataType<?> responseType;
 
   private VajramID(
-      @Nullable String vajramId, @Nullable String className, DataType<?> responseType) {
+      @Nullable String vajramId, @Nullable String vajramClassName, DataType<?> responseType) {
     this.vajramId = vajramId;
-    this.className = className;
+    this.vajramClassName = vajramClassName;
     this.responseType = responseType;
   }
 
@@ -83,13 +85,8 @@ public final class VajramID implements DataAccessSpec {
     throw new UnsupportedOperationException("");
   }
 
-  @Override
-  public String toString() {
-    return "v<%s>".formatted(vajramId());
-  }
-
   public Optional<String> className() {
-    return Optional.ofNullable(className);
+    return Optional.ofNullable(vajramClassName);
   }
 
   public DataType<?> responseType() {

@@ -5,26 +5,26 @@ import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_CLASS_S
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_NEEDING_MODULATION;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.flipkart.krystal.vajram.VajramRequest;
-import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.google.common.base.CaseFormat;
 import com.google.common.primitives.Primitives;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.PrimitiveType;
+import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Elements;
+import javax.lang.model.util.SimpleTypeVisitor14;
+import javax.lang.model.util.Types;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -33,13 +33,18 @@ public final class CodegenUtils {
   public static final String DOT = ".";
   public static final String COMMA = ",";
   private static final Pattern COMPILE = Pattern.compile(".");
-  public static final String REQUEST = "Request";
+  public static final String REQUEST_SUFFIX = "Request";
   public static final String IMPL = "Impl";
   public static final String INPUT_UTIL = "InputUtil";
   public static final String VAJRAM = "vajram";
   public static final String CONVERTER = "CONVERTER";
+  private final Types typeUtils;
+  private final Elements elementUtils;
 
-  private CodegenUtils() {}
+  public CodegenUtils(Types typeUtils, Elements elementUtils) {
+    this.typeUtils = typeUtils;
+    this.elementUtils = elementUtils;
+  }
 
   public static String getPackageFromPath(Path filePath) {
     Path parentDir =
@@ -60,11 +65,11 @@ public final class CodegenUtils {
   }
 
   public static String getRequestClassName(String vajramName) {
-    return getVajramBaseName(vajramName) + REQUEST;
+    return getVajramBaseName(vajramName) + REQUEST_SUFFIX;
   }
 
-  public static String getVajramImplClassName(String vajramName) {
-    return vajramName + IMPL;
+  public static String getVajramImplClassName(String vajramId) {
+    return vajramId + IMPL;
   }
 
   public static String getVajramBaseName(String vajramName) {
@@ -129,22 +134,6 @@ public final class CodegenUtils {
     }
   }
 
-  public static TypeName getClassGenericArgumentsType(Class klass) {
-    if (klass.getGenericSuperclass() instanceof ParameterizedType genericReturnType) {
-      final Type typeArg = genericReturnType.getActualTypeArguments()[0];
-      if (typeArg instanceof ParameterizedType parameterizedType) {
-        return getType(typeArg);
-      } else {
-        if (typeArg instanceof Class<?>) {
-          return ClassName.get(Primitives.wrap((Class<?>) typeArg));
-        } else {
-          return ClassName.bestGuess(typeArg.getTypeName());
-        }
-      }
-    }
-    return TypeName.VOID; // TODO : check if its correct or need to throw exception
-  }
-
   public static TypeName getType(Type typeArg) {
     if (typeArg instanceof ParameterizedType parameterizedType) {
       final Type rawType = parameterizedType.getRawType();
@@ -161,105 +150,32 @@ public final class CodegenUtils {
     }
   }
 
-  public static boolean isDepResolverFanout(
-      Class dependencyVajram, Method resolverMethod, String[] inputs, Map<String, Field> fields) {
-    final TypeName classGenericArgumentsType =
-        CodegenUtils.getClassGenericArgumentsType(dependencyVajram);
-    final TypeName methodGenericReturnType = CodegenUtils.getMethodReturnType(resolverMethod);
-    if (methodGenericReturnType.equals(classGenericArgumentsType)) {
-      return false;
-    }
-    // Method is of parameterized type.
-    else if (methodGenericReturnType instanceof ParameterizedTypeName parameterizedTypeName) {
-      try {
-        Class<?> methodRawType = null;
-        if (Objects.nonNull(parameterizedTypeName.rawType.enclosingClassName())) {
-          methodRawType =
-              Class.forName(
-                  parameterizedTypeName.rawType.enclosingClassName()
-                      + "$"
-                      + parameterizedTypeName.rawType.simpleName());
-        } else {
-          methodRawType = Class.forName(parameterizedTypeName.rawType.canonicalName());
-        }
-        final TypeName typeName = parameterizedTypeName.typeArguments.get(0);
-        if (DependencyCommand.class.isAssignableFrom(methodRawType)) {
-          // TODO : return DependencyCommand.MultiExecute.class.isAssignableFrom(methodRawType);
-          return false;
-        } else if (Iterable.class.isAssignableFrom(methodRawType)) {
-          if (typeName instanceof ParameterizedTypeName
-              && typeName.equals(classGenericArgumentsType)) {
-            return true;
-          } else if (ClassName.get(VajramRequest.class).equals(typeName)
-              && Iterable.class.isAssignableFrom(methodRawType)) {
-            return true;
-          } else {
-            AtomicBoolean fanout = new AtomicBoolean(false);
-            Stream.of(inputs)
-                .forEach(
-                    input -> {
-                      String key = toJavaName(input);
-                      if (fields.containsKey(key)) {
-                        Field field = fields.get(key);
-                        if (typeName.equals(getType(field.getType())) && !fanout.get()) {
-                          fanout.set(true);
-                        }
-                      } else {
-                        log.error("Field {} not found in {}", key, dependencyVajram.getName());
-                        throw new RuntimeException(
-                            String.format(
-                                "field %s not found in %s vajram",
-                                key, dependencyVajram.getName()));
-                      }
-                    });
-            return fanout.get();
+  public static List<? extends TypeMirror> getTypeParameters(TypeMirror returnType) {
+    return returnType.accept(
+        new SimpleTypeVisitor14<List<? extends TypeMirror>, Void>() {
+          @Override
+          public List<? extends TypeMirror> visitDeclared(DeclaredType t, Void unused) {
+            return t.getTypeArguments();
           }
-        } else {
-          assert typeName instanceof ClassName;
-          final Class<?> typeClass = Class.forName(((ClassName) typeName).canonicalName());
-          if (typeName.equals(classGenericArgumentsType)
-              && Iterable.class.isAssignableFrom(methodRawType)) {
-            return true;
-          } else if (VajramRequest.class.isAssignableFrom(typeClass)
-              && Iterable.class.isAssignableFrom(methodRawType)) {
-            return true;
-          }
-        }
-      } catch (ClassNotFoundException e) {
-        throw new RuntimeException(e);
-      }
+        },
+        null);
+  }
+
+  /**
+   * @return true of the raw type (without generics) of {@code from} can be assigned to the raw type
+   *     of {@code to}
+   */
+  public boolean isRawAssignable(TypeMirror from, Class<?> to) {
+    return typeUtils.isAssignable(
+        typeUtils.erasure(from),
+        typeUtils.erasure(elementUtils.getTypeElement(to.getName()).asType()));
+  }
+
+  public TypeMirror wrap(TypeMirror type) {
+    if (type instanceof PrimitiveType p) {
+      return typeUtils.boxedClass(p).asType();
+    } else {
+      return type;
     }
-    // Dependent class response is of parameterized type
-    //    else if (classGenericArgumentsType instanceof ParameterizedTypeName parameterizedType) {
-    //      try {
-    //        final Class<?> methodRawType =
-    // Class.forName(parameterizedType.rawType.canonicalName());
-    //        final TypeName typeName = parameterizedType.typeArguments.get(0);
-    //        AtomicBoolean fanout = new AtomicBoolean(false);
-    //        Stream.of(inputs)
-    //            .forEach(
-    //                input -> {
-    //                  String key = toJavaName(input);
-    //                  if (fields.containsKey(key)) {
-    //                    Field field = fields.get(toJavaName(input));
-    //                    if (Iterable.class.isAssignableFrom(methodRawType)
-    //                        && typeName.equals(getType(field.getType()))
-    //                        && !fanout.get()) {
-    //                      fanout.set(true);
-    //                    }
-    //                  } else {
-    //                    log.error("Field {} not found in {}", key, dependencyVajram.getName());
-    //                    throw new RuntimeException(
-    //                        String.format(
-    //                            "field %s not found in %s vajram", key,
-    // dependencyVajram.getName()));
-    //                  }
-    //                });
-    //        return fanout.get();
-    //      } catch (ClassNotFoundException e) {
-    //        throw new RuntimeException(e);
-    //      }
-    //    }
-    return false;
   }
 }

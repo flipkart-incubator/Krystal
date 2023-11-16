@@ -1,15 +1,20 @@
 package com.flipkart.krystal.vajram
 
+import com.flipkart.krystal.vajram.codegen.BuildPhase
 import com.flipkart.krystal.vajram.codegen.VajramCodeGenFacade
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.compile.JavaCompile
 
 class VajramPlugin implements Plugin<Project> {
+
+
     void apply(Project project) {
 
-        String mainGeneratedSrcDir = project.buildDir.getPath() + '/generated/sources/vajrams/main/java/'
-        String testGeneratedSrcDir = project.buildDir.getPath() + '/generated/sources/vajrams/test/java/'
+        def buildPhaseFile = "krystal_build_phase.txt"
+        def vajramBuildDir = '/generated/sources/vajrams'
+        String mainGeneratedSrcDir = project.buildDir.getPath() + vajramBuildDir + '/main/java/'
+        String testGeneratedSrcDir = project.buildDir.getPath() + vajramBuildDir + '/test/java/'
 
         project.sourceSets {
             main {
@@ -36,26 +41,42 @@ class VajramPlugin implements Plugin<Project> {
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
             options.generatedSourceOutputDirectory.fileValue(project.file(mainGeneratedSrcDir))
-            options.compilerArgs += ['-processor', 'com.flipkart.krystal.vajram.codegen.VajramModelGenProcessor']
+            options.compilerArgs += ['-proc:only']
+//            doFirst {
+//                project.logger.error("" + options.annotationProcessorPath.toList().stream().map { it.absolutePath }.toList())
+//                project.logger.error("Creating krystal_build_phase.txt in ${mainGeneratedSrcDir} with text '${BuildPhase.CODEGEN_MODELS}'")
+//                new File(mainGeneratedSrcDir, buildPhaseFile).text = BuildPhase.CODEGEN_MODELS.name()
+//            }
+//            doLast {
+//                project.logger.error("Deleting krystal_build_phase.txt in ${mainGeneratedSrcDir} with text '${BuildPhase.CODEGEN_MODELS}'")
+//                new File(mainGeneratedSrcDir, buildPhaseFile).delete()
+//            }
         }
-
 
         // add a new task to generate vajram impl as this step needs to run after model generation
         // and compile
-        project.tasks.register('codeGenVajramImpl') {
+        project.tasks.register('codeGenVajramImpls', JavaCompile) {
+            //Compile the generatedCode
             group = 'krystal'
             dependsOn it.project.tasks.codeGenVajramModels
-            print project.tasks.compileJava.destinationDirectory
+            source project.sourceSets.main.allSource.srcDirs
+            classpath = project.configurations.compileClasspath
+            destinationDirectory = project.tasks.compileJava.destinationDirectory
+            //For lombok processing of EqualsAndHashCode
+            options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
+            options.generatedSourceOutputDirectory.fileValue(project.file(mainGeneratedSrcDir))
+            options.compilerArgs += ['-proc:only']
+            doFirst {
+                project.logger.error("Creating krystal_build_phase.txt in ${mainGeneratedSrcDir} with text '${BuildPhase.CODEGEN_IMPLS}'")
+                new File(mainGeneratedSrcDir, buildPhaseFile).text = BuildPhase.CODEGEN_IMPLS.name()
+            }
             doLast {
-                VajramCodeGenFacade.codeGenVajramImpl(
-                        project.sourceSets.main.java.srcDirs,
-                        compiledMainDir,
-                        mainGeneratedSrcDir,
-                        project.tasks.compileJava.classpath)
+                project.logger.error("Deleting krystal_build_phase.txt in ${mainGeneratedSrcDir} with text '${BuildPhase.CODEGEN_IMPLS}'")
+                new File(mainGeneratedSrcDir, buildPhaseFile).delete()
             }
         }
 
-        project.tasks.compileJava.dependsOn 'codeGenVajramImpl'
+        project.tasks.compileJava.dependsOn 'codeGenVajramImpls'
 
         project.tasks.register('testCodeGenVajramModels', JavaCompile) {
             //Compile the generatedCode
@@ -68,7 +89,6 @@ class VajramPlugin implements Plugin<Project> {
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileTestJava.options.annotationProcessorPath
             options.generatedSourceOutputDirectory.fileValue(project.file(testGeneratedSrcDir))
-            mustRunAfter("createCheckerFrameworkManifest")
         }
 
         project.tasks.register('testCodeGenVajramImpl') {
@@ -83,7 +103,7 @@ class VajramPlugin implements Plugin<Project> {
             }
         }
 
-        project.tasks.named("sourcesJar").configure { it.dependsOn("codeGenVajramImpl") }
-        project.tasks.named("jar").configure { it.dependsOn("codeGenVajramImpl") }
+        project.tasks.named("sourcesJar").configure { it.dependsOn("codeGenVajramImpls") }
+        project.tasks.named("jar").configure { it.dependsOn("codeGenVajramImpls") }
     }
 }

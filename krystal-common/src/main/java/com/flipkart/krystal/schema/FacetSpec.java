@@ -1,5 +1,5 @@
 package com.flipkart.krystal.schema;
 
-public interface InputTypeSpec<T> {
+public interface FacetSpec<T> {
   String name();
 }
