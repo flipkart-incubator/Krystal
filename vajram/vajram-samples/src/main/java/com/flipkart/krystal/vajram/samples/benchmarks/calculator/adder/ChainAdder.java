@@ -11,6 +11,8 @@ import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Ch
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderRequest.sum_n;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
+import com.flipkart.krystal.vajram.Dependency;
+import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.MultiExecute;
@@ -26,6 +28,14 @@ import java.util.List;
 public abstract class ChainAdder extends ComputeVajram<Integer> {
 
   public static final String ID = "chainAdder";
+
+  @Input List<Integer> numbers;
+
+  @Dependency(value = ID, canFanout = true)
+  Integer chainSum;
+
+  @Dependency(Adder.ID)
+  Integer sum;
 
   @Resolve(depName = chainSum_n, depInputs = numbers_n)
   public static MultiExecute<List<Integer>> numbersForSubChainer(

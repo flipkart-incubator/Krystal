@@ -15,10 +15,10 @@ import lombok.EqualsAndHashCode;
  * @param <DV> The dependency vajram
  */
 @EqualsAndHashCode(callSuper = true, cacheStrategy = LAZY)
-public final class VajramDepFanoutTypeSpec<T, CV extends Vajram<?>, DV extends Vajram<T>>
-    extends VajramDependencyTypeSpec<T, Collection<T>, CV, DV> {
+public final class VajramDepFanoutTypeSpec<T, CV extends Vajram<?>>
+    extends VajramDependencySpec<Collection<T>, CV> {
 
-  public VajramDepFanoutTypeSpec(String name, Class<CV> ofVajram, Class<DV> onVajram) {
-    super(name, ofVajram, onVajram);
+  public VajramDepFanoutTypeSpec(String name, Class<CV> ofVajram) {
+    super(name, ofVajram);
   }
 }

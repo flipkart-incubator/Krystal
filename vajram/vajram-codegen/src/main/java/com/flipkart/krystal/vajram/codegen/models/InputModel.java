@@ -1,7 +1,8 @@
-package com.flipkart.krystal.vajram.inputs;
+package com.flipkart.krystal.vajram.codegen.models;
 
 import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.datatypes.DataType;
+import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.HashMap;
@@ -10,7 +11,7 @@ import java.util.Set;
 import lombok.Builder;
 
 @Builder
-public record Input<T>(
+public record InputModel<T>(
     String name,
     DataType<?> type,
     ImmutableMap<String, Tag> tags,
@@ -19,7 +20,7 @@ public record Input<T>(
     String documentation,
     boolean needsModulation,
     ImmutableSet<InputSource> sources)
-    implements VajramFacetDefinition {
+    implements FacetGenModel {
 
   private static final ImmutableSet<InputSource> DEFAULT_INPUT_SOURCES =
       ImmutableSet.of(InputSource.CLIENT);
@@ -35,23 +36,23 @@ public record Input<T>(
     return sources;
   }
 
-  public static class InputBuilder<T> {
+  public static class InputModelBuilder<T> {
 
-    public InputBuilder<T> sources(InputSource... inputSources) {
+    public InputModelBuilder<T> sources(InputSource... inputSources) {
       if (inputSources != null) {
         this.sources = ImmutableSet.copyOf(inputSources);
       }
       return this;
     }
 
-    public InputBuilder<T> sources(Set<InputSource> inputSources) {
+    public InputModelBuilder<T> sources(Set<InputSource> inputSources) {
       if (inputSources != null) {
         this.sources = ImmutableSet.copyOf(inputSources);
       }
       return this;
     }
 
-    public InputBuilder<T> tags(Map<String, String> tags) {
+    public InputModelBuilder<T> tags(Map<String, String> tags) {
       Map<String, Tag> tagsMap = new HashMap<>();
       tags.forEach((key, value) -> tagsMap.put(key, new Tag(key, value)));
       this.tags = ImmutableMap.copyOf(tagsMap);

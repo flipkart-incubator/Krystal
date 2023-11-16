@@ -4,8 +4,8 @@ import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.to
 import static java.util.Arrays.stream;
 
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.inputs.VajramDependencyTypeSpec;
-import com.flipkart.krystal.vajram.inputs.VajramInputTypeSpec;
+import com.flipkart.krystal.vajram.inputs.VajramDependencySpec;
+import com.flipkart.krystal.vajram.inputs.VajramFacetSpec;
 import com.flipkart.krystal.vajram.inputs.resolution.FanoutResolverStage.ResolveFanoutStage;
 import com.flipkart.krystal.vajram.inputs.resolution.ResolverStage.ResolveStage;
 import com.google.common.collect.ImmutableList;
@@ -28,18 +28,15 @@ public final class InputResolvers {
 
   /**
    * @param dependency The dependency whose inputs are being resolved
-   * @param resolverSpecs The resolver specs of the dependency
+   * @param resolverStages The resolver specs of the dependency
    * @return The list of InputResolvers
    * @param <T> The return type of the dependency.
    * @param <P> The resultant return type of the dependency. If it's a fanout dependency then this
    *     would be {@link Collection<T>}, else T itself.
    * @param <CV> The current vajram which has the dependency
-   * @param <DV> The dependency vajram
    */
-  @SafeVarargs
-  public static <T, P, CV extends Vajram<?>, DV extends Vajram<T>> List<InputResolver> dep(
-      VajramDependencyTypeSpec<T, P, CV, DV> dependency,
-      SimpleInputResolverSpec<?, ?, CV, DV>... resolverStages) {
+  public static <T, P, CV extends Vajram<?>> List<InputResolver> dep(
+      VajramDependencySpec<P, CV> dependency, SimpleInputResolverSpec<?, ?>... resolverStages) {
     return stream(resolverStages)
         .map(
             spec -> {
@@ -55,7 +52,7 @@ public final class InputResolvers {
    * @param <DV> The dependency whose input is being resolved.
    */
   public static <T, DV extends Vajram<?>> ResolveStage<T, DV> depInput(
-      VajramInputTypeSpec<T, DV> depInput) {
+      VajramFacetSpec<T> depInput) {
     return new ResolveStage<>(depInput);
   }
 
@@ -67,7 +64,7 @@ public final class InputResolvers {
    * @param <DV> The dependency whose input is being resolved.
    */
   public static <T, DV extends Vajram<?>> ResolveFanoutStage<T, DV> fanout(
-      VajramInputTypeSpec<T, DV> depInput) {
+      VajramFacetSpec<T> depInput) {
     return new ResolveFanoutStage<>(depInput);
   }
 
@@ -79,7 +76,7 @@ public final class InputResolvers {
    * @param <DV> DependencyVajram: The vajram whose input is being resolved
    */
   public static <T, DV extends Vajram<?>> ResolveFanoutStage<T, DV> resolveFanout(
-      VajramInputTypeSpec<T, DV> depInput) {
+      VajramFacetSpec<T> depInput) {
     return new ResolveFanoutStage<>(depInput);
   }
 

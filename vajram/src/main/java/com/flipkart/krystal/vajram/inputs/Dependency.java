@@ -10,10 +10,4 @@ public record Dependency<T>(
     boolean isMandatory,
     boolean canFanout,
     String documentation)
-    implements VajramInputDefinition {
-
-  @Override
-  public boolean needsModulation() {
-    return false;
-  }
-}
+    implements VajramFacetDefinition {}

@@ -18,7 +18,7 @@ import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputSource;
-import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
+import com.flipkart.krystal.vajram.inputs.VajramFacetDefinition;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -94,7 +94,7 @@ public final class InputInjector implements MainLogicDecorator {
         .map(Vajram::getInputDefinitions)
         .ifPresent(
             inputDefinitions -> {
-              for (VajramInputDefinition inputDefinition : inputDefinitions) {
+              for (VajramFacetDefinition inputDefinition : inputDefinitions) {
                 String inputName = inputDefinition.name();
                 if (inputDefinition instanceof Input<?> input) {
                   if (input.sources().contains(InputSource.CLIENT)) {
@@ -133,10 +133,10 @@ public final class InputInjector implements MainLogicDecorator {
           new Exception("Dependency injector is null, cannot resolve SESSION input"));
     }
 
-    if (dataType == null || dataType.javaType().isEmpty()) {
+    if (dataType == null || dataType.javaReflectType().isEmpty()) {
       return ValueOrError.withError(new Exception("Data type not found"));
     }
-    Optional<Type> type = dataType.javaType();
+    Optional<Type> type = dataType.javaReflectType();
     @Nullable Object resolvedObject = null;
     if (type.isPresent()) {
       if (injectionName != null) {

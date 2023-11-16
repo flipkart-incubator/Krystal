@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.codegen.models;
 
-import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
+import com.flipkart.krystal.vajram.inputs.VajramFacetDefinition;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -11,5 +11,5 @@ public abstract sealed class AbstractInput extends TypeDefinition permits InputD
   private boolean mandatory;
   private String doc = "";
 
-  public abstract VajramInputDefinition toInputDefinition();
+  public abstract VajramFacetDefinition toInputDefinition();
 }

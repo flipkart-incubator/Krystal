@@ -87,4 +87,6 @@ publishing {
             }
         }
     }
+
+    tasks.named("spotlessJava").configure { dependsOn("codeGenVajramImpls") }
 }
