@@ -42,15 +42,14 @@ class VajramPlugin implements Plugin<Project> {
             options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
             options.generatedSourceOutputDirectory.fileValue(project.file(mainGeneratedSrcDir))
             options.compilerArgs += ['-proc:only']
-//            doFirst {
-//                project.logger.error("" + options.annotationProcessorPath.toList().stream().map { it.absolutePath }.toList())
-//                project.logger.error("Creating krystal_build_phase.txt in ${mainGeneratedSrcDir} with text '${BuildPhase.CODEGEN_MODELS}'")
-//                new File(mainGeneratedSrcDir, buildPhaseFile).text = BuildPhase.CODEGEN_MODELS.name()
-//            }
-//            doLast {
-//                project.logger.error("Deleting krystal_build_phase.txt in ${mainGeneratedSrcDir} with text '${BuildPhase.CODEGEN_MODELS}'")
-//                new File(mainGeneratedSrcDir, buildPhaseFile).delete()
-//            }
+            doFirst {
+                project.logger.error("Creating krystal_build_phase.txt in ${mainGeneratedSrcDir} with text '${BuildPhase.CODEGEN_MODELS}'")
+                new File(mainGeneratedSrcDir, buildPhaseFile).text = BuildPhase.CODEGEN_MODELS.name()
+            }
+            doLast {
+                project.logger.error("Deleting krystal_build_phase.txt in ${mainGeneratedSrcDir} with text '${BuildPhase.CODEGEN_MODELS}'")
+                new File(mainGeneratedSrcDir, buildPhaseFile).delete()
+            }
         }
 
         // add a new task to generate vajram impl as this step needs to run after model generation
@@ -91,7 +90,7 @@ class VajramPlugin implements Plugin<Project> {
             options.generatedSourceOutputDirectory.fileValue(project.file(testGeneratedSrcDir))
         }
 
-        project.tasks.register('testCodeGenVajramImpl') {
+        project.tasks.register('testCodeGenVajramImpls') {
             group = 'krystal'
             dependsOn it.project.tasks.testCodeGenVajramModels
             doLast {

@@ -6,6 +6,7 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStr
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.GRANULAR;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
+import static com.flipkart.krystal.vajram.tags.AnnotationTag.getAnnotationByType;
 import static com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig.sharedModulator;
 import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,6 +37,8 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
 import com.flipkart.krystal.vajram.modulation.Batcher;
+import com.flipkart.krystal.vajram.tags.AnnotationTag;
+import com.flipkart.krystal.vajram.tags.NamedValueTag;
 import com.flipkart.krystal.vajram.tags.Service;
 import com.flipkart.krystal.vajram.tags.ServiceApi;
 import com.flipkart.krystal.vajram.tags.VajramTags;
@@ -844,19 +847,23 @@ class KrystexVajramExecutorTest {
                 .orElse(false);
     Function<LogicExecutionContext, String> instanceIdCreator =
         context -> {
-          ImmutableMap<String, Tag> logicTags = context.logicTags();
-          Tag service = logicTags.get(Service.TAG_KEY);
+          ImmutableMap<Object, Tag> logicTags = context.logicTags();
+          Optional<Service> service = getAnnotationByType(Service.class, logicTags);
           String instanceId;
-          if (service == null) {
-            Tag vajramId = logicTags.get(VajramTags.VAJRAM_ID);
-            if (vajramId == null) {
+          if (service.isEmpty()) {
+            Optional<NamedValueTag> namedValueTag =
+                getAnnotationByType(VajramTags.VAJRAM_ID, NamedValueTag.class, logicTags);
+            if (namedValueTag.isEmpty()) {
               throw new IllegalStateException("Missing vajramId tag");
             }
-            instanceId = vajramId.tagValue();
+            instanceId = namedValueTag.get().value();
           } else {
             String serviceApi =
-                Optional.ofNullable(logicTags.get(ServiceApi.TAG_KEY)).map(s -> "." + s).orElse("");
-            instanceId = service.tagValue() + serviceApi;
+                getAnnotationByType(ServiceApi.class, logicTags)
+                    .map(ServiceApi::service)
+                    .map(s -> "." + s)
+                    .orElse("");
+            instanceId = service.get().value() + serviceApi;
           }
           return instanceId;
         };

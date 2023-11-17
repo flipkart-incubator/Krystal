@@ -11,6 +11,8 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
+import com.flipkart.krystal.vajram.tags.AnnotationTag;
+import com.flipkart.krystal.vajram.tags.NamedValueTag;
 import com.flipkart.krystal.vajram.tags.VajramTags;
 import com.google.common.collect.ImmutableSet;
 import java.util.NoSuchElementException;
@@ -25,7 +27,7 @@ public record InputModulatorConfig(
     Function<ModulatorContext, MainLogicDecorator> decoratorFactory) {
 
   /**
-   * Creates a default {@link InputModulatorConfig} which guarantees that every unique {@link
+   * Creates a default InputModulatorConfig which guarantees that every unique {@link
    * DependantChain} of a vajram gets its own {@link InputModulationDecorator} and its own
    * corresponding {@link InputModulator}. The instance id corresponding to a particular {@link
    * DependantChain} is of the form:
@@ -105,12 +107,20 @@ public record InputModulatorConfig(
                         .getMainLogicDefinition()
                         .logicTags()
                         .get(VajramTags.VAJRAM_ID))
+                .map(
+                    tag -> {
+                      if (tag instanceof AnnotationTag<?> anno) {
+                        if (anno.annotation() instanceof NamedValueTag namedValueTag) {
+                          return namedValueTag.value();
+                        }
+                      }
+                      return null;
+                    })
                 .orElseThrow(
                     () ->
                         new NoSuchElementException(
                             "Could not find tag %s for kryon %s"
-                                .formatted(VajramTags.VAJRAM_ID, defaultDependantChain.kryonId())))
-                .tagValue();
+                                .formatted(VajramTags.VAJRAM_ID, defaultDependantChain.kryonId())));
         return generateInstanceId(defaultDependantChain.dependantChain(), kryonDefinitionRegistry)
             .append('>')
             .append(vajramId)

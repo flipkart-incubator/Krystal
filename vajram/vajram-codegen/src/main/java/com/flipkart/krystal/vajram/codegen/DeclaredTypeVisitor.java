@@ -25,19 +25,20 @@ import javax.lang.model.util.AbstractTypeVisitor14;
 import javax.tools.Diagnostic.Kind;
 import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
 
-class FacetFieldTypeVisitor extends AbstractTypeVisitor14<DataType<?>, Void> {
+class DeclaredTypeVisitor extends AbstractTypeVisitor14<DataType<?>, Void> {
   private final ProcessingEnvironment processingEnv;
-  private final boolean root;
+  private final boolean ignoreFirstOptional;
   private final Element element;
 
-  @NotOnlyInitialized private final FacetFieldTypeVisitor subVisitor;
+  @NotOnlyInitialized private final DeclaredTypeVisitor subVisitor;
 
-  FacetFieldTypeVisitor(ProcessingEnvironment processingEnv, boolean root, Element element) {
+  DeclaredTypeVisitor(
+      ProcessingEnvironment processingEnv, boolean ignoreFirstOptional, Element element) {
     this.processingEnv = processingEnv;
-    this.root = root;
+    this.ignoreFirstOptional = ignoreFirstOptional;
     this.element = element;
-    if (root) {
-      this.subVisitor = new FacetFieldTypeVisitor(processingEnv, false, element);
+    if (ignoreFirstOptional) {
+      this.subVisitor = new DeclaredTypeVisitor(processingEnv, false, element);
     } else {
       this.subVisitor = this;
     }
@@ -53,7 +54,7 @@ class FacetFieldTypeVisitor extends AbstractTypeVisitor14<DataType<?>, Void> {
             .getMessager()
             .printMessage(Kind.ERROR, "Optional<Optional<..>> is not supported", element);
       }
-      if (root) {
+      if (ignoreFirstOptional) {
         return subVisitor.visit(optionalOf);
       }
     }

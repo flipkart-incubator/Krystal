@@ -1,19 +1,21 @@
 package com.flipkart.krystal.datatypes;
 
+import static com.flipkart.krystal.datatypes.TypeUtils.box;
 import static com.flipkart.krystal.datatypes.TypeUtils.getJavaType;
 
 import com.google.common.primitives.Primitives;
 import java.lang.reflect.Type;
-import java.util.Optional;
 import java.util.Set;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public final class SetType<T> implements DataType<Set<T>> {
+@EqualsAndHashCode(callSuper = false)
+public final class SetType<T> extends AbstractDataType<Set<T>> {
 
   public static final Class<?> COLLECTION_TYPE = Set.class;
 
@@ -24,18 +26,13 @@ public final class SetType<T> implements DataType<Set<T>> {
   }
 
   @Override
-  public Optional<Type> javaReflectType() {
-    return typeParam
-        .javaReflectType()
-        .map(
-            t -> {
-              if (t instanceof Class<?> clazz) {
-                return Primitives.wrap(clazz);
-              } else {
-                return t;
-              }
-            })
-        .map(t -> getJavaType(COLLECTION_TYPE, t));
+  public Type javaReflectType() throws ClassNotFoundException {
+    Type t = typeParam.javaReflectType();
+    if (t instanceof Class<?> clazz) {
+      return getJavaType(COLLECTION_TYPE, Primitives.wrap(clazz));
+    } else {
+      return getJavaType(COLLECTION_TYPE, t);
+    }
   }
 
   @Override
@@ -44,6 +41,6 @@ public final class SetType<T> implements DataType<Set<T>> {
         processingEnv.getElementUtils().getTypeElement(COLLECTION_TYPE.getName());
     return processingEnv
         .getTypeUtils()
-        .getDeclaredType(typeElement, typeParam.javaModelType(processingEnv));
+        .getDeclaredType(typeElement, box(typeParam.javaModelType(processingEnv), processingEnv));
   }
 }

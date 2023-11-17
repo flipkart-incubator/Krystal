@@ -234,7 +234,7 @@ public final class VajramCodeGenFacade {
 
     //noinspection ClassLoaderInstantiation
     try (URLClassLoader urlcl = new URLClassLoader(urls.toArray(URL[]::new), systemClassLoader)) {
-      Map<String, VajramInfoLite> vajramDefs = new HashMap<>();
+      Map<VajramID, VajramInfoLite> vajramDefs = new HashMap<>();
       // The input defs are first fetched from config file. If
       // it is not found, then the VajramImpl class is loaded and "getInputDefinitions" method is
       // invoked to fetch the vajram input definitions
@@ -245,7 +245,8 @@ public final class VajramCodeGenFacade {
               log.warn("VajramImpl codegen will be skipped for {}. ", vajramInfo.vajramId());
             } else {
               String vajramName = parsedVajramData.get().vajramName();
-              vajramDefs.put(vajramName, new VajramInfoLite(vajramName, vajramInfo.responseType()));
+              vajramDefs.put(
+                  VajramID.vajramID(vajramName), new VajramInfoLite(vajramName, (TypeName) NIL));
             }
           });
       // add vajram input dependency vajram definitions from dependent modules/jars
@@ -256,15 +257,7 @@ public final class VajramCodeGenFacade {
                 .forEach(
                     inputDef -> {
                       if (inputDef instanceof DependencyModel dependency) {
-                        String depVajramClass =
-                            dependency
-                                .depVajramId()
-                                .className()
-                                .orElseThrow(
-                                    () ->
-                                        new VajramValidationException(
-                                            "Vajram class missing in VajramInputDefinition for :"
-                                                + dependency.depVajramId()));
+                        String depVajramClass = dependency.depVajramId().vajramId();
                         String[] splits = Constants.DOT_PATTERN.split(depVajramClass);
                         String vajramName = splits[splits.length - 1];
                         if (!vajramDefs.containsKey(vajramName)) {
@@ -272,7 +265,7 @@ public final class VajramCodeGenFacade {
                             Class<? extends Vajram<?>> vajramClass =
                                 (Class<? extends Vajram<?>>) urlcl.loadClass(depVajramClass);
                             vajramDefs.put(
-                                vajramName,
+                                VajramID.vajramID(vajramName),
                                 new VajramInfoLite(
                                     vajramName, TypeName.get(getVajramResponseType(vajramClass))));
                           } catch (ClassNotFoundException e) {
@@ -285,7 +278,7 @@ public final class VajramCodeGenFacade {
       vajramInfos.forEach(
           vajramInfo -> {
             // check to call VajramImpl codegen if Vajram class exists
-            if (vajramDefs.containsKey(vajramInfo.vajramId().vajramId())) {
+            if (vajramDefs.containsKey(vajramInfo.vajramId())) {
               try {
                 VajramCodeGenerator vajramCodeGenerator =
                     new VajramCodeGenerator(vajramInfo, vajramDefs, (ProcessingEnvironment) NIL);

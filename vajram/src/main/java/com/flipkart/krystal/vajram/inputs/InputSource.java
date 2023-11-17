@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.inputs;
 
 public enum InputSource {
-  /** The input can be provided by clients of a vajram */
+  /** The input can be provided by clients of the vajram */
   CLIENT,
-  /** The input can be provided by the platform runtime session */
+  /** The input can be provided (injected) by the platform runtime session */
   SESSION
 }

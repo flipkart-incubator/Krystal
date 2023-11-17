@@ -19,9 +19,11 @@ import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.inputs.Input;
 import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.flipkart.krystal.vajram.inputs.VajramFacetDefinition;
+import com.flipkart.krystal.vajram.tags.AnnotationTag;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import jakarta.inject.Named;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,7 +37,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class InputInjector implements MainLogicDecorator {
 
   public static final String DECORATOR_TYPE = InputInjector.class.getName();
-  public static final String INJECT_NAMED_KEY = "inject.named";
   @NotOnlyInitialized private final VajramKryonGraph vajramKryonGraph;
   private final @Nullable InputInjectionProvider inputInjectionProvider;
 
@@ -89,12 +90,14 @@ public final class InputInjector implements MainLogicDecorator {
 
   private Inputs injectFromSession(@Nullable VajramDefinition vajramDefinition, Inputs inputs) {
     Map<String, InputValue<Object>> newValues = new HashMap<>();
+    ImmutableMap<String, ImmutableMap<Object, Tag>> facetTags =
+        vajramDefinition == null ? ImmutableMap.of() : vajramDefinition.getFacetTags();
     Optional.ofNullable(vajramDefinition)
         .map(VajramDefinition::getVajram)
         .map(Vajram::getInputDefinitions)
         .ifPresent(
-            inputDefinitions -> {
-              for (VajramFacetDefinition inputDefinition : inputDefinitions) {
+            facetDefinitions -> {
+              for (VajramFacetDefinition inputDefinition : facetDefinitions) {
                 String inputName = inputDefinition.name();
                 if (inputDefinition instanceof Input<?> input) {
                   if (input.sources().contains(InputSource.CLIENT)) {
@@ -106,12 +109,21 @@ public final class InputInjector implements MainLogicDecorator {
                     // by SESSION
                   }
                   if (input.sources().contains(InputSource.SESSION)) {
+                    ImmutableMap<Object, Tag> inputTags =
+                        facetTags.getOrDefault(inputName, ImmutableMap.of());
                     ValueOrError<Object> value =
                         getFromInjectionAdaptor(
                             input.type(),
-                            Optional.ofNullable(input.tags())
-                                .map(tags -> tags.get(INJECT_NAMED_KEY))
-                                .map(Tag::tagValue)
+                            Optional.ofNullable(inputTags.get(Named.class))
+                                .map(
+                                    tag -> {
+                                      if (tag instanceof AnnotationTag<?> anno) {
+                                        if (anno.annotation() instanceof Named named) {
+                                          return named.value();
+                                        }
+                                      }
+                                      return null;
+                                    })
                                 .orElse(null));
                     newValues.put(inputName, value);
                   }
@@ -133,18 +145,21 @@ public final class InputInjector implements MainLogicDecorator {
           new Exception("Dependency injector is null, cannot resolve SESSION input"));
     }
 
-    if (dataType == null || dataType.javaReflectType().isEmpty()) {
+    if (dataType == null) {
       return ValueOrError.withError(new Exception("Data type not found"));
     }
-    Optional<Type> type = dataType.javaReflectType();
+    Type type;
+    try {
+      type = dataType.javaReflectType();
+    } catch (ClassNotFoundException e) {
+      return ValueOrError.withError(e);
+    }
     @Nullable Object resolvedObject = null;
-    if (type.isPresent()) {
-      if (injectionName != null) {
-        resolvedObject = inputInjectionProvider.getInstance((Class<?>) type.get(), injectionName);
-      }
-      if (resolvedObject == null) {
-        resolvedObject = inputInjectionProvider.getInstance(((Class<?>) type.get()));
-      }
+    if (injectionName != null) {
+      resolvedObject = inputInjectionProvider.getInstance((Class<?>) type, injectionName);
+    }
+    if (resolvedObject == null) {
+      resolvedObject = inputInjectionProvider.getInstance(((Class<?>) type));
     }
     return ValueOrError.withValue(resolvedObject);
   }

@@ -5,6 +5,7 @@ import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_CLASS_S
 import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_NEEDING_MODULATION;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.flipkart.krystal.datatypes.DataType;
 import com.google.common.base.CaseFormat;
 import com.google.common.primitives.Primitives;
 import com.squareup.javapoet.ClassName;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
@@ -40,10 +42,12 @@ public final class CodegenUtils {
   public static final String CONVERTER = "CONVERTER";
   private final Types typeUtils;
   private final Elements elementUtils;
+  private final ProcessingEnvironment processingEnv;
 
-  public CodegenUtils(Types typeUtils, Elements elementUtils) {
-    this.typeUtils = typeUtils;
-    this.elementUtils = elementUtils;
+  public CodegenUtils(ProcessingEnvironment processingEnv) {
+    this.typeUtils = processingEnv.getTypeUtils();
+    this.elementUtils = processingEnv.getElementUtils();
+    this.processingEnv = processingEnv;
   }
 
   public static String getPackageFromPath(Path filePath) {
@@ -101,7 +105,7 @@ public final class CodegenUtils {
 
   public static TypeName getMethodReturnType(Method method) {
     if (method.getGenericReturnType() instanceof ParameterizedType) {
-      return getType(method.getGenericReturnType());
+      return toTypeName(method.getGenericReturnType());
     } else {
       return TypeName.get(method.getReturnType());
     }
@@ -114,19 +118,19 @@ public final class CodegenUtils {
       if (actualTypeArguments.length == 1) {
         if (actualTypeArguments[0] instanceof ParameterizedType) {
           return ParameterizedTypeName.get(
-              (ClassName) getType(((ParameterizedType) actualTypeArguments[0]).getRawType()),
+              (ClassName) toTypeName(((ParameterizedType) actualTypeArguments[0]).getRawType()),
               Arrays.stream(((ParameterizedType) actualTypeArguments[0]).getActualTypeArguments())
-                  .map(CodegenUtils::getType)
+                  .map(CodegenUtils::toTypeName)
                   .toArray(TypeName[]::new));
         } else {
-          return getType(actualTypeArguments[0]);
+          return toTypeName(actualTypeArguments[0]);
         }
       } else {
         return ParameterizedTypeName.get(
-            (ClassName) getType(actualTypeArguments[0]),
+            (ClassName) toTypeName(actualTypeArguments[0]),
             Arrays.stream(actualTypeArguments)
                 .skip(1)
-                .map(CodegenUtils::getType)
+                .map(CodegenUtils::toTypeName)
                 .toArray(TypeName[]::new));
       }
     } else {
@@ -134,13 +138,21 @@ public final class CodegenUtils {
     }
   }
 
-  public static TypeName getType(Type typeArg) {
+  public TypeName toTypeName(DataType<?> dataType) {
+    return TypeName.get(toTypeMirror(dataType));
+  }
+
+  public TypeMirror toTypeMirror(DataType<?> dataType) {
+    return dataType.javaModelType(processingEnv);
+  }
+
+  public static TypeName toTypeName(Type typeArg) {
     if (typeArg instanceof ParameterizedType parameterizedType) {
       final Type rawType = parameterizedType.getRawType();
       final Type[] typeArgs = parameterizedType.getActualTypeArguments();
       return ParameterizedTypeName.get(
-          (ClassName) getType(rawType),
-          Arrays.stream(typeArgs).map(CodegenUtils::getType).toArray(TypeName[]::new));
+          (ClassName) toTypeName(rawType),
+          Arrays.stream(typeArgs).map(CodegenUtils::toTypeName).toArray(TypeName[]::new));
     } else {
       if (typeArg instanceof Class<?>) {
         return ClassName.get(Primitives.wrap((Class<?>) typeArg));

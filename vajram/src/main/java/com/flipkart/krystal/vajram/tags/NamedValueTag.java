@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram;
+package com.flipkart.krystal.vajram.tags;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,8 +7,10 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-public @interface TagWith {
+public @interface NamedValueTag {
   String name();
 
   String value();
+
+
 }

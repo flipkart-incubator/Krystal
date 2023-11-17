@@ -13,7 +13,7 @@ public final class ResolverLogicDefinition extends LogicDefinition<ResolverLogic
       KryonLogicId kryonLogicId,
       Set<String> inputNames,
       ResolverLogic resolverLogic,
-      ImmutableMap<String, Tag> logicTags) {
+      ImmutableMap<Object, Tag> logicTags) {
     super(kryonLogicId, inputNames, logicTags, resolverLogic);
   }
 

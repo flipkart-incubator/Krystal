@@ -1,12 +1,14 @@
 package com.flipkart.krystal.datatypes;
 
+import static javax.lang.model.type.TypeKind.INT;
+
 import java.lang.reflect.Type;
 import java.util.Optional;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.type.TypeMirror;
 
 @SuppressWarnings("Singleton")
-public final class IntegerType implements DataType<Integer> {
+public final class IntegerType extends AbstractDataType<Integer> {
 
   private static final IntegerType INSTANCE = new IntegerType();
 
@@ -17,12 +19,12 @@ public final class IntegerType implements DataType<Integer> {
   private IntegerType() {}
 
   @Override
-  public Optional<Type> javaReflectType() {
-    return Optional.of(Integer.TYPE);
+  public Class<Integer> javaReflectType() {
+    return Integer.TYPE;
   }
 
   @Override
   public TypeMirror javaModelType(ProcessingEnvironment processingEnv) {
-    return processingEnv.getElementUtils().getTypeElement(Integer.class.getName()).asType();
+    return processingEnv.getTypeUtils().getPrimitiveType(INT);
   }
 }

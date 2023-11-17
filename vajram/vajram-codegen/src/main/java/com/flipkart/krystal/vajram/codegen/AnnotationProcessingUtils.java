@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.codegen;
 
-import static com.flipkart.krystal.vajram.codegen.FacetFieldTypeVisitor.isOptional;
+import static com.flipkart.krystal.vajram.VajramID.vajramID;
+import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.REQUEST_SUFFIX;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.stream.Collectors.toMap;
@@ -19,23 +20,31 @@ import com.flipkart.krystal.vajram.codegen.models.InputModel.InputModelBuilder;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfoLite;
 import com.flipkart.krystal.vajram.codegen.utils.CodegenUtils;
+import com.flipkart.krystal.vajram.inputs.InputSource;
 import com.squareup.javapoet.TypeName;
+import jakarta.inject.Inject;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Supplier;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.PackageElement;
+import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
+import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.JavaFileObject;
@@ -45,12 +54,15 @@ public class AnnotationProcessingUtils {
   private final RoundEnvironment roundEnv;
   private final ProcessingEnvironment processingEnv;
   private final CodegenUtils codegenUtils;
+  private final Types typeUtils;
+  private final Elements elementUtils;
 
   public AnnotationProcessingUtils(RoundEnvironment roundEnv, ProcessingEnvironment processingEnv) {
     this.roundEnv = roundEnv;
     this.processingEnv = processingEnv;
-    this.codegenUtils =
-        new CodegenUtils(processingEnv.getTypeUtils(), processingEnv.getElementUtils());
+    this.codegenUtils = new CodegenUtils(processingEnv);
+    this.typeUtils = processingEnv.getTypeUtils();
+    this.elementUtils = processingEnv.getElementUtils();
   }
 
   List<TypeElement> getVajramClasses() {
@@ -61,18 +73,15 @@ public class AnnotationProcessingUtils {
   }
 
   VajramCodeGenerator createCodeGenerator(VajramInfo vajramInfo) {
-    return new VajramCodeGenerator(
-        vajramInfo,
-        vajramInfo.dependencies().stream()
-            .map(DependencyModel::depVajramId)
-            .collect(
-                toMap(
-                    VajramID::vajramId,
-                    vajramId ->
-                        new VajramInfoLite(
-                            vajramId.vajramId(),
-                            TypeName.get(vajramId.responseType().javaModelType(processingEnv))))),
-        processingEnv);
+    Map<VajramID, VajramInfoLite> map = new HashMap<>();
+    for (DependencyModel depModel : vajramInfo.dependencies()) {
+      map.put(
+          depModel.depVajramId(),
+          new VajramInfoLite(
+              depModel.depVajramId().vajramId(),
+              TypeName.get(depModel.depVajramId().responseType().javaModelType(processingEnv))));
+    }
+    return new VajramCodeGenerator(vajramInfo, map, processingEnv);
   }
 
   void generateSourceFile(String className, String code, TypeElement vajramDefinition) {
@@ -92,13 +101,15 @@ public class AnnotationProcessingUtils {
   }
 
   public VajramInfo computeVajramInfo(TypeElement vajramClass) {
-    note("Did not find .vajram.yaml file. Will use annotated fields to generate models");
     VajramID vajramId = getVajramId(vajramClass);
     List<? extends Element> enclosedElements = vajramClass.getEnclosedElements();
     List<VariableElement> fields = ElementFilter.fieldsIn(enclosedElements);
     List<VariableElement> inputFields =
         fields.stream()
-            .filter(variableElement -> variableElement.getAnnotation(Input.class) != null)
+            .filter(
+                variableElement ->
+                    variableElement.getAnnotation(Input.class) != null
+                        || variableElement.getAnnotation(Inject.class) != null)
             .toList();
     List<VariableElement> dependencyFields =
         fields.stream()
@@ -120,71 +131,55 @@ public class AnnotationProcessingUtils {
                           inputField
                               .asType()
                               .accept(
-                                  new FacetFieldTypeVisitor(processingEnv, true, inputField), null);
+                                  new DeclaredTypeVisitor(processingEnv, true, inputField), null);
                       inputBuilder.type(dataType);
-                      inputBuilder.needsModulation(
-                          inputField.getAnnotation(Input.class).modulated());
+                      Optional<Input> inputAnno =
+                          Optional.ofNullable(inputField.getAnnotation(Input.class));
+                      Set<InputSource> sources = new LinkedHashSet<>();
+                      if (inputAnno.isPresent()) {
+                        inputBuilder.needsModulation(inputAnno.get().modulated());
+                        sources.add(InputSource.CLIENT);
+                      }
+                      if (inputField.getAnnotation(Inject.class) != null) {
+                        sources.add(InputSource.SESSION);
+                      }
+                      inputBuilder.sources(sources);
                       return inputBuilder.build();
                     })
                 .collect(toImmutableList()),
             dependencyFields.stream()
-                .map(
-                    depField -> {
-                      DependencyModelBuilder depBuilder = DependencyModel.builder();
-                      depBuilder.name(depField.getSimpleName().toString());
-                      depBuilder.isMandatory(!isOptional(depField.asType(), processingEnv));
-                      Dependency dependency = depField.getAnnotation(Dependency.class);
-                      VajramID depVajramId =
-                          getDepGenModel(vajramId.vajramId(), depField).depVajramId();
-                      Optional<TypeMirror> vajramReqType =
-                          getTypeFromAnnotationMember(dependency::withVajramReq);
-                      Optional<TypeMirror> vajramType =
-                          getTypeFromAnnotationMember(dependency::onVajram);
-                      TypeMirror vajramOrReqType =
-                          vajramReqType
-                              .or(() -> vajramType)
-                              .orElseThrow(
-                                  () -> {
-                                    log(
-                                        Kind.ERROR,
-                                        "At least one of `onVajram` or `withVajramReq` is needed in dependency declaration '%s' of vajram '%s'"
-                                            .formatted(depField.getSimpleName(), vajramId),
-                                        depField);
-                                    return new RuntimeException("Invalid Dependency specification");
-                                  });
-                      if (vajramReqType.isPresent() && vajramType.isPresent()) {
-                        log(
-                            Kind.ERROR,
-                            ("Both `onVajram` or `withVajramReq` cannot be set."
-                                    + " Please set only one of them for dependency '%s' of vajram '%s'")
-                                .formatted(depField.getSimpleName(), vajramId),
-                            depField);
-                      } else {
-                        depBuilder
-                            .depVajramId(depVajramId)
-                            .depReqClassName(
-                                getVajramReqClassName(
-                                    (TypeElement)
-                                        processingEnv.getTypeUtils().asElement(vajramOrReqType)))
-                            .canFanout(dependency.canFanout());
-                        return depBuilder.build();
-                      }
-                      throw new RuntimeException("Invalid Dependency specification");
-                    })
+                .map(depField -> toDependencyModel(vajramId.vajramId(), depField))
                 .collect(toImmutableList()),
-            getResponseType(vajramClass),
             vajramClass);
     note("VajramInfo: %s".formatted(vajramInfo));
     return vajramInfo;
   }
 
-  private DependencyModel getDepGenModel(String vajramId, VariableElement depField) {
+  private DependencyModel toDependencyModel(String vajramId, VariableElement depField) {
     Dependency dependency = depField.getAnnotation(Dependency.class);
     DependencyModelBuilder depBuilder = DependencyModel.builder();
     depBuilder.name(depField.getSimpleName().toString());
     depBuilder.isMandatory(!isOptional(depField.asType(), processingEnv));
-    Optional<TypeMirror> vajramReqType = getTypeFromAnnotationMember(dependency::withVajramReq);
-    Optional<TypeMirror> vajramType = getTypeFromAnnotationMember(dependency::onVajram);
+    Optional<TypeMirror> vajramReqType =
+        getTypeFromAnnotationMember(dependency::withVajramReq)
+            .filter(
+                typeMirror ->
+                    !((QualifiedNameable) typeUtils.asElement(typeMirror))
+                        .getQualifiedName()
+                        .equals(
+                            elementUtils
+                                .getTypeElement(VajramRequest.class.getName())
+                                .getQualifiedName()));
+    Optional<TypeMirror> vajramType =
+        getTypeFromAnnotationMember(dependency::onVajram)
+            .filter(
+                typeMirror ->
+                    !((QualifiedNameable) typeUtils.asElement(typeMirror))
+                        .getQualifiedName()
+                        .equals(
+                            elementUtils
+                                .getTypeElement(Vajram.class.getName())
+                                .getQualifiedName()));
     TypeMirror vajramOrReqType =
         vajramReqType
             .or(() -> vajramType)
@@ -200,38 +195,58 @@ public class AnnotationProcessingUtils {
     if (vajramReqType.isPresent() && vajramType.isPresent()) {
       log(
           Kind.ERROR,
-          ("Both `onVajram` or `withVajramReq` cannot be set."
-                  + " Please set only one of them for dependency '%s' of vajram '%s'")
-              .formatted(depField.getSimpleName(), vajramId),
+          ("Both `withVajramReq` or `onVajram` cannot be set."
+                  + " Please set only one of them for dependency '%s' of vajram '%s'."
+                  + " Found withVajramReq=%s and onVajram=%s")
+              .formatted(depField.getSimpleName(), vajramId, vajramReqType.get(), vajramType.get()),
           depField);
     } else {
+      DataType<?> declaredDataType =
+          new DeclaredTypeVisitor(processingEnv, true, depField).visit(depField.asType());
       TypeElement vajramOrReqElement =
           (TypeElement) processingEnv.getTypeUtils().asElement(vajramOrReqType);
+      VajramID depVajramId = getVajramId(vajramOrReqElement);
       depBuilder
-          .depVajramId(getVajramId(vajramOrReqElement))
+          .depVajramId(depVajramId)
           .depReqClassName(getVajramReqClassName(vajramOrReqElement))
           .canFanout(dependency.canFanout());
+      if (!declaredDataType.equals(depVajramId.responseType())) {
+        log(
+            Kind.ERROR,
+            "Declared dependency type %s does not match dependency vajram response type %s"
+                .formatted(declaredDataType, depVajramId.responseType()),
+            depField);
+      }
+
       return depBuilder.build();
     }
     throw new RuntimeException("Invalid Dependency specification");
   }
 
-  private VajramID getVajramId(TypeElement vajramClass) {
-    String vajramClassName = vajramClass.getSimpleName().toString();
-    if (codegenUtils.isRawAssignable(vajramClass.asType(), Vajram.class)) {
-      VajramDef vajramDef = vajramClass.getAnnotation(VajramDef.class);
+  private VajramID getVajramId(TypeElement vajramOrReqClass) {
+    String vajramClassSimpleName = vajramOrReqClass.getSimpleName().toString();
+    if (codegenUtils.isRawAssignable(vajramOrReqClass.asType(), VajramRequest.class)) {
+      TypeMirror responseType = getResponseType(vajramOrReqClass, VajramRequest.class);
+      TypeElement responseTypeElement = (TypeElement) typeUtils.asElement(responseType);
+      return vajramID(
+          vajramClassSimpleName.substring(
+              0, vajramClassSimpleName.length() - REQUEST_SUFFIX.length()),
+          new DeclaredTypeVisitor(processingEnv, false, responseTypeElement).visit(responseType));
+    } else if (codegenUtils.isRawAssignable(vajramOrReqClass.asType(), Vajram.class)) {
+      TypeMirror responseType = getResponseType(vajramOrReqClass, Vajram.class);
+      TypeElement responseTypeElement = (TypeElement) typeUtils.asElement(responseType);
+      VajramDef vajramDef = vajramOrReqClass.getAnnotation(VajramDef.class);
       String vajramId = vajramDef.value();
       if (vajramId.isEmpty()) {
-        vajramId = vajramClassName;
+        vajramId = vajramClassSimpleName;
       }
-      return VajramID.vajramID(vajramId);
-    } else if (codegenUtils.isRawAssignable(vajramClass.asType(), VajramRequest.class)) {
-      return VajramID.vajramID(
-          vajramClassName.substring(0, vajramClassName.length() - REQUEST_SUFFIX.length()));
+      return vajramID(
+          vajramId,
+          new DeclaredTypeVisitor(processingEnv, false, responseTypeElement).visit(responseType));
     } else {
       throw new IllegalArgumentException(
           "Unknown class hierarchy of vajram class %s. Expected %s or %s"
-              .formatted(vajramClass, Vajram.class, VajramRequest.class));
+              .formatted(vajramOrReqClass, Vajram.class, VajramRequest.class));
     }
   }
 
@@ -254,7 +269,8 @@ public class AnnotationProcessingUtils {
     }
   }
 
-  private TypeName getResponseType(TypeElement vajramDef) {
+  private TypeMirror getResponseType(TypeElement vajramDef, Class<?> targetClass) {
+    int typeParamIndex = 0;
     List<TypeMirror> currentTypes = List.of(vajramDef.asType());
     note("VajramDef: %s".formatted(vajramDef));
 
@@ -274,7 +290,7 @@ public class AnnotationProcessingUtils {
           Element element = typeUtils.asElement(superType);
           if (element instanceof TypeElement typeElement) {
             note("Element qualified name: %s".formatted(typeElement.getQualifiedName()));
-            if (typeElement.getQualifiedName().contentEquals(Vajram.class.getName())) {
+            if (typeElement.getQualifiedName().contentEquals(targetClass.getName())) {
               vajramInterface = superType;
               break;
             }
@@ -288,8 +304,8 @@ public class AnnotationProcessingUtils {
     } while (!currentTypes.isEmpty() && vajramInterface == null);
     if (vajramInterface != null) {
       List<? extends TypeMirror> typeParameters = vajramInterface.getTypeArguments();
-      if (typeParameters.size() == 1) {
-        return TypeName.get(typeParameters.get(0));
+      if (typeParameters.size() > typeParamIndex) {
+        return typeParameters.get(typeParamIndex);
       } else {
         log(
             Kind.ERROR,

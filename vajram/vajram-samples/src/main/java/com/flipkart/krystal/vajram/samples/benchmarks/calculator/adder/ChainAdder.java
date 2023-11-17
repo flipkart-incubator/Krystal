@@ -23,19 +23,19 @@ import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdde
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-@VajramDef(ChainAdder.ID)
+@VajramDef
+@SuppressWarnings("initialization.field.uninitialized")
 public abstract class ChainAdder extends ComputeVajram<Integer> {
-
-  public static final String ID = "chainAdder";
 
   @Input List<Integer> numbers;
 
-  @Dependency(value = ID, canFanout = true)
-  Integer chainSum;
+  @Dependency(onVajram = ChainAdder.class, canFanout = true)
+  int chainSum;
 
-  @Dependency(Adder.ID)
-  Integer sum;
+  @Dependency(onVajram = Adder.class)
+  Optional<Integer> sum;
 
   @Resolve(depName = chainSum_n, depInputs = numbers_n)
   public static MultiExecute<List<Integer>> numbersForSubChainer(
@@ -78,7 +78,7 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
   }
 
   @VajramLogic
-  public static Integer add(ChainAdderInputs allInputs) {
+  static Integer add(ChainAdderInputs allInputs) {
     return allInputs.sum().orElse(0)
         + allInputs.chainSum().values().stream().mapToInt(value -> value.value().orElse(0)).sum();
   }
