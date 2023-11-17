@@ -41,7 +41,6 @@ class VajramPlugin implements Plugin<Project> {
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
             options.generatedSourceOutputDirectory.fileValue(project.file(mainGeneratedSrcDir))
-            options.compilerArgs += ['-proc:only']
             doFirst {
                 project.logger.error("Creating krystal_build_phase.txt in ${mainGeneratedSrcDir} with text '${BuildPhase.CODEGEN_MODELS}'")
                 new File(mainGeneratedSrcDir, buildPhaseFile).text = BuildPhase.CODEGEN_MODELS.name()
@@ -64,7 +63,6 @@ class VajramPlugin implements Plugin<Project> {
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
             options.generatedSourceOutputDirectory.fileValue(project.file(mainGeneratedSrcDir))
-            options.compilerArgs += ['-proc:only']
             doFirst {
                 project.logger.error("Creating krystal_build_phase.txt in ${mainGeneratedSrcDir} with text '${BuildPhase.CODEGEN_IMPLS}'")
                 new File(mainGeneratedSrcDir, buildPhaseFile).text = BuildPhase.CODEGEN_IMPLS.name()

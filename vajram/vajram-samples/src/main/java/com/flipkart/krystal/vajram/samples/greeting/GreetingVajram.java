@@ -25,6 +25,8 @@ import java.util.Optional;
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class GreetingVajram extends ComputeVajram<String> {
 
+  public static final String ID = GreetingVajram.class.getSimpleName();
+
   @Input String userId;
 
   @Inject Optional<Logger> log;

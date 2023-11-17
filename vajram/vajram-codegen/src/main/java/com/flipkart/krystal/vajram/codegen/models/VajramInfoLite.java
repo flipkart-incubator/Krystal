@@ -1,5 +1,5 @@
 package com.flipkart.krystal.vajram.codegen.models;
 
-import com.squareup.javapoet.TypeName;
+import com.flipkart.krystal.datatypes.DataType;
 
-public record VajramInfoLite(String vajramName, TypeName responseType) {}
+public record VajramInfoLite(String vajramId, DataType<?> responseType) {}

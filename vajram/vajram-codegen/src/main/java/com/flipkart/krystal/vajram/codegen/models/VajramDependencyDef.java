@@ -16,7 +16,7 @@ public final class VajramDependencyDef extends DependencyDef {
 
   @Override
   public DataAccessSpec toDataAccessSpec() {
-    return VajramID.vajramID(vajramClass, toDataType());
+    return VajramID.vajramID(vajramClass);
   }
 
   @Override

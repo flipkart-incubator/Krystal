@@ -6,6 +6,7 @@ import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.nio.file.StandardOpenOption.WRITE;
 
+import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Vajram;
@@ -246,7 +247,7 @@ public final class VajramCodeGenFacade {
             } else {
               String vajramName = parsedVajramData.get().vajramName();
               vajramDefs.put(
-                  VajramID.vajramID(vajramName), new VajramInfoLite(vajramName, (TypeName) NIL));
+                  VajramID.vajramID(vajramName), new VajramInfoLite(vajramName, (DataType<?>) NIL));
             }
           });
       // add vajram input dependency vajram definitions from dependent modules/jars
@@ -266,8 +267,7 @@ public final class VajramCodeGenFacade {
                                 (Class<? extends Vajram<?>>) urlcl.loadClass(depVajramClass);
                             vajramDefs.put(
                                 VajramID.vajramID(vajramName),
-                                new VajramInfoLite(
-                                    vajramName, TypeName.get(getVajramResponseType(vajramClass))));
+                                new VajramInfoLite(vajramName, (DataType<?>) NIL));
                           } catch (ClassNotFoundException e) {
                             throw new RuntimeException(e);
                           }
