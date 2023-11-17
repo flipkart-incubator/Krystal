@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator;
 
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
+import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder.add;
@@ -42,7 +43,8 @@ class FormulaTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputModulators(
-        vajramID(Adder.ID), InputModulatorConfig.simple(() -> new Batcher<>(100)));
+        vajramID(getVajramIdString(Adder.class)),
+        InputModulatorConfig.simple(() -> new Batcher<>(100)));
     try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
         graph.createExecutor(new FormulaRequestContext(100, 20, 5, "formulaTest"))) {
       future = executeVajram(krystexVajramExecutor, 0);
@@ -123,7 +125,8 @@ class FormulaTest {
     int loopCount = outerLoopCount * innerLoopCount;
     VajramKryonGraph graph = this.graph.maxParallelismPerCore(1).build();
     graph.registerInputModulators(
-        vajramID(Adder.ID), InputModulatorConfig.simple(() -> new Batcher<>(innerLoopCount)));
+        vajramID(getVajramIdString(Adder.class)),
+        InputModulatorConfig.simple(() -> new Batcher<>(innerLoopCount)));
     long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
     long javaFuturesTimeNs = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
     //noinspection unchecked
@@ -204,7 +207,7 @@ class FormulaTest {
   private static CompletableFuture<Integer> executeVajram(
       KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor, int value) {
     return krystexVajramExecutor.execute(
-        vajramID(Formula.ID),
+        vajramID(getVajramIdString(Formula.class)),
         rc -> FormulaRequest.builder().a(rc.a + value).p(rc.p + value).q(rc.q + value).build(),
         KryonExecutionConfig.builder().executionId("formulaTest" + value).build());
   }

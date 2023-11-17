@@ -19,6 +19,7 @@ dependencies {
 
     def jacksonVersion = '2.14.2'
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations:' + jacksonVersion
+    testImplementation 'com.google.inject:guice:7.0.0'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind:' + jacksonVersion
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:' + jacksonVersion
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jacksonVersion

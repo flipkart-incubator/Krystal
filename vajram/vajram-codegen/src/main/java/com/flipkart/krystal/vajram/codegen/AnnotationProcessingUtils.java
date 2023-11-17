@@ -21,7 +21,6 @@ import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfoLite;
 import com.flipkart.krystal.vajram.codegen.utils.CodegenUtils;
 import com.flipkart.krystal.vajram.inputs.InputSource;
-import com.squareup.javapoet.TypeName;
 import jakarta.inject.Inject;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -77,9 +76,7 @@ public class AnnotationProcessingUtils {
     for (DependencyModel depModel : vajramInfo.dependencies()) {
       map.put(
           depModel.depVajramId(),
-          new VajramInfoLite(
-              depModel.depVajramId().vajramId(),
-              TypeName.get(depModel.depVajramId().responseType().javaModelType(processingEnv))));
+          new VajramInfoLite(depModel.depVajramId().vajramId(), depModel.responseType()));
     }
     return new VajramCodeGenerator(vajramInfo, map, processingEnv);
   }
@@ -101,7 +98,7 @@ public class AnnotationProcessingUtils {
   }
 
   public VajramInfo computeVajramInfo(TypeElement vajramClass) {
-    VajramID vajramId = getVajramId(vajramClass);
+    VajramInfoLite vajramInfoLite = getVajramInfoLite(vajramClass);
     List<? extends Element> enclosedElements = vajramClass.getEnclosedElements();
     List<VariableElement> fields = ElementFilter.fieldsIn(enclosedElements);
     List<VariableElement> inputFields =
@@ -119,7 +116,8 @@ public class AnnotationProcessingUtils {
     String packageName = enclosingElement.getQualifiedName().toString();
     VajramInfo vajramInfo =
         new VajramInfo(
-            vajramId,
+            vajramID(vajramInfoLite.vajramId()),
+            vajramInfoLite.responseType(),
             packageName,
             inputFields.stream()
                 .map(
@@ -148,7 +146,7 @@ public class AnnotationProcessingUtils {
                     })
                 .collect(toImmutableList()),
             dependencyFields.stream()
-                .map(depField -> toDependencyModel(vajramId.vajramId(), depField))
+                .map(depField -> toDependencyModel(vajramInfoLite.vajramId(), depField))
                 .collect(toImmutableList()),
             vajramClass);
     note("VajramInfo: %s".formatted(vajramInfo));
@@ -205,9 +203,9 @@ public class AnnotationProcessingUtils {
           new DeclaredTypeVisitor(processingEnv, true, depField).visit(depField.asType());
       TypeElement vajramOrReqElement =
           (TypeElement) processingEnv.getTypeUtils().asElement(vajramOrReqType);
-      VajramID depVajramId = getVajramId(vajramOrReqElement);
+      VajramInfoLite depVajramId = getVajramInfoLite(vajramOrReqElement);
       depBuilder
-          .depVajramId(depVajramId)
+          .depVajramId(vajramID(depVajramId.vajramId()))
           .depReqClassName(getVajramReqClassName(vajramOrReqElement))
           .canFanout(dependency.canFanout());
       if (!declaredDataType.equals(depVajramId.responseType())) {
@@ -217,18 +215,18 @@ public class AnnotationProcessingUtils {
                 .formatted(declaredDataType, depVajramId.responseType()),
             depField);
       }
-
+      depBuilder.responseType(declaredDataType);
       return depBuilder.build();
     }
     throw new RuntimeException("Invalid Dependency specification");
   }
 
-  private VajramID getVajramId(TypeElement vajramOrReqClass) {
+  private VajramInfoLite getVajramInfoLite(TypeElement vajramOrReqClass) {
     String vajramClassSimpleName = vajramOrReqClass.getSimpleName().toString();
     if (codegenUtils.isRawAssignable(vajramOrReqClass.asType(), VajramRequest.class)) {
       TypeMirror responseType = getResponseType(vajramOrReqClass, VajramRequest.class);
       TypeElement responseTypeElement = (TypeElement) typeUtils.asElement(responseType);
-      return vajramID(
+      return new VajramInfoLite(
           vajramClassSimpleName.substring(
               0, vajramClassSimpleName.length() - REQUEST_SUFFIX.length()),
           new DeclaredTypeVisitor(processingEnv, false, responseTypeElement).visit(responseType));
@@ -240,7 +238,7 @@ public class AnnotationProcessingUtils {
       if (vajramId.isEmpty()) {
         vajramId = vajramClassSimpleName;
       }
-      return vajramID(
+      return new VajramInfoLite(
           vajramId,
           new DeclaredTypeVisitor(processingEnv, false, responseTypeElement).visit(responseType));
     } else {

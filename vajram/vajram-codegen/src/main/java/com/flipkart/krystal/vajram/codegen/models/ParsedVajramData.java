@@ -43,7 +43,7 @@ public record ParsedVajramData(
             vajramLogic,
             vajramClass,
             packageName,
-            vajramInfo.vajramId().responseType()));
+            vajramInfo.responseType()));
   }
 
   public static ExecutableElement getVajramLogicAndResolverMethods(

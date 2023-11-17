@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
+import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
@@ -69,7 +70,7 @@ class ChainAdderTest {
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
     MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(kryonExecutionReport);
     graph.registerInputModulators(
-        vajramID(Adder.ID),
+        vajramID(getVajramIdString(Adder.class)),
         InputModulatorConfig.sharedModulator(
             () -> new Batcher<>(100), "adderBatcher", getBatchedDepChains()));
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
@@ -107,7 +108,7 @@ class ChainAdderTest {
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
     graph.registerInputModulators(
-        vajramID(Adder.ID),
+        vajramID(getVajramIdString(Adder.class)),
         InputModulatorConfig.sharedModulator(
             () -> new Batcher<>(100), "adderBatcher", getBatchedDepChains()));
     for (int value = 0; value < loopCount; value++) {
@@ -176,7 +177,7 @@ class ChainAdderTest {
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
     graph.registerInputModulators(
-        vajramID(Adder.ID),
+        vajramID(getVajramIdString(Adder.class)),
         InputModulatorConfig.sharedModulator(
             () -> new Batcher<>(100), "adderBatcher", getBatchedDepChains()));
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
@@ -236,7 +237,7 @@ class ChainAdderTest {
   private CompletableFuture<Integer> executeVajram(
       KrystexVajramExecutor<RequestContext> krystexVajramExecutor, int multiplier) {
     return krystexVajramExecutor.execute(
-        vajramID(ChainAdder.ID),
+        vajramID(getVajramIdString(ChainAdder.class)),
         rc ->
             ChainAdderRequest.builder()
                 .numbers(
@@ -309,7 +310,7 @@ class ChainAdderTest {
   private static ImmutableSet<DependantChain> getDisabledDependantChains(VajramKryonGraph graph) {
     return ImmutableSet.of(
         graph.computeDependantChain(
-            ChainAdder.ID,
+            getVajramIdString(ChainAdder.class),
             chainSum_n,
             chainSum_n,
             chainSum_n,
@@ -322,17 +323,18 @@ class ChainAdderTest {
   }
 
   private DependantChain[] getBatchedDepChains() {
+    String chainAdderId = getVajramIdString(ChainAdder.class);
     return new DependantChain[] {
-      graph.computeDependantChain(ChainAdder.ID, sum_n),
-      graph.computeDependantChain(ChainAdder.ID, chainSum_n, sum_n),
-      graph.computeDependantChain(ChainAdder.ID, chainSum_n, chainSum_n, sum_n),
-      graph.computeDependantChain(ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, sum_n),
+      graph.computeDependantChain(chainAdderId, sum_n),
+      graph.computeDependantChain(chainAdderId, chainSum_n, sum_n),
+      graph.computeDependantChain(chainAdderId, chainSum_n, chainSum_n, sum_n),
+      graph.computeDependantChain(chainAdderId, chainSum_n, chainSum_n, chainSum_n, sum_n),
       graph.computeDependantChain(
-          ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
+          chainAdderId, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
       graph.computeDependantChain(
-          ChainAdder.ID, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
+          chainAdderId, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
       graph.computeDependantChain(
-          ChainAdder.ID,
+          chainAdderId,
           chainSum_n,
           chainSum_n,
           chainSum_n,
@@ -341,7 +343,7 @@ class ChainAdderTest {
           chainSum_n,
           sum_n),
       graph.computeDependantChain(
-          ChainAdder.ID,
+          chainAdderId,
           chainSum_n,
           chainSum_n,
           chainSum_n,
@@ -351,7 +353,7 @@ class ChainAdderTest {
           chainSum_n,
           sum_n),
       graph.computeDependantChain(
-          ChainAdder.ID,
+          chainAdderId,
           chainSum_n,
           chainSum_n,
           chainSum_n,

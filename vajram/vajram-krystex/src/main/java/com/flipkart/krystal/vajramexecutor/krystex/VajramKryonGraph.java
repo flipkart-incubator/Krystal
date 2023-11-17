@@ -121,7 +121,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
     this.logicRegistryDecorator = new LogicDefRegistryDecorator(logicDefinitionRegistry);
     for (String packagePrefix : packagePrefixes) {
-      loadVajramsFromClassPath(packagePrefix).forEach(this::registerVajram);
+      List<? extends Vajram> vajrams = loadVajramsFromClassPath(packagePrefix);
+      vajrams.forEach(this::registerVajram);
     }
     this.inputInjector = new InputInjector(this, inputInjectionProvider);
   }

@@ -18,8 +18,6 @@ import java.util.concurrent.atomic.LongAdder;
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class Adder extends ComputeVajram<Integer> {
 
-  public static final String ID = Adder.class.getSimpleName();
-
   public static final LongAdder CALL_COUNTER = new LongAdder();
 
   @Input(modulated = true)

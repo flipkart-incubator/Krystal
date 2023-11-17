@@ -372,12 +372,12 @@ public class VajramCodeGenerator {
               if (inputDef instanceof DependencyModel dependencyModel) {
                 VajramID depVajramId = dependencyModel.depVajramId();
                 String depRequestClass = dependencyModel.depReqClassName();
-                VajramInfoLite vajramInfoLite =
+                VajramInfoLite depVajramInfo =
                     checkNotNull(
                         vajramDefs.get(depVajramId),
                         "Could not find ParsedVajramData for %s",
                         depVajramId);
-                final TypeName boxedResponseType = vajramInfoLite.responseType().box();
+                final TypeName boxedResponseType = util.toTypeName(depVajramInfo.responseType()).box();
                 final String variableName = toJavaName(inputDef.name());
                 final String depVariableName = variableName + RESPONSES_SUFFIX;
                 if (dependencyModel.canFanout()) {
@@ -795,14 +795,14 @@ public class VajramCodeGenerator {
     //    ReturnType returnType
     if (vajramInputDef instanceof DependencyModel dependencyModel) {
       String variableName = toJavaName(usingInputName);
-      final VajramInfoLite parsedVajramData =
+      final VajramInfoLite vajramInfoLite =
           checkNotNull(
               vajramDefs.get(dependencyModel.depVajramId()),
               "Could not find parsed vajram data for class %s",
               dependencyModel.depVajramId());
       String requestClass = dependencyModel.depReqClassName();
 
-      TypeName usingDepType = parsedVajramData.responseType();
+      TypeName usingDepType = util.toTypeName(vajramInfoLite.responseType());
       if (usingDepType.isBoxedPrimitive()) {
         usingDepType = usingDepType.unbox();
       }
@@ -1164,7 +1164,7 @@ public class VajramCodeGenerator {
             .addSuperinterface(
                 ParameterizedTypeName.get(
                     ClassName.get(VajramRequest.class),
-                    util.toTypeName(vajramInfo.vajramId().responseType()).box()))
+                    util.toTypeName(vajramInfo.responseType()).box()))
             .addAnnotation(EqualsAndHashCode.class)
             .addMethod(
                 methodBuilder("builder")
@@ -1319,7 +1319,7 @@ public class VajramCodeGenerator {
     if (abstractInput instanceof InputModel<?> input) {
       return input.type();
     } else if (abstractInput instanceof DependencyModel dep) {
-      return dep.depVajramId().responseType();
+      return dep.responseType();
     } else {
       throw new UnsupportedOperationException(
           "Unable to extract datatype from facet : %s".formatted(abstractInput));
@@ -1531,7 +1531,7 @@ public class VajramCodeGenerator {
   }
 
   private TypeAndName getDependencyOutputsType(DependencyModel dependencyDef) {
-    DataType<?> depResponseType = dependencyDef.depVajramId().responseType();
+    DataType<?> depResponseType = dependencyDef.responseType();
     if (dependencyDef.canFanout()) {
       return new TypeAndName(
           ParameterizedTypeName.get(
