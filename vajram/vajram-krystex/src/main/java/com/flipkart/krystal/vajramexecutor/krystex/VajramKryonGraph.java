@@ -548,12 +548,10 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
               ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> validResults =
                   vajram.execute(ImmutableList.copyOf(validInputs));
 
-              ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> result =
-                  ImmutableMap.<Inputs, CompletableFuture<@Nullable Object>>builder()
-                      .putAll(validResults)
-                      .putAll(failedValidations)
-                      .build();
-              return result;
+              return ImmutableMap.<Inputs, CompletableFuture<@Nullable Object>>builder()
+                  .putAll(validResults)
+                  .putAll(failedValidations)
+                  .build();
             },
             vajramDefinition.getMainLogicTags());
     registerInputInjector(vajramLogic, vajramDefinition.getVajram());

@@ -40,7 +40,7 @@ public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
       KryonLogicId kryonLogicId,
       Set<String> inputs,
       MainLogic<T> kryonLogic,
-      ImmutableMap<String, Tag> logicTags) {
+      ImmutableMap<Object, Tag> logicTags) {
     MainLogicDefinition<T> def =
         isIOLogic
             ? new IOLogicDefinition<>(kryonLogicId, inputs, kryonLogic, logicTags)

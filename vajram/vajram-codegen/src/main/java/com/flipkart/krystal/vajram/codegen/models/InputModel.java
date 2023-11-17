@@ -14,7 +14,6 @@ import lombok.Builder;
 public record InputModel<T>(
     String name,
     DataType<?> type,
-    ImmutableMap<String, Tag> tags,
     boolean isMandatory,
     T defaultValue,
     String documentation,
@@ -49,13 +48,6 @@ public record InputModel<T>(
       if (inputSources != null) {
         this.sources = ImmutableSet.copyOf(inputSources);
       }
-      return this;
-    }
-
-    public InputModelBuilder<T> tags(Map<String, String> tags) {
-      Map<String, Tag> tagsMap = new HashMap<>();
-      tags.forEach((key, value) -> tagsMap.put(key, new Tag(key, value)));
-      this.tags = ImmutableMap.copyOf(tagsMap);
       return this;
     }
   }

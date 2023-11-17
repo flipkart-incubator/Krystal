@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder;
 
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder.ID;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.function.Function.identity;
 
@@ -15,17 +14,19 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.LongAdder;
 
-@VajramDef(ID)
+@VajramDef
+@SuppressWarnings("initialization.field.uninitialized")
 public abstract class Adder extends ComputeVajram<Integer> {
 
-  public static final String ID = "adder";
+  public static final String ID = Adder.class.getSimpleName();
+
   public static final LongAdder CALL_COUNTER = new LongAdder();
 
   @Input(modulated = true)
   int numberOne;
 
   @Input(modulated = true)
-  Optional<Integer> numberTwo = Optional.empty();
+  Optional<Integer> numberTwo;
 
   @VajramLogic
   static Map<AdderModInputs, Integer> add(

@@ -1,5 +1,6 @@
 package com.flipkart.krystal.datatypes;
 
+import static com.flipkart.krystal.datatypes.TypeUtils.box;
 import static com.flipkart.krystal.datatypes.TypeUtils.getJavaType;
 import static java.util.function.Function.identity;
 
@@ -15,6 +16,7 @@ import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
@@ -22,9 +24,12 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 @Accessors(fluent = true)
 @ToString
-public final class CustomType<T> implements DataType<T> {
+@EqualsAndHashCode(
+    of = {"canonicalClassName", "typeParameters"},
+    callSuper = false)
+public final class CustomType<T> extends AbstractDataType<T> {
 
-  /** the fully qualified name of the class, i.e. pck.outer.inner. null for anonymous classes */
+  /** the fully qualified name of the class, i.e. pck.outer.inner */
   private final String canonicalClassName;
 
   private @MonotonicNonNull String packageName;
@@ -117,36 +122,31 @@ public final class CustomType<T> implements DataType<T> {
   }
 
   @Override
-  public Optional<Type> javaReflectType() {
+  public Type javaReflectType() throws ClassNotFoundException {
     if (clazz == null) {
       if (!enclosingClasses.isEmpty()) {
         throw new UnsupportedOperationException(
             "Cannot load java type of an enclosed class - only top level classes supported");
       }
-      try {
-        //noinspection unchecked
-        Class<T> type =
-            (Class<T>)
-                Optional.ofNullable(this.getClass().getClassLoader())
-                    .orElseThrow(
-                        () ->
-                            new IllegalStateException(
-                                "null classloader returned. Cannot proceed further"))
-                    .loadClass(canonicalClassName());
+      //noinspection unchecked
+      Class<T> type =
+          (Class<T>)
+              Optional.ofNullable(this.getClass().getClassLoader())
+                  .orElseThrow(
+                      () ->
+                          new IllegalStateException(
+                              "null classloader returned. Cannot proceed further"))
+                  .loadClass(canonicalClassName());
 
-        List<Optional<Type>> types =
-            typeParameters.stream().map(DataType::javaReflectType).toList();
-        if (types.stream().allMatch(Optional::isPresent)) {
-          this.clazz =
-              getJavaType(type, types.stream().map(Optional::orElseThrow).toArray(Type[]::new));
-        } else {
-          return Optional.empty();
-        }
-      } catch (ClassNotFoundException e) {
-        return Optional.empty();
+      List<Type> list = new ArrayList<>();
+      for (DataType<?> typeParameter : typeParameters) {
+        Type javaReflectType = typeParameter.javaReflectType();
+        list.add(javaReflectType);
       }
+      //noinspection ZeroLengthArrayAllocation
+      this.clazz = getJavaType(type, list.toArray(new Type[0]));
     }
-    return Optional.of(clazz);
+    return clazz;
   }
 
   @Override
@@ -157,7 +157,7 @@ public final class CustomType<T> implements DataType<T> {
         .getDeclaredType(
             typeElement,
             typeParameters.stream()
-                .map(t -> t.javaModelType(processingEnv))
+                .map(t -> box(t.javaModelType(processingEnv), processingEnv))
                 .toArray(TypeMirror[]::new));
   }
 

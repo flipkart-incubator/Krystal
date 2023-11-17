@@ -1,6 +1,17 @@
 <component name="InspectionProjectProfileManager">
   <profile version="1.0">
     <option name="myName" value="Project Default" />
+    <option name="scopesOrder">
+      <list>
+        <option value="All Changed Files" />
+        <option value="Open Files" />
+        <option value="Production" />
+        <option value="Project Files" />
+        <option value="Scratches and Consoles" />
+        <option value="Tests" />
+        <option value="Vajrams" />
+      </list>
+    </option>
     <inspection_tool class="AbstractClassExtendsConcreteClass" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="AbstractClassNeverImplemented" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="AbstractClassWithoutAbstractMethods" enabled="false" level="ERROR" enabled_by_default="false" />
@@ -292,6 +303,7 @@
       <option name="loggerFactoryMethodName" value="getLogger,getLogger,getLog,getLogger" />
     </inspection_tool>
     <inspection_tool class="LoggingConditionDisagreesWithLogStatement" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="LombokGetterMayBeUsed" enabled="true" level="TEXT ATTRIBUTES" enabled_by_default="true" editorAttributes="CONSIDERATION_ATTRIBUTES" />
     <inspection_tool class="LoopWithImplicitTerminationCondition" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="MagicNumber" enabled="true" level="WARNING" enabled_by_default="true">
       <scope name="Tests" level="WARNING" enabled="false" />
@@ -410,7 +422,9 @@
       <option name="m_minLength" value="3" />
       <option name="m_maxLength" value="16" />
     </inspection_tool>
-    <inspection_tool class="PackageVisibleField" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="PackageVisibleField" enabled="true" level="WARNING" enabled_by_default="true">
+      <scope name="Vajrams" level="WARNING" enabled="false" />
+    </inspection_tool>
     <inspection_tool class="PackageVisibleInnerClass" enabled="false" level="ERROR" enabled_by_default="false">
       <option name="ignoreEnums" value="false" />
       <option name="ignoreInterfaces" value="false" />
@@ -540,10 +554,11 @@
           <option value="unused" />
           <option value="RedundantCast" />
           <option value="RedundantTypeArguments" />
-          <option value="initialization" />
           <option value="nullness" />
           <option value="Convert2Diamond" />
           <option value="NonBooleanMethodNameMayNotStartWithQuestion" />
+          <option value="ZeroLengthArrayAllocation" />
+          <option value="initialization.field.uninitialized" />
         </list>
       </option>
     </inspection_tool>

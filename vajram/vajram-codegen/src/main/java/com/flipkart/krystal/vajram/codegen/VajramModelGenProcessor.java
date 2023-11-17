@@ -33,7 +33,6 @@ public class VajramModelGenProcessor extends AbstractProcessor {
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     AnnotationProcessingUtils util = new AnnotationProcessingUtils(roundEnv, processingEnv);
-    util.log(Kind.ERROR, "Received call in VajramModelGenProcessor");
     BuildPhase buildPhase;
     try {
       buildPhase = readBuildPhase();

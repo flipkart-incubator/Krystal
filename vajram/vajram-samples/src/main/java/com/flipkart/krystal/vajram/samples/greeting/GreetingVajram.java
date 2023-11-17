@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.samples.greeting;
 
 import static com.flipkart.krystal.vajram.samples.greeting.GreetingRequest.userId_n;
-import static com.flipkart.krystal.vajram.samples.greeting.GreetingVajram.ID;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
@@ -21,20 +20,20 @@ import java.util.Optional;
  * Given a userId, this Vajram composes and returns a 'Hello!' greeting addressing the user by name
  * (as declared by the user in their profile).
  */
-@VajramDef(ID) // Unique Id of this Vajram
-// SyncVajram means that this Vajram does not directly perform any blocking operations.
+@VajramDef // Unique Id of this Vajram
+// ComputeVajram means that this Vajram does not directly perform any blocking operations.
+@SuppressWarnings("initialization.field.uninitialized")
 public abstract class GreetingVajram extends ComputeVajram<String> {
-  public static final String ID = "com.flipkart.greetingVajram";
 
   @Input String userId;
 
-  @Inject Logger log;
+  @Inject Optional<Logger> log;
 
   @Inject
   @Named("analytics_sink")
   AnalyticsEventSink analyticsEventSink;
 
-  @Dependency("UserServiceVajram")
+  @Dependency(onVajram = UserServiceVajram.class)
   Optional<UserInfo> userInfo;
 
   // Resolving (or providing) inputs of dependencies

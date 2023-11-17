@@ -12,7 +12,7 @@ public final class MultiResolverDefinition extends LogicDefinition<MultiResolver
       KryonLogicId kryonLogicId,
       Set<String> inputs,
       MultiResolver logic,
-      ImmutableMap<String, Tag> logicTags) {
+      ImmutableMap<Object, Tag> logicTags) {
     super(kryonLogicId, inputs, logicTags, logic);
   }
 }

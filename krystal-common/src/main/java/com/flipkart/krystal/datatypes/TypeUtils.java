@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.type.PrimitiveType;
+import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class TypeUtils {
@@ -54,6 +57,14 @@ public final class TypeUtils {
       return mappings.get(canonicalClassName).apply(typeParameters);
     } else {
       return CustomType.create(canonicalClassName, typeParameters);
+    }
+  }
+
+  static TypeMirror box(TypeMirror typeMirror, ProcessingEnvironment processingEnv) {
+    if (typeMirror.getKind().isPrimitive()) {
+      return processingEnv.getTypeUtils().boxedClass((PrimitiveType) typeMirror).asType();
+    } else {
+      return typeMirror;
     }
   }
 

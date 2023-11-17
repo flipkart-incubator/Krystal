@@ -11,7 +11,7 @@ public final class IOLogicDefinition<T> extends MainLogicDefinition<T> {
       KryonLogicId kryonLogicId,
       Set<String> inputs,
       MainLogic<T> mainLogic,
-      ImmutableMap<String, Tag> logicTags) {
+      ImmutableMap<Object, Tag> logicTags) {
     super(kryonLogicId, inputs, logicTags, mainLogic);
   }
 }

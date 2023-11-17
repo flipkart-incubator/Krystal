@@ -14,4 +14,5 @@ module flipkart.krystal.vajram {
   requires org.checkerframework.checker.qual;
   requires com.google.errorprone.annotations;
   requires flipkart.krystal.common;
+  requires static org.slf4j;
 }

@@ -44,7 +44,7 @@ compileTestJava {
     }
 }
 
-project.tasks.compileTestJava.dependsOn 'testCodeGenVajramImpl'
+project.tasks.compileTestJava.dependsOn 'testCodeGenVajramImpls'
 tasks.named('testCodeGenVajramModels').configure {
     doFirst {
         def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
@@ -89,4 +89,5 @@ publishing {
     }
 
     tasks.named("spotlessJava").configure { dependsOn("codeGenVajramImpls") }
+    tasks.named("spotlessJava").configure { dependsOn("testCodeGenVajramImpls") }
 }

@@ -21,14 +21,14 @@ public @interface Dependency {
    * <p>Due to this reason, setting this should be preferred over setting {@link #onVajram()} which
    * tightly couples the classpaths of this vajram and the dependency
    */
-  Class<? extends VajramRequest<?>> withVajramReq();
+  Class<? extends VajramRequest> withVajramReq() default VajramRequest.class;
 
   /**
    * The vajram class on which this vajram depends. This should only be used if the dependency
    * vajram is in the same buildable module as this vajram. In all other cases, please use {@link
    * #withVajramReq()}
    */
-  Class<? extends Vajram<?>> onVajram();
+  Class<? extends Vajram> onVajram() default Vajram.class;
 
   boolean canFanout() default false;
 }

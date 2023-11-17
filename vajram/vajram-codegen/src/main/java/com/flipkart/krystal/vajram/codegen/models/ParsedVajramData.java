@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajram.codegen.models;
 
+import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
-import com.squareup.javapoet.TypeName;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -22,7 +22,7 @@ public record ParsedVajramData(
     ExecutableElement outputLogic,
     TypeElement vajramClass,
     String packageName,
-    TypeName responseType) {
+    DataType<?> responseType) {
 
   public static Optional<ParsedVajramData> fromVajram(VajramInfo vajramInfo) {
     TypeElement vajramClass = vajramInfo.vajramClass();
@@ -43,7 +43,7 @@ public record ParsedVajramData(
             vajramLogic,
             vajramClass,
             packageName,
-            vajramInfo.responseType()));
+            vajramInfo.vajramId().responseType()));
   }
 
   public static ExecutableElement getVajramLogicAndResolverMethods(

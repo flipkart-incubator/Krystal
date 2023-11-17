@@ -16,10 +16,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-@VajramDef(UserServiceVajram.ID)
+@VajramDef
+@SuppressWarnings("initialization.field.uninitialized")
 public abstract class UserServiceVajram extends IOVajram<UserInfo> {
-
-  public static final String ID = "userServiceVajram";
 
   @Input(modulated = true)
   String userId;

@@ -5,4 +5,5 @@ module flipkart.krystal.vajramexecutor.krystex {
   requires org.checkerframework.checker.qual;
   requires lombok;
   requires flipkart.krystal.common;
+  requires jakarta.inject;
 }

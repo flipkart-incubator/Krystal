@@ -1,14 +1,20 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
+import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.DividerInputUtil.DividerInputs;
+import java.util.Optional;
 
-@VajramDef("divider")
+@VajramDef
+@SuppressWarnings("initialization.field.uninitialized")
 public abstract class Divider extends ComputeVajram<Integer> {
+  @Input int numerator;
+  @Input Optional<Integer> denominator;
+
   @VajramLogic
-  public static int divide(DividerInputs allInputs) {
+  static int divide(DividerInputs allInputs) {
     return divide(allInputs.numerator(), allInputs.denominator().orElse(1));
   }
 

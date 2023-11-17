@@ -8,6 +8,6 @@ import com.google.common.collect.ImmutableMap;
 
 public record LogicExecutionContext(
     KryonId kryonId,
-    ImmutableMap<String, Tag> logicTags,
+    ImmutableMap<Object, Tag> logicTags,
     DependantChain dependants,
     KryonDefinitionRegistry kryonDefinitionRegistry) {}
