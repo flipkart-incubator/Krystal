@@ -47,7 +47,7 @@ Krystex is not designed to solve for functional and development-time use cases. 
 
 Because of this design choice, Krystex is not very developer-friendly, and is not supposed to be
 used by application developers directly. It is expected that other
-frameworks (like [vajram](../vajram/README.md) and [caramel](../caramel/README.md)) will create
+frameworks (like [vajram](../vajram/README.md)) will create
 abstractions over krystex which provide a developer-friendly environment to write application logic,
 and then translate/compile these abstractions into Krystal native entities for runtime execution.
 

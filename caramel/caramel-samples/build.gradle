@@ -1,6 +1,0 @@
-description 'Sample caramel workflows used as documentation and for integration testing.'
-
-dependencies {
-    implementation project(':caramel')
-    annotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
-}
