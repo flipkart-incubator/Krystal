@@ -6,7 +6,7 @@ plugins {
 ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
-    krystal_version = '4.3-SNAPSHOT'
+    krystal_version = '5.0-SNAPSHOT'
 }
 
 checkerFramework {
