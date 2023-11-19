@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.codegen;
 
-import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getInputUtilClassName;
-import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.getVajramImplClassName;
+import static com.flipkart.krystal.vajram.codegen.CodegenUtils.getInputUtilClassName;
+import static com.flipkart.krystal.vajram.codegen.CodegenUtils.getVajramImplClassName;
 import static java.lang.System.lineSeparator;
 import static java.util.stream.Collectors.joining;
 

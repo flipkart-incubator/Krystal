@@ -1,6 +1,4 @@
-package com.flipkart.krystal.vajram.codegen.utils;
-
-import java.util.regex.Pattern;
+package com.flipkart.krystal.vajram.codegen;
 
 public final class Constants {
 
@@ -18,16 +16,12 @@ public final class Constants {
   public static final String LINK_HASH_MAP = "linkHashMap";
   public static final String MAP = "map";
   public static final String LIST = "list";
-  public static final String JAVA_EXT = ".java";
-  public static final char DOLLAR = '$';
   public static final String INPUT_DEFINITIONS_VAR = "inputDefinitions";
-  public static final Pattern DOT_PATTERN = Pattern.compile("\\.");
   public static final String INPUT_NAME_SUFFIX = "_n";
   public static final String INPUT_SPEC_SUFFIX = "_s";
 
-  private Constants() {}
-
   public static final char DOT_SEPARATOR = '.';
+
   public static final String RESPONSE = "response";
   public static final String VARIABLE = "variable";
   public static final String DEP_RESPONSE = "depResponse";
@@ -35,7 +29,6 @@ public final class Constants {
   public static final String ILLEGAL_ARGUMENT = "illegalArgument";
   public static final String REQUEST = "request";
   public static final String RESPONSES_SUFFIX = "Responses";
-  public static final String RESPONSE_SUFFIX = "Response";
   public static final String METHOD_GET_INPUTS_CONVERTOR = "getInputsConvertor";
   public static final String METHOD_EXECUTE = "execute";
   public static final String METHOD_RESOLVE_INPUT_OF_DEPENDENCY = "resolveInputOfDependency";
@@ -50,12 +43,8 @@ public final class Constants {
   public static final String MOD_INPUT = "modInput";
   public static final String IM_MAP = "imMap";
   public static final String IM_LIST = "imList";
-  public static final String DEP_COMMAND = "depCommand";
   public static final String FUNCTION = "function";
   public static final String OPTIONAL = "optional";
-  public static final String SINGLE_EXEC_CMD = "singleExecCmd";
-  public static final String MULTI_EXEC_CMD = "multiExecCmd";
-
   public static final String INPUT_MODULATION_CODE_BLOCK =
       """
                 $map:T<$inputModulation:T, $inputs:T> mapping = new $hashMap:T<>();
@@ -99,4 +88,6 @@ public final class Constants {
                 }
                 return $imMap:T.copyOf(returnValue);
             """;
+
+  private Constants() {}
 }

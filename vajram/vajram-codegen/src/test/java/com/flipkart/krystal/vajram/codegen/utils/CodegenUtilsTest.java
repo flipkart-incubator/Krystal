@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.codegen.utils;
 import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
 
 import com.flipkart.krystal.vajram.VajramRequest;
+import com.flipkart.krystal.vajram.codegen.CodegenUtils;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
