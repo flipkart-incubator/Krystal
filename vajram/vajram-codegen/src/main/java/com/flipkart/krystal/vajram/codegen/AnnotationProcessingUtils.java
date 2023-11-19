@@ -197,7 +197,7 @@ public class AnnotationProcessingUtils {
     if (vajramReqType.isPresent() && vajramType.isPresent()) {
       log(
           Kind.ERROR,
-          ("Both `withVajramReq` or `onVajram` cannot be set."
+          ("Both `withVajramReq` and `onVajram` cannot be set."
                   + " Please set only one of them for dependency '%s' of vajram '%s'."
                   + " Found withVajramReq=%s and onVajram=%s")
               .formatted(depField.getSimpleName(), vajramId, vajramReqType.get(), vajramType.get()),

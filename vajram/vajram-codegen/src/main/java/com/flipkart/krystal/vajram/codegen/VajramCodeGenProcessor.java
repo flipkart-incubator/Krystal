@@ -21,7 +21,7 @@ import javax.lang.model.element.TypeElement;
 @SupportedAnnotationTypes("com.flipkart.krystal.vajram.VajramDef")
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
-public class VajramModelGenProcessor extends AbstractProcessor {
+public class VajramCodeGenProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
