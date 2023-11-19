@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
-import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.REQUEST_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.CodegenUtils.REQUEST_SUFFIX;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.datatypes.DataType;
@@ -18,7 +18,6 @@ import com.flipkart.krystal.vajram.codegen.models.InputModel;
 import com.flipkart.krystal.vajram.codegen.models.InputModel.InputModelBuilder;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfoLite;
-import com.flipkart.krystal.vajram.codegen.utils.CodegenUtils;
 import com.flipkart.krystal.vajram.inputs.InputSource;
 import jakarta.inject.Inject;
 import java.io.PrintWriter;

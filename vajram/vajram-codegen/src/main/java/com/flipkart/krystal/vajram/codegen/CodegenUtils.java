@@ -1,8 +1,8 @@
-package com.flipkart.krystal.vajram.codegen.utils;
+package com.flipkart.krystal.vajram.codegen;
 
-import static com.flipkart.krystal.vajram.codegen.utils.Constants.COMMON_INPUTS;
-import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_CLASS_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_NEEDING_MODULATION;
+import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_INPUTS;
+import static com.flipkart.krystal.vajram.codegen.Constants.INPUTS_CLASS_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.Constants.INPUTS_NEEDING_MODULATION;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.flipkart.krystal.datatypes.DataType;
