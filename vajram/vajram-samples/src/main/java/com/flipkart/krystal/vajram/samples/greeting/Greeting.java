@@ -20,12 +20,15 @@ import java.util.Optional;
  * Given a userId, this Vajram composes and returns a 'Hello!' greeting addressing the user by name
  * (as declared by the user in their profile).
  */
-@VajramDef // Unique Id of this Vajram
-// ComputeVajram means that this Vajram does not directly perform any blocking operations.
+@VajramDef(
+    // Unique Id of this Vajram;
+    // if not specified, then the simplename of the class is used as id
+    "Greeting")
 @SuppressWarnings("initialization.field.uninitialized")
-public abstract class GreetingVajram extends ComputeVajram<String> {
+// ComputeVajram means that this Vajram does not directly perform any blocking operations.
+public abstract class Greeting extends ComputeVajram<String> {
 
-  public static final String ID = GreetingVajram.class.getSimpleName();
+  public static final String ID = Greeting.class.getSimpleName();
 
   @Input String userId;
 
@@ -35,7 +38,7 @@ public abstract class GreetingVajram extends ComputeVajram<String> {
   @Named("analytics_sink")
   AnalyticsEventSink analyticsEventSink;
 
-  @Dependency(onVajram = UserServiceVajram.class)
+  @Dependency(onVajram = UserService.class)
   Optional<UserInfo> userInfo;
 
   // Resolving (or providing) inputs of dependencies

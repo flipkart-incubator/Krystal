@@ -12,6 +12,8 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
+import com.flipkart.krystal.vajram.Dependency;
+import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.Using;
@@ -19,6 +21,7 @@ import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
 import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsInputUtil.HelloFriendsInputs;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableSet;
@@ -27,10 +30,17 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.IntStream;
 
-@VajramDef(HelloFriendsVajram.ID)
-public abstract class HelloFriendsVajram extends ComputeVajram<String> {
+@VajramDef
+public abstract class HelloFriends extends ComputeVajram<String> {
 
-  public static final String ID = "HelloFriendsVajram";
+  @Input String userId;
+  @Input Optional<Integer> numberOfFriends;
+
+  @Dependency(onVajram = TestUserService.class)
+  TestUserInfo userInfo;
+
+  @Dependency(onVajram = TestUserService.class, canFanout = true)
+  TestUserInfo friendInfos;
 
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {

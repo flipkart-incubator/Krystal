@@ -7,7 +7,6 @@ import static java.util.stream.Collectors.toMap;
 import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.tags.AnnotationTag;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.DefaultInputResolverDefinition;
@@ -17,6 +16,7 @@ import com.flipkart.krystal.vajram.inputs.Using;
 import com.flipkart.krystal.vajram.inputs.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolverDefinition;
 import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
+import com.flipkart.krystal.vajram.tags.AnnotationTag;
 import com.flipkart.krystal.vajram.tags.Service;
 import com.flipkart.krystal.vajram.tags.ServiceApi;
 import com.flipkart.krystal.vajram.tags.VajramTags;
@@ -33,7 +33,6 @@ import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,7 +69,7 @@ public final class VajramDefinition {
           log.warn("Repeatable annotations are not supported as tags. Ignoring {}", annotation);
         } else {
           AnnotationTag<Annotation> annotationTag = AnnotationTag.from(annotation);
-          annoTags.put(annotationTag.getTagKey(), annotationTag);
+          annoTags.put(annotationTag.tagKey(), annotationTag);
         }
       }
       result.put(declaredField.getName(), ImmutableMap.copyOf(annoTags));
@@ -140,18 +139,18 @@ public final class VajramDefinition {
             .map(method -> Arrays.stream(method.getAnnotations()).map(AnnotationTag::from).toList())
             .orElse(List.of());
     Map<Object, Tag> collect =
-        tagWithArray.stream().collect(toMap(Tag::getTagKey, Function.identity()));
+        tagWithArray.stream().collect(toMap(Tag::tagKey, Function.identity()));
     vajramLogicMethod.ifPresent(
         method -> {
           Service service = method.getAnnotation(Service.class);
           if (service != null) {
             AnnotationTag<Service> serviceTag = AnnotationTag.from(service);
-            collect.put(serviceTag.getTagKey(), serviceTag);
+            collect.put(serviceTag.tagKey(), serviceTag);
           }
           ServiceApi serviceApi = method.getAnnotation(ServiceApi.class);
           if (serviceApi != null) {
             AnnotationTag<ServiceApi> serviceApiTag = AnnotationTag.from(serviceApi);
-            collect.put(serviceApiTag.getTagKey(), serviceApiTag);
+            collect.put(serviceApiTag.tagKey(), serviceApiTag);
           }
           collect.put(
               VajramTags.VAJRAM_TYPE,

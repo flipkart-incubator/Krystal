@@ -9,20 +9,23 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofrie
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.friendIds_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.friendInfos_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.userId_n;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Vajram.ID;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.vajram.ComputeVajram;
+import com.flipkart.krystal.vajram.Dependency;
+import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
 import com.flipkart.krystal.vajram.inputs.resolution.AbstractInputResolver;
 import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2InputUtil.HelloFriendsV2Inputs;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -32,11 +35,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
-@VajramDef(ID)
-public abstract class HelloFriendsV2Vajram extends ComputeVajram<String> {
+@VajramDef
+public abstract class HelloFriendsV2 extends ComputeVajram<String> {
 
-  public static final String ID = "HelloFriendsV2Vajram";
+  @Input String userId;
+
+  @Dependency(onVajram = FriendsService.class)
+  Set<String> friendIds;
+
+  @Dependency(onVajram = TestUserService.class, canFanout = true)
+  /*Collection of*/ TestUserInfo friendInfos;
 
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {

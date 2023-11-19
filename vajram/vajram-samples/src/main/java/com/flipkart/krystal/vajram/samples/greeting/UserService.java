@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 @VajramDef
 @SuppressWarnings("initialization.field.uninitialized")
-public abstract class UserServiceVajram extends IOVajram<UserInfo> {
+public abstract class UserService extends IOVajram<UserInfo> {
 
   @Input(modulated = true)
   String userId;

@@ -1,4 +1,4 @@
-output:
+  output:
   dataType: string
 inputs:
   - name: user_ids

@@ -6,7 +6,6 @@ import static com.flipkart.krystal.vajram.codegen.utils.Constants.INPUTS_NEEDING
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.flipkart.krystal.datatypes.DataType;
-import com.google.common.base.CaseFormat;
 import com.google.common.primitives.Primitives;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -17,7 +16,6 @@ import java.lang.reflect.Type;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -34,11 +32,9 @@ public final class CodegenUtils {
 
   public static final String DOT = ".";
   public static final String COMMA = ",";
-  private static final Pattern COMPILE = Pattern.compile(".");
   public static final String REQUEST_SUFFIX = "Request";
   public static final String IMPL = "Impl";
   public static final String INPUT_UTIL = "InputUtil";
-  public static final String VAJRAM = "vajram";
   public static final String CONVERTER = "CONVERTER";
   private final Types typeUtils;
   private final Elements elementUtils;
@@ -62,45 +58,27 @@ public final class CodegenUtils {
   }
 
   public static String getInputUtilClassName(String vajramName) {
-    return (vajramName.toLowerCase().endsWith(VAJRAM)
-            ? vajramName.substring(0, vajramName.length() - 6)
-            : vajramName)
-        + INPUT_UTIL;
+    return vajramName + INPUT_UTIL;
   }
 
   public static String getRequestClassName(String vajramName) {
-    return getVajramBaseName(vajramName) + REQUEST_SUFFIX;
+    return vajramName + REQUEST_SUFFIX;
   }
 
   public static String getVajramImplClassName(String vajramId) {
     return vajramId + IMPL;
   }
 
-  public static String getVajramBaseName(String vajramName) {
-    return (vajramName.toLowerCase().endsWith(VAJRAM)
-        ? vajramName.substring(0, vajramName.length() - 6)
-        : vajramName);
-  }
-
-  public static String getVajramNameFromClass(String vajramClassFullName) {
-    String[] splits = COMPILE.split(vajramClassFullName);
-    return splits[splits.length - 1];
-  }
-
-  public static String toJavaName(String input) {
-    return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, input);
-  }
-
   public static String getAllInputsClassname(String vajramName) {
-    return getVajramBaseName(vajramName) + INPUTS_CLASS_SUFFIX;
+    return vajramName + INPUTS_CLASS_SUFFIX;
   }
 
   public static String getCommonInputsClassname(String vajramName) {
-    return getVajramBaseName(vajramName) + COMMON_INPUTS;
+    return vajramName + COMMON_INPUTS;
   }
 
   public static String getInputModulationClassname(String vajramName) {
-    return getVajramBaseName(vajramName) + INPUTS_NEEDING_MODULATION;
+    return vajramName + INPUTS_NEEDING_MODULATION;
   }
 
   public static TypeName getMethodReturnType(Method method) {
@@ -108,33 +86,6 @@ public final class CodegenUtils {
       return toTypeName(method.getGenericReturnType());
     } else {
       return TypeName.get(method.getReturnType());
-    }
-  }
-
-  public static TypeName getMethodGenericReturnType(Method method) {
-    ParameterizedTypeName parameterizedTypeName;
-    if (method.getGenericReturnType() instanceof ParameterizedType genericReturnType) {
-      final Type[] actualTypeArguments = genericReturnType.getActualTypeArguments();
-      if (actualTypeArguments.length == 1) {
-        if (actualTypeArguments[0] instanceof ParameterizedType) {
-          return ParameterizedTypeName.get(
-              (ClassName) toTypeName(((ParameterizedType) actualTypeArguments[0]).getRawType()),
-              Arrays.stream(((ParameterizedType) actualTypeArguments[0]).getActualTypeArguments())
-                  .map(CodegenUtils::toTypeName)
-                  .toArray(TypeName[]::new));
-        } else {
-          return toTypeName(actualTypeArguments[0]);
-        }
-      } else {
-        return ParameterizedTypeName.get(
-            (ClassName) toTypeName(actualTypeArguments[0]),
-            Arrays.stream(actualTypeArguments)
-                .skip(1)
-                .map(CodegenUtils::toTypeName)
-                .toArray(TypeName[]::new));
-      }
-    } else {
-      return ClassName.get(Primitives.wrap(method.getReturnType()));
     }
   }
 
@@ -183,7 +134,7 @@ public final class CodegenUtils {
         typeUtils.erasure(elementUtils.getTypeElement(to.getName()).asType()));
   }
 
-  public TypeMirror wrap(TypeMirror type) {
+  public TypeMirror box(TypeMirror type) {
     if (type instanceof PrimitiveType p) {
       return typeUtils.boxedClass(p).asType();
     } else {

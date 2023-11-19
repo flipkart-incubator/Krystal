@@ -2,8 +2,6 @@ package com.flipkart.krystal.datatypes;
 
 import static javax.lang.model.type.TypeKind.BOOLEAN;
 
-import java.lang.reflect.Type;
-import java.util.Optional;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.type.TypeMirror;
 
