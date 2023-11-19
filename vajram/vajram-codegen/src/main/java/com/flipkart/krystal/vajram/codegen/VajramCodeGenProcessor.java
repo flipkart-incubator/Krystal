@@ -23,6 +23,8 @@ import javax.lang.model.element.TypeElement;
 @AutoService(Processor.class)
 public class VajramCodeGenProcessor extends AbstractProcessor {
 
+  public static final boolean DEBUG = false;
+
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     AnnotationProcessingUtils util = new AnnotationProcessingUtils(roundEnv, processingEnv);

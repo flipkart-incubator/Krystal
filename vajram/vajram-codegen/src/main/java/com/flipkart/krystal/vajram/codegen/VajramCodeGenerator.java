@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.codegen;
 
-import static com.flipkart.krystal.vajram.codegen.models.ParsedVajramData.fromVajram;
 import static com.flipkart.krystal.vajram.codegen.CodegenUtils.COMMA;
 import static com.flipkart.krystal.vajram.codegen.CodegenUtils.CONVERTER;
 import static com.flipkart.krystal.vajram.codegen.CodegenUtils.DOT;
@@ -48,6 +47,7 @@ import static com.flipkart.krystal.vajram.codegen.Constants.UNMOD_INPUT;
 import static com.flipkart.krystal.vajram.codegen.Constants.VAJRAM_LOGIC_METHOD;
 import static com.flipkart.krystal.vajram.codegen.Constants.VAL_ERR;
 import static com.flipkart.krystal.vajram.codegen.Constants.VARIABLE;
+import static com.flipkart.krystal.vajram.codegen.models.ParsedVajramData.fromVajram;
 import static com.google.common.base.CaseFormat.LOWER_CAMEL;
 import static com.google.common.base.CaseFormat.LOWER_UNDERSCORE;
 import static com.google.common.base.Preconditions.checkNotNull;

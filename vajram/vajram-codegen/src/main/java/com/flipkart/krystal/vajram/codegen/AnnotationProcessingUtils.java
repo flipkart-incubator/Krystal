@@ -1,8 +1,9 @@
 package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
-import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
 import static com.flipkart.krystal.vajram.codegen.CodegenUtils.REQUEST_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
+import static com.flipkart.krystal.vajram.codegen.VajramCodeGenProcessor.DEBUG;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.datatypes.DataType;
@@ -93,8 +94,7 @@ public class AnnotationProcessingUtils {
       // processor is executed, we might end up creating the same file multiple times. This is not
       // an error, hence we ignore this exceeption
     } catch (Exception e) {
-      log(
-          Kind.ERROR,
+      error(
           "Error creating java file for className: %s. Error: %s".formatted(className, e),
           vajramDefinition);
     }
@@ -186,16 +186,14 @@ public class AnnotationProcessingUtils {
             .or(() -> vajramType)
             .orElseThrow(
                 () -> {
-                  log(
-                      Kind.ERROR,
+                  error(
                       "At least one of `onVajram` or `withVajramReq` is needed in dependency declaration '%s' of vajram '%s'"
                           .formatted(depField.getSimpleName(), vajramId),
                       depField);
                   return new RuntimeException("Invalid Dependency specification");
                 });
     if (vajramReqType.isPresent() && vajramType.isPresent()) {
-      log(
-          Kind.ERROR,
+      error(
           ("Both `withVajramReq` and `onVajram` cannot be set."
                   + " Please set only one of them for dependency '%s' of vajram '%s'."
                   + " Found withVajramReq=%s and onVajram=%s")
@@ -212,8 +210,7 @@ public class AnnotationProcessingUtils {
           .depReqClassName(getVajramReqClassName(vajramOrReqElement))
           .canFanout(dependency.canFanout());
       if (!declaredDataType.equals(depVajramId.responseType())) {
-        log(
-            Kind.ERROR,
+        error(
             "Declared dependency type %s does not match dependency vajram response type %s"
                 .formatted(declaredDataType, depVajramId.responseType()),
             depField);
@@ -308,26 +305,23 @@ public class AnnotationProcessingUtils {
       if (typeParameters.size() > typeParamIndex) {
         return typeParameters.get(typeParamIndex);
       } else {
-        log(
-            Kind.ERROR,
+        error(
             "Incorrect number of parameter types on Vajram interface. Expected 1, Found %s"
                 .formatted(typeParameters),
             vajramDef);
       }
     }
-    log(Kind.ERROR, "Unable to infer response type for Vajram", vajramDef);
+    error("Unable to infer response type for Vajram", vajramDef);
     throw new RuntimeException();
   }
 
   void note(CharSequence message) {
-    processingEnv.getMessager().printMessage(Kind.NOTE, message);
+    if (DEBUG) {
+      processingEnv.getMessager().printMessage(Kind.NOTE, message);
+    }
   }
 
-  void log(Kind kind, String message) {
-    processingEnv.getMessager().printMessage(kind, message);
-  }
-
-  void log(Kind kind, String message, Element element) {
-    processingEnv.getMessager().printMessage(kind, message, element);
+  void error(String message, Element element) {
+    processingEnv.getMessager().printMessage(Kind.ERROR, message, element);
   }
 }
