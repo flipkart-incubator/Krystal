@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram;
 
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
-import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;

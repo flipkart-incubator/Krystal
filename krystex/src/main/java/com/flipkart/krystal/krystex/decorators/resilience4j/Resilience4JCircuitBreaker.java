@@ -19,7 +19,7 @@ public final class Resilience4JCircuitBreaker implements MainLogicDecorator {
 
   private final String instanceId;
 
-  @Nullable private CircuitBreaker circuitBreaker;
+  private @Nullable CircuitBreaker circuitBreaker;
 
   /**
    * @param instanceId The tag because of which this logic decorator was applied.

@@ -19,7 +19,6 @@ import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfoLite;
 import com.flipkart.krystal.vajram.codegen.utils.CodegenUtils;
 import com.flipkart.krystal.vajram.codegen.utils.Constants;
-import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.TypeName;
 import java.io.File;

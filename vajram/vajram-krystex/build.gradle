@@ -20,52 +20,42 @@ dependencies {
     testAnnotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
 }
 
+tasks.named('testCodeGenVajramModels').configure {
+    doFirst {
+        def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
+        options.compilerArgs += modulePathArgs(moduleName)
+    }
+}
+
 compileTestJava {
     doFirst {
         def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
+        options.compilerArgs += modulePathArgs(moduleName)
         options.compilerArgs += [
                 '--module-path', classpath.asPath,
-                '--add-modules', 'org.junit.jupiter.api',
-                '--add-reads', "$moduleName=org.junit.jupiter.api",
                 '--patch-module', "$moduleName=" + files(sourceSets.test.java.srcDirs).asPath,
-                '--add-modules', 'com.fasterxml.jackson.databind',
-                '--add-reads', "$moduleName=com.fasterxml.jackson.databind",
-                '--add-modules', 'com.fasterxml.jackson.annotation',
-                '--add-reads', "$moduleName=com.fasterxml.jackson.annotation",
-                '--add-modules', 'org.assertj.core',
-                '--add-reads', "$moduleName=org.assertj.core",
-                '--add-modules', 'com.fasterxml.jackson.datatype.jdk8',
-                '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jdk8",
-                '--add-modules', 'com.fasterxml.jackson.datatype.jsr310',
-                '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jsr310",
-                '--add-modules', 'org.junit.jupiter.params',
-                '--add-reads', "$moduleName=org.junit.jupiter.params",
         ]
     }
 }
 
-project.tasks.compileTestJava.dependsOn 'testCodeGenVajramImpls'
-tasks.named('testCodeGenVajramModels').configure {
+project.tasks.compileTestJava.dependsOn 'testCodeGenVajramModels'
+
+test {
     doFirst {
         def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
-        options.compilerArgs += [
-                '--add-reads', "$moduleName=flipkart.krystal.krystex",
-                '--add-reads', "$moduleName=org.junit.jupiter.api",
+        jvmArgs += modulePathArgs(moduleName)
+        jvmArgs += [
+                '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
+                '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
+                '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
+                '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
+                '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
+                '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
+                '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
+                '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
 
-                '--add-modules', 'com.fasterxml.jackson.annotation',
-                '--add-reads', "$moduleName=com.fasterxml.jackson.annotation",
-                '--add-modules', 'com.fasterxml.jackson.databind',
-                '--add-reads', "$moduleName=com.fasterxml.jackson.databind",
-                '--add-modules', 'com.fasterxml.jackson.datatype.jdk8',
-                '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jdk8",
-                '--add-modules', 'com.fasterxml.jackson.datatype.jsr310',
-                '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jsr310",
-                '--add-modules', 'org.junit.jupiter.params',
-                '--add-reads', "$moduleName=org.junit.jupiter.params",
-
-                '--add-modules', 'org.assertj.core',
-                '--add-reads', "$moduleName=org.assertj.core",
-
+                '--add-opens', "flipkart.krystal.krystex/com.flipkart.krystal.krystex.decorators.observability=com.fasterxml.jackson.databind",
+                '--add-opens', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex=org.junit.platform.commons",
         ]
     }
 }
@@ -88,6 +78,34 @@ publishing {
         }
     }
 
-    tasks.named("spotlessJava").configure { dependsOn("codeGenVajramImpls") }
-    tasks.named("spotlessJava").configure { dependsOn("testCodeGenVajramImpls") }
+    tasks.named("spotlessJava").configure { dependsOn("codeGenVajramModels") }
+    tasks.named("spotlessJava").configure { dependsOn("testCodeGenVajramModels") }
+}
+
+private static ArrayList<String> modulePathArgs(String moduleName) {
+    [
+            '--add-modules', 'flipkart.krystal.krystex',
+            '--add-reads', "$moduleName=flipkart.krystal.krystex",
+
+            '--add-modules', 'org.junit.jupiter.api',
+            '--add-reads', "$moduleName=org.junit.jupiter.api",
+
+            '--add-modules', 'org.junit.jupiter.params',
+            '--add-reads', "$moduleName=org.junit.jupiter.params",
+
+            '--add-modules', 'org.assertj.core',
+            '--add-reads', "$moduleName=org.assertj.core",
+
+            '--add-modules', 'com.fasterxml.jackson.annotation',
+            '--add-reads', "$moduleName=com.fasterxml.jackson.annotation",
+
+            '--add-modules', 'com.fasterxml.jackson.databind',
+            '--add-reads', "$moduleName=com.fasterxml.jackson.databind",
+
+            '--add-modules', 'com.fasterxml.jackson.datatype.jdk8',
+            '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jdk8",
+
+            '--add-modules', 'com.fasterxml.jackson.datatype.jsr310',
+            '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jsr310",
+    ]
 }

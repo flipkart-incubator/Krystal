@@ -1,12 +1,15 @@
 package com.flipkart.krystal.vajram;
 
+import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
+
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import java.util.Collection;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record VajramID(String vajramId) implements DataAccessSpec {
+
+  public static VajramID ofVajram(Class<? extends Vajram<?>> vajramClass) {
+    return vajramID(getVajramIdString(vajramClass));
+  }
 
   public static VajramID vajramID(String id) {
     return new VajramID(id);
@@ -15,5 +18,10 @@ public record VajramID(String vajramId) implements DataAccessSpec {
   @Override
   public <T> T adapt(Collection<T> dataObjects) {
     throw new UnsupportedOperationException("");
+  }
+
+  @Override
+  public String toString() {
+    return "v<%s>".formatted(vajramId());
   }
 }

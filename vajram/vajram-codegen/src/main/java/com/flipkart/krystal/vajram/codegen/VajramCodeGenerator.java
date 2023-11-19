@@ -377,7 +377,8 @@ public class VajramCodeGenerator {
                         vajramDefs.get(depVajramId),
                         "Could not find ParsedVajramData for %s",
                         depVajramId);
-                final TypeName boxedResponseType = util.toTypeName(depVajramInfo.responseType()).box();
+                final TypeName boxedResponseType =
+                    util.toTypeName(depVajramInfo.responseType()).box();
                 final String variableName = toJavaName(inputDef.name());
                 final String depVariableName = variableName + RESPONSES_SUFFIX;
                 if (dependencyModel.canFanout()) {
@@ -934,7 +935,7 @@ public class VajramCodeGenerator {
       controlFLowStarted = true;
     }
     // TODO : add missing validations if any (??)
-    TypeMirror returnType = util.wrap(method.getReturnType());
+    TypeMirror returnType = util.box(method.getReturnType());
     if (util.isRawAssignable(returnType, MultiExecute.class)) {
       String code =
           """

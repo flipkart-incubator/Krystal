@@ -5,6 +5,7 @@ import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.flipkart.krystal.vajram.IOVajram;
+import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
@@ -17,10 +18,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.LongAdder;
 
-@VajramDef(TestUserServiceVajram.ID)
-public abstract class TestUserServiceVajram extends IOVajram<TestUserInfo> {
+@VajramDef
+public abstract class TestUserService extends IOVajram<TestUserInfo> {
 
-  public static final String ID = "testUserServiceVajram";
+  @Input(modulated = true)
+  String userId;
 
   private static final ScheduledExecutorService LATENCY_INDUCER =
       newSingleThreadScheduledExecutor();
@@ -29,9 +31,8 @@ public abstract class TestUserServiceVajram extends IOVajram<TestUserInfo> {
   public static final Set<TestUserServiceRequest> REQUESTS = new LinkedHashSet<>();
 
   @VajramLogic
-  public static ImmutableMap<TestUserServiceModInputs, CompletableFuture<TestUserInfo>>
-      callUserService(
-          ModulatedInput<TestUserServiceModInputs, TestUserServiceCommonInputs> modulatedRequest) {
+  static ImmutableMap<TestUserServiceModInputs, CompletableFuture<TestUserInfo>> callUserService(
+      ModulatedInput<TestUserServiceModInputs, TestUserServiceCommonInputs> modulatedRequest) {
     CALL_COUNTER.increment();
     modulatedRequest.modInputs().stream()
         .map(im -> TestUserServiceRequest.builder().userId(im.userId()).build())

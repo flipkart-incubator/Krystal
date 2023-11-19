@@ -11,6 +11,4 @@ public @interface NamedValueTag {
   String name();
 
   String value();
-
-
 }

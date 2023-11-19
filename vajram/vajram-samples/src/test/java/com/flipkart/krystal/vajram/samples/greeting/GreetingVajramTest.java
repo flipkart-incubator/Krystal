@@ -111,7 +111,7 @@ public class GreetingVajramTest {
   private static CompletableFuture<String> executeVajram(
       KrystexVajramExecutor<RequestContext> krystexVajramExecutor) {
     return krystexVajramExecutor.execute(
-        vajramID(GreetingVajram.ID),
+        vajramID(Greeting.ID),
         rc -> GreetingRequest.builder().userId("user@123").build(),
         KryonExecutionConfig.builder().executionId("req_1").build());
   }

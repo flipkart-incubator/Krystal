@@ -4,7 +4,6 @@ import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
 import static com.flipkart.krystal.vajram.codegen.utils.CodegenUtils.REQUEST_SUFFIX;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.util.stream.Collectors.toMap;
 
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.vajram.Dependency;
@@ -31,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
+import javax.annotation.processing.FilerException;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
@@ -89,9 +89,13 @@ public class AnnotationProcessingUtils {
       try (PrintWriter out = new PrintWriter(requestFile.openWriter())) {
         out.println(code);
       }
+    } catch (FilerException ignored) {
+      // Since we do multiple passes (codeGenVajramModels, and compileJava) where this annotation
+      // processor is executed, we might end up creating the same file multiple times. This is not
+      // an error, hence we ignore this exceeption
     } catch (Exception e) {
       log(
-          Kind.WARNING,
+          Kind.ERROR,
           "Error creating java file for className: %s. Error: %s".formatted(className, e),
           vajramDefinition);
     }

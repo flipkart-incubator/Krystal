@@ -33,7 +33,7 @@ public final class Resilience4JBulkhead implements MainLogicDecorator {
 
   private final String instanceId;
 
-  @Nullable private BulkheadAdapter adaptedBulkhead;
+  private @Nullable BulkheadAdapter adaptedBulkhead;
 
   /**
    * @param instanceId The tag because of which this logic decorator was applied.
@@ -116,8 +116,8 @@ public final class Resilience4JBulkhead implements MainLogicDecorator {
   }
 
   private final class BulkheadAdapter {
-    @Nullable private Bulkhead bulkhead;
-    @Nullable private ThreadPoolBulkhead threadPoolBulkhead;
+    private @Nullable Bulkhead bulkhead;
+    private @Nullable ThreadPoolBulkhead threadPoolBulkhead;
 
     private BulkheadAdapter(BulkheadAdapterConfig config) {
       BulkheadConfig bulkheadConfig = config.bulkheadConfig();

@@ -2,20 +2,23 @@ package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHe
 
 import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.inputs.MultiExecute.skipFanout;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello.ID;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.friendIds_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.hellos_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.skip_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.userIds_n;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
+import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.DependencyResponse;
+import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.inputs.MultiExecute;
 import com.flipkart.krystal.vajram.inputs.Using;
 import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceRequest;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloInputUtil.MutualFriendsHelloInputs;
 import java.util.ArrayList;
@@ -25,10 +28,17 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@VajramDef(ID)
+@VajramDef
 public abstract class MutualFriendsHello extends ComputeVajram<String> {
 
-  public static final String ID = "MutualFriendsHello";
+  @Input Set<String> userIds;
+  @Input Optional<Boolean> skip;
+
+  @Dependency(onVajram = FriendsService.class)
+  Set<String> friendIds;
+
+  @Dependency(onVajram = HelloFriendsV2.class, canFanout = true)
+  String hellos;
 
   @VajramLogic
   public static String sayHelloToMutualFriends(
