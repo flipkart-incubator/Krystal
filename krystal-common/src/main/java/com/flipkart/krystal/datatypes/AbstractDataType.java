@@ -1,7 +1,7 @@
 package com.flipkart.krystal.datatypes;
 
 abstract sealed class AbstractDataType<T> implements DataType<T>
-    permits BooleanType, CustomType, IntegerType, ListType, ObjectType, SetType, StringType {
+    permits BooleanType, CustomType, IntegerType, ListType, SetType, StringType {
   @Override
   public String toString() {
     try {
