@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram.codegen;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.codegen.CodegenUtils.REQUEST_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
-import static com.flipkart.krystal.vajram.codegen.VajramCodeGenProcessor.DEBUG;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.datatypes.DataType;
@@ -22,6 +21,9 @@ import com.flipkart.krystal.vajram.codegen.models.VajramInfoLite;
 import com.flipkart.krystal.vajram.inputs.InputSource;
 import jakarta.inject.Inject;
 import java.io.PrintWriter;
+import java.time.Clock;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -49,6 +51,8 @@ import javax.tools.Diagnostic.Kind;
 import javax.tools.JavaFileObject;
 
 public class AnnotationProcessingUtils {
+
+  public static final boolean DEBUG = true;
 
   private final RoundEnvironment roundEnv;
   private final ProcessingEnvironment processingEnv;
@@ -89,10 +93,12 @@ public class AnnotationProcessingUtils {
       try (PrintWriter out = new PrintWriter(requestFile.openWriter())) {
         out.println(code);
       }
-    } catch (FilerException ignored) {
+    } catch (FilerException e) {
       // Since we do multiple passes (codeGenVajramModels, and compileJava) where this annotation
       // processor is executed, we might end up creating the same file multiple times. This is not
       // an error, hence we ignore this exceeption
+      //      note("Could not create source file for %s. Due to exception %s".formatted(className,
+      // e));
     } catch (Exception e) {
       error(
           "Error creating java file for className: %s. Error: %s".formatted(className, e),
@@ -317,11 +323,18 @@ public class AnnotationProcessingUtils {
 
   void note(CharSequence message) {
     if (DEBUG) {
-      processingEnv.getMessager().printMessage(Kind.NOTE, message);
+      processingEnv
+          .getMessager()
+          .printMessage(Kind.NOTE, "[%s] %s".formatted(getTimestamp(), message));
     }
   }
 
   void error(String message, Element element) {
     processingEnv.getMessager().printMessage(Kind.ERROR, message, element);
+  }
+
+  private String getTimestamp() {
+    return DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(
+        Clock.systemDefaultZone().instant().atZone(ZoneId.systemDefault()));
   }
 }
