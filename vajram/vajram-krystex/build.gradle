@@ -27,7 +27,15 @@ tasks.named('testCodeGenVajramModels').configure {
     }
 }
 
+tasks.named('testCodeGenVajramImpls').configure {
+    doFirst {
+        def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
+        options.compilerArgs += modulePathArgs(moduleName)
+    }
+}
+
 compileTestJava {
+    dependsOn 'testCodeGenVajramImpls'
     doFirst {
         def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
         options.compilerArgs += modulePathArgs(moduleName)
@@ -37,8 +45,6 @@ compileTestJava {
         ]
     }
 }
-
-project.tasks.compileTestJava.dependsOn 'testCodeGenVajramModels'
 
 test {
     doFirst {

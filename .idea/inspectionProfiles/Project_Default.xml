@@ -3,13 +3,13 @@
     <option name="myName" value="Project Default" />
     <option name="scopesOrder">
       <list>
+        <option value="Vajrams" />
         <option value="All Changed Files" />
         <option value="Open Files" />
         <option value="Production" />
         <option value="Project Files" />
         <option value="Scratches and Consoles" />
         <option value="Tests" />
-        <option value="Vajrams" />
       </list>
     </option>
     <inspection_tool class="AbstractClassExtendsConcreteClass" enabled="false" level="ERROR" enabled_by_default="false" />

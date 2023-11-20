@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.vajram.codegen.CodegenUtils.getInputUtilClassName;
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.getVajramImplClassName;
 import static java.lang.System.lineSeparator;
 import static java.util.stream.Collectors.joining;
 
@@ -21,9 +20,7 @@ import javax.lang.model.element.TypeElement;
 @SupportedAnnotationTypes("com.flipkart.krystal.vajram.VajramDef")
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
-public class VajramCodeGenProcessor extends AbstractProcessor {
-
-  public static final boolean DEBUG = false;
+public class VajramModelGenProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -51,17 +48,6 @@ public class VajramCodeGenProcessor extends AbstractProcessor {
               + getInputUtilClassName(vajramCodeGenerator.getVajramName()),
           vajramCodeGenerator.codeGenInputUtil(),
           vajramClass);
-      try {
-        util.generateSourceFile(
-            vajramCodeGenerator.getPackageName()
-                + '.'
-                + getVajramImplClassName(vajramInfo.vajramId().vajramId()),
-            vajramCodeGenerator.codeGenVajramImpl(),
-            vajramClass);
-      } catch (Exception e) {
-        util.note(
-            "Error while generating vajramImpl. Ignoring the error as it should be skipped in subsequent runs");
-      }
     }
     return true;
   }
