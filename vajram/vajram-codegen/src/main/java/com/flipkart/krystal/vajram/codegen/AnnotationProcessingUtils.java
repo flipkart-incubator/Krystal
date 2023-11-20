@@ -52,7 +52,7 @@ import javax.tools.JavaFileObject;
 
 public class AnnotationProcessingUtils {
 
-  public static final boolean DEBUG = true;
+  public static final boolean DEBUG = false;
 
   private final RoundEnvironment roundEnv;
   private final ProcessingEnvironment processingEnv;

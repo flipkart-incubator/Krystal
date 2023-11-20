@@ -60,7 +60,6 @@ class VajramPlugin implements Plugin<Project> {
             mustRunAfter it.project.tasks.compileJava
             source project.sourceSets.test.allSource.srcDirs + project.sourceSets.main.allSource.srcDirs
             classpath = project.configurations.testCompileClasspath + project.configurations.compileClasspath
-            println 'Compile classpath: ' + classpath.toList()
             destinationDirectory = project.tasks.compileTestJava.destinationDirectory
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileTestJava.options.annotationProcessorPath
@@ -74,7 +73,6 @@ class VajramPlugin implements Plugin<Project> {
             dependsOn 'testCodeGenVajramModels'
             source project.sourceSets.test.allSource.srcDirs + project.sourceSets.main.allSource.srcDirs
             classpath = project.configurations.testCompileClasspath + project.configurations.compileClasspath
-            println 'Compile classpath: ' + classpath.toList()
             destinationDirectory = project.tasks.compileTestJava.destinationDirectory
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileTestJava.options.annotationProcessorPath
