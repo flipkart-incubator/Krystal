@@ -81,7 +81,6 @@ class VajramPlugin implements Plugin<Project> {
             outputs.upToDateWhen { false }
         }
 
-        project.tasks.named("sourcesJar").configure { it.dependsOn("compileJava") }
         project.tasks.named("jar").configure { it.dependsOn("compileJava") }
     }
 }

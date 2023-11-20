@@ -20,6 +20,8 @@ dependencies {
     testAnnotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
 }
 
+project.tasks.named("sourcesJar").configure { it.dependsOn("compileJava") }
+
 tasks.named('testCodeGenVajramModels').configure {
     doFirst {
         def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
