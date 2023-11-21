@@ -26,7 +26,7 @@ public abstract class FriendsService extends IOVajram<Set<String>> {
   String userId;
 
   @VajramLogic
-  public static ImmutableMap<FriendsServiceModInputs, CompletableFuture<Set<String>>> call(
+  static ImmutableMap<FriendsServiceModInputs, CompletableFuture<Set<String>>> call(
       ModulatedInput<FriendsServiceModInputs, FriendsServiceCommonInputs> modulatedInput) {
     CALL_COUNTER.increment();
     Map<FriendsServiceModInputs, CompletableFuture<Set<String>>> result = new LinkedHashMap<>();

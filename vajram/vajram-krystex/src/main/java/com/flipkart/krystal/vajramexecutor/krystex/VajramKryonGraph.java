@@ -82,6 +82,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
+import lombok.Getter;
 import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
 import org.checkerframework.checker.initialization.qual.UnderInitialization;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -89,7 +90,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 /** The execution graph encompassing all registered vajrams. */
 public final class VajramKryonGraph implements VajramExecutableGraph {
 
-  private final KryonDefinitionRegistry kryonDefinitionRegistry;
+  @Getter private final KryonDefinitionRegistry kryonDefinitionRegistry;
 
   private final LogicDefRegistryDecorator logicRegistryDecorator;
 
@@ -206,10 +207,6 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
       previousDepName = currentDepName;
     }
     return currentDepChain;
-  }
-
-  public KryonDefinitionRegistry getKryonDefinitionRegistry() {
-    return this.kryonDefinitionRegistry;
   }
 
   @Override

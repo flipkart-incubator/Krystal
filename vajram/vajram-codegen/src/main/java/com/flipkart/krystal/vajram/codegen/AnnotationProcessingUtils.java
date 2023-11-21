@@ -52,7 +52,7 @@ import javax.tools.JavaFileObject;
 
 public class AnnotationProcessingUtils {
 
-  public static final boolean DEBUG = false;
+  private static final boolean DEBUG = false;
 
   private final RoundEnvironment roundEnv;
   private final ProcessingEnvironment processingEnv;
@@ -224,6 +224,11 @@ public class AnnotationProcessingUtils {
       depBuilder.responseType(declaredDataType);
       return depBuilder.build();
     }
+    error(
+        ("Invalid dependency spec of dependency '%s' of vajram '%s'."
+                + " Found withVajramReq=%s and onVajram=%s")
+            .formatted(depField.getSimpleName(), vajramId, vajramReqType.get(), vajramType.get()),
+        depField);
     throw new RuntimeException("Invalid Dependency specification");
   }
 
