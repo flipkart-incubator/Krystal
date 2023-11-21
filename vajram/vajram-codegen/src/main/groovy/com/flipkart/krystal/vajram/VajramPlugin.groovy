@@ -35,6 +35,7 @@ class VajramPlugin implements Plugin<Project> {
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
             options.generatedSourceOutputDirectory.fileValue(project.file(mainGeneratedSrcDir))
+            options.compilerArgs += ['-proc:only']
             outputs.upToDateWhen { false }
         }
 
@@ -48,7 +49,10 @@ class VajramPlugin implements Plugin<Project> {
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
             options.generatedSourceOutputDirectory.fileValue(project.file(mainGeneratedSrcDir))
-            options.compilerArgs += ['-proc:only', '-processor', 'com.flipkart.krystal.vajram.codegen.VajramImplGenProcessor']
+            options.compilerArgs +=
+                    ['-proc:only', '-processor',
+                     'lombok.launch.AnnotationProcessorHider$AnnotationProcessor,' +
+                             'com.flipkart.krystal.vajram.codegen.VajramImplGenProcessor']
             outputs.upToDateWhen { false }
         }
 
