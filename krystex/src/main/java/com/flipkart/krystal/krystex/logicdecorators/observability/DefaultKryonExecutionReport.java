@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.decorators.observability;
+package com.flipkart.krystal.krystex.logicdecorators.observability;
 
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;

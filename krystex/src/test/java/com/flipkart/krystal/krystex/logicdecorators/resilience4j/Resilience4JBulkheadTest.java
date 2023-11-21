@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.decorators.resilience4j;
+package com.flipkart.krystal.krystex.logicdecorators.resilience4j;
 
 import static com.flipkart.krystal.data.ValueOrError.withValue;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.GRANULAR;
@@ -15,7 +15,6 @@ import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
@@ -23,6 +22,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
+import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig;
 import com.google.common.collect.ImmutableMap;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
 import java.time.Duration;

@@ -21,10 +21,10 @@ import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardGranule;
 import com.flipkart.krystal.krystex.commands.GranularCommand;
 import com.flipkart.krystal.krystex.commands.SkipGranule;
-import com.flipkart.krystal.krystex.decoration.FlushCommand;
-import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
-import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.logicdecoration.FlushCommand;
+import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
+import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
+import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.request.StringReqGenerator;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
@@ -150,7 +150,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
   private void executeMainLogicIfPossible(
       RequestId requestId, CompletableFuture<GranuleResponse> resultForRequest) {
     // If all the inputs and dependency values are available, then prepare run mainLogic
-    MainLogicDefinition<Object> mainLogicDefinition = kryonDefinition.getMainLogicDefinition();
+    MainLogicDefinition<Object> mainLogicDefinition = definition.getMainLogicDefinition();
     ImmutableSet<String> inputNames = mainLogicDefinition.inputNames();
     Set<String> collect =
         new LinkedHashSet<>(
@@ -225,7 +225,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
   }
 
   private void execute(RequestId requestId, ImmutableSet<String> newInputNames) {
-    MainLogicDefinition<Object> mainLogicDefinition = kryonDefinition.getMainLogicDefinition();
+    MainLogicDefinition<Object> mainLogicDefinition = definition.getMainLogicDefinition();
 
     Map<String, InputValue<Object>> allInputs =
         inputsValueCollector.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
@@ -235,8 +235,8 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
     Set<String> availableInputs = Sets.union(allInputs.keySet(), allDependencies.keySet());
     if (availableInputs.isEmpty()) {
       if (!allInputNames.isEmpty()
-          && kryonDefinition.resolverDefinitions().isEmpty()
-          && !kryonDefinition.dependencyKryons().isEmpty()) {
+          && definition.resolverDefinitions().isEmpty()
+          && !definition.dependencyKryons().isEmpty()) {
         executeDependenciesWhenNoResolvers(requestId);
       }
       return;
@@ -290,11 +290,11 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
     }
 
     Optional<MultiResolverDefinition> multiResolverOpt =
-        kryonDefinition
+        definition
             .multiResolverLogicId()
             .map(
                 kryonLogicId ->
-                    kryonDefinition
+                    definition
                         .kryonDefinitionRegistry()
                         .logicDefinitionRegistry()
                         .getMultiResolver(kryonLogicId));
@@ -376,8 +376,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                   depRequestId,
                   dependantChainByRequest
                       .getOrDefault(
-                          requestId,
-                          kryonDefinition.kryonDefinitionRegistry().getDependantChainsStart())
+                          requestId, definition.kryonDefinitionRegistry().getDependantChainsStart())
                       .extend(kryonId, dependencyName),
                   (SkipDependency) resolverCommand);
           dependencyKryonExecutions
@@ -449,9 +448,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                           dependantChainByRequest
                               .getOrDefault(
                                   requestId,
-                                  kryonDefinition
-                                      .kryonDefinitionRegistry()
-                                      .getDependantChainsStart())
+                                  definition.kryonDefinitionRegistry().getDependantChainsStart())
                               .extend(kryonId, dependencyName),
                           dependencyRequestId)));
         }
@@ -494,19 +491,19 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                           getDepChainFor(requestId));
                     },
                     depKryonId,
-                    kryonDefinition,
+                    definition,
                     kryonExecutor);
               });
 
       flushDependencyIfNeeded(
           dependencyName,
           dependantChainByRequest.getOrDefault(
-              requestId, kryonDefinition.kryonDefinitionRegistry().getDependantChainsStart()));
+              requestId, definition.kryonDefinitionRegistry().getDependantChainsStart()));
     }
   }
 
   private void flushAllDependenciesIfNeeded(DependantChain dependantChain) {
-    kryonDefinition
+    definition
         .dependencyKryons()
         .keySet()
         .forEach(dependencyName -> flushDependencyIfNeeded(dependencyName, dependantChain));
@@ -537,7 +534,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
   }
 
   private KryonId getDepKryonId(String dependencyName) {
-    KryonId depKryonId = kryonDefinition.dependencyKryons().get(dependencyName);
+    KryonId depKryonId = definition.dependencyKryons().get(dependencyName);
     if (depKryonId == null) {
       throw new AssertionError("This is a bug");
     }
@@ -564,7 +561,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
   }
 
   private void executeDependenciesWhenNoResolvers(RequestId requestId) {
-    kryonDefinition
+    definition
         .dependencyKryons()
         .forEach(
             (depName, depKryonId) -> {
@@ -599,7 +596,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                                     getDepChainFor(requestId));
                               },
                               depKryonId,
-                              kryonDefinition,
+                              definition,
                               kryonExecutor);
                         });
               }
@@ -608,7 +605,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
 
   private void executeMainLogic(
       CompletableFuture<GranuleResponse> resultForRequest, RequestId requestId) {
-    MainLogicDefinition<Object> mainLogicDefinition = kryonDefinition.getMainLogicDefinition();
+    MainLogicDefinition<Object> mainLogicDefinition = definition.getMainLogicDefinition();
     MainLogicInputs mainLogicInputs = getInputsForMainLogic(requestId);
     // Retrieve existing result from cache if result for this set of inputs has already been
     // calculated

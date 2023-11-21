@@ -2,13 +2,13 @@ package com.flipkart.krystal.krystex;
 
 import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.data.Inputs;
-import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig.DecoratorContext;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
+import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
+import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig.DecoratorContext;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;

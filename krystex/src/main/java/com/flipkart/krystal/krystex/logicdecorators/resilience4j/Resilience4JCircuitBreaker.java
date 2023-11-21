@@ -1,12 +1,12 @@
-package com.flipkart.krystal.krystex.decorators.resilience4j;
+package com.flipkart.krystal.krystex.logicdecorators.resilience4j;
 
-import static com.flipkart.krystal.krystex.decorators.resilience4j.R4JUtils.decorateAsyncExecute;
-import static com.flipkart.krystal.krystex.decorators.resilience4j.R4JUtils.extractResponseMap;
+import static com.flipkart.krystal.krystex.logicdecorators.resilience4j.R4JUtils.decorateAsyncExecute;
+import static com.flipkart.krystal.krystex.logicdecorators.resilience4j.R4JUtils.extractResponseMap;
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.internal.CircuitBreakerStateMachine;

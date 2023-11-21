@@ -25,10 +25,10 @@ import com.flipkart.krystal.krystex.commands.BatchCommand;
 import com.flipkart.krystal.krystex.commands.CallbackBatch;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardBatch;
-import com.flipkart.krystal.krystex.decoration.FlushCommand;
-import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
-import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.logicdecoration.FlushCommand;
+import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
+import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
+import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
@@ -160,11 +160,11 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     ForwardBatch forwardBatch = getForwardCommand(dependantChain);
 
     Optional<MultiResolverDefinition> multiResolverOpt =
-        kryonDefinition
+        definition
             .multiResolverLogicId()
             .map(
                 kryonLogicId ->
-                    kryonDefinition
+                    definition
                         .kryonDefinitionRegistry()
                         .logicDefinitionRegistry()
                         .getMultiResolver(kryonLogicId));
@@ -245,7 +245,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       DependantChain dependantChain,
       Map<Set<RequestId>, ResolverCommand> resolverCommandsByReq,
       Set<ResolverDefinition> resolverDefinitions) {
-    KryonId depKryonId = kryonDefinition.dependencyKryons().get(depName);
+    KryonId depKryonId = definition.dependencyKryons().get(depName);
     if (depKryonId == null) {
       throw new AssertionError("This is a bug.");
     }
@@ -335,7 +335,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
           enqueueOrExecuteCommand(
               () -> new CallbackBatch(kryonId, depName, results, dependantChain),
               depKryonId,
-              kryonDefinition,
+              definition,
               kryonExecutor);
         });
     flushDependencyIfNeeded(depName, dependantChain);
@@ -345,7 +345,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       DependantChain dependantChain) {
     ForwardBatch forwardCommand = getForwardCommand(dependantChain);
     // If all the inputs and dependency values are available, then prepare run mainLogic
-    ImmutableSet<String> inputNames = kryonDefinition.getMainLogicDefinition().inputNames();
+    ImmutableSet<String> inputNames = definition.getMainLogicDefinition().inputNames();
     if (availableInputsByDepChain
         .getOrDefault(dependantChain, ImmutableSet.of())
         .containsAll(inputNames)) { // All the inputs of the kryon logic have data present
@@ -362,7 +362,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
   private CompletableFuture<BatchResponse> executeMainLogic(
       Set<RequestId> requestIds, DependantChain dependantChain) {
 
-    MainLogicDefinition<Object> mainLogicDefinition = kryonDefinition.getMainLogicDefinition();
+    MainLogicDefinition<Object> mainLogicDefinition = definition.getMainLogicDefinition();
 
     Map<RequestId, MainLogicInputs> mainLogicInputs = new LinkedHashMap<>();
 
@@ -430,7 +430,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
   }
 
   private void flushAllDependenciesIfNeeded(DependantChain dependantChain) {
-    kryonDefinition
+    definition
         .dependencyKryons()
         .keySet()
         .forEach(dependencyName -> flushDependencyIfNeeded(dependencyName, dependantChain));
@@ -443,7 +443,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     if (executedDependencies.getOrDefault(dependantChain, Set.of()).contains(dependencyName)) {
       kryonExecutor.executeCommand(
           new Flush(
-              Optional.ofNullable(kryonDefinition.dependencyKryons().get(dependencyName))
+              Optional.ofNullable(definition.dependencyKryons().get(dependencyName))
                   .orElseThrow(
                       () ->
                           new AssertionError(
@@ -530,8 +530,8 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     }
     SetView<String> resolvableInputNames =
         Sets.difference(
-            kryonDefinition.getMainLogicDefinition().inputNames(),
-            kryonDefinition.dependencyKryons().keySet());
+            definition.getMainLogicDefinition().inputNames(),
+            definition.dependencyKryons().keySet());
     if (!inputNames.containsAll(resolvableInputNames)) {
       throw new IllegalArgumentException(
           "Did not receive inputs " + Sets.difference(resolvableInputNames, inputNames));

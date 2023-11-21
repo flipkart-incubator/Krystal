@@ -2,10 +2,10 @@ package com.flipkart.krystal.krystex.kryon;
 
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
-import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
-import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition.KryonDefinitionView;
+import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
+import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
+import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.google.common.collect.ImmutableMap;
@@ -20,9 +20,10 @@ import java.util.function.Function;
 abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonResponse>
     implements Kryon<C, R> permits BatchKryon, GranularKryon {
 
-  protected final KryonDefinition kryonDefinition;
+  protected final KryonDefinition definition;
   protected final KryonId kryonId;
   protected final KryonExecutor kryonExecutor;
+
   /** decoratorType -> Decorator */
   protected final Function<LogicExecutionContext, ImmutableMap<String, MainLogicDecorator>>
       requestScopedDecoratorsSupplier;
@@ -37,18 +38,18 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
   protected final RequestIdGenerator requestIdGenerator;
 
   AbstractKryon(
-      KryonDefinition kryonDefinition,
+      KryonDefinition definition,
       KryonExecutor kryonExecutor,
       Function<LogicExecutionContext, ImmutableMap<String, MainLogicDecorator>>
           requestScopedDecoratorsSupplier,
       LogicDecorationOrdering logicDecorationOrdering,
       RequestIdGenerator requestIdGenerator) {
-    this.kryonDefinition = kryonDefinition;
-    this.kryonId = kryonDefinition.kryonId();
+    this.definition = definition;
+    this.kryonId = definition.kryonId();
     this.kryonExecutor = kryonExecutor;
     this.requestScopedDecoratorsSupplier = requestScopedDecoratorsSupplier;
     this.logicDecorationOrdering = logicDecorationOrdering;
-    KryonDefinitionView kryonDefinitionView = kryonDefinition.kryonDefinitionView();
+    KryonDefinitionView kryonDefinitionView = definition.kryonDefinitionView();
     this.resolverDefinitionsByInput = kryonDefinitionView.resolverDefinitionsByInput();
     this.resolverDefinitionsByDependencies =
         kryonDefinitionView.resolverDefinitionsByDependencies();
@@ -57,10 +58,10 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
   }
 
   protected NavigableSet<MainLogicDecorator> getSortedDecorators(DependantChain dependantChain) {
-    MainLogicDefinition<Object> mainLogicDefinition = kryonDefinition.getMainLogicDefinition();
+    MainLogicDefinition<Object> mainLogicDefinition = definition.getMainLogicDefinition();
     Map<String, MainLogicDecorator> decorators =
         new LinkedHashMap<>(
-            mainLogicDefinition.getSessionScopedLogicDecorators(kryonDefinition, dependantChain));
+            mainLogicDefinition.getSessionScopedLogicDecorators(definition, dependantChain));
     // If the same decoratorType is configured for session and request scope, request scope
     // overrides session scope.
     decorators.putAll(
@@ -69,10 +70,15 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
                 kryonId,
                 mainLogicDefinition.logicTags(),
                 dependantChain,
-                kryonDefinition.kryonDefinitionRegistry())));
+                definition.kryonDefinitionRegistry())));
     TreeSet<MainLogicDecorator> sortedDecorators =
         new TreeSet<>(logicDecorationOrdering.decorationOrder());
     sortedDecorators.addAll(decorators.values());
     return sortedDecorators;
+  }
+
+  @Override
+  public KryonDefinition getDefinition() {
+    return definition;
   }
 }

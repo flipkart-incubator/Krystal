@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.decorators.observability;
+package com.flipkart.krystal.krystex.logicdecorators.observability;
 
 import static com.flipkart.krystal.data.ValueOrError.empty;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -9,9 +9,9 @@ import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
+import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;

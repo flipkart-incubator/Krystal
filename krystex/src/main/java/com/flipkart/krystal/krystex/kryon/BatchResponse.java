@@ -4,5 +4,5 @@ import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.google.common.collect.ImmutableMap;
 
-record BatchResponse(ImmutableMap<RequestId, ValueOrError<Object>> responses)
+public record BatchResponse(ImmutableMap<RequestId, ValueOrError<Object>> responses)
     implements KryonResponse {}

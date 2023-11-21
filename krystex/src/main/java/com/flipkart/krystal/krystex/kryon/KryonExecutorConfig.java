@@ -3,14 +3,15 @@ package com.flipkart.krystal.krystex.kryon;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 
-import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
+import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
+import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import lombok.Builder;
 
 @Builder(toBuilder = true)
@@ -20,6 +21,7 @@ public record KryonExecutorConfig(
     ImmutableSet<DependantChain> disabledDependantChains,
     KryonExecStrategy kryonExecStrategy,
     GraphTraversalStrategy graphTraversalStrategy,
+    Function<KryonId, List<KryonDecorator>> kryonDecoratorsProvider,
     boolean debug) {
 
   public KryonExecutorConfig {
@@ -28,6 +30,9 @@ public record KryonExecutorConfig(
     }
     if (graphTraversalStrategy == null) {
       graphTraversalStrategy = DEPTH;
+    }
+    if (kryonDecoratorsProvider == null) {
+      kryonDecoratorsProvider = kryonId -> List.of();
     }
   }
 
