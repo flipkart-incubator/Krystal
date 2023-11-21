@@ -25,8 +25,6 @@ import java.util.Optional;
 // ComputeVajram means that this Vajram does not directly perform any blocking operations.
 public abstract class Greeting extends ComputeVajram<String> {
 
-  public static final String ID = Greeting.class.getSimpleName();
-
   @Input String userId;
 
   @Inject Optional<Logger> log;

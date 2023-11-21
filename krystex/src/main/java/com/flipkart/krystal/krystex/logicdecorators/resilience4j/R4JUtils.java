@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.decorators.resilience4j;
+package com.flipkart.krystal.krystex.logicdecorators.resilience4j;
 
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.function.Function.identity;

@@ -4,6 +4,6 @@ public record KryonId(String value) {
 
   @Override
   public String toString() {
-    return "n<%s>".formatted(value());
+    return "k<%s>".formatted(value());
   }
 }

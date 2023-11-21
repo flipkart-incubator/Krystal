@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.decoration;
+package com.flipkart.krystal.krystex.logicdecoration;
 
 import com.flipkart.krystal.data.Inputs;
 import com.google.common.collect.ImmutableList;
