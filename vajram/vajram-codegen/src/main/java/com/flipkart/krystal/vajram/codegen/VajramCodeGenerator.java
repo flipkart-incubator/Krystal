@@ -475,9 +475,11 @@ public class VajramCodeGenerator {
       TypeMirror returnType = getParsedVajramData().outputLogic().getReturnType();
       if (!util.isRawAssignable(returnType, CompletableFuture.class)) {
         // TODO: Validate IOVajram response type is CompletableFuture<Type>"
-        throw new VajramValidationException(
+        String errorMessage =
             "The VajramLogic of non-modulated IO vajram %s must return a CompletableFuture"
-                .formatted(vajramName));
+                .formatted(vajramName);
+        util.error(errorMessage, getParsedVajramData().outputLogic());
+        throw new VajramValidationException(errorMessage);
       }
       returnBuilder.add(
           "\nreturn ($L(new $T(\n",
@@ -649,8 +651,10 @@ public class VajramCodeGenerator {
                             // input
                             if (!(facetModels.containsKey(bindParamName)
                                 || resolvedVariables.contains(bindParamName))) {
-                              throw new VajramValidationException(
-                                  "Parameter binding incorrect for input - " + bindParamName);
+                              String message =
+                                  "Parameter binding incorrect for input - " + bindParamName;
+                              util.error(message, parameter);
+                              throw new VajramValidationException(message);
                             }
                           });
                   CodeBlock.Builder ifBlockBuilder =
@@ -742,15 +746,18 @@ public class VajramCodeGenerator {
                                 usingInputName)
                             .build());
                   } else {
-                    throw new VajramValidationException(
+                    String message =
                         String.format(
                             "Optional input dependency %s must have type as Optional",
-                            usingInputName));
+                            usingInputName);
+                    util.error(message, parameter);
+                    throw new VajramValidationException(message);
                   }
                 }
               } else {
-                throw new VajramValidationException(
-                    "No input resolver found for " + usingInputName);
+                String message = "No input resolver found for " + usingInputName;
+                util.error(message, parameter);
+                throw new VajramValidationException(message);
               }
             });
     boolean isFanOut = isParamFanoutDependency || depFanoutMap.getOrDefault(depName, false);
@@ -784,13 +791,11 @@ public class VajramCodeGenerator {
         && depFanoutMap.get(usingInputName)
         && util.isRawAssignable(parameter.asType(), DependencyResponse.class)) {
       // the parameter data type must be DependencyResponse
-      log.error(
-          "Dependency resolution of {} is fanout but the resolver method is not of type DependencyResponse.",
-          resolvedDep);
-      throw new VajramValidationException(
-          "Dependency resolution of "
-              + resolvedDep
-              + " is fanout but the resolver method is not of type DependencyResponse");
+      String message =
+          "Dependency resolution of %s is fanout but the resolver method is not of type DependencyResponse"
+              .formatted(resolvedDep);
+      util.error(message, method);
+      throw new VajramValidationException(message);
     }
     //    ReturnType returnType
     if (vajramInputDef instanceof DependencyModel dependencyModel) {
@@ -856,10 +861,12 @@ public class VajramCodeGenerator {
                 usingInputName,
                 vajramName);
           } else {
-            throw new VajramValidationException(
+            String message =
                 ("A resolver ('%s') must not access an optional dependency ('%s') directly."
                         + "Use Optional<>, ValueOrError<>, or DependencyResponse<> instead")
-                    .formatted(resolverName, usingInputName));
+                    .formatted(resolverName, usingInputName);
+            util.error(message, parameter);
+            throw new VajramValidationException(message);
           }
         } else if (util.isRawAssignable(parameter.asType(), ValueOrError.class)) {
           // This means this dependency in "Using" annotation is not a fanout and the dev has
@@ -883,9 +890,11 @@ public class VajramCodeGenerator {
               boxedDepType,
               usingInputName);
         } else {
-          throw new VajramValidationException(
+          String message =
               "Unrecognized parameter type %s in resolver %s of vajram %s"
-                  .formatted(parameter.asType(), resolverName, this.vajramName));
+                  .formatted(parameter.asType(), resolverName, this.vajramName);
+          util.error(message, parameter);
+          throw new VajramValidationException(message);
         }
       }
     }
@@ -984,10 +993,12 @@ public class VajramCodeGenerator {
               ValueOrError.class);
         }
       } else {
-        throw new VajramValidationException(
+        String message =
             "Incorrect vajram resolver "
                 + vajramName
-                + ": Fanout resolvers must return an iterable");
+                + ": Fanout resolvers must return an iterable";
+        util.error(message, method);
+        throw new VajramValidationException(message);
       }
     } else {
       if (util.isRawAssignable(returnType, VajramRequest.class)) {
