@@ -1,7 +1,9 @@
 package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.REQUEST_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_INPUTS;
+import static com.flipkart.krystal.vajram.codegen.Constants.INPUTS_CLASS_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.Constants.INPUTS_NEEDING_MODULATION;
 import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -19,12 +21,20 @@ import com.flipkart.krystal.vajram.codegen.models.InputModel.InputModelBuilder;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfoLite;
 import com.flipkart.krystal.vajram.inputs.InputSource;
+import com.google.common.primitives.Primitives;
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
 import jakarta.inject.Inject;
 import java.io.PrintWriter;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.time.Clock;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -43,32 +53,37 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypeException;
+import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
+import javax.lang.model.util.SimpleTypeVisitor14;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.JavaFileObject;
 
-public class AnnotationProcessingUtils {
+public class Utils {
 
   private static final boolean DEBUG = false;
 
-  private final RoundEnvironment roundEnv;
+  public static final String DOT = ".";
+  public static final String COMMA = ",";
+  public static final String REQUEST_SUFFIX = "Request";
+  public static final String IMPL = "Impl";
+  public static final String INPUT_UTIL = "InputUtil";
+  public static final String CONVERTER = "CONVERTER";
+
   private final ProcessingEnvironment processingEnv;
-  private final CodegenUtils codegenUtils;
   private final Types typeUtils;
   private final Elements elementUtils;
 
-  public AnnotationProcessingUtils(RoundEnvironment roundEnv, ProcessingEnvironment processingEnv) {
-    this.roundEnv = roundEnv;
+  public Utils(ProcessingEnvironment processingEnv) {
     this.processingEnv = processingEnv;
-    this.codegenUtils = new CodegenUtils(processingEnv);
     this.typeUtils = processingEnv.getTypeUtils();
     this.elementUtils = processingEnv.getElementUtils();
   }
 
-  List<TypeElement> getVajramClasses() {
+  List<TypeElement> getVajramClasses(RoundEnvironment roundEnv) {
     return roundEnv.getElementsAnnotatedWith(VajramDef.class).stream()
         .filter(element -> element.getKind() == ElementKind.CLASS)
         .map(executableElement -> (TypeElement) executableElement)
@@ -234,14 +249,14 @@ public class AnnotationProcessingUtils {
 
   private VajramInfoLite getVajramInfoLite(TypeElement vajramOrReqClass) {
     String vajramClassSimpleName = vajramOrReqClass.getSimpleName().toString();
-    if (codegenUtils.isRawAssignable(vajramOrReqClass.asType(), VajramRequest.class)) {
+    if (isRawAssignable(vajramOrReqClass.asType(), VajramRequest.class)) {
       TypeMirror responseType = getResponseType(vajramOrReqClass, VajramRequest.class);
       TypeElement responseTypeElement = (TypeElement) typeUtils.asElement(responseType);
       return new VajramInfoLite(
           vajramClassSimpleName.substring(
               0, vajramClassSimpleName.length() - REQUEST_SUFFIX.length()),
           new DeclaredTypeVisitor(processingEnv, false, responseTypeElement).visit(responseType));
-    } else if (codegenUtils.isRawAssignable(vajramOrReqClass.asType(), Vajram.class)) {
+    } else if (isRawAssignable(vajramOrReqClass.asType(), Vajram.class)) {
       TypeMirror responseType = getResponseType(vajramOrReqClass, Vajram.class);
       TypeElement responseTypeElement = (TypeElement) typeUtils.asElement(responseType);
       VajramDef vajramDef = vajramOrReqClass.getAnnotation(VajramDef.class);
@@ -260,9 +275,9 @@ public class AnnotationProcessingUtils {
   }
 
   private String getVajramReqClassName(TypeElement vajramClass) {
-    if (codegenUtils.isRawAssignable(vajramClass.asType(), Vajram.class)) {
+    if (isRawAssignable(vajramClass.asType(), Vajram.class)) {
       return vajramClass.getQualifiedName().toString() + "Request";
-    } else if (codegenUtils.isRawAssignable(vajramClass.asType(), VajramRequest.class)) {
+    } else if (isRawAssignable(vajramClass.asType(), VajramRequest.class)) {
       return vajramClass.getQualifiedName().toString();
     } else {
       throw new AssertionError("This should not happen!");
@@ -334,12 +349,97 @@ public class AnnotationProcessingUtils {
     }
   }
 
-  void error(String message, Element element) {
+  public void error(String message, Element element) {
     processingEnv.getMessager().printMessage(Kind.ERROR, message, element);
   }
 
   private String getTimestamp() {
     return DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(
         Clock.systemDefaultZone().instant().atZone(ZoneId.systemDefault()));
+  }
+
+  public static String getInputUtilClassName(String vajramName) {
+    return vajramName + INPUT_UTIL;
+  }
+
+  public static String getRequestClassName(String vajramName) {
+    return vajramName + REQUEST_SUFFIX;
+  }
+
+  public static String getVajramImplClassName(String vajramId) {
+    return vajramId + IMPL;
+  }
+
+  public static String getAllInputsClassname(String vajramName) {
+    return vajramName + INPUTS_CLASS_SUFFIX;
+  }
+
+  public static String getCommonInputsClassname(String vajramName) {
+    return vajramName + COMMON_INPUTS;
+  }
+
+  public static String getInputModulationClassname(String vajramName) {
+    return vajramName + INPUTS_NEEDING_MODULATION;
+  }
+
+  public static TypeName getMethodReturnType(Method method) {
+    if (method.getGenericReturnType() instanceof ParameterizedType) {
+      return toTypeName(method.getGenericReturnType());
+    } else {
+      return TypeName.get(method.getReturnType());
+    }
+  }
+
+  public TypeName toTypeName(DataType<?> dataType) {
+    return TypeName.get(toTypeMirror(dataType));
+  }
+
+  public TypeMirror toTypeMirror(DataType<?> dataType) {
+    return dataType.javaModelType(processingEnv);
+  }
+
+  public static TypeName toTypeName(Type typeArg) {
+    if (typeArg instanceof ParameterizedType parameterizedType) {
+      final Type rawType = parameterizedType.getRawType();
+      final Type[] typeArgs = parameterizedType.getActualTypeArguments();
+      return ParameterizedTypeName.get(
+          (ClassName) toTypeName(rawType),
+          Arrays.stream(typeArgs).map(Utils::toTypeName).toArray(TypeName[]::new));
+    } else {
+      if (typeArg instanceof Class<?>) {
+        return ClassName.get(Primitives.wrap((Class<?>) typeArg));
+      } else {
+        return ClassName.bestGuess(typeArg.getTypeName());
+      }
+    }
+  }
+
+  public static List<? extends TypeMirror> getTypeParameters(TypeMirror returnType) {
+    return returnType.accept(
+        new SimpleTypeVisitor14<List<? extends TypeMirror>, Void>() {
+          @Override
+          public List<? extends TypeMirror> visitDeclared(DeclaredType t, Void unused) {
+            return t.getTypeArguments();
+          }
+        },
+        null);
+  }
+
+  /**
+   * @return true of the raw type (without generics) of {@code from} can be assigned to the raw type
+   *     of {@code to}
+   */
+  public boolean isRawAssignable(TypeMirror from, Class<?> to) {
+    return typeUtils.isAssignable(
+        typeUtils.erasure(from),
+        typeUtils.erasure(elementUtils.getTypeElement(to.getName()).asType()));
+  }
+
+  public TypeMirror box(TypeMirror type) {
+    if (type instanceof PrimitiveType p) {
+      return typeUtils.boxedClass(p).asType();
+    } else {
+      return type;
+    }
   }
 }

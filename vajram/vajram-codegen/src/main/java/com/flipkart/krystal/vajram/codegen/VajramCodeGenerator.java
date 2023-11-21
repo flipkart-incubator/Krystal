@@ -1,13 +1,5 @@
 package com.flipkart.krystal.vajram.codegen;
 
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.COMMA;
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.CONVERTER;
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.DOT;
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.getAllInputsClassname;
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.getCommonInputsClassname;
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.getInputModulationClassname;
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.getInputUtilClassName;
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.getTypeParameters;
 import static com.flipkart.krystal.vajram.codegen.Constants.ARRAY_LIST;
 import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_INPUT;
 import static com.flipkart.krystal.vajram.codegen.Constants.COM_FUTURE;
@@ -47,6 +39,15 @@ import static com.flipkart.krystal.vajram.codegen.Constants.UNMOD_INPUT;
 import static com.flipkart.krystal.vajram.codegen.Constants.VAJRAM_LOGIC_METHOD;
 import static com.flipkart.krystal.vajram.codegen.Constants.VAL_ERR;
 import static com.flipkart.krystal.vajram.codegen.Constants.VARIABLE;
+import static com.flipkart.krystal.vajram.codegen.Utils.COMMA;
+import static com.flipkart.krystal.vajram.codegen.Utils.CONVERTER;
+import static com.flipkart.krystal.vajram.codegen.Utils.DOT;
+import static com.flipkart.krystal.vajram.codegen.Utils.getAllInputsClassname;
+import static com.flipkart.krystal.vajram.codegen.Utils.getCommonInputsClassname;
+import static com.flipkart.krystal.vajram.codegen.Utils.getInputModulationClassname;
+import static com.flipkart.krystal.vajram.codegen.Utils.getInputUtilClassName;
+import static com.flipkart.krystal.vajram.codegen.Utils.getTypeParameters;
+import static com.flipkart.krystal.vajram.codegen.Utils.getVajramImplClassName;
 import static com.flipkart.krystal.vajram.codegen.models.ParsedVajramData.fromVajram;
 import static com.google.common.base.CaseFormat.LOWER_CAMEL;
 import static com.google.common.base.CaseFormat.LOWER_UNDERSCORE;
@@ -152,7 +153,7 @@ public class VajramCodeGenerator {
   private final Map<String, FacetGenModel> facetModels;
   private final boolean needsModulation;
   private @MonotonicNonNull ParsedVajramData parsedVajramData;
-  private final CodegenUtils util;
+  private final Utils util;
 
   public VajramCodeGenerator(
       VajramInfo vajramInfo,
@@ -162,8 +163,8 @@ public class VajramCodeGenerator {
     this.vajramName = vajramInfo.vajramId().vajramId();
     this.packageName = vajramInfo.packageName();
     this.processingEnv = processingEnv;
-    this.util = new CodegenUtils(processingEnv);
-    this.requestClassName = CodegenUtils.getRequestClassName(vajramName);
+    this.util = new Utils(processingEnv);
+    this.requestClassName = Utils.getRequestClassName(vajramName);
     // All parsed Vajram data loaded from all Vajram class files with vajram name as key
     this.vajramDefs = Collections.unmodifiableMap(vajramDefs);
     // All the present Vajram -> VajramInputDefinitions map with name as key
@@ -261,7 +262,7 @@ public class VajramCodeGenerator {
   private @NonNull ParsedVajramData initParsedVajramData() {
     if (parsedVajramData == null) {
       this.parsedVajramData =
-          fromVajram(vajramInfo)
+          fromVajram(vajramInfo, util)
               .orElseThrow(
                   () ->
                       new VajramValidationException(
@@ -1676,7 +1677,7 @@ public class VajramCodeGenerator {
   }
 
   private TypeSpec.Builder createVajramImplClass() {
-    return classBuilder(CodegenUtils.getVajramImplClassName(vajramName))
+    return classBuilder(getVajramImplClassName(vajramName))
         .addField(
             FieldSpec.builder(
                     ParameterizedTypeName.get(ImmutableList.class, VajramFacetDefinition.class)
