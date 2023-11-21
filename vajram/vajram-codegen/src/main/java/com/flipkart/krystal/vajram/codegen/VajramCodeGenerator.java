@@ -801,10 +801,9 @@ public class VajramCodeGenerator {
               dependencyModel.depVajramId());
       String requestClass = dependencyModel.depReqClassName();
 
-      TypeName usingDepType = util.toTypeName(vajramInfoLite.responseType());
-      if (usingDepType.isBoxedPrimitive()) {
-        usingDepType = usingDepType.unbox();
-      }
+      TypeName boxedDepType = util.toTypeName(vajramInfoLite.responseType()).box();
+      TypeName unboxedDepType =
+          boxedDepType.isBoxedPrimitive() ? boxedDepType.unbox() : boxedDepType;
       String resolverName = method.getSimpleName().toString();
       if (util.isRawAssignable(parameter.asType(), DependencyResponse.class)) {
         String depValueAccessorCode =
@@ -817,10 +816,10 @@ public class VajramCodeGenerator {
         ifBlockBuilder.addStatement(
             depValueAccessorCode,
             ParameterizedTypeName.get(
-                ClassName.get(DependencyResponse.class), toClassName(requestClass), usingDepType),
+                ClassName.get(DependencyResponse.class), toClassName(requestClass), boxedDepType),
             variableName,
             DependencyResponse.class,
-            usingDepType,
+            boxedDepType,
             usingInputName,
             ImmutableMap.class,
             toClassName(requestClass),
@@ -835,7 +834,7 @@ public class VajramCodeGenerator {
                  .iterator()
                  .next()
                  .getValue()""";
-        if (usingDepType.equals(TypeName.get(parameter.asType()))) {
+        if (unboxedDepType.equals(TypeName.get(parameter.asType()))) {
           // This means this dependency in "Using" annotation is not a fanout and the dev has
           // requested the value directly. So we extract the only value from dependency response
           // and
@@ -848,9 +847,9 @@ public class VajramCodeGenerator {
                                 new $5T("Received null value for mandatory dependency '$6L' of vajram '$7L'"))""";
             ifBlockBuilder.addStatement(
                 code,
-                usingDepType,
+                unboxedDepType,
                 variableName,
-                usingDepType,
+                boxedDepType,
                 usingInputName,
                 IllegalArgumentException.class,
                 usingInputName,
@@ -867,9 +866,9 @@ public class VajramCodeGenerator {
           // response and provide it.
           ifBlockBuilder.addStatement(
               depValueAccessorCode,
-              ParameterizedTypeName.get(ClassName.get(ValueOrError.class), usingDepType),
+              ParameterizedTypeName.get(ClassName.get(ValueOrError.class), boxedDepType),
               variableName,
-              usingDepType,
+              boxedDepType,
               usingInputName);
         } else if (util.isRawAssignable(parameter.asType(), Optional.class)) {
           // This means this dependency in "Using" annotation is not a fanout and the dev has
@@ -878,9 +877,9 @@ public class VajramCodeGenerator {
           String code = depValueAccessorCode + ".value()";
           ifBlockBuilder.addStatement(
               code,
-              ParameterizedTypeName.get(ClassName.get(Optional.class), usingDepType),
+              ParameterizedTypeName.get(ClassName.get(Optional.class), boxedDepType),
               variableName,
-              usingDepType,
+              boxedDepType,
               usingInputName);
         } else {
           throw new VajramValidationException(
