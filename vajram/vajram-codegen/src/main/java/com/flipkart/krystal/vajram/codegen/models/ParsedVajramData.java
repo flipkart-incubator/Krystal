@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.codegen.models;
 
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.vajram.VajramLogic;
+import com.flipkart.krystal.vajram.codegen.Utils;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
 import java.util.ArrayList;
@@ -24,18 +25,22 @@ public record ParsedVajramData(
     String packageName,
     DataType<?> responseType) {
 
-  public static Optional<ParsedVajramData> fromVajram(VajramInfo vajramInfo) {
+  public static Optional<ParsedVajramData> fromVajram(VajramInfo vajramInfo, Utils util) {
     TypeElement vajramClass = vajramInfo.vajramClass();
     String packageName = vajramInfo.packageName();
     for (ExecutableElement method : iter(getAllMethods(vajramClass))) {
-      if ((isOutputLogic(method) || isResolver(method)) && !isStatic(method))
-        throw new VajramValidationException(
-            "Vajram class %s has non-static method %s"
-                .formatted(vajramInfo.vajramId(), method.getSimpleName()));
+      String errorMessage =
+          "Vajram class %s has non-static method %s"
+              .formatted(vajramInfo.vajramId(), method.getSimpleName());
+      if ((isOutputLogic(method) || isResolver(method)) && !isStatic(method)) {
+        util.error(errorMessage, method);
+        throw new VajramValidationException(errorMessage);
+      }
     }
 
     List<ExecutableElement> resolveMethods = new ArrayList<>();
-    ExecutableElement vajramLogic = getVajramLogicAndResolverMethods(vajramClass, resolveMethods);
+    ExecutableElement vajramLogic =
+        getVajramLogicAndResolverMethods(vajramClass, resolveMethods, util);
     return Optional.of(
         new ParsedVajramData(
             vajramInfo.vajramId().vajramId(),
@@ -47,22 +52,31 @@ public record ParsedVajramData(
   }
 
   public static ExecutableElement getVajramLogicAndResolverMethods(
-      TypeElement vajramCalss, List<ExecutableElement> resolveMethods) {
+      TypeElement vajramClass, List<ExecutableElement> resolveMethods, Utils util) {
     ExecutableElement vajramLogic = null;
-    for (ExecutableElement method : getStaticMethods(vajramCalss)) {
+    for (ExecutableElement method : getStaticMethods(vajramClass)) {
       if (isResolver(method)) {
         resolveMethods.add(method);
       } else if (isOutputLogic(method)) {
         if (vajramLogic == null) {
           vajramLogic = method;
         } else {
-          throw new VajramValidationException(
-              "Multiple VajramLogic annotated methods found in " + vajramCalss.getSimpleName());
+          String errorMessage =
+              "Multiple VajramLogic annotated methods (%s, %s) found in %s"
+                  .formatted(
+                      vajramLogic.getSimpleName(),
+                      method.getSimpleName(),
+                      vajramClass.getSimpleName());
+          util.error(errorMessage, vajramLogic);
+          util.error(errorMessage, method);
+          throw new VajramValidationException(errorMessage);
         }
       }
     }
     if (vajramLogic == null) {
-      throw new VajramValidationException("Missing vajram logic method");
+      String errorMessage = "Missing vajram logic method";
+      util.error(errorMessage, vajramClass);
+      throw new VajramValidationException(errorMessage);
     }
     return vajramLogic;
   }
