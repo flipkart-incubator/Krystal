@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajram.codegen.utils;
 import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
 
 import com.flipkart.krystal.vajram.VajramRequest;
-import com.flipkart.krystal.vajram.codegen.CodegenUtils;
+import com.flipkart.krystal.vajram.codegen.Utils;
 import com.flipkart.krystal.vajram.inputs.DependencyCommand;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -28,15 +28,15 @@ public class CodegenUtilsTest {
     final Method keySet = klass.getMethod("keySet");
     final Method entrySet = klass.getMethod("entrySet");
 
-    Assertions.assertNotNull(CodegenUtils.getMethodReturnType(containsKey));
-    final TypeName methodReturnType1 = CodegenUtils.getMethodReturnType(keySet);
+    Assertions.assertNotNull(Utils.getMethodReturnType(containsKey));
+    final TypeName methodReturnType1 = Utils.getMethodReturnType(keySet);
     Assertions.assertEquals(
         ((ParameterizedTypeName) methodReturnType1).rawType, ClassName.get(Set.class));
-    final TypeName methodReturnType = CodegenUtils.getMethodReturnType(entrySet);
+    final TypeName methodReturnType = Utils.getMethodReturnType(entrySet);
     Assertions.assertEquals(
         ((ParameterizedTypeName) methodReturnType).rawType, ClassName.get(Set.class));
 
-    final TypeName methodReturnType2 = CodegenUtils.getMethodReturnType(getMethod);
+    final TypeName methodReturnType2 = Utils.getMethodReturnType(getMethod);
     Assertions.assertEquals(methodReturnType2, ClassName.get(Object.class));
 
     final Class<?> aClass =

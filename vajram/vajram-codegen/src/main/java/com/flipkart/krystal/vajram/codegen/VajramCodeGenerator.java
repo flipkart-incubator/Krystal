@@ -1,13 +1,5 @@
 package com.flipkart.krystal.vajram.codegen;
 
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.COMMA;
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.CONVERTER;
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.DOT;
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.getAllInputsClassname;
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.getCommonInputsClassname;
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.getInputModulationClassname;
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.getInputUtilClassName;
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.getTypeParameters;
 import static com.flipkart.krystal.vajram.codegen.Constants.ARRAY_LIST;
 import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_INPUT;
 import static com.flipkart.krystal.vajram.codegen.Constants.COM_FUTURE;
@@ -47,6 +39,15 @@ import static com.flipkart.krystal.vajram.codegen.Constants.UNMOD_INPUT;
 import static com.flipkart.krystal.vajram.codegen.Constants.VAJRAM_LOGIC_METHOD;
 import static com.flipkart.krystal.vajram.codegen.Constants.VAL_ERR;
 import static com.flipkart.krystal.vajram.codegen.Constants.VARIABLE;
+import static com.flipkart.krystal.vajram.codegen.Utils.COMMA;
+import static com.flipkart.krystal.vajram.codegen.Utils.CONVERTER;
+import static com.flipkart.krystal.vajram.codegen.Utils.DOT;
+import static com.flipkart.krystal.vajram.codegen.Utils.getAllInputsClassname;
+import static com.flipkart.krystal.vajram.codegen.Utils.getCommonInputsClassname;
+import static com.flipkart.krystal.vajram.codegen.Utils.getInputModulationClassname;
+import static com.flipkart.krystal.vajram.codegen.Utils.getInputUtilClassName;
+import static com.flipkart.krystal.vajram.codegen.Utils.getTypeParameters;
+import static com.flipkart.krystal.vajram.codegen.Utils.getVajramImplClassName;
 import static com.flipkart.krystal.vajram.codegen.models.ParsedVajramData.fromVajram;
 import static com.google.common.base.CaseFormat.LOWER_CAMEL;
 import static com.google.common.base.CaseFormat.LOWER_UNDERSCORE;
@@ -152,7 +153,7 @@ public class VajramCodeGenerator {
   private final Map<String, FacetGenModel> facetModels;
   private final boolean needsModulation;
   private @MonotonicNonNull ParsedVajramData parsedVajramData;
-  private final CodegenUtils util;
+  private final Utils util;
 
   public VajramCodeGenerator(
       VajramInfo vajramInfo,
@@ -162,8 +163,8 @@ public class VajramCodeGenerator {
     this.vajramName = vajramInfo.vajramId().vajramId();
     this.packageName = vajramInfo.packageName();
     this.processingEnv = processingEnv;
-    this.util = new CodegenUtils(processingEnv);
-    this.requestClassName = CodegenUtils.getRequestClassName(vajramName);
+    this.util = new Utils(processingEnv);
+    this.requestClassName = Utils.getRequestClassName(vajramName);
     // All parsed Vajram data loaded from all Vajram class files with vajram name as key
     this.vajramDefs = Collections.unmodifiableMap(vajramDefs);
     // All the present Vajram -> VajramInputDefinitions map with name as key
@@ -261,7 +262,7 @@ public class VajramCodeGenerator {
   private @NonNull ParsedVajramData initParsedVajramData() {
     if (parsedVajramData == null) {
       this.parsedVajramData =
-          fromVajram(vajramInfo)
+          fromVajram(vajramInfo, util)
               .orElseThrow(
                   () ->
                       new VajramValidationException(
@@ -474,9 +475,11 @@ public class VajramCodeGenerator {
       TypeMirror returnType = getParsedVajramData().outputLogic().getReturnType();
       if (!util.isRawAssignable(returnType, CompletableFuture.class)) {
         // TODO: Validate IOVajram response type is CompletableFuture<Type>"
-        throw new VajramValidationException(
+        String errorMessage =
             "The VajramLogic of non-modulated IO vajram %s must return a CompletableFuture"
-                .formatted(vajramName));
+                .formatted(vajramName);
+        util.error(errorMessage, getParsedVajramData().outputLogic());
+        throw new VajramValidationException(errorMessage);
       }
       returnBuilder.add(
           "\nreturn ($L(new $T(\n",
@@ -648,8 +651,10 @@ public class VajramCodeGenerator {
                             // input
                             if (!(facetModels.containsKey(bindParamName)
                                 || resolvedVariables.contains(bindParamName))) {
-                              throw new VajramValidationException(
-                                  "Parameter binding incorrect for input - " + bindParamName);
+                              String message =
+                                  "Parameter binding incorrect for input - " + bindParamName;
+                              util.error(message, parameter);
+                              throw new VajramValidationException(message);
                             }
                           });
                   CodeBlock.Builder ifBlockBuilder =
@@ -741,15 +746,18 @@ public class VajramCodeGenerator {
                                 usingInputName)
                             .build());
                   } else {
-                    throw new VajramValidationException(
+                    String message =
                         String.format(
                             "Optional input dependency %s must have type as Optional",
-                            usingInputName));
+                            usingInputName);
+                    util.error(message, parameter);
+                    throw new VajramValidationException(message);
                   }
                 }
               } else {
-                throw new VajramValidationException(
-                    "No input resolver found for " + usingInputName);
+                String message = "No input resolver found for " + usingInputName;
+                util.error(message, parameter);
+                throw new VajramValidationException(message);
               }
             });
     boolean isFanOut = isParamFanoutDependency || depFanoutMap.getOrDefault(depName, false);
@@ -783,13 +791,11 @@ public class VajramCodeGenerator {
         && depFanoutMap.get(usingInputName)
         && util.isRawAssignable(parameter.asType(), DependencyResponse.class)) {
       // the parameter data type must be DependencyResponse
-      log.error(
-          "Dependency resolution of {} is fanout but the resolver method is not of type DependencyResponse.",
-          resolvedDep);
-      throw new VajramValidationException(
-          "Dependency resolution of "
-              + resolvedDep
-              + " is fanout but the resolver method is not of type DependencyResponse");
+      String message =
+          "Dependency resolution of %s is fanout but the resolver method is not of type DependencyResponse"
+              .formatted(resolvedDep);
+      util.error(message, method);
+      throw new VajramValidationException(message);
     }
     //    ReturnType returnType
     if (vajramInputDef instanceof DependencyModel dependencyModel) {
@@ -801,10 +807,9 @@ public class VajramCodeGenerator {
               dependencyModel.depVajramId());
       String requestClass = dependencyModel.depReqClassName();
 
-      TypeName usingDepType = util.toTypeName(vajramInfoLite.responseType());
-      if (usingDepType.isBoxedPrimitive()) {
-        usingDepType = usingDepType.unbox();
-      }
+      TypeName boxedDepType = util.toTypeName(vajramInfoLite.responseType()).box();
+      TypeName unboxedDepType =
+          boxedDepType.isBoxedPrimitive() ? boxedDepType.unbox() : boxedDepType;
       String resolverName = method.getSimpleName().toString();
       if (util.isRawAssignable(parameter.asType(), DependencyResponse.class)) {
         String depValueAccessorCode =
@@ -817,10 +822,10 @@ public class VajramCodeGenerator {
         ifBlockBuilder.addStatement(
             depValueAccessorCode,
             ParameterizedTypeName.get(
-                ClassName.get(DependencyResponse.class), toClassName(requestClass), usingDepType),
+                ClassName.get(DependencyResponse.class), toClassName(requestClass), boxedDepType),
             variableName,
             DependencyResponse.class,
-            usingDepType,
+            boxedDepType,
             usingInputName,
             ImmutableMap.class,
             toClassName(requestClass),
@@ -835,7 +840,7 @@ public class VajramCodeGenerator {
                  .iterator()
                  .next()
                  .getValue()""";
-        if (usingDepType.equals(TypeName.get(parameter.asType()))) {
+        if (unboxedDepType.equals(TypeName.get(parameter.asType()))) {
           // This means this dependency in "Using" annotation is not a fanout and the dev has
           // requested the value directly. So we extract the only value from dependency response
           // and
@@ -848,18 +853,20 @@ public class VajramCodeGenerator {
                                 new $5T("Received null value for mandatory dependency '$6L' of vajram '$7L'"))""";
             ifBlockBuilder.addStatement(
                 code,
-                usingDepType,
+                unboxedDepType,
                 variableName,
-                usingDepType,
+                boxedDepType,
                 usingInputName,
                 IllegalArgumentException.class,
                 usingInputName,
                 vajramName);
           } else {
-            throw new VajramValidationException(
+            String message =
                 ("A resolver ('%s') must not access an optional dependency ('%s') directly."
                         + "Use Optional<>, ValueOrError<>, or DependencyResponse<> instead")
-                    .formatted(resolverName, usingInputName));
+                    .formatted(resolverName, usingInputName);
+            util.error(message, parameter);
+            throw new VajramValidationException(message);
           }
         } else if (util.isRawAssignable(parameter.asType(), ValueOrError.class)) {
           // This means this dependency in "Using" annotation is not a fanout and the dev has
@@ -867,9 +874,9 @@ public class VajramCodeGenerator {
           // response and provide it.
           ifBlockBuilder.addStatement(
               depValueAccessorCode,
-              ParameterizedTypeName.get(ClassName.get(ValueOrError.class), usingDepType),
+              ParameterizedTypeName.get(ClassName.get(ValueOrError.class), boxedDepType),
               variableName,
-              usingDepType,
+              boxedDepType,
               usingInputName);
         } else if (util.isRawAssignable(parameter.asType(), Optional.class)) {
           // This means this dependency in "Using" annotation is not a fanout and the dev has
@@ -878,14 +885,16 @@ public class VajramCodeGenerator {
           String code = depValueAccessorCode + ".value()";
           ifBlockBuilder.addStatement(
               code,
-              ParameterizedTypeName.get(ClassName.get(Optional.class), usingDepType),
+              ParameterizedTypeName.get(ClassName.get(Optional.class), boxedDepType),
               variableName,
-              usingDepType,
+              boxedDepType,
               usingInputName);
         } else {
-          throw new VajramValidationException(
+          String message =
               "Unrecognized parameter type %s in resolver %s of vajram %s"
-                  .formatted(parameter.asType(), resolverName, this.vajramName));
+                  .formatted(parameter.asType(), resolverName, this.vajramName);
+          util.error(message, parameter);
+          throw new VajramValidationException(message);
         }
       }
     }
@@ -984,10 +993,12 @@ public class VajramCodeGenerator {
               ValueOrError.class);
         }
       } else {
-        throw new VajramValidationException(
+        String message =
             "Incorrect vajram resolver "
                 + vajramName
-                + ": Fanout resolvers must return an iterable");
+                + ": Fanout resolvers must return an iterable";
+        util.error(message, method);
+        throw new VajramValidationException(message);
       }
     } else {
       if (util.isRawAssignable(returnType, VajramRequest.class)) {
@@ -1677,7 +1688,7 @@ public class VajramCodeGenerator {
   }
 
   private TypeSpec.Builder createVajramImplClass() {
-    return classBuilder(CodegenUtils.getVajramImplClassName(vajramName))
+    return classBuilder(getVajramImplClassName(vajramName))
         .addField(
             FieldSpec.builder(
                     ParameterizedTypeName.get(ImmutableList.class, VajramFacetDefinition.class)

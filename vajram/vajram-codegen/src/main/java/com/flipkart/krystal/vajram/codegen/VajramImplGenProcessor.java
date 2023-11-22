@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.codegen;
 
-import static com.flipkart.krystal.vajram.codegen.CodegenUtils.getVajramImplClassName;
+import static com.flipkart.krystal.vajram.codegen.Utils.getVajramImplClassName;
 import static java.lang.System.lineSeparator;
 import static java.util.stream.Collectors.joining;
 
@@ -24,8 +24,8 @@ public class VajramImplGenProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    AnnotationProcessingUtils util = new AnnotationProcessingUtils(roundEnv, processingEnv);
-    List<TypeElement> vajramDefinitions = util.getVajramClasses();
+    Utils util = new Utils(processingEnv);
+    List<TypeElement> vajramDefinitions = util.getVajramClasses(roundEnv);
     util.note(
         "Vajram Defs received by VajramImplGenProcessor: %s"
             .formatted(
