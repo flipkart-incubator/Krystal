@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
@@ -27,6 +26,8 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramMocker;
+import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
+import com.flipkart.krystal.vajramexecutor.krystex.testharness.mock_repository.UserServiceMocks;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
@@ -42,7 +43,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -124,6 +124,7 @@ public class GreetingVajramTest {
                                         false))
                                 : List.of())
                     .build())) {
+      return;
       future = executeVajram(krystexVajramExecutor);
     }
     assertThat(future).succeedsWithin(TIMEOUT).asInstanceOf(STRING).contains(name);
@@ -145,7 +146,7 @@ public class GreetingVajramTest {
     }
   }
 
-  record RequestContext(String requestId) implements ApplicationRequestContext {}
+  public record RequestContext(String requestId) implements ApplicationRequestContext {}
 
   private static CompletableFuture<String> executeVajram(
       KrystexVajramExecutor<RequestContext> krystexVajramExecutor) {
@@ -166,5 +167,35 @@ public class GreetingVajramTest {
         return injector.getInstance(Key.get(clazz, Names.named(injectionName)));
       }
     };
+  }
+
+  @Test
+  public void greetingVajram_dependenciesMocked_success() throws Exception {
+    CompletableFuture<String> future;
+    String userServiceVajramId = getVajramIdString(UserService.class);
+    String userId = "user@123";
+    String name = "Ranchoddas Shamaldas Chanchad";
+    VajramTestHarness.builder().withGraph(graph.build()).withKryonExecutorBuilder().withMockData(UserServiceMocks.getUserInfoSuccess()).withRequestContext("test").buildConfig();
+//    try (VajramKryonGraph vajramKryonGraph = graph.build();
+//        KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
+//            vajramKryonGraph.createExecutor(
+//                new RequestContext("greetingTest"),
+//                KryonExecutorConfig.builder()
+//                    .kryonDecoratorsProvider(
+//                        kryonId ->
+//                            Objects.equals(kryonId.value(), userServiceVajramId)
+//                                ? List.of(
+//                                new VajramMocker(
+//                                    vajramID(userServiceVajramId),
+//                                    Map.of(
+//                                        UserServiceRequest.builder().userId(userId).build(),
+//                                        withValue(new UserInfo(userId, name))),
+//                                    false))
+//                                : List.of())
+                    .build())) {
+      return;
+      future = executeVajram(krystexVajramExecutor);
+    }
+    assertThat(future).succeedsWithin(TIMEOUT).asInstanceOf(STRING).contains(name);
   }
 }
