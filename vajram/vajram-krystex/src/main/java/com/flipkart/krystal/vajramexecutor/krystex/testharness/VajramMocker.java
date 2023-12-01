@@ -27,7 +27,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-
+// TODO rename to VajramPrimer and rename all instances of 'mock' with prime
 public class VajramMocker extends AbstractKryonDecorator {
 
   private final ImmutableMap<Inputs, ValueOrError<Object>> mockData;
