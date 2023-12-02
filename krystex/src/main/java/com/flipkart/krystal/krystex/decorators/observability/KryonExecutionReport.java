@@ -2,8 +2,8 @@ package com.flipkart.krystal.krystex.decorators.observability;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.Results;
-import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
+import com.flipkart.krystal.model.KryonId;
 import com.google.common.collect.ImmutableList;
 
 public sealed interface KryonExecutionReport permits DefaultKryonExecutionReport {

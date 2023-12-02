@@ -32,6 +32,8 @@ import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
 import com.flipkart.krystal.krystex.resolution.ResolverCommand;
 import com.flipkart.krystal.krystex.resolution.ResolverCommand.SkipDependency;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
+import com.flipkart.krystal.model.DependantChain;
+import com.flipkart.krystal.model.KryonId;
 import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;

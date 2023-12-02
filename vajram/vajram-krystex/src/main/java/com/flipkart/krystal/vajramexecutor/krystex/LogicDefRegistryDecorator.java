@@ -6,12 +6,12 @@ import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.resolution.MultiResolver;
 import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
 import com.flipkart.krystal.krystex.resolution.ResolverLogic;
 import com.flipkart.krystal.krystex.resolution.ResolverLogicDefinition;
+import com.flipkart.krystal.model.KryonId;
 import com.google.common.collect.ImmutableMap;
 import java.util.Set;
 

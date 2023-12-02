@@ -1,6 +1,5 @@
-package com.flipkart.krystal.krystex.kryon;
+package com.flipkart.krystal.model;
 
-import com.flipkart.krystal.krystex.KrystalExecutor;
 import lombok.EqualsAndHashCode;
 import lombok.EqualsAndHashCode.CacheStrategy;
 
@@ -10,13 +9,12 @@ import lombok.EqualsAndHashCode.CacheStrategy;
  *
  * <p>All {@link DependantChain}s are guaranteed to begin with a {@link DependantChainStart}
  *
- * <p>{@link GranularKryon}s which are executed explicitly using {@link
- * KrystalExecutor#executeKryon} have this as their dependantChain.
+ * <p>Kryons which are executed explicitly have this as their dependantChain.
  */
 @EqualsAndHashCode(callSuper = false, cacheStrategy = CacheStrategy.LAZY)
 public final class DependantChainStart extends AbstractDependantChain {
 
-  DependantChainStart() {}
+  public DependantChainStart() {}
 
   /**
    * @return A string representation that depicts the beginning of the DependantChain.

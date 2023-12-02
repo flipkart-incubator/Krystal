@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.kryon;
+package com.flipkart.krystal.model;
 
 public record KryonId(String value) {
 

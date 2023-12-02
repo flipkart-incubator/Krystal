@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.kryon;
+package com.flipkart.krystal.model;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 

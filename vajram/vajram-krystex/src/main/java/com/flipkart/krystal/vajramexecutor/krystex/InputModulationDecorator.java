@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
-import static com.flipkart.krystal.utils.Futures.linkFutures;
+import static com.flipkart.krystal.futures.Futures.linkFutures;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.config.ConfigProvider;
@@ -12,7 +12,7 @@ import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.decoration.LogicDecoratorCommand;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
-import com.flipkart.krystal.krystex.kryon.DependantChain;
+import com.flipkart.krystal.model.DependantChain;
 import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;

@@ -30,7 +30,8 @@ public sealed interface Vajram<T> permits AbstractVajram {
 
   ImmutableCollection<VajramFacetDefinition> getInputDefinitions();
 
-  ImmutableMap<Inputs, CompletableFuture<@Nullable T>> execute(ImmutableList<Inputs> inputs);
+  ImmutableMap<Inputs, ? extends CompletableFuture<@Nullable T>> execute(
+      ImmutableList<Inputs> inputs);
 
   default InputsConverter<? extends InputValuesAdaptor, ? extends InputValuesAdaptor>
       getInputsConvertor() {

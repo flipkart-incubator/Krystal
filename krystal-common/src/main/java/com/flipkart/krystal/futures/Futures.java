@@ -1,4 +1,4 @@
-package com.flipkart.krystal.utils;
+package com.flipkart.krystal.futures;
 
 import java.util.concurrent.CompletableFuture;
 

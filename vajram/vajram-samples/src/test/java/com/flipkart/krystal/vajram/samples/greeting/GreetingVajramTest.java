@@ -67,10 +67,9 @@ public class GreetingVajramTest {
     CompletableFuture<String> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
     MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(kryonExecutionReport);
-    try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-        graph
-            .build()
-            .createExecutor(
+    try (VajramKryonGraph vajramKryonGraph = graph.build();
+        KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
+            vajramKryonGraph.createExecutor(
                 new RequestContext("greetingTest"),
                 KryonExecutorConfig.builder()
                     .requestScopedLogicDecoratorConfigs(

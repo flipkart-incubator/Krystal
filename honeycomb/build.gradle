@@ -1,5 +1,10 @@
 description 'The default asynchronous orchestator which orchestrates stateful krystal workflows'
 
+
+dependencies {
+    api project(':krystal-common')
+}
+
 publishing {
     publications {
         maven(MavenPublication) {

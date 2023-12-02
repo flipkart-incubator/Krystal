@@ -10,6 +10,7 @@ import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition.KryonDefinitionView;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
+import com.flipkart.krystal.model.KryonId;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;

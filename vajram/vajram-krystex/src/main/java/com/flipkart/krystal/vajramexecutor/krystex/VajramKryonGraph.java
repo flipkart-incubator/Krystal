@@ -27,17 +27,17 @@ import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
-import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
-import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
 import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
 import com.flipkart.krystal.krystex.resolution.ResolverCommand;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.flipkart.krystal.krystex.resolution.ResolverLogicDefinition;
+import com.flipkart.krystal.model.DependantChain;
+import com.flipkart.krystal.model.KryonId;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.IOVajram;
@@ -546,7 +546,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                   });
               @SuppressWarnings("unchecked")
               Vajram<Object> vajram = (Vajram<Object>) vajramDefinition.getVajram();
-              ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> validResults =
+              ImmutableMap<Inputs, ? extends CompletableFuture<@Nullable Object>> validResults =
                   vajram.execute(ImmutableList.copyOf(validInputs));
 
               return ImmutableMap.<Inputs, CompletableFuture<@Nullable Object>>builder()

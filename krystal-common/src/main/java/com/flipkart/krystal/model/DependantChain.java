@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.kryon;
+package com.flipkart.krystal.model;
 
 public sealed interface DependantChain permits AbstractDependantChain {
 

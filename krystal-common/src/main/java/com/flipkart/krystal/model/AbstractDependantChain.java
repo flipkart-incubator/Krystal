@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.kryon;
+package com.flipkart.krystal.model;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
