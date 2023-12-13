@@ -170,29 +170,17 @@ public class GreetingVajramTest {
   }
 
   @Test
-  public void greetingVajram_dependenciesMocked_success() throws Exception {
+  public void greetingVajram_dependenciesMockedWithHarness_success() throws Exception {
     CompletableFuture<String> future;
     String userServiceVajramId = getVajramIdString(UserService.class);
     String userId = "user@123";
     String name = "Ranchoddas Shamaldas Chanchad";
-    VajramTestHarness.withGraph(graph.build()).withKryonExecutorBuilder().withMockData(UserServiceMocks.getUserInfoSuccess()).withRequestContext("test").buildConfig();
-//    try (VajramKryonGraph vajramKryonGraph = graph.build();
-//        KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-//            vajramKryonGraph.createExecutor(
-//                new RequestContext("greetingTest"),
-//                KryonExecutorConfig.builder()
-//                    .kryonDecoratorsProvider(
-//                        kryonId ->
-//                            Objects.equals(kryonId.value(), userServiceVajramId)
-//                                ? List.of(
-//                                new VajramPrimer(
-//                                    vajramID(userServiceVajramId),
-//                                    Map.of(
-//                                        UserServiceRequest.builder().userId(userId).build(),
-//                                        withValue(new UserInfo(userId, name))),
-//                                    false))
-//                                : List.of())
-                    .build())) {
+    KryonExecutorConfig kryonExecutorConfig = KryonExecutorConfig.builder().
+    try (VajramKryonGraph vajramKryonGraph = graph.build();
+        KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
+            vajramKryonGraph.createExecutor(
+                new RequestContext("greetingTest"),
+                VajramTestHarness.prepareForTest())) {
       return;
       future = executeVajram(krystexVajramExecutor);
     }

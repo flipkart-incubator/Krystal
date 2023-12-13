@@ -11,13 +11,19 @@ import java.util.Map;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 
+/***
+ *Test harness is a collection of software or test data used by developers for unit testing.
+ *It is responsible for test drivers and stubs. In the context of Vajrams, VajramTestHarness is
+ * responsible for preparing the krystex executor for test by providing the necessary stubbing
+ * capability of the dependancy vajrams for the given vajram in test.
+ */
 @Slf4j
 public class VajramTestHarness {
   private Map<String, Map<VajramRequest<Object>, ValueOrError<Object>>> vajramIdMockData;
-  private KryonExecutorConfigBuilder kryonExecutorBuilder;
+  private KryonExecutorConfigBuilder kryonExecutorConfigBuilder;
 
   private VajramTestHarness(KryonExecutorConfigBuilder kryonExecutorBuilder) {
-    this.kryonExecutorBuilder = kryonExecutorBuilder;
+    this.kryonExecutorConfigBuilder = kryonExecutorBuilder;
   }
 
   public static VajramTestHarness prepareForTest(KryonExecutorConfigBuilder kryonExecutorBuilder) {
@@ -38,9 +44,7 @@ public class VajramTestHarness {
       if (Objects.isNull(valueOrError)) {
         mockDataMap.put((VajramRequest<Object>) request, (ValueOrError<Object>) response);
         this.vajramIdMockData.put(vajramId, mockDataMap);
-      }
-      else
-      {
+      } else {
         log.info("Ignoring mock data since the given request object is already mocked");
       }
     }
@@ -62,7 +66,7 @@ public class VajramTestHarness {
 
   public KryonExecutorConfig buildConfig() {
     // TODO get existing decorators for a given kryon and append the vajramPrimer
-    return kryonExecutorBuilder
+    return kryonExecutorConfigBuilder
         .kryonDecoratorsProvider(kryonId -> getVajramMocker(kryonId.value()))
         .build();
   }
