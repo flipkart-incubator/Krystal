@@ -28,14 +28,14 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 // TODO rename to VajramPrimer and rename all instances of 'mock' with prime
-public class VajramMocker extends AbstractKryonDecorator {
+public class VajramPrimer extends AbstractKryonDecorator {
 
   private final ImmutableMap<Inputs, ValueOrError<Object>> mockData;
   private final VajramID mockedVajramId;
   private final boolean failIfMockMissing;
   @MonotonicNonNull private DecoratedKryon decoratedKryon;
 
-  public <T> VajramMocker(
+  public <T> VajramPrimer(
       VajramID mockedVajramId,
       Map<VajramRequest<T>, ValueOrError<T>> mockData,
       boolean failIfMockMissing) {
@@ -81,7 +81,7 @@ public class VajramMocker extends AbstractKryonDecorator {
       validate(kryonId);
       if (kryonCommand instanceof ForwardGranule) {
         throw new UnsupportedOperationException(
-            "VajramMocker does not support KryonExecStrategy GRANULAR. Please use BATCH instead");
+            "VajramPrimer does not support KryonExecStrategy GRANULAR. Please use BATCH instead");
       } else if (kryonCommand instanceof Flush flush) {
         kryon.executeCommand(flush);
       } else if (kryonCommand instanceof ForwardBatch forwardBatch) {

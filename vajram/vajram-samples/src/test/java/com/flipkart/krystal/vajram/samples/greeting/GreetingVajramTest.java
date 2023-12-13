@@ -25,7 +25,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjector;
-import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramMocker;
+import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramPrimer;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.mock_repository.UserServiceMocks;
 import com.google.common.collect.ImmutableMap;
@@ -116,7 +116,7 @@ public class GreetingVajramTest {
                         kryonId ->
                             Objects.equals(kryonId.value(), userServiceVajramId)
                                 ? List.of(
-                                    new VajramMocker(
+                                    new VajramPrimer(
                                         vajramID(userServiceVajramId),
                                         Map.of(
                                             UserServiceRequest.builder().userId(userId).build(),
@@ -175,7 +175,7 @@ public class GreetingVajramTest {
     String userServiceVajramId = getVajramIdString(UserService.class);
     String userId = "user@123";
     String name = "Ranchoddas Shamaldas Chanchad";
-    VajramTestHarness.builder().withGraph(graph.build()).withKryonExecutorBuilder().withMockData(UserServiceMocks.getUserInfoSuccess()).withRequestContext("test").buildConfig();
+    VajramTestHarness.withGraph(graph.build()).withKryonExecutorBuilder().withMockData(UserServiceMocks.getUserInfoSuccess()).withRequestContext("test").buildConfig();
 //    try (VajramKryonGraph vajramKryonGraph = graph.build();
 //        KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
 //            vajramKryonGraph.createExecutor(
@@ -185,7 +185,7 @@ public class GreetingVajramTest {
 //                        kryonId ->
 //                            Objects.equals(kryonId.value(), userServiceVajramId)
 //                                ? List.of(
-//                                new VajramMocker(
+//                                new VajramPrimer(
 //                                    vajramID(userServiceVajramId),
 //                                    Map.of(
 //                                        UserServiceRequest.builder().userId(userId).build(),
