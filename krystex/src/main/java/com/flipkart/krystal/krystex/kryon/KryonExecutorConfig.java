@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.function.Function;
 import lombok.Builder;
 
-@Builder(toBuilder = true)
+//@Builder(toBuilder = true)
 public record KryonExecutorConfig(
     LogicDecorationOrdering logicDecorationOrdering,
     Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs,
@@ -24,7 +24,7 @@ public record KryonExecutorConfig(
     Function<KryonId, List<KryonDecorator>> kryonDecoratorsProvider,
     boolean debug) {
 
-  public KryonExecutorConfig {
+  @Builder(toBuilder = true) public KryonExecutorConfig {
     if (kryonExecStrategy == null) {
       kryonExecStrategy = BATCH;
     }

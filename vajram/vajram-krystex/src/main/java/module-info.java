@@ -6,5 +6,4 @@ module flipkart.krystal.vajramexecutor.krystex {
   requires static lombok;
   requires flipkart.krystal.common;
   requires jakarta.inject;
-  requires flipkart.krystal.vajram.vajram_samples;
 }
