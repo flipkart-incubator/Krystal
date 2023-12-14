@@ -27,27 +27,28 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-// TODO rename to VajramPrimer and rename all instances of 'mock' with prime
+
 public class VajramPrimer extends AbstractKryonDecorator {
 
-  private final ImmutableMap<Inputs, ValueOrError<Object>> mockData;
-  private final VajramID mockedVajramId;
+  private final ImmutableMap<Inputs, ValueOrError<Object>> executionStubs;
+  private final VajramID decoratedVajramId;
   private final boolean failIfMockMissing;
-  @MonotonicNonNull private DecoratedKryon decoratedKryon;
+  @MonotonicNonNull
+  private DecoratedKryon decoratedKryon;
 
   public <T> VajramPrimer(
       VajramID mockedVajramId,
-      Map<VajramRequest<T>, ValueOrError<T>> mockData,
+      Map<VajramRequest<T>, ValueOrError<T>> stubs,
       boolean failIfMockMissing) {
-    this.mockedVajramId = mockedVajramId;
+    this.decoratedVajramId = mockedVajramId;
     this.failIfMockMissing = failIfMockMissing;
-    Map<Inputs, ValueOrError<Object>> mocks = new LinkedHashMap<>(mockData.size());
-    mockData.forEach(
+    Map<Inputs, ValueOrError<Object>> mocks = new LinkedHashMap<>(stubs.size());
+    stubs.forEach(
         (req, resp) -> {
           //noinspection unchecked
           mocks.put(req.toInputValues(), (ValueOrError<Object>) resp);
         });
-    this.mockData = ImmutableMap.copyOf(mocks);
+    this.executionStubs = ImmutableMap.copyOf(mocks);
   }
 
   @Override
@@ -90,7 +91,7 @@ public class VajramPrimer extends AbstractKryonDecorator {
         for (Entry<RequestId, Inputs> entry : forwardBatch.executableRequests().entrySet()) {
           RequestId requestId = entry.getKey();
           Inputs inputs = entry.getValue();
-          ValueOrError<Object> mockedResponse = mockData.get(inputs);
+          ValueOrError<Object> mockedResponse = executionStubs.get(inputs);
           if (mockedResponse == null) {
             if (failIfMockMissing) {
               throw new IllegalStateException(
@@ -150,7 +151,7 @@ public class VajramPrimer extends AbstractKryonDecorator {
     }
 
     private void validate(KryonId kryonId) {
-      String vajramId = mockedVajramId.vajramId();
+      String vajramId = decoratedVajramId.vajramId();
       String kryondId = kryonId.value();
       if (!Objects.equals(kryondId, vajramId)) {
         throw new AssertionError(
