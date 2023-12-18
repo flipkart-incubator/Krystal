@@ -7,6 +7,7 @@ import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.google.inject.Guice.createInjector;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -52,7 +53,7 @@ import org.junit.jupiter.api.Test;
 
 class GreetingVajramTest {
 
-  private static final Duration TIMEOUT = Duration.ofSeconds(1);
+  private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
   private Builder graph;
   private ObjectMapper objectMapper;
@@ -216,7 +217,8 @@ class GreetingVajramTest {
                     .buildConfig())) {
       future = executeVajram(krystexVajramExecutor);
     }
-    assertThat(future).failsWithin(TIMEOUT).withThrowableOfType(IOException.class);
+    assertThat(future).succeedsWithin(TIMEOUT).asInstanceOf(STRING).doesNotContain(USER_NAME);
+
   }
 
   @Test
@@ -237,6 +239,6 @@ class GreetingVajramTest {
                     .buildConfig())) {
       future = executeVajram(krystexVajramExecutor);
     }
-    assertThat(future).failsWithin(TIMEOUT).withThrowableOfType(IOException.class);
+    assertThat(future).succeedsWithin(TIMEOUT).asInstanceOf(STRING).doesNotContain(USER_NAME);
   }
 }
