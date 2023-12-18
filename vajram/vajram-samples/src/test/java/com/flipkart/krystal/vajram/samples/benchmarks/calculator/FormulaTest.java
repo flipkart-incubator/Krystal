@@ -249,7 +249,7 @@ class FormulaTest {
   }
 
   @Test
-  void formula_success_scenario_one_withMockedDependencies() throws Exception {
+  void formula_success_withAllMockedDependencies() throws Exception {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputModulators(
@@ -271,11 +271,11 @@ class FormulaTest {
       future = executeVajram(krystexVajramExecutor, 0);
     }
     assertThat(future.get()).isEqualTo(4);
-    assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
+    assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(0);
   }
 
   @Test
-  void formula_success_scenario_two_withMockedDependencies() throws Exception {
+  void formula_success_with_mockedDependencyAdder() throws Exception {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputModulators(
@@ -285,16 +285,58 @@ class FormulaTest {
         .kryonExecStrategy(
             KryonExecStrategy.BATCH).graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
     try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
-        graph.createExecutor(new FormulaRequestContext(100, 20, null, REQUEST_ID),
+        graph.createExecutor(new FormulaRequestContext(100, 20, 5, REQUEST_ID),
             VajramTestHarness
                 .prepareForTest(kryonExecutorConfigBuilder)
-                .withMock(AdderRequest.builder().numberOne(20).build(), ValueOrError.withValue(20))
-                .withMock(DividerRequest.builder().numerator(100).denominator(20).build(),
-                    ValueOrError.withValue(5))
+                .withMock(AdderRequest.builder().numberOne(20).numberTwo(5).build(), ValueOrError.withValue(25))
                 .buildConfig())) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
-    assertThat(future.get()).isEqualTo(5);
+    assertThat(future.get()).isEqualTo(4);
+    assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(0);
+  }
+
+  @Test
+  void formula_success_with_mockedDependencyDivider() throws Exception {
+    CompletableFuture<Integer> future;
+    VajramKryonGraph graph = this.graph.build();
+    graph.registerInputModulators(
+        vajramID(getVajramIdString(Adder.class)),
+        InputModulatorConfig.simple(() -> new Batcher<>(100)));
+    KryonExecutorConfigBuilder kryonExecutorConfigBuilder = KryonExecutorConfig.builder()
+        .kryonExecStrategy(
+            KryonExecStrategy.BATCH).graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
+    try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
+        graph.createExecutor(new FormulaRequestContext(100, 20, 5, REQUEST_ID),
+            VajramTestHarness
+                .prepareForTest(kryonExecutorConfigBuilder)
+                .withMock(DividerRequest.builder().numerator(100).denominator(25).build(), ValueOrError.withValue(4))
+                .buildConfig())) {
+      future = executeVajram(krystexVajramExecutor, 0);
+    }
+    assertThat(future.get()).isEqualTo(4);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
+  }
+
+  @Test
+  void formula_failure() throws Exception {
+    CompletableFuture<Integer> future;
+    VajramKryonGraph graph = this.graph.build();
+    graph.registerInputModulators(
+        vajramID(getVajramIdString(Adder.class)),
+        InputModulatorConfig.simple(() -> new Batcher<>(100)));
+    KryonExecutorConfigBuilder kryonExecutorConfigBuilder = KryonExecutorConfig.builder()
+        .kryonExecStrategy(
+            KryonExecStrategy.BATCH).graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
+    try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
+        graph.createExecutor(new FormulaRequestContext(100, 0, 0, REQUEST_ID),
+            VajramTestHarness
+                .prepareForTest(kryonExecutorConfigBuilder)
+                .withMock(AdderRequest.builder().numberOne(0).numberTwo(0).build(),
+                    ValueOrError.withValue(0))
+                .buildConfig())) {
+      future = executeVajram(krystexVajramExecutor, 0);
+    }
+    assertThat(future.isCompletedExceptionally());
   }
 }
