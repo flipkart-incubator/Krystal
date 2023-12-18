@@ -337,6 +337,5 @@ class FormulaTest {
                 .buildConfig())) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
-    assertThat(future.isCompletedExceptionally());
   }
 }
