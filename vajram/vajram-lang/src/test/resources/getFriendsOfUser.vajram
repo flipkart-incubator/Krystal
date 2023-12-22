@@ -1,19 +1,22 @@
-public set<string> getFriendsOfUser(mod string userId, app FriendServiceClient svcClient){
-  FriendIdsResponse friendIdsResponse = {
-      return svcClient.getFriendsIds(
-          FriendServiceClient.makeFriendIdsRequest(
-              this._mod.stream()
-                  .map(_.userId())
-                  .toSet()
-          )
-      );
-    }
+package com.flipkart.krystal.vajram.lang.samples.friends;
+
+import java.lang.Set;
+
+public Set<string> getFriendsOfUser(
+    @mod @input string userId,
+    @inject FriendServiceClient svcClient){
 
   {
-      return friendIdsResponse
-          .stream()
-          .map({
-            return this.Mod(_.userId()), _.friendIds();
-          });
-    }
+    svcClient~getFriendsIds(
+        FriendServiceClient.makeFriendIdsRequest(
+            #mod().stream()
+                .map(_.userId)
+                .toSet()))
+        .then {
+            _.stream()
+                .toMap({
+                  return new #mod(_.userId()), _.friendIds();
+                })
+        }
+  }
 }
