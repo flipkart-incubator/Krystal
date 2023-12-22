@@ -10,21 +10,21 @@ program
 
 vajram_def : vajram_visibility? type ID '(' input_decl? ')' permits? '{' (dependency | async_dep)* vajram_logic'}' ;
 
+dependency: type FANOUT? ID (OPTIONAL)? EQ ID '(' (dep_input_resolver SEMI)* dep_input_resolver? ')';
+
 async_dep: type ID EQ block;
 
 block: '{' stat* return_stat '}';
 
 vajram_visibility: PUBLIC | PRIVATE;
 
-input_decl: ((input_qualifier)* input_id_declaration COMMA)? input_qualifier* input_id_declaration;
+input_decl: ((input_annotation)* input_id_declaration COMMA)? input_annotation* input_id_declaration;
 
-input_qualifier: APP | CLIENT | MOD;
+input_annotation: '@' ID;
 
 permits: PERMITS ID (COMMA ID)*;
 
 input_id_declaration: type OPTIONAL? ID;
-
-dependency: type FANOUT? ID (OPTIONAL)? EQ ID '(' (dep_input_resolver SEMI)* dep_input_resolver? ')';
 
 dep_input_resolver: dep_input_resolver_stat | dep_input_resolver_func;
 

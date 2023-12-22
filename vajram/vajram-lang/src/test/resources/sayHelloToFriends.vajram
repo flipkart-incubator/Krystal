@@ -1,6 +1,8 @@
-string sayHelloToFriends(string userId, int? numberOfFriends){
+string sayHelloToFriends(
+    string userId,
+    int? numberOfFriends){
   UserInfo userInfo = getUserInfo(userId = userId)
-  UserInfo* friendsInfos? = getUserInfoFromUserService(
+  UserInfo*? friendsInfos = getUserInfoFromUserService(
     userId =* {
       return IntStream.range(0, numberOfFriends or 2)
          .mapToObj(i, getFriendId(i))

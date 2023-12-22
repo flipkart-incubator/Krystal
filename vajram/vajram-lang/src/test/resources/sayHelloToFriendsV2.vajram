@@ -1,4 +1,9 @@
-public string sayHelloToFriendsV2(string userId){
+import com.flipkart.krystal.vajram.lang.samples.friends.getFriendIdsOfUser;
+import com.flipkart.krystal.vajram.lang.samples.friends.getUserInfo;
+
+public string sayHelloToFriendsV2(
+    string userId){
+
   set<string> friendIds = getFriendIdsOfUser(userId = userId)
   UserInfo* userInfos = getUserInfo(userId =* friendIds)
   {
