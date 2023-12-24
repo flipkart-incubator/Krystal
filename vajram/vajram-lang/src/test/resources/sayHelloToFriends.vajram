@@ -1,14 +1,17 @@
+package com.flipkart.krystal.vajram.lang.samples.friends;
+
 string sayHelloToFriends(
     string userId,
     int? numberOfFriends){
+
   UserInfo userInfo = getUserInfo(userId = userId)
-  UserInfo*? friendsInfos = getUserInfoFromUserService(
-    userId =* {
-      return IntStream.range(0, numberOfFriends or 2)
-         .mapToObj(i, getFriendId(i))
-         .toSet();
-    }
+
+  UserInfo* friendsInfos = getUserInfo(
+      userId =* IntStream
+                  .range(0, numberOfFriends?or(2))
+                  .mapToObj(i, getFriendId(i))
   )
+
   {
     return "Hello Friends of %s ! %s"
         .formatted(

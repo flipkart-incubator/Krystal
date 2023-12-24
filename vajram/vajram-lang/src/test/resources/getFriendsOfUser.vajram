@@ -1,22 +1,26 @@
 package com.flipkart.krystal.vajram.lang.samples.friends;
 
 import java.lang.Set;
+import com.flipkart.krystal.vajram.lang.samples.friendsservice.FriendServiceClient;
 
 public Set<string> getFriendsOfUser(
     @mod @input string userId,
     @inject FriendServiceClient svcClient){
 
-  {
-    svcClient~getFriendsIds(
+  @output ~{
+    svcClient.getFriendsIds(
         FriendServiceClient.makeFriendIdsRequest(
             #mod().stream()
                 .map(_.userId)
                 .toSet()))
-        .then {
-            _.stream()
-                .toMap({
-                  return new #mod(_.userId()), _.friendIds();
-                })
-        }
+      ~then {
+          Set<string>? nullbleFriendIds = _!throwError();
+          Set<string> friendIds = nullbleFriendIds?or(Set.of());
+          friendIds
+              .stream()
+              .toMap {
+                new #mod(_.userId()), _.friendIds()
+              }
+      }
   }
 }

@@ -5,19 +5,18 @@ import com.flipkart.userservice.models.UserServiceClient;
 public UserInfo getUserInfo(
     @mod @input string userId,
     @inject UserServiceClient svcClient)
-    client* sayHelloToFriends {
+    permits sayHelloToFriends {
 
-  {
-      svcClient~getUserInfo(
+  @output ~{
+      svcClient.getUserInfos(
           UserServiceClient.makeUserInfoRequest(
               #mod().stream()
                   .map(_.userId())
-                  .toSet()));
-  }.then {
-    _?userInfos()
-        .stream()
-        .toMap {
-          new #mod(_.userId()), _;
-        }
+                  .toSet()))
+          ~.userInfos()
+          ~.stream()
+          ~.toMap {
+            new #mod(_.userId()), _
+          }
   }
 }

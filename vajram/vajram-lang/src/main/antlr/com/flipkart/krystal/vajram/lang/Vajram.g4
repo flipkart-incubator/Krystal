@@ -8,33 +8,42 @@ program
     : vajram_def EOF
     ;
 
-vajram_def : vajram_visibility? type ID '(' input_decl? ')' permits? '{' (dependency | async_dep)* vajram_logic'}' ;
+vajram_def: package_decl imports_decl* vajram_visibility? type ID '(' input_decl? ')' permits? '{' (dependency)* output_logic'}' ;
 
-dependency: type FANOUT? ID (OPTIONAL)? EQ ID '(' (dep_input_resolver SEMI)* dep_input_resolver? ')';
+package_decl: annotation* PACKAGE qualifiedName ';';
 
-async_dep: type ID EQ block;
+imports_decl: IMPORT qualifiedName ('.' '*')? ';';
 
-block: '{' stat* return_stat '}';
+qualifiedName: ID ('.' ID)*;
+
+dependency: type FANOUT? ID (NULLABLE)? EQ ID '(' (dep_input_resolver SEMI)* dep_input_resolver? ')';
+
+logic_block: annotation* completion_time '{' stat* return_stat '}';
+
+lambda_block: (var_use (COMMA var_use)* '->' )? annotation* completion_time '{' stat* return_stat '}';
+
+var_use: ID (NULLABLE | ERRABLE)?;
+
+completion_time: (SOON | LATER)?;
 
 vajram_visibility: PUBLIC | PRIVATE;
 
-input_decl: ((input_annotation)* input_id_declaration COMMA)? input_annotation* input_id_declaration;
+input_decl: ((annotation)* input_id_declaration COMMA)? annotation* input_id_declaration;
 
-input_annotation: '@' ID;
+annotation: '@' ID;
 
 permits: PERMITS ID (COMMA ID)*;
 
-input_id_declaration: type OPTIONAL? ID;
+input_id_declaration: type NULLABLE? ID;
 
 dep_input_resolver: dep_input_resolver_stat | dep_input_resolver_func;
 
 dep_input_resolver_stat: (ID COMMA)* ID EQ FANOUT? (expr COMMA)* expr;
 dep_input_resolver_func: (ID COMMA)* ID EQ FANOUT? '{' stat* return_stat '}';
 
-vajram_logic : block;
+output_logic : logic_block;
 
-return_stat: RETURN (expr COMMA)* expr SEMI;
-
+return_stat: (RETURN (expr COMMA)* expr SEMI | (expr COMMA)* expr);
 
 type:
     | non_param_type ('<' ((type COMMA)* type COMMA?)? '>')?;
@@ -51,27 +60,27 @@ stat: assign_stat|throw_stat;
 throw_stat: THROW expr SEMI;
 assign_stat: input_id_declaration EQ expr SEMI;
 
-expr: ID (OPTIONAL)?
+expr: var_use
     | STRING_LITERAL
     | INT
     | bool
     | NOT expr
-    | expr AND expr
-    | expr OR expr
     | expr PLUS expr
     | func_chain
-    | expr (OPTIONAL | DOT ) ID
-    | expr (OPTIONAL | DOT) func_chain
+    | expr accessor ID
+    | expr accessor func_chain
     | expr '::' ID
-    | block
+    | lambda_block
+    | SPECIAL? func_call
+    | NEW SPECIAL? func_call
     ;
 
-func_chain: (func_call (OPTIONAL | DOT))* func_call;
+accessor: (DOT | NULLABLE | ERRABLE | SOON | NULLABLE DOT | ERRABLE DOT | SOON DOT);
 
-func_call: ID '(' ((expr COMMA)* expr COMMA?)? ')';
+func_chain: (func_call accessor)* func_call;
 
-AND : 'and' ;
-OR : 'or' ;
+func_call: ID ('(' ((expr COMMA)* expr COMMA?)? ')' | logic_block );
+
 NOT : 'not' ;
 EQ : '=' ;
 PLUS : '+';
@@ -81,22 +90,24 @@ LPAREN : '(' ;
 RPAREN : ')' ;
 LCURLY : '{' ;
 RCURLY : '}' ;
+SPECIAL : '#' ;
 
-DEP    : 'dep' ;
-OUT    : 'out' ;
+NEW : 'new' ;
 RETURN : 'return' ;
 THROW: 'throw';
 
 PUBLIC: 'public';
 PRIVATE: 'private';
 PERMITS: 'permits' ;
-APP    : 'app' ;
 CLIENT : 'client' ;
-MOD : 'mod' ;
+PACKAGE: 'package';
+IMPORT : 'import';
 
 FANOUT : '*';
-OPTIONAL: '?';
-FUTURE : '~';
+NULLABLE: '?';
+ERRABLE: '!';
+SOON : '~';
+LATER : '~~';
 DOT: '.';
 
 INT : [0-9]+ ;
@@ -106,4 +117,3 @@ STRING: 'string' ;
 STRING_LITERAL:     '"' (~["\\\r\n])* '"';
 ID: [a-zA-Z_][a-zA-Z_0-9]* ;
 WS: [ \t\n\r\f]+ -> skip ;
-
