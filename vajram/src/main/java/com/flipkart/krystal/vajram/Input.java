@@ -1,5 +1,4 @@
 package com.flipkart.krystal.vajram;
 
-public @interface Input {
-  boolean modulated() default false;
-}
+/** Declares a facet as a client provided input */
+public @interface Input {}
