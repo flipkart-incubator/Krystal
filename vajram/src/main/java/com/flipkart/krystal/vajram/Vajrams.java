@@ -9,11 +9,7 @@ public final class Vajrams {
     do {
       annotation = annotatedClass.getAnnotation(VajramDef.class);
       if (annotation != null) {
-        String vajramId = annotation.value();
-        if (vajramId.isEmpty()) {
-          vajramId = annotatedClass.getSimpleName();
-        }
-        return vajramId;
+        return annotatedClass.getSimpleName();
       }
       annotatedClass = annotatedClass.getSuperclass();
       if (annotatedClass == null) {

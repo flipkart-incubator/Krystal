@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.inputs;
+package com.flipkart.krystal.vajram.facets;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -21,7 +21,7 @@ public record MultiExecute<T>(Collection<T> multiInputs, boolean shouldSkip, Str
   }
 
   public static <T> MultiExecute<T> skipFanout(String reason) {
-    return new com.flipkart.krystal.vajram.inputs.MultiExecute<>(
+    return new MultiExecute<>(
         Collections.emptyList(), true, reason);
   }
 }

@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.codegen.models;
 
 import com.flipkart.krystal.datatypes.DataType;
-import com.flipkart.krystal.vajram.inputs.InputSource;
+import com.flipkart.krystal.vajram.facets.InputSource;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 import lombok.Builder;

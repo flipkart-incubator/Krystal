@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.inputs.resolution;
+package com.flipkart.krystal.vajram.facets.resolution;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

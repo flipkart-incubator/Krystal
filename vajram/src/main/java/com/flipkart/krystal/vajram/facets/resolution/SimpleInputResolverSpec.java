@@ -1,6 +1,6 @@
-package com.flipkart.krystal.vajram.inputs.resolution;
+package com.flipkart.krystal.vajram.facets.resolution;
 
-import com.flipkart.krystal.vajram.inputs.VajramFacetSpec;
+import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;

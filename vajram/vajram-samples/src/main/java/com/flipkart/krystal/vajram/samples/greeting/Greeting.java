@@ -7,8 +7,8 @@ import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.Using;
-import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
+import com.flipkart.krystal.vajram.facets.Using;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.samples.greeting.GreetingInputUtil.GreetingInputs;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -20,10 +20,7 @@ import java.util.Optional;
  * Given a userId, this Vajram composes and returns a 'Hello!' greeting addressing the user by name
  * (as declared by the user in their profile).
  */
-@VajramDef(
-    // Unique Id of this Vajram;
-    // if not specified, then the simplename of the class is used as id
-    "Greeting")
+@VajramDef
 @SuppressWarnings("initialization.field.uninitialized")
 // ComputeVajram means that this Vajram does not directly perform any blocking operations.
 public abstract class Greeting extends ComputeVajram<String> {
