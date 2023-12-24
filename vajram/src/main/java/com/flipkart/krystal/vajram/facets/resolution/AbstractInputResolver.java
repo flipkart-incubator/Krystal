@@ -1,6 +1,6 @@
-package com.flipkart.krystal.vajram.inputs.resolution;
+package com.flipkart.krystal.vajram.facets.resolution;
 
-import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
+import com.flipkart.krystal.vajram.facets.QualifiedInputs;
 import com.google.common.collect.ImmutableSet;
 
 public abstract class AbstractInputResolver implements InputResolver {

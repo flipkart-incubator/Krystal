@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello;
 
-import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
-import static com.flipkart.krystal.vajram.inputs.MultiExecute.skipFanout;
+import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
+import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.friendIds_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.hellos_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.skip_n;
@@ -13,9 +13,9 @@ import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.MultiExecute;
-import com.flipkart.krystal.vajram.inputs.Using;
-import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
+import com.flipkart.krystal.vajram.facets.MultiExecute;
+import com.flipkart.krystal.vajram.facets.Using;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;

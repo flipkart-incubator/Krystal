@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.inputs.resolution;
+package com.flipkart.krystal.vajram.facets.resolution;
 
 import com.google.common.collect.ImmutableSet;
 

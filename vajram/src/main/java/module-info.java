@@ -1,6 +1,6 @@
 module flipkart.krystal.vajram {
-  exports com.flipkart.krystal.vajram.inputs;
-  exports com.flipkart.krystal.vajram.inputs.resolution;
+  exports com.flipkart.krystal.vajram.facets;
+  exports com.flipkart.krystal.vajram.facets.resolution;
   exports com.flipkart.krystal.vajram;
   exports com.flipkart.krystal.vajram.das;
   exports com.flipkart.krystal.vajram.modulation;

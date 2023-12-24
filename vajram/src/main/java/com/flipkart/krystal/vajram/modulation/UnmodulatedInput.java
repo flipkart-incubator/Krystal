@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.modulation;
 
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
-import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
+import com.flipkart.krystal.vajram.facets.InputValuesAdaptor;
 import java.util.LinkedHashMap;
 import java.util.Map;
 

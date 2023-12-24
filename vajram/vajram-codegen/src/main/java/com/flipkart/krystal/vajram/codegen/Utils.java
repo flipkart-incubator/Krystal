@@ -20,7 +20,7 @@ import com.flipkart.krystal.vajram.codegen.models.InputModel;
 import com.flipkart.krystal.vajram.codegen.models.InputModel.InputModelBuilder;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfoLite;
-import com.flipkart.krystal.vajram.inputs.InputSource;
+import com.flipkart.krystal.vajram.facets.InputSource;
 import com.google.common.primitives.Primitives;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -260,12 +260,13 @@ public class Utils {
       TypeMirror responseType = getResponseType(vajramOrReqClass, Vajram.class);
       TypeElement responseTypeElement = (TypeElement) typeUtils.asElement(responseType);
       VajramDef vajramDef = vajramOrReqClass.getAnnotation(VajramDef.class);
-      String vajramId = vajramDef.value();
-      if (vajramId.isEmpty()) {
-        vajramId = vajramClassSimpleName;
+      if (vajramDef == null) {
+        throw new IllegalArgumentException(
+            "Vajram class %s does not have @VajramDef annotation. This should not happen"
+                .formatted(vajramOrReqClass));
       }
       return new VajramInfoLite(
-          vajramId,
+          vajramClassSimpleName,
           new DeclaredTypeVisitor(processingEnv, false, responseTypeElement).visit(responseType));
     } else {
       throw new IllegalArgumentException(

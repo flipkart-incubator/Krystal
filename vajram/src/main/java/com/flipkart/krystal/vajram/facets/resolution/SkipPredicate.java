@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.inputs.resolution;
+package com.flipkart.krystal.vajram.facets.resolution;
 
 import java.util.Optional;
 import java.util.function.Predicate;

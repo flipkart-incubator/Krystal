@@ -1,13 +1,13 @@
-package com.flipkart.krystal.vajram.inputs.resolution;
+package com.flipkart.krystal.vajram.facets.resolution;
 
-import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.toResolver;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.toResolver;
 import static java.util.Arrays.stream;
 
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.inputs.VajramDependencySpec;
-import com.flipkart.krystal.vajram.inputs.VajramFacetSpec;
-import com.flipkart.krystal.vajram.inputs.resolution.FanoutResolverStage.ResolveFanoutStage;
-import com.flipkart.krystal.vajram.inputs.resolution.ResolverStage.ResolveStage;
+import com.flipkart.krystal.vajram.facets.VajramDependencySpec;
+import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
+import com.flipkart.krystal.vajram.facets.resolution.FanoutResolverStage.ResolveFanoutStage;
+import com.flipkart.krystal.vajram.facets.resolution.ResolverStage.ResolveStage;
 import com.google.common.collect.ImmutableList;
 import java.util.Collection;
 import java.util.List;

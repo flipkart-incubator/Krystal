@@ -1,9 +1,9 @@
-package com.flipkart.krystal.vajram.inputs.resolution;
+package com.flipkart.krystal.vajram.facets.resolution;
 
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.inputs.VajramFacetSpec;
-import com.flipkart.krystal.vajram.inputs.resolution.ResolverStage.AsIsResolverStage;
+import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
+import com.flipkart.krystal.vajram.facets.resolution.ResolverStage.AsIsResolverStage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;

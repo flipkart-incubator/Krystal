@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder;
 
-import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
-import static com.flipkart.krystal.vajram.inputs.MultiExecute.skipFanout;
-import static com.flipkart.krystal.vajram.inputs.SingleExecute.executeWith;
-import static com.flipkart.krystal.vajram.inputs.SingleExecute.skipExecution;
+import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
+import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
+import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
+import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest.numberOne_n;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest.numberTwo_n;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderRequest.chainSum_n;
@@ -15,10 +15,10 @@ import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.MultiExecute;
-import com.flipkart.krystal.vajram.inputs.SingleExecute;
-import com.flipkart.krystal.vajram.inputs.Using;
-import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
+import com.flipkart.krystal.vajram.facets.MultiExecute;
+import com.flipkart.krystal.vajram.facets.SingleExecute;
+import com.flipkart.krystal.vajram.facets.Using;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderInputUtil.ChainAdderInputs;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;

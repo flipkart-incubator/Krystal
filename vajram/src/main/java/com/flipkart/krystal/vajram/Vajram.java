@@ -1,12 +1,12 @@
 package com.flipkart.krystal.vajram;
 
-import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
+import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 
 import com.flipkart.krystal.data.Inputs;
-import com.flipkart.krystal.vajram.inputs.DependencyCommand;
-import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
-import com.flipkart.krystal.vajram.inputs.VajramFacetDefinition;
-import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
+import com.flipkart.krystal.vajram.facets.DependencyCommand;
+import com.flipkart.krystal.vajram.facets.InputValuesAdaptor;
+import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
+import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
