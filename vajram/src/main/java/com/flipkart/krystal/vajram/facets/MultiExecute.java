@@ -21,7 +21,6 @@ public record MultiExecute<T>(Collection<T> multiInputs, boolean shouldSkip, Str
   }
 
   public static <T> MultiExecute<T> skipFanout(String reason) {
-    return new MultiExecute<>(
-        Collections.emptyList(), true, reason);
+    return new MultiExecute<>(Collections.emptyList(), true, reason);
   }
 }

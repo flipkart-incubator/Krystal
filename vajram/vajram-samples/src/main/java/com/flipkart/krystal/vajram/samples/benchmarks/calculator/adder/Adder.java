@@ -7,6 +7,7 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
+import com.flipkart.krystal.vajram.modulation.Modulated;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderInputUtil.AdderCommonInputs;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderInputUtil.AdderModInputs;
@@ -20,11 +21,9 @@ public abstract class Adder extends ComputeVajram<Integer> {
 
   public static final LongAdder CALL_COUNTER = new LongAdder();
 
-  @Input(modulated = true)
-  int numberOne;
+  @Modulated @Input int numberOne;
 
-  @Input(modulated = true)
-  Optional<Integer> numberTwo;
+  @Modulated @Input Optional<Integer> numberTwo;
 
   @VajramLogic
   static Map<AdderModInputs, Integer> add(

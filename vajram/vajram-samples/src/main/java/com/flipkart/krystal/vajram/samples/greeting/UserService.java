@@ -7,6 +7,7 @@ import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
+import com.flipkart.krystal.vajram.modulation.Modulated;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajram.samples.greeting.UserServiceInputUtil.UserServiceCommonInputs;
 import com.flipkart.krystal.vajram.samples.greeting.UserServiceInputUtil.UserServiceModInputs;
@@ -20,8 +21,7 @@ import java.util.stream.Collectors;
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class UserService extends IOVajram<UserInfo> {
 
-  @Input(modulated = true)
-  String userId;
+  @Modulated @Input String userId;
 
   @VajramLogic
   static Map<UserServiceModInputs, CompletableFuture<UserInfo>> callUserService(
