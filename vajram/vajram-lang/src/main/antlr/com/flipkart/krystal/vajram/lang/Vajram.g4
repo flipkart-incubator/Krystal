@@ -99,7 +99,6 @@ THROW: 'throw';
 PUBLIC: 'public';
 PRIVATE: 'private';
 PERMITS: 'permits' ;
-CLIENT : 'client' ;
 PACKAGE: 'package';
 IMPORT : 'import';
 

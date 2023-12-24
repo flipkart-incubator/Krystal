@@ -7,10 +7,13 @@ import com.flipkart.krystal.vajram.lang.samples.friends.getUserInfo;
 public string sayHelloToFriendsV2(
     string userId){
 
-  UserInfo userInfo = getUserInfo(userId = userId)
-  Set<string> friendIds = getFriendIdsOfUser(userId = userId)
-  UserInfo* friendInfos = getUserInfo(userId =* friendIds)
-  {
+  @dep UserInfo userInfo = getUserInfo(userId = userId)
+
+  @dep Set<string> friendIds = getFriendIdsOfUser(userId = userId)
+
+  @dep UserInfo* friendInfos = getUserInfo(userId =* friendIds)
+
+  @output {
     return "Hello Friends of %s ! %s"
        .formatted(
            userInfo.name(),
