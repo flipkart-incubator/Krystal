@@ -1,22 +1,22 @@
-package com.flipkart.krystal.vajram.inputs.resolution;
+package com.flipkart.krystal.vajram.facets.resolution;
 
 import static com.flipkart.krystal.data.ValueOrError.withValue;
-import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
-import static com.flipkart.krystal.vajram.inputs.MultiExecute.skipFanout;
-import static com.flipkart.krystal.vajram.inputs.SingleExecute.executeWith;
-import static com.flipkart.krystal.vajram.inputs.SingleExecute.skipExecution;
-import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil._resolutionHelper;
+import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
+import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
+import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
+import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil._resolutionHelper;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Optional.ofNullable;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.inputs.DependencyCommand;
-import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
-import com.flipkart.krystal.vajram.inputs.SingleExecute;
-import com.flipkart.krystal.vajram.inputs.VajramDependencySpec;
-import com.flipkart.krystal.vajram.inputs.VajramFacetSpec;
+import com.flipkart.krystal.vajram.facets.DependencyCommand;
+import com.flipkart.krystal.vajram.facets.QualifiedInputs;
+import com.flipkart.krystal.vajram.facets.SingleExecute;
+import com.flipkart.krystal.vajram.facets.VajramDependencySpec;
+import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;

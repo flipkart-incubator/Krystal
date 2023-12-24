@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.inputs;
+package com.flipkart.krystal.vajram.facets;
 
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 

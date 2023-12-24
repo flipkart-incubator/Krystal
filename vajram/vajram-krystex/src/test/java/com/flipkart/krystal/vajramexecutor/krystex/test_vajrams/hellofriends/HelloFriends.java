@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends;
 
-import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.dep;
-import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.depInput;
-import static com.flipkart.krystal.vajram.inputs.resolution.InputResolvers.resolve;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.friendInfos_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.numberOfFriends_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.userId_n;
@@ -16,9 +16,9 @@ import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.Using;
-import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
-import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
+import com.flipkart.krystal.vajram.facets.Using;
+import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsInputUtil.HelloFriendsInputs;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService;

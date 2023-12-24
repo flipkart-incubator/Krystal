@@ -1,9 +1,5 @@
-package com.flipkart.krystal.vajram.inputs.resolution;
+package com.flipkart.krystal.vajram.facets.resolution;
 
-import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
-import static com.flipkart.krystal.vajram.inputs.MultiExecute.skipFanout;
-import static com.flipkart.krystal.vajram.inputs.SingleExecute.executeWith;
-import static com.flipkart.krystal.vajram.inputs.SingleExecute.skipExecution;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Optional.ofNullable;
 import static java.util.function.Function.identity;
@@ -12,13 +8,13 @@ import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.inputs.DependencyCommand;
-import com.flipkart.krystal.vajram.inputs.MultiExecute;
-import com.flipkart.krystal.vajram.inputs.SingleExecute;
-import com.flipkart.krystal.vajram.inputs.VajramDepFanoutTypeSpec;
-import com.flipkart.krystal.vajram.inputs.VajramDepSingleTypeSpec;
-import com.flipkart.krystal.vajram.inputs.VajramDependencySpec;
-import com.flipkart.krystal.vajram.inputs.VajramFacetSpec;
+import com.flipkart.krystal.vajram.facets.DependencyCommand;
+import com.flipkart.krystal.vajram.facets.MultiExecute;
+import com.flipkart.krystal.vajram.facets.SingleExecute;
+import com.flipkart.krystal.vajram.facets.VajramDepFanoutTypeSpec;
+import com.flipkart.krystal.vajram.facets.VajramDepSingleTypeSpec;
+import com.flipkart.krystal.vajram.facets.VajramDependencySpec;
+import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -160,9 +156,9 @@ public final class InputResolverUtil {
             .findFirst();
     if (skipPredicate.isPresent()) {
       if (fanout) {
-        return skipFanout(skipPredicate.get().reason());
+        return MultiExecute.skipFanout(skipPredicate.get().reason());
       } else {
-        return skipExecution(skipPredicate.get().reason());
+        return SingleExecute.skipExecution(skipPredicate.get().reason());
       }
     }
     //noinspection unchecked
@@ -185,13 +181,13 @@ public final class InputResolverUtil {
     }
     if (fanout) {
       //noinspection unchecked
-      return executeFanoutWith(
+      return MultiExecute.executeFanoutWith(
           transformedInput.map(ts -> ((Collection<T>) ts).stream()).stream()
               .flatMap(identity())
               .collect(toImmutableList()));
     } else {
       //noinspection unchecked
-      return executeWith((T) transformedInput.orElse(null));
+      return SingleExecute.executeWith((T) transformedInput.orElse(null));
     }
   }
 

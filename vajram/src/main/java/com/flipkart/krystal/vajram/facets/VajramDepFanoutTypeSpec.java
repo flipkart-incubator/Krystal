@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.inputs;
+package com.flipkart.krystal.vajram.facets;
 
 import static lombok.EqualsAndHashCode.CacheStrategy.LAZY;
 

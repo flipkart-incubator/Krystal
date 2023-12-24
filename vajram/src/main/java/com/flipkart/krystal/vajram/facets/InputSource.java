@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.inputs;
+package com.flipkart.krystal.vajram.facets;
 
 public enum InputSource {
   /** The input can be provided by clients of the vajram */

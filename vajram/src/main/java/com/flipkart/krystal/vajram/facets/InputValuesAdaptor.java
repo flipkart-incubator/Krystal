@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.inputs;
+package com.flipkart.krystal.vajram.facets;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
