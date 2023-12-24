@@ -4,15 +4,15 @@ string sayHelloToFriends(
     string userId,
     int? numberOfFriends){
 
-  UserInfo userInfo = getUserInfo(userId = userId)
+  @dep UserInfo userInfo = getUserInfo(userId = userId)
 
-  UserInfo* friendsInfos = getUserInfo(
+  @dep UserInfo* friendsInfos = getUserInfo(
       userId =* IntStream
                   .range(0, numberOfFriends?or(2))
                   .mapToObj(i, getFriendId(i))
   )
 
-  {
+  @output {
     return "Hello Friends of %s ! %s"
         .formatted(
           userInfo.name(),
