@@ -4,12 +4,12 @@ import static com.flipkart.krystal.data.ValueOrError.withValue;
 import static com.flipkart.krystal.krystex.resolution.ResolverCommand.multiExecuteWith;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.VajramLoader.loadVajramsFromClassPath;
-import static com.flipkart.krystal.vajram.inputs.InputSource.CLIENT;
-import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
-import static com.flipkart.krystal.vajram.inputs.SingleExecute.executeWith;
-import static com.flipkart.krystal.vajram.inputs.SingleExecute.skipExecution;
-import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.collectDepInputs;
-import static com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.multiResolve;
+import static com.flipkart.krystal.vajram.facets.InputSource.CLIENT;
+import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
+import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
+import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.collectDepInputs;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.multiResolve;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -50,16 +50,16 @@ import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import com.flipkart.krystal.vajram.das.VajramIndex;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.exec.VajramExecutableGraph;
-import com.flipkart.krystal.vajram.inputs.Dependency;
-import com.flipkart.krystal.vajram.inputs.DependencyCommand;
-import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.vajram.inputs.InputSource;
-import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
-import com.flipkart.krystal.vajram.inputs.resolution.InputResolver;
-import com.flipkart.krystal.vajram.inputs.resolution.InputResolverDefinition;
-import com.flipkart.krystal.vajram.inputs.resolution.InputResolverUtil.ResolutionResult;
-import com.flipkart.krystal.vajram.inputs.resolution.ResolutionRequest;
-import com.flipkart.krystal.vajram.inputs.resolution.SimpleInputResolver;
+import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.DependencyCommand;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.InputSource;
+import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
+import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.InputResolverDefinition;
+import com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.ResolutionResult;
+import com.flipkart.krystal.vajram.facets.resolution.ResolutionRequest;
+import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig.ModulatorContext;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjector;
@@ -95,6 +95,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
   private final LogicDefRegistryDecorator logicRegistryDecorator;
 
   private final Map<VajramID, VajramDefinition> vajramDefinitions = new LinkedHashMap<>();
+
   /** These are those call graphs of a vajram where no other vajram depends on this. */
   private final Map<VajramID, KryonId> vajramExecutables = new LinkedHashMap<>();
 
@@ -120,7 +121,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
     this.logicRegistryDecorator = new LogicDefRegistryDecorator(logicDefinitionRegistry);
     for (String packagePrefix : packagePrefixes) {
-      loadVajramsFromClassPath(packagePrefix).forEach(this::registerVajram);
+      List<? extends Vajram> vajrams = loadVajramsFromClassPath(packagePrefix);
+      vajrams.forEach(this::registerVajram);
     }
     this.inputInjector = new InputInjector(this, inputInjectionProvider);
   }
@@ -280,7 +282,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
       VajramDefinition vajramDefinition) {
     Vajram<?> vajram = vajramDefinition.getVajram();
     VajramID vajramId = vajram.getId();
-    ImmutableCollection<VajramInputDefinition> inputDefinitions = vajram.getInputDefinitions();
+    ImmutableCollection<VajramFacetDefinition> inputDefinitions = vajram.getInputDefinitions();
 
     // Create kryon definitions for all input resolvers defined in this vajram
     List<InputResolverDefinition> inputResolvers =
@@ -296,7 +298,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                       ImmutableSet<String> resolvedInputNames =
                           inputResolverDefinition.resolutionTarget().inputNames();
                       ImmutableSet<String> sources = inputResolverDefinition.sources();
-                      ImmutableCollection<VajramInputDefinition> requiredInputs =
+                      ImmutableCollection<VajramFacetDefinition> requiredInputs =
                           inputDefinitions.stream()
                               .filter(def -> sources.contains(def.name()))
                               .collect(toImmutableList());
@@ -314,7 +316,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                                 DependencyCommand<Inputs> dependencyCommand;
                                 try {
                                   if (inputResolverDefinition
-                                      instanceof SimpleInputResolver<?, ?, ?, ?> inputResolver) {
+                                      instanceof SimpleInputResolver<?, ?, ?> inputResolver) {
                                     ResolutionResult resolutionResult =
                                         multiResolve(
                                             List.of(
@@ -369,7 +371,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
         logicRegistryDecorator.newMultiResolver(
             vajramId.vajramId(),
             vajramId.vajramId() + ":multiResolver",
-            inputDefinitions.stream().map(VajramInputDefinition::name).collect(toImmutableSet()),
+            inputDefinitions.stream().map(VajramFacetDefinition::name).collect(toImmutableSet()),
             (resolutionRequests, inputs) -> {
               Set<ResolverDefinition> allResolverDefs = new HashSet<>();
               for (DependencyResolutionRequest resolutionRequest : resolutionRequests) {
@@ -417,7 +419,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                                                           () ->
                                                               new AssertionError(
                                                                   "Could not find resolver for resolver definition. This should not happen")))
-                                          .map(ird -> (SimpleInputResolver<?, ?, ?, ?>) ird)
+                                          .map(ird -> (SimpleInputResolver<?, ?, ?>) ird)
                                           .toList())),
                       inputs);
               Map<String, List<Map<String, @Nullable Object>>> results =
@@ -485,14 +487,14 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
   }
 
   private void validateMandatory(
-      VajramID vajramID, Inputs inputs, ImmutableCollection<VajramInputDefinition> requiredInputs) {
-    Iterable<VajramInputDefinition> mandatoryInputs =
+      VajramID vajramID, Inputs inputs, ImmutableCollection<VajramFacetDefinition> requiredInputs) {
+    Iterable<VajramFacetDefinition> mandatoryInputs =
         requiredInputs.stream()
                 .filter(inputDefinition -> inputDefinition instanceof Input<?>)
-                .filter(VajramInputDefinition::isMandatory)
+                .filter(VajramFacetDefinition::isMandatory)
             ::iterator;
     Map<String, Throwable> missingMandatoryValues = new HashMap<>();
-    for (VajramInputDefinition mandatoryInput : mandatoryInputs) {
+    for (VajramFacetDefinition mandatoryInput : mandatoryInputs) {
       ValueOrError<?> value = inputs.getInputValue(mandatoryInput.name());
       if (value.error().isPresent() || value.value().isEmpty()) {
         missingMandatoryValues.put(
@@ -513,12 +515,12 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
   private MainLogicDefinition<?> createVajramKryonLogic(
       KryonId kryonId, VajramDefinition vajramDefinition) {
     VajramID vajramId = vajramDefinition.getVajram().getId();
-    ImmutableCollection<VajramInputDefinition> inputDefinitions =
+    ImmutableCollection<VajramFacetDefinition> inputDefinitions =
         vajramDefinition.getVajram().getInputDefinitions();
     ImmutableSet<String> inputNames =
         inputDefinitions.stream()
             .filter(this::isVisibleToKrystex)
-            .map(VajramInputDefinition::name)
+            .map(VajramFacetDefinition::name)
             .collect(toImmutableSet());
     KryonLogicId vajramLogicKryonName =
         new KryonLogicId(kryonId, "%s:vajramLogic".formatted(vajramId));
@@ -547,12 +549,10 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
               ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> validResults =
                   vajram.execute(ImmutableList.copyOf(validInputs));
 
-              ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> result =
-                  ImmutableMap.<Inputs, CompletableFuture<@Nullable Object>>builder()
-                      .putAll(validResults)
-                      .putAll(failedValidations)
-                      .build();
-              return result;
+              return ImmutableMap.<Inputs, CompletableFuture<@Nullable Object>>builder()
+                  .putAll(validResults)
+                  .putAll(failedValidations)
+                  .build();
             },
             vajramDefinition.getMainLogicTags());
     registerInputInjector(vajramLogic, vajramDefinition.getVajram());
@@ -562,7 +562,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     return vajramLogic;
   }
 
-  private boolean isVisibleToKrystex(VajramInputDefinition vajramInputDefinition) {
+  private boolean isVisibleToKrystex(VajramFacetDefinition vajramInputDefinition) {
     if (vajramInputDefinition instanceof Input<?> input) {
       return input.sources().contains(CLIENT);
     }
@@ -611,7 +611,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
   private ImmutableMap<String, KryonId> createKryonDefinitionsForDependencies(
       VajramDefinition vajramDefinition) {
     List<Dependency> dependencies = new ArrayList<>();
-    for (VajramInputDefinition vajramInputDefinition :
+    for (VajramFacetDefinition vajramInputDefinition :
         vajramDefinition.getVajram().getInputDefinitions()) {
       if (vajramInputDefinition instanceof Dependency definition) {
         dependencies.add(definition);

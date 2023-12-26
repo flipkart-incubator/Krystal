@@ -1,9 +1,10 @@
 package com.flipkart.krystal.datatypes;
 
-import java.lang.reflect.Type;
-import java.util.Optional;
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.type.TypeMirror;
 
-public final class StringType implements JavaDataType<String> {
+@SuppressWarnings("Singleton")
+public final class StringType extends AbstractDataType<String> {
 
   private static final StringType INSTANCE = new StringType();
 
@@ -14,7 +15,12 @@ public final class StringType implements JavaDataType<String> {
   private StringType() {}
 
   @Override
-  public Optional<Type> javaType() {
-    return Optional.of(String.class);
+  public Class<String> javaReflectType() {
+    return String.class;
+  }
+
+  @Override
+  public TypeMirror javaModelType(ProcessingEnvironment processingEnv) {
+    return processingEnv.getElementUtils().getTypeElement(String.class.getName()).asType();
   }
 }

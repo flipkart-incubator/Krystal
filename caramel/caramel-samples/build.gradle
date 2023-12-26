@@ -1,6 +1,0 @@
-group 'org.example'
-version 'unspecified'
-
-dependencies {
-    implementation project(':caramel')
-}

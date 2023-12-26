@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder;
 
-import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
-import static com.flipkart.krystal.vajram.inputs.MultiExecute.skipFanout;
-import static com.flipkart.krystal.vajram.inputs.SingleExecute.executeWith;
-import static com.flipkart.krystal.vajram.inputs.SingleExecute.skipExecution;
+import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
+import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
+import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
+import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest.numberOne_n;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest.numberTwo_n;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderRequest.chainSum_n;
@@ -11,21 +11,31 @@ import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Ch
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderRequest.sum_n;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
+import com.flipkart.krystal.vajram.Dependency;
+import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.MultiExecute;
-import com.flipkart.krystal.vajram.inputs.SingleExecute;
-import com.flipkart.krystal.vajram.inputs.Using;
-import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
+import com.flipkart.krystal.vajram.facets.MultiExecute;
+import com.flipkart.krystal.vajram.facets.SingleExecute;
+import com.flipkart.krystal.vajram.facets.Using;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderInputUtil.ChainAdderInputs;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-@VajramDef(ChainAdder.ID)
+@VajramDef
+@SuppressWarnings("initialization.field.uninitialized")
 public abstract class ChainAdder extends ComputeVajram<Integer> {
 
-  public static final String ID = "chainAdder";
+  @Input List<Integer> numbers;
+
+  @Dependency(onVajram = ChainAdder.class, canFanout = true)
+  int chainSum;
+
+  @Dependency(onVajram = Adder.class)
+  Optional<Integer> sum;
 
   @Resolve(depName = chainSum_n, depInputs = numbers_n)
   public static MultiExecute<List<Integer>> numbersForSubChainer(
@@ -68,7 +78,7 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
   }
 
   @VajramLogic
-  public static Integer add(ChainAdderInputs allInputs) {
+  static Integer add(ChainAdderInputs allInputs) {
     return allInputs.sum().orElse(0)
         + allInputs.chainSum().values().stream().mapToInt(value -> value.value().orElse(0)).sum();
   }

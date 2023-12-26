@@ -1,5 +1,0 @@
-inputs:
-  - name: user_id
-    dataType: string
-    mandatory: true
-    needsModulation: true

@@ -1,3 +1,5 @@
+output:
+  dataType: string
 inputs:
   - name: user_ids
     mandatory: true

@@ -1,110 +1,111 @@
 package com.flipkart.krystal.vajram.codegen.models;
 
-import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.codegen.utils.CodegenUtils;
-import com.flipkart.krystal.vajram.codegen.utils.Constants;
+import com.flipkart.krystal.vajram.codegen.Utils;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
-import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
+import javax.lang.model.element.TypeElement;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public record ParsedVajramData(
     String vajramName,
-    List<Method> resolveMethods,
-    Method vajramLogic,
-    Class<? extends Vajram<?>> vajramClass,
+    List<ExecutableElement> resolvers,
+    ExecutableElement outputLogic,
+    TypeElement vajramClass,
     String packageName,
-    Map<String, Field> fields) {
+    DataType<?> responseType) {
 
-  public static final String DOT_SEPARATOR = ".";
-
-  public static Optional<ParsedVajramData> fromVajram(
-      ClassLoader classLoader, VajramInputFile inputFile) {
-    String packageName =
-        CodegenUtils.getPackageFromPath(inputFile.inputFilePath().relativeFilePath());
-    Class<? extends Vajram<?>> result;
-    Map<String, Field> fields = new HashMap<>();
-    try {
-      //noinspection unchecked
-      result =
-          (Class<? extends Vajram<?>>)
-              classLoader.loadClass(packageName + DOT_SEPARATOR + inputFile.vajramName());
-
-      for (Method method : result.getDeclaredMethods()) {
-        if ((method.isAnnotationPresent(VajramLogic.class)
-                || method.isAnnotationPresent(Resolve.class))
-            && !Modifier.isStatic(method.getModifiers()))
-          throw new VajramValidationException(
-              "Vajram class %s has non-static method %s"
-                  .formatted(inputFile.vajramName(), method.getName()));
+  public static Optional<ParsedVajramData> fromVajram(VajramInfo vajramInfo, Utils util) {
+    TypeElement vajramClass = vajramInfo.vajramClass();
+    String packageName = vajramInfo.packageName();
+    for (ExecutableElement method : iter(getAllMethods(vajramClass))) {
+      String errorMessage =
+          "Vajram class %s has non-static method %s"
+              .formatted(vajramInfo.vajramId(), method.getSimpleName());
+      if ((isOutputLogic(method) || isResolver(method)) && !isStatic(method)) {
+        util.error(errorMessage, method);
+        throw new VajramValidationException(errorMessage);
       }
-
-      boolean needsModulation =
-          inputFile.vajramInputsDef().inputs().stream().anyMatch(InputDef::isNeedsModulation);
-      if (needsModulation) {
-        final Class<?> inputsCls =
-            classLoader.loadClass(
-                packageName
-                    + DOT_SEPARATOR
-                    + CodegenUtils.getInputUtilClassName(inputFile.vajramName())
-                    + Constants.DOLLAR
-                    + CodegenUtils.getInputModulationClassname(inputFile.vajramName()));
-        Arrays.stream(inputsCls.getDeclaredFields())
-            .forEach(field -> fields.put(field.getName(), field));
-      } else {
-        final Class<?> allInputsCls =
-            classLoader.loadClass(
-                packageName
-                    + DOT_SEPARATOR
-                    + CodegenUtils.getInputUtilClassName(inputFile.vajramName())
-                    + Constants.DOLLAR
-                    + CodegenUtils.getAllInputsClassname(inputFile.vajramName()));
-        Arrays.stream(allInputsCls.getDeclaredFields())
-            .forEach(field -> fields.put(field.getName(), field));
-      }
-      String requestClass =
-          packageName + DOT_SEPARATOR + CodegenUtils.getRequestClassName(inputFile.vajramName());
-      classLoader.loadClass(requestClass);
-    } catch (ClassNotFoundException e) {
-      log.warn("Vajram class not found for {}", inputFile.vajramName(), e);
-      return Optional.empty();
     }
 
-    List<Method> resolveMethods = new ArrayList<>();
-    Method vajramLogic = getVajramLogicAndResolverMethods(result, resolveMethods);
+    List<ExecutableElement> resolveMethods = new ArrayList<>();
+    ExecutableElement vajramLogic =
+        getVajramLogicAndResolverMethods(vajramClass, resolveMethods, util);
     return Optional.of(
         new ParsedVajramData(
-            inputFile.vajramName(), resolveMethods, vajramLogic, result, packageName, fields));
+            vajramInfo.vajramId().vajramId(),
+            resolveMethods,
+            vajramLogic,
+            vajramClass,
+            packageName,
+            vajramInfo.responseType()));
   }
 
-  public static Method getVajramLogicAndResolverMethods(
-      Class<? extends Vajram<?>> vajramCalss, List<Method> resolveMethods) {
-    Method vajramLogic = null;
-    for (Method method : vajramCalss.getDeclaredMethods()) {
-      if (method.isAnnotationPresent(Resolve.class)) {
+  public static ExecutableElement getVajramLogicAndResolverMethods(
+      TypeElement vajramClass, List<ExecutableElement> resolveMethods, Utils util) {
+    ExecutableElement vajramLogic = null;
+    for (ExecutableElement method : getStaticMethods(vajramClass)) {
+      if (isResolver(method)) {
         resolveMethods.add(method);
-      } else if (method.isAnnotationPresent(VajramLogic.class)) {
+      } else if (isOutputLogic(method)) {
         if (vajramLogic == null) {
           vajramLogic = method;
         } else {
-          throw new VajramValidationException(
-              "Multiple VajramLogic annotated methods found in " + vajramCalss.getSimpleName());
+          String errorMessage =
+              "Multiple VajramLogic annotated methods (%s, %s) found in %s"
+                  .formatted(
+                      vajramLogic.getSimpleName(),
+                      method.getSimpleName(),
+                      vajramClass.getSimpleName());
+          util.error(errorMessage, vajramLogic);
+          util.error(errorMessage, method);
+          throw new VajramValidationException(errorMessage);
         }
       }
     }
     if (vajramLogic == null) {
-      throw new VajramValidationException("Missing vajram logic method");
+      String errorMessage = "Missing vajram logic method";
+      util.error(errorMessage, vajramClass);
+      throw new VajramValidationException(errorMessage);
     }
     return vajramLogic;
+  }
+
+  private static boolean isResolver(ExecutableElement method) {
+    return method.getAnnotationsByType(Resolve.class).length == 1;
+  }
+
+  private static boolean isOutputLogic(ExecutableElement method) {
+    return method.getAnnotationsByType(VajramLogic.class).length == 1;
+  }
+
+  private static List<ExecutableElement> getStaticMethods(TypeElement vajramClass) {
+    return getAllMethods(vajramClass)
+        .filter(element -> element.getModifiers().contains(Modifier.STATIC))
+        .toList();
+  }
+
+  private static Stream<ExecutableElement> getAllMethods(TypeElement vajramCalss) {
+    return vajramCalss.getEnclosedElements().stream()
+        .filter(element -> element.getKind() == ElementKind.METHOD)
+        .map(element -> (ExecutableElement) element);
+  }
+
+  private static <T> Iterable<T> iter(Stream<T> elementStream) {
+    return elementStream::iterator;
+  }
+
+  private static boolean isStatic(Element element) {
+    return element.getModifiers().contains(Modifier.STATIC);
   }
 }

@@ -1,3 +1,5 @@
+output:
+  dataType: string
 inputs:
   - name: name
     dataType: string

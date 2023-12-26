@@ -1,0 +1,10 @@
+output:
+  dataType: integer
+inputs:
+  - name: number_one
+    dataType: integer
+    mandatory: true
+    needsModulation: true
+  - name: number_two
+    dataType: integer
+    needsModulation: true

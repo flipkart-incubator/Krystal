@@ -1,5 +1,5 @@
-public set<string> getFriendsOfUser(mod string userId, FriendServiceClient svcClient){
-  FriendIdsBatch friendIdsBatch = {
+public set<string> getFriendsOfUser(mod string userId, app FriendServiceClient svcClient){
+  FriendIdsResponse friendIdsResponse = {
       return svcClient.getFriendsIds(
           FriendServiceClient.makeFriendIdsRequest(
               this._mod.stream()
@@ -10,11 +10,10 @@ public set<string> getFriendsOfUser(mod string userId, FriendServiceClient svcCl
     }
 
   {
-      return friendIdsBatch
-          .friendsIds()
+      return friendIdsResponse
           .stream()
           .map({
-            return this.Req(_.userId(), svcClient), _.friendIds();
+            return this.Mod(_.userId()), _.friendIds();
           });
     }
 }

@@ -1,24 +1,22 @@
 package com.flipkart.krystal.vajram;
 
-import java.util.Optional;
-
 public final class Vajrams {
 
-  public static Optional<String> getVajramIdString(
+  public static String getVajramIdString(
       @SuppressWarnings("rawtypes") Class<? extends Vajram> aClass) {
     VajramDef annotation;
-    Class<?> annotationClass = aClass;
+    Class<?> annotatedClass = aClass;
     do {
-      annotation = annotationClass.getAnnotation(VajramDef.class);
-      annotationClass = annotationClass.getSuperclass();
-      if (annotationClass == null) {
+      annotation = annotatedClass.getAnnotation(VajramDef.class);
+      if (annotation != null) {
+        return annotatedClass.getSimpleName();
+      }
+      annotatedClass = annotatedClass.getSuperclass();
+      if (annotatedClass == null) {
         break;
       }
-      if (!Vajram.class.isAssignableFrom(annotationClass)) {
-        break;
-      }
-    } while (annotation == null);
-    return Optional.ofNullable(annotation).map(VajramDef::value);
+    } while (Vajram.class.isAssignableFrom(annotatedClass));
+    throw new IllegalStateException("Unable to find vajramId for class %s".formatted(aClass));
   }
 
   private Vajrams() {}

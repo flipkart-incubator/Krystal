@@ -2,14 +2,11 @@ plugins {
     id 'antlr'
 }
 
-group 'com.flipkart'
-version project.krystal_version
-
 dependencies {
     antlr 'org.antlr:antlr4:4.12.0'
 }
 
-// These is to avoid the gradle error in gradle 8.1. Example:
+// These are to avoid the gradle error in gradle 8.1. Example:
 // Task ':vajram-lang:spotlessJava' uses this output of task ':vajram-lang:generateGrammarSource'
 // without declaring an explicit or implicit dependency. This can lead to incorrect results being produced,
 // depending on what order the tasks are executed.

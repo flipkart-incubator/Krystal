@@ -9,21 +9,27 @@ dependencies {
     implementation project(':krystal-common')
     implementation project(':vajram')
 
+    annotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
+
     testImplementation project(':vajram-krystex')
     testImplementation project(':krystex')
 
-    implementation 'com.google.inject:guice:5.1.0'
+    implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
     implementation 'org.checkerframework:checker-qual:3.37.0'
 
     def jacksonVersion = '2.14.2'
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations:' + jacksonVersion
+    testImplementation 'com.google.inject:guice:7.0.0'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind:' + jacksonVersion
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:' + jacksonVersion
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jacksonVersion
 }
+
+project.tasks.named("sourcesJar").configure { it.dependsOn("compileJava") }
 
 test {
     minHeapSize = "128m" // initial heap size
     maxHeapSize = "4g" // maximum heap size
 }
 
+tasks.named("spotlessJava").configure { dependsOn("codeGenVajramModels") }

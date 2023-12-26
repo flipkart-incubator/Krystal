@@ -28,7 +28,7 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<Main
   protected MainLogicDefinition(
       KryonLogicId kryonLogicId,
       Set<String> inputs,
-      ImmutableMap<String, Tag> logicTags,
+      ImmutableMap<Object, Tag> logicTags,
       MainLogic<T> mainLogic) {
     super(kryonLogicId, inputs, logicTags, mainLogic);
   }

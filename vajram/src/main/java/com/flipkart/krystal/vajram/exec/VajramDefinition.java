@@ -7,16 +7,16 @@ import static java.util.stream.Collectors.toMap;
 import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.TagWith;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.DefaultInputResolverDefinition;
-import com.flipkart.krystal.vajram.inputs.Dependency;
-import com.flipkart.krystal.vajram.inputs.QualifiedInputs;
-import com.flipkart.krystal.vajram.inputs.Using;
-import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
-import com.flipkart.krystal.vajram.inputs.resolution.InputResolverDefinition;
-import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
+import com.flipkart.krystal.vajram.facets.DefaultInputResolverDefinition;
+import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.QualifiedInputs;
+import com.flipkart.krystal.vajram.facets.Using;
+import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
+import com.flipkart.krystal.vajram.facets.resolution.InputResolverDefinition;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
+import com.flipkart.krystal.vajram.tags.AnnotationTag;
 import com.flipkart.krystal.vajram.tags.Service;
 import com.flipkart.krystal.vajram.tags.ServiceApi;
 import com.flipkart.krystal.vajram.tags.VajramTags;
@@ -25,29 +25,56 @@ import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.lang.annotation.Annotation;
+import java.lang.annotation.Repeatable;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public final class VajramDefinition {
 
   @Getter private final Vajram<?> vajram;
 
   @Getter private final ImmutableCollection<InputResolverDefinition> inputResolverDefinitions;
 
-  @Getter private final ImmutableMap<String, Tag> mainLogicTags;
+  @Getter private final ImmutableMap<Object, Tag> mainLogicTags;
+  @Getter private final ImmutableMap<String, ImmutableMap<Object, Tag>> facetTags;
 
   public VajramDefinition(Vajram<?> vajram) {
     this.vajram = vajram;
     this.inputResolverDefinitions = ImmutableList.copyOf(parseInputResolvers(vajram));
     this.mainLogicTags = parseVajramLogicTags(vajram);
+    this.facetTags = parseFacetTags(vajram);
+  }
+
+  private static ImmutableMap<String, ImmutableMap<Object, Tag>> parseFacetTags(Vajram<?> vajram) {
+    Map<String, ImmutableMap<Object, Tag>> result = new LinkedHashMap<>();
+    for (Field declaredField : vajram.getClass().getDeclaredFields()) {
+      Map<Object, Tag> annoTags = new LinkedHashMap<>();
+      Annotation[] annotations = declaredField.getAnnotations();
+      for (Annotation annotation : annotations) {
+        boolean isRepeatable = annotation.getClass().getAnnotation(Repeatable.class) != null;
+        if (isRepeatable) {
+          log.warn("Repeatable annotations are not supported as tags. Ignoring {}", annotation);
+        } else {
+          AnnotationTag<Annotation> annotationTag = AnnotationTag.from(annotation);
+          annoTags.put(annotationTag.tagKey(), annotationTag);
+        }
+      }
+      result.put(declaredField.getName(), ImmutableMap.copyOf(annoTags));
+    }
+    return ImmutableMap.copyOf(result);
   }
 
   private static Collection<InputResolverDefinition> parseInputResolvers(Vajram<?> vajram) {
@@ -62,7 +89,7 @@ public final class VajramDefinition {
         vajram.getInputDefinitions().stream()
             .filter(vi -> vi instanceof Dependency)
             .map(vi -> (Dependency<?>) vi)
-            .collect(toImmutableMap(VajramInputDefinition::name, Function.identity()));
+            .collect(toImmutableMap(VajramFacetDefinition::name, Function.identity()));
 
     for (Method resolverMethod : resolverMethods) {
       Resolve resolver = resolverMethod.getAnnotation(Resolve.class);
@@ -102,37 +129,40 @@ public final class VajramDefinition {
     return inputResolvers;
   }
 
-  private static ImmutableMap<String, Tag> parseVajramLogicTags(Vajram<?> vajram) {
+  private static ImmutableMap<Object, Tag> parseVajramLogicTags(Vajram<?> vajram) {
     Optional<Method> vajramLogicMethod =
         Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
             .filter(method -> method.getAnnotation(VajramLogic.class) != null)
             .findFirst();
-    TagWith[] tagWithArray =
+    List<AnnotationTag<Annotation>> tagWithArray =
         vajramLogicMethod
-            .map(method -> method.getAnnotationsByType(TagWith.class))
-            .orElse(new TagWith[0]);
-    Map<String, Tag> collect =
-        Arrays.stream(tagWithArray)
-            .collect(toMap(TagWith::name, tagWith -> new Tag(tagWith.name(), tagWith.value())));
+            .map(method -> Arrays.stream(method.getAnnotations()).map(AnnotationTag::from).toList())
+            .orElse(List.of());
+    Map<Object, Tag> collect =
+        tagWithArray.stream().collect(toMap(Tag::tagKey, Function.identity()));
     vajramLogicMethod.ifPresent(
         method -> {
           Service service = method.getAnnotation(Service.class);
           if (service != null) {
-            collect.put(Service.TAG_KEY, new Tag(Service.TAG_KEY, service.value()));
+            AnnotationTag<Service> serviceTag = AnnotationTag.from(service);
+            collect.put(serviceTag.tagKey(), serviceTag);
           }
           ServiceApi serviceApi = method.getAnnotation(ServiceApi.class);
           if (serviceApi != null) {
-            collect.put(ServiceApi.TAG_KEY, new Tag(ServiceApi.TAG_KEY, serviceApi.apiName()));
+            AnnotationTag<ServiceApi> serviceApiTag = AnnotationTag.from(serviceApi);
+            collect.put(serviceApiTag.tagKey(), serviceApiTag);
           }
           collect.put(
               VajramTags.VAJRAM_TYPE,
-              new Tag(
+              AnnotationTag.newNamedTag(
                   VajramTags.VAJRAM_TYPE,
                   vajram instanceof IOVajram<?>
                       ? VajramTypes.IO_VAJRAM
                       : VajramTypes.COMPUTE_VAJRAM));
         });
-    collect.put(VajramTags.VAJRAM_ID, new Tag(VajramTags.VAJRAM_ID, vajram.getId().vajramId()));
+    collect.put(
+        VajramTags.VAJRAM_ID,
+        AnnotationTag.newNamedTag(VajramTags.VAJRAM_ID, vajram.getId().vajramId()));
     return ImmutableMap.copyOf(collect);
   }
 

@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder;
 
-import static com.flipkart.krystal.vajram.inputs.SingleExecute.executeWith;
-import static com.flipkart.krystal.vajram.inputs.SingleExecute.skipExecution;
+import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
+import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest.numberOne_n;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest.numberTwo_n;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderRequest.numbers_n;
@@ -10,19 +10,32 @@ import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Sp
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderRequest.sum_n;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
+import com.flipkart.krystal.vajram.Dependency;
+import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.SingleExecute;
-import com.flipkart.krystal.vajram.inputs.Using;
-import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
+import com.flipkart.krystal.vajram.facets.SingleExecute;
+import com.flipkart.krystal.vajram.facets.Using;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderInputUtil.SplitAdderInputs;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-@VajramDef(SplitAdder.ID)
+@VajramDef
+@SuppressWarnings("initialization.field.uninitialized")
 public abstract class SplitAdder extends ComputeVajram<Integer> {
 
-  public static final String ID = "splitAdder";
+  @Input List<Integer> numbers;
+
+  @Dependency(onVajram = SplitAdder.class)
+  Optional<Integer> splitSum1;
+
+  @Dependency(onVajram = SplitAdder.class)
+  Optional<Integer> splitSum2;
+
+  @Dependency(onVajram = Adder.class)
+  Optional<Integer> sum;
 
   @Resolve(depName = splitSum1_n, depInputs = numbers_n)
   public static SingleExecute<ArrayList<Integer>> numbersForSubSplitter1(
@@ -65,7 +78,7 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
   }
 
   @VajramLogic
-  public static Integer add(SplitAdderInputs allInputs) {
+  static Integer add(SplitAdderInputs allInputs) {
     return allInputs.splitSum1().orElse(0)
         + allInputs.splitSum2().orElse(0)
         + allInputs.sum().orElse(0);

@@ -7,7 +7,7 @@ import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
-import com.flipkart.krystal.datatypes.JavaDataType;
+import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.krystex.MainLogic;
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
@@ -16,12 +16,14 @@ import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
-import com.flipkart.krystal.vajram.inputs.Input;
-import com.flipkart.krystal.vajram.inputs.InputSource;
-import com.flipkart.krystal.vajram.inputs.VajramInputDefinition;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.InputSource;
+import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
+import com.flipkart.krystal.vajram.tags.AnnotationTag;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import jakarta.inject.Named;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,7 +37,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class InputInjector implements MainLogicDecorator {
 
   public static final String DECORATOR_TYPE = InputInjector.class.getName();
-  public static final String INJECT_NAMED_KEY = "inject.named";
   @NotOnlyInitialized private final VajramKryonGraph vajramKryonGraph;
   private final @Nullable InputInjectionProvider inputInjectionProvider;
 
@@ -89,12 +90,14 @@ public final class InputInjector implements MainLogicDecorator {
 
   private Inputs injectFromSession(@Nullable VajramDefinition vajramDefinition, Inputs inputs) {
     Map<String, InputValue<Object>> newValues = new HashMap<>();
+    ImmutableMap<String, ImmutableMap<Object, Tag>> facetTags =
+        vajramDefinition == null ? ImmutableMap.of() : vajramDefinition.getFacetTags();
     Optional.ofNullable(vajramDefinition)
         .map(VajramDefinition::getVajram)
         .map(Vajram::getInputDefinitions)
         .ifPresent(
-            inputDefinitions -> {
-              for (VajramInputDefinition inputDefinition : inputDefinitions) {
+            facetDefinitions -> {
+              for (VajramFacetDefinition inputDefinition : facetDefinitions) {
                 String inputName = inputDefinition.name();
                 if (inputDefinition instanceof Input<?> input) {
                   if (input.sources().contains(InputSource.CLIENT)) {
@@ -105,14 +108,22 @@ public final class InputInjector implements MainLogicDecorator {
                     // Input was not resolved by another vajram. Check if it is resolvable
                     // by SESSION
                   }
-                  if (input.sources().contains(InputSource.SESSION)
-                      && input.type() instanceof JavaDataType<?>) {
+                  if (input.sources().contains(InputSource.SESSION)) {
+                    ImmutableMap<Object, Tag> inputTags =
+                        facetTags.getOrDefault(inputName, ImmutableMap.of());
                     ValueOrError<Object> value =
                         getFromInjectionAdaptor(
-                            ((JavaDataType<?>) input.type()),
-                            Optional.ofNullable(input.tags())
-                                .map(tags -> tags.get(INJECT_NAMED_KEY))
-                                .map(Tag::tagValue)
+                            input.type(),
+                            Optional.ofNullable(inputTags.get(Named.class))
+                                .map(
+                                    tag -> {
+                                      if (tag instanceof AnnotationTag<?> anno) {
+                                        if (anno.annotation() instanceof Named named) {
+                                          return named.value();
+                                        }
+                                      }
+                                      return null;
+                                    })
                                 .orElse(null));
                     newValues.put(inputName, value);
                   }
@@ -128,24 +139,27 @@ public final class InputInjector implements MainLogicDecorator {
   }
 
   private ValueOrError<Object> getFromInjectionAdaptor(
-      JavaDataType<?> dataType, @Nullable String injectionName) {
+      DataType<?> dataType, @Nullable String injectionName) {
     if (inputInjectionProvider == null) {
       return ValueOrError.withError(
           new Exception("Dependency injector is null, cannot resolve SESSION input"));
     }
 
-    if (dataType == null || dataType.javaType().isEmpty()) {
+    if (dataType == null) {
       return ValueOrError.withError(new Exception("Data type not found"));
     }
-    Optional<Type> type = dataType.javaType();
+    Type type;
+    try {
+      type = dataType.javaReflectType();
+    } catch (ClassNotFoundException e) {
+      return ValueOrError.withError(e);
+    }
     @Nullable Object resolvedObject = null;
-    if (type.isPresent()) {
-      if (injectionName != null) {
-        resolvedObject = inputInjectionProvider.getInstance((Class<?>) type.get(), injectionName);
-      }
-      if (resolvedObject == null) {
-        resolvedObject = inputInjectionProvider.getInstance(((Class<?>) type.get()));
-      }
+    if (injectionName != null) {
+      resolvedObject = inputInjectionProvider.getInstance((Class<?>) type, injectionName);
+    }
+    if (resolvedObject == null) {
+      resolvedObject = inputInjectionProvider.getInstance(((Class<?>) type));
     }
     return ValueOrError.withValue(resolvedObject);
   }

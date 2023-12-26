@@ -1,11 +1,11 @@
-group 'com.flipkart.krystal'
-version project.krystal_version
+description 'Common data structures and utilities used across krystal components.'
+
 
 publishing {
     publications {
         maven(MavenPublication) {
             groupId = 'com.flipkart.krystal'
-            artifactId = 'krystal-common'
+            artifactId = project.name
             version = project.krystal_version
             from components.java
             pom {
