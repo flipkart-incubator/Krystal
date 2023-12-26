@@ -16,25 +16,25 @@ imports_decl: IMPORT qualifiedName ('.' '*')? ';';
 
 qualifiedName: ID ('.' ID)*;
 
-dependency: type FANOUT? ID (NULLABLE)? EQ ID '(' (dep_input_resolver SEMI)* dep_input_resolver? ')';
+dependency: annotation* type FANOUT? ID ERRABLE? EQ ID '(' (dep_input_resolver SEMI)* dep_input_resolver? ')';
 
 logic_block: annotation* completion_time '{' stat* return_stat '}';
 
 lambda_block: (var_use (COMMA var_use)* '->' )? annotation* completion_time '{' stat* return_stat '}';
 
-var_use: ID (NULLABLE | ERRABLE)?;
+var_use: ID ERRABLE?;
 
 completion_time: (SOON | LATER)?;
 
 vajram_visibility: PUBLIC | PRIVATE;
 
-input_decl: ((annotation)* input_id_declaration COMMA)? annotation* input_id_declaration;
+input_decl: (annotation* input_id_declaration COMMA)* (annotation* input_id_declaration)?;
 
 annotation: '@' ID;
 
 permits: PERMITS ID (COMMA ID)*;
 
-input_id_declaration: type NULLABLE? ID;
+input_id_declaration: type ERRABLE? ID;
 
 dep_input_resolver: dep_input_resolver_stat | dep_input_resolver_func;
 
@@ -75,7 +75,7 @@ expr: var_use
     | NEW SPECIAL? func_call
     ;
 
-accessor: (DOT | NULLABLE | ERRABLE | SOON | NULLABLE DOT | ERRABLE DOT | SOON DOT);
+accessor: (SOON | ERRABLE | DOT | SOON DOT | ERRABLE DOT | SOON ERRABLE DOT | SOON ERRABLE);
 
 func_chain: (func_call accessor)* func_call;
 
@@ -103,8 +103,7 @@ PACKAGE: 'package';
 IMPORT : 'import';
 
 FANOUT : '*';
-NULLABLE: '?';
-ERRABLE: '!';
+ERRABLE: '?';
 SOON : '~';
 LATER : '~~';
 DOT: '.';

@@ -7,9 +7,10 @@ string sayHelloToFriends(
   @dep UserInfo userInfo = getUserInfo(userId = userId)
 
   @dep UserInfo* friendsInfos = getUserInfo(
-      userId =* IntStream
-                  .range(0, numberOfFriends?or(2))
-                  .mapToObj(i, getFriendId(i))
+      userId =*
+          IntStream
+              .range(0, numberOfFriends?or(2))
+              .mapToObj(i, getFriendId(i))
   )
 
   @output {

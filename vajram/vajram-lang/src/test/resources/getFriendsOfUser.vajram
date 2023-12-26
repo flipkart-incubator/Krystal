@@ -9,18 +9,14 @@ public Set<string> getFriendsOfUser(
 
   @output ~{
     svcClient.getFriendsIds(
-        FriendServiceClient.makeFriendIdsRequest(
+        new FriendServiceRequest(
             #mod().stream()
-                .map(_.userId)
+                .map(_.userId())
                 .toSet()))
-      ~then {
-          Set<string>? nullbleFriendIds = _!throwError();
-          Set<string> friendIds = nullbleFriendIds?or(Set.of());
-          friendIds
-              .stream()
-              .toMap {
-                new #mod(_.userId()), _.friendIds()
-              }
-      }
+      ~?.results()
+      ~? or(List.of())
+      ~ .stream()
+      ~ .toMap {
+          new #mod(_.userId()), _.friendIds()}
   }
 }
