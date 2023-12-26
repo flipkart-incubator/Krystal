@@ -1,10 +1,23 @@
-public string sayHelloToFriendsV2(string userId){
-  set<string> friendIds = getFriendIdsOfUser(userId = userId)
-  UserInfo* userInfos = getUserInfo(userId =* friendIds)
-  {
-    return "Hello Friends! %s"
+package com.flipkart.krystal.vajram.lang.samples.friends;
+
+import java.lang.Set;
+import com.flipkart.krystal.vajram.lang.samples.friends.getFriendIdsOfUser;
+import com.flipkart.krystal.vajram.lang.samples.friends.getUserInfo;
+
+public string sayHelloToFriendsV2(
+    string userId){
+
+  @dep UserInfo userInfo = getUserInfo(userId = userId)
+
+  @dep Set<string> friendIds = getFriendIdsOfUser(userId = userId)
+
+  @dep UserInfo* friendInfos = getUserInfo(userId =* friendIds)
+
+  @output {
+    return "Hello Friends of %s ! %s"
        .formatted(
-           userInfos.stream()
+           userInfo.name(),
+           friendInfos.stream()
                .filter(_.isPresent())
                .map(_.userName())
                .collect(joining(", ")));
