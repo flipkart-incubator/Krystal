@@ -8,15 +8,16 @@ private UserInfo getUserInfo(
     permits sayHelloToFriends {
 
   @output ~{
-      svcClient.getUserInfos(
-          UserServiceClient.makeUserInfoRequest(
-              #mod().stream()
-                  .map(_.userId())
-                  .toSet()))
-          ~.userInfos()
-          ~.stream()
-          ~.toMap {
-            new #mod(_.userId()), _
-          }
+    svcClient.getUserInfos(
+        UserServiceClient.makeUserInfoRequest(
+            #mod().stream()
+                .map(_.userId())
+                .toSet()))
+      ~?.userInfos()
+      ~?.stream()
+      ~? or(Stream.of())
+      ~ .toMap {
+          new #mod(_.userId()), _
+        }
   }
 }
