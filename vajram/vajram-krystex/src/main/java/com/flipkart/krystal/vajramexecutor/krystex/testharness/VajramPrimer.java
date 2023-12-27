@@ -28,6 +28,12 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
+/**
+ * VajramPrimer is a custom Kryon Decorator which enables mocking the
+ * request and response of a vajram at runtime. When regietred with a kryon,
+ * it overrides the actual execution logic of the vajram and replaces it
+ * with the stubs provided when a kryon is registered with this class.
+ */
 public class VajramPrimer extends AbstractKryonDecorator {
 
   private final ImmutableMap<Inputs, ValueOrError<Object>> executionStubs;
