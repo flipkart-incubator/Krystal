@@ -336,6 +336,7 @@ class FormulaTest {
                     ValueOrError.withValue(0))
                 .buildConfig())) {
       future = executeVajram(krystexVajramExecutor, 0);
+      assertThat(future.isCompletedExceptionally()).isEqualTo(false);
     }
   }
 }
