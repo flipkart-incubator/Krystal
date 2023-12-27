@@ -1,20 +1,23 @@
-public UserInfo getUserInfo(mod string userId, app UserServiceClient svcClient)
+package com.flipkart.krystal.vajram.lang.samples.friends;
+
+import com.flipkart.userservice.models.UserServiceClient;
+
+private UserInfo getUserInfo(
+    @mod @input string userId,
+    @inject UserServiceClient svcClient)
     permits sayHelloToFriends {
-  UserInfoBatch userInfoBatch = {
-      return svcClient.getUserInfo(
-          UserServiceClient.makeUserInfoRequest(
-              this._mod.stream()
-                  .map(_.userId())
-                  .toSet()
-          )
-      );
-  }
-  {
-    return userInfoBatch
-        .userInfos()
-        .stream()
-        .map({
-          return this.Req(_.userId(), svcClient), _;
-        });
+
+  @output ~{
+    svcClient.getUserInfos(
+        UserServiceClient.makeUserInfoRequest(
+            #mod().stream()
+                .map(_.userId())
+                .toSet()))
+      ~?.userInfos()
+      ~?.stream()
+      ~? or(Stream.of())
+      ~ .toMap {
+          new #mod(_.userId()), _
+        }
   }
 }

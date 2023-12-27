@@ -4,7 +4,7 @@ import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.codegen.Utils;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
-import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;

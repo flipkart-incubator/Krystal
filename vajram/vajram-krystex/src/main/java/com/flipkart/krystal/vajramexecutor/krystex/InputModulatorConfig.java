@@ -8,7 +8,7 @@ import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig.DecoratorContext;
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
+import com.flipkart.krystal.vajram.facets.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.flipkart.krystal.vajram.tags.AnnotationTag;

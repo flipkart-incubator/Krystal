@@ -13,7 +13,7 @@ import com.flipkart.krystal.krystex.logicdecoration.FlushCommand;
 import com.flipkart.krystal.krystex.logicdecoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecoratorCommand;
 import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
-import com.flipkart.krystal.vajram.inputs.InputValuesAdaptor;
+import com.flipkart.krystal.vajram.facets.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;

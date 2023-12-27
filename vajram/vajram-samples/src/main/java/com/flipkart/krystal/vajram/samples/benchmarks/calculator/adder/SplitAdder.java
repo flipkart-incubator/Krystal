@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder;
 
-import static com.flipkart.krystal.vajram.inputs.SingleExecute.executeWith;
-import static com.flipkart.krystal.vajram.inputs.SingleExecute.skipExecution;
+import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
+import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest.numberOne_n;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest.numberTwo_n;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderRequest.numbers_n;
@@ -14,9 +14,9 @@ import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.inputs.SingleExecute;
-import com.flipkart.krystal.vajram.inputs.Using;
-import com.flipkart.krystal.vajram.inputs.resolution.Resolve;
+import com.flipkart.krystal.vajram.facets.SingleExecute;
+import com.flipkart.krystal.vajram.facets.Using;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderInputUtil.SplitAdderInputs;
 import java.util.ArrayList;
 import java.util.List;

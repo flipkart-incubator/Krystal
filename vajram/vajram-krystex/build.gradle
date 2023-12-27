@@ -22,6 +22,42 @@ dependencies {
 
 project.tasks.named("sourcesJar").configure { it.dependsOn("compileJava") }
 
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.flipkart.krystal'
+            artifactId = project.name
+            version = project.krystal_version
+            from components.java
+            pom {
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+            }
+        }
+    }
+
+    tasks.named("spotlessJava").configure { dependsOn("codeGenVajramModels") }
+    tasks.named("spotlessJava").configure { dependsOn("testCodeGenVajramModels") }
+}
+
+/*
+ * The krystal gradle plugin adds new test tasks and modifies the compileTestJavaTask by making it depend
+ * on these new tasks. This seems to be interfering with gradle's ability to copy over the module dependencies
+ * from the module-info.java spec to the test modules. To overcome this, we have to manually add --add-exports and
+ * --add-reads arguments to the jvm so that test classes compile.
+ *
+ * This issue happens only when the compileTestJava task is modofied to add a dependency on testCodeGenVajramImpls.
+ * This is needed only when there are vajrams written in the 'test' directory of the project - which is the case in vajram-krystex.
+ * This issue doesn't arise in traditional modules where vajrams are written in 'main' directory.
+ *
+ * To circumvent this, the krystal gradle plugin does not make `compileTestJava` dependend on `testCodeGenVajramImpls`.
+ * If any project has vajrams in the test directory, then that project will have to explicitly make `compileTestJava` dependend on `testCodeGenVajramImpls`
+ * and add custome jvm arguments as done below, so that compilation of test code succeeds.
+ */
 tasks.named('testCodeGenVajramModels').configure {
     doFirst {
         def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
@@ -62,32 +98,10 @@ test {
                 '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
                 '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
 
-                '--add-opens', "flipkart.krystal.krystex/com.flipkart.krystal.krystex.decorators.observability=com.fasterxml.jackson.databind",
+                '--add-opens', "flipkart.krystal.krystex/com.flipkart.krystal.krystex.logicdecorators.observability=com.fasterxml.jackson.databind",
                 '--add-opens', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex=org.junit.platform.commons",
         ]
     }
-}
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId = 'com.flipkart.krystal'
-            artifactId = project.name
-            version = project.krystal_version
-            from components.java
-            pom {
-                licenses {
-                    license {
-                        name = 'The Apache License, Version 2.0'
-                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                    }
-                }
-            }
-        }
-    }
-
-    tasks.named("spotlessJava").configure { dependsOn("codeGenVajramModels") }
-    tasks.named("spotlessJava").configure { dependsOn("testCodeGenVajramModels") }
 }
 
 private static ArrayList<String> modulePathArgs(String moduleName) {

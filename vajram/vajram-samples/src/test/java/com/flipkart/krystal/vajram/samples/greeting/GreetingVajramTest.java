@@ -7,7 +7,6 @@ import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.google.inject.Guice.createInjector;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -125,12 +124,12 @@ class GreetingVajramTest {
                         kryonId ->
                             Objects.equals(kryonId.value(), userServiceVajramId)
                                 ? List.of(
-                                new VajramPrimer(
-                                    vajramID(userServiceVajramId),
-                                    Map.of(
-                                        UserServiceRequest.builder().userId(userId).build(),
-                                        withValue(new UserInfo(userId, name))),
-                                    false))
+                                    new VajramPrimer(
+                                        vajramID(userServiceVajramId),
+                                        Map.of(
+                                            UserServiceRequest.builder().userId(userId).build(),
+                                            withValue(new UserInfo(userId, name))),
+                                        false))
                                 : List.of())
                     .build())) {
       future = executeVajram(krystexVajramExecutor);
@@ -154,10 +153,8 @@ class GreetingVajramTest {
     }
   }
 
-  public record RequestContext(String requestId, String userId) implements
-      ApplicationRequestContext {
-
-  }
+  public record RequestContext(String requestId, String userId)
+      implements ApplicationRequestContext {}
 
   private static CompletableFuture<String> executeVajram(
       KrystexVajramExecutor<RequestContext> krystexVajramExecutor) {
@@ -183,14 +180,16 @@ class GreetingVajramTest {
   @Test
   void greetingVajram_dependenciesMockedWithHarness_success() {
     CompletableFuture<String> future;
-    KryonExecutorConfigBuilder kryonExecutorConfigBuilder = KryonExecutorConfig.builder()
-        .kryonExecStrategy(KryonExecStrategy.BATCH)
-        .graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
+    KryonExecutorConfigBuilder kryonExecutorConfigBuilder =
+        KryonExecutorConfig.builder()
+            .kryonExecStrategy(KryonExecStrategy.BATCH)
+            .graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
     try (VajramKryonGraph vajramKryonGraph = graph.build();
         KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
             vajramKryonGraph.createExecutor(
                 new RequestContext(REQUEST_ID, USER_ID),
-                VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder).withMock(
+                VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder)
+                    .withMock(
                         UserServiceRequest.builder().userId(USER_ID).build(),
                         withValue(new UserInfo(USER_ID, USER_NAME)))
                     .buildConfig())) {
@@ -202,37 +201,36 @@ class GreetingVajramTest {
   @Test
   void greetingVajram_dependenciesMockedWithHarness_failureWithTimeOut() {
     CompletableFuture<String> future;
-    KryonExecutorConfigBuilder kryonExecutorConfigBuilder = KryonExecutorConfig.builder()
-        .kryonExecStrategy(
-            KryonExecStrategy.BATCH).graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
+    KryonExecutorConfigBuilder kryonExecutorConfigBuilder =
+        KryonExecutorConfig.builder()
+            .kryonExecStrategy(KryonExecStrategy.BATCH)
+            .graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
     try (VajramKryonGraph vajramKryonGraph = graph.build();
         KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
             vajramKryonGraph.createExecutor(
                 new RequestContext(REQUEST_ID, USER_ID),
-                VajramTestHarness.
-                    prepareForTest(kryonExecutorConfigBuilder).
-                    withMock(
+                VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder)
+                    .withMock(
                         UserServiceRequest.builder().userId(USER_ID).build(),
                         ValueOrError.withError(new IOException("Request Timeout")))
                     .buildConfig())) {
       future = executeVajram(krystexVajramExecutor);
     }
     assertThat(future).succeedsWithin(TIMEOUT).asInstanceOf(STRING).doesNotContain(USER_NAME);
-
   }
 
   @Test
   void greetingVajram_dependenciesMockedWithHarness_failureWithUpstreamUnavailable() {
     CompletableFuture<String> future;
-    KryonExecutorConfigBuilder kryonExecutorConfigBuilder = KryonExecutorConfig.builder()
-        .kryonExecStrategy(KryonExecStrategy.BATCH)
-        .graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
+    KryonExecutorConfigBuilder kryonExecutorConfigBuilder =
+        KryonExecutorConfig.builder()
+            .kryonExecStrategy(KryonExecStrategy.BATCH)
+            .graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
     try (VajramKryonGraph vajramKryonGraph = graph.build();
         KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
             vajramKryonGraph.createExecutor(
                 new RequestContext(REQUEST_ID, USER_ID),
-                VajramTestHarness
-                    .prepareForTest(kryonExecutorConfigBuilder)
+                VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder)
                     .withMock(
                         UserServiceRequest.builder().userId(USER_ID).build(),
                         ValueOrError.withError(new IOException("Server unavailable")))

@@ -8,6 +8,7 @@ import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
+import com.flipkart.krystal.vajram.modulation.Modulated;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceInputUtil.TestUserServiceCommonInputs;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceInputUtil.TestUserServiceModInputs;
@@ -21,8 +22,7 @@ import java.util.concurrent.atomic.LongAdder;
 @VajramDef
 public abstract class TestUserService extends IOVajram<TestUserInfo> {
 
-  @Input(modulated = true)
-  String userId;
+  @Modulated @Input String userId;
 
   private static final ScheduledExecutorService LATENCY_INDUCER =
       newSingleThreadScheduledExecutor();

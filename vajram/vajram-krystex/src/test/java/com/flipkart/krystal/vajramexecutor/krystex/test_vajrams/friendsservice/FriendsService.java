@@ -6,6 +6,7 @@ import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
+import com.flipkart.krystal.vajram.modulation.Modulated;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceInputUtil.FriendsServiceCommonInputs;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceInputUtil.FriendsServiceModInputs;
@@ -22,8 +23,7 @@ public abstract class FriendsService extends IOVajram<Set<String>> {
 
   public static final LongAdder CALL_COUNTER = new LongAdder();
 
-  @Input(modulated = true)
-  String userId;
+  @Modulated @Input String userId;
 
   @VajramLogic
   static ImmutableMap<FriendsServiceModInputs, CompletableFuture<Set<String>>> call(
