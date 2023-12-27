@@ -1,0 +1,224 @@
+1
+00:00:01,000 --> 00:00:02,000
+<font size="10px">
+Krystal receives a request to execute Vajram V1.
+The request contains the values of all the input facets of V1.
+V1 is ready for execution.
+</font>
+
+2
+00:00:02,000 --> 00:00:04,000
+<font size="10px">
+V1 depends on vajrams V2, V3, and V4 in sequential order,
+  i.e V3 waits for V2 and V4 waits for V3.
+V1 constructs the request for V2 containing values for V2's input facets.
+This is called input resolution.
+V2 is ready for execution.
+</font>
+
+3
+00:00:04,000 --> 00:00:06,000
+<font size="10px">
+V2 depends on vajrams V5 and V6 parallely (V5 and V6 do not need to wait for each other).
+V2 constructs the requests for V5 and V6 which are then ready for execution.
+</font>
+
+4
+00:00:06,000 --> 00:00:08,000
+<font size="10px">
+V5 and V6 do not have dependencies.
+They start execution concurrently.
+</font>
+
+5
+00:00:08,000 --> 00:00:10,000
+<font size="10px">
+V5 and V6 finish execution independently after some time.
+All of V2's dependencies are now completed.
+</font>
+
+6
+00:00:10,000 --> 00:00:12,000
+<font size="10px">
+V2 starts execution.
+</font>
+
+7
+00:00:12,000 --> 00:00:14,000
+<font size="10px">
+V2 finishes execution after some time.
+The first dependency facet of V1 is now completed.
+</font>
+
+8
+00:00:14,000 --> 00:00:16,000
+<font size="10px">
+V2 now has enough information to resolve the inputs of V3.
+V3 is ready for execution.
+</font>
+
+9
+00:00:16,000 --> 00:00:18,000
+<font size="10px">
+V3 has a sequential dependency on V7 and V8.
+V3 resolves V7's inputs. V7 is ready for execution.
+</font>
+
+10
+00:00:18,000 --> 00:00:20,000
+<font size="10px">
+V7 has no dependencies.
+V7 is decorated with a 'Retrying decorator'.
+V7 starts execution.
+</font>
+
+11
+00:00:20,000 --> 00:00:22,000
+<font size="10px">
+V7 fails with an error.
+</font>
+
+12
+00:00:22,000 --> 00:00:24,000
+<font size="10px">
+V7's response is intercepted by the Retrying decorator.
+which is configured to retry thrice on error.
+</font>
+
+13
+00:00:24,000 --> 00:00:26,000
+<font size="10px">
+V7 is retried by the decorator (invisibly to V3).
+V7 starts executing for the second time.
+</font>
+
+14
+00:00:26,000 --> 00:00:28,000
+<font size="10px">
+V7 fails again.
+</font>
+
+15
+00:00:28,000 --> 00:00:30,000
+<font size="10px">
+The response is intercepted by the retrying decorator again.
+V7 is retried for a second time.
+</font>
+
+16
+00:00:30,000 --> 00:00:32,000
+<font size="10px">
+V7 starts executing for the third time.
+</font>
+
+17
+00:00:32,000 --> 00:00:34,000
+<font size="10px">
+V7 succeeds on this attempt.
+V3's first dependency facet is now completed.
+</font>
+
+18
+00:00:34,000 --> 00:00:36,000
+<font size="10px">
+V3 resolves the inputs of its second dependency V8.
+V8 is ready for execution.
+</font>
+
+19
+00:00:36,000 --> 00:00:38,000
+<font size="10px">
+V8 has no dependencies and is decorated by a caching decorator.
+V8 starts execution.
+</font>
+
+20
+00:00:38,000 --> 00:00:40,000
+<font size="10px">
+V8 succeeds.
+</font>
+
+21
+00:00:40,000 --> 00:00:42,000
+<font size="10px">
+V8's response is intercepted by the caching decorator.
+The response is cached with the input facets values of V8 as key.
+</font>
+
+22
+00:00:42,000 --> 00:00:44,000
+<font size="10px">
+All of V3's facets are compeleted.
+V3 starts execution.
+</font>
+
+23
+00:00:44,000 --> 00:00:46,000
+<font size="10px">
+V3 succeeds.
+V1's second facet is now compeleted.
+</font>
+
+24
+00:00:46,000 --> 00:00:48,000
+<font size="10px">
+V1 now resolves the inputs for V4.
+V4 is ready for execution.
+</font>
+
+25
+00:00:48,000 --> 00:00:50,000
+<font size="10px">
+V4 has a sequential dependency on V8 and V9.
+V4 resolves the inputs for V8.
+The caching decorator of V8 intercepts the request and looks up the cache.
+There is a cache hit. The response is made available to V4 without executing V8 again.
+</font>
+
+26
+00:00:50,000 --> 00:00:52,000
+<font size="10px">
+V4 uses the result of V8 to resolve the inputs for V9.
+V9 is ready for execution.
+</font>
+
+27
+00:00:52,000 --> 00:00:54,000
+<font size="10px">
+V9 has no dependencies.
+V9 starts execution.
+</font>
+
+28
+00:00:54,000 --> 00:00:56,000
+<font size="10px">
+V9 succeeds.
+All of V4's facets are now completed.
+</font>
+
+29
+00:00:56,000 --> 00:00:58,000
+<font size="10px">
+V4 starts execution.
+</font>
+
+30
+00:00:58,000 --> 00:01:00,000
+<font size="10px">
+V4 fails with an error.
+The third dependency facet of V1 has failed.
+</font>
+
+31
+00:01:00,000 --> 00:01:02,000
+<font size="10px">
+But V4 is an optional dependency of V1.
+V1 handles the error of V4, and continues execution.
+</font>
+
+32
+00:01:02,000 --> 00:01:04,000
+<font size="10px">
+V1 succeeds.
+The platform returns the result of V1 to the original caller.
+</font>
