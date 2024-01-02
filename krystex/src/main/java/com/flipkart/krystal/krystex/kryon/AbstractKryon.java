@@ -20,7 +20,7 @@ import java.util.function.Function;
 abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonResponse>
     implements Kryon<C, R> permits BatchKryon, GranularKryon {
 
-  protected final KryonDefinition definition;
+  protected final KryonDefinition kryonDefinition;
   protected final KryonId kryonId;
   protected final KryonExecutor kryonExecutor;
 
@@ -44,7 +44,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
           requestScopedDecoratorsSupplier,
       LogicDecorationOrdering logicDecorationOrdering,
       RequestIdGenerator requestIdGenerator) {
-    this.definition = definition;
+    this.kryonDefinition = definition;
     this.kryonId = definition.kryonId();
     this.kryonExecutor = kryonExecutor;
     this.requestScopedDecoratorsSupplier = requestScopedDecoratorsSupplier;
@@ -58,10 +58,10 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
   }
 
   protected NavigableSet<MainLogicDecorator> getSortedDecorators(DependantChain dependantChain) {
-    MainLogicDefinition<Object> mainLogicDefinition = definition.getMainLogicDefinition();
+    MainLogicDefinition<Object> mainLogicDefinition = kryonDefinition.getMainLogicDefinition();
     Map<String, MainLogicDecorator> decorators =
         new LinkedHashMap<>(
-            mainLogicDefinition.getSessionScopedLogicDecorators(definition, dependantChain));
+            mainLogicDefinition.getSessionScopedLogicDecorators(kryonDefinition, dependantChain));
     // If the same decoratorType is configured for session and request scope, request scope
     // overrides session scope.
     decorators.putAll(
@@ -70,7 +70,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
                 kryonId,
                 mainLogicDefinition.logicTags(),
                 dependantChain,
-                definition.kryonDefinitionRegistry())));
+                kryonDefinition.kryonDefinitionRegistry())));
     TreeSet<MainLogicDecorator> sortedDecorators =
         new TreeSet<>(logicDecorationOrdering.decorationOrder());
     sortedDecorators.addAll(decorators.values());
@@ -78,7 +78,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
   }
 
   @Override
-  public KryonDefinition getDefinition() {
-    return definition;
+  public KryonDefinition getKryonDefinition() {
+    return kryonDefinition;
   }
 }

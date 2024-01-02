@@ -160,11 +160,11 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     ForwardBatch forwardBatch = getForwardCommand(dependantChain);
 
     Optional<MultiResolverDefinition> multiResolverOpt =
-        definition
+        kryonDefinition
             .multiResolverLogicId()
             .map(
                 kryonLogicId ->
-                    definition
+                    kryonDefinition
                         .kryonDefinitionRegistry()
                         .logicDefinitionRegistry()
                         .getMultiResolver(kryonLogicId));
@@ -245,7 +245,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       DependantChain dependantChain,
       Map<Set<RequestId>, ResolverCommand> resolverCommandsByReq,
       Set<ResolverDefinition> resolverDefinitions) {
-    KryonId depKryonId = definition.dependencyKryons().get(depName);
+    KryonId depKryonId = kryonDefinition.dependencyKryons().get(depName);
     if (depKryonId == null) {
       throw new AssertionError("This is a bug.");
     }
@@ -335,7 +335,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
           enqueueOrExecuteCommand(
               () -> new CallbackBatch(kryonId, depName, results, dependantChain),
               depKryonId,
-              definition,
+              kryonDefinition,
               kryonExecutor);
         });
     flushDependencyIfNeeded(depName, dependantChain);
@@ -345,7 +345,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       DependantChain dependantChain) {
     ForwardBatch forwardCommand = getForwardCommand(dependantChain);
     // If all the inputs and dependency values are available, then prepare run mainLogic
-    ImmutableSet<String> inputNames = definition.getMainLogicDefinition().inputNames();
+    ImmutableSet<String> inputNames = kryonDefinition.getMainLogicDefinition().inputNames();
     if (availableInputsByDepChain
         .getOrDefault(dependantChain, ImmutableSet.of())
         .containsAll(inputNames)) { // All the inputs of the kryon logic have data present
@@ -362,7 +362,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
   private CompletableFuture<BatchResponse> executeMainLogic(
       Set<RequestId> requestIds, DependantChain dependantChain) {
 
-    MainLogicDefinition<Object> mainLogicDefinition = definition.getMainLogicDefinition();
+    MainLogicDefinition<Object> mainLogicDefinition = kryonDefinition.getMainLogicDefinition();
 
     Map<RequestId, MainLogicInputs> mainLogicInputs = new LinkedHashMap<>();
 
@@ -430,7 +430,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
   }
 
   private void flushAllDependenciesIfNeeded(DependantChain dependantChain) {
-    definition
+    kryonDefinition
         .dependencyKryons()
         .keySet()
         .forEach(dependencyName -> flushDependencyIfNeeded(dependencyName, dependantChain));
@@ -443,7 +443,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     if (executedDependencies.getOrDefault(dependantChain, Set.of()).contains(dependencyName)) {
       kryonExecutor.executeCommand(
           new Flush(
-              Optional.ofNullable(definition.dependencyKryons().get(dependencyName))
+              Optional.ofNullable(kryonDefinition.dependencyKryons().get(dependencyName))
                   .orElseThrow(
                       () ->
                           new AssertionError(
@@ -530,8 +530,8 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     }
     SetView<String> resolvableInputNames =
         Sets.difference(
-            definition.getMainLogicDefinition().inputNames(),
-            definition.dependencyKryons().keySet());
+            kryonDefinition.getMainLogicDefinition().inputNames(),
+            kryonDefinition.dependencyKryons().keySet());
     if (!inputNames.containsAll(resolvableInputNames)) {
       throw new IllegalArgumentException(
           "Did not receive inputs " + Sets.difference(resolvableInputNames, inputNames));

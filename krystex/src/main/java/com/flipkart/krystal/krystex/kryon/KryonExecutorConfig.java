@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.function.Function;
 import lombok.Builder;
 
-// @Builder(toBuilder = true)
 public record KryonExecutorConfig(
     LogicDecorationOrdering logicDecorationOrdering,
     Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs,

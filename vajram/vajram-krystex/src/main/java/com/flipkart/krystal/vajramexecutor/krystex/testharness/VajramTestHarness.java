@@ -18,7 +18,7 @@ import java.util.function.Function;
 /**
  * Test harness is a collection of software/test data used by developers for unit testing. It is
  * responsible for test drivers and stubs. In the context of Vajrams, VajramTestHarness is
- * responsible for preparing the krystex executor for test by provide the necessary stubbing
+ * responsible for preparing the krystex executor for test by providing the necessary stubbing
  * capability for all the dependancy Vajrams of the given dependant Vajram in test.
  */
 public class VajramTestHarness {
