@@ -30,8 +30,8 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /**
  * VajramPrimer is a custom Kryon Decorator which enables mocking the request and response of a
- * vajram at runtime. When a kryon is decorated with vajram primer, it overrides the actual execution
- * logic of the vajram and replaces it with the provided execution stubs.
+ * vajram at runtime. When a kryon is decorated with vajram primer, it overrides the actual
+ * execution logic of the vajram and replaces it with the provided execution stubs.
  */
 public class VajramPrimer extends AbstractKryonDecorator {
 

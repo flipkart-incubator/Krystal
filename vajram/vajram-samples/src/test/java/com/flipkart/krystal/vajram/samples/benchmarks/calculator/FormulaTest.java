@@ -238,7 +238,7 @@ class FormulaTest {
         .thenApply(unused -> divide(numerator.getNow(null), sum.getNow(null)));
   }
 
-  private record FormulaRequestContext(Integer a, Integer p, Integer q, String requestId)
+  private record FormulaRequestContext(int a, int p, int q, String requestId)
       implements ApplicationRequestContext {}
 
   private static Builder loadFromClasspath(String... packagePrefixes) {

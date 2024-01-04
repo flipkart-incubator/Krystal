@@ -376,7 +376,8 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                   depRequestId,
                   dependantChainByRequest
                       .getOrDefault(
-                          requestId, kryonDefinition.kryonDefinitionRegistry().getDependantChainsStart())
+                          requestId,
+                          kryonDefinition.kryonDefinitionRegistry().getDependantChainsStart())
                       .extend(kryonId, dependencyName),
                   (SkipDependency) resolverCommand);
           dependencyKryonExecutions
@@ -448,7 +449,9 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                           dependantChainByRequest
                               .getOrDefault(
                                   requestId,
-                                  kryonDefinition.kryonDefinitionRegistry().getDependantChainsStart())
+                                  kryonDefinition
+                                      .kryonDefinitionRegistry()
+                                      .getDependantChainsStart())
                               .extend(kryonId, dependencyName),
                           dependencyRequestId)));
         }
