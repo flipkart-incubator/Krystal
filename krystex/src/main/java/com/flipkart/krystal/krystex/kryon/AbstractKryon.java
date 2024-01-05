@@ -2,10 +2,10 @@ package com.flipkart.krystal.krystex.kryon;
 
 import com.flipkart.krystal.krystex.MainLogicDefinition;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
-import com.flipkart.krystal.krystex.decoration.LogicDecorationOrdering;
-import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition.KryonDefinitionView;
+import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
+import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
+import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.google.common.collect.ImmutableMap;
@@ -23,6 +23,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
   protected final KryonDefinition kryonDefinition;
   protected final KryonId kryonId;
   protected final KryonExecutor kryonExecutor;
+
   /** decoratorType -> Decorator */
   protected final Function<LogicExecutionContext, ImmutableMap<String, MainLogicDecorator>>
       requestScopedDecoratorsSupplier;
@@ -37,18 +38,18 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
   protected final RequestIdGenerator requestIdGenerator;
 
   AbstractKryon(
-      KryonDefinition kryonDefinition,
+      KryonDefinition definition,
       KryonExecutor kryonExecutor,
       Function<LogicExecutionContext, ImmutableMap<String, MainLogicDecorator>>
           requestScopedDecoratorsSupplier,
       LogicDecorationOrdering logicDecorationOrdering,
       RequestIdGenerator requestIdGenerator) {
-    this.kryonDefinition = kryonDefinition;
-    this.kryonId = kryonDefinition.kryonId();
+    this.kryonDefinition = definition;
+    this.kryonId = definition.kryonId();
     this.kryonExecutor = kryonExecutor;
     this.requestScopedDecoratorsSupplier = requestScopedDecoratorsSupplier;
     this.logicDecorationOrdering = logicDecorationOrdering;
-    KryonDefinitionView kryonDefinitionView = kryonDefinition.kryonDefinitionView();
+    KryonDefinitionView kryonDefinitionView = definition.kryonDefinitionView();
     this.resolverDefinitionsByInput = kryonDefinitionView.resolverDefinitionsByInput();
     this.resolverDefinitionsByDependencies =
         kryonDefinitionView.resolverDefinitionsByDependencies();
@@ -74,5 +75,10 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
         new TreeSet<>(logicDecorationOrdering.decorationOrder());
     sortedDecorators.addAll(decorators.values());
     return sortedDecorators;
+  }
+
+  @Override
+  public KryonDefinition getKryonDefinition() {
+    return kryonDefinition;
   }
 }

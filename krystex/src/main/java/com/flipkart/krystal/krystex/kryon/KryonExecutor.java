@@ -22,11 +22,11 @@ import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardBatch;
 import com.flipkart.krystal.krystex.commands.ForwardGranule;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
-import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
-import com.flipkart.krystal.krystex.decoration.LogicExecutionContext;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecorator;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig;
-import com.flipkart.krystal.krystex.decoration.MainLogicDecoratorConfig.DecoratorContext;
+import com.flipkart.krystal.krystex.logicdecoration.InitiateActiveDepChains;
+import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
+import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig.DecoratorContext;
 import com.flipkart.krystal.krystex.request.IntReqGenerator;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
@@ -68,6 +68,7 @@ public final class KryonExecutor implements KrystalExecutor {
   private final KryonExecutorConfig executorConfig;
   private final Lease<? extends ExecutorService> commandQueueLease;
   private final String instanceId;
+
   /**
    * We need to have a list of request scope global decorators corresponding to each type, in case
    * we want to have a decorator of one type but based on some config in request, we want to choose
@@ -284,14 +285,20 @@ public final class KryonExecutor implements KrystalExecutor {
     } catch (Throwable e) {
       return failedFuture(e);
     }
-    if (kryonCommand instanceof Flush flush) {
-      kryonRegistry.get(flush.kryonId()).executeCommand(flush);
+    KryonId kryonId = kryonCommand.kryonId();
+    //noinspection unchecked
+    Kryon<KryonCommand, R> kryon = (Kryon<KryonCommand, R>) kryonRegistry.get(kryonId);
+    for (KryonDecorator kryonDecorator : executorConfig.kryonDecoratorsProvider().apply(kryonId)) {
       //noinspection unchecked
-      return (CompletableFuture<R>) completedFuture(FlushResponse.getInstance());
+      kryon =
+          (Kryon<KryonCommand, R>)
+              kryonDecorator.decorateKryon((Kryon<KryonCommand, KryonResponse>) kryon, this);
+    }
+    if (kryonCommand instanceof Flush flush) {
+      kryon.executeCommand(flush);
+      //noinspection unchecked
+      return completedFuture((R) FlushResponse.getInstance());
     } else {
-      @SuppressWarnings("unchecked")
-      Kryon<KryonCommand, R> kryon =
-          (Kryon<KryonCommand, R>) kryonRegistry.get(kryonCommand.kryonId());
       return kryon.executeCommand(kryonCommand);
     }
   }
@@ -365,6 +372,7 @@ public final class KryonExecutor implements KrystalExecutor {
       KryonExecution kryonExecution,
       KryonId kryonId,
       KryonDefinition kryonDefinition) {
+    //noinspection RedundantTypeArguments for CheckerFrameworkNullChecker
     CompletableFuture<@Nullable Object> submissionResult =
         this.<GranuleResponse>executeCommand(
                 new ForwardGranule(

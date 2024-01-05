@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.decorators.observability;
+package com.flipkart.krystal.krystex.logicdecorators.observability;
 
 import java.time.Clock;
 import java.time.Instant;

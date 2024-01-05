@@ -3,14 +3,17 @@ module flipkart.krystal.krystex {
       flipkart.krystal.vajramexecutor.krystex;
   exports com.flipkart.krystal.krystex.kryon to
       flipkart.krystal.vajramexecutor.krystex;
-  exports com.flipkart.krystal.krystex.decoration to
+  exports com.flipkart.krystal.krystex.logicdecoration to
       flipkart.krystal.vajramexecutor.krystex;
-  exports com.flipkart.krystal.krystex.decorators.resilience4j;
-  exports com.flipkart.krystal.krystex.decorators.observability to
+  exports com.flipkart.krystal.krystex.logicdecorators.resilience4j to
+      flipkart.krystal.vajramexecutor.krystex;
+  exports com.flipkart.krystal.krystex.logicdecorators.observability to
       flipkart.krystal.vajramexecutor.krystex;
   exports com.flipkart.krystal.krystex.request to
       flipkart.krystal.vajramexecutor.krystex;
   exports com.flipkart.krystal.krystex.resolution to
+      flipkart.krystal.vajramexecutor.krystex;
+  exports com.flipkart.krystal.krystex.commands to
       flipkart.krystal.vajramexecutor.krystex;
 
   requires com.google.common;
