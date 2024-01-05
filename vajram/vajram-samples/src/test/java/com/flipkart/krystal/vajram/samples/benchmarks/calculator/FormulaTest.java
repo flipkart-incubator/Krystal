@@ -32,6 +32,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -92,14 +93,14 @@ class FormulaTest {
     allOf(futures).join();
     long vajramTimeNs = System.nanoTime() - startTime;
     assertThat(
-            allOf(futures)
-                .whenComplete(
-                    (unused, throwable) -> {
-                      for (int i = 0, futuresLength = futures.length; i < futuresLength; i++) {
-                        CompletableFuture<Integer> future = futures[i];
-                        assertThat(future.getNow(0)).isEqualTo((100 + i) / (20 + i + 5 + i));
-                      }
-                    }))
+        allOf(futures)
+            .whenComplete(
+                (unused, throwable) -> {
+                  for (int i = 0, futuresLength = futures.length; i < futuresLength; i++) {
+                    CompletableFuture<Integer> future = futures[i];
+                    assertThat(future.getNow(0)).isEqualTo((100 + i) / (20 + i + 5 + i));
+                  }
+                }))
         .succeedsWithin(Duration.ofSeconds(1));
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(loopCount);
 
@@ -164,14 +165,14 @@ class FormulaTest {
     allOf(futures).join();
     long vajramTimeNs = System.nanoTime() - startTime;
     assertThat(
-            allOf(futures)
-                .whenComplete(
-                    (unused, throwable) -> {
-                      for (int i = 0, futuresLength = futures.length; i < futuresLength; i++) {
-                        CompletableFuture<Integer> future = futures[i];
-                        assertThat(future.getNow(0)).isEqualTo((100 + i) / (20 + i + 5 + i));
-                      }
-                    }))
+        allOf(futures)
+            .whenComplete(
+                (unused, throwable) -> {
+                  for (int i = 0, futuresLength = futures.length; i < futuresLength; i++) {
+                    CompletableFuture<Integer> future = futures[i];
+                    assertThat(future.getNow(0)).isEqualTo((100 + i) / (20 + i + 5 + i));
+                  }
+                }))
         .succeedsWithin(Duration.ofSeconds(1));
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(outerLoopCount);
     /*
@@ -239,7 +240,9 @@ class FormulaTest {
   }
 
   private record FormulaRequestContext(int a, int p, int q, String requestId)
-      implements ApplicationRequestContext {}
+      implements ApplicationRequestContext {
+
+  }
 
   private static Builder loadFromClasspath(String... packagePrefixes) {
     Builder builder = VajramKryonGraph.builder();
@@ -345,7 +348,9 @@ class FormulaTest {
                     ValueOrError.withValue(0))
                 .buildConfig())) {
       future = executeVajram(krystexVajramExecutor, 0);
-      assertThat(future.isCompletedExceptionally()).isEqualTo(false);
     }
+    assertThat(future).failsWithin(Duration.ofSeconds(1)).withThrowableOfType
+            (ExecutionException.class).withCauseInstanceOf(ArithmeticException.class)
+        .withMessage("java.lang.ArithmeticException: / by zero");
   }
 }
