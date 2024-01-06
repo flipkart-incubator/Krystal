@@ -365,7 +365,7 @@ final class Publisher {
       ConfigurationContainer configurations = project.getConfigurations();
       Set<Project> allProjectDependencies =
           configurations.getAsMap().entrySet().stream()
-              .filter(e -> !e.getKey().startsWith("test"))
+              .filter(e -> !e.getKey().startsWith("test") && !e.getKey().equals("nativeImageClasspath")
               .map(Entry::getValue)
               .map(Configuration::getAllDependencies)
               .<Set<ProjectDependency>>map(d -> d.withType(ProjectDependency.class))
