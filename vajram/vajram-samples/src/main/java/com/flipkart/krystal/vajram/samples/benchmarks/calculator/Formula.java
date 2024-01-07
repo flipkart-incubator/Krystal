@@ -3,11 +3,11 @@ package com.flipkart.krystal.vajram.samples.benchmarks.calculator;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaInputUtil.quotient_s;
+import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaInputUtil.sum_s;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.a_s;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.p_s;
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.q_s;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.quotient_s;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.FormulaRequest.sum_s;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
@@ -52,7 +52,7 @@ public abstract class Formula extends ComputeVajram<Integer> {
   }
 
   @VajramLogic
-  public static int result(FormulaInputs allInputs) {
+  static int result(FormulaInputs allInputs) {
     /* Return quotient */
     return allInputs.quotient();
   }

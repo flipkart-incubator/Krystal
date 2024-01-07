@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
 import com.flipkart.krystal.data.ValueOrError;
-import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.ResolverStage.AsIsResolverStage;
 import java.util.ArrayList;
@@ -18,13 +18,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <CV> CurrentVajram: The current vajram which is resolving the input
  * @param <DV> DependencyVajram: The vajram whose input is being resolved
  */
-public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<?>>
+public sealed class ResolverStage<S, T, CV extends VajramRequest<?>, DV extends VajramRequest<?>>
     permits AsIsResolverStage {
-  private final VajramFacetSpec<T> targetInput;
-  private final VajramFacetSpec<S> sourceInput;
+  private final VajramFacetSpec<T, DV> targetInput;
+  private final VajramFacetSpec<S, CV> sourceInput;
   private final List<SkipPredicate<S>> skipConditions = new ArrayList<>();
 
-  ResolverStage(VajramFacetSpec<T> targetInput, VajramFacetSpec<S> sourceInput) {
+  ResolverStage(VajramFacetSpec<T, DV> targetInput, VajramFacetSpec<S, CV> sourceInput) {
     this.targetInput = targetInput;
     this.sourceInput = sourceInput;
   }
@@ -43,14 +43,16 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
    *     value of target data type {@code T} (no fanout)
    * @return The resultant {@link SimpleInputResolverSpec}
    */
-  public SimpleInputResolverSpec<S, T> with(Function<Optional<S>, @Nullable T> transformer) {
+  public SimpleInputResolverSpec<S, T, CV, DV> with(
+      Function<Optional<S>, @Nullable T> transformer) {
     return new SimpleInputResolverSpec<>(
         targetInput, sourceInput, skipConditions, transformer, null);
   }
 
-  public static final class AsIsResolverStage<T, CV extends Vajram<?>, DV extends Vajram<?>>
+  public static final class AsIsResolverStage<
+          T, CV extends VajramRequest<?>, DV extends VajramRequest<?>>
       extends ResolverStage<T, T, CV, DV> {
-    AsIsResolverStage(VajramFacetSpec<T> targetInput, VajramFacetSpec<T> sourceInput) {
+    AsIsResolverStage(VajramFacetSpec<T, DV> targetInput, VajramFacetSpec<T, CV> sourceInput) {
       super(targetInput, sourceInput);
     }
 
@@ -60,7 +62,7 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
       return this;
     }
 
-    public SimpleInputResolverSpec<T, T> asResolver() {
+    public SimpleInputResolverSpec<T, T, CV, DV> asResolver() {
       return with(t -> t.orElse(null));
     }
   }
@@ -68,13 +70,13 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
   /**
    * The stage which can be used to further specify the non-fanout resolver of the given targetInput
    *
-   * @param <T> The data type of the input being resolved.
+   * @param <I> The data type of the input being resolved.
    * @param <DV> The dependency whose input is being resolved.
    */
-  public static final class ResolveStage<T, DV extends Vajram<?>> {
-    private final VajramFacetSpec<T> targetInput;
+  public static final class ResolveStage<I, DV extends VajramRequest<?>> {
+    private final VajramFacetSpec<I, DV> targetInput;
 
-    ResolveStage(VajramFacetSpec<T> targetInput) {
+    ResolveStage(VajramFacetSpec<I, DV> targetInput) {
       this.targetInput = targetInput;
     }
 
@@ -87,8 +89,8 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
      * @see #using(VajramFacetSpec)
      * @param sourceInput the spec of the source input being used for resolution
      */
-    public <CV extends Vajram<?>> AsIsResolverStage<T, CV, DV> usingAsIs(
-        VajramFacetSpec<T> sourceInput) {
+    public <CV extends VajramRequest<?>> AsIsResolverStage<I, CV, DV> usingAsIs(
+        VajramFacetSpec<I, CV> sourceInput) {
       return new AsIsResolverStage<>(targetInput, sourceInput);
     }
 
@@ -98,8 +100,8 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
      * @param sourceInput the spec of the source input whose value is used to resolve the dependency
      *     input.
      */
-    public <S, CV extends Vajram<?>> ResolverStage<S, T, CV, DV> using(
-        VajramFacetSpec<S> sourceInput) {
+    public <S, CV extends VajramRequest<?>> ResolverStage<S, I, CV, DV> using(
+        VajramFacetSpec<S, CV> sourceInput) {
       return new ResolverStage<>(targetInput, sourceInput);
     }
 
@@ -111,7 +113,8 @@ public sealed class ResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<
      * @return The resultant {@link SimpleInputResolverSpec}
      * @param <CV> The current vajram which is doing the resolution
      */
-    public <CV extends Vajram<?>> SimpleInputResolverSpec<Void, T> with(Supplier<T> with) {
+    public <CV extends VajramRequest<?>> SimpleInputResolverSpec<Void, I, CV, DV> with(
+        Supplier<I> with) {
       return new SimpleInputResolverSpec<>(targetInput, null, List.of(), o -> with.get(), null);
     }
   }

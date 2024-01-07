@@ -1,20 +1,18 @@
 package com.flipkart.krystal.vajram.facets;
 
-import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.VajramRequest;
 
 /**
  * Represents a dependency vajram of the current vajram.
  *
- * @param <T> The type of this facet
+ * @param <T> The type of this facet - this is the return type of the dependency vajram
  * @param <CV> The current vajram which has the dependency
  */
-public abstract sealed class VajramDependencySpec<T, CV extends Vajram<?>>
-    extends VajramFacetSpec<T> permits VajramDepFanoutTypeSpec, VajramDepSingleTypeSpec {
+public abstract sealed class VajramDependencySpec<
+        T, CV extends VajramRequest<?>, DV extends VajramRequest<T>>
+    extends VajramFacetSpec<T, CV> permits VajramDepFanoutTypeSpec, VajramDepSingleTypeSpec {
 
-  private final Class<CV> ofVajram;
-
-  VajramDependencySpec(String name, Class<CV> ofVajram) {
-    super(name);
-    this.ofVajram = ofVajram;
+  VajramDependencySpec(String name, Class<CV> ofVajram, Class<DV> onVajram) {
+    super(name, ofVajram);
   }
 }

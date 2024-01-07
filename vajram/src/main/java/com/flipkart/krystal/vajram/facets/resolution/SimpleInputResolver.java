@@ -11,7 +11,7 @@ import static java.util.Optional.ofNullable;
 
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
-import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.QualifiedInputs;
 import com.flipkart.krystal.vajram.facets.SingleExecute;
@@ -25,13 +25,16 @@ import java.util.Optional;
 import java.util.concurrent.atomic.LongAdder;
 
 /** A resolver which resolves exactly one input of a dependency. */
-public final class SimpleInputResolver<S, T, CV extends Vajram<?>> extends AbstractInputResolver {
+public final class SimpleInputResolver<
+        S, T, CV extends VajramRequest<?>, DV extends VajramRequest<?>>
+    extends AbstractInputResolver {
   public static final LongAdder TIME = new LongAdder();
-  private final VajramDependencySpec<?, CV> dependency;
-  private final SimpleInputResolverSpec<S, T> resolverSpec;
+  private final VajramDependencySpec<?, CV, DV> dependency;
+  private final SimpleInputResolverSpec<S, T, CV, DV> resolverSpec;
 
   SimpleInputResolver(
-      VajramDependencySpec<?, CV> dependency, SimpleInputResolverSpec<S, T> resolverSpec) {
+      VajramDependencySpec<?, CV, DV> dependency,
+      SimpleInputResolverSpec<S, T, CV, DV> resolverSpec) {
     super(
         ofNullable(resolverSpec.getSourceInput()).stream()
             .map(VajramFacetSpec::name)
@@ -41,11 +44,11 @@ public final class SimpleInputResolver<S, T, CV extends Vajram<?>> extends Abstr
     this.resolverSpec = resolverSpec;
   }
 
-  public VajramDependencySpec<?, ?> getDependency() {
+  public VajramDependencySpec<?, ?, ?> getDependency() {
     return dependency;
   }
 
-  public SimpleInputResolverSpec<?, ?> getResolverSpec() {
+  public SimpleInputResolverSpec<?, ?, ?, ?> getResolverSpec() {
     return resolverSpec;
   }
 

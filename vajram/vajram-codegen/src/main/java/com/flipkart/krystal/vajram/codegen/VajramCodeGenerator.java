@@ -5,6 +5,8 @@ import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_INPUT;
 import static com.flipkart.krystal.vajram.codegen.Constants.COM_FUTURE;
 import static com.flipkart.krystal.vajram.codegen.Constants.DEP_RESP;
 import static com.flipkart.krystal.vajram.codegen.Constants.DEP_RESPONSE;
+import static com.flipkart.krystal.vajram.codegen.Constants.FACET_NAME_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.Constants.FACET_SPEC_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants.FUNCTION;
 import static com.flipkart.krystal.vajram.codegen.Constants.GET_INPUT_DEFINITIONS;
 import static com.flipkart.krystal.vajram.codegen.Constants.HASH_MAP;
@@ -17,8 +19,6 @@ import static com.flipkart.krystal.vajram.codegen.Constants.INPUT_DEFINITIONS_VA
 import static com.flipkart.krystal.vajram.codegen.Constants.INPUT_MODULATION;
 import static com.flipkart.krystal.vajram.codegen.Constants.INPUT_MODULATION_CODE_BLOCK;
 import static com.flipkart.krystal.vajram.codegen.Constants.INPUT_MODULATION_FUTURE_CODE_BLOCK;
-import static com.flipkart.krystal.vajram.codegen.Constants.INPUT_NAME_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.Constants.INPUT_SPEC_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants.INPUT_SRC;
 import static com.flipkart.krystal.vajram.codegen.Constants.LINK_HASH_MAP;
 import static com.flipkart.krystal.vajram.codegen.Constants.LIST;
@@ -370,7 +370,7 @@ public class VajramCodeGenerator {
             inputDef -> {
               if (inputDef instanceof DependencyModel dependencyModel) {
                 VajramID depVajramId = dependencyModel.depVajramId();
-                String depRequestClass = dependencyModel.depReqClassName();
+                String depRequestClass = dependencyModel.depReqClassQualifiedName();
                 VajramInfoLite depVajramInfo =
                     checkNotNull(
                         vajramDefs.get(depVajramId),
@@ -805,8 +805,7 @@ public class VajramCodeGenerator {
               vajramDefs.get(dependencyModel.depVajramId()),
               "Could not find parsed vajram data for class %s",
               dependencyModel.depVajramId());
-      String requestClass = dependencyModel.depReqClassName();
-
+      String requestClass = dependencyModel.depReqClassQualifiedName();
       TypeName boxedDepType = util.toTypeName(vajramInfoLite.responseType()).box();
       TypeName unboxedDepType =
           boxedDepType.isBoxedPrimitive() ? boxedDepType.unbox() : boxedDepType;
@@ -1195,38 +1194,38 @@ public class VajramCodeGenerator {
       String facetJavaName = toJavaName(facet.name());
       TypeAndName facetType = getTypeName(getDataType(facet));
       TypeAndName boxedFacetType = boxPrimitive(facetType);
-      ClassName vajramClassName = ClassName.get(packageName, vajramName);
-
-      String inputNameFieldName = facetJavaName + INPUT_NAME_SUFFIX;
+      ClassName vajramReqClass = ClassName.get(packageName, requestClassName);
+      String inputNameFieldName = facetJavaName + FACET_NAME_SUFFIX;
       FieldSpec.Builder inputNameField =
           FieldSpec.builder(String.class, inputNameFieldName).initializer("\"$L\"", facet.name());
 
-      FieldSpec.Builder inputSpecField;
-      if (facet instanceof DependencyModel vajramDepDef) {
-        ClassName specType =
-            ClassName.get(
-                vajramDepDef.canFanout()
-                    ? VajramDepFanoutTypeSpec.class
-                    : VajramDepSingleTypeSpec.class);
-        inputSpecField =
-            FieldSpec.builder(
-                    ParameterizedTypeName.get(specType, boxedFacetType.typeName(), vajramClassName),
-                    facetJavaName + INPUT_SPEC_SUFFIX)
-                .initializer(
-                    "new $T<>($L, $T.class)", specType, inputNameFieldName, vajramClassName);
-
-      } else {
+      FieldSpec.Builder inputSpecField = null;
+      if (!(facet instanceof DependencyModel)) {
+        // If vajrams A dependson B, and B depends on C, adding C's dependency spec in B's request
+        // will leak C's request class into A's classpath which is not ideal.
+        // This is the reason dependency Facet spec fields are generated in InputUtilClass instead
+        // of Request class to avoid dependency leakage from dependendency vajrams to client
+        // vajrams.
         inputSpecField =
             FieldSpec.builder(
                     ParameterizedTypeName.get(
-                        ClassName.get(VajramFacetSpec.class), boxedFacetType.typeName()),
-                    facetJavaName + INPUT_SPEC_SUFFIX)
-                .initializer("new $T<>($L)", VajramFacetSpec.class, inputNameFieldName);
+                        ClassName.get(VajramFacetSpec.class),
+                        boxedFacetType.typeName(),
+                        vajramReqClass),
+                    facetJavaName + FACET_SPEC_SUFFIX)
+                .addModifiers(STATIC, FINAL)
+                .initializer(
+                    "new $T<>($L, $T.class)",
+                    VajramFacetSpec.class,
+                    inputNameFieldName,
+                    vajramReqClass);
+        inputSpecFields.add(inputSpecField);
       }
       inputNameFields.add(inputNameField.addModifiers(STATIC, FINAL));
-      inputSpecFields.add(inputSpecField.addModifiers(STATIC, FINAL));
       if (facet instanceof InputModel<?> input && input.sources().contains(InputSource.CLIENT)) {
-        inputSpecField.addModifiers(PUBLIC);
+        if (inputSpecField != null) {
+          inputSpecField.addModifiers(PUBLIC);
+        }
         inputNameField.addModifiers(PUBLIC);
       } else {
         continue;
@@ -1546,7 +1545,7 @@ public class VajramCodeGenerator {
       return new TypeAndName(
           ParameterizedTypeName.get(
               ClassName.get(DependencyResponse.class),
-              toClassName(dependencyDef.depReqClassName()),
+              toClassName(dependencyDef.depReqClassQualifiedName()),
               boxPrimitive(getTypeName(depResponseType)).typeName()));
     } else {
       return getTypeName(depResponseType, List.of(AnnotationSpec.builder(Nullable.class).build()));
@@ -1682,9 +1681,44 @@ public class VajramCodeGenerator {
   }
 
   private TypeSpec.Builder createInputUtilClass() {
-    return classBuilder(getInputUtilClassName(vajramName))
-        .addModifiers(FINAL)
-        .addMethod(constructorBuilder().addModifiers(PRIVATE).build());
+    TypeSpec.Builder classBuilder =
+        classBuilder(getInputUtilClassName(vajramName))
+            .addModifiers(FINAL)
+            .addMethod(constructorBuilder().addModifiers(PRIVATE).build());
+    List<FacetGenModel> facets = vajramInfo.facetStream().toList();
+    List<FieldSpec.Builder> depSpecFields = new ArrayList<>(facets.size());
+    for (FacetGenModel facet : facets) {
+      String facetJavaName = toJavaName(facet.name());
+      TypeAndName facetType = getTypeName(getDataType(facet));
+      TypeAndName boxedFacetType = boxPrimitive(facetType);
+      ClassName vajramReqClass = ClassName.get(packageName, requestClassName);
+      String inputNameFieldName = facetJavaName + FACET_NAME_SUFFIX;
+
+      if (facet instanceof DependencyModel vajramDepDef) {
+        FieldSpec.Builder inputSpecField;
+        ClassName depReqClass = ClassName.bestGuess(vajramDepDef.depReqClassQualifiedName());
+        ClassName specType =
+            ClassName.get(
+                vajramDepDef.canFanout()
+                    ? VajramDepFanoutTypeSpec.class
+                    : VajramDepSingleTypeSpec.class);
+        inputSpecField =
+            FieldSpec.builder(
+                    ParameterizedTypeName.get(
+                        specType, boxedFacetType.typeName(), vajramReqClass, depReqClass),
+                    facetJavaName + FACET_SPEC_SUFFIX)
+                .initializer(
+                    "new $T<>($T.$L, $T.class, $T.class)",
+                    specType,
+                    vajramReqClass,
+                    inputNameFieldName,
+                    vajramReqClass,
+                    depReqClass);
+
+        depSpecFields.add(inputSpecField.addModifiers(STATIC, FINAL));
+      }
+    }
+    return classBuilder.addFields(depSpecFields.stream().map(FieldSpec.Builder::build)::iterator);
   }
 
   private TypeSpec.Builder createVajramImplClass() {

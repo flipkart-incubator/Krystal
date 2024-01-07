@@ -231,7 +231,7 @@ public class Utils {
       VajramInfoLite depVajramId = getVajramInfoLite(vajramOrReqElement);
       depBuilder
           .depVajramId(vajramID(depVajramId.vajramId()))
-          .depReqClassName(getVajramReqClassName(vajramOrReqElement))
+          .depReqClassQualifiedName(getVajramReqClassName(vajramOrReqElement))
           .canFanout(dependency.canFanout());
       if (!declaredDataType.equals(depVajramId.responseType())) {
         error(
@@ -280,7 +280,7 @@ public class Utils {
 
   private String getVajramReqClassName(TypeElement vajramClass) {
     if (isRawAssignable(vajramClass.asType(), Vajram.class)) {
-      return vajramClass.getQualifiedName().toString() + "Request";
+      return vajramClass.getQualifiedName().toString() + REQUEST_SUFFIX;
     } else if (isRawAssignable(vajramClass.asType(), VajramRequest.class)) {
       return vajramClass.getQualifiedName().toString();
     } else {

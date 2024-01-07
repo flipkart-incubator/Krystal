@@ -17,8 +17,8 @@ public final class Constants {
   public static final String MAP = "map";
   public static final String LIST = "list";
   public static final String INPUT_DEFINITIONS_VAR = "inputDefinitions";
-  public static final String INPUT_NAME_SUFFIX = "_n";
-  public static final String INPUT_SPEC_SUFFIX = "_s";
+  public static final String FACET_NAME_SUFFIX = "_n";
+  public static final String FACET_SPEC_SUFFIX = "_s";
 
   public static final char DOT_SEPARATOR = '.';
 
