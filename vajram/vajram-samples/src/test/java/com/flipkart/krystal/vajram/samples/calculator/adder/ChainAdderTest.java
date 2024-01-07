@@ -236,7 +236,7 @@ class ChainAdderTest {
     return krystexVajramExecutor.execute(
         vajramID(getVajramIdString(ChainAdder.class)),
         rc ->
-            builder()
+            ChainAdderRequest.builder()
                 .numbers(
                     new ArrayList<>(
                         Stream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
@@ -323,34 +323,13 @@ class ChainAdderTest {
     String chainAdderId = getVajramIdString(ChainAdder.class);
     return new DependantChain[] {
       graph.computeDependantChain(chainAdderId, sum_n),
+      graph.computeDependantChain(chainAdderId, chainSum_n, sum_n),
+      graph.computeDependantChain(chainAdderId, chainSum_n, chainSum_n, sum_n),
+      graph.computeDependantChain(chainAdderId, chainSum_n, chainSum_n, chainSum_n, sum_n),
       graph.computeDependantChain(
-          chainAdderId, chainSum_n, sum_n),
+          chainAdderId, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
       graph.computeDependantChain(
-          chainAdderId,
-          chainSum_n,
-          chainSum_n,
-          sum_n),
-      graph.computeDependantChain(
-          chainAdderId,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          sum_n),
-      graph.computeDependantChain(
-          chainAdderId,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          sum_n),
-      graph.computeDependantChain(
-          chainAdderId,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          sum_n),
+          chainAdderId, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
       graph.computeDependantChain(
           chainAdderId,
           chainSum_n,
