@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
-import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -15,12 +15,13 @@ import java.util.function.Predicate;
  * @param <CV> CurrentVajram: The current vajram which is resolving the input
  * @param <DV> DependencyVajram: The vajram whose input is being resolved
  */
-public final class FanoutResolverStage<S, T, CV extends Vajram<?>, DV extends Vajram<?>> {
-  private final VajramFacetSpec<T> targetInput;
-  private final VajramFacetSpec<S> sourceInput;
+public final class FanoutResolverStage<
+    S, T, CV extends VajramRequest<?>, DV extends VajramRequest<?>> {
+  private final VajramFacetSpec<T, DV> targetInput;
+  private final VajramFacetSpec<S, CV> sourceInput;
   private final List<SkipPredicate<S>> skipConditions = new ArrayList<>();
 
-  FanoutResolverStage(VajramFacetSpec<T> targetInput, VajramFacetSpec<S> sourceInput) {
+  FanoutResolverStage(VajramFacetSpec<T, DV> targetInput, VajramFacetSpec<S, CV> sourceInput) {
     this.targetInput = targetInput;
     this.sourceInput = sourceInput;
   }
@@ -40,7 +41,7 @@ public final class FanoutResolverStage<S, T, CV extends Vajram<?>, DV extends Va
    *     collection of the target data type {@code T}
    * @return The resultant {@link SimpleInputResolverSpec}
    */
-  public SimpleInputResolverSpec<S, T> with(
+  public SimpleInputResolverSpec<S, T, CV, DV> with(
       Function<Optional<S>, ? extends Collection<? extends T>> transformer) {
     return new SimpleInputResolverSpec<>(
         targetInput, sourceInput, skipConditions, null, transformer);
@@ -52,16 +53,16 @@ public final class FanoutResolverStage<S, T, CV extends Vajram<?>, DV extends Va
    * @param <T> The data type of the input being resolved.
    * @param <DV> The dependency whose input is being resolved.
    */
-  public static final class ResolveFanoutStage<T, DV extends Vajram<?>> {
+  public static final class ResolveFanoutStage<T, DV extends VajramRequest<?>> {
 
-    private final VajramFacetSpec<T> targetInput;
+    private final VajramFacetSpec<T, DV> targetInput;
 
-    ResolveFanoutStage(VajramFacetSpec<T> targetInput) {
+    ResolveFanoutStage(VajramFacetSpec<T, DV> targetInput) {
       this.targetInput = targetInput;
     }
 
-    public <S, CV extends Vajram<?>> FanoutResolverStage<S, T, CV, DV> using(
-        VajramFacetSpec<S> sourceInput) {
+    public <S, CV extends VajramRequest<?>> FanoutResolverStage<S, T, CV, DV> using(
+        VajramFacetSpec<S, CV> sourceInput) {
       return new FanoutResolverStage<>(targetInput, sourceInput);
     }
   }
