@@ -1,10 +1,10 @@
-package com.flipkart.krystal.vajram.samples.benchmarks.calculator.subtractor;
+package com.flipkart.krystal.vajram.samples.calculator.subtractor;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.samples.benchmarks.calculator.subtractor.SubtractorInputUtil.SubtractorInputs;
+import com.flipkart.krystal.vajram.samples.calculator.subtractor.SubtractorInputUtil.SubtractorInputs;
 import java.util.Optional;
 
 @VajramDef

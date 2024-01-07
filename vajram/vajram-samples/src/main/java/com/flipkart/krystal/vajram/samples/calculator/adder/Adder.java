@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder;
+package com.flipkart.krystal.vajram.samples.calculator.adder;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.function.Function.identity;
@@ -9,8 +9,8 @@ import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.modulation.Modulated;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
-import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderInputUtil.AdderCommonInputs;
-import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderInputUtil.AdderModInputs;
+import com.flipkart.krystal.vajram.samples.calculator.adder.AdderInputUtil.AdderCommonInputs;
+import com.flipkart.krystal.vajram.samples.calculator.adder.AdderInputUtil.AdderModInputs;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.LongAdder;

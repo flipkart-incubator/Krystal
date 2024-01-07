@@ -1,10 +1,10 @@
-package com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider;
+package com.flipkart.krystal.vajram.samples.calculator.divider;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.DividerInputUtil.DividerInputs;
+import com.flipkart.krystal.vajram.samples.calculator.divider.DividerInputUtil.DividerInputs;
 import java.util.Optional;
 
 @VajramDef

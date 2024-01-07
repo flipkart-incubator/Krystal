@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello;
 import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.fanout;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInputFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsInputUtil.hellos_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.userIds_s;
@@ -43,9 +43,9 @@ public abstract class MultiHelloFriends extends ComputeVajram<String> {
     return resolve(
         dep(
             hellos_s,
-            fanout(HelloFriendsRequest.numberOfFriends_s)
+            depInputFanout(HelloFriendsRequest.numberOfFriends_s)
                 .using(userIds_s)
-                .with(_x -> NUMBER_OF_FRIENDS)));
+                .asResolver(_x -> NUMBER_OF_FRIENDS)));
   }
 
   @Resolve(depName = MultiHelloFriendsRequest.hellos_n, depInputs = HelloFriendsRequest.userId_n)

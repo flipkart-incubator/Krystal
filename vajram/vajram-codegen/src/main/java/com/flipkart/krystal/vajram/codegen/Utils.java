@@ -341,7 +341,9 @@ public class Utils {
             vajramDef);
       }
     }
-    error("Unable to infer response type for Vajram", vajramDef);
+    error(
+        "Unable to infer response type for Vajram %s".formatted(vajramDef.getQualifiedName()),
+        vajramDef);
     throw new RuntimeException();
   }
 

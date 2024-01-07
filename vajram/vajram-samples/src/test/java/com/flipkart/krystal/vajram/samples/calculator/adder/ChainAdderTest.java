@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder;
+package com.flipkart.krystal.vajram.samples.calculator.adder;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
@@ -6,9 +6,7 @@ import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder.add;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderRequest.chainSum_n;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderRequest.sum_n;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.add;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -29,6 +27,7 @@ import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecution
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.modulation.Batcher;
+import com.flipkart.krystal.vajram.samples.calculator.Formula;
 import com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
@@ -52,10 +51,7 @@ class ChainAdderTest {
   @BeforeEach
   void setUp() {
     Adder.CALL_COUNTER.reset();
-    graph =
-        loadFromClasspath("com.flipkart.krystal.vajram.samples.benchmarks.calculator")
-            .maxParallelismPerCore(1)
-            .build();
+    graph = loadFromClasspath(Formula.class.getPackageName()).maxParallelismPerCore(1).build();
     objectMapper =
         new ObjectMapper()
             .registerModule(new JavaTimeModule())
@@ -311,58 +307,79 @@ class ChainAdderTest {
     return ImmutableSet.of(
         graph.computeDependantChain(
             getVajramIdString(ChainAdder.class),
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n,
-            chainSum_n));
+            ChainAdderRequest.chainSum_n,
+            ChainAdderRequest.chainSum_n,
+            ChainAdderRequest.chainSum_n,
+            ChainAdderRequest.chainSum_n,
+            ChainAdderRequest.chainSum_n,
+            ChainAdderRequest.chainSum_n,
+            ChainAdderRequest.chainSum_n,
+            ChainAdderRequest.chainSum_n,
+            ChainAdderRequest.chainSum_n));
   }
 
   private DependantChain[] getBatchedDepChains() {
     String chainAdderId = getVajramIdString(ChainAdder.class);
     return new DependantChain[] {
-      graph.computeDependantChain(chainAdderId, sum_n),
-      graph.computeDependantChain(chainAdderId, chainSum_n, sum_n),
-      graph.computeDependantChain(chainAdderId, chainSum_n, chainSum_n, sum_n),
-      graph.computeDependantChain(chainAdderId, chainSum_n, chainSum_n, chainSum_n, sum_n),
+      graph.computeDependantChain(chainAdderId, ChainAdderRequest.sum_n),
       graph.computeDependantChain(
-          chainAdderId, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
-      graph.computeDependantChain(
-          chainAdderId, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
+          chainAdderId, ChainAdderRequest.chainSum_n, ChainAdderRequest.sum_n),
       graph.computeDependantChain(
           chainAdderId,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          sum_n),
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.sum_n),
       graph.computeDependantChain(
           chainAdderId,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          sum_n),
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.sum_n),
       graph.computeDependantChain(
           chainAdderId,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          sum_n)
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.sum_n),
+      graph.computeDependantChain(
+          chainAdderId,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.sum_n),
+      graph.computeDependantChain(
+          chainAdderId,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.sum_n),
+      graph.computeDependantChain(
+          chainAdderId,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.sum_n),
+      graph.computeDependantChain(
+          chainAdderId,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.chainSum_n,
+          ChainAdderRequest.sum_n)
     };
   }
 }

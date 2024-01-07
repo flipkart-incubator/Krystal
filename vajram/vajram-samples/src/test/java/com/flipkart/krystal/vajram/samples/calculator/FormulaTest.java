@@ -1,11 +1,10 @@
-package com.flipkart.krystal.vajram.samples.benchmarks.calculator;
+package com.flipkart.krystal.vajram.samples.calculator;
 
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder.add;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.Divider.divide;
+import static com.flipkart.krystal.vajram.samples.calculator.divider.Divider.divide;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -22,9 +21,9 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.modulation.Batcher;
 import com.flipkart.krystal.vajram.samples.Util;
-import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder;
-import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.AdderRequest;
-import com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.DividerRequest;
+import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
+import com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest;
+import com.flipkart.krystal.vajram.samples.calculator.divider.DividerRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
@@ -42,12 +41,10 @@ class FormulaTest {
 
   private Builder graph;
   private static final String REQUEST_ID = "formulaTest";
-  private static final String PACKAGE_PATH =
-      "com.flipkart.krystal.vajram.samples.benchmarks.calculator";
 
   @BeforeEach
   void setUp() {
-    graph = loadFromClasspath(PACKAGE_PATH);
+    graph = loadFromClasspath(Formula.class.getPackageName());
     Adder.CALL_COUNTER.reset();
   }
 
@@ -228,7 +225,7 @@ class FormulaTest {
 
   private static void syncFormula(Integer value) {
     //noinspection ResultOfMethodCallIgnored
-    divide(value, add(20, 5));
+    divide(value, Adder.add(20, 5));
   }
 
   private static CompletableFuture<Integer> asyncFormula(int value) {
@@ -236,7 +233,7 @@ class FormulaTest {
     CompletableFuture<Integer> add1 = completedFuture(20);
     CompletableFuture<Integer> add2 = completedFuture(5);
     CompletableFuture<Integer> sum =
-        allOf(add1, add2).thenApply(unused -> add(add1.getNow(null), add2.getNow(null)));
+        allOf(add1, add2).thenApply(unused -> Adder.add(add1.getNow(null), add2.getNow(null)));
     return allOf(numerator, sum)
         .thenApply(unused -> divide(numerator.getNow(null), sum.getNow(null)));
   }
