@@ -14,9 +14,7 @@ import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
 import com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest;
 import com.google.common.collect.ImmutableCollection;
 
-/**
- * Returns the sum of numbers '2' and '3'
- */
+/** Returns the sum of numbers '2' and '3' */
 @VajramDef
 abstract class Add2And3 extends ComputeVajram<Integer> {
   @Dependency(onVajram = Adder.class)
