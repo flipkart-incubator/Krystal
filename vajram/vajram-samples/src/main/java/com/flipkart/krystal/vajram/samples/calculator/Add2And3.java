@@ -20,7 +20,7 @@ import com.google.common.collect.ImmutableCollection;
 @VajramDef
 abstract class Add2And3 extends ComputeVajram<Integer> {
   @Dependency(onVajram = Adder.class)
-  private int sumOf2And3;
+  int sumOf2And3;
 
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {

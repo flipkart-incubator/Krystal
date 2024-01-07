@@ -3,6 +3,10 @@ package com.flipkart.krystal.vajram.samples.calculator;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
+import static com.flipkart.krystal.vajram.samples.calculator.FormulaInputUtil.*;
+import static com.flipkart.krystal.vajram.samples.calculator.FormulaRequest.*;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest.*;
+import static com.flipkart.krystal.vajram.samples.calculator.divider.DividerRequest.*;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
@@ -36,14 +40,14 @@ public abstract class Formula extends ComputeVajram<Integer> {
     return resolve(
         /* sum = adder(numberOne=p, numberTwo=q) */
         dep(
-            FormulaInputUtil.sum_s,
-            depInput(AdderRequest.numberOne_s).usingAsIs(FormulaRequest.p_s).asResolver(),
-            depInput(AdderRequest.numberTwo_s).usingAsIs(FormulaRequest.q_s).asResolver()),
+            sum_s,
+            depInput(numberOne_s).usingAsIs(p_s).asResolver(),
+            depInput(numberTwo_s).usingAsIs(q_s).asResolver()),
         /* quotient = divider(numerator = a, denominator= sum) */
         dep(
-            FormulaInputUtil.quotient_s,
-            depInput(DividerRequest.numerator_s).usingAsIs(FormulaRequest.a_s).asResolver(),
-            depInput(DividerRequest.denominator_s).usingAsIs(FormulaInputUtil.sum_s).asResolver()));
+            quotient_s,
+            depInput(numerator_s).usingAsIs(a_s).asResolver(),
+            depInput(denominator_s).usingAsIs(sum_s).asResolver()));
   }
 
   @VajramLogic
