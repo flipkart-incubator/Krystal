@@ -10,7 +10,7 @@ public record DependencyModel(
     String name,
     VajramID depVajramId,
     DataType<?> responseType,
-    String depReqClassName,
+    String depReqClassQualifiedName,
     boolean isMandatory,
     boolean canFanout,
     String documentation,

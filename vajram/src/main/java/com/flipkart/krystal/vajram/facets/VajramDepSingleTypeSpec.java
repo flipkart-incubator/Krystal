@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.facets;
 
 import static lombok.EqualsAndHashCode.CacheStrategy.LAZY;
 
-import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.VajramRequest;
 import lombok.EqualsAndHashCode;
 
 /**
@@ -14,10 +14,11 @@ import lombok.EqualsAndHashCode;
  * @param <DVR> The dependency vajram
  */
 @EqualsAndHashCode(callSuper = true, cacheStrategy = LAZY)
-public final class VajramDepSingleTypeSpec<T, CV extends Vajram<?>>
-    extends VajramDependencySpec<T, CV> {
+public final class VajramDepSingleTypeSpec<
+        T, CV extends VajramRequest<?>, DV extends VajramRequest<T>>
+    extends VajramDependencySpec<T, CV, DV> {
 
-  public VajramDepSingleTypeSpec(String name, Class<CV> ofVajram) {
-    super(name, ofVajram);
+  public VajramDepSingleTypeSpec(String name, Class<CV> ofVajram, Class<DV> onVajram) {
+    super(name, ofVajram, onVajram);
   }
 }

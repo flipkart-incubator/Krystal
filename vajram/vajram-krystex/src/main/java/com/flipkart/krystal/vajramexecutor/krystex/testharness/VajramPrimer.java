@@ -38,7 +38,7 @@ public class VajramPrimer extends AbstractKryonDecorator {
   private final ImmutableMap<Inputs, ValueOrError<Object>> executionStubs;
   private final VajramID decoratedVajramId;
   private final boolean failIfMockMissing;
-  @MonotonicNonNull private DecoratedKryon decoratedKryon;
+  private @MonotonicNonNull DecoratedKryon decoratedKryon;
 
   public <T> VajramPrimer(
       VajramID mockedVajramId,

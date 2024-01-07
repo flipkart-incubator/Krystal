@@ -316,7 +316,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                                 DependencyCommand<Inputs> dependencyCommand;
                                 try {
                                   if (inputResolverDefinition
-                                      instanceof SimpleInputResolver<?, ?, ?> inputResolver) {
+                                      instanceof SimpleInputResolver<?, ?, ?, ?> inputResolver) {
                                     ResolutionResult resolutionResult =
                                         multiResolve(
                                             List.of(
@@ -377,9 +377,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
               for (DependencyResolutionRequest resolutionRequest : resolutionRequests) {
                 Set<ResolverDefinition> resolverDefinitions =
                     resolutionRequest.resolverDefinitions();
-                for (ResolverDefinition definition : resolverDefinitions) {
-                  allResolverDefs.add(definition);
-                }
+                allResolverDefs.addAll(resolverDefinitions);
               }
               Map<String, List<ResolverDefinition>> simpleResolverDefsByDep = new HashMap<>();
               List<ResolverDefinition> complexResolverDefs = new ArrayList<>();
@@ -419,7 +417,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                                                           () ->
                                                               new AssertionError(
                                                                   "Could not find resolver for resolver definition. This should not happen")))
-                                          .map(ird -> (SimpleInputResolver<?, ?, ?>) ird)
+                                          .map(ird -> (SimpleInputResolver<?, ?, ?, ?>) ird)
                                           .toList())),
                       inputs);
               Map<String, List<Map<String, @Nullable Object>>> results =
@@ -610,16 +608,16 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
 
   private ImmutableMap<String, KryonId> createKryonDefinitionsForDependencies(
       VajramDefinition vajramDefinition) {
-    List<Dependency> dependencies = new ArrayList<>();
+    List<Dependency<?>> dependencies = new ArrayList<>();
     for (VajramFacetDefinition vajramInputDefinition :
         vajramDefinition.getVajram().getInputDefinitions()) {
-      if (vajramInputDefinition instanceof Dependency definition) {
+      if (vajramInputDefinition instanceof Dependency<?> definition) {
         dependencies.add(definition);
       }
     }
     Map<String, KryonId> depNameToProviderKryon = new HashMap<>();
     // Create and register sub graphs for dependencies of this vajram
-    for (Dependency dependency : dependencies) {
+    for (Dependency<?> dependency : dependencies) {
       var accessSpec = dependency.dataAccessSpec();
       String dependencyName = dependency.name();
       AccessSpecMatchingResult<DataAccessSpec> accessSpecMatchingResult =
