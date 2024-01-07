@@ -2,6 +2,8 @@ package com.flipkart.krystal.vajram.samples.calculator.adder;
 
 import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest.*;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderRequest.*;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
@@ -31,9 +33,9 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
   @Dependency(onVajram = Adder.class)
   Optional<Integer> sum;
 
-  @Resolve(depName = SplitAdderRequest.splitSum1_n, depInputs = SplitAdderRequest.numbers_n)
+  @Resolve(depName = splitSum1_n, depInputs = numbers_n)
   public static SingleExecute<ArrayList<Integer>> numbersForSubSplitter1(
-      @Using(SplitAdderRequest.numbers_n) List<Integer> numbers) {
+      @Using(numbers_n) List<Integer> numbers) {
     if (numbers.size() < 2) {
       return skipExecution(
           "Skipping splitters as count of numbers is less than 2. Will call adder instead");
@@ -43,9 +45,9 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
     }
   }
 
-  @Resolve(depName = SplitAdderRequest.splitSum2_n, depInputs = SplitAdderRequest.numbers_n)
+  @Resolve(depName = splitSum2_n, depInputs = numbers_n)
   public static SingleExecute<ArrayList<Integer>> numbersForSubSplitter2(
-      @Using(SplitAdderRequest.numbers_n) List<Integer> numbers) {
+      @Using(numbers_n) List<Integer> numbers) {
     if (numbers.size() < 2) {
       return skipExecution(
           "Skipping splitters as count of numbers is less than 2. Will call adder instead");
@@ -55,9 +57,8 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
     }
   }
 
-  @Resolve(depName = SplitAdderRequest.sum_n, depInputs = AdderRequest.numberOne_n)
-  public static SingleExecute<Integer> adderNumberOne(
-      @Using(SplitAdderRequest.numbers_n) List<Integer> numbers) {
+  @Resolve(depName = sum_n, depInputs = numberOne_n)
+  public static SingleExecute<Integer> adderNumberOne(@Using(numbers_n) List<Integer> numbers) {
     if (numbers.size() == 1) {
       return executeWith(numbers.get(0));
     } else if (numbers.isEmpty()) {
@@ -67,8 +68,8 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
     }
   }
 
-  @Resolve(depName = SplitAdderRequest.sum_n, depInputs = AdderRequest.numberTwo_n)
-  public static Integer adderNumberTwo(@Using(SplitAdderRequest.numbers_n) List<Integer> numbers) {
+  @Resolve(depName = sum_n, depInputs = numberTwo_n)
+  public static Integer adderNumberTwo(@Using(numbers_n) List<Integer> numbers) {
     return 0;
   }
 

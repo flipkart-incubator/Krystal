@@ -4,6 +4,8 @@ import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest.*;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderRequest.*;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
@@ -32,9 +34,9 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
   @Dependency(onVajram = Adder.class)
   Optional<Integer> sum;
 
-  @Resolve(depName = ChainAdderRequest.chainSum_n, depInputs = ChainAdderRequest.numbers_n)
+  @Resolve(depName = chainSum_n, depInputs = numbers_n)
   public static MultiExecute<List<Integer>> numbersForSubChainer(
-      @Using(ChainAdderRequest.numbers_n) List<Integer> numbers) {
+      @Using(numbers_n) List<Integer> numbers) {
     if (numbers.size() < 3) {
       return skipFanout(
           "Skipping chainer as count of numbers is less than 3. Will call adder instead");
@@ -46,9 +48,8 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
     }
   }
 
-  @Resolve(depName = ChainAdderRequest.sum_n, depInputs = AdderRequest.numberOne_n)
-  public static SingleExecute<Integer> adderNumberOne(
-      @Using(ChainAdderRequest.numbers_n) List<Integer> numbers) {
+  @Resolve(depName = sum_n, depInputs = numberOne_n)
+  public static SingleExecute<Integer> adderNumberOne(@Using(numbers_n) List<Integer> numbers) {
     if (numbers.isEmpty()) {
       return skipExecution("No numbers provided. Skipping adder call");
     } else if (numbers.size() > 2) {
@@ -59,7 +60,7 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
     }
   }
 
-  @Resolve(depName = ChainAdderRequest.sum_n, depInputs = AdderRequest.numberTwo_n)
+  @Resolve(depName = sum_n, depInputs = numberTwo_n)
   public static SingleExecute<Integer> adderNumberTwo(@Using("numbers") List<Integer> numbers) {
     if (numbers.isEmpty()) {
       return skipExecution("No numbers provided. Skipping adder call");
