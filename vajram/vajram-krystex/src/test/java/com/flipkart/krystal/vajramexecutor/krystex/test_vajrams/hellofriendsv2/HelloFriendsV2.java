@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2;
 import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.fanout;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInputFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2InputUtil.friendIds_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2InputUtil.friendInfos_s;
@@ -55,9 +55,9 @@ public abstract class HelloFriendsV2 extends ComputeVajram<String> {
             resolve(
                 dep(
                     friendInfos_s,
-                    fanout(TestUserServiceRequest.userId_s)
+                    depInputFanout(TestUserServiceRequest.userId_s)
                         .using(friendIds_s)
-                        .with(Optional::orElseThrow))));
+                        .asResolver(Optional::orElseThrow))));
     /*
      Following is not a preferred way to write resolvers by application developers.
      But it is mentioned here because some platform code might contain resolvers

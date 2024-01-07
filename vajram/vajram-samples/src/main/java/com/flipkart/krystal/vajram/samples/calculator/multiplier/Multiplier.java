@@ -1,10 +1,10 @@
-package com.flipkart.krystal.vajram.samples.benchmarks.calculator.multiplier;
+package com.flipkart.krystal.vajram.samples.calculator.multiplier;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramLogic;
-import com.flipkart.krystal.vajram.samples.benchmarks.calculator.multiplier.MultiplierInputUtil.MultiplierInputs;
+import com.flipkart.krystal.vajram.samples.calculator.multiplier.MultiplierInputUtil.MultiplierInputs;
 import java.util.Optional;
 
 @VajramDef

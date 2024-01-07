@@ -47,7 +47,9 @@ public abstract class HelloFriends extends ComputeVajram<String> {
     return resolve(
         dep(
             userInfo_s,
-            depInput(TestUserServiceRequest.userId_s).usingAsIs(userId_s).asResolver()));
+            depInput(TestUserServiceRequest.userId_s)
+                .using(userId_s)
+                .asResolver(s -> s.map(String::trim).orElse(null))));
   }
 
   @Resolve(depName = friendInfos_n, depInputs = TestUserServiceRequest.userId_n)
