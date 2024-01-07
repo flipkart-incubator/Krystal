@@ -7,7 +7,6 @@ import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.VajramDependencySpec;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.FanoutResolverStage.ResolveFanoutStage;
-import com.flipkart.krystal.vajram.facets.resolution.ResolverStage.ResolveStage;
 import com.google.common.collect.ImmutableList;
 import java.util.Collection;
 import java.util.List;
@@ -65,19 +64,7 @@ public final class InputResolvers {
    * @param <T> The data type of the input being resolved.
    * @param <DV> The dependency whose input is being resolved.
    */
-  public static <T, DV extends VajramRequest<?>> ResolveFanoutStage<T, DV> fanout(
-      VajramFacetSpec<T, DV> depInput) {
-    return new ResolveFanoutStage<>(depInput);
-  }
-
-  /**
-   * Returns a builder stage which can be used to simple input resolver with fanout.
-   *
-   * @param depInput spec of the dependency target input being resolved
-   * @param <T> Target Type: The DataType of the dependency target input being resolved
-   * @param <DV> DependencyVajram: The vajram whose input is being resolved
-   */
-  public static <T, DV extends VajramRequest<?>> ResolveFanoutStage<T, DV> resolveFanout(
+  public static <T, DV extends VajramRequest<?>> ResolveFanoutStage<T, DV> depInputFanout(
       VajramFacetSpec<T, DV> depInput) {
     return new ResolveFanoutStage<>(depInput);
   }

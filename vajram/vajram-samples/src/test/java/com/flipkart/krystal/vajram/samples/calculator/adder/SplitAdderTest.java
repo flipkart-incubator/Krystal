@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder;
+package com.flipkart.krystal.vajram.samples.calculator.adder;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
@@ -6,9 +6,7 @@ import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder.add;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderRequest.splitSum1_n;
-import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.SplitAdderRequest.splitSum2_n;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.add;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -27,7 +25,8 @@ import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
-import com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.ChainAdderTest.RequestContext;
+import com.flipkart.krystal.vajram.samples.calculator.Formula;
+import com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderTest.RequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
@@ -49,10 +48,7 @@ class SplitAdderTest {
 
   @BeforeEach
   void setUp() {
-    graph =
-        loadFromClasspath("com.flipkart.krystal.vajram.samples.benchmarks.calculator")
-            .maxParallelismPerCore(1)
-            .build();
+    graph = loadFromClasspath(Formula.class.getPackageName()).maxParallelismPerCore(1).build();
     objectMapper =
         new ObjectMapper()
             .registerModule(new JavaTimeModule())
@@ -297,68 +293,228 @@ class SplitAdderTest {
     String splitAdderId = getVajramIdString(SplitAdder.class);
     return ImmutableSet.of(
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum1_n, splitSum1_n, splitSum1_n, splitSum1_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum1_n, splitSum1_n, splitSum1_n, splitSum2_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum1_n, splitSum1_n, splitSum2_n, splitSum1_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum1_n, splitSum1_n, splitSum2_n, splitSum2_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum1_n, splitSum2_n, splitSum1_n, splitSum1_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum1_n, splitSum2_n, splitSum1_n, splitSum2_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum1_n, splitSum2_n, splitSum2_n, splitSum1_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum1_n, splitSum2_n, splitSum2_n, splitSum2_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum2_n, splitSum1_n, splitSum1_n, splitSum1_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum2_n, splitSum1_n, splitSum1_n, splitSum2_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum2_n, splitSum1_n, splitSum2_n, splitSum1_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum2_n, splitSum1_n, splitSum2_n, splitSum2_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum2_n, splitSum2_n, splitSum1_n, splitSum1_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum2_n, splitSum2_n, splitSum1_n, splitSum2_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum2_n, splitSum2_n, splitSum2_n, splitSum1_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum2_n, splitSum2_n, splitSum2_n, splitSum2_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum1_n, splitSum1_n, splitSum1_n, splitSum1_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum1_n, splitSum1_n, splitSum1_n, splitSum2_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum1_n, splitSum1_n, splitSum2_n, splitSum1_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum1_n, splitSum1_n, splitSum2_n, splitSum2_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum1_n, splitSum2_n, splitSum1_n, splitSum1_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum1_n, splitSum2_n, splitSum1_n, splitSum2_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum1_n, splitSum2_n, splitSum2_n, splitSum1_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum1_n, splitSum2_n, splitSum2_n, splitSum2_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum2_n, splitSum1_n, splitSum1_n, splitSum1_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum2_n, splitSum1_n, splitSum1_n, splitSum2_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum2_n, splitSum1_n, splitSum2_n, splitSum1_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum2_n, splitSum1_n, splitSum2_n, splitSum2_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum2_n, splitSum2_n, splitSum1_n, splitSum1_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum1_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum2_n, splitSum2_n, splitSum1_n, splitSum2_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n,
+            SplitAdderRequest.splitSum2_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum2_n, splitSum2_n, splitSum2_n, splitSum1_n),
+            splitAdderId,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum1_n),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum2_n, splitSum2_n, splitSum2_n, splitSum2_n));
+            splitAdderId,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n,
+            SplitAdderRequest.splitSum2_n));
   }
 }
