@@ -553,6 +553,7 @@
           <option value="NonBooleanMethodNameMayNotStartWithQuestion" />
           <option value="ZeroLengthArrayAllocation" />
           <option value="initialization.field.uninitialized" />
+          <option value="AssertBetweenInconvertibleTypes" />
         </list>
       </option>
     </inspection_tool>

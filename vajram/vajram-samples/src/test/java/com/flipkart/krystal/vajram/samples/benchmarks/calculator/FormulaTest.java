@@ -8,6 +8,7 @@ import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Ad
 import static com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.Divider.divide;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.data.ValueOrError;
@@ -49,7 +50,7 @@ class FormulaTest {
   }
 
   @Test
-  void formula_success() throws Exception {
+  void formula_success() {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputModulators(
@@ -59,7 +60,8 @@ class FormulaTest {
         graph.createExecutor(new FormulaRequestContext(100, 20, 5, REQUEST_ID))) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
-    assertThat(future.get()).isEqualTo(4);
+    //noinspection AssertBetweenInconvertibleTypes https://youtrack.jetbrains.com/issue/IDEA-342354
+    assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(4);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
   }
 
