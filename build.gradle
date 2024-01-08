@@ -24,6 +24,7 @@ subprojects {
     apply plugin: 'maven-publish'
     apply plugin: 'com.diffplug.spotless'
     apply plugin: 'org.checkerframework'
+    apply plugin: 'jacoco'
 
     group 'com.flipkart.krystal'
     version project.krystal_version
@@ -82,6 +83,18 @@ subprojects {
 
         testCompileOnly 'org.projectlombok:lombok:1.18.24'
         testAnnotationProcessor 'org.projectlombok:lombok:1.18.24'
+    }
+
+    jacoco {
+        toolVersion = "0.8.11"
+    }
+
+    jacocoTestReport {
+        dependsOn test // tests are required to run before generating the report
+    }
+
+    test {
+        finalizedBy jacocoTestReport // report is always generated after tests run
     }
 
     java {

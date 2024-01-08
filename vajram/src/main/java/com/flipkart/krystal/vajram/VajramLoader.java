@@ -21,4 +21,6 @@ public final class VajramLoader {
                 })
             .toList();
   }
+
+  private VajramLoader() {}
 }

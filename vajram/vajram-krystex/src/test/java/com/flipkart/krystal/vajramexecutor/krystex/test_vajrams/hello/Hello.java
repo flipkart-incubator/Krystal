@@ -17,7 +17,7 @@ public abstract class Hello extends ComputeVajram<String> {
   @Input Optional<String> greeting;
 
   @VajramLogic
-  public static String greet(HelloInputs inputs) {
+  static String greet(HelloInputs inputs) {
     CALL_COUNTER.increment();
     return "%s! %s".formatted(inputs.greeting().orElse("Hello"), inputs.name());
   }

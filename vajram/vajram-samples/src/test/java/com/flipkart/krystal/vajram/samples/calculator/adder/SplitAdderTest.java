@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.samples.calculator.adder;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+import static com.flipkart.krystal.vajram.VajramID.ofVajram;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
@@ -11,6 +12,7 @@ import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderReq
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -84,6 +87,22 @@ class SplitAdderTest {
     assertThat(future).succeedsWithin(ofSeconds(1)).isEqualTo(55);
     System.out.println(
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
+  }
+
+  @Test
+  void emptyNumbers_returnsZero_success() {
+    CompletableFuture<Integer> future;
+    try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
+        graph.createExecutor(new RequestContext("splitAdderTest"))) {
+      future =
+          krystexVajramExecutor.execute(
+              ofVajram(SplitAdder.class),
+              rc -> SplitAdderRequest.builder().numbers(List.of()).build(),
+              KryonExecutionConfig.builder()
+                  .disabledDependantChains(disabledDepChains(graph))
+                  .build());
+    }
+    assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(0);
   }
 
   @Disabled("Long running benchmark")
