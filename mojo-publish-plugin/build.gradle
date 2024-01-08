@@ -46,10 +46,10 @@ publishing {
     repositories {
         maven {
             url "https://clojars.org/repo"
-//            credentials {
-//                username = rootProject.ext.clojarsusername
-//                password = rootProject.ext.clojarspassword
-//            }
+            credentials {
+                username = rootProject.ext.clojarsusername
+                password = rootProject.ext.clojarspassword
+            }
         }
     }
 }
