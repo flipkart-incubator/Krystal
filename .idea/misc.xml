@@ -56,7 +56,7 @@
     </option>
     <option name="myNotNulls">
       <value>
-        <list size="16">
+        <list size="15">
           <item index="0" class="java.lang.String" itemvalue="androidx.annotation.RecentlyNonNull" />
           <item index="1" class="java.lang.String" itemvalue="org.checkerframework.checker.nullness.qual.NonNull" />
           <item index="2" class="java.lang.String" itemvalue="com.android.annotations.NonNull" />
