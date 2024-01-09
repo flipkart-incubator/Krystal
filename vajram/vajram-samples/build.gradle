@@ -12,7 +12,6 @@ dependencies {
     annotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
 
     testImplementation project(':vajram-krystex')
-    testImplementation project(':krystex')
 
     implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
     implementation 'org.checkerframework:checker-qual:3.37.0'

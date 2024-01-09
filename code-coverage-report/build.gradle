@@ -1,0 +1,21 @@
+plugins {
+    id 'base'
+    id 'jacoco-report-aggregation'
+}
+
+dependencies {
+    jacocoAggregation project(":vajram-samples")
+    jacocoAggregation project(":vajram-krystex")
+}
+
+reporting {
+    reports {
+        testCodeCoverageReport(JacocoCoverageReport) { // <.>
+            testType = TestSuiteType.UNIT_TEST
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('testCodeCoverageReport', JacocoReport) // <.>
+}
