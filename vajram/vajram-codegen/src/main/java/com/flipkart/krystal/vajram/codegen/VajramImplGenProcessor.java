@@ -24,7 +24,7 @@ public class VajramImplGenProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    Utils util = new Utils(processingEnv);
+    Utils util = new Utils(processingEnv, this.getClass());
     List<TypeElement> vajramDefinitions = util.getVajramClasses(roundEnv);
     util.note(
         "Vajram Defs received by VajramImplGenProcessor: %s"

@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.samples.calculator;
+package com.flipkart.krystal.vajram.samples.calculator.multiplier;
 
 import static com.flipkart.krystal.vajram.VajramID.ofVajram;
 
@@ -10,21 +10,21 @@ import java.util.concurrent.TimeUnit;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-class Add2And3Test {
+class MultiplierTest {
 
   private final VajramKryonGraph graph =
-      VajramKryonGraph.builder().loadFromPackage(Formula.class.getPackageName()).build();
+      VajramKryonGraph.builder().loadFromPackage(Multiplier.class.getPackageName()).build();
 
   @Test
-  void add2And3_success() {
+  void multiply_success() {
     CompletableFuture<Integer> future;
     try (KrystexVajramExecutor<ApplicationRequestContext> krystexVajramExecutor =
-        graph.createExecutor(() -> "add2and3")) {
+        graph.createExecutor(() -> "multiply")) {
       future =
           krystexVajramExecutor.execute(
-              ofVajram(Add2And3.class),
-              applicationRequestContext -> Add2And3Request.builder().build());
+              ofVajram(Multiplier.class),
+              c -> MultiplierRequest.builder().numberOne(3).numberTwo(9).build());
     }
-    Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(5);
+    Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(27);
   }
 }

@@ -50,33 +50,37 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
 
   @Resolve(depName = sum_n, depInputs = numberOne_n)
   public static SingleExecute<Integer> adderNumberOne(@Using(numbers_n) List<Integer> numbers) {
-    if (numbers.isEmpty()) {
-      return skipExecution("No numbers provided. Skipping adder call");
-    } else if (numbers.size() > 2) {
-      return skipExecution(
-          "Cannot call adder for more than 2 inputs. ChainAdder will be called instead");
-    } else {
-      return executeWith(numbers.get(0));
-    }
+    return skipAdder(numbers).orElseGet(() -> executeWith(numbers.get(0)));
   }
 
   @Resolve(depName = sum_n, depInputs = numberTwo_n)
-  public static SingleExecute<Integer> adderNumberTwo(@Using("numbers") List<Integer> numbers) {
-    if (numbers.isEmpty()) {
-      return skipExecution("No numbers provided. Skipping adder call");
-    } else if (numbers.size() > 2) {
-      return skipExecution(
-          "Cannot call adder for more than 2 inputs. ChainAdder will be called instead");
-    } else if (numbers.size() == 1) {
-      return executeWith(0);
-    } else {
-      return executeWith(numbers.get(1));
-    }
+  public static SingleExecute<Integer> adderNumberTwo(@Using(numbers_n) List<Integer> numbers) {
+    return skipAdder(numbers)
+        .orElseGet(
+            () -> {
+              if (numbers.size() == 1) {
+                return executeWith(0);
+              } else {
+                return executeWith(numbers.get(1));
+              }
+            });
   }
 
   @VajramLogic
   static Integer add(ChainAdderInputs allInputs) {
     return allInputs.sum().orElse(0)
         + allInputs.chainSum().values().stream().mapToInt(value -> value.value().orElse(0)).sum();
+  }
+
+  private static Optional<SingleExecute<Integer>> skipAdder(List<Integer> numbers) {
+    if (numbers.isEmpty()) {
+      return Optional.of(skipExecution("No numbers provided. Skipping adder call"));
+    } else if (numbers.size() > 2) {
+      return Optional.of(
+          skipExecution(
+              "Cannot call adder for more than 2 inputs. ChainAdder will be called instead"));
+    } else {
+      return Optional.empty();
+    }
   }
 }

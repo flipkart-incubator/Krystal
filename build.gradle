@@ -24,16 +24,19 @@ subprojects {
     apply plugin: 'maven-publish'
     apply plugin: 'com.diffplug.spotless'
     apply plugin: 'org.checkerframework'
+    apply plugin: 'jacoco'
 
     group 'com.flipkart.krystal'
     version project.krystal_version
 
     spotless {
         java {
-            target 'src/*/java/**/*.java', 'build/generated/sources/vajrams/**/*.java'
+            target 'src/*/java/**/*.java', 'build/generated/sources/annotationProcessor/**/*.java'
             googleJavaFormat()
         }
     }
+    tasks.named('spotlessJava').configure { mustRunAfter('compileJava') }
+    tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
 
     dependencies {
         implementation 'org.checkerframework:checker-qual:3.21.3'
@@ -84,9 +87,14 @@ subprojects {
         testAnnotationProcessor 'org.projectlombok:lombok:1.18.24'
     }
 
+    jacoco {
+        toolVersion = "0.8.11"
+    }
+
     java {
         withSourcesJar()
     }
+    tasks.named('sourcesJar').configure { mustRunAfter('compileJava') }
 
     publishing {
         repositories {

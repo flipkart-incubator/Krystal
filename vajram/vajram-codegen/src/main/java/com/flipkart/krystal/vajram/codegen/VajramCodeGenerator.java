@@ -56,7 +56,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
-import static com.squareup.javapoet.TypeSpec.classBuilder;
 import static java.util.Arrays.stream;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
@@ -158,12 +157,13 @@ public class VajramCodeGenerator {
   public VajramCodeGenerator(
       VajramInfo vajramInfo,
       Map<VajramID, VajramInfoLite> vajramDefs,
-      ProcessingEnvironment processingEnv) {
+      ProcessingEnvironment processingEnv,
+      Utils util) {
     this.vajramInfo = vajramInfo;
     this.vajramName = vajramInfo.vajramId().vajramId();
     this.packageName = vajramInfo.packageName();
     this.processingEnv = processingEnv;
-    this.util = new Utils(processingEnv);
+    this.util = util;
     this.requestClassName = Utils.getRequestClassName(vajramName);
     // All parsed Vajram data loaded from all Vajram class files with vajram name as key
     this.vajramDefs = Collections.unmodifiableMap(vajramDefs);
@@ -192,7 +192,15 @@ public class VajramCodeGenerator {
    */
   public String codeGenVajramImpl() {
     initParsedVajramData();
-    final TypeSpec.Builder vajramImplClass = createVajramImplClass();
+    final TypeSpec.Builder vajramImplClass =
+        util.classBuilder(getVajramImplClassName(vajramName))
+            .addField(
+                FieldSpec.builder(
+                        ParameterizedTypeName.get(ImmutableList.class, VajramFacetDefinition.class)
+                            .annotated(AnnotationSpec.builder(Nullable.class).build()),
+                        INPUT_DEFINITIONS_VAR)
+                    .addModifiers(PRIVATE)
+                    .build());
     List<MethodSpec> methodSpecs = new ArrayList<>();
     // Add superclass
     vajramImplClass
@@ -1168,7 +1176,7 @@ public class VajramCodeGenerator {
     ClassName builderClassType =
         ClassName.get(packageName + Constants.DOT_SEPARATOR + requestClassName, "Builder");
     TypeSpec.Builder requestClass =
-        classBuilder(requestClassName)
+        util.classBuilder(requestClassName)
             .addModifiers(PUBLIC, FINAL)
             .addSuperinterface(
                 ParameterizedTypeName.get(
@@ -1182,7 +1190,7 @@ public class VajramCodeGenerator {
                     .addStatement("return new Builder()")
                     .build());
     TypeSpec.Builder builderClass =
-        classBuilder("Builder")
+        util.classBuilder("Builder")
             .addModifiers(PUBLIC, STATIC, FINAL)
             .addAnnotation(EqualsAndHashCode.class)
             .addMethod(constructorBuilder().addModifiers(PRIVATE).build());
@@ -1479,7 +1487,9 @@ public class VajramCodeGenerator {
     TypeSpec.Builder inputUtilClass = createInputUtilClass();
     String className = getAllInputsClassname(vajramName);
     TypeSpec.Builder allInputsClass =
-        classBuilder(className).addModifiers(FINAL, STATIC).addAnnotations(recordAnnotations());
+        util.classBuilder(className)
+            .addModifiers(FINAL, STATIC)
+            .addAnnotations(recordAnnotations());
     List<FieldTypeName> fieldsList = new ArrayList<>();
     vajramInfo
         .inputs()
@@ -1570,7 +1580,7 @@ public class VajramCodeGenerator {
               vajramFacetsDef.inputs().stream().filter(InputModel::needsModulation).toList(),
               ClassName.get(packageName, getInputUtilClassName(vajramName), imClassName));
       TypeSpec.Builder inputsNeedingModulation =
-          classBuilder(imClassName)
+          util.classBuilder(imClassName)
               .addModifiers(STATIC)
               .addSuperinterface(InputValuesAdaptor.class)
               .addAnnotations(recordAnnotations())
@@ -1585,7 +1595,7 @@ public class VajramCodeGenerator {
                   .toList(),
               ClassName.get(packageName, getInputUtilClassName(vajramName), ciClassName));
       TypeSpec.Builder commonInputs =
-          classBuilder(ciClassName)
+          util.classBuilder(ciClassName)
               .addModifiers(STATIC)
               .addSuperinterface(InputValuesAdaptor.class)
               .addAnnotations(recordAnnotations())
@@ -1637,7 +1647,7 @@ public class VajramCodeGenerator {
           CodeBlock.builder()
               .add(
                   "$L",
-                  TypeSpec.anonymousClassBuilder("")
+                  util.classBuilder("")
                       .addSuperinterface(parameterizedTypeName)
                       .addMethod(
                           methodBuilder("apply")
@@ -1682,7 +1692,7 @@ public class VajramCodeGenerator {
 
   private TypeSpec.Builder createInputUtilClass() {
     TypeSpec.Builder classBuilder =
-        classBuilder(getInputUtilClassName(vajramName))
+        util.classBuilder(getInputUtilClassName(vajramName))
             .addModifiers(FINAL)
             .addMethod(constructorBuilder().addModifiers(PRIVATE).build());
     List<FacetGenModel> facets = vajramInfo.facetStream().toList();
@@ -1719,17 +1729,6 @@ public class VajramCodeGenerator {
       }
     }
     return classBuilder.addFields(depSpecFields.stream().map(FieldSpec.Builder::build)::iterator);
-  }
-
-  private TypeSpec.Builder createVajramImplClass() {
-    return classBuilder(getVajramImplClassName(vajramName))
-        .addField(
-            FieldSpec.builder(
-                    ParameterizedTypeName.get(ImmutableList.class, VajramFacetDefinition.class)
-                        .annotated(AnnotationSpec.builder(Nullable.class).build()),
-                    INPUT_DEFINITIONS_VAR)
-                .addModifiers(PRIVATE)
-                .build());
   }
 
   public String getRequestClassName() {

@@ -9,6 +9,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.vajram.Dependency;
+import com.flipkart.krystal.vajram.Generated;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -23,9 +24,11 @@ import com.flipkart.krystal.vajram.codegen.models.VajramInfoLite;
 import com.flipkart.krystal.vajram.facets.InputSource;
 import com.flipkart.krystal.vajram.modulation.Modulated;
 import com.google.common.primitives.Primitives;
+import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeSpec;
 import jakarta.inject.Inject;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
@@ -77,11 +80,13 @@ public class Utils {
   private final ProcessingEnvironment processingEnv;
   private final Types typeUtils;
   private final Elements elementUtils;
+  private final Class<?> generator;
 
-  public Utils(ProcessingEnvironment processingEnv) {
+  public Utils(ProcessingEnvironment processingEnv, Class<?> generator) {
     this.processingEnv = processingEnv;
     this.typeUtils = processingEnv.getTypeUtils();
     this.elementUtils = processingEnv.getElementUtils();
+    this.generator = generator;
   }
 
   List<TypeElement> getVajramClasses(RoundEnvironment roundEnv) {
@@ -92,13 +97,13 @@ public class Utils {
   }
 
   VajramCodeGenerator createCodeGenerator(VajramInfo vajramInfo) {
-    Map<VajramID, VajramInfoLite> map = new HashMap<>();
+    Map<VajramID, VajramInfoLite> vajramDefs = new HashMap<>();
     for (DependencyModel depModel : vajramInfo.dependencies()) {
-      map.put(
+      vajramDefs.put(
           depModel.depVajramId(),
           new VajramInfoLite(depModel.depVajramId().vajramId(), depModel.responseType()));
     }
-    return new VajramCodeGenerator(vajramInfo, map, processingEnv);
+    return new VajramCodeGenerator(vajramInfo, vajramDefs, processingEnv, this);
   }
 
   void generateSourceFile(String className, String code, TypeElement vajramDefinition) {
@@ -447,5 +452,24 @@ public class Utils {
     } else {
       return type;
     }
+  }
+
+  /**
+   * Creates a class builder with the given class name. If the className is a blank string, then the
+   * builder represents an anonymous class.
+   *
+   * @param className fully qualifield class name
+   * @return a class builder with the given class name, with the {@link Generated} annotation
+   *     applied on the class
+   */
+  public TypeSpec.Builder classBuilder(String className) {
+    TypeSpec.Builder classBuilder;
+    if (className.isBlank()) {
+      classBuilder = TypeSpec.anonymousClassBuilder("");
+    } else {
+      classBuilder = TypeSpec.classBuilder(className);
+    }
+    return classBuilder.addAnnotation(
+        AnnotationSpec.builder(Generated.class).addMember("by", "$S", generator.getName()).build());
   }
 }

@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.samples.calculator;
+package com.flipkart.krystal.vajram.samples.calculator.subtractor;
 
 import static com.flipkart.krystal.vajram.VajramID.ofVajram;
 
@@ -10,21 +10,21 @@ import java.util.concurrent.TimeUnit;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-class Add2And3Test {
+class SubtractorTest {
 
   private final VajramKryonGraph graph =
-      VajramKryonGraph.builder().loadFromPackage(Formula.class.getPackageName()).build();
+      VajramKryonGraph.builder().loadFromPackage(Subtractor.class.getPackageName()).build();
 
   @Test
-  void add2And3_success() {
+  void subtract_success() {
     CompletableFuture<Integer> future;
     try (KrystexVajramExecutor<ApplicationRequestContext> krystexVajramExecutor =
-        graph.createExecutor(() -> "add2and3")) {
+        graph.createExecutor(() -> "subtract")) {
       future =
           krystexVajramExecutor.execute(
-              ofVajram(Add2And3.class),
-              applicationRequestContext -> Add2And3Request.builder().build());
+              ofVajram(Subtractor.class),
+              c -> SubtractorRequest.builder().numberOne(5).numberTwo(7).build());
     }
-    Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(5);
+    Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(-2);
   }
 }
