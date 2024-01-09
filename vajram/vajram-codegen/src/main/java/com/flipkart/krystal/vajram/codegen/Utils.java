@@ -470,8 +470,6 @@ public class Utils {
       classBuilder = TypeSpec.classBuilder(className);
     }
     return classBuilder.addAnnotation(
-        AnnotationSpec.builder(Generated.class)
-            .addMember("value", "$S", generator.getName())
-            .build());
+        AnnotationSpec.builder(Generated.class).addMember("by", "$S", generator.getName()).build());
   }
 }

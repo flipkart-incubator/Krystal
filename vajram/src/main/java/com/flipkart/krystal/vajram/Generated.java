@@ -26,5 +26,5 @@ public @interface Generated {
    *
    * @return The fully qualified name of the code generator.
    */
-  String value() default "";
+  String by() default "";
 }
