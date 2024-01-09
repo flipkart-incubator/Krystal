@@ -31,10 +31,11 @@ subprojects {
 
     spotless {
         java {
-            target 'src/*/java/**/*.java', 'build/generated/sources/vajrams/**/*.java'
+            target 'src/*/java/**/*.java', 'build/generated/sources/annotationProcessor/**/*.java'
             googleJavaFormat()
         }
     }
+    tasks.named('spotlessJava').configure { mustRunAfter('compileJava') }
 
     dependencies {
         implementation 'org.checkerframework:checker-qual:3.21.3'
@@ -100,6 +101,7 @@ subprojects {
     java {
         withSourcesJar()
     }
+    tasks.named('sourcesJar').configure { mustRunAfter('compileJava') }
 
     publishing {
         repositories {

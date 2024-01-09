@@ -14,7 +14,7 @@ plugins {
 }
 
 group 'com.flipkart.mojopublish'
-version '1.1.1'
+version '1.1.2'
 
 gradlePlugin {
     plugins {
@@ -52,18 +52,12 @@ publishing {
             }
         }
     }
-    publications {
-        maven(MavenPublication) {
-            groupId = group
-            artifactId = project.name
-            version = version
-            from components.java
-            pom {
-                licenses {
-                    license {
-                        name = 'The Apache License, Version 2.0'
-                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                    }
+    publications.withType(MavenPublication).configureEach {
+        pom {
+            licenses {
+                license {
+                    name = 'The Apache License, Version 2.0'
+                    url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
                 }
             }
         }

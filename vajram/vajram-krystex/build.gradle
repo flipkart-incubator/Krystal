@@ -20,7 +20,7 @@ dependencies {
     testAnnotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
 }
 
-project.tasks.named("sourcesJar").configure { it.dependsOn("compileJava") }
+tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
 
 publishing {
     publications {
@@ -39,9 +39,6 @@ publishing {
             }
         }
     }
-
-    tasks.named("spotlessJava").configure { dependsOn("codeGenVajramModels") }
-    tasks.named("spotlessJava").configure { dependsOn("testCodeGenVajramModels") }
 }
 
 /*

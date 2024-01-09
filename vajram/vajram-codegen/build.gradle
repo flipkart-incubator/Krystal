@@ -29,6 +29,8 @@ gradlePlugin {
     }
 }
 
+tasks.named('spotlessJava').configure { mustRunAfter('compileGroovy') }
+
 dependencies {
     api project(':vajram')
     implementation 'com.squareup:javapoet:1.13.0'
