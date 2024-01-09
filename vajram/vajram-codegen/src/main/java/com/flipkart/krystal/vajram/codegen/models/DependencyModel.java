@@ -14,5 +14,5 @@ public record DependencyModel(
     boolean isMandatory,
     boolean canFanout,
     String documentation,
-    VariableElement depField)
+    VariableElement facetField)
     implements FacetGenModel {}

@@ -4,6 +4,7 @@ import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.vajram.facets.InputSource;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
+import javax.lang.model.element.VariableElement;
 import lombok.Builder;
 
 @Builder
@@ -14,15 +15,12 @@ public record InputModel<T>(
     T defaultValue,
     String documentation,
     boolean needsModulation,
-    ImmutableSet<InputSource> sources)
+    ImmutableSet<InputSource> sources,
+    VariableElement facetField)
     implements FacetGenModel {
 
   private static final ImmutableSet<InputSource> DEFAULT_INPUT_SOURCES =
       ImmutableSet.of(InputSource.CLIENT);
-
-  public boolean isOptional() {
-    return !isMandatory();
-  }
 
   public ImmutableSet<InputSource> sources() {
     if (sources == null || sources.isEmpty()) {

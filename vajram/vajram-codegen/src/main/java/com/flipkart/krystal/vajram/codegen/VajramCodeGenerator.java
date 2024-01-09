@@ -65,8 +65,8 @@ import static javax.lang.model.element.Modifier.STATIC;
 import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
-import com.flipkart.krystal.datatypes.CustomType;
 import com.flipkart.krystal.datatypes.DataType;
+import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.IOVajram;
@@ -1125,49 +1125,45 @@ public class VajramCodeGenerator {
     // handle data type
     DataType<?> inputType = input.type();
     inputDefBuilder.add(".type(");
-    if (inputType instanceof CustomType<?> javaType) {
-      // custom handling
-      TypeName className;
-      if (!javaType.enclosingClasses().isEmpty() || javaType.simpleName().isPresent()) {
-        assert javaType.packageName().isPresent();
-        className =
-            ClassName.get(
-                javaType.packageName().get(),
-                String.join(DOT, javaType.enclosingClasses()),
-                javaType.simpleName().get());
-      } else {
-        className = TypeName.get(javaType.javaModelType(processingEnv));
-      }
-      inputDefBuilder.add("$1T.create($2T.class)", ClassName.get(CustomType.class), className);
+    if (inputType instanceof JavaType<?> javaType) {
+      List<TypeName> collectClassNames = new ArrayList<>();
+      inputDefBuilder.add(
+          getJavaTypeCreationCode(javaType, collectClassNames, input.facetField()),
+          (Object[]) collectClassNames.toArray(TypeName[]::new));
     } else {
-      String simpleName = inputType.getClass().getSimpleName();
-      String name = simpleName.substring(0, simpleName.length() - 4).toLowerCase();
-      // support Boolean.bool() type
-      if (simpleName.toLowerCase().contains("boolean")) {
-        name = "bool";
-      }
-      final TypeAndName typeName = getTypeName(inputType);
-      if (ParameterizedTypeName.class.isAssignableFrom(typeName.typeName().getClass())) {
-        final TypeName innerType =
-            ((ParameterizedTypeName) typeName.typeName()).typeArguments.get(0);
-        inputDefBuilder.add(
-            "$T.$L($T.$L())",
-            ClassName.get(inputType.getClass().getPackageName(), simpleName),
-            name,
-            ClassName.get(
-                inputType.getClass().getPackageName(),
-                ((ClassName) innerType).simpleName() + "Type"),
-            ((ClassName) innerType).simpleName().toLowerCase());
-      } else {
-        inputDefBuilder.add(
-            "$T.$L()", ClassName.get(inputType.getClass().getPackageName(), simpleName), name);
-      }
+      util.error("Unrecognised data type %s".formatted(inputType), input.facetField());
     }
     inputDefBuilder.add(")");
     inputDefBuilder.add(".isMandatory($L)", input.isMandatory());
     inputDefBuilder.add(".needsModulation($L)", input.needsModulation());
     // last line
     inputDefBuilder.add(".build()");
+  }
+
+  private String getJavaTypeCreationCode(
+      JavaType<?> javaType, List<TypeName> collectClassNames, VariableElement facetField) {
+    TypeMirror typeMirror = javaType.javaModelType(processingEnv);
+    collectClassNames.add(ClassName.get(JavaType.class));
+    if (javaType.typeParameters().isEmpty()) {
+      collectClassNames.add(TypeName.get(typeMirror));
+      return "$T.create($T.class)";
+    } else {
+      collectClassNames.add(TypeName.get(processingEnv.getTypeUtils().erasure(typeMirror)));
+      collectClassNames.add(ClassName.get(List.class));
+      return "$T.create($T.class, $T.of("
+          + javaType.typeParameters().stream()
+              .map(
+                  dataType -> {
+                    if (!(dataType instanceof JavaType<?> typeParamType)) {
+                      util.error("Unrecognised data type %s".formatted(dataType), facetField);
+                      return "";
+                    } else {
+                      return getJavaTypeCreationCode(typeParamType, collectClassNames, facetField);
+                    }
+                  })
+              .collect(Collectors.joining(","))
+          + "))";
+    }
   }
 
   public String codeGenVajramRequest() {

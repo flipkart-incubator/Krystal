@@ -1,5 +1,6 @@
 package com.flipkart.krystal.datatypes;
 
+import com.google.common.collect.ImmutableList;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.LinkedHashMap;
@@ -9,25 +10,61 @@ import java.util.Set;
 import java.util.function.Function;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.type.PrimitiveType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class TypeUtils {
+final class TypeUtils {
 
-  private static final Map<String, Function<List<? extends DataType<?>>, DataType<?>>> mappings =
+  static final Map<String, Function<List<? extends DataType<?>>, JavaType<?>>> dataTypeMappings =
       new LinkedHashMap<>();
 
+  static final Map<Type, TypeKind> typeKindMappings = new LinkedHashMap<>();
+
   static {
-    mappings.put(boolean.class.getName(), _unused -> BooleanType.bool());
-    mappings.put(Boolean.class.getName(), _unused -> BooleanType.bool());
-    mappings.put(int.class.getName(), _unused -> IntegerType.integer());
-    mappings.put(Integer.class.getName(), _unused -> IntegerType.integer());
-    mappings.put(String.class.getName(), _unused -> StringType.string());
-    mappings.put(List.class.getName(), typeParams -> ListType.list(typeParams.get(0)));
-    mappings.put(Set.class.getName(), typeParams -> SetType.set(typeParams.get(0)));
+    dataTypeMappings.put(
+        boolean.class.getName(), _unused -> new JavaType<>(boolean.class, ImmutableList.of()));
+    dataTypeMappings.put(
+        Boolean.class.getName(), _unused -> new JavaType<>(boolean.class, ImmutableList.of()));
+    typeKindMappings.put(boolean.class, TypeKind.BOOLEAN);
+    typeKindMappings.put(Boolean.class, TypeKind.BOOLEAN);
+
+    dataTypeMappings.put(
+        int.class.getName(), _unused -> new JavaType<>(int.class, ImmutableList.of()));
+    dataTypeMappings.put(
+        Integer.class.getName(), _unused -> new JavaType<>(int.class, ImmutableList.of()));
+    typeKindMappings.put(int.class, TypeKind.INT);
+    typeKindMappings.put(Integer.class, TypeKind.INT);
+
+    dataTypeMappings.put(
+        String.class.getName(), _unused -> new JavaType<>(String.class, ImmutableList.of()));
+    dataTypeMappings.put(
+        List.class.getName(),
+        typeParams -> new JavaType<>(List.class, ImmutableList.of(typeParams.get(0))));
+    dataTypeMappings.put(
+        Set.class.getName(),
+        typeParams -> new JavaType<>(Set.class, ImmutableList.of(typeParams.get(0))));
+
+    typeKindMappings.put(byte.class, TypeKind.BYTE);
+    typeKindMappings.put(Byte.class, TypeKind.BYTE);
+
+    typeKindMappings.put(short.class, TypeKind.SHORT);
+    typeKindMappings.put(Short.class, TypeKind.SHORT);
+
+    typeKindMappings.put(long.class, TypeKind.LONG);
+    typeKindMappings.put(Long.class, TypeKind.LONG);
+
+    typeKindMappings.put(char.class, TypeKind.CHAR);
+    typeKindMappings.put(Character.class, TypeKind.CHAR);
+
+    typeKindMappings.put(float.class, TypeKind.FLOAT);
+    typeKindMappings.put(Float.class, TypeKind.FLOAT);
+
+    typeKindMappings.put(double.class, TypeKind.DOUBLE);
+    typeKindMappings.put(Double.class, TypeKind.DOUBLE);
   }
 
-  public static Type getJavaType(Type rawType, Type... typeParameters) {
+  static Type getJavaType(Type rawType, Type... typeParameters) {
     if (typeParameters.length == 0) {
       return rawType;
     } else {
@@ -48,15 +85,6 @@ public final class TypeUtils {
           return null;
         }
       };
-    }
-  }
-
-  public static DataType<?> getDataType(
-      String canonicalClassName, List<? extends DataType<?>> typeParameters) {
-    if (mappings.containsKey(canonicalClassName)) {
-      return mappings.get(canonicalClassName).apply(typeParameters);
-    } else {
-      return CustomType.create(canonicalClassName, typeParameters);
     }
   }
 

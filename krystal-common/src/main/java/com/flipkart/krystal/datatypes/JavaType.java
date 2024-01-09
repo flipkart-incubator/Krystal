@@ -1,7 +1,9 @@
 package com.flipkart.krystal.datatypes;
 
 import static com.flipkart.krystal.datatypes.TypeUtils.box;
+import static com.flipkart.krystal.datatypes.TypeUtils.dataTypeMappings;
 import static com.flipkart.krystal.datatypes.TypeUtils.getJavaType;
+import static com.flipkart.krystal.datatypes.TypeUtils.typeKindMappings;
 import static java.util.function.Function.identity;
 
 import com.google.common.collect.ImmutableList;
@@ -10,24 +12,25 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.ToString;
 import lombok.experimental.Accessors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Accessors(fluent = true)
-@ToString
 @EqualsAndHashCode(
     of = {"canonicalClassName", "typeParameters"},
     callSuper = false)
-public final class CustomType<T> extends AbstractDataType<T> {
+public final class JavaType<T> implements DataType<T> {
 
   /** the fully qualified name of the class, i.e. pck.outer.inner */
   private final String canonicalClassName;
@@ -35,74 +38,61 @@ public final class CustomType<T> extends AbstractDataType<T> {
   private @MonotonicNonNull String packageName;
   private @MonotonicNonNull String simpleName;
   private ImmutableList<String> enclosingClasses = ImmutableList.of();
-  @Getter private ImmutableList<DataType<?>> typeParameters = ImmutableList.of();
+  @Getter private final ImmutableList<DataType<?>> typeParameters;
 
   private @MonotonicNonNull Type clazz;
 
-  private CustomType(Class<T> clazz) {
-    this(clazz.getPackageName(), clazz.getSimpleName(), getEnclosingClasses(clazz));
+  JavaType(Class<T> clazz, List<? extends DataType<?>> typeParams) {
+    this(
+        Optional.ofNullable(clazz.getPackage()).map(Package::getName).orElse(null),
+        clazz.getSimpleName(),
+        getEnclosingClasses(clazz),
+        typeParams);
     this.clazz = clazz;
   }
 
-  public CustomType(String canonicalClassName) {
-    this.canonicalClassName = canonicalClassName;
-  }
-
-  private CustomType(String canonicalClassName, List<? extends DataType<?>> typeParameters) {
-    this.canonicalClassName = canonicalClassName;
-    this.typeParameters = ImmutableList.copyOf(typeParameters);
-  }
-
-  private CustomType(
-      String packageName, String simpleName, ImmutableList<String> enclosingClasses) {
-    this(packageName, simpleName, enclosingClasses, new ArrayList<>());
-  }
-
-  private CustomType(
-      String packageName,
+  private JavaType(
+      @Nullable String packageName,
       String simpleName,
       List<String> enclosingClasses,
       List<? extends DataType<?>> typeParameters) {
     this(
         Stream.of(Stream.of(packageName), enclosingClasses.stream(), Stream.of(simpleName))
             .flatMap(identity())
-            .collect(Collectors.joining(".")));
+            .filter(Objects::nonNull)
+            .collect(Collectors.joining(".")),
+        typeParameters);
     this.packageName = packageName;
     this.simpleName = simpleName;
     this.enclosingClasses = ImmutableList.copyOf(enclosingClasses);
+  }
+
+  private JavaType(String canonicalClassName, List<? extends DataType<?>> typeParameters) {
+    this.canonicalClassName = canonicalClassName;
     this.typeParameters = ImmutableList.copyOf(typeParameters);
   }
 
-  public static <T> CustomType<T> create(Class<T> clazz) {
-    return new CustomType<>(clazz);
+  public static <T> JavaType<T> create(Class<T> clazz) {
+    return create(clazz, ImmutableList.of());
   }
 
-  public static <T> CustomType<T> create(
-      String packageName,
-      String simpleName,
-      List<String> enclosingClasses,
-      List<? extends DataType<?>> typeParameters) {
-    return new CustomType<>(packageName, simpleName, enclosingClasses, typeParameters);
-  }
-
-  public static <T> CustomType<T> create(
-      List<String> typeInfo, List<? extends DataType<?>> typeParameters) {
-    if (typeInfo.isEmpty()) {
-      throw new IllegalArgumentException("At least one type name is needed for java types.");
+  public static <T> JavaType<T> create(Class<T> clazz, List<DataType<?>> typeParams) {
+    String canonicalClassName = clazz.getCanonicalName();
+    if (canonicalClassName != null && dataTypeMappings.containsKey(canonicalClassName)) {
+      //noinspection unchecked
+      return (JavaType<T>) dataTypeMappings.get(canonicalClassName).apply(typeParams);
+    } else {
+      return new JavaType<>(clazz, typeParams);
     }
-    if (typeInfo.size() == 1) {
-      return create(typeInfo.get(0), typeParameters);
-    }
-    return create(
-        typeInfo.get(0),
-        typeInfo.get(typeInfo.size() - 1),
-        typeInfo.subList(1, typeInfo.size() - 1),
-        typeParameters);
   }
 
-  public static <T> CustomType<T> create(
-      String className, List<? extends DataType<?>> typeParameters) {
-    return new CustomType<>(className, typeParameters);
+  public static JavaType<?> create(
+      String canonicalClassName, List<? extends DataType<?>> typeParameters) {
+    if (dataTypeMappings.containsKey(canonicalClassName)) {
+      return dataTypeMappings.get(canonicalClassName).apply(typeParameters);
+    } else {
+      return new JavaType<>(canonicalClassName, typeParameters);
+    }
   }
 
   public String canonicalClassName() {
@@ -151,6 +141,12 @@ public final class CustomType<T> extends AbstractDataType<T> {
 
   @Override
   public TypeMirror javaModelType(ProcessingEnvironment processingEnv) {
+    if (this.clazz != null) {
+      TypeKind typeKind = typeKindMappings.get(this.clazz);
+      if (typeKind != null && typeKind.isPrimitive()) {
+        return processingEnv.getTypeUtils().getPrimitiveType(typeKind);
+      }
+    }
     TypeElement typeElement = processingEnv.getElementUtils().getTypeElement(canonicalClassName);
     return processingEnv
         .getTypeUtils()
@@ -168,5 +164,14 @@ public final class CustomType<T> extends AbstractDataType<T> {
       enclosingClasses.push(enclosingClass.getSimpleName());
     }
     return ImmutableList.copyOf(enclosingClasses);
+  }
+
+  @Override
+  public String toString() {
+    try {
+      return javaReflectType().toString();
+    } catch (ClassNotFoundException e) {
+      return super.toString();
+    }
   }
 }
