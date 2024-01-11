@@ -58,7 +58,7 @@ publishing {
         maven(MavenPublication) {
             groupId = 'com.flipkart.krystal'
             artifactId = 'krystal-plugin'
-            version = project.krystal_version
+            version = project.version
             from components.java
             pom {
                 licenses {
