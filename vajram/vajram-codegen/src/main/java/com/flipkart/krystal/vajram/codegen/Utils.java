@@ -152,7 +152,8 @@ public class Utils {
             inputFields.stream()
                 .map(
                     inputField -> {
-                      InputModelBuilder<Object> inputBuilder = InputModel.builder();
+                      InputModelBuilder<Object> inputBuilder =
+                          InputModel.builder().facetField(inputField);
                       inputBuilder.name(inputField.getSimpleName().toString());
                       inputBuilder.isMandatory(!isOptional(inputField.asType(), processingEnv));
                       DataType<?> dataType =
@@ -187,7 +188,7 @@ public class Utils {
 
   private DependencyModel toDependencyModel(String vajramId, VariableElement depField) {
     Dependency dependency = depField.getAnnotation(Dependency.class);
-    DependencyModelBuilder depBuilder = DependencyModel.builder();
+    DependencyModelBuilder depBuilder = DependencyModel.builder().facetField(depField);
     depBuilder.name(depField.getSimpleName().toString());
     depBuilder.isMandatory(!isOptional(depField.asType(), processingEnv));
     Optional<TypeMirror> vajramReqType =

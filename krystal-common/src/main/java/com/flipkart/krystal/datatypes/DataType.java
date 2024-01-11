@@ -5,7 +5,7 @@ import java.util.Optional;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.type.TypeMirror;
 
-public sealed interface DataType<T> permits AbstractDataType {
+public sealed interface DataType<T> permits JavaType {
 
   /**
    * @return The java {@link Type} corresponding to this data type. Or {@link Optional#empty()} if

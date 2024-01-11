@@ -1,8 +1,7 @@
 package com.flipkart.krystal.vajram.codegen;
 
-import static com.flipkart.krystal.datatypes.TypeUtils.getDataType;
-
 import com.flipkart.krystal.datatypes.DataType;
+import com.flipkart.krystal.datatypes.JavaType;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -58,13 +57,13 @@ class DeclaredTypeVisitor extends AbstractTypeVisitor14<DataType<?>, Void> {
         return subVisitor.visit(optionalOf);
       }
     }
-    return getDataType(
+    return JavaType.create(
         t.asElement().toString(), t.getTypeArguments().stream().map(subVisitor::visit).toList());
   }
 
   @Override
   public DataType<?> visitPrimitive(PrimitiveType t, Void unused) {
-    return getDataType(t.toString(), List.of());
+    return JavaType.create(t.toString(), List.of());
   }
 
   @Override
