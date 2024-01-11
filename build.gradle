@@ -6,7 +6,7 @@ plugins {
 ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
-    krystal_version = '5.1'
+    krystal_version = '5.2-SNAPSHOT'
 }
 
 checkerFramework {
@@ -103,6 +103,16 @@ subprojects {
                 credentials {
                     username = rootProject.ext.clojarsusername
                     password = rootProject.ext.clojarspassword
+                }
+            }
+        }
+        publications.withType(MavenPublication).configureEach {
+            pom {
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
                 }
             }
         }
