@@ -1,3 +1,6 @@
+import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY
+import static com.flipkart.krystal.vajram.codegen.models.CodegenPhase.IMPLS
+
 plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
 }
@@ -39,22 +42,15 @@ publishing {
  * from the module-info.java spec to the test modules. To overcome this, we have to manually add --add-exports and
  * --add-reads arguments to the jvm so that test classes compile.
  *
- * This issue happens only when the compileTestJava task is modofied to add a dependency on testCodeGenVajramImpls.
+ * This issue happens only when the compileTestJava task is modified to add a dependency on testCodeGenVajramModels.
  * This is needed only when there are vajrams written in the 'test' directory of the project - which is the case in vajram-krystex.
  * This issue doesn't arise in traditional modules where vajrams are written in 'main' directory.
  *
- * To circumvent this, the krystal gradle plugin does not make `compileTestJava` dependend on `testCodeGenVajramImpls`.
- * If any project has vajrams in the test directory, then that project will have to explicitly make `compileTestJava` dependend on `testCodeGenVajramImpls`
+ * To circumvent this, the krystal gradle plugin does not make `compileTestJava` dependend on `testCodeGenVajramModels`.
+ * If any project has vajrams in the test directory, then that project will have to explicitly make `compileTestJava` dependend on `testCodeGenVajramModels`
  * and add custome jvm arguments as done below, so that compilation of test code succeeds.
  */
-tasks.named('testCodeGenVajramModels').configure {
-    doFirst {
-        def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
-        options.compilerArgs += modulePathArgs(moduleName)
-    }
-}
-
-tasks.named('testCodeGenVajramImpls').configure {
+tasks.named('testCodeGenVajramModels', JavaCompile).configure {
     doFirst {
         def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
         options.compilerArgs += modulePathArgs(moduleName)
@@ -62,33 +58,13 @@ tasks.named('testCodeGenVajramImpls').configure {
 }
 
 compileTestJava {
-    dependsOn 'testCodeGenVajramImpls'
+    dependsOn 'testCodeGenVajramModels'
     doFirst {
         def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
         options.compilerArgs += modulePathArgs(moduleName)
         options.compilerArgs += [
                 '--module-path', classpath.asPath,
                 '--patch-module', "$moduleName=" + files(sourceSets.test.java.srcDirs).asPath,
-        ]
-    }
-}
-
-test {
-    doFirst {
-        def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
-        jvmArgs += modulePathArgs(moduleName)
-        jvmArgs += [
-                '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
-                '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
-                '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
-                '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
-                '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
-                '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
-                '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
-                '--add-exports', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice=flipkart.krystal.vajram,com.fasterxml.jackson.databind",
-
-                '--add-opens', "flipkart.krystal.krystex/com.flipkart.krystal.krystex.logicdecorators.observability=com.fasterxml.jackson.databind",
-                '--add-opens', "$moduleName/com.flipkart.krystal.vajramexecutor.krystex=org.junit.platform.commons",
         ]
     }
 }

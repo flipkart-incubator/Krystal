@@ -4,24 +4,41 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.compile.JavaCompile
 
+import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY
+import static com.flipkart.krystal.vajram.codegen.models.CodegenPhase.IMPLS
+import static com.flipkart.krystal.vajram.codegen.models.CodegenPhase.MODELS
+
 class VajramPlugin implements Plugin<Project> {
 
 
+    public static final String EMPTY_DIR = 'tmp/empty'
+
     void apply(Project project) {
 
-        def vajramBuildDir = '/generated/sources/annotationProcessor/java'
-        String mainGeneratedSrcDir = project.buildDir.getPath() + vajramBuildDir + '/main'
-        String testGeneratedSrcDir = project.buildDir.getPath() + vajramBuildDir + '/test'
+
+        def srcGenDir = '/generated/sources/annotationProcessor/java'
+        // Vajram models are generated in a different directory to keep the build phase inputs and outputs separate -
+        // This enables better caching and to deterministically reuse previous build's outputs
+        def vajramModelsGenDir = '/generated/sources/annotationProcessor/vajramModels/java'
+
+        String mainSrcDir = 'src/main/java'
+        String testSrcDir = 'src/test/java'
+
+        String mainModelsGenDir = project.buildDir.getPath() + vajramModelsGenDir + '/main'
+        String mainImplsGenDir = project.buildDir.getPath() + srcGenDir + '/main'
+
+        String testModelsGenDir = project.buildDir.getPath() + vajramModelsGenDir + '/test'
+        String testImplsGenDir = project.buildDir.getPath() + srcGenDir + '/test'
 
         project.sourceSets {
             main {
                 java {
-                    srcDirs = ['src/main/java', mainGeneratedSrcDir]
+                    srcDirs = [mainSrcDir, mainModelsGenDir, mainImplsGenDir]
                 }
             }
             test {
                 java {
-                    srcDirs = ['src/test/java', testGeneratedSrcDir]
+                    srcDirs = [testSrcDir, testModelsGenDir, testImplsGenDir]
                 }
             }
         }
@@ -29,60 +46,47 @@ class VajramPlugin implements Plugin<Project> {
         project.tasks.register('codeGenVajramModels', JavaCompile) {
             //Compile the generatedCode
             group = 'krystal'
-            source project.sourceSets.main.allSource.srcDirs
+            source mainSrcDir
             classpath = project.configurations.compileClasspath
-            destinationDirectory = project.tasks.compileJava.destinationDirectory
+            // This is a 'proc:only' compile step. Which means, no .class files are generated. This means the destinationDirectory property
+            // is not essential used by this step.
+            // We reassign the `destinationDirectory` to a dummy empty directory so that the destination directory doesnot clash
+            // with the full compile step. This is so that gradle caching works optimally - gradle doesn't cache outputs of tasks
+            // which share output directories with other tasks -
+            // See: https://docs.gradle.org/current/userguide/build_cache_concepts.html#concepts_overlapping_outputs
+            destinationDirectory = project.getObjects().directoryProperty().fileValue(project.buildDir.toPath().resolve(EMPTY_DIR).toFile())
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
-            options.generatedSourceOutputDirectory.fileValue(project.file(mainGeneratedSrcDir))
-            options.compilerArgs += ['-proc:only']
-            outputs.upToDateWhen { false }
+            options.generatedSourceOutputDirectory.fileValue(project.file(mainModelsGenDir))
+            options.compilerArgs += ['-proc:only', '-A' + COGENGEN_PHASE_KEY + '=' + MODELS]
         }
 
-        project.tasks.register('codeGenVajramImpls', JavaCompile) {
-            //Compile the generatedCode
-            group = 'krystal'
+        project.tasks.named('compileJava', JavaCompile).configure {
             dependsOn 'codeGenVajramModels'
-            source project.sourceSets.main.allSource.srcDirs
-            classpath = project.configurations.compileClasspath
-            destinationDirectory = project.tasks.compileJava.destinationDirectory
-            //For lombok processing of EqualsAndHashCode
-            options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
-            options.generatedSourceOutputDirectory.fileValue(project.file(mainGeneratedSrcDir))
-            options.compilerArgs +=
-                    ['-proc:only', '-processor',
-                     'lombok.launch.AnnotationProcessorHider$AnnotationProcessor,' +
-                             'com.flipkart.krystal.vajram.codegen.VajramImplGenProcessor']
-            outputs.upToDateWhen { false }
+            options.compilerArgs += ['-A' + COGENGEN_PHASE_KEY + '=' + IMPLS]
         }
-
-        project.tasks.compileJava.dependsOn 'codeGenVajramImpls'
 
         project.tasks.register('testCodeGenVajramModels', JavaCompile) {
             //Compile the generatedCode
             group = 'krystal'
             mustRunAfter it.project.tasks.compileJava
-            source project.sourceSets.test.allSource.srcDirs + project.sourceSets.main.allSource.srcDirs
+            source mainSrcDir, testSrcDir
             classpath = project.configurations.testCompileClasspath + project.configurations.compileClasspath
-            destinationDirectory = project.tasks.compileTestJava.destinationDirectory
+            // This is a 'proc:only' compile step. Which means, no .class files are generated. This means the destinationDirectory property
+            // is not essential used by this step.
+            // We reassign the `destinationDirectory` to a dummy empty directory so that the destination directory doesnot clash
+            // with the full compile step. This is so that gradle caching works optimally - gradle doesn't cache outputs of tasks
+            // which share output directories with other tasks -
+            // See: https://docs.gradle.org/current/userguide/build_cache_concepts.html#concepts_overlapping_outputs
+            destinationDirectory = project.getObjects().directoryProperty().fileValue(project.buildDir.toPath().resolve(EMPTY_DIR).toFile())
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileTestJava.options.annotationProcessorPath
-            options.generatedSourceOutputDirectory.fileValue(project.file(testGeneratedSrcDir))
-            outputs.upToDateWhen { false }
+            options.generatedSourceOutputDirectory.fileValue(project.file(testModelsGenDir))
+            options.compilerArgs += ['-A' + COGENGEN_PHASE_KEY + '=' + MODELS]
         }
 
-        project.tasks.register('testCodeGenVajramImpls', JavaCompile) {
-            //Compile the generatedCode
-            group = 'krystal'
-            dependsOn 'testCodeGenVajramModels'
-            source project.sourceSets.test.allSource.srcDirs + project.sourceSets.main.allSource.srcDirs
-            classpath = project.configurations.testCompileClasspath + project.configurations.compileClasspath
-            destinationDirectory = project.tasks.compileTestJava.destinationDirectory
-            //For lombok processing of EqualsAndHashCode
-            options.annotationProcessorPath = project.tasks.compileTestJava.options.annotationProcessorPath
-            options.generatedSourceOutputDirectory.fileValue(project.file(testGeneratedSrcDir))
-            options.compilerArgs += ['-proc:only', '-processor', 'com.flipkart.krystal.vajram.codegen.VajramImplGenProcessor']
-            outputs.upToDateWhen { false }
+        project.tasks.named('compileTestJava', JavaCompile).configure {
+            options.compilerArgs += ['-A' + COGENGEN_PHASE_KEY + '=' + IMPLS]
         }
 
         project.tasks.named("jar").configure { it.dependsOn("compileJava") }
