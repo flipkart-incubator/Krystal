@@ -107,6 +107,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
   private final LogicDecorationOrdering logicDecorationOrdering;
   private final MultiLeasePool<? extends ExecutorService> executorPool;
   @NotOnlyInitialized private final InputInjector inputInjector;
+  private final Map<String, VajramMetadata> vajramMetadataMap;
 
   private VajramKryonGraph(
       String[] packagePrefixes,
@@ -125,6 +126,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
       vajrams.forEach(this::registerVajram);
     }
     this.inputInjector = new InputInjector(this, inputInjectionProvider);
+    this.vajramMetadataMap = new HashMap<>();
   }
 
   public MultiLeasePool<? extends ExecutorService> getExecutorPool() {
@@ -258,6 +260,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                 () ->
                     new NoSuchElementException(
                         "Could not find vajram with id: %s".formatted(vajramId)));
+    vajramMetadataMap.put(vajramId.vajramId(), new VajramMetadata(vajramDefinition.getVajram()));
 
     InputResolverCreationResult inputResolverCreationResult =
         createKryonLogicsForInputResolvers(vajramDefinition);
@@ -568,17 +571,14 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
 
   private <T> void registerInputInjector(
       OutputLogicDefinition<T> logicDefinition, Vajram<?> vajram) {
+    VajramMetadata metadata = vajramMetadataMap.get(vajram.getId().vajramId());
+    if (metadata == null || !metadata.isInputInjectionNeeded()) {
+      return;
+    }
     logicDefinition.registerSessionScopedLogicDecorator(
         new OutputLogicDecoratorConfig(
             InputInjector.DECORATOR_TYPE,
-            logicExecutionContext ->
-                vajram.getInputDefinitions().stream()
-                    .filter(inputDefinition -> inputDefinition instanceof Input<?>)
-                    .map(inputDefinition -> ((Input<?>) inputDefinition))
-                    .anyMatch(
-                        input ->
-                            input.sources() != null
-                                && input.sources().contains(InputSource.SESSION)),
+            logicExecutionContext -> true,
             logicExecutionContext -> logicExecutionContext.kryonId().value(),
             decoratorContext -> inputInjector));
   }
@@ -642,6 +642,19 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
 
   private record InputResolverCreationResult(
       ImmutableList<ResolverDefinition> resolverDefinitions, KryonLogicId multiResolver) {}
+
+  private record VajramMetadata(boolean isInputInjectionNeeded) {
+
+    public VajramMetadata(Vajram<?> vajram) {
+      this(
+          vajram.getInputDefinitions().stream()
+              .filter(inputDefinition -> inputDefinition instanceof Input<?>)
+              .map(inputDefinition -> ((Input<?>) inputDefinition))
+              .anyMatch(
+                  input ->
+                      input.sources() != null && input.sources().contains(InputSource.SESSION)));
+    }
+  }
 
   public Optional<VajramDefinition> getVajramDefinition(VajramID vajramId) {
     return Optional.ofNullable(vajramDefinitions.get(vajramId));

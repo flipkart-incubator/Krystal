@@ -20,8 +20,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+@Slf4j
 public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<OutputLogic<T>>
     permits IOLogicDefinition, ComputeLogicDefinition {
 
@@ -54,25 +56,33 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
     Map<String, OutputLogicDecorator> decorators = new LinkedHashMap<>();
     sessionScopedLogicDecoratorConfigs.forEach(
         (s, decoratorConfig) -> {
-          LogicExecutionContext logicExecutionContext =
-              new LogicExecutionContext(
-                  kryonDefinition.kryonId(),
-                  logicTags(),
-                  dependants,
-                  kryonDefinition.kryonDefinitionRegistry());
-          String instanceId = decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
+          try {
+            LogicExecutionContext logicExecutionContext =
+                new LogicExecutionContext(
+                    kryonDefinition.kryonId(),
+                    logicTags(),
+                    dependants,
+                    kryonDefinition.kryonDefinitionRegistry());
+            String instanceId = decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
 
-          if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
-            decorators.put(
+            if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
+              decorators.put(
+                  s,
+                  sessionScopedDecorators
+                      .computeIfAbsent(s, k -> new LinkedHashMap<>())
+                      .computeIfAbsent(
+                          instanceId,
+                          k ->
+                              decoratorConfig
+                                  .factory()
+                                  .apply(new DecoratorContext(instanceId, logicExecutionContext))));
+            }
+          } catch (Exception e) {
+            log.error(
+                "Error in getSessionScopedLogicDecorators for decorator : {} and config : {}",
                 s,
-                sessionScopedDecorators
-                    .computeIfAbsent(s, k -> new LinkedHashMap<>())
-                    .computeIfAbsent(
-                        instanceId,
-                        k ->
-                            decoratorConfig
-                                .factory()
-                                .apply(new DecoratorContext(instanceId, logicExecutionContext))));
+                decoratorConfig,
+                e);
           }
         });
     return ImmutableMap.copyOf(decorators);
