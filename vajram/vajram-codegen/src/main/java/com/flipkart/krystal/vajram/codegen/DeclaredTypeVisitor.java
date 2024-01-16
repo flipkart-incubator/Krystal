@@ -21,23 +21,23 @@ import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.UnionType;
 import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.AbstractTypeVisitor14;
-import javax.tools.Diagnostic.Kind;
 import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
 
 class DeclaredTypeVisitor extends AbstractTypeVisitor14<DataType<?>, Void> {
   private final ProcessingEnvironment processingEnv;
+  private final Utils util;
   private final boolean ignoreFirstOptional;
   private final Element element;
 
   @NotOnlyInitialized private final DeclaredTypeVisitor subVisitor;
 
-  DeclaredTypeVisitor(
-      ProcessingEnvironment processingEnv, boolean ignoreFirstOptional, Element element) {
-    this.processingEnv = processingEnv;
+  DeclaredTypeVisitor(Utils util, boolean ignoreFirstOptional, Element element) {
+    this.util = util;
+    this.processingEnv = util.getProcessingEnv();
     this.ignoreFirstOptional = ignoreFirstOptional;
     this.element = element;
     if (ignoreFirstOptional) {
-      this.subVisitor = new DeclaredTypeVisitor(processingEnv, false, element);
+      this.subVisitor = new DeclaredTypeVisitor(util, false, element);
     } else {
       this.subVisitor = this;
     }
@@ -49,9 +49,7 @@ class DeclaredTypeVisitor extends AbstractTypeVisitor14<DataType<?>, Void> {
     if (optional) {
       TypeMirror optionalOf = t.getTypeArguments().get(0);
       if (isOptional(optionalOf, processingEnv)) {
-        processingEnv
-            .getMessager()
-            .printMessage(Kind.ERROR, "Optional<Optional<..>> is not supported", element);
+        util.error("Optional<Optional<..>> is not supported", element);
       }
       if (ignoreFirstOptional) {
         return subVisitor.visit(optionalOf);

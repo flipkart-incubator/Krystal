@@ -2,6 +2,8 @@ package com.flipkart.krystal.vajram.codegen;
 
 public final class Constants {
 
+  public static final String COGENGEN_PHASE_KEY = "krystal.vajram.codegen.phase";
+
   public static final String VAL_ERR = "valErr";
   public static final String DEP_RESP = "depResp";
   public static final String RESOLVABLE_INPUTS = "resolvableInputs";

@@ -46,6 +46,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
+import javax.annotation.Nullable;
 import javax.annotation.processing.FilerException;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
@@ -65,6 +66,7 @@ import javax.lang.model.util.SimpleTypeVisitor14;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.JavaFileObject;
+import lombok.Getter;
 
 public class Utils {
 
@@ -77,7 +79,7 @@ public class Utils {
   public static final String INPUT_UTIL = "InputUtil";
   public static final String CONVERTER = "CONVERTER";
 
-  private final ProcessingEnvironment processingEnv;
+  @Getter private final ProcessingEnvironment processingEnv;
   private final Types typeUtils;
   private final Elements elementUtils;
   private final Class<?> generator;
@@ -159,8 +161,7 @@ public class Utils {
                       DataType<?> dataType =
                           inputField
                               .asType()
-                              .accept(
-                                  new DeclaredTypeVisitor(processingEnv, true, inputField), null);
+                              .accept(new DeclaredTypeVisitor(this, true, inputField), null);
                       inputBuilder.type(dataType);
                       inputBuilder.needsModulation(
                           Optional.ofNullable(inputField.getAnnotation(Modulated.class))
@@ -231,7 +232,7 @@ public class Utils {
           depField);
     } else {
       DataType<?> declaredDataType =
-          new DeclaredTypeVisitor(processingEnv, true, depField).visit(depField.asType());
+          new DeclaredTypeVisitor(this, true, depField).visit(depField.asType());
       TypeElement vajramOrReqElement =
           (TypeElement) processingEnv.getTypeUtils().asElement(vajramOrReqType);
       VajramInfoLite depVajramId = getVajramInfoLite(vajramOrReqElement);
@@ -264,7 +265,7 @@ public class Utils {
       return new VajramInfoLite(
           vajramClassSimpleName.substring(
               0, vajramClassSimpleName.length() - REQUEST_SUFFIX.length()),
-          new DeclaredTypeVisitor(processingEnv, false, responseTypeElement).visit(responseType));
+          new DeclaredTypeVisitor(this, false, responseTypeElement).visit(responseType));
     } else if (isRawAssignable(vajramOrReqClass.asType(), Vajram.class)) {
       TypeMirror responseType = getResponseType(vajramOrReqClass, Vajram.class);
       TypeElement responseTypeElement = (TypeElement) typeUtils.asElement(responseType);
@@ -276,7 +277,7 @@ public class Utils {
       }
       return new VajramInfoLite(
           vajramClassSimpleName,
-          new DeclaredTypeVisitor(processingEnv, false, responseTypeElement).visit(responseType));
+          new DeclaredTypeVisitor(this, false, responseTypeElement).visit(responseType));
     } else {
       throw new IllegalArgumentException(
           "Unknown class hierarchy of vajram class %s. Expected %s or %s"
@@ -361,7 +362,7 @@ public class Utils {
     }
   }
 
-  public void error(String message, Element element) {
+  public void error(String message, @Nullable Element element) {
     processingEnv.getMessager().printMessage(Kind.ERROR, message, element);
   }
 

@@ -24,8 +24,6 @@ dependencies {
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jacksonVersion
 }
 
-project.tasks.named("sourcesJar").configure { it.dependsOn("compileJava") }
-
 test {
     minHeapSize = "128m" // initial heap size
     maxHeapSize = "4g" // maximum heap size

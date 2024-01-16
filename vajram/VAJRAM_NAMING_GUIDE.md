@@ -1,7 +1,7 @@
 1. **Vajram names are verbs in [upper-camel-case](https://en.wikipedia.org/wiki/Camel_case) verbs**: A Vajram is the smallest unit of business logic in the Krystal framework, which performs a particular function. The name of a vajram should reflect that functionality.
     1. Vajram names must be verbs: If the vajram retrieves and returns some data, then it can be name `GetX`
     2. If the vajram updates some data, it can be named `UpdateY`
-    3. Other possibilities are `GetAndUpdateZ` , `LoginUser` , `SendSMS`  etc.
+    3. Other possibilities are `GetAndUpdateZ` , `LoginUser` , `SendSMS` etc.
 2. **Vajram Ids are purely functional in nature**:
     1. **Avoid common suffixes** Internally krystal reads all vajram definitions and creates a Directed Acyclic Graph of kryons (Each kryon corresponds to exactly one vajram and is a node in the graph). So for someone who understands the internals of Krystal, it might be tempting to name the vajram with a 'Node', 'Vajram' or 'Kryon' in the vajram id. This is not advisable. The name of the vajram should only refer to what it does and nothing else.
     2. **Don't use `Batch` in vajram name** Some vajrams can have input modulation enabled (for example, batching), but krystal abstracts out this implementation detail to this vajram's client vajrams. This means a vajram which has input modulation disabled now may enable it a later point in time, or vice versa. This is the reason the word `Batch` should not be present in the vajram Id.

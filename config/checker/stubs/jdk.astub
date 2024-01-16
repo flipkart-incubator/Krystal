@@ -15,3 +15,11 @@ class ForkJoinPool{
       long keepAliveTime,
       TimeUnit unit);
 }
+
+package javax.annotation.processing;
+
+class Messager {
+  void printMessage(Diagnostic.Kind kind, CharSequence msg, @Nullable Element e);
+}
+
+
