@@ -10,8 +10,8 @@ import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderReq
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
+import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.SingleExecute;
 import com.flipkart.krystal.vajram.facets.Using;
@@ -66,7 +66,7 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
             });
   }
 
-  @VajramLogic
+  @Output
   static Integer add(ChainAdderInputs allInputs) {
     return allInputs.sum().orElse(0)
         + allInputs.chainSum().values().stream().mapToInt(value -> value.value().orElse(0)).sum();

@@ -6,8 +6,8 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Input;
+import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.modulation.Modulated;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceInputUtil.TestUserServiceCommonInputs;
@@ -30,7 +30,7 @@ public abstract class TestUserService extends IOVajram<TestUserInfo> {
   public static final LongAdder CALL_COUNTER = new LongAdder();
   public static final Set<TestUserServiceRequest> REQUESTS = new LinkedHashSet<>();
 
-  @VajramLogic
+  @Output
   static ImmutableMap<TestUserServiceModInputs, CompletableFuture<TestUserInfo>> callUserService(
       ModulatedInput<TestUserServiceModInputs, TestUserServiceCommonInputs> modulatedRequest) {
     CALL_COUNTER.increment();

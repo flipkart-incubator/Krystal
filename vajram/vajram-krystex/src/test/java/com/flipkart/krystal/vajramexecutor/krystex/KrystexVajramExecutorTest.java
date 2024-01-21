@@ -20,8 +20,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.config.Tag;
-import com.flipkart.krystal.krystex.MainLogic;
-import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.OutputLogic;
+import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
@@ -30,8 +30,8 @@ import com.flipkart.krystal.krystex.logicdecoration.FlushCommand;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecoratorCommand;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
@@ -393,7 +393,7 @@ class KrystexVajramExecutorTest {
                     ImmutableMap.of(
                         mainLogicExecReporter.decoratorType(),
                         List.of(
-                            new MainLogicDecoratorConfig(
+                            new OutputLogicDecoratorConfig(
                                 mainLogicExecReporter.decoratorType(),
                                 (logicExecutionContext) -> true,
                                 logicExecutionContext -> mainLogicExecReporter.decoratorType(),
@@ -746,11 +746,11 @@ class KrystexVajramExecutorTest {
             logicExecutionContext -> "",
             _x -> true,
             modulatorContext ->
-                new MainLogicDecorator() {
+                new OutputLogicDecorator() {
                   @Override
-                  public MainLogic<Object> decorateLogic(
-                      MainLogic<Object> logicToDecorate,
-                      MainLogicDefinition<Object> originalLogicDefinition) {
+                  public OutputLogic<Object> decorateLogic(
+                      OutputLogic<Object> logicToDecorate,
+                      OutputLogicDefinition<Object> originalLogicDefinition) {
                     return logicToDecorate;
                   }
 
@@ -772,11 +772,11 @@ class KrystexVajramExecutorTest {
             logicExecutionContext1 -> "1",
             _x -> true,
             modulatorContext1 ->
-                new MainLogicDecorator() {
+                new OutputLogicDecorator() {
                   @Override
-                  public MainLogic<Object> decorateLogic(
-                      MainLogic<Object> logicToDecorate,
-                      MainLogicDefinition<Object> originalLogicDefinition) {
+                  public OutputLogic<Object> decorateLogic(
+                      OutputLogic<Object> logicToDecorate,
+                      OutputLogicDefinition<Object> originalLogicDefinition) {
                     return logicToDecorate;
                   }
 
@@ -880,16 +880,16 @@ class KrystexVajramExecutorTest {
           return instanceId;
         };
     return builder
-        .decorateVajramLogicForSession(
-            new MainLogicDecoratorConfig(
+        .decorateOutputLogicForSession(
+            new OutputLogicDecoratorConfig(
                 Resilience4JBulkhead.DECORATOR_TYPE,
                 isIOVajram,
                 instanceIdCreator,
                 decoratorContext ->
                     new Resilience4JBulkhead(
                         instanceIdCreator.apply(decoratorContext.logicExecutionContext()))))
-        .decorateVajramLogicForSession(
-            new MainLogicDecoratorConfig(
+        .decorateOutputLogicForSession(
+            new OutputLogicDecoratorConfig(
                 Resilience4JCircuitBreaker.DECORATOR_TYPE,
                 isIOVajram,
                 instanceIdCreator,

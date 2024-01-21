@@ -7,8 +7,8 @@ import static java.util.stream.Collectors.toMap;
 import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.IOVajram;
+import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.facets.DefaultInputResolverDefinition;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.QualifiedInputs;
@@ -48,13 +48,13 @@ public final class VajramDefinition {
 
   @Getter private final ImmutableCollection<InputResolverDefinition> inputResolverDefinitions;
 
-  @Getter private final ImmutableMap<Object, Tag> mainLogicTags;
+  @Getter private final ImmutableMap<Object, Tag> outputLogicTags;
   @Getter private final ImmutableMap<String, ImmutableMap<Object, Tag>> facetTags;
 
   public VajramDefinition(Vajram<?> vajram) {
     this.vajram = vajram;
     this.inputResolverDefinitions = ImmutableList.copyOf(parseInputResolvers(vajram));
-    this.mainLogicTags = parseVajramLogicTags(vajram);
+    this.outputLogicTags = parseOutputLogicTags(vajram);
     this.facetTags = parseFacetTags(vajram);
   }
 
@@ -129,18 +129,18 @@ public final class VajramDefinition {
     return inputResolvers;
   }
 
-  private static ImmutableMap<Object, Tag> parseVajramLogicTags(Vajram<?> vajram) {
-    Optional<Method> vajramLogicMethod =
+  private static ImmutableMap<Object, Tag> parseOutputLogicTags(Vajram<?> vajram) {
+    Optional<Method> outputLogicMethod =
         Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
-            .filter(method -> method.getAnnotation(VajramLogic.class) != null)
+            .filter(method -> method.getAnnotation(Output.class) != null)
             .findFirst();
     List<AnnotationTag<Annotation>> tagWithArray =
-        vajramLogicMethod
+        outputLogicMethod
             .map(method -> Arrays.stream(method.getAnnotations()).map(AnnotationTag::from).toList())
             .orElse(List.of());
     Map<Object, Tag> collect =
         tagWithArray.stream().collect(toMap(Tag::tagKey, Function.identity()));
-    vajramLogicMethod.ifPresent(
+    outputLogicMethod.ifPresent(
         method -> {
           Service service = method.getAnnotation(Service.class);
           if (service != null) {

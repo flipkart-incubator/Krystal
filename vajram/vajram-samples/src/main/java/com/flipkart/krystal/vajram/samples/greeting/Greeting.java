@@ -5,8 +5,8 @@ import static com.flipkart.krystal.vajram.samples.greeting.GreetingRequest.userI
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
+import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.samples.greeting.GreetingInputUtil.GreetingInputs;
@@ -55,7 +55,7 @@ public abstract class Greeting extends ComputeVajram<String> {
 
   // This is the core business logic of this Vajram
   // Sync vajrams can return any object. AsyncVajrams need to return {CompletableFuture}s
-  @VajramLogic
+  @Output
   public static String createGreetingMessage(GreetingInputs inputs) {
     String userId = inputs.userId();
     Optional<UserInfo> userInfo = inputs.userInfo();

@@ -8,8 +8,8 @@ import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderReq
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
+import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.facets.SingleExecute;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
@@ -73,7 +73,7 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
     return 0;
   }
 
-  @VajramLogic
+  @Output
   static Integer add(SplitAdderInputs allInputs) {
     return allInputs.splitSum1().orElse(0)
         + allInputs.splitSum2().orElse(0)

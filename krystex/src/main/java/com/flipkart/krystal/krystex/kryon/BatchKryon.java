@@ -19,8 +19,8 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.LogicDefinition;
-import com.flipkart.krystal.krystex.MainLogic;
-import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.OutputLogic;
+import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.BatchCommand;
 import com.flipkart.krystal.krystex.commands.CallbackBatch;
 import com.flipkart.krystal.krystex.commands.Flush;
@@ -28,7 +28,7 @@ import com.flipkart.krystal.krystex.commands.ForwardBatch;
 import com.flipkart.krystal.krystex.logicdecoration.FlushCommand;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
@@ -81,12 +81,12 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       new LinkedHashMap<>();
 
   private final Set<DependantChain> flushedDependantChain = new LinkedHashSet<>();
-  private final Map<DependantChain, Boolean> mainLogicExecuted = new LinkedHashMap<>();
+  private final Map<DependantChain, Boolean> outputLogicExecuted = new LinkedHashMap<>();
 
   BatchKryon(
       KryonDefinition kryonDefinition,
       KryonExecutor kryonExecutor,
-      Function<LogicExecutionContext, ImmutableMap<String, MainLogicDecorator>>
+      Function<LogicExecutionContext, ImmutableMap<String, OutputLogicDecorator>>
           requestScopedDecoratorsSupplier,
       LogicDecorationOrdering logicDecorationOrdering,
       RequestIdGenerator requestIdGenerator) {
@@ -119,9 +119,9 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       triggerDependencies(
           dependantChain, getTriggerableDependencies(dependantChain, kryonCommand.inputNames()));
 
-      Optional<CompletableFuture<BatchResponse>> mainLogicFuture =
-          executeMainLogicIfPossible(dependantChain);
-      mainLogicFuture.ifPresent(f -> linkFutures(f, resultForDepChain));
+      Optional<CompletableFuture<BatchResponse>> outputLogicFuture =
+          executeOutputLogicIfPossible(dependantChain);
+      outputLogicFuture.ifPresent(f -> linkFutures(f, resultForDepChain));
     } catch (Throwable e) {
       resultForDepChain.completeExceptionally(e);
     }
@@ -341,11 +341,11 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     flushDependencyIfNeeded(depName, dependantChain);
   }
 
-  private Optional<CompletableFuture<BatchResponse>> executeMainLogicIfPossible(
+  private Optional<CompletableFuture<BatchResponse>> executeOutputLogicIfPossible(
       DependantChain dependantChain) {
     ForwardBatch forwardCommand = getForwardCommand(dependantChain);
-    // If all the inputs and dependency values are available, then prepare run mainLogic
-    ImmutableSet<String> inputNames = kryonDefinition.getMainLogicDefinition().inputNames();
+    // If all the inputs and dependency values are available, then prepare to run outputLogic
+    ImmutableSet<String> inputNames = kryonDefinition.getOutputLogicDefinition().inputNames();
     if (availableInputsByDepChain
         .getOrDefault(dependantChain, ImmutableSet.of())
         .containsAll(inputNames)) { // All the inputs of the kryon logic have data present
@@ -354,31 +354,32 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
             failedFuture(new SkippedExecutionException(getSkipMessage(forwardCommand))));
       }
       return Optional.of(
-          executeMainLogic(forwardCommand.executableRequests().keySet(), dependantChain));
+          executeOutputLogic(forwardCommand.executableRequests().keySet(), dependantChain));
     }
     return Optional.empty();
   }
 
-  private CompletableFuture<BatchResponse> executeMainLogic(
+  private CompletableFuture<BatchResponse> executeOutputLogic(
       Set<RequestId> requestIds, DependantChain dependantChain) {
 
-    MainLogicDefinition<Object> mainLogicDefinition = kryonDefinition.getMainLogicDefinition();
+    OutputLogicDefinition<Object> outputLogicDefinition =
+        kryonDefinition.getOutputLogicDefinition();
 
-    Map<RequestId, MainLogicInputs> mainLogicInputs = new LinkedHashMap<>();
+    Map<RequestId, OutputLogicInputs> outputLogicInputs = new LinkedHashMap<>();
 
     for (RequestId requestId : requestIds) {
-      mainLogicInputs.put(requestId, getInputsForMainLogic(dependantChain, requestId));
+      outputLogicInputs.put(requestId, getInputsForOutputLogic(dependantChain, requestId));
     }
     CompletableFuture<BatchResponse> resultForBatch = new CompletableFuture<>();
     Map<RequestId, CompletableFuture<ValueOrError<Object>>> results =
-        executeDecoratedMainLogic(mainLogicDefinition, mainLogicInputs, dependantChain);
+        executeDecoratedOutputLogic(outputLogicDefinition, outputLogicInputs, dependantChain);
 
     allOf(results.values().toArray(CompletableFuture[]::new))
         .whenComplete(
             (unused, throwable) -> {
               resultForBatch.complete(
                   new BatchResponse(
-                      mainLogicInputs.keySet().stream()
+                      outputLogicInputs.keySet().stream()
                           .collect(
                               toImmutableMap(
                                   identity(),
@@ -387,42 +388,42 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
                                           .getOrDefault(requestId, new CompletableFuture<>())
                                           .getNow(empty())))));
             });
-    mainLogicExecuted.put(dependantChain, true);
+    outputLogicExecuted.put(dependantChain, true);
     flushDecoratorsIfNeeded(dependantChain);
     return resultForBatch;
   }
 
-  private Map<RequestId, CompletableFuture<ValueOrError<Object>>> executeDecoratedMainLogic(
-      MainLogicDefinition<Object> mainLogicDefinition,
-      Map<RequestId, MainLogicInputs> inputs,
+  private Map<RequestId, CompletableFuture<ValueOrError<Object>>> executeDecoratedOutputLogic(
+      OutputLogicDefinition<Object> outputLogicDefinition,
+      Map<RequestId, OutputLogicInputs> inputs,
       DependantChain dependantChain) {
-    NavigableSet<MainLogicDecorator> sortedDecorators = getSortedDecorators(dependantChain);
-    MainLogic<Object> logic = mainLogicDefinition::execute;
+    NavigableSet<OutputLogicDecorator> sortedDecorators = getSortedDecorators(dependantChain);
+    OutputLogic<Object> logic = outputLogicDefinition::execute;
 
-    for (MainLogicDecorator mainLogicDecorator : sortedDecorators) {
-      logic = mainLogicDecorator.decorateLogic(logic, mainLogicDefinition);
+    for (OutputLogicDecorator outputLogicDecorator : sortedDecorators) {
+      logic = outputLogicDecorator.decorateLogic(logic, outputLogicDefinition);
     }
-    MainLogic<Object> finalLogic = logic;
+    OutputLogic<Object> finalLogic = logic;
     Map<RequestId, CompletableFuture<ValueOrError<Object>>> resultsByRequest =
         new LinkedHashMap<>();
     inputs.forEach(
-        (requestId, mainLogicInputs) -> {
+        (requestId, outputLogicInputs) -> {
           // Retrieve existing result from cache if result for this set of inputs has already been
           // calculated
           CompletableFuture<@Nullable Object> cachedResult =
-              resultsCache.get(mainLogicInputs.providedInputs());
+              resultsCache.get(outputLogicInputs.providedInputs());
           if (cachedResult == null) {
             try {
               cachedResult =
                   finalLogic
-                      .execute(ImmutableList.of(mainLogicInputs.allInputsAndDependencies()))
+                      .execute(ImmutableList.of(outputLogicInputs.allInputsAndDependencies()))
                       .values()
                       .iterator()
                       .next();
             } catch (Exception e) {
               cachedResult = failedFuture(e);
             }
-            resultsCache.put(mainLogicInputs.providedInputs(), cachedResult);
+            resultsCache.put(outputLogicInputs.providedInputs(), cachedResult);
           }
           resultsByRequest.put(requestId, cachedResult.handle(ValueOrError::valueOrError));
         });
@@ -458,11 +459,11 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     if (!flushedDependantChain.contains(dependantChain)) {
       return;
     }
-    if (mainLogicExecuted.getOrDefault(dependantChain, false)
+    if (outputLogicExecuted.getOrDefault(dependantChain, false)
         || getForwardCommand(dependantChain).shouldSkip()) {
-      Iterable<MainLogicDecorator> reverseSortedDecorators =
+      Iterable<OutputLogicDecorator> reverseSortedDecorators =
           getSortedDecorators(dependantChain)::descendingIterator;
-      for (MainLogicDecorator decorator : reverseSortedDecorators) {
+      for (OutputLogicDecorator decorator : reverseSortedDecorators) {
         decorator.executeCommand(new FlushCommand(dependantChain));
       }
     }
@@ -494,7 +495,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     return new Inputs(inputValues);
   }
 
-  private MainLogicInputs getInputsForMainLogic(
+  private OutputLogicInputs getInputsForOutputLogic(
       DependantChain dependantChain, RequestId requestId) {
     ForwardBatch forwardBatch = inputsValueCollector.get(dependantChain);
     if (forwardBatch == null) {
@@ -511,7 +512,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
                     e -> e.getValue().resultsByRequest().getOrDefault(requestId, Results.empty())));
     Inputs inputValues = forwardBatch.executableRequests().getOrDefault(requestId, Inputs.empty());
     Inputs allInputsAndDependencies = Inputs.union(depValues, inputValues.values());
-    return new MainLogicInputs(inputValues, allInputsAndDependencies);
+    return new OutputLogicInputs(inputValues, allInputsAndDependencies);
   }
 
   private void collectInputValues(ForwardBatch forwardBatch) {
@@ -530,7 +531,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     }
     SetView<String> resolvableInputNames =
         Sets.difference(
-            kryonDefinition.getMainLogicDefinition().inputNames(),
+            kryonDefinition.getOutputLogicDefinition().inputNames(),
             kryonDefinition.dependencyKryons().keySet());
     if (!inputNames.containsAll(resolvableInputNames)) {
       throw new IllegalArgumentException(

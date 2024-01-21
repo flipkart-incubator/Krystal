@@ -14,8 +14,8 @@ import static java.util.stream.Collectors.joining;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
+import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
@@ -60,7 +60,7 @@ public abstract class HelloFriends extends ComputeVajram<String> {
     } else return Collections.emptySet();
   }
 
-  @VajramLogic
+  @Output
   public static String sayHellos(HelloFriendsInputs request) throws Exception {
     return "Hello Friends of %s! %s"
         .formatted(

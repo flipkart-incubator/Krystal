@@ -9,7 +9,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 
 public abstract sealed class LogicDefinition<L extends Logic>
-    permits MainLogicDefinition, MultiResolverDefinition, ResolverLogicDefinition {
+    permits OutputLogicDefinition, MultiResolverDefinition, ResolverLogicDefinition {
 
   private final KryonLogicId kryonLogicId;
   private final ImmutableSet<String> inputNames;

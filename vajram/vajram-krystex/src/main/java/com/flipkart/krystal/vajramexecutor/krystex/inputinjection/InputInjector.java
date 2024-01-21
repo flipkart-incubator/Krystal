@@ -8,11 +8,11 @@ import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.datatypes.DataType;
-import com.flipkart.krystal.krystex.MainLogic;
-import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.OutputLogic;
+import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
@@ -34,7 +34,7 @@ import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
 import org.checkerframework.checker.initialization.qual.UnderInitialization;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class InputInjector implements MainLogicDecorator {
+public final class InputInjector implements OutputLogicDecorator {
 
   public static final String DECORATOR_TYPE = InputInjector.class.getName();
   @NotOnlyInitialized private final VajramKryonGraph vajramKryonGraph;
@@ -48,8 +48,8 @@ public final class InputInjector implements MainLogicDecorator {
   }
 
   @Override
-  public MainLogic<Object> decorateLogic(
-      MainLogic<Object> logicToDecorate, MainLogicDefinition<Object> originalLogicDefinition) {
+  public OutputLogic<Object> decorateLogic(
+      OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
     return inputsList -> {
       Map<Inputs, Inputs> newInputsToOldInputs = new HashMap<>();
       ImmutableList<Inputs> inputValues =

@@ -465,7 +465,7 @@ public class VajramCodeGenerator {
                   }
                 }
               } else {
-                // call vajram logic method with all input values
+                // call output logic method with all input values
                 if (inputDef.isMandatory()) {
                   inputCodeBlocks.add(
                       CodeBlock.builder()
@@ -484,7 +484,7 @@ public class VajramCodeGenerator {
       if (!util.isRawAssignable(returnType, CompletableFuture.class)) {
         // TODO: Validate IOVajram response type is CompletableFuture<Type>"
         String errorMessage =
-            "The VajramLogic of non-modulated IO vajram %s must return a CompletableFuture"
+            "The OutputLogic of non-modulated IO vajram %s must return a CompletableFuture"
                 .formatted(vajramName);
         util.error(errorMessage, getParsedVajramData().outputLogic());
         throw new VajramValidationException(errorMessage);

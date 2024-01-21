@@ -19,7 +19,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
@@ -93,7 +93,7 @@ class GreetingVajramTest {
                         ImmutableMap.of(
                             mainLogicExecReporter.decoratorType(),
                             List.of(
-                                new MainLogicDecoratorConfig(
+                                new OutputLogicDecoratorConfig(
                                     mainLogicExecReporter.decoratorType(),
                                     logicExecutionContext -> true,
                                     logicExecutionContext -> mainLogicExecReporter.decoratorType(),

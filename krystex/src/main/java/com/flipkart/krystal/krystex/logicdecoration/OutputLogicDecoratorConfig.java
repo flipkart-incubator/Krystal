@@ -16,10 +16,10 @@ import java.util.function.Predicate;
  * @param factory A factory which creates an instance of the logic decorator with the given
  *     instanceId.
  */
-public record MainLogicDecoratorConfig(
+public record OutputLogicDecoratorConfig(
     String decoratorType,
     Predicate<LogicExecutionContext> shouldDecorate,
     Function<LogicExecutionContext, String> instanceIdGenerator,
-    Function<DecoratorContext, MainLogicDecorator> factory) {
+    Function<DecoratorContext, OutputLogicDecorator> factory) {
   public record DecoratorContext(String instanceId, LogicExecutionContext logicExecutionContext) {}
 }

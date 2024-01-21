@@ -7,17 +7,17 @@ import static java.util.concurrent.CompletableFuture.allOf;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.data.ValueOrError;
-import com.flipkart.krystal.krystex.MainLogic;
-import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.OutputLogic;
+import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public class MainLogicExecReporter implements MainLogicDecorator {
+public class MainLogicExecReporter implements OutputLogicDecorator {
 
   private final KryonExecutionReport kryonExecutionReport;
 
@@ -26,8 +26,8 @@ public class MainLogicExecReporter implements MainLogicDecorator {
   }
 
   @Override
-  public MainLogic<Object> decorateLogic(
-      MainLogic<Object> logicToDecorate, MainLogicDefinition<Object> originalLogicDefinition) {
+  public OutputLogic<Object> decorateLogic(
+      OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
     return inputs -> {
       KryonId kryonId = originalLogicDefinition.kryonLogicId().kryonId();
       KryonLogicId kryonLogicId = originalLogicDefinition.kryonLogicId();

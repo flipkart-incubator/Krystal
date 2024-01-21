@@ -4,7 +4,7 @@ import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Inputs;
-import com.flipkart.krystal.krystex.MainLogic;
+import com.flipkart.krystal.krystex.OutputLogic;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.github.resilience4j.decorators.Decorators;
@@ -18,7 +18,7 @@ final class R4JUtils {
 
   @SuppressWarnings("RedundantTypeArguments") // To avoid nullChecker errors
   static DecorateCompletionStage<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>>
-      decorateAsyncExecute(MainLogic<Object> logicToDecorate, ImmutableList<Inputs> inputsList) {
+      decorateAsyncExecute(OutputLogic<Object> logicToDecorate, ImmutableList<Inputs> inputsList) {
     return Decorators.<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>>ofCompletionStage(
         () -> {
           var result = logicToDecorate.execute(inputsList);

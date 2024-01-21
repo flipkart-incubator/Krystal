@@ -4,16 +4,16 @@ import static com.flipkart.krystal.krystex.logicdecorators.resilience4j.R4JUtils
 import static com.flipkart.krystal.krystex.logicdecorators.resilience4j.R4JUtils.extractResponseMap;
 
 import com.flipkart.krystal.config.ConfigProvider;
-import com.flipkart.krystal.krystex.MainLogic;
-import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.OutputLogic;
+import com.flipkart.krystal.krystex.OutputLogicDefinition;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.internal.CircuitBreakerStateMachine;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class Resilience4JCircuitBreaker implements MainLogicDecorator {
+public final class Resilience4JCircuitBreaker implements OutputLogicDecorator {
 
   public static final String DECORATOR_TYPE = Resilience4JCircuitBreaker.class.getName();
 
@@ -29,8 +29,8 @@ public final class Resilience4JCircuitBreaker implements MainLogicDecorator {
   }
 
   @Override
-  public MainLogic<Object> decorateLogic(
-      MainLogic<Object> logicToDecorate, MainLogicDefinition<Object> originalLogicDefinition) {
+  public OutputLogic<Object> decorateLogic(
+      OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
     CircuitBreaker circuitBreaker = this.circuitBreaker;
     if (circuitBreaker != null) {
       return inputsList ->

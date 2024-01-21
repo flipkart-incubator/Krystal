@@ -15,8 +15,8 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
+import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.QualifiedInputs;
 import com.flipkart.krystal.vajram.facets.resolution.AbstractInputResolver;
@@ -81,7 +81,7 @@ public abstract class HelloFriendsV2 extends ComputeVajram<String> {
     return ImmutableList.copyOf(resolvers);
   }
 
-  @VajramLogic
+  @Output
   public static String sayHellos(HelloFriendsV2Inputs request) {
     return "Hello Friends! %s"
         .formatted(

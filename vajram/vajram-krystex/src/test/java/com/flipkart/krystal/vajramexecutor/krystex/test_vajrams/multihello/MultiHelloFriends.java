@@ -13,8 +13,8 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihell
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
+import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
@@ -57,7 +57,7 @@ public abstract class MultiHelloFriends extends ComputeVajram<String> {
     return executeFanoutWith(userIds);
   }
 
-  @VajramLogic
+  @Output
   public static String sayHellos(MultiHelloFriendsInputs allInputs) {
     List<String> result = new ArrayList<>();
     for (String userId : allInputs.userIds()) {

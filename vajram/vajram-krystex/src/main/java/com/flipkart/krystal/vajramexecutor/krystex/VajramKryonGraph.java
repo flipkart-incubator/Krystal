@@ -23,7 +23,7 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
-import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
@@ -32,7 +32,7 @@ import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
 import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
 import com.flipkart.krystal.krystex.resolution.ResolverCommand;
@@ -102,7 +102,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
   private final VajramIndex vajramIndex = new VajramIndex();
 
   /** LogicDecorator Id -> LogicDecoratorConfig */
-  private final ImmutableMap<String, MainLogicDecoratorConfig> sessionScopedDecoratorConfigs;
+  private final ImmutableMap<String, OutputLogicDecoratorConfig> sessionScopedDecoratorConfigs;
 
   private final LogicDecorationOrdering logicDecorationOrdering;
   private final MultiLeasePool<? extends ExecutorService> executorPool;
@@ -110,7 +110,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
 
   private VajramKryonGraph(
       String[] packagePrefixes,
-      ImmutableMap<String, MainLogicDecoratorConfig> sessionScopedDecorators,
+      ImmutableMap<String, OutputLogicDecoratorConfig> sessionScopedDecorators,
       LogicDecorationOrdering logicDecorationOrdering,
       @Nullable InputInjectionProvider inputInjectionProvider,
       double maxParallelismPerCore) {
@@ -150,13 +150,13 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
   public void registerInputModulators(VajramID vajramID, InputModulatorConfig... inputModulators) {
     KryonId kryonId = getKryonId(vajramID);
     VajramDefinition vajramDefinition = vajramDefinitions.get(vajramID);
-    MainLogicDefinition<Object> mainLogicDefinition =
-        kryonDefinitionRegistry.get(kryonId).getMainLogicDefinition();
+    OutputLogicDefinition<Object> outputLogicDefinition =
+        kryonDefinitionRegistry.get(kryonId).getOutputLogicDefinition();
     if (kryonId == null || vajramDefinition == null) {
       throw new IllegalArgumentException("Unable to find vajram with id %s".formatted(vajramID));
     }
     Vajram<?> vajram = vajramDefinition.getVajram();
-    List<MainLogicDecoratorConfig> mainLogicDecoratorConfigList = new ArrayList<>();
+    List<OutputLogicDecoratorConfig> outputLogicDecoratorConfigList = new ArrayList<>();
     for (InputModulatorConfig inputModulatorConfig : inputModulators) {
       Predicate<LogicExecutionContext> biFunction =
           logicExecutionContext -> {
@@ -166,8 +166,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                     .anyMatch(Input::needsModulation)
                 && inputModulatorConfig.shouldModulate().test(logicExecutionContext);
           };
-      mainLogicDecoratorConfigList.add(
-          new MainLogicDecoratorConfig(
+      outputLogicDecoratorConfigList.add(
+          new OutputLogicDecoratorConfig(
               InputModulationDecorator.DECORATOR_TYPE,
               biFunction,
               inputModulatorConfig.instanceIdGenerator(),
@@ -176,7 +176,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                       .decoratorFactory()
                       .apply(new ModulatorContext(vajram, decoratorContext))));
     }
-    mainLogicDefinition.registerRequestScopedDecorator(mainLogicDecoratorConfigList);
+    outputLogicDefinition.registerRequestScopedDecorator(outputLogicDecoratorConfigList);
   }
 
   /**
@@ -265,13 +265,13 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     ImmutableMap<String, KryonId> depNameToProviderKryon =
         createKryonDefinitionsForDependencies(vajramDefinition);
 
-    MainLogicDefinition<?> vajramLogicMainLogicDefinition =
+    OutputLogicDefinition<?> outputLogicDefinition =
         createVajramKryonLogic(kryonId, vajramDefinition);
 
     KryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newKryonDefinition(
             kryonId.value(),
-            vajramLogicMainLogicDefinition.kryonLogicId(),
+            outputLogicDefinition.kryonLogicId(),
             depNameToProviderKryon,
             inputResolverCreationResult.resolverDefinitions(),
             inputResolverCreationResult.multiResolver());
@@ -510,7 +510,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     throw new MandatoryInputsMissingException(vajramID, missingMandatoryValues);
   }
 
-  private MainLogicDefinition<?> createVajramKryonLogic(
+  private OutputLogicDefinition<?> createVajramKryonLogic(
       KryonId kryonId, VajramDefinition vajramDefinition) {
     VajramID vajramId = vajramDefinition.getVajram().getId();
     ImmutableCollection<VajramFacetDefinition> inputDefinitions =
@@ -520,14 +520,13 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
             .filter(this::isVisibleToKrystex)
             .map(VajramFacetDefinition::name)
             .collect(toImmutableSet());
-    KryonLogicId vajramLogicKryonName =
-        new KryonLogicId(kryonId, "%s:vajramLogic".formatted(vajramId));
-    // Step 4: Create and register Kryon for the main vajram logic
+    KryonLogicId outputLogicName = new KryonLogicId(kryonId, "%s:outputLogic".formatted(vajramId));
+    // Step 4: Create and register Kryon for the output logic
 
-    MainLogicDefinition<?> vajramLogic =
-        logicRegistryDecorator.newMainLogic(
+    OutputLogicDefinition<?> outputLogic =
+        logicRegistryDecorator.newOutputLogic(
             vajramDefinition.getVajram() instanceof IOVajram<?>,
-            vajramLogicKryonName,
+            outputLogicName,
             inputNames,
             inputsList -> {
               List<Inputs> validInputs = new ArrayList<>();
@@ -552,12 +551,12 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                   .putAll(failedValidations)
                   .build();
             },
-            vajramDefinition.getMainLogicTags());
-    registerInputInjector(vajramLogic, vajramDefinition.getVajram());
+            vajramDefinition.getOutputLogicTags());
+    registerInputInjector(outputLogic, vajramDefinition.getVajram());
     sessionScopedDecoratorConfigs
         .values()
-        .forEach(vajramLogic::registerSessionScopedLogicDecorator);
-    return vajramLogic;
+        .forEach(outputLogic::registerSessionScopedLogicDecorator);
+    return outputLogic;
   }
 
   private boolean isVisibleToKrystex(VajramFacetDefinition vajramInputDefinition) {
@@ -567,9 +566,10 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     return true;
   }
 
-  private <T> void registerInputInjector(MainLogicDefinition<T> logicDefinition, Vajram<?> vajram) {
+  private <T> void registerInputInjector(
+      OutputLogicDefinition<T> logicDefinition, Vajram<?> vajram) {
     logicDefinition.registerSessionScopedLogicDecorator(
-        new MainLogicDecoratorConfig(
+        new OutputLogicDecoratorConfig(
             InputInjector.DECORATOR_TYPE,
             logicExecutionContext ->
                 vajram.getInputDefinitions().stream()
@@ -653,7 +653,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
 
   public static final class Builder {
     private final Set<String> packagePrefixes = new LinkedHashSet<>();
-    private final Map<String, MainLogicDecoratorConfig> sessionScopedDecoratorConfigs =
+    private final Map<String, OutputLogicDecoratorConfig> sessionScopedDecoratorConfigs =
         new HashMap<>();
     private LogicDecorationOrdering logicDecorationOrdering =
         new LogicDecorationOrdering(ImmutableSet.of());
@@ -665,7 +665,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
       return this;
     }
 
-    public Builder decorateVajramLogicForSession(MainLogicDecoratorConfig logicDecoratorConfig) {
+    public Builder decorateOutputLogicForSession(OutputLogicDecoratorConfig logicDecoratorConfig) {
       if (sessionScopedDecoratorConfigs.putIfAbsent(
               logicDecoratorConfig.decoratorType(), logicDecoratorConfig)
           != null) {

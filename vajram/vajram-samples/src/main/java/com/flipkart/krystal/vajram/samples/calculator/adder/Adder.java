@@ -5,8 +5,8 @@ import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Input;
+import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.modulation.Modulated;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajram.samples.calculator.adder.AdderInputUtil.AdderCommonInputs;
@@ -25,7 +25,7 @@ public abstract class Adder extends ComputeVajram<Integer> {
 
   @Modulated @Input Optional<Integer> numberTwo;
 
-  @VajramLogic
+  @Output
   static Map<AdderModInputs, Integer> add(
       ModulatedInput<AdderModInputs, AdderCommonInputs> modulatedInput) {
     CALL_COUNTER.increment();
