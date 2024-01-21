@@ -5,8 +5,8 @@ import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.DependantChainStart;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig.DecoratorContext;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.DecoratorContext;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
@@ -24,7 +24,7 @@ import java.util.function.Supplier;
 public record InputModulatorConfig(
     Function<LogicExecutionContext, String> instanceIdGenerator,
     Predicate<LogicExecutionContext> shouldModulate,
-    Function<ModulatorContext, MainLogicDecorator> decoratorFactory) {
+    Function<ModulatorContext, OutputLogicDecorator> decoratorFactory) {
 
   /**
    * Creates a default InputModulatorConfig which guarantees that every unique {@link
@@ -104,7 +104,7 @@ public record InputModulatorConfig(
             Optional.ofNullable(
                     kryonDefinitionRegistry
                         .get(defaultDependantChain.kryonId())
-                        .getMainLogicDefinition()
+                        .getOutputLogicDefinition()
                         .logicTags()
                         .get(VajramTags.VAJRAM_ID))
                 .map(

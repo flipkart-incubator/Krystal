@@ -11,7 +11,7 @@ public final class Constants {
   public static final String INPUT_MODULATION = "inputModulation";
   public static final String COMMON_INPUT = "commonInput";
   public static final String RETURN_TYPE = "returnType";
-  public static final String VAJRAM_LOGIC_METHOD = "vajramLogicMethod";
+  public static final String VAJRAM_LOGIC_METHOD = "outputLogicMethod";
   public static final String HASH_MAP = "hashMap";
   public static final String ARRAY_LIST = "arrayList";
   public static final String COM_FUTURE = "comFuture";
@@ -61,7 +61,7 @@ public final class Constants {
                 $map:T<$inputs:T, $valErr:T<$returnType:T>> returnValue = new $linkHashMap:T<>();
 
                 if (commonInputs != null) {
-                  var results = $vajramLogicMethod:L(new $modInput:T<>($imList:T.copyOf(mapping.keySet()), commonInputs));
+                  var results = $outputLogicMethod:L(new $modInput:T<>($imList:T.copyOf(mapping.keySet()), commonInputs));
                   results.forEach((im, value) -> returnValue.put(
                        $optional:T.ofNullable(mapping.get(im)).orElseThrow(),
                        $valErr:T.withValue(value)));
@@ -83,7 +83,7 @@ public final class Constants {
                 $map:T<$inputs:T, $comFuture:T<$returnType:T>> returnValue = new $linkHashMap:T<>();
 
                 if (commonInputs != null) {
-                  var results = $vajramLogicMethod:L(new $modInput:T<>($imList:T.copyOf(mapping.keySet()), commonInputs));
+                  var results = $outputLogicMethod:L(new $modInput:T<>($imList:T.copyOf(mapping.keySet()), commonInputs));
                   results.forEach((im, future) -> returnValue.put(
                         $optional:T.ofNullable(mapping.get(im)).orElseThrow(),
                         future.<$returnType:T>thenApply($function:T.identity())));

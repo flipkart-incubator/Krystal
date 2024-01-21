@@ -6,7 +6,7 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
@@ -16,7 +16,7 @@ import lombok.Builder;
 
 public record KryonExecutorConfig(
     LogicDecorationOrdering logicDecorationOrdering,
-    Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs,
+    Map<String, List<OutputLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs,
     ImmutableSet<DependantChain> disabledDependantChains,
     KryonExecStrategy kryonExecStrategy,
     GraphTraversalStrategy graphTraversalStrategy,
@@ -49,7 +49,7 @@ public record KryonExecutorConfig(
   }
 
   @Override
-  public Map<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs() {
+  public Map<String, List<OutputLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs() {
     return requestScopedLogicDecoratorConfigs != null
         ? requestScopedLogicDecoratorConfigs
         : ImmutableMap.of();

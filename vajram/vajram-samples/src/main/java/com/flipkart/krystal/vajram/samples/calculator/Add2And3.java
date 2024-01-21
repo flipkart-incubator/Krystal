@@ -7,8 +7,8 @@ import static com.flipkart.krystal.vajram.samples.calculator.Add2And3InputUtil.s
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
+import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
 import com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest;
@@ -29,7 +29,7 @@ abstract class Add2And3 extends ComputeVajram<Integer> {
             depInput(AdderRequest.numberTwo_s).using(() -> 3)));
   }
 
-  @VajramLogic
+  @Output
   static int sum(Add2And3InputUtil.Add2And3Inputs facets) {
     return facets.sumOf2And3();
   }

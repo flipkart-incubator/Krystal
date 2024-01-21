@@ -14,8 +14,8 @@ import com.flipkart.krystal.data.InputValue;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.data.ValueOrError;
-import com.flipkart.krystal.krystex.MainLogic;
-import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.OutputLogic;
+import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.CallbackGranule;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardGranule;
@@ -24,7 +24,7 @@ import com.flipkart.krystal.krystex.commands.SkipGranule;
 import com.flipkart.krystal.krystex.logicdecoration.FlushCommand;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.request.StringReqGenerator;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
@@ -72,7 +72,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
   private final Map<Inputs, CompletableFuture<@Nullable Object>> resultsCache =
       new LinkedHashMap<>();
 
-  private final Map<RequestId, Boolean> mainLogicExecuted = new LinkedHashMap<>();
+  private final Map<RequestId, Boolean> outputLogicExecuted = new LinkedHashMap<>();
 
   private final Map<RequestId, Optional<SkipGranule>> skipLogicRequested = new LinkedHashMap<>();
 
@@ -87,7 +87,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
   GranularKryon(
       KryonDefinition kryonDefinition,
       KryonExecutor kryonExecutor,
-      Function<LogicExecutionContext, ImmutableMap<String, MainLogicDecorator>>
+      Function<LogicExecutionContext, ImmutableMap<String, OutputLogicDecorator>>
           requestScopedDecoratorsSupplier,
       LogicDecorationOrdering logicDecorationOrdering) {
     super(
@@ -140,24 +140,25 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
         throw new UnsupportedOperationException(
             "Unknown type of kryonCommand: %s".formatted(kryonCommand));
       }
-      executeMainLogicIfPossible(requestId, resultForRequest);
+      executeOutputLogicIfPossible(requestId, resultForRequest);
     } catch (Throwable e) {
       resultForRequest.completeExceptionally(e);
     }
     return resultForRequest;
   }
 
-  private void executeMainLogicIfPossible(
+  private void executeOutputLogicIfPossible(
       RequestId requestId, CompletableFuture<GranuleResponse> resultForRequest) {
-    // If all the inputs and dependency values are available, then prepare run mainLogic
-    MainLogicDefinition<Object> mainLogicDefinition = kryonDefinition.getMainLogicDefinition();
-    ImmutableSet<String> inputNames = mainLogicDefinition.inputNames();
+    // If all the inputs and dependency values are available, then prepare to run outputLogic
+    OutputLogicDefinition<Object> outputLogicDefinition =
+        kryonDefinition.getOutputLogicDefinition();
+    ImmutableSet<String> inputNames = outputLogicDefinition.inputNames();
     Set<String> collect =
         new LinkedHashSet<>(
             inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
     collect.addAll(dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
     if (collect.containsAll(inputNames)) { // All the inputs of the kryon logic have data present
-      executeMainLogic(resultForRequest, requestId);
+      executeOutputLogic(resultForRequest, requestId);
     }
   }
 
@@ -191,15 +192,15 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
         requestsByDependantChain.getOrDefault(dependantChain, ImmutableSet.of());
     int requestIdExecuted = 0;
     for (RequestId requestId : requestIds) {
-      if (mainLogicExecuted.getOrDefault(requestId, false)
+      if (outputLogicExecuted.getOrDefault(requestId, false)
           || skipLogicRequested.getOrDefault(requestId, Optional.empty()).isPresent()) {
         requestIdExecuted += 1;
       }
     }
     if (requestIdExecuted == requestIds.size()) {
-      Iterable<MainLogicDecorator> reverseSortedDecorators =
+      Iterable<OutputLogicDecorator> reverseSortedDecorators =
           getSortedDecorators(dependantChain)::descendingIterator;
-      for (MainLogicDecorator decorator : reverseSortedDecorators) {
+      for (OutputLogicDecorator decorator : reverseSortedDecorators) {
         decorator.executeCommand(new FlushCommand(dependantChain));
       }
     }
@@ -225,13 +226,14 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
   }
 
   private void execute(RequestId requestId, ImmutableSet<String> newInputNames) {
-    MainLogicDefinition<Object> mainLogicDefinition = kryonDefinition.getMainLogicDefinition();
+    OutputLogicDefinition<Object> outputLogicDefinition =
+        kryonDefinition.getOutputLogicDefinition();
 
     Map<String, InputValue<Object>> allInputs =
         inputsValueCollector.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
     Map<String, Results<Object>> allDependencies =
         dependencyValuesCollector.computeIfAbsent(requestId, k -> new LinkedHashMap<>());
-    ImmutableSet<String> allInputNames = mainLogicDefinition.inputNames();
+    ImmutableSet<String> allInputNames = outputLogicDefinition.inputNames();
     Set<String> availableInputs = Sets.union(allInputs.keySet(), allDependencies.keySet());
     if (availableInputs.isEmpty()) {
       if (!allInputNames.isEmpty()
@@ -606,44 +608,46 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
             });
   }
 
-  private void executeMainLogic(
+  private void executeOutputLogic(
       CompletableFuture<GranuleResponse> resultForRequest, RequestId requestId) {
-    MainLogicDefinition<Object> mainLogicDefinition = kryonDefinition.getMainLogicDefinition();
-    MainLogicInputs mainLogicInputs = getInputsForMainLogic(requestId);
+    OutputLogicDefinition<Object> outputLogicDefinition =
+        kryonDefinition.getOutputLogicDefinition();
+    OutputLogicInputs outputLogicInputs = getInputsForOutputLogic(requestId);
     // Retrieve existing result from cache if result for this set of inputs has already been
     // calculated
     CompletableFuture<@Nullable Object> resultFuture =
-        resultsCache.get(mainLogicInputs.providedInputs());
+        resultsCache.get(outputLogicInputs.providedInputs());
     if (resultFuture == null) {
       resultFuture =
-          executeDecoratedMainLogic(
-              mainLogicInputs.allInputsAndDependencies(), mainLogicDefinition, requestId);
-      resultsCache.put(mainLogicInputs.providedInputs(), resultFuture);
+          executeDecoratedOutputLogic(
+              outputLogicInputs.allInputsAndDependencies(), outputLogicDefinition, requestId);
+      resultsCache.put(outputLogicInputs.providedInputs(), resultFuture);
     }
     resultFuture
         .handle(ValueOrError::valueOrError)
         .thenAccept(
             value ->
                 resultForRequest.complete(
-                    new GranuleResponse(mainLogicInputs.providedInputs(), value)));
-    mainLogicExecuted.put(requestId, true);
+                    new GranuleResponse(outputLogicInputs.providedInputs(), value)));
+    outputLogicExecuted.put(requestId, true);
     flushDecoratorsIfNeeded(getDepChainFor(requestId));
   }
 
-  private CompletableFuture<@Nullable Object> executeDecoratedMainLogic(
-      Inputs inputs, MainLogicDefinition<Object> mainLogicDefinition, RequestId requestId) {
-    SortedSet<MainLogicDecorator> sortedDecorators = getSortedDecorators(getDepChainFor(requestId));
-    MainLogic<Object> logic = mainLogicDefinition::execute;
+  private CompletableFuture<@Nullable Object> executeDecoratedOutputLogic(
+      Inputs inputs, OutputLogicDefinition<Object> outputLogicDefinition, RequestId requestId) {
+    SortedSet<OutputLogicDecorator> sortedDecorators =
+        getSortedDecorators(getDepChainFor(requestId));
+    OutputLogic<Object> logic = outputLogicDefinition::execute;
 
-    for (MainLogicDecorator mainLogicDecorator : sortedDecorators) {
-      logic = mainLogicDecorator.decorateLogic(logic, mainLogicDefinition);
+    for (OutputLogicDecorator outputLogicDecorator : sortedDecorators) {
+      logic = outputLogicDecorator.decorateLogic(logic, outputLogicDefinition);
     }
     return Optional.ofNullable(logic.execute(ImmutableList.of(inputs)).get(inputs))
         .orElseThrow(
             () ->
                 new IllegalStateException(
-                    "Main logic "
-                        + mainLogicDefinition.kryonLogicId()
+                    "Output logic "
+                        + outputLogicDefinition.kryonLogicId()
                         + " did not return a future for inputs "
                         + inputs));
   }
@@ -653,13 +657,13 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
         .orElseThrow(() -> new AssertionError("This is a bug"));
   }
 
-  private MainLogicInputs getInputsForMainLogic(RequestId requestId) {
+  private OutputLogicInputs getInputsForOutputLogic(RequestId requestId) {
     Inputs inputValues =
         new Inputs(inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()));
     Map<String, Results<Object>> dependencyValues =
         dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of());
     Inputs allInputsAndDependencies = Inputs.union(dependencyValues, inputValues.values());
-    return new MainLogicInputs(inputValues, allInputsAndDependencies);
+    return new OutputLogicInputs(inputValues, allInputsAndDependencies);
   }
 
   private void collectInputValues(RequestId requestId, Set<String> inputNames, Inputs inputs) {

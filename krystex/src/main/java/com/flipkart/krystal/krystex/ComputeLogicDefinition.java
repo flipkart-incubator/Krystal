@@ -5,13 +5,13 @@ import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.google.common.collect.ImmutableMap;
 import java.util.Set;
 
-public final class ComputeLogicDefinition<T> extends MainLogicDefinition<T> {
+public final class ComputeLogicDefinition<T> extends OutputLogicDefinition<T> {
 
   public ComputeLogicDefinition(
       KryonLogicId kryonLogicId,
       Set<String> inputs,
-      MainLogic<T> mainLogic,
+      OutputLogic<T> outputLogic,
       ImmutableMap<Object, Tag> logicTags) {
-    super(kryonLogicId, inputs, logicTags, mainLogic);
+    super(kryonLogicId, inputs, logicTags, outputLogic);
   }
 }

@@ -14,7 +14,7 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
-import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
@@ -22,7 +22,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.google.common.collect.ImmutableMap;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
 import java.time.Duration;
@@ -60,7 +60,7 @@ class Resilience4JBulkheadTest {
   void bulkhead_restrictsConcurrency() {
     CountDownLatch countDownLatch = new CountDownLatch(1);
     ExecutorService executorService = Executors.newSingleThreadExecutor();
-    MainLogicDefinition<String> mainLogic =
+    OutputLogicDefinition<String> outputLogicId =
         newAsyncLogic(
             "bulkhead_restrictsConcurrency",
             Set.of("input"),
@@ -92,15 +92,15 @@ class Resilience4JBulkheadTest {
             };
           }
         });
-    mainLogic.registerRequestScopedDecorator(
+    outputLogicId.registerRequestScopedDecorator(
         List.of(
-            new MainLogicDecoratorConfig(
+            new OutputLogicDecoratorConfig(
                 Resilience4JBulkhead.DECORATOR_TYPE,
                 (logicExecutionContext) -> true,
                 logicExecutionContext -> "",
                 decoratorContext -> resilience4JBulkhead)));
     KryonDefinition kryonDefinition =
-        kryonDefinitionRegistry.newKryonDefinition("kryon", mainLogic.kryonLogicId());
+        kryonDefinitionRegistry.newKryonDefinition("kryon", outputLogicId.kryonLogicId());
 
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         kryonExecutor.executeKryon(
@@ -132,7 +132,7 @@ class Resilience4JBulkheadTest {
   @Test
   void threadpoolBulkhead_restrictsConcurrency() {
     CountDownLatch countDownLatch = new CountDownLatch(1);
-    MainLogicDefinition<String> mainLogic =
+    OutputLogicDefinition<String> outputLogic =
         newAsyncLogic(
             "threadpoolBulkhead_restrictsConcurrency",
             Set.of("input"),
@@ -164,15 +164,15 @@ class Resilience4JBulkheadTest {
             };
           }
         });
-    mainLogic.registerRequestScopedDecorator(
+    outputLogic.registerRequestScopedDecorator(
         List.of(
-            new MainLogicDecoratorConfig(
+            new OutputLogicDecoratorConfig(
                 Resilience4JBulkhead.DECORATOR_TYPE,
                 (logicExecutionContext) -> true,
                 logicExecutionContext -> "",
                 decoratorContext -> resilience4JBulkhead)));
     KryonDefinition kryonDefinition =
-        kryonDefinitionRegistry.newKryonDefinition("kryon", mainLogic.kryonLogicId());
+        kryonDefinitionRegistry.newKryonDefinition("kryon", outputLogic.kryonLogicId());
 
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         kryonExecutor.executeKryon(
@@ -204,7 +204,7 @@ class Resilience4JBulkheadTest {
         .isEqualTo("computed_value");
   }
 
-  private <T> MainLogicDefinition<T> newAsyncLogic(
+  private <T> OutputLogicDefinition<T> newAsyncLogic(
       String kryonId, Set<String> inputs, Function<Inputs, CompletableFuture<T>> logic) {
     IOLogicDefinition<T> def =
         new IOLogicDefinition<>(
@@ -214,7 +214,7 @@ class Resilience4JBulkheadTest {
                 inputsList.stream()
                     .collect(ImmutableMap.toImmutableMap(Function.identity(), logic)),
             ImmutableMap.of());
-    logicDefinitionRegistry.addMainLogic(def);
+    logicDefinitionRegistry.addOutputLogic(def);
     return def;
   }
 }

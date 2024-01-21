@@ -6,13 +6,13 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.config.NestedConfig;
 import com.flipkart.krystal.data.Inputs;
-import com.flipkart.krystal.krystex.MainLogic;
-import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.OutputLogic;
+import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.logicdecoration.FlushCommand;
 import com.flipkart.krystal.krystex.logicdecoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecoratorCommand;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.vajram.facets.InputValuesAdaptor;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
 import com.flipkart.krystal.vajram.modulation.InputsConverter;
@@ -36,7 +36,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class InputModulationDecorator<
         I /*InputsNeedingModulation*/ extends InputValuesAdaptor,
         C /*CommonInputs*/ extends InputValuesAdaptor>
-    implements MainLogicDecorator {
+    implements OutputLogicDecorator {
 
   public static final String DECORATOR_TYPE = InputModulationDecorator.class.getName();
   private final String instanceId;
@@ -59,8 +59,8 @@ public final class InputModulationDecorator<
   }
 
   @Override
-  public MainLogic<Object> decorateLogic(
-      MainLogic<Object> logicToDecorate, MainLogicDefinition<Object> originalLogicDefinition) {
+  public OutputLogic<Object> decorateLogic(
+      OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
     inputModulator.onModulation(
         requests -> requests.forEach(request -> modulateInputsList(logicToDecorate, request)));
     return inputsList -> {
@@ -113,7 +113,7 @@ public final class InputModulationDecorator<
   }
 
   private void modulateInputsList(
-      MainLogic<Object> logicToDecorate, ModulatedInput<I, C> modulatedInput) {
+      OutputLogic<Object> logicToDecorate, ModulatedInput<I, C> modulatedInput) {
     ImmutableList<UnmodulatedInput<I, C>> requests =
         modulatedInput.modInputs().stream()
             .map(each -> new UnmodulatedInput<>(each, modulatedInput.commonInputs()))

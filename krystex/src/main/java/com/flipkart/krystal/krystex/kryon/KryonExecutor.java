@@ -17,16 +17,16 @@ import static java.util.stream.Collectors.groupingBy;
 import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.KrystalExecutor;
-import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardBatch;
 import com.flipkart.krystal.krystex.commands.ForwardGranule;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.logicdecoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig.DecoratorContext;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.DecoratorContext;
 import com.flipkart.krystal.krystex.request.IntReqGenerator;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
@@ -77,14 +77,14 @@ public final class KryonExecutor implements KrystalExecutor {
    */
   private final ImmutableMap<
           String, // DecoratorType
-          List<MainLogicDecoratorConfig>>
+          List<OutputLogicDecoratorConfig>>
       requestScopedLogicDecoratorConfigs;
 
   private final Map<
           String, // DecoratorType
           Map<
               String, // InstanceId
-              MainLogicDecorator>>
+              OutputLogicDecorator>>
       requestScopedMainDecorators = new LinkedHashMap<>();
 
   private final KryonRegistry<?> kryonRegistry = new KryonRegistry<>();
@@ -112,26 +112,26 @@ public final class KryonExecutor implements KrystalExecutor {
         executorConfig.debug() ? new StringReqGenerator() : new IntReqGenerator();
   }
 
-  private ImmutableMap<String, MainLogicDecorator> getRequestScopedDecorators(
+  private ImmutableMap<String, OutputLogicDecorator> getRequestScopedDecorators(
       LogicExecutionContext logicExecutionContext) {
     KryonId kryonId = logicExecutionContext.kryonId();
     KryonDefinition kryonDefinition = kryonDefinitionRegistry.get(kryonId);
-    MainLogicDefinition<?> mainLogicDefinition = kryonDefinition.getMainLogicDefinition();
-    Map<String, MainLogicDecorator> decorators = new LinkedHashMap<>();
+    OutputLogicDefinition<?> outputLogicDefinition = kryonDefinition.getOutputLogicDefinition();
+    Map<String, OutputLogicDecorator> decorators = new LinkedHashMap<>();
     Stream.concat(
-            mainLogicDefinition.getRequestScopedLogicDecoratorConfigs().entrySet().stream(),
+            outputLogicDefinition.getRequestScopedLogicDecoratorConfigs().entrySet().stream(),
             requestScopedLogicDecoratorConfigs.entrySet().stream())
         .forEach(
             entry -> {
               String decoratorType = entry.getKey();
-              List<MainLogicDecoratorConfig> decoratorConfigList =
+              List<OutputLogicDecoratorConfig> decoratorConfigList =
                   new ArrayList<>(entry.getValue());
               decoratorConfigList.forEach(
                   decoratorConfig -> {
                     String instanceId =
                         decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
                     if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
-                      MainLogicDecorator mainLogicDecorator =
+                      OutputLogicDecorator outputLogicDecorator =
                           requestScopedMainDecorators
                               .computeIfAbsent(decoratorType, t -> new LinkedHashMap<>())
                               .computeIfAbsent(
@@ -142,13 +142,13 @@ public final class KryonExecutor implements KrystalExecutor {
                                           .apply(
                                               new DecoratorContext(
                                                   instanceId, logicExecutionContext)));
-                      mainLogicDecorator.executeCommand(
+                      outputLogicDecorator.executeCommand(
                           new InitiateActiveDepChains(
                               kryonId,
                               ImmutableSet.copyOf(
                                   dependantChainsPerKryon.getOrDefault(
                                       kryonId, ImmutableSet.of()))));
-                      decorators.putIfAbsent(decoratorType, mainLogicDecorator);
+                      decorators.putIfAbsent(decoratorType, outputLogicDecorator);
                     }
                   });
             });
@@ -377,7 +377,7 @@ public final class KryonExecutor implements KrystalExecutor {
         this.<GranuleResponse>executeCommand(
                 new ForwardGranule(
                     kryonId,
-                    kryonDefinition.getMainLogicDefinition().inputNames().stream()
+                    kryonDefinition.getOutputLogicDefinition().inputNames().stream()
                         .filter(s -> !kryonDefinition.dependencyKryons().containsKey(s))
                         .collect(toImmutableSet()),
                     kryonExecution.inputs(),
@@ -400,7 +400,7 @@ public final class KryonExecutor implements KrystalExecutor {
                   this.executeCommand(
                       new ForwardBatch(
                           kryonId,
-                          kryonDefinition.getMainLogicDefinition().inputNames().stream()
+                          kryonDefinition.getOutputLogicDefinition().inputNames().stream()
                               .filter(s -> !kryonDefinition.dependencyKryons().containsKey(s))
                               .collect(toImmutableSet()),
                           kryonResults.stream()

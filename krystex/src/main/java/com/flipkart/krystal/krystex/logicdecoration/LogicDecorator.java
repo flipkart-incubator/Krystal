@@ -5,7 +5,7 @@ import com.flipkart.krystal.krystex.Logic;
 import com.flipkart.krystal.krystex.LogicDefinition;
 
 public sealed interface LogicDecorator<L extends Logic, LD extends LogicDefinition<L>>
-    extends ConfigListener permits MainLogicDecorator {
+    extends ConfigListener permits OutputLogicDecorator {
   L decorateLogic(L logicToDecorate, LD originalLogicDefinition);
 
   /**

@@ -24,7 +24,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
@@ -80,7 +80,7 @@ class ChainAdderTest {
                     ImmutableMap.of(
                         mainLogicExecReporter.decoratorType(),
                         List.of(
-                            new MainLogicDecoratorConfig(
+                            new OutputLogicDecoratorConfig(
                                 mainLogicExecReporter.decoratorType(),
                                 logicExecutionContext -> true,
                                 logicExecutionContext -> mainLogicExecReporter.decoratorType(),

@@ -6,9 +6,9 @@ import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.data.Inputs;
-import com.flipkart.krystal.krystex.MainLogic;
-import com.flipkart.krystal.krystex.MainLogicDefinition;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
+import com.flipkart.krystal.krystex.OutputLogic;
+import com.flipkart.krystal.krystex.OutputLogicDefinition;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.github.resilience4j.bulkhead.Bulkhead;
@@ -22,7 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class Resilience4JBulkhead implements MainLogicDecorator {
+public final class Resilience4JBulkhead implements OutputLogicDecorator {
 
   public static final String DECORATOR_TYPE = Resilience4JBulkhead.class.getName();
 
@@ -43,8 +43,8 @@ public final class Resilience4JBulkhead implements MainLogicDecorator {
   }
 
   @Override
-  public MainLogic<Object> decorateLogic(
-      MainLogic<Object> logicToDecorate, MainLogicDefinition<Object> originalLogicDefinition) {
+  public OutputLogic<Object> decorateLogic(
+      OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
     BulkheadAdapter bulkhead = this.adaptedBulkhead;
     if (bulkhead != null) {
       return inputsList ->
@@ -154,7 +154,7 @@ public final class Resilience4JBulkhead implements MainLogicDecorator {
 
     @SuppressWarnings("RedundantTypeArguments") // Avoid nullChecker errors
     CompletionStage<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>> decorate(
-        MainLogic<Object> logicToDecorate, ImmutableList<Inputs> inputsList) {
+        OutputLogic<Object> logicToDecorate, ImmutableList<Inputs> inputsList) {
       ThreadPoolBulkhead threadPoolBulkhead = this.threadPoolBulkhead;
       Bulkhead bulkhead = this.bulkhead;
       if (threadPoolBulkhead != null) {

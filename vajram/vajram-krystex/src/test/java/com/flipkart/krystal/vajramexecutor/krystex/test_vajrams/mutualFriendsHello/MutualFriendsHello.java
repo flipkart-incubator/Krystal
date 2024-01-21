@@ -11,8 +11,8 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.Input;
+import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
@@ -40,7 +40,7 @@ public abstract class MutualFriendsHello extends ComputeVajram<String> {
   @Dependency(onVajram = HelloFriendsV2.class, canFanout = true)
   String hellos;
 
-  @VajramLogic
+  @Output
   public static String sayHelloToMutualFriends(
       MutualFriendsHelloInputs mutualFriendsHelloAllInputs) {
     List<String> result = new ArrayList<>();

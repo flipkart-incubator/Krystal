@@ -6,7 +6,7 @@ import static java.util.stream.Collectors.groupingBy;
 
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
-import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition.KryonDefinitionView;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
@@ -26,15 +26,15 @@ public final class KryonUtils {
       KryonId depKryonId,
       KryonDefinition kryonDefinition,
       KryonExecutor kryonExecutor) {
-    MainLogicDefinition<Object> depMainLogic =
-        kryonDefinition.kryonDefinitionRegistry().get(depKryonId).getMainLogicDefinition();
-    if (depMainLogic instanceof IOLogicDefinition<Object>) {
+    OutputLogicDefinition<Object> depOutputLogic =
+        kryonDefinition.kryonDefinitionRegistry().get(depKryonId).getOutputLogicDefinition();
+    if (depOutputLogic instanceof IOLogicDefinition<Object>) {
       kryonExecutor.enqueueKryonCommand(commandGenerator);
-    } else if (depMainLogic instanceof ComputeLogicDefinition<Object>) {
+    } else if (depOutputLogic instanceof ComputeLogicDefinition<Object>) {
       kryonExecutor.executeCommand(commandGenerator.get());
     } else {
       throw new UnsupportedOperationException(
-          "Unknown logicDefinition type %s".formatted(depMainLogic.getClass()));
+          "Unknown logicDefinition type %s".formatted(depOutputLogic.getClass()));
     }
   }
 

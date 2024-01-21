@@ -6,9 +6,9 @@ import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecorator;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig;
-import com.flipkart.krystal.krystex.logicdecoration.MainLogicDecoratorConfig.DecoratorContext;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.DecoratorContext;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
@@ -22,15 +22,15 @@ import java.util.concurrent.CompletableFuture;
 import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<MainLogic<T>>
+public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<OutputLogic<T>>
     permits IOLogicDefinition, ComputeLogicDefinition {
 
-  protected MainLogicDefinition(
+  protected OutputLogicDefinition(
       KryonLogicId kryonLogicId,
       Set<String> inputs,
       ImmutableMap<Object, Tag> logicTags,
-      MainLogic<T> mainLogic) {
-    super(kryonLogicId, inputs, logicTags, mainLogic);
+      OutputLogic<T> outputLogic) {
+    super(kryonLogicId, inputs, logicTags, outputLogic);
   }
 
   public final ImmutableMap<Inputs, CompletableFuture<@Nullable T>> execute(
@@ -39,19 +39,19 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<Main
   }
 
   @Getter
-  private ImmutableMap<String, List<MainLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs =
-      ImmutableMap.of();
+  private ImmutableMap<String, List<OutputLogicDecoratorConfig>>
+      requestScopedLogicDecoratorConfigs = ImmutableMap.of();
 
   /** LogicDecorator Id -> LogicDecorator */
-  private final Map<String, MainLogicDecoratorConfig> sessionScopedLogicDecoratorConfigs =
+  private final Map<String, OutputLogicDecoratorConfig> sessionScopedLogicDecoratorConfigs =
       new HashMap<>();
 
-  private final Map<String, Map<String, MainLogicDecorator>> sessionScopedDecorators =
+  private final Map<String, Map<String, OutputLogicDecorator>> sessionScopedDecorators =
       new LinkedHashMap<>();
 
-  public ImmutableMap<String, MainLogicDecorator> getSessionScopedLogicDecorators(
+  public ImmutableMap<String, OutputLogicDecorator> getSessionScopedLogicDecorators(
       KryonDefinition kryonDefinition, DependantChain dependants) {
-    Map<String, MainLogicDecorator> decorators = new LinkedHashMap<>();
+    Map<String, OutputLogicDecorator> decorators = new LinkedHashMap<>();
     sessionScopedLogicDecoratorConfigs.forEach(
         (s, decoratorConfig) -> {
           LogicExecutionContext logicExecutionContext =
@@ -79,29 +79,29 @@ public abstract sealed class MainLogicDefinition<T> extends LogicDefinition<Main
   }
 
   public void registerRequestScopedDecorator(
-      Collection<MainLogicDecoratorConfig> decoratorConfigs) {
+      Collection<OutputLogicDecoratorConfig> decoratorConfigs) {
     //noinspection UnstableApiUsage
     requestScopedLogicDecoratorConfigs =
-        ImmutableMap.<String, List<MainLogicDecoratorConfig>>builderWithExpectedSize(
+        ImmutableMap.<String, List<OutputLogicDecoratorConfig>>builderWithExpectedSize(
                 requestScopedLogicDecoratorConfigs.size() + decoratorConfigs.size())
             .putAll(requestScopedLogicDecoratorConfigs)
             .putAll(getDecoratorConfigMap(decoratorConfigs))
             .build();
   }
 
-  private Map<String, List<MainLogicDecoratorConfig>> getDecoratorConfigMap(
-      Collection<MainLogicDecoratorConfig> decoratorConfigs) {
-    Map<String, List<MainLogicDecoratorConfig>> decoratorConfigMap = new HashMap<>();
-    for (MainLogicDecoratorConfig mainLogicDecoratorConfig : decoratorConfigs) {
-      decoratorConfigMap.putIfAbsent(mainLogicDecoratorConfig.decoratorType(), new ArrayList<>());
+  private Map<String, List<OutputLogicDecoratorConfig>> getDecoratorConfigMap(
+      Collection<OutputLogicDecoratorConfig> decoratorConfigs) {
+    Map<String, List<OutputLogicDecoratorConfig>> decoratorConfigMap = new HashMap<>();
+    for (OutputLogicDecoratorConfig outputLogicDecoratorConfig : decoratorConfigs) {
+      decoratorConfigMap.putIfAbsent(outputLogicDecoratorConfig.decoratorType(), new ArrayList<>());
       decoratorConfigMap
-          .get(mainLogicDecoratorConfig.decoratorType())
-          .add(mainLogicDecoratorConfig);
+          .get(outputLogicDecoratorConfig.decoratorType())
+          .add(outputLogicDecoratorConfig);
     }
     return decoratorConfigMap;
   }
 
-  public void registerSessionScopedLogicDecorator(MainLogicDecoratorConfig decoratorConfig) {
+  public void registerSessionScopedLogicDecorator(OutputLogicDecoratorConfig decoratorConfig) {
     sessionScopedLogicDecoratorConfigs.put(decoratorConfig.decoratorType(), decoratorConfig);
   }
 }

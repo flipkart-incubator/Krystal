@@ -4,8 +4,8 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Input;
+import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.modulation.Modulated;
 import com.flipkart.krystal.vajram.modulation.ModulatedInput;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceInputUtil.FriendsServiceCommonInputs;
@@ -25,7 +25,7 @@ public abstract class FriendsService extends IOVajram<Set<String>> {
 
   @Modulated @Input String userId;
 
-  @VajramLogic
+  @Output
   static ImmutableMap<FriendsServiceModInputs, CompletableFuture<Set<String>>> call(
       ModulatedInput<FriendsServiceModInputs, FriendsServiceCommonInputs> modulatedInput) {
     CALL_COUNTER.increment();

@@ -8,19 +8,20 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 public final class LogicDefinitionRegistry {
-  private final Map<KryonLogicId, MainLogicDefinition<?>> mainLogicDefinitions = new HashMap<>();
+  private final Map<KryonLogicId, OutputLogicDefinition<?>> outputLogicDefinitions =
+      new HashMap<>();
   private final Map<KryonLogicId, ResolverLogicDefinition> resolverLogicDefinitions =
       new HashMap<>();
   private final Map<KryonLogicId, MultiResolverDefinition> multiResolverDefinitions =
       new HashMap<>();
 
-  public <T> MainLogicDefinition<T> getMain(KryonLogicId kryonLogicId) {
-    MainLogicDefinition<?> mainLogicDefinition = mainLogicDefinitions.get(kryonLogicId);
-    if (mainLogicDefinition == null) {
-      throw new NoSuchElementException("Could not find mainLogicDefinition for " + kryonLogicId);
+  public <T> OutputLogicDefinition<T> getOutputLogic(KryonLogicId kryonLogicId) {
+    OutputLogicDefinition<?> outputLogicDefinition = outputLogicDefinitions.get(kryonLogicId);
+    if (outputLogicDefinition == null) {
+      throw new NoSuchElementException("Could not find outputLogicDefinition for " + kryonLogicId);
     }
     //noinspection unchecked
-    return (MainLogicDefinition<T>) mainLogicDefinition;
+    return (OutputLogicDefinition<T>) outputLogicDefinition;
   }
 
   public MultiResolverDefinition getMultiResolver(KryonLogicId kryonLogicId) {
@@ -32,11 +33,11 @@ public final class LogicDefinitionRegistry {
     return multiResolverDefinition;
   }
 
-  public void addMainLogic(MainLogicDefinition<?> mainLogicDefinition) {
-    if (mainLogicDefinitions.containsKey(mainLogicDefinition.kryonLogicId())) {
+  public void addOutputLogic(OutputLogicDefinition<?> outputLogicDefinition) {
+    if (outputLogicDefinitions.containsKey(outputLogicDefinition.kryonLogicId())) {
       return;
     }
-    mainLogicDefinitions.put(mainLogicDefinition.kryonLogicId(), mainLogicDefinition);
+    outputLogicDefinitions.put(outputLogicDefinition.kryonLogicId(), outputLogicDefinition);
   }
 
   public void addResolver(ResolverLogicDefinition def) {

@@ -11,8 +11,8 @@ import static com.flipkart.krystal.vajram.samples.calculator.divider.DividerRequ
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
+import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.VajramLogic;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.FormulaInputUtil.FormulaInputs;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
@@ -48,7 +48,7 @@ public abstract class Formula extends ComputeVajram<Integer> {
             depInput(denominator_s).usingAsIs(sum_s).asResolver()));
   }
 
-  @VajramLogic
+  @Output
   static int result(FormulaInputs allInputs) {
     /* Return quotient */
     return allInputs.quotient();

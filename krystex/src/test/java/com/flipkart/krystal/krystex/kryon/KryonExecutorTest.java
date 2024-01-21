@@ -18,7 +18,7 @@ import com.flipkart.krystal.data.Inputs;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
-import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.google.common.collect.ImmutableMap;
@@ -336,7 +336,7 @@ class KryonExecutorTest {
     return future.get(TIMEOUT.getSeconds(), SECONDS);
   }
 
-  private <T> MainLogicDefinition<T> newComputeLogic(
+  private <T> OutputLogicDefinition<T> newComputeLogic(
       String kryonId, Set<String> inputs, Function<Inputs, T> logic) {
     ComputeLogicDefinition<T> def =
         new ComputeLogicDefinition<>(
@@ -350,7 +350,7 @@ class KryonExecutorTest {
                     .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture())),
             ImmutableMap.of());
 
-    logicDefinitionRegistry.addMainLogic(def);
+    logicDefinitionRegistry.addOutputLogic(def);
     return def;
   }
 
