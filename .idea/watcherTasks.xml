@@ -2,11 +2,11 @@
 <project version="4">
   <component name="ProjectTasksOptions">
     <TaskOptions isEnabled="true">
-      <option name="arguments" value="-cp $Classpath$ com.flipkart.krystal.vajram.codegen.VajramCodeGenFacade codeVajramModels -v $FilePath$ -j $ContentRoot$/java" />
-      <option name="checkSyntaxErrors" value="false" />
+      <option name="arguments" value="codegenVajramModels" />
+      <option name="checkSyntaxErrors" value="true" />
       <option name="description" />
-      <option name="exitCodeBehavior" value="ERROR" />
-      <option name="fileExtension" value="yml" />
+      <option name="exitCodeBehavior" value="NEVER" />
+      <option name="fileExtension" value="java" />
       <option name="immediateSync" value="true" />
       <option name="name" value="Vajram model-gen" />
       <option name="output" value="" />
@@ -14,7 +14,7 @@
         <array />
       </option>
       <option name="outputFromStdout" value="false" />
-      <option name="program" value="java" />
+      <option name="program" value="$ProjectFileDir$/gradlew" />
       <option name="runOnExternalChanges" value="true" />
       <option name="scopeName" value="Current File" />
       <option name="trackOnlyRoot" value="false" />
