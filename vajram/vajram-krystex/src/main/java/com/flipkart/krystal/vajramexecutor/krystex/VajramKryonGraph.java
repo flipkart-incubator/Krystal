@@ -162,9 +162,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     for (InputModulatorConfig inputModulatorConfig : inputModulators) {
       Predicate<LogicExecutionContext> biFunction =
           logicExecutionContext -> {
-            return vajram.getInputDefinitions().stream()
-                    .filter(inputDefinition -> inputDefinition instanceof Input<?>)
-                    .map(inputDefinition -> (Input<?>) inputDefinition)
+            return vajram.getFacetDefinitions().stream()
+                    .filter(facetDefinition -> facetDefinition instanceof Input<?>)
+                    .map(facetDefinition -> (Input<?>) facetDefinition)
                     .anyMatch(Input::needsModulation)
                 && inputModulatorConfig.shouldModulate().test(logicExecutionContext);
           };
@@ -285,7 +285,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
       VajramDefinition vajramDefinition) {
     Vajram<?> vajram = vajramDefinition.getVajram();
     VajramID vajramId = vajram.getId();
-    ImmutableCollection<VajramFacetDefinition> inputDefinitions = vajram.getInputDefinitions();
+    ImmutableCollection<VajramFacetDefinition> facetDefinitions = vajram.getFacetDefinitions();
 
     // Create kryon definitions for all input resolvers defined in this vajram
     List<InputResolverDefinition> inputResolvers =
@@ -302,7 +302,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                           inputResolverDefinition.resolutionTarget().inputNames();
                       ImmutableSet<String> sources = inputResolverDefinition.sources();
                       ImmutableCollection<VajramFacetDefinition> requiredInputs =
-                          inputDefinitions.stream()
+                          facetDefinitions.stream()
                               .filter(def -> sources.contains(def.name()))
                               .collect(toImmutableList());
                       ResolverLogicDefinition inputResolverLogic =
@@ -374,7 +374,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
         logicRegistryDecorator.newMultiResolver(
             vajramId.vajramId(),
             vajramId.vajramId() + ":multiResolver",
-            inputDefinitions.stream().map(VajramFacetDefinition::name).collect(toImmutableSet()),
+            facetDefinitions.stream().map(VajramFacetDefinition::name).collect(toImmutableSet()),
             (resolutionRequests, inputs) -> {
               Set<ResolverDefinition> allResolverDefs = new HashSet<>();
               for (DependencyResolutionRequest resolutionRequest : resolutionRequests) {
@@ -491,7 +491,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
       VajramID vajramID, Inputs inputs, ImmutableCollection<VajramFacetDefinition> requiredInputs) {
     Iterable<VajramFacetDefinition> mandatoryInputs =
         requiredInputs.stream()
-                .filter(inputDefinition -> inputDefinition instanceof Input<?>)
+                .filter(facetDefinition -> facetDefinition instanceof Input<?>)
                 .filter(VajramFacetDefinition::isMandatory)
             ::iterator;
     Map<String, Throwable> missingMandatoryValues = new HashMap<>();
@@ -516,10 +516,10 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
   private OutputLogicDefinition<?> createVajramKryonLogic(
       KryonId kryonId, VajramDefinition vajramDefinition) {
     VajramID vajramId = vajramDefinition.getVajram().getId();
-    ImmutableCollection<VajramFacetDefinition> inputDefinitions =
-        vajramDefinition.getVajram().getInputDefinitions();
+    ImmutableCollection<VajramFacetDefinition> facetDefinitions =
+        vajramDefinition.getVajram().getFacetDefinitions();
     ImmutableSet<String> inputNames =
-        inputDefinitions.stream()
+        facetDefinitions.stream()
             .filter(this::isVisibleToKrystex)
             .map(VajramFacetDefinition::name)
             .collect(toImmutableSet());
@@ -538,7 +538,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
               inputsList.forEach(
                   inputs -> {
                     try {
-                      validateMandatory(vajramId, inputs, inputDefinitions);
+                      validateMandatory(vajramId, inputs, facetDefinitions);
                       validInputs.add(inputs);
                     } catch (Throwable e) {
                       failedValidations.put(inputs, failedFuture(e));
@@ -562,8 +562,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     return outputLogic;
   }
 
-  private boolean isVisibleToKrystex(VajramFacetDefinition vajramInputDefinition) {
-    if (vajramInputDefinition instanceof Input<?> input) {
+  private boolean isVisibleToKrystex(VajramFacetDefinition vajramFacetDefinition) {
+    if (vajramFacetDefinition instanceof Input<?> input) {
       return input.sources().contains(CLIENT);
     }
     return true;
@@ -609,9 +609,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
   private ImmutableMap<String, KryonId> createKryonDefinitionsForDependencies(
       VajramDefinition vajramDefinition) {
     List<Dependency<?>> dependencies = new ArrayList<>();
-    for (VajramFacetDefinition vajramInputDefinition :
-        vajramDefinition.getVajram().getInputDefinitions()) {
-      if (vajramInputDefinition instanceof Dependency<?> definition) {
+    for (VajramFacetDefinition vajramFacetDefinition :
+        vajramDefinition.getVajram().getFacetDefinitions()) {
+      if (vajramFacetDefinition instanceof Dependency<?> definition) {
         dependencies.add(definition);
       }
     }
@@ -647,9 +647,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
 
     public VajramMetadata(Vajram<?> vajram) {
       this(
-          vajram.getInputDefinitions().stream()
-              .filter(inputDefinition -> inputDefinition instanceof Input<?>)
-              .map(inputDefinition -> ((Input<?>) inputDefinition))
+          vajram.getFacetDefinitions().stream()
+              .filter(facetDefinition -> facetDefinition instanceof Input<?>)
+              .map(facetDefinition -> ((Input<?>) facetDefinition))
               .anyMatch(
                   input ->
                       input.sources() != null && input.sources().contains(InputSource.SESSION)));

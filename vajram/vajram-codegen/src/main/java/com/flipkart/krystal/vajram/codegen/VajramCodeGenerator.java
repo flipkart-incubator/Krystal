@@ -5,17 +5,17 @@ import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_INPUT;
 import static com.flipkart.krystal.vajram.codegen.Constants.COM_FUTURE;
 import static com.flipkart.krystal.vajram.codegen.Constants.DEP_RESP;
 import static com.flipkart.krystal.vajram.codegen.Constants.DEP_RESPONSE;
+import static com.flipkart.krystal.vajram.codegen.Constants.FACET_DEFINITIONS_VAR;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACET_NAME_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACET_SPEC_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants.FUNCTION;
-import static com.flipkart.krystal.vajram.codegen.Constants.GET_INPUT_DEFINITIONS;
+import static com.flipkart.krystal.vajram.codegen.Constants.GET_FACET_DEFINITIONS;
 import static com.flipkart.krystal.vajram.codegen.Constants.HASH_MAP;
 import static com.flipkart.krystal.vajram.codegen.Constants.ILLEGAL_ARGUMENT;
 import static com.flipkart.krystal.vajram.codegen.Constants.IM_LIST;
 import static com.flipkart.krystal.vajram.codegen.Constants.IM_MAP;
 import static com.flipkart.krystal.vajram.codegen.Constants.INPUTS;
 import static com.flipkart.krystal.vajram.codegen.Constants.INPUTS_LIST;
-import static com.flipkart.krystal.vajram.codegen.Constants.INPUT_DEFINITIONS_VAR;
 import static com.flipkart.krystal.vajram.codegen.Constants.INPUT_MODULATION;
 import static com.flipkart.krystal.vajram.codegen.Constants.INPUT_MODULATION_CODE_BLOCK;
 import static com.flipkart.krystal.vajram.codegen.Constants.INPUT_MODULATION_FUTURE_CODE_BLOCK;
@@ -167,7 +167,7 @@ public class VajramCodeGenerator {
     this.requestClassName = Utils.getRequestClassName(vajramName);
     // All parsed Vajram data loaded from all Vajram class files with vajram name as key
     this.vajramDefs = Collections.unmodifiableMap(vajramDefs);
-    // All the present Vajram -> VajramInputDefinitions map with name as key
+    // All the present Vajram -> VajramFacetDefinitions map with name as key
     this.facetModels =
         vajramInfo
             .facetStream()
@@ -198,7 +198,7 @@ public class VajramCodeGenerator {
                 FieldSpec.builder(
                         ParameterizedTypeName.get(ImmutableList.class, VajramFacetDefinition.class)
                             .annotated(AnnotationSpec.builder(Nullable.class).build()),
-                        INPUT_DEFINITIONS_VAR)
+                        FACET_DEFINITIONS_VAR)
                     .addModifiers(PRIVATE)
                     .build());
     List<MethodSpec> methodSpecs = new ArrayList<>();
@@ -235,8 +235,8 @@ public class VajramCodeGenerator {
             getCommonInputsClassname(vajramName));
     final TypeName vajramResponseType = util.toTypeName(getParsedVajramData().responseType());
 
-    MethodSpec inputDefinitionsMethod = createInputDefinitions();
-    methodSpecs.add(inputDefinitionsMethod);
+    MethodSpec facetDefinitionsMethod = createFacetDefinitions();
+    methodSpecs.add(facetDefinitionsMethod);
     Optional<MethodSpec> inputResolverMethod = createResolvers(resolverMap, depFanoutMap);
     inputResolverMethod.ifPresent(methodSpecs::add);
 
@@ -729,10 +729,10 @@ public class VajramCodeGenerator {
                 generateDependencyResolutions(
                     method, usingInputName, ifBlockBuilder, depFanoutMap, parameter);
               } else if (facetModels.containsKey(usingInputName)) {
-                FacetGenModel inputDefinition = facetModels.get(usingInputName);
+                FacetGenModel facetGenModel = facetModels.get(usingInputName);
                 String variable = toJavaName(usingInputName);
                 final TypeName parameterType = TypeName.get(parameter.asType());
-                if (inputDefinition.isMandatory()) {
+                if (facetGenModel.isMandatory()) {
                   ifBlockBuilder.add(
                       CodeBlock.builder()
                           .addStatement(
@@ -1040,40 +1040,40 @@ public class VajramCodeGenerator {
   }
 
   /**
-   * Method to generate code for "getInputDefinitions" function
+   * Method to generate code for "getFacetDefinitions" function
    *
    * @return {@link MethodSpec}
    */
-  private MethodSpec createInputDefinitions() {
-    // Method : getInputDefinitions
-    Builder inputDefinitionsBuilder =
-        methodBuilder(GET_INPUT_DEFINITIONS)
+  private MethodSpec createFacetDefinitions() {
+    // Method : getFacetDefinitions
+    Builder facetDefinitionsBuilder =
+        methodBuilder(GET_FACET_DEFINITIONS)
             .addModifiers(PUBLIC)
             .returns(ParameterizedTypeName.get(ImmutableList.class, VajramFacetDefinition.class));
-    List<FacetGenModel> inputDefinitions = vajramInfo.facetStream().toList();
-    Collection<CodeBlock> codeBlocks = new ArrayList<>(inputDefinitions.size());
+    List<FacetGenModel> facetGenModels = vajramInfo.facetStream().toList();
+    Collection<CodeBlock> codeBlocks = new ArrayList<>(facetGenModels.size());
     // Input and Dependency code block
-    inputDefinitions.forEach(
-        vajramInputDefinition -> {
+    facetGenModels.forEach(
+        facetGenModel -> {
           CodeBlock.Builder inputDefBuilder = CodeBlock.builder();
-          if (vajramInputDefinition instanceof InputModel<?> input) {
+          if (facetGenModel instanceof InputModel<?> input) {
             buildVajramInput(inputDefBuilder, input);
-          } else if (vajramInputDefinition instanceof DependencyModel dependency) {
+          } else if (facetGenModel instanceof DependencyModel dependency) {
             buildVajramDependency(inputDefBuilder, dependency);
           }
           codeBlocks.add(inputDefBuilder.build());
         });
 
-    inputDefinitionsBuilder.beginControlFlow("if(this.$L == null)", INPUT_DEFINITIONS_VAR);
-    inputDefinitionsBuilder.addCode(
+    facetDefinitionsBuilder.beginControlFlow("if(this.$L == null)", FACET_DEFINITIONS_VAR);
+    facetDefinitionsBuilder.addCode(
         CodeBlock.builder()
-            .add("this.$L = $T.of(\n", INPUT_DEFINITIONS_VAR, ImmutableList.class)
+            .add("this.$L = $T.of(\n", FACET_DEFINITIONS_VAR, ImmutableList.class)
             .add(CodeBlock.join(codeBlocks, ",\n\t"))
             .add("\n);\n")
             .build());
-    inputDefinitionsBuilder.endControlFlow();
-    inputDefinitionsBuilder.addStatement("return $L", INPUT_DEFINITIONS_VAR);
-    return inputDefinitionsBuilder.build();
+    facetDefinitionsBuilder.endControlFlow();
+    facetDefinitionsBuilder.addStatement("return $L", FACET_DEFINITIONS_VAR);
+    return facetDefinitionsBuilder.build();
   }
 
   /**

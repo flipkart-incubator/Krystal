@@ -18,7 +18,7 @@ public final class Constants {
   public static final String LINK_HASH_MAP = "linkHashMap";
   public static final String MAP = "map";
   public static final String LIST = "list";
-  public static final String INPUT_DEFINITIONS_VAR = "inputDefinitions";
+  public static final String FACET_DEFINITIONS_VAR = "facetDefinitions";
   public static final String FACET_NAME_SUFFIX = "_n";
   public static final String FACET_SPEC_SUFFIX = "_s";
 
@@ -35,7 +35,7 @@ public final class Constants {
   public static final String METHOD_EXECUTE = "execute";
   public static final String METHOD_RESOLVE_INPUT_OF_DEPENDENCY = "resolveInputOfDependency";
   public static final String METHOD_EXECUTE_COMPUTE = "executeCompute";
-  public static final String GET_INPUT_DEFINITIONS = "getInputDefinitions";
+  public static final String GET_FACET_DEFINITIONS = "getFacetDefinitions";
   public static final String INPUTS_CLASS_SUFFIX = "Inputs";
   public static final String INPUTS_LIST = "inputsList";
   public static final String INPUTS_NEEDING_MODULATION = "ModInputs";

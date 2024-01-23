@@ -28,7 +28,7 @@ public sealed interface Vajram<T> permits AbstractVajram {
 
   VajramID getId();
 
-  ImmutableCollection<VajramFacetDefinition> getInputDefinitions();
+  ImmutableCollection<VajramFacetDefinition> getFacetDefinitions();
 
   ImmutableMap<Inputs, CompletableFuture<@Nullable T>> execute(ImmutableList<Inputs> inputs);
 

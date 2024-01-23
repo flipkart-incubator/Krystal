@@ -85,8 +85,8 @@ public final class VajramDefinition {
             .filter(method -> method.isAnnotationPresent(Resolve.class))
             .collect(toImmutableSet());
 
-    ImmutableMap<String, Dependency<?>> inputDefinitions =
-        vajram.getInputDefinitions().stream()
+    ImmutableMap<String, Dependency<?>> dependencyDefinitions =
+        vajram.getFacetDefinitions().stream()
             .filter(vi -> vi instanceof Dependency)
             .map(vi -> (Dependency<?>) vi)
             .collect(toImmutableMap(VajramFacetDefinition::name, Function.identity()));
@@ -97,7 +97,7 @@ public final class VajramDefinition {
         throw new AssertionError();
       }
       String targetDependency = resolver.depName();
-      Dependency<?> dependency = inputDefinitions.get(targetDependency);
+      Dependency<?> dependency = dependencyDefinitions.get(targetDependency);
       if (dependency == null) {
         throw new IllegalStateException(
             "Could not find dependency with name %s".formatted(targetDependency));
