@@ -94,12 +94,12 @@ public final class InputInjector implements OutputLogicDecorator {
         vajramDefinition == null ? ImmutableMap.of() : vajramDefinition.getFacetTags();
     Optional.ofNullable(vajramDefinition)
         .map(VajramDefinition::getVajram)
-        .map(Vajram::getInputDefinitions)
+        .map(Vajram::getFacetDefinitions)
         .ifPresent(
             facetDefinitions -> {
-              for (VajramFacetDefinition inputDefinition : facetDefinitions) {
-                String inputName = inputDefinition.name();
-                if (inputDefinition instanceof Input<?> input) {
+              for (VajramFacetDefinition facetDefinition : facetDefinitions) {
+                String inputName = facetDefinition.name();
+                if (facetDefinition instanceof Input<?> input) {
                   if (input.sources().contains(InputSource.CLIENT)) {
                     ValueOrError<Object> value = inputs.getInputValue(inputName);
                     if (!ValueOrError.empty().equals(value)) {
