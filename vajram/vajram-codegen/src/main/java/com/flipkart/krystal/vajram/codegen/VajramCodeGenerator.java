@@ -1049,7 +1049,8 @@ public class VajramCodeGenerator {
     Builder facetDefinitionsBuilder =
         methodBuilder(GET_FACET_DEFINITIONS)
             .addModifiers(PUBLIC)
-            .returns(ParameterizedTypeName.get(ImmutableList.class, VajramFacetDefinition.class));
+            .returns(ParameterizedTypeName.get(ImmutableList.class, VajramFacetDefinition.class))
+            .addAnnotation(Override.class);
     List<FacetGenModel> facetGenModels = vajramInfo.facetStream().toList();
     Collection<CodeBlock> codeBlocks = new ArrayList<>(facetGenModels.size());
     // Input and Dependency code block
