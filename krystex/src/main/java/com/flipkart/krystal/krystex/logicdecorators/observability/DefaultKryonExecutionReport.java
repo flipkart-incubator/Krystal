@@ -105,11 +105,6 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
       if (!(value instanceof ValueOrError<Object>)) {
         continue;
       }
-//      if (e.getKey().equalsIgnoreCase("_graphql_execution_context")
-//          || e.getKey().equalsIgnoreCase("_graphql_execution_strategy")
-//          || e.getKey().equalsIgnoreCase("_graphql_execution_strategy_params")) {
-//        continue;
-//      }
       Object collect = convertValueOrError((ValueOrError<Object>) value);
       if (collect != null) {
         inputMap.put(e.getKey(), collect);
