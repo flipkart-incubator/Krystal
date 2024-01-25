@@ -1,3 +1,5 @@
 package com.flipkart.krystal.config;
 
-public record Tag(String tagKey, String tagValue) {}
+public interface Tag {
+  Object tagKey();
+}

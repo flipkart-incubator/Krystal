@@ -1,39 +1,98 @@
+import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY
+import static com.flipkart.krystal.vajram.codegen.models.CodegenPhase.IMPLS
+
 plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
 }
 
-group 'com.flipkart.krystal'
-version project.krystal_version
 description 'An implementation of a vajram executor powered by the Krystex module.'
-
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven { url "https://clojars.org/repo" }
-}
 
 dependencies {
     api project(':vajram')
     api project(':krystex')
+
+    annotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
 
     def jacksonVersion = '2.14.2'
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations:' + jacksonVersion
     testImplementation 'com.fasterxml.jackson.core:jackson-databind:' + jacksonVersion
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:' + jacksonVersion
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jacksonVersion
+    testImplementation 'org.assertj:assertj-core:3.23.1'
+
+    testAnnotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
 }
+
+tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
 
 publishing {
     publications {
         maven(MavenPublication) {
             groupId = 'com.flipkart.krystal'
-            artifactId = 'vajram-krystex'
+            artifactId = project.name
             version = project.krystal_version
             from components.java
         }
     }
 }
 
-test {
-    useJUnitPlatform()
+/*
+ * The krystal gradle plugin adds new test tasks and modifies the compileTestJavaTask by making it depend
+ * on these new tasks. This seems to be interfering with gradle's ability to copy over the module dependencies
+ * from the module-info.java spec to the test modules. To overcome this, we have to manually add --add-exports and
+ * --add-reads arguments to the jvm so that test classes compile.
+ *
+ * This issue happens only when the compileTestJava task is modified to add a dependency on testCodeGenVajramModels.
+ * This is needed only when there are vajrams written in the 'test' directory of the project - which is the case in vajram-krystex.
+ * This issue doesn't arise in traditional modules where vajrams are written in 'main' directory.
+ *
+ * To circumvent this, the krystal gradle plugin does not make `compileTestJava` dependend on `testCodeGenVajramModels`.
+ * If any project has vajrams in the test directory, then that project will have to explicitly make `compileTestJava` dependend on `testCodeGenVajramModels`
+ * and add custome jvm arguments as done below, so that compilation of test code succeeds.
+ */
+tasks.named('testCodeGenVajramModels', JavaCompile).configure {
+    doFirst {
+        def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
+        options.compilerArgs += modulePathArgs(moduleName)
+    }
+}
+
+compileTestJava {
+    dependsOn 'testCodeGenVajramModels'
+    doFirst {
+        def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
+        options.compilerArgs += modulePathArgs(moduleName)
+        options.compilerArgs += [
+                '--module-path', classpath.asPath,
+                '--patch-module', "$moduleName=" + files(sourceSets.test.java.srcDirs).asPath,
+        ]
+    }
+}
+
+private static ArrayList<String> modulePathArgs(String moduleName) {
+    [
+            '--add-modules', 'flipkart.krystal.krystex',
+            '--add-reads', "$moduleName=flipkart.krystal.krystex",
+
+            '--add-modules', 'org.junit.jupiter.api',
+            '--add-reads', "$moduleName=org.junit.jupiter.api",
+
+            '--add-modules', 'org.junit.jupiter.params',
+            '--add-reads', "$moduleName=org.junit.jupiter.params",
+
+            '--add-modules', 'org.assertj.core',
+            '--add-reads', "$moduleName=org.assertj.core",
+
+            '--add-modules', 'com.fasterxml.jackson.annotation',
+            '--add-reads', "$moduleName=com.fasterxml.jackson.annotation",
+
+            '--add-modules', 'com.fasterxml.jackson.databind',
+            '--add-reads', "$moduleName=com.fasterxml.jackson.databind",
+
+            '--add-modules', 'com.fasterxml.jackson.datatype.jdk8',
+            '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jdk8",
+
+            '--add-modules', 'com.fasterxml.jackson.datatype.jsr310',
+            '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jsr310",
+    ]
 }

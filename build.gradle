@@ -6,7 +6,7 @@ plugins {
 ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
-    krystal_version = '4.3-WIWWT-GRAPHQL-ALL-OPTI-SNAPSHOT'
+    krystal_version = '5.3-SNAPSHOT'
 }
 
 checkerFramework {
@@ -24,12 +24,36 @@ subprojects {
     apply plugin: 'maven-publish'
     apply plugin: 'com.diffplug.spotless'
     apply plugin: 'org.checkerframework'
+    apply plugin: 'jacoco'
+
+    group 'com.flipkart.krystal'
+    version project.krystal_version
 
     spotless {
         java {
-            target 'src/*/java/**/*.java', 'build/generated/sources/vajrams/**/*.java'
+            target 'src/*/java/**/*.java', 'build/generated/sources/annotationProcessor/**/*.java'
             googleJavaFormat()
         }
+    }
+    tasks.named('spotlessJava').configure { mustRunAfter('compileJava') }
+    tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
+
+    dependencies {
+        implementation 'com.google.guava:guava:31.1-jre'
+        implementation 'org.checkerframework:checker-qual:3.37.0'
+        implementation 'org.slf4j:slf4j-api:2.0.3'
+        implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
+
+        compileOnly 'org.projectlombok:lombok:1.18.24'
+        annotationProcessor 'org.projectlombok:lombok:1.18.24'
+
+        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.3'
+        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.3'
+        testImplementation 'org.junit.jupiter:junit-jupiter-params:5.9.3'
+        testImplementation 'org.assertj:assertj-core:3.23.1'
+
+        testCompileOnly 'org.projectlombok:lombok:1.18.24'
+        testAnnotationProcessor 'org.projectlombok:lombok:1.18.24'
     }
 
     afterEvaluate {
@@ -48,26 +72,14 @@ subprojects {
         excludeTests = true
     }
 
-    dependencies {
-        implementation 'com.google.guava:guava:31.1-jre'
-        implementation 'org.checkerframework:checker-qual:3.37.0'
-        implementation 'org.slf4j:slf4j-api:2.0.3'
-
-        compileOnly 'org.projectlombok:lombok:1.18.24'
-        annotationProcessor 'org.projectlombok:lombok:1.18.24'
-
-        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.3'
-        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.3'
-        testImplementation 'org.junit.jupiter:junit-jupiter-params:5.9.3'
-        testImplementation 'org.assertj:assertj-core:3.23.1'
-
-        testCompileOnly 'org.projectlombok:lombok:1.18.24'
-        testAnnotationProcessor 'org.projectlombok:lombok:1.18.24'
+    jacoco {
+        toolVersion = "0.8.11"
     }
 
     java {
         withSourcesJar()
     }
+    tasks.named('sourcesJar').configure { mustRunAfter('compileJava') }
 
     publishing {
         repositories {
@@ -76,6 +88,16 @@ subprojects {
                 credentials {
                     username = rootProject.ext.clojarsusername
                     password = rootProject.ext.clojarspassword
+                }
+            }
+        }
+        publications.withType(MavenPublication).configureEach {
+            pom {
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
                 }
             }
         }

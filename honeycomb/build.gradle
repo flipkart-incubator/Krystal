@@ -1,3 +1,13 @@
-group 'org.example'
-version 'unspecified'
+description 'The default asynchronous orchestator which orchestrates stateful krystal workflows'
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.flipkart.krystal'
+            artifactId = project.name
+            version = project.krystal_version
+            from components.java
+        }
+    }
+}
 

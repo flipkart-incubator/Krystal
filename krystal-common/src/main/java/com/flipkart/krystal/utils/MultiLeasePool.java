@@ -37,13 +37,13 @@ public class MultiLeasePool<T> implements AutoCloseable {
       PooledObject<T> head;
       do {
         head = queue.peek();
-        if (head == null) {
-          continue;
+        boolean leasable = checkLeasabilityAndRotateIfNeeded(head);
+        if (leasable) {
+          break;
         }
-        processNonNullHead();
-      } while (head != null && --count > 0 && !canLeaseOut(head));
+      } while (head != null && --count > 0);
       PooledObject<T> leasable;
-      if (head == null || !canLeaseOut(head)) {
+      if (head == null || !shouldLeaseOut(head)) {
         leasable = createNewForLeasing();
       } else {
         leasable = head;
@@ -58,20 +58,29 @@ public class MultiLeasePool<T> implements AutoCloseable {
     }
   }
 
-  private void processNonNullHead() {
-    PooledObject<T> head = queue.poll();
+  private boolean checkLeasabilityAndRotateIfNeeded(@Nullable PooledObject<T> head) {
     if (head == null) {
-      return;
+      return false;
     }
+    boolean shouldLeaseOut = shouldLeaseOut(head);
     boolean shouldPushToLast =
-        !canLeaseOut(head)
-            || (leasePolicy instanceof DistributeLeases distributeLeases
+        // If this head shouldn't be leased out because it has too many leases active,
+        // then we need to move it the last position in the queue so that others get a chance to be
+        // leased out
+        !shouldLeaseOut
+            ||
+            // If the object can be leased out, but we have reached max active objects, even then
+            // push it to the last of the queue so that others get a chance to be leased out and the
+            // leases get distributed in a round-robin fashion
+            (leasePolicy instanceof DistributeLeases distributeLeases
                 && distributeLeases.maxActiveObjects() == queue.size());
     if (shouldPushToLast) {
+      queue.poll();
       if (!shouldDelete(head)) {
         queue.add(head);
       }
     }
+    return shouldLeaseOut;
   }
 
   private boolean shouldDelete(@Nullable PooledObject<T> pooledObject) {
@@ -96,7 +105,7 @@ public class MultiLeasePool<T> implements AutoCloseable {
     }
   }
 
-  private boolean canLeaseOut(PooledObject<T> pooledObject) {
+  private boolean shouldLeaseOut(PooledObject<T> pooledObject) {
     if (shouldDelete(pooledObject)) {
       return false;
     }

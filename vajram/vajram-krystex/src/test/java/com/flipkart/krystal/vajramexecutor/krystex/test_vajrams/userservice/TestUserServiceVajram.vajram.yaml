@@ -1,3 +1,6 @@
+output:
+  dataType: custom_java
+  customDataType: com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo
 inputs:
   - name: user_id
     dataType: string

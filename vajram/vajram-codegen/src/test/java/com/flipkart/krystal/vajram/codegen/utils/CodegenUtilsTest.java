@@ -1,9 +1,10 @@
 package com.flipkart.krystal.vajram.codegen.utils;
 
-import static com.flipkart.krystal.vajram.inputs.MultiExecute.executeFanoutWith;
+import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 
 import com.flipkart.krystal.vajram.VajramRequest;
-import com.flipkart.krystal.vajram.inputs.DependencyCommand;
+import com.flipkart.krystal.vajram.codegen.Utils;
+import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
@@ -18,8 +19,6 @@ import org.junit.jupiter.api.Test;
 
 public class CodegenUtilsTest {
 
-  public static final String[] EMPTY_INPUTS = new String[0];
-
   @SneakyThrows
   @Test
   public void testMethodReturnTypeComputation() throws Exception {
@@ -29,23 +28,16 @@ public class CodegenUtilsTest {
     final Method keySet = klass.getMethod("keySet");
     final Method entrySet = klass.getMethod("entrySet");
 
-    Assertions.assertNotNull(CodegenUtils.getMethodReturnType(containsKey));
-    final TypeName methodReturnType1 = CodegenUtils.getMethodReturnType(keySet);
+    Assertions.assertNotNull(Utils.getMethodReturnType(containsKey));
+    final TypeName methodReturnType1 = Utils.getMethodReturnType(keySet);
     Assertions.assertEquals(
         ((ParameterizedTypeName) methodReturnType1).rawType, ClassName.get(Set.class));
-    final TypeName methodReturnType = CodegenUtils.getMethodReturnType(entrySet);
+    final TypeName methodReturnType = Utils.getMethodReturnType(entrySet);
     Assertions.assertEquals(
         ((ParameterizedTypeName) methodReturnType).rawType, ClassName.get(Set.class));
 
-    final TypeName methodReturnType2 = CodegenUtils.getMethodReturnType(getMethod);
+    final TypeName methodReturnType2 = Utils.getMethodReturnType(getMethod);
     Assertions.assertEquals(methodReturnType2, ClassName.get(Object.class));
-
-    final TypeName classGenericArgumentsType =
-        CodegenUtils.getClassGenericArgumentsType(ClassTest1.class);
-    Assertions.assertEquals(
-        ((ParameterizedTypeName) classGenericArgumentsType).rawType, ClassName.get(Set.class));
-
-    //    final Type methodGenericType = CodegenUtils.getMethodGenericReturnType(g)
 
     final Class<?> aClass =
         Class.forName("com.flipkart.krystal.vajram.codegen.utils.CodegenUtilsTest$ClassTest1");
@@ -53,24 +45,6 @@ public class CodegenUtilsTest {
     if (genericSuperclass instanceof ParameterizedType parameterizedType) {
       final Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
     }
-  }
-
-  @Test
-  public void testGenericTypeComparison() throws ClassNotFoundException, NoSuchMethodException {
-    final Class<?> aClass =
-        Class.forName("com.flipkart.krystal.vajram.codegen.utils.CodegenUtilsTest$ClassTest1");
-    Assertions.assertTrue(
-        CodegenUtils.isDepResolverFanout(
-            aClass, aClass.getMethod("fanoutMethod1"), EMPTY_INPUTS, Collections.emptyMap()));
-    Assertions.assertTrue(
-        CodegenUtils.isDepResolverFanout(
-            aClass, aClass.getMethod("fanoutMethod2"), EMPTY_INPUTS, Collections.emptyMap()));
-    Assertions.assertFalse(
-        CodegenUtils.isDepResolverFanout(
-            aClass, aClass.getMethod("fanoutMethod3"), EMPTY_INPUTS, Collections.emptyMap()));
-    Assertions.assertFalse(
-        CodegenUtils.isDepResolverFanout(
-            aClass, aClass.getMethod("method1"), EMPTY_INPUTS, Collections.emptyMap()));
   }
 
   interface ITest<E> {}

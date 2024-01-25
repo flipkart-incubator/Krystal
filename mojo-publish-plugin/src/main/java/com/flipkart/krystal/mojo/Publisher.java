@@ -371,6 +371,10 @@ final class Publisher {
               .<Set<ProjectDependency>>map(d -> d.withType(ProjectDependency.class))
               .flatMap(Collection::stream)
               .map(ProjectDependency::getDependencyProject)
+              // to avoid cases where the project depends on itself for runtime image creation or
+              // any other tasks. Cyclic dependencies need not to be checked here as that would
+              // be taken care of by gradle itslef.
+              .filter(p -> !p.equals(project))
               .collect(Collectors.toSet());
       projectDependencies.put(project, allProjectDependencies);
       allProjectDependencies.forEach(

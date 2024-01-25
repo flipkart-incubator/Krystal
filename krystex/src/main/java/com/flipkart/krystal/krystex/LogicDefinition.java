@@ -9,15 +9,15 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 
 public abstract sealed class LogicDefinition<L extends Logic>
-    permits MainLogicDefinition, MultiResolverDefinition, ResolverLogicDefinition {
+    permits OutputLogicDefinition, MultiResolverDefinition, ResolverLogicDefinition {
 
   private final KryonLogicId kryonLogicId;
   private final ImmutableSet<String> inputNames;
-  private final ImmutableMap<String, Tag> logicTags;
+  private final ImmutableMap<Object, Tag> logicTags;
   private final L logic;
 
   protected LogicDefinition(
-      KryonLogicId kryonLogicId, Set<String> inputs, ImmutableMap<String, Tag> logicTags, L logic) {
+      KryonLogicId kryonLogicId, Set<String> inputs, ImmutableMap<Object, Tag> logicTags, L logic) {
     this.kryonLogicId = kryonLogicId;
     this.inputNames = ImmutableSet.copyOf(inputs);
     this.logicTags = logicTags;
@@ -32,7 +32,7 @@ public abstract sealed class LogicDefinition<L extends Logic>
     return inputNames;
   }
 
-  public ImmutableMap<String, Tag> logicTags() {
+  public ImmutableMap<Object, Tag> logicTags() {
     return logicTags;
   }
 

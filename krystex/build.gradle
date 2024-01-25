@@ -1,5 +1,4 @@
-group 'com.flipkart.krystal'
-version project.krystal_version
+description 'The default execution engine to execute synchronous workflows'
 
 dependencies {
     api project(':krystal-common')
@@ -8,14 +7,13 @@ dependencies {
     implementation 'io.github.resilience4j:resilience4j-all:' + r4j_version
     implementation 'io.github.resilience4j:resilience4j-circuitbreaker:' + r4j_version
     implementation 'io.github.resilience4j:resilience4j-bulkhead:' + r4j_version
-
 }
 
 publishing {
     publications {
         maven(MavenPublication) {
             groupId = 'com.flipkart.krystal'
-            artifactId = 'krystex'
+            artifactId = project.name
             version = project.krystal_version
             from components.java
         }

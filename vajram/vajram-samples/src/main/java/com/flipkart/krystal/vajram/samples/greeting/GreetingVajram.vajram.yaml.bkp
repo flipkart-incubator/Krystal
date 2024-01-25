@@ -1,0 +1,26 @@
+output:
+  dataType: integer
+inputs:
+  - name: user_id
+    dataType: string
+    mandatory: true
+  - name: log
+    dataType: custom_java
+    customDataType: [ java.lang, System, Logger ]
+    sources: SESSION
+  - name: analytics_event_sink
+    dataType: custom_java
+    customDataType: com.flipkart.krystal.vajram.samples.greeting.AnalyticsEventSink
+    tags:
+      inject.named: analytics_sink
+    mandatory: true
+    sources: SESSION
+dependencies:
+  - name: user_info
+    mandatory: false
+    depType: vajram
+    vajramClass: com.flipkart.krystal.vajram.samples.greeting.UserServiceVajram
+    dataType: custom_java
+    customDataType: com.flipkart.krystal.vajram.samples.greeting.UserInfo
+    canFanout: false
+

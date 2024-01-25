@@ -1,0 +1,26 @@
+output:
+  dataType: integer
+inputs:
+  - name: a
+    dataType: integer
+    mandatory: true
+  - name: p
+    dataType: integer
+    mandatory: true
+  - name: q
+    dataType: integer
+    mandatory: true
+dependencies:
+  - name: sum
+    mandatory: true
+    depType: vajram
+    vajramClass: com.flipkart.krystal.vajram.samples.benchmarks.calculator.adder.Adder
+    dataType: integer
+    canFanout: false
+  - name: quotient
+    mandatory: true
+    depType: vajram
+    vajramClass: com.flipkart.krystal.vajram.samples.benchmarks.calculator.divider.Divider
+    dataType: integer
+    canFanout: false
+

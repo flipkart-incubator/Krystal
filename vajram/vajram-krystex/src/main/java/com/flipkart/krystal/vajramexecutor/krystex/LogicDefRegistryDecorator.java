@@ -4,8 +4,8 @@ import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
-import com.flipkart.krystal.krystex.MainLogic;
-import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.OutputLogic;
+import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.resolution.MultiResolver;
@@ -35,17 +35,17 @@ public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
     return def;
   }
 
-  public <T> MainLogicDefinition<T> newMainLogic(
+  public <T> OutputLogicDefinition<T> newOutputLogic(
       boolean isIOLogic,
       KryonLogicId kryonLogicId,
       Set<String> inputs,
-      MainLogic<T> kryonLogic,
-      ImmutableMap<String, Tag> logicTags) {
-    MainLogicDefinition<T> def =
+      OutputLogic<T> kryonLogic,
+      ImmutableMap<Object, Tag> logicTags) {
+    OutputLogicDefinition<T> def =
         isIOLogic
             ? new IOLogicDefinition<>(kryonLogicId, inputs, kryonLogic, logicTags)
             : new ComputeLogicDefinition<>(kryonLogicId, inputs, kryonLogic, logicTags);
-    delegate.addMainLogic(def);
+    delegate.addOutputLogic(def);
     return def;
   }
 }

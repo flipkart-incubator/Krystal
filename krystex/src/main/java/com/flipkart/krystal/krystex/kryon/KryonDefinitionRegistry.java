@@ -31,18 +31,18 @@ public final class KryonDefinitionRegistry {
     return kryon;
   }
 
-  public KryonDefinition newKryonDefinition(String kryonId, KryonLogicId mainLogicId) {
-    return newKryonDefinition(kryonId, mainLogicId, ImmutableMap.of());
+  public KryonDefinition newKryonDefinition(String kryonId, KryonLogicId outputLogicId) {
+    return newKryonDefinition(kryonId, outputLogicId, ImmutableMap.of());
   }
 
   public KryonDefinition newKryonDefinition(
-      String kryonId, KryonLogicId mainLogicId, ImmutableMap<String, KryonId> dependencyKryons) {
-    return newKryonDefinition(kryonId, mainLogicId, dependencyKryons, ImmutableList.of(), null);
+      String kryonId, KryonLogicId outputLogicId, ImmutableMap<String, KryonId> dependencyKryons) {
+    return newKryonDefinition(kryonId, outputLogicId, dependencyKryons, ImmutableList.of(), null);
   }
 
   public KryonDefinition newKryonDefinition(
       String kryonId,
-      KryonLogicId mainLogicId,
+      KryonLogicId outputLogicId,
       ImmutableMap<String, KryonId> dependencyKryons,
       ImmutableList<ResolverDefinition> resolverDefinitions,
       @Nullable KryonLogicId mulitResolverId) {
@@ -52,7 +52,7 @@ public final class KryonDefinitionRegistry {
     KryonDefinition kryonDefinition =
         new KryonDefinition(
             new KryonId(kryonId),
-            mainLogicId,
+            outputLogicId,
             dependencyKryons,
             resolverDefinitions,
             Optional.ofNullable(mulitResolverId),

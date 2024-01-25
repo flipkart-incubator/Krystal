@@ -3,6 +3,7 @@ module flipkart.krystal.vajramexecutor.krystex {
   requires flipkart.krystal.vajram;
   requires com.google.common;
   requires org.checkerframework.checker.qual;
-  requires lombok;
+  requires static lombok;
   requires flipkart.krystal.common;
+  requires jakarta.inject;
 }

@@ -9,14 +9,16 @@ dependencies {
     implementation project(':krystal-common')
     implementation project(':vajram')
 
-    testImplementation project(':vajram-krystex')
-    testImplementation project(':krystex')
+    annotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
 
-    implementation 'com.google.inject:guice:5.1.0'
+    testImplementation project(':vajram-krystex')
+
+    implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
     implementation 'org.checkerframework:checker-qual:3.37.0'
 
     def jacksonVersion = '2.14.2'
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations:' + jacksonVersion
+    testImplementation 'com.google.inject:guice:7.0.0'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind:' + jacksonVersion
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:' + jacksonVersion
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jacksonVersion
@@ -27,3 +29,4 @@ test {
     maxHeapSize = "4g" // maximum heap size
 }
 
+tasks.named("spotlessJava").configure { dependsOn("codeGenVajramModels") }

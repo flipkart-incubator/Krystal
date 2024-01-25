@@ -1,3 +1,8 @@
+output:
+  dataType: custom_java
+  customDataType: java.util.Set
+  typeParameters:
+    dataType: string
 inputs:
   - name: user_id
     dataType: string

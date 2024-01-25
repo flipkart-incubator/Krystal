@@ -47,7 +47,7 @@ Krystex is not designed to solve for functional and development-time use cases. 
 
 Because of this design choice, Krystex is not very developer-friendly, and is not supposed to be
 used by application developers directly. It is expected that other
-frameworks (like [vajram](../vajram/README.md) and [caramel](../caramel/README.md)) will create
+frameworks (like [vajram](../vajram/README.md)) will create
 abstractions over krystex which provide a developer-friendly environment to write application logic,
 and then translate/compile these abstractions into Krystal native entities for runtime execution.
 
@@ -74,7 +74,7 @@ information
 * a kryonId - a unique identifier for every kryon. In a given KryonExecutor, there can only be
   on instance of a kryon having a given kryonId.
 * a reference to a stateless logic/function (the unit of work) - called
-  the [main logic](#kryon-main-logic) of the kryon
+  the [main logic](#kryon-output-logic) of the kryon
 * references to other kryon definitions which are [dependencies](#kryon-dependency) of this kryon
   definition
 * references to [resolver functions](#dependency-input-resolver-logic)
@@ -84,10 +84,10 @@ inputs and outputs. For this reason, kryon definitions are created once and cach
 of the application. And are used as templates for [Kryons](#kryon) which are created afresh for every
 new instance of the KryonExecutor.
 
-### Kryon Main Logic
+### Kryon Output Logic
 
 Every kryon has exactly one function which has the responsibility of computing the output of the
-kryon. This called the main logic. If the main logic fails with an Exception, then the kryon is
+kryon. This called the output logic. If the output logic fails with an Exception, then the kryon is
 considered to have failed with the same exception.
 
 ### Kryon Input
@@ -142,7 +142,7 @@ considered to have failed with the same exception.
 ### Logic Decorator
 
 Logic decorators are a simple yet powerful way to extend Krystex. Krystex allows clients to define
-and plug-in decorators which wrap the main logic of kryons. In this wrapped logic, clients are free
+and plug-in decorators which wrap the output logic of kryons. In this wrapped logic, clients are free
 to add functionality to the framework. The decisions like which logic decorators should decorate
 which kryons, in which order and how a logic decorator instance is shared across hoe many kryons, etc.
 are completely left to clients, making this a very powerful feature.
@@ -156,7 +156,7 @@ Example use-cases include:
 
 * Logic decorators can be uniquer per kryon, or can be shared across kryons.
 * Logic decorators can be request-scoped or session-scoped (last for the application lifetime.)
-* Logic decorators, unlike kryon logics (like resolvers and main logics) can be stateful.
+* Logic decorators, unlike kryon logics (like resolvers and output logics) can be stateful.
 
 <!--TODO-->
 
@@ -165,7 +165,7 @@ Example use-cases include:
 ### Command Queue - (SingleThreadExecutor)
 
 The KryonExecutor executes all the required kryons in a single thread using the event loop
-pattern. This means that none of the resolver logics or main logics of any kryon are allowed to block
+pattern. This means that none of the resolver logics or output logics of any kryon are allowed to block
 for
 any amount of time. They are expected to return instantly after wrapping any long-running operation
 in a `CompletableFuture`. All long-running operations like I/O should either be performed using
@@ -210,7 +210,7 @@ Following is a logic view of a representative krystex kryon `N`:
     * `r1` resolves the input of `d1` using inputs `i1` and `i2`.
     * `r2` resolves the input of `d2` using inputs `i3` and the result of dependency `d1`.
     * `r3` resolves the input of `d3` using inputs `i3` and `i4` and the result of dependency `d2`.
-* The main logic has access to all the four input values and three dependency results.
+* The output logic has access to all the four input values and three dependency results.
 
 For the purpose of this example, let us assume `N1`, and `N2` themselves have no other dependencies.
 When we trigger the kryon `N` with a set of inputs (all inputs need not be provided at the same
@@ -220,24 +220,24 @@ time). This is how the execution proceeds:
 2. Execute `r1` (Do not wait for `i3` and `i4`). `r1` finishes immediately since resolvers are not
    allowed to make blocking calls.
 3. Take the output of `r1` and provide it to kryon `N1`
-4. `N1` has no resolvers/dependencies. Execute main logic of `N1`
-5. Wait for main logic of `N1` to finish.
+4. `N1` has no resolvers/dependencies. Execute output logic of `N1`
+5. Wait for output logic of `N1` to finish.
 6. Wait for `i3` to be provided.
 7. Execute `r2` with `i3` and results of `d1` (`N1`). `r2` finishes immediately.
 8. Take the output of `r2` and provide it to kryon `N2`
-9. `N2` has no resolvers/dependencies. Execute main logic on `N1`. Wait for this to complete.
+9. `N2` has no resolvers/dependencies. Execute output logic on `N1`. Wait for this to complete.
 10. Wait for `i4` to be provided.
 11. Execute `r3` with `i3`, `i4` and the results of `d2`(`N2`). `r3` finishes immediately.
 12. Take output of `r3` and provide it to kryon `N1`.
-13. `N1` has no resolvers/dependencies. Execute main logic of `N1` with the provided input. Wait for
+13. `N1` has no resolvers/dependencies. Execute output logic of `N1` with the provided input. Wait for
     this to complete.
-14. Execute the main logic of `N`
+14. Execute the output logic of `N`
 
 Here is the shorter-form of the execution sequence:
 
 `r1` -> `N1` -> `r2` -> `N2` -> `r3` -> `N1` -> `N`
 
-The result of executing the main logic of `N` is considered the final result of the computation.
+The result of executing the output logic of `N` is considered the final result of the computation.
 
 <!-- TODO add execution animation -->
 

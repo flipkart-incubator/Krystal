@@ -1,18 +1,15 @@
-group 'com.flipkart.krystal'
-version project.krystal_version
+description 'A programming model for writing highly concurrent synchronous workflows.'
 
 dependencies {
     api project(':krystal-common')
     implementation 'org.reflections:reflections:0.10.2'
-    implementation 'com.graphql-java:graphql-java:20.0'
-
 }
 
 publishing {
     publications {
         maven(MavenPublication) {
             groupId = 'com.flipkart.krystal'
-            artifactId = 'vajram'
+            artifactId = project.name
             version = project.krystal_version
             from components.java
         }

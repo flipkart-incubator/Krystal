@@ -2,7 +2,7 @@ package com.flipkart.krystal.krystex.kryon;
 
 import static com.flipkart.krystal.krystex.kryon.KryonUtils.toView;
 
-import com.flipkart.krystal.krystex.MainLogicDefinition;
+import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -14,7 +14,7 @@ import java.util.Optional;
  */
 public record KryonDefinition(
     KryonId kryonId,
-    KryonLogicId mainLogicId,
+    KryonLogicId outputLogicId,
     ImmutableMap<String, KryonId> dependencyKryons,
     ImmutableList<ResolverDefinition> resolverDefinitions,
     Optional<KryonLogicId> multiResolverLogicId,
@@ -23,14 +23,14 @@ public record KryonDefinition(
 
   public KryonDefinition(
       KryonId kryonId,
-      KryonLogicId mainLogicId,
+      KryonLogicId outputLogicId,
       ImmutableMap<String, KryonId> dependencyKryons,
       ImmutableList<ResolverDefinition> resolverDefinitions,
       Optional<KryonLogicId> multiResolverLogicId,
       KryonDefinitionRegistry kryonDefinitionRegistry) {
     this(
         kryonId,
-        mainLogicId,
+        outputLogicId,
         dependencyKryons,
         resolverDefinitions,
         multiResolverLogicId,
@@ -38,8 +38,8 @@ public record KryonDefinition(
         kryonDefinitionRegistry);
   }
 
-  public <T> MainLogicDefinition<T> getMainLogicDefinition() {
-    return kryonDefinitionRegistry().logicDefinitionRegistry().getMain(mainLogicId());
+  public <T> OutputLogicDefinition<T> getOutputLogicDefinition() {
+    return kryonDefinitionRegistry().logicDefinitionRegistry().getOutputLogic(outputLogicId());
   }
 
   /**

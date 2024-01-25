@@ -1,103 +1,94 @@
 package com.flipkart.krystal.vajram
 
-import com.flipkart.krystal.vajram.codegen.VajramCodeGenFacade
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.compile.JavaCompile
 
+import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY
+import static com.flipkart.krystal.vajram.codegen.models.CodegenPhase.IMPLS
+import static com.flipkart.krystal.vajram.codegen.models.CodegenPhase.MODELS
+
 class VajramPlugin implements Plugin<Project> {
+
+
+    public static final String EMPTY_DIR = 'tmp/empty'
+
     void apply(Project project) {
 
-        String mainGeneratedSrcDir = project.buildDir.getPath() + '/generated/sources/vajrams/main/java/'
-        String testGeneratedSrcDir = project.buildDir.getPath() + '/generated/sources/vajrams/test/java/'
+
+        def srcGenDir = '/generated/sources/annotationProcessor/java'
+        // Vajram models are generated in a different directory to keep the build phase inputs and outputs separate -
+        // This enables better caching and to deterministically reuse previous build's outputs
+        def vajramModelsGenDir = '/generated/sources/annotationProcessor/vajramModels/java'
+
+        String mainSrcDir = 'src/main/java'
+        String testSrcDir = 'src/test/java'
+
+        String mainModelsGenDir = project.buildDir.getPath() + vajramModelsGenDir + '/main'
+        String mainImplsGenDir = project.buildDir.getPath() + srcGenDir + '/main'
+
+        String testModelsGenDir = project.buildDir.getPath() + vajramModelsGenDir + '/test'
+        String testImplsGenDir = project.buildDir.getPath() + srcGenDir + '/test'
 
         project.sourceSets {
             main {
                 java {
-                    srcDirs = ['src/main/java', mainGeneratedSrcDir]
+                    srcDirs = [mainSrcDir, mainModelsGenDir, mainImplsGenDir]
                 }
             }
             test {
                 java {
-                    srcDirs = ['src/test/java', testGeneratedSrcDir]
+                    srcDirs = [testSrcDir, testModelsGenDir, testImplsGenDir]
                 }
             }
         }
 
-        String compiledMainDir = project.buildDir.getPath() + '/classes/java/main/'
-        String compiledTestDir = project.buildDir.getPath() + '/classes/java/test/'
-
-        project.tasks.register('codeGenVajramModels') {
-            group = 'krystal'
-            doLast {
-                VajramCodeGenFacade.codeGenModels(
-                        project.sourceSets.main.java.srcDirs,
-                        compiledMainDir,
-                        mainGeneratedSrcDir)
-            }
-        }
-
-        project.tasks.register('compileVajramModels', JavaCompile) {
-            group = 'krystal'
-            dependsOn it.project.tasks.codeGenVajramModels
+        project.tasks.register('codeGenVajramModels', JavaCompile) {
             //Compile the generatedCode
-            source project.sourceSets.main.allSource.srcDirs
+            group = 'krystal'
+            source mainSrcDir
             classpath = project.configurations.compileClasspath
-            destinationDirectory = project.tasks.compileJava.destinationDirectory
+            // This is a 'proc:only' compile step. Which means, no .class files are generated. This means the destinationDirectory property
+            // is not essential used by this step.
+            // We reassign the `destinationDirectory` to a dummy empty directory so that the destination directory doesnot clash
+            // with the full compile step. This is so that gradle caching works optimally - gradle doesn't cache outputs of tasks
+            // which share output directories with other tasks -
+            // See: https://docs.gradle.org/current/userguide/build_cache_concepts.html#concepts_overlapping_outputs
+            destinationDirectory = project.getObjects().directoryProperty().fileValue(project.buildDir.toPath().resolve(EMPTY_DIR).toFile())
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
+            options.generatedSourceOutputDirectory.fileValue(project.file(mainModelsGenDir))
+            options.compilerArgs += ['-proc:only', '-A' + COGENGEN_PHASE_KEY + '=' + MODELS]
         }
 
-        // add a new task to generate vajram impl as this step needs to run after model generation
-        // and compile
-        project.tasks.register('codeGenVajramImpl') {
-            group = 'krystal'
-            dependsOn it.project.tasks.compileVajramModels
-            print project.tasks.compileJava.destinationDirectory
-            doLast {
-                VajramCodeGenFacade.codeGenVajramImpl(
-                        project.sourceSets.main.java.srcDirs,
-                        compiledMainDir,
-                        mainGeneratedSrcDir,
-                        project.tasks.compileJava.classpath)
-            }
+        project.tasks.named('compileJava', JavaCompile).configure {
+            dependsOn 'codeGenVajramModels'
+            options.compilerArgs += ['-A' + COGENGEN_PHASE_KEY + '=' + IMPLS]
         }
 
-        project.tasks.compileJava.dependsOn 'codeGenVajramImpl'
-
-        project.tasks.register('testCodeGenVajramModels') {
-            group = 'krystal'
-            doLast {
-                VajramCodeGenFacade.codeGenModels(
-                        project.sourceSets.test.java.srcDirs,
-                        compiledTestDir,
-                        testGeneratedSrcDir)
-            }
-        }
-
-        project.tasks.register('testCompileVajramModels', JavaCompile) {
-            group = 'krystal'
-            dependsOn it.project.tasks.testCodeGenVajramModels
+        project.tasks.register('testCodeGenVajramModels', JavaCompile) {
             //Compile the generatedCode
-            source project.sourceSets.test.allSource.srcDirs
-            classpath = project.tasks.compileTestJava.classpath
-            destinationDirectory = project.tasks.compileTestJava.destinationDirectory
+            group = 'krystal'
+            mustRunAfter it.project.tasks.compileJava
+            source mainSrcDir, testSrcDir
+            classpath = project.configurations.testCompileClasspath + project.configurations.compileClasspath
+            // This is a 'proc:only' compile step. Which means, no .class files are generated. This means the destinationDirectory property
+            // is not essential used by this step.
+            // We reassign the `destinationDirectory` to a dummy empty directory so that the destination directory doesnot clash
+            // with the full compile step. This is so that gradle caching works optimally - gradle doesn't cache outputs of tasks
+            // which share output directories with other tasks -
+            // See: https://docs.gradle.org/current/userguide/build_cache_concepts.html#concepts_overlapping_outputs
+            destinationDirectory = project.getObjects().directoryProperty().fileValue(project.buildDir.toPath().resolve(EMPTY_DIR).toFile())
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileTestJava.options.annotationProcessorPath
+            options.generatedSourceOutputDirectory.fileValue(project.file(testModelsGenDir))
+            options.compilerArgs += ['-A' + COGENGEN_PHASE_KEY + '=' + MODELS]
         }
 
-        project.tasks.register('testCodeGenVajramImpl') {
-            group = 'krystal'
-            dependsOn it.project.tasks.testCompileVajramModels
-            doLast {
-                VajramCodeGenFacade.codeGenVajramImpl(
-                        project.sourceSets.test.java.srcDirs,
-                        compiledTestDir,
-                        testGeneratedSrcDir,
-                        project.tasks.compileTestJava.classpath)
-            }
+        project.tasks.named('compileTestJava', JavaCompile).configure {
+            options.compilerArgs += ['-A' + COGENGEN_PHASE_KEY + '=' + IMPLS]
         }
 
-        project.tasks.compileTestJava.dependsOn 'testCodeGenVajramImpl'
+        project.tasks.named("jar").configure { it.dependsOn("compileJava") }
     }
 }
