@@ -12,9 +12,13 @@ import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -33,6 +37,8 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
 
   @Getter
   private final Map<KryonExecution, LogicExecInfo> mainLogicExecInfos = new LinkedHashMap<>();
+
+  @Getter private final Map<String, Object> dataMap = new HashMap<>();
 
   public DefaultKryonExecutionReport(Clock clock) {
     this(clock, false);
@@ -99,6 +105,11 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
       if (!(value instanceof ValueOrError<Object>)) {
         continue;
       }
+//      if (e.getKey().equalsIgnoreCase("_graphql_execution_context")
+//          || e.getKey().equalsIgnoreCase("_graphql_execution_strategy")
+//          || e.getKey().equalsIgnoreCase("_graphql_execution_strategy_params")) {
+//        continue;
+//      }
       Object collect = convertValueOrError((ValueOrError<Object>) value);
       if (collect != null) {
         inputMap.put(e.getKey(), collect);
@@ -121,11 +132,17 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
   }
 
   private Object convertValueOrError(ValueOrError<Object> voe) {
+    String sha256;
     if (voe.error().isPresent()) {
       Throwable throwable = voe.error().get();
-      return verbose ? getStackTraceAsString(throwable) : throwable.toString();
+      sha256 =
+          verbose ? hashValues(getStackTraceAsString(throwable)) : hashValues(throwable.toString());
+      dataMap.put(sha256, verbose ? getStackTraceAsString(throwable) : throwable.toString());
+      return sha256;
     } else {
-      return voe.value().orElse("null");
+      sha256 = hashValues(voe.value().orElse("null"));
+      dataMap.put(sha256, voe.value().orElse("null"));
+      return sha256;
     }
   }
 
@@ -134,6 +151,35 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
         .collect(
             Collectors.toMap(
                 e -> extractAndConvertInputs(e.getKey()), e -> convertValueOrError(e.getValue())));
+  }
+
+  public static <T> String hashValues(T input) {
+    StringBuilder concatenatedValues = new StringBuilder();
+    if (input != null) {
+      concatenatedValues.append(input.toString());
+    }
+    return hashString(concatenatedValues.toString());
+  }
+
+  private static String hashString(String appendedInput) {
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      byte[] encodedHash = digest.digest(appendedInput.getBytes(StandardCharsets.UTF_8));
+      StringBuilder hexString = new StringBuilder(2 * encodedHash.length);
+
+      for (byte b : encodedHash) {
+        String hex = Integer.toHexString(0xff & b);
+        if (hex.length() == 1) {
+          hexString.append('0');
+        }
+        hexString.append(hex);
+      }
+
+      return hexString.toString();
+    } catch (NoSuchAlgorithmException e) {
+      log.error("Error came while generating message digest instance.");
+      return "";
+    }
   }
 
   @ToString
