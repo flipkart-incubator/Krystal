@@ -9,19 +9,19 @@ dependencies {
     implementation project(':krystal-common')
     implementation project(':vajram')
 
-    annotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
+    annotationProcessor 'com.flipkart.krystal:krystal-plugin'
+
+    implementation 'jakarta.inject:jakarta.inject-api'
+    implementation 'org.checkerframework:checker-qual'
 
     testImplementation project(':vajram-krystex')
 
-    implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
-    implementation 'org.checkerframework:checker-qual:3.37.0'
+    testImplementation 'com.google.inject:guice'
 
-    def jacksonVersion = '2.14.2'
-    testImplementation 'com.fasterxml.jackson.core:jackson-annotations:' + jacksonVersion
-    testImplementation 'com.google.inject:guice:7.0.0'
-    testImplementation 'com.fasterxml.jackson.core:jackson-databind:' + jacksonVersion
-    testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:' + jacksonVersion
-    testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jacksonVersion
+    testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
+    testImplementation 'com.fasterxml.jackson.core:jackson-databind'
+    testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
+    testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 }
 
 test {
