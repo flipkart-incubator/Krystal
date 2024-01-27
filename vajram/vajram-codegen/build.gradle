@@ -33,22 +33,16 @@ tasks.named('spotlessJava').configure { mustRunAfter('compileGroovy') }
 
 dependencies {
     api project(':vajram')
-    implementation 'com.squareup:javapoet:1.13.0'
-    implementation 'commons-cli:commons-cli:1.5.0'
-    implementation 'org.projectlombok:lombok:1.18.24'
+    implementation 'com.squareup:javapoet'
+    implementation 'commons-cli:commons-cli'
+    implementation 'org.projectlombok:lombok'
 
-    compileOnly 'com.google.auto.service:auto-service:1.1.1'
-    annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
-
-    def jacksonVersion = '2.14.2'
-    implementation 'com.fasterxml.jackson.core:jackson-annotations:' + jacksonVersion
-    implementation 'com.fasterxml.jackson.core:jackson-databind:' + jacksonVersion
-    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:' + jacksonVersion
+    compileOnly 'com.google.auto.service:auto-service'
+    annotationProcessor 'com.google.auto.service:auto-service'
 }
 
 checkerFramework {
-    extraJavacArgs = [
-            "-Astubs=${rootDir}/config/checker/stubs",
+    extraJavacArgs += [
             '-AresolveReflection',
     ]
 }
