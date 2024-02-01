@@ -15,25 +15,17 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * <p>Example states:
  *
  * <ul>
- *   {@link #value()} is empty and {@link #error()} is empty - represents a null value.
- * </ul>
- *
- * <ul>
- *   {@link #value()} is empty and {@link #error()} is not empty - value could not be computed
- *   because of the given error.
- * </ul>
- *
- * <ul>
- *   {@link #value()} is not empty and {@link #error()} is empty - successfully computed the given
- *   value
- * </ul>
- *
- * <ul>
- *   {@link #value()} is not empty and {@link #error()} is not empty - this scenario is impossible.
+ *   <li>{@link #value()} is empty and {@link #error()} is empty - represents a null value.
+ *   <li>{@link #value()} is empty and {@link #error()} is not empty - value could not be computed
+ *       because of the given error.
+ *   <li>{@link #value()} is not empty and {@link #error()} is empty - successfully computed the
+ *       given value
+ *   <li>{@link #value()} is not empty and {@link #error()} is not empty - this scenario is
+ *       impossible.
  * </ul>
  */
 public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error)
-    implements InputValue<T> {
+    implements FacetValue<T> {
 
   private static final ValueOrError<?> EMPTY =
       new ValueOrError<>(Optional.empty(), Optional.empty());

@@ -16,7 +16,7 @@ import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2InputUtil.MultiHelloFriendsV2Inputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2FacetUtil.MultiHelloFriendsV2Facets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -41,14 +41,14 @@ public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
   }
 
   @Output
-  public static String sayHellos(MultiHelloFriendsV2Inputs allInputs) {
-    if (allInputs.skip().orElse(false)) {
+  static String sayHellos(MultiHelloFriendsV2Facets facets) {
+    if (facets.skip().orElse(false)) {
       return "";
     }
-    Set<String> userIds = allInputs.userIds();
+    Set<String> userIds = facets.userIds();
     List<String> result = new ArrayList<>();
     for (String userId : userIds) {
-      allInputs
+      facets
           .hellos()
           .get(HelloFriendsV2Request.builder().userId(userId).build())
           .value()

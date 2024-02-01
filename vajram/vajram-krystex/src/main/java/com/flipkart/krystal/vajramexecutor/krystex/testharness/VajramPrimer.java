@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajramexecutor.krystex.testharness;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardBatch;
@@ -35,7 +35,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  */
 public class VajramPrimer extends AbstractKryonDecorator {
 
-  private final ImmutableMap<Inputs, ValueOrError<Object>> executionStubs;
+  private final ImmutableMap<Facets, ValueOrError<Object>> executionStubs;
   private final VajramID decoratedVajramId;
   private final boolean failIfMockMissing;
   private @MonotonicNonNull DecoratedKryon decoratedKryon;
@@ -46,11 +46,11 @@ public class VajramPrimer extends AbstractKryonDecorator {
       boolean failIfMockMissing) {
     this.decoratedVajramId = mockedVajramId;
     this.failIfMockMissing = failIfMockMissing;
-    Map<Inputs, ValueOrError<Object>> mocks = new LinkedHashMap<>(stubs.size());
+    Map<Facets, ValueOrError<Object>> mocks = new LinkedHashMap<>(stubs.size());
     stubs.forEach(
         (req, resp) -> {
           //noinspection unchecked
-          mocks.put(req.toInputValues(), (ValueOrError<Object>) resp);
+          mocks.put(req.toFacetValues(), (ValueOrError<Object>) resp);
         });
     this.executionStubs = ImmutableMap.copyOf(mocks);
   }
@@ -92,15 +92,15 @@ public class VajramPrimer extends AbstractKryonDecorator {
       } else if (kryonCommand instanceof ForwardBatch forwardBatch) {
         Map<RequestId, ValueOrError<Object>> finalResponses = new LinkedHashMap<>();
         Set<RequestId> unmockedRequestIds = new LinkedHashSet<>();
-        for (Entry<RequestId, Inputs> entry : forwardBatch.executableRequests().entrySet()) {
+        for (Entry<RequestId, Facets> entry : forwardBatch.executableRequests().entrySet()) {
           RequestId requestId = entry.getKey();
-          Inputs inputs = entry.getValue();
-          ValueOrError<Object> mockedResponse = executionStubs.get(inputs);
+          Facets facets = entry.getValue();
+          ValueOrError<Object> mockedResponse = executionStubs.get(facets);
           if (mockedResponse == null) {
             if (failIfMockMissing) {
               throw new IllegalStateException(
                   "Could not find mocked response for inputs %s of kryon %s"
-                      .formatted(inputs, kryonId));
+                      .formatted(facets, kryonId));
             } else {
               unmockedRequestIds.add(requestId);
             }
@@ -108,7 +108,7 @@ public class VajramPrimer extends AbstractKryonDecorator {
             finalResponses.put(requestId, mockedResponse);
           }
         }
-        LinkedHashMap<RequestId, Inputs> unmockedRequests =
+        LinkedHashMap<RequestId, Facets> unmockedRequests =
             new LinkedHashMap<>(forwardBatch.executableRequests());
         unmockedRequests.keySet().retainAll(unmockedRequestIds);
         try {

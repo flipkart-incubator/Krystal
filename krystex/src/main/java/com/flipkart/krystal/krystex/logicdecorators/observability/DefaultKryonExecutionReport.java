@@ -3,8 +3,8 @@ package com.flipkart.krystal.krystex.logicdecorators.observability;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
-import com.flipkart.krystal.data.InputValue;
-import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.FacetValue;
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.kryon.KryonId;
@@ -46,7 +46,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
 
   @Override
   public void reportMainLogicStart(
-      KryonId kryonId, KryonLogicId kryonLogicId, ImmutableList<Inputs> inputs) {
+      KryonId kryonId, KryonLogicId kryonLogicId, ImmutableList<Facets> inputs) {
     KryonExecution kryonExecution =
         new KryonExecution(
             kryonId, inputs.stream().map(this::extractAndConvertInputs).collect(toImmutableList()));
@@ -92,10 +92,10 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     }
   }
 
-  private ImmutableMap<String, Object> extractAndConvertInputs(Inputs inputs) {
+  private ImmutableMap<String, Object> extractAndConvertInputs(Facets facets) {
     Map<String, Object> inputMap = new LinkedHashMap<>();
-    for (Entry<String, InputValue<Object>> e : inputs.values().entrySet()) {
-      InputValue<Object> value = e.getValue();
+    for (Entry<String, FacetValue<Object>> e : facets.values().entrySet()) {
+      FacetValue<Object> value = e.getValue();
       if (!(value instanceof ValueOrError<Object>)) {
         continue;
       }
@@ -107,10 +107,10 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     return ImmutableMap.copyOf(inputMap);
   }
 
-  private ImmutableMap<String, Object> extractAndConvertDependencyResults(Inputs inputs) {
+  private ImmutableMap<String, Object> extractAndConvertDependencyResults(Facets facets) {
     Map<String, Object> inputMap = new LinkedHashMap<>();
-    for (Entry<String, InputValue<Object>> e : inputs.values().entrySet()) {
-      InputValue<Object> value = e.getValue();
+    for (Entry<String, FacetValue<Object>> e : facets.values().entrySet()) {
+      FacetValue<Object> value = e.getValue();
       if (!(value instanceof Results<Object>)) {
         continue;
       }
@@ -150,7 +150,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     LogicExecInfo(
         DefaultKryonExecutionReport kryonExecutionReport,
         KryonId kryonId,
-        ImmutableCollection<Inputs> inputList,
+        ImmutableCollection<Facets> inputList,
         long startTimeMs) {
       this.startTimeMs = startTimeMs;
       ImmutableList<ImmutableMap<String, Object>> dependencyResults;

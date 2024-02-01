@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
@@ -81,12 +81,12 @@ class KryonExecutorTest {
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            Inputs.empty(),
+            Facets.empty(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> future2 =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            Inputs.empty(),
+            Facets.empty(),
             KryonExecutionConfig.builder().executionId("req_2").build());
 
     kryonExecutor.flush();
@@ -109,10 +109,10 @@ class KryonExecutorTest {
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            Inputs.empty(),
+            Facets.empty(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     assertThatThrownBy(
-            () -> kryonExecutor.executeKryon(kryonDefinition.kryonId(), Inputs.empty(), null))
+            () -> kryonExecutor.executeKryon(kryonDefinition.kryonId(), Facets.empty(), null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("executionConfig can not be null");
     kryonExecutor.flush();
@@ -135,7 +135,7 @@ class KryonExecutorTest {
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            Inputs.empty(),
+            Facets.empty(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     kryonExecutor.flush();
     assertEquals("computed_value", timedGet(future));
@@ -166,7 +166,7 @@ class KryonExecutorTest {
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
             kryonId,
-            new Inputs(ImmutableMap.of("a", withValue(1), "b", withValue(2), "c", withValue("3"))),
+            new Facets(ImmutableMap.of("a", withValue(1), "b", withValue(2), "c", withValue("3"))),
             KryonExecutionConfig.builder().executionId("r").build());
     kryonExecutor.flush();
     assertEquals("computed_values: a=1;b=2;c=3", timedGet(future));
@@ -206,7 +206,7 @@ class KryonExecutorTest {
 
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
-            n2.kryonId(), Inputs.empty(), KryonExecutionConfig.builder().executionId("r1").build());
+            n2.kryonId(), Facets.empty(), KryonExecutionConfig.builder().executionId("r1").build());
     kryonExecutor.flush();
     assertEquals("dependency_value:computed_value", timedGet(future));
   }
@@ -279,7 +279,7 @@ class KryonExecutorTest {
             .kryonLogicId(),
         ImmutableMap.of("input", new KryonId(l3Dep)));
 
-    Inputs inputs = Inputs.empty();
+    Facets facets = Facets.empty();
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
             kryonDefinitionRegistry
@@ -301,7 +301,7 @@ class KryonExecutorTest {
                         .kryonLogicId(),
                     ImmutableMap.of("input", new KryonId(l4Dep)))
                 .kryonId(),
-            inputs,
+            facets,
             KryonExecutionConfig.builder().executionId("r").build());
     kryonExecutor.flush();
     assertThat(future).succeedsWithin(TIMEOUT).isEqualTo("l1:l2:l3:l4:final");
@@ -326,7 +326,7 @@ class KryonExecutorTest {
                                 dependencyValues -> "")
                             .kryonLogicId())
                     .kryonId(),
-                Inputs.empty(),
+                Facets.empty(),
                 KryonExecutionConfig.builder().executionId("req_1").build()));
   }
 
@@ -337,7 +337,7 @@ class KryonExecutorTest {
   }
 
   private <T> OutputLogicDefinition<T> newComputeLogic(
-      String kryonId, Set<String> inputs, Function<Inputs, T> logic) {
+      String kryonId, Set<String> inputs, Function<Facets, T> logic) {
     ComputeLogicDefinition<T> def =
         new ComputeLogicDefinition<>(
             new KryonLogicId(new KryonId(kryonId), kryonId),

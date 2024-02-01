@@ -5,7 +5,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.config.NestedConfig;
-import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
@@ -13,11 +13,11 @@ import com.flipkart.krystal.krystex.logicdecoration.FlushCommand;
 import com.flipkart.krystal.krystex.logicdecoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecoratorCommand;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
-import com.flipkart.krystal.vajram.facets.InputValuesAdaptor;
+import com.flipkart.krystal.vajram.facets.FacetValuesAdaptor;
+import com.flipkart.krystal.vajram.modulation.FacetsConverter;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
-import com.flipkart.krystal.vajram.modulation.InputsConverter;
-import com.flipkart.krystal.vajram.modulation.ModulatedInput;
-import com.flipkart.krystal.vajram.modulation.UnmodulatedInput;
+import com.flipkart.krystal.vajram.modulation.ModulatedFacets;
+import com.flipkart.krystal.vajram.modulation.UnmodulatedFacets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -34,27 +34,27 @@ import java.util.function.Predicate;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputModulationDecorator<
-        I /*InputsNeedingModulation*/ extends InputValuesAdaptor,
-        C /*CommonInputs*/ extends InputValuesAdaptor>
+        I /*InputsNeedingModulation*/ extends FacetValuesAdaptor,
+        C /*CommonInputs*/ extends FacetValuesAdaptor>
     implements OutputLogicDecorator {
 
   public static final String DECORATOR_TYPE = InputModulationDecorator.class.getName();
   private final String instanceId;
   private final InputModulator<I, C> inputModulator;
-  private final InputsConverter<I, C> inputsConverter;
+  private final FacetsConverter<I, C> facetsConverter;
   private final Predicate<DependantChain> isApplicableToDependantChain;
-  private final Map<Inputs, CompletableFuture<@Nullable Object>> futureCache = new HashMap<>();
+  private final Map<Facets, CompletableFuture<@Nullable Object>> futureCache = new HashMap<>();
   private ImmutableSet<DependantChain> activeDependantChains = ImmutableSet.of();
   private final Set<DependantChain> flushedDependantChains = new LinkedHashSet<>();
 
   public InputModulationDecorator(
       String instanceId,
       InputModulator<I, C> inputModulator,
-      InputsConverter<I, C> inputsConverter,
+      FacetsConverter<I, C> facetsConverter,
       Predicate<DependantChain> isApplicableToDependantChain) {
     this.instanceId = instanceId;
     this.inputModulator = inputModulator;
-    this.inputsConverter = inputsConverter;
+    this.facetsConverter = facetsConverter;
     this.isApplicableToDependantChain = isApplicableToDependantChain;
   }
 
@@ -64,27 +64,26 @@ public final class InputModulationDecorator<
     inputModulator.onModulation(
         requests -> requests.forEach(request -> modulateInputsList(logicToDecorate, request)));
     return inputsList -> {
-      List<UnmodulatedInput<I, C>> requests = inputsList.stream().map(inputsConverter).toList();
-      List<ModulatedInput<I, C>> modulatedInputs =
+      List<UnmodulatedFacets<I, C>> requests = inputsList.stream().map(facetsConverter).toList();
+      List<ModulatedFacets<I, C>> modulatedFacets =
           requests.stream()
               .map(
                   unmodulatedInput ->
                       inputModulator.add(
-                          unmodulatedInput.inputsNeedingModulation(),
-                          unmodulatedInput.commonInputs()))
+                          unmodulatedInput.modulatedInputs(), unmodulatedInput.commonFacets()))
               .flatMap(Collection::stream)
               .toList();
       requests.forEach(
           request ->
               futureCache.computeIfAbsent(
-                  request.toInputValues(), e -> new CompletableFuture<@Nullable Object>()));
-      for (ModulatedInput<I, C> modulatedInput : modulatedInputs) {
-        modulateInputsList(logicToDecorate, modulatedInput);
+                  request.toFacetValues(), e -> new CompletableFuture<@Nullable Object>()));
+      for (ModulatedFacets<I, C> modulatedFacet : modulatedFacets) {
+        modulateInputsList(logicToDecorate, modulatedFacet);
       }
       return requests.stream()
-          .map(UnmodulatedInput::toInputValues)
+          .map(UnmodulatedFacets::toFacetValues)
           .collect(
-              ImmutableMap.<Inputs, Inputs, CompletableFuture<@Nullable Object>>toImmutableMap(
+              ImmutableMap.<Facets, Facets, CompletableFuture<@Nullable Object>>toImmutableMap(
                   Function.identity(),
                   key ->
                       Optional.ofNullable(futureCache.get(key))
@@ -113,13 +112,13 @@ public final class InputModulationDecorator<
   }
 
   private void modulateInputsList(
-      OutputLogic<Object> logicToDecorate, ModulatedInput<I, C> modulatedInput) {
-    ImmutableList<UnmodulatedInput<I, C>> requests =
-        modulatedInput.modInputs().stream()
-            .map(each -> new UnmodulatedInput<>(each, modulatedInput.commonInputs()))
+      OutputLogic<Object> logicToDecorate, ModulatedFacets<I, C> modulatedFacets) {
+    ImmutableList<UnmodulatedFacets<I, C>> requests =
+        modulatedFacets.modInputs().stream()
+            .map(each -> new UnmodulatedFacets<>(each, modulatedFacets.commonFacets()))
             .collect(toImmutableList());
     logicToDecorate
-        .execute(requests.stream().map(UnmodulatedInput::toInputValues).collect(toImmutableList()))
+        .execute(requests.stream().map(UnmodulatedFacets::toFacetValues).collect(toImmutableList()))
         .forEach(
             (inputs, resultFuture) -> {
               //noinspection RedundantTypeArguments: To Handle nullChecker errors

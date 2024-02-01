@@ -2,7 +2,7 @@
 00:00:01,000 --> 00:00:02,000
 <font size="10px">
 Krystal receives a request to execute Vajram V1.
-The request contains the values of all the input facets of V1.
+The request contains the values of all the inputDef facets of V1.
 V1 is ready for execution.
 </font>
 
@@ -11,8 +11,8 @@ V1 is ready for execution.
 <font size="10px">
 V1 depends on vajrams V2, V3, and V4 in sequential order,
   i.e V3 waits for V2 and V4 waits for V3.
-V1 constructs the request for V2 containing values for V2's input facets.
-This is called input resolution.
+V1 constructs the request for V2 containing values for V2's inputDef facets.
+This is called inputDef resolution.
 V2 is ready for execution.
 </font>
 
@@ -47,21 +47,21 @@ V2 starts execution.
 00:00:12,000 --> 00:00:14,000
 <font size="10px">
 V2 finishes execution after some time.
-The first dependency facet of V1 is now completed.
+The first dependencyDef facet of V1 is now completed.
 </font>
 
 8
 00:00:14,000 --> 00:00:16,000
 <font size="10px">
-V2 now has enough information to resolve the inputs of V3.
+V2 now has enough information to resolve the facets of V3.
 V3 is ready for execution.
 </font>
 
 9
 00:00:16,000 --> 00:00:18,000
 <font size="10px">
-V3 has a sequential dependency on V7 and V8.
-V3 resolves V7's inputs. V7 is ready for execution.
+V3 has a sequential dependencyDef on V7 and V8.
+V3 resolves V7's facets. V7 is ready for execution.
 </font>
 
 10
@@ -115,13 +115,13 @@ V7 starts executing for the third time.
 00:00:32,000 --> 00:00:34,000
 <font size="10px">
 V7 succeeds on this attempt.
-V3's first dependency facet is now completed.
+V3's first dependencyDef facet is now completed.
 </font>
 
 18
 00:00:34,000 --> 00:00:36,000
 <font size="10px">
-V3 resolves the inputs of its second dependency V8.
+V3 resolves the facets of its second dependencyDef V8.
 V8 is ready for execution.
 </font>
 
@@ -142,7 +142,7 @@ V8 succeeds.
 00:00:40,000 --> 00:00:42,000
 <font size="10px">
 V8's response is intercepted by the caching decorator.
-The response is cached with the input facets values of V8 as key.
+The response is cached with the inputDef facets values of V8 as key.
 </font>
 
 22
@@ -162,15 +162,15 @@ V1's second facet is now compeleted.
 24
 00:00:46,000 --> 00:00:48,000
 <font size="10px">
-V1 now resolves the inputs for V4.
+V1 now resolves the facets for V4.
 V4 is ready for execution.
 </font>
 
 25
 00:00:48,000 --> 00:00:50,000
 <font size="10px">
-V4 has a sequential dependency on V8 and V9.
-V4 resolves the inputs for V8.
+V4 has a sequential dependencyDef on V8 and V9.
+V4 resolves the facets for V8.
 The caching decorator of V8 intercepts the request and looks up the cache.
 There is a cache hit. The response is made available to V4 without executing V8 again.
 </font>
@@ -178,7 +178,7 @@ There is a cache hit. The response is made available to V4 without executing V8 
 26
 00:00:50,000 --> 00:00:52,000
 <font size="10px">
-V4 uses the result of V8 to resolve the inputs for V9.
+V4 uses the result of V8 to resolve the facets for V9.
 V9 is ready for execution.
 </font>
 
@@ -206,13 +206,13 @@ V4 starts execution.
 00:00:58,000 --> 00:01:00,000
 <font size="10px">
 V4 fails with an error.
-The third dependency facet of V1 has failed.
+The third dependencyDef facet of V1 has failed.
 </font>
 
 31
 00:01:00,000 --> 00:01:02,000
 <font size="10px">
-But V4 is an optional dependency of V1.
+But V4 is an optional dependencyDef of V1.
 V1 handles the error of V4, and continues execution.
 </font>
 

@@ -6,7 +6,7 @@ import java.util.Set;
 import lombok.Builder;
 
 @Builder
-public record Input<T>(
+public record InputDef<T>(
     String name,
     DataType<?> type,
     boolean isMandatory,
@@ -30,16 +30,16 @@ public record Input<T>(
     return sources;
   }
 
-  public static class InputBuilder<T> {
+  public static class InputDefBuilder<T> {
 
-    public InputBuilder<T> sources(InputSource... inputSources) {
+    public InputDefBuilder<T> sources(InputSource... inputSources) {
       if (inputSources != null) {
         this.sources = ImmutableSet.copyOf(inputSources);
       }
       return this;
     }
 
-    public InputBuilder<T> sources(Set<InputSource> inputSources) {
+    public InputDefBuilder<T> sources(Set<InputSource> inputSources) {
       if (inputSources != null) {
         this.sources = ImmutableSet.copyOf(inputSources);
       }

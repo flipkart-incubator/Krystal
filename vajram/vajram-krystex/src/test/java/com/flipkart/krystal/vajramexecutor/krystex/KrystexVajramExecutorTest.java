@@ -37,7 +37,7 @@ import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecution
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.logicdecorators.resilience4j.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.logicdecorators.resilience4j.Resilience4JCircuitBreaker;
-import com.flipkart.krystal.vajram.MandatoryInputsMissingException;
+import com.flipkart.krystal.vajram.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.modulation.Batcher;
 import com.flipkart.krystal.vajram.tags.NamedValueTag;
 import com.flipkart.krystal.vajram.tags.Service;
@@ -270,7 +270,7 @@ class KrystexVajramExecutorTest {
     assertThat(result)
         .failsWithin(TIMEOUT)
         .withThrowableOfType(ExecutionException.class)
-        .withCauseExactlyInstanceOf(MandatoryInputsMissingException.class)
+        .withCauseExactlyInstanceOf(MandatoryFacetsMissingException.class)
         .withMessageContaining(
             "Vajram v<"
                 + getVajramIdString(Hello.class)

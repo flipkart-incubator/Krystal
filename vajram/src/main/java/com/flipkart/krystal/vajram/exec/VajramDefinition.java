@@ -10,7 +10,7 @@ import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.DefaultInputResolverDefinition;
-import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.DependencyDef;
 import com.flipkart.krystal.vajram.facets.QualifiedInputs;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
@@ -85,10 +85,10 @@ public final class VajramDefinition {
             .filter(method -> method.isAnnotationPresent(Resolve.class))
             .collect(toImmutableSet());
 
-    ImmutableMap<String, Dependency<?>> dependencyDefinitions =
+    ImmutableMap<String, DependencyDef<?>> dependencyDefinitions =
         vajram.getFacetDefinitions().stream()
-            .filter(vi -> vi instanceof Dependency)
-            .map(vi -> (Dependency<?>) vi)
+            .filter(vi -> vi instanceof DependencyDef)
+            .map(vi -> (DependencyDef<?>) vi)
             .collect(toImmutableMap(VajramFacetDefinition::name, Function.identity()));
 
     for (Method resolverMethod : resolverMethods) {
@@ -97,8 +97,8 @@ public final class VajramDefinition {
         throw new AssertionError();
       }
       String targetDependency = resolver.depName();
-      Dependency<?> dependency = dependencyDefinitions.get(targetDependency);
-      if (dependency == null) {
+      DependencyDef<?> dependencyDef = dependencyDefinitions.get(targetDependency);
+      if (dependencyDef == null) {
         throw new IllegalStateException(
             "Could not find dependency with name %s".formatted(targetDependency));
       }
@@ -123,7 +123,7 @@ public final class VajramDefinition {
               sources,
               new QualifiedInputs(
                   targetDependency,
-                  dependency.dataAccessSpec(),
+                  dependencyDef.dataAccessSpec(),
                   ImmutableSet.copyOf(targetInputs))));
     }
     return inputResolvers;

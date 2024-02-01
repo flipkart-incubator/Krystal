@@ -4,8 +4,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Optional.ofNullable;
 import static java.util.function.Function.identity;
 
-import com.flipkart.krystal.data.InputValue;
-import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.FacetValue;
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
@@ -31,10 +31,10 @@ public final class InputResolverUtil {
   public static ResolutionResult multiResolve(
       List<ResolutionRequest> resolutionRequests,
       Map<String, Collection<? extends SimpleInputResolver<?, ?, ?, ?>>> resolvers,
-      Inputs inputs) {
+      Facets facets) {
 
     Map<String, List<Map<String, @Nullable Object>>> results = new LinkedHashMap<>();
-    Map<String, DependencyCommand<Inputs>> skippedDependencies = new LinkedHashMap<>();
+    Map<String, DependencyCommand<Facets>> skippedDependencies = new LinkedHashMap<>();
     for (ResolutionRequest resolutionRequest : resolutionRequests) {
       String dependencyName = resolutionRequest.dependencyName();
       List<Map<String, @Nullable Object>> depInputs = new ArrayList<>();
@@ -48,10 +48,10 @@ public final class InputResolverUtil {
                 simpleResolver.getResolverSpec().getTransformer(),
                 simpleResolver.getResolverSpec().getFanoutTransformer(),
                 simpleResolver.getResolverSpec().getSkipConditions(),
-                inputs);
+                facets);
         if (command.shouldSkip()) {
           //noinspection unchecked
-          skippedDependencies.put(dependencyName, (DependencyCommand<Inputs>) command);
+          skippedDependencies.put(dependencyName, (DependencyCommand<Facets>) command);
           break;
         }
         collectDepInputs(depInputs, resolvable, command);
@@ -108,8 +108,8 @@ public final class InputResolverUtil {
 
   private static void handleResolverReturn(
       @Nullable String resolvable, @Nullable Object o, Map<String, @Nullable Object> valuesMap) {
-    if (o instanceof Inputs inputs) {
-      for (Entry<String, InputValue<Object>> e : inputs.values().entrySet()) {
+    if (o instanceof Facets facets) {
+      for (Entry<String, FacetValue<Object>> e : facets.values().entrySet()) {
         //noinspection unchecked,rawtypes
         if (valuesMap.put(e.getKey(), ((ValueOrError) e.getValue()).value().orElse(null)) != null) {
           throw new IllegalStateException("Duplicate key");
@@ -128,22 +128,22 @@ public final class InputResolverUtil {
       @Nullable Function<? extends Optional<?>, ?> oneToOneTransformer,
       @Nullable Function<? extends Optional<?>, ? extends Collection<?>> fanoutTransformer,
       List<? extends SkipPredicate<?>> skipPredicates,
-      Inputs inputs) {
+      Facets facets) {
     boolean fanout = fanoutTransformer != null;
     final Optional<Object> inputValue;
     if (sourceInput instanceof VajramDepSingleTypeSpec<?, ?, ?>) {
       inputValue =
-          inputs.getDepValue(sourceInput.name()).values().values().iterator().next().value();
+          facets.getDepValue(sourceInput.name()).values().values().iterator().next().value();
     } else if (sourceInput instanceof VajramDepFanoutTypeSpec<?, ?, ?>) {
       inputValue =
           Optional.of(
-              inputs.getDepValue(sourceInput.name()).values().values().stream()
+              facets.getDepValue(sourceInput.name()).values().values().stream()
                   .map(ValueOrError::value)
                   .filter(Optional::isPresent)
                   .map(Optional::get)
                   .toList());
     } else if (sourceInput != null) {
-      inputValue = inputs.getInputValue(sourceInput.name()).value();
+      inputValue = facets.getInputValue(sourceInput.name()).value();
     } else {
       inputValue = Optional.empty();
     }
@@ -198,7 +198,7 @@ public final class InputResolverUtil {
 
   public record ResolutionResult(
       Map<String, List<Map<String, @Nullable Object>>> results,
-      Map<String, DependencyCommand<Inputs>> skippedDependencies) {}
+      Map<String, DependencyCommand<Facets>> skippedDependencies) {}
 
   private InputResolverUtil() {}
 }
