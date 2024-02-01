@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
-import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_INPUTS;
-import static com.flipkart.krystal.vajram.codegen.Constants.INPUTS_CLASS_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_FACETS;
+import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants.INPUTS_NEEDING_MODULATION;
 import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -76,7 +76,7 @@ public class Utils {
   public static final String COMMA = ",";
   public static final String REQUEST_SUFFIX = "Request";
   public static final String IMPL = "Impl";
-  public static final String INPUT_UTIL = "InputUtil";
+  public static final String FACET_UTIL = "FacetUtil";
   public static final String CONVERTER = "CONVERTER";
 
   @Getter private final ProcessingEnvironment processingEnv;
@@ -371,8 +371,8 @@ public class Utils {
         Clock.systemDefaultZone().instant().atZone(ZoneId.systemDefault()));
   }
 
-  public static String getInputUtilClassName(String vajramName) {
-    return vajramName + INPUT_UTIL;
+  public static String getFacetUtilClassName(String vajramName) {
+    return vajramName + FACET_UTIL;
   }
 
   public static String getRequestClassName(String vajramName) {
@@ -383,12 +383,12 @@ public class Utils {
     return vajramId + IMPL;
   }
 
-  public static String getAllInputsClassname(String vajramName) {
-    return vajramName + INPUTS_CLASS_SUFFIX;
+  public static String getAllFacetsClassname(String vajramName) {
+    return vajramName + FACETS_CLASS_SUFFIX;
   }
 
-  public static String getCommonInputsClassname(String vajramName) {
-    return vajramName + COMMON_INPUTS;
+  public static String getCommonFacetsClassname(String vajramName) {
+    return vajramName + COMMON_FACETS;
   }
 
   public static String getInputModulationClassname(String vajramName) {

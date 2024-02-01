@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.facets;
 
-public sealed interface VajramFacetDefinition permits Dependency, Input {
+public sealed interface VajramFacetDefinition permits DependencyDef, InputDef {
   String name();
 
   boolean isMandatory();

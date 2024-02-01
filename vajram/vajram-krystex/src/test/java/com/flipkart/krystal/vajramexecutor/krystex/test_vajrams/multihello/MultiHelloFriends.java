@@ -5,7 +5,7 @@ import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInputFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsInputUtil.hellos_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsFacetUtil.hellos_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.userIds_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Request.skip_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Request.userIds_n;
@@ -21,7 +21,7 @@ import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsInputUtil.MultiHelloFriendsInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsFacetUtil.MultiHelloFriendsFacets;
 import com.google.common.collect.ImmutableCollection;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,11 +58,11 @@ public abstract class MultiHelloFriends extends ComputeVajram<String> {
   }
 
   @Output
-  public static String sayHellos(MultiHelloFriendsInputs allInputs) {
+  static String sayHellos(MultiHelloFriendsFacets facets) {
     List<String> result = new ArrayList<>();
-    for (String userId : allInputs.userIds()) {
+    for (String userId : facets.userIds()) {
       for (Integer numberOfFriend : NUMBER_OF_FRIENDS) {
-        allInputs
+        facets
             .hellos()
             .get(
                 HelloFriendsRequest.builder()

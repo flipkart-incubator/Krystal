@@ -51,7 +51,7 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
       KryonExecutionConfig executionConfig) {
     return krystalExecutor.executeKryon(
         vajramKryonGraph.getKryonId(vajramId),
-        vajramRequestBuilder.apply(applicationRequestContext).toInputValues(),
+        vajramRequestBuilder.apply(applicationRequestContext).toFacetValues(),
         executionConfig);
   }
 

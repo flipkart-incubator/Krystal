@@ -15,7 +15,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class Batcher<I, C> implements InputModulator<I, C> {
 
   private static final int DEFAULT_BATCH_SIZE = 1;
-  private @Nullable Consumer<ImmutableList<ModulatedInput<I, C>>> modulationListener;
+  private @Nullable Consumer<ImmutableList<ModulatedFacets<I, C>>> modulationListener;
   private final Map<C, List<I>> unModulatedRequests = new HashMap<>();
   private int minBatchSize = DEFAULT_BATCH_SIZE;
 
@@ -26,14 +26,14 @@ public final class Batcher<I, C> implements InputModulator<I, C> {
   }
 
   @Override
-  public ImmutableList<ModulatedInput<I, C>> add(I inputsNeedingModulation, C commonInputs) {
+  public ImmutableList<ModulatedFacets<I, C>> add(I inputsNeedingModulation, C commonInputs) {
     unModulatedRequests
         .computeIfAbsent(commonInputs, k -> new ArrayList<>())
         .add(inputsNeedingModulation);
     return getModulatedInputs(commonInputs, false);
   }
 
-  private ImmutableList<ModulatedInput<I, C>> getModulatedInputs(C commonInputs, boolean force) {
+  private ImmutableList<ModulatedFacets<I, C>> getModulatedInputs(C commonInputs, boolean force) {
     if (commonInputs == null) {
       return ImmutableList.of();
     }
@@ -41,25 +41,25 @@ public final class Batcher<I, C> implements InputModulator<I, C> {
         ImmutableList.copyOf(unModulatedRequests.getOrDefault(commonInputs, ImmutableList.of()));
     if (force || inputsNeedingModulations.size() >= minBatchSize) {
       unModulatedRequests.put(commonInputs, new ArrayList<>());
-      return ImmutableList.of(new ModulatedInput<>(inputsNeedingModulations, commonInputs));
+      return ImmutableList.of(new ModulatedFacets<>(inputsNeedingModulations, commonInputs));
     }
     return ImmutableList.of();
   }
 
   @Override
   public void modulate() {
-    ImmutableList<ModulatedInput<I, C>> modulatedInputs =
+    ImmutableList<ModulatedFacets<I, C>> modulatedFacets =
         unModulatedRequests.keySet().stream()
             .map(c -> getModulatedInputs(c, true))
             .flatMap(Collection::stream)
             .collect(toImmutableList());
     if (modulationListener != null) {
-      modulationListener.accept(modulatedInputs);
+      modulationListener.accept(modulatedFacets);
     }
   }
 
   @Override
-  public void onModulation(Consumer<ImmutableList<ModulatedInput<I, C>>> listener) {
+  public void onModulation(Consumer<ImmutableList<ModulatedFacets<I, C>>> listener) {
     modulationListener = listener;
   }
 

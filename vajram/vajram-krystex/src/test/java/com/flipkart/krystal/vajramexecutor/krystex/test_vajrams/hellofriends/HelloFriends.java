@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsInputUtil.userInfo_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsFacetUtil.userInfo_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.friendInfos_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.numberOfFriends_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.userId_n;
@@ -19,7 +19,7 @@ import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsInputUtil.HelloFriendsInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsFacetUtil.HelloFriendsFacets;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
@@ -61,11 +61,11 @@ public abstract class HelloFriends extends ComputeVajram<String> {
   }
 
   @Output
-  public static String sayHellos(HelloFriendsInputs request) throws Exception {
+  static String sayHellos(HelloFriendsFacets facets) {
     return "Hello Friends of %s! %s"
         .formatted(
-            request.userInfo().userName(),
-            request.friendInfos().values().stream()
+            facets.userInfo().userName(),
+            facets.friendInfos().values().stream()
                 .filter(voe -> voe.value().isPresent())
                 .map(voe -> voe.value().get())
                 .map(TestUserInfo::userName)

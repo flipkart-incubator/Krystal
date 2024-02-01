@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY;
-import static com.flipkart.krystal.vajram.codegen.Utils.getInputUtilClassName;
+import static com.flipkart.krystal.vajram.codegen.Utils.getFacetUtilClassName;
 import static com.flipkart.krystal.vajram.codegen.models.CodegenPhase.MODELS;
 import static java.lang.System.lineSeparator;
 import static java.util.stream.Collectors.joining;
@@ -70,7 +70,7 @@ public class VajramModelGenProcessor extends AbstractProcessor {
       util.generateSourceFile(
           vajramCodeGenerator.getPackageName()
               + '.'
-              + getInputUtilClassName(vajramCodeGenerator.getVajramName()),
+              + getFacetUtilClassName(vajramCodeGenerator.getVajramName()),
           vajramCodeGenerator.codeGenInputUtil(),
           vajramClass);
     }

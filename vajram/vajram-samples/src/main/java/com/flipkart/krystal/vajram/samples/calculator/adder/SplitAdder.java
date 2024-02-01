@@ -13,7 +13,7 @@ import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.SingleExecute;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
-import com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderInputUtil.SplitAdderInputs;
+import com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderFacetUtil.SplitAdderFacets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -74,9 +74,7 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
   }
 
   @Output
-  static Integer add(SplitAdderInputs allInputs) {
-    return allInputs.splitSum1().orElse(0)
-        + allInputs.splitSum2().orElse(0)
-        + allInputs.sum().orElse(0);
+  static Integer add(SplitAdderFacets facets) {
+    return facets.splitSum1().orElse(0) + facets.splitSum2().orElse(0) + facets.sum().orElse(0);
   }
 }

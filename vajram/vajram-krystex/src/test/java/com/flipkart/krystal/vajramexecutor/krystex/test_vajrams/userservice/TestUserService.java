@@ -9,9 +9,9 @@ import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.modulation.Modulated;
-import com.flipkart.krystal.vajram.modulation.ModulatedInput;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceInputUtil.TestUserServiceCommonInputs;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceInputUtil.TestUserServiceModInputs;
+import com.flipkart.krystal.vajram.modulation.ModulatedFacets;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceFacetUtil.TestUserServiceCommonFacets;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceFacetUtil.TestUserServiceModInputs;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -32,7 +32,7 @@ public abstract class TestUserService extends IOVajram<TestUserInfo> {
 
   @Output
   static ImmutableMap<TestUserServiceModInputs, CompletableFuture<TestUserInfo>> callUserService(
-      ModulatedInput<TestUserServiceModInputs, TestUserServiceCommonInputs> modulatedRequest) {
+      ModulatedFacets<TestUserServiceModInputs, TestUserServiceCommonFacets> modulatedRequest) {
     CALL_COUNTER.increment();
     modulatedRequest.modInputs().stream()
         .map(im -> TestUserServiceRequest.builder().userId(im.userId()).build())

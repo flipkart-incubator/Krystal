@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.commands;
 
-import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.request.RequestId;
@@ -12,7 +12,7 @@ import java.util.Set;
 public record ForwardBatch(
     KryonId kryonId,
     ImmutableSet<String> inputNames,
-    ImmutableMap<RequestId, Inputs> executableRequests,
+    ImmutableMap<RequestId, Facets> executableRequests,
     DependantChain dependantChain,
     ImmutableMap<RequestId, String> skippedRequests)
     implements BatchCommand {

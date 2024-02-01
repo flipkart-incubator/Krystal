@@ -8,9 +8,9 @@ import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.modulation.Modulated;
-import com.flipkart.krystal.vajram.modulation.ModulatedInput;
-import com.flipkart.krystal.vajram.samples.greeting.UserServiceInputUtil.UserServiceCommonInputs;
-import com.flipkart.krystal.vajram.samples.greeting.UserServiceInputUtil.UserServiceModInputs;
+import com.flipkart.krystal.vajram.modulation.ModulatedFacets;
+import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacetUtil.UserServiceCommonFacets;
+import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacetUtil.UserServiceModInputs;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -25,7 +25,7 @@ public abstract class UserService extends IOVajram<UserInfo> {
 
   @Output
   static Map<UserServiceModInputs, CompletableFuture<UserInfo>> callUserService(
-      ModulatedInput<UserServiceModInputs, UserServiceCommonInputs> modulatedRequest) {
+      ModulatedFacets<UserServiceModInputs, UserServiceCommonFacets> modulatedRequest) {
 
     // Make a call to user service and get user info
     CompletableFuture<List<UserInfo>> serviceResponse =

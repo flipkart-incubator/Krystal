@@ -8,9 +8,9 @@ import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.DecoratorContext;
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.facets.InputValuesAdaptor;
+import com.flipkart.krystal.vajram.facets.FacetValuesAdaptor;
+import com.flipkart.krystal.vajram.modulation.FacetsConverter;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
-import com.flipkart.krystal.vajram.modulation.InputsConverter;
 import com.flipkart.krystal.vajram.tags.AnnotationTag;
 import com.flipkart.krystal.vajram.tags.NamedValueTag;
 import com.flipkart.krystal.vajram.tags.VajramTags;
@@ -39,7 +39,7 @@ public record InputModulatorConfig(
    *     unique {@link InputModulationDecorator} instance.
    */
   public static InputModulatorConfig simple(
-      Supplier<InputModulator<InputValuesAdaptor, InputValuesAdaptor>> inputModulatorSupplier) {
+      Supplier<InputModulator<FacetValuesAdaptor, FacetValuesAdaptor>> inputModulatorSupplier) {
     return new InputModulatorConfig(
         logicExecutionContext ->
             generateInstanceId(
@@ -50,7 +50,7 @@ public record InputModulatorConfig(
         modulatorContext -> {
           @SuppressWarnings("unchecked")
           var inputsConvertor =
-              (InputsConverter<InputValuesAdaptor, InputValuesAdaptor>)
+              (FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>)
                   modulatorContext.vajram().getInputsConvertor();
           return new InputModulationDecorator<>(
               modulatorContext.decoratorContext().instanceId(),
@@ -66,7 +66,7 @@ public record InputModulatorConfig(
   }
 
   public static InputModulatorConfig sharedModulator(
-      Supplier<InputModulator<InputValuesAdaptor, InputValuesAdaptor>> inputModulatorSupplier,
+      Supplier<InputModulator<FacetValuesAdaptor, FacetValuesAdaptor>> inputModulatorSupplier,
       String instanceId,
       DependantChain... dependantChains) {
     return sharedModulator(
@@ -74,7 +74,7 @@ public record InputModulatorConfig(
   }
 
   public static InputModulatorConfig sharedModulator(
-      Supplier<InputModulator<InputValuesAdaptor, InputValuesAdaptor>> inputModulatorSupplier,
+      Supplier<InputModulator<FacetValuesAdaptor, FacetValuesAdaptor>> inputModulatorSupplier,
       String instanceId,
       ImmutableSet<DependantChain> dependantChains) {
     return new InputModulatorConfig(
@@ -83,7 +83,7 @@ public record InputModulatorConfig(
         modulatorContext -> {
           @SuppressWarnings("unchecked")
           var inputsConvertor =
-              (InputsConverter<InputValuesAdaptor, InputValuesAdaptor>)
+              (FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>)
                   modulatorContext.vajram().getInputsConvertor();
           return new InputModulationDecorator<>(
               instanceId, inputModulatorSupplier.get(), inputsConvertor, dependantChains::contains);

@@ -16,7 +16,7 @@ import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.SingleExecute;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
-import com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderInputUtil.ChainAdderInputs;
+import com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderFacetUtil.ChainAdderFacets;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,9 +67,9 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
   }
 
   @Output
-  static Integer add(ChainAdderInputs allInputs) {
-    return allInputs.sum().orElse(0)
-        + allInputs.chainSum().values().stream().mapToInt(value -> value.value().orElse(0)).sum();
+  static Integer add(ChainAdderFacets facets) {
+    return facets.sum().orElse(0)
+        + facets.chainSum().values().stream().mapToInt(value -> value.value().orElse(0)).sum();
   }
 
   private static Optional<SingleExecute<Integer>> skipAdder(List<Integer> numbers) {

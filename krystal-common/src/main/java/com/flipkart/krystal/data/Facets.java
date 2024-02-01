@@ -9,18 +9,18 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.PolyNull;
 
 @EqualsAndHashCode(callSuper = false, cacheStrategy = CacheStrategy.LAZY)
-public final class Inputs {
-  private final ImmutableMap<String, InputValue<Object>> values;
+public final class Facets {
+  private final ImmutableMap<String, FacetValue<Object>> values;
 
-  public Inputs(Map<String, InputValue<Object>> values) {
+  public Facets(Map<String, FacetValue<Object>> values) {
     this.values = ImmutableMap.copyOf(values);
   }
 
-  private static final Inputs EMPTY = new Inputs(ImmutableMap.of());
+  private static final Facets EMPTY = new Facets(ImmutableMap.of());
 
   public <T> ValueOrError<T> getInputValue(String inputName) {
-    InputValue<?> inputValue = values.getOrDefault(inputName, ValueOrError.empty());
-    if (inputValue instanceof ValueOrError<?> voe) {
+    FacetValue<?> facetValue = values.getOrDefault(inputName, ValueOrError.empty());
+    if (facetValue instanceof ValueOrError<?> voe) {
       //noinspection unchecked
       return (ValueOrError<T>) voe;
     }
@@ -43,31 +43,31 @@ public final class Inputs {
   }
 
   public <T> Results<T> getDepValue(String inputName) {
-    InputValue<?> inputValue = values.getOrDefault(inputName, Results.empty());
-    if (inputValue instanceof Results<?> voe) {
+    FacetValue<?> facetValue = values.getOrDefault(inputName, Results.empty());
+    if (facetValue instanceof Results<?> voe) {
       //noinspection unchecked
       return (Results<T>) voe;
     }
     throw new IllegalArgumentException("%s is not of type Results".formatted(inputName));
   }
 
-  public static Inputs union(
-      Map<String, ? extends InputValue<Object>> inputs1,
-      Map<String, ? extends InputValue<Object>> inputs2) {
+  public static Facets union(
+      Map<String, ? extends FacetValue<Object>> inputs1,
+      Map<String, ? extends FacetValue<Object>> inputs2) {
     //noinspection UnstableApiUsage
-    return new Inputs(
-        ImmutableMap.<String, InputValue<Object>>builderWithExpectedSize(
+    return new Facets(
+        ImmutableMap.<String, FacetValue<Object>>builderWithExpectedSize(
                 inputs1.size() + inputs2.size())
             .putAll(inputs1)
             .putAll(inputs2)
             .build());
   }
 
-  public static Inputs empty() {
+  public static Facets empty() {
     return EMPTY;
   }
 
-  public ImmutableMap<String, InputValue<Object>> values() {
+  public ImmutableMap<String, FacetValue<Object>> values() {
     return values;
   }
 

@@ -20,7 +20,7 @@ import java.util.function.Consumer;
  */
 public interface InputModulator<InputsNeedingModulation, CommonInputs> extends ConfigListener {
 
-  ImmutableList<ModulatedInput<InputsNeedingModulation, CommonInputs>> add(
+  ImmutableList<ModulatedFacets<InputsNeedingModulation, CommonInputs>> add(
       InputsNeedingModulation inputsNeedingModulation, CommonInputs commonInputs);
 
   /** Externally trigger modulation */
@@ -31,5 +31,5 @@ public interface InputModulator<InputsNeedingModulation, CommonInputs> extends C
    * the {@link #modulate()} method is called, execute the given callback.
    */
   void onModulation(
-      Consumer<ImmutableList<ModulatedInput<InputsNeedingModulation, CommonInputs>>> callback);
+      Consumer<ImmutableList<ModulatedFacets<InputsNeedingModulation, CommonInputs>>> callback);
 }

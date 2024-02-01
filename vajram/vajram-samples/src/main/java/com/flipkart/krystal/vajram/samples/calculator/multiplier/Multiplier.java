@@ -4,7 +4,7 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.samples.calculator.multiplier.MultiplierInputUtil.MultiplierInputs;
+import com.flipkart.krystal.vajram.samples.calculator.multiplier.MultiplierFacetUtil.MultiplierFacets;
 import java.util.Optional;
 
 @VajramDef
@@ -14,7 +14,7 @@ public abstract class Multiplier extends ComputeVajram<Integer> {
   @Input Optional<Integer> numberTwo;
 
   @Output
-  public static int multiply(MultiplierInputs allInputs) {
+  public static int multiply(MultiplierFacets allInputs) {
     return allInputs.numberOne() * allInputs.numberTwo().orElse(1);
   }
 }

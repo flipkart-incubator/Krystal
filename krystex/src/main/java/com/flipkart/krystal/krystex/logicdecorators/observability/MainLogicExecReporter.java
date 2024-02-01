@@ -4,7 +4,7 @@ import static com.flipkart.krystal.data.ValueOrError.empty;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.allOf;
 
-import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.OutputLogic;
@@ -39,7 +39,7 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
       /*
        Execute logic
       */
-      ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> results =
+      ImmutableMap<Facets, CompletableFuture<@Nullable Object>> results =
           logicToDecorate.execute(inputs);
       /*
        Report logic end

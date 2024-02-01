@@ -4,13 +4,13 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-public class MandatoryInputsMissingException extends RuntimeException {
+public class MandatoryFacetsMissingException extends RuntimeException {
 
   private final VajramID vajramID;
   private final ImmutableMap<String, Throwable> failedMandatoryInputs;
   private @MonotonicNonNull String detailedMessage;
 
-  public MandatoryInputsMissingException(
+  public MandatoryFacetsMissingException(
       VajramID vajramID, Map<String, Throwable> failedMandatoryInputs) {
     this.vajramID = vajramID;
     this.failedMandatoryInputs = ImmutableMap.copyOf(failedMandatoryInputs);

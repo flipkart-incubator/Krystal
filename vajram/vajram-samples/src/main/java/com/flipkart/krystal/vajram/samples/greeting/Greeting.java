@@ -9,7 +9,7 @@ import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
-import com.flipkart.krystal.vajram.samples.greeting.GreetingInputUtil.GreetingInputs;
+import com.flipkart.krystal.vajram.samples.greeting.GreetingFacetUtil.GreetingFacets;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.lang.System.Logger;
@@ -56,14 +56,14 @@ public abstract class Greeting extends ComputeVajram<String> {
   // This is the core business logic of this Vajram
   // Sync vajrams can return any object. AsyncVajrams need to return {CompletableFuture}s
   @Output
-  public static String createGreetingMessage(GreetingInputs inputs) {
-    String userId = inputs.userId();
-    Optional<UserInfo> userInfo = inputs.userInfo();
+  public static String createGreetingMessage(GreetingFacets facets) {
+    String userId = facets.userId();
+    Optional<UserInfo> userInfo = facets.userInfo();
     String greeting =
         "Hello " + userInfo.map(UserInfo::userName).orElse("friend") + "! Hope you are doing well!";
-    inputs.log().ifPresent(l -> l.log(Level.INFO, greeting));
-    inputs.log().ifPresent(l -> l.log(Level.INFO, "Greeting user " + userId));
-    inputs.analyticsEventSink().pushEvent("event_type", new GreetingEvent(userId, greeting));
+    facets.log().ifPresent(l -> l.log(Level.INFO, greeting));
+    facets.log().ifPresent(l -> l.log(Level.INFO, "Greeting user " + userId));
+    facets.analyticsEventSink().pushEvent("event_type", new GreetingEvent(userId, greeting));
     return greeting;
   }
 }
