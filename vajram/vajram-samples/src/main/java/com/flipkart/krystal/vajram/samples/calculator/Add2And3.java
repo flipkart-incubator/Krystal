@@ -26,8 +26,8 @@ abstract class Add2And3 extends ComputeVajram<Integer> {
     return resolve(
         dep(
             sumOf2And3_s,
-            depInput(AdderRequest.numberOne_s).using(() -> 2),
-            depInput(AdderRequest.numberTwo_s).using(() -> 3)));
+            depInput(AdderRequest.numberOne_s).usingValueAsResolver(() -> 2),
+            depInput(AdderRequest.numberTwo_s).usingValueAsResolver(() -> 3)));
   }
 
   @Output

@@ -52,8 +52,8 @@ public final class ResolveStage<I, DV extends VajramRequest<?>> {
    * @return The resultant {@link SimpleInputResolverSpec}
    * @param <CV> The current vajram which is doing the resolution
    */
-  public <CV extends VajramRequest<?>> SimpleInputResolverSpec<Void, I, CV, DV> using(
-      Supplier<I> with) {
+  public <CV extends VajramRequest<?>>
+      SimpleInputResolverSpec<Void, I, CV, DV> usingValueAsResolver(Supplier<I> with) {
     return new SimpleInputResolverSpec<>(targetInput, null, List.of(), o -> with.get(), null);
   }
 }
