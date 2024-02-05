@@ -49,7 +49,9 @@ public final class VajramDefinition {
   @Getter private final ImmutableCollection<InputResolverDefinition> inputResolverDefinitions;
 
   @Getter private final ImmutableMap<Object, Tag> outputLogicTags;
-  @Getter private final ImmutableMap<String, ImmutableMap<Object, Tag>> facetTags;
+
+  @Getter
+  private final ImmutableMap</*FacetName*/ String, ImmutableMap</*TagKey*/ Object, Tag>> facetTags;
 
   public VajramDefinition(Vajram<?> vajram) {
     this.vajram = vajram;
@@ -59,9 +61,17 @@ public final class VajramDefinition {
   }
 
   private static ImmutableMap<String, ImmutableMap<Object, Tag>> parseFacetTags(Vajram<?> vajram) {
+    ImmutableMap<String, VajramFacetDefinition> facetDefs =
+        vajram.getFacetDefinitions().stream()
+            .collect(toImmutableMap(VajramFacetDefinition::name, Function.identity()));
     Map<String, ImmutableMap<Object, Tag>> result = new LinkedHashMap<>();
     for (Field declaredField : vajram.getClass().getDeclaredFields()) {
-      Map<Object, Tag> annoTags = new LinkedHashMap<>();
+      Map<Object, Tag> tags = new LinkedHashMap<>();
+      String facetName = declaredField.getName();
+      VajramFacetDefinition facetDef = facetDefs.get(facetName);
+      if (facetDef != null) {
+        tags.putAll(facetDef.tags());
+      }
       Annotation[] annotations = declaredField.getAnnotations();
       for (Annotation annotation : annotations) {
         boolean isRepeatable = annotation.getClass().getAnnotation(Repeatable.class) != null;
@@ -69,10 +79,10 @@ public final class VajramDefinition {
           log.warn("Repeatable annotations are not supported as tags. Ignoring {}", annotation);
         } else {
           AnnotationTag<Annotation> annotationTag = AnnotationTag.from(annotation);
-          annoTags.put(annotationTag.tagKey(), annotationTag);
+          tags.put(annotationTag.tagKey(), annotationTag);
         }
       }
-      result.put(declaredField.getName(), ImmutableMap.copyOf(annoTags));
+      result.put(facetName, ImmutableMap.copyOf(tags));
     }
     return ImmutableMap.copyOf(result);
   }
