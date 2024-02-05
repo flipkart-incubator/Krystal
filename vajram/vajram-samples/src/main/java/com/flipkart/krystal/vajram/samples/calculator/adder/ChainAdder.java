@@ -15,7 +15,7 @@ import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.SingleExecute;
 import com.flipkart.krystal.vajram.facets.Using;
-import com.flipkart.krystal.vajram.facets.resolution.Resolve;
+import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderFacetUtil.ChainAdderFacets;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
@@ -25,14 +25,15 @@ import java.util.Optional;
 @VajramDef
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class ChainAdder extends ComputeVajram<Integer> {
+  static class _Facets {
+    @Input List<Integer> numbers;
 
-  @Input List<Integer> numbers;
+    @Dependency(onVajram = ChainAdder.class, canFanout = true)
+    int chainSum;
 
-  @Dependency(onVajram = ChainAdder.class, canFanout = true)
-  int chainSum;
-
-  @Dependency(onVajram = Adder.class)
-  Optional<Integer> sum;
+    @Dependency(onVajram = Adder.class)
+    Optional<Integer> sum;
+  }
 
   @Resolve(depName = chainSum_n, depInputs = numbers_n)
   public static MultiExecute<List<Integer>> numbersForSubChainer(

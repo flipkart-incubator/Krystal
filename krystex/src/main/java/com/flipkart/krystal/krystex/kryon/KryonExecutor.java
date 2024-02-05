@@ -14,8 +14,8 @@ import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.groupingBy;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.Flush;
@@ -384,7 +384,7 @@ public final class KryonExecutor implements KrystalExecutor {
                     kryonDefinitionRegistry.getDependantChainsStart(),
                     requestId))
             .thenApply(GranuleResponse::response)
-            .<CompletableFuture<@Nullable Object>>thenApply(ValueOrError::toFuture)
+            .<CompletableFuture<@Nullable Object>>thenApply(Errable::toFuture)
             .thenCompose(identity());
     linkFutures(submissionResult, kryonExecution.future());
   }
@@ -417,9 +417,9 @@ public final class KryonExecutor implements KrystalExecutor {
                           if (throwable != null) {
                             kryonExecution.future().completeExceptionally(throwable);
                           } else {
-                            ValueOrError<Object> result =
+                            Errable<Object> result =
                                 responses.getOrDefault(
-                                    kryonExecution.instanceExecutionId(), ValueOrError.empty());
+                                    kryonExecution.instanceExecutionId(), Errable.empty());
                             linkFutures(result.toFuture(), kryonExecution.future());
                           }
                         }

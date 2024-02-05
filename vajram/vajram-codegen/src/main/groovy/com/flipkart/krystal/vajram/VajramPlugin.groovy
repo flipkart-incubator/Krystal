@@ -49,7 +49,7 @@ class VajramPlugin implements Plugin<Project> {
             source mainSrcDir
             classpath = project.configurations.compileClasspath
             // This is a 'proc:only' compile step. Which means, no .class files are generated. This means the destinationDirectory property
-            // is not essential used by this step.
+            // is not used by this step.
             // We reassign the `destinationDirectory` to a dummy empty directory so that the destination directory doesnot clash
             // with the full compile step. This is so that gradle caching works optimally - gradle doesn't cache outputs of tasks
             // which share output directories with other tasks -

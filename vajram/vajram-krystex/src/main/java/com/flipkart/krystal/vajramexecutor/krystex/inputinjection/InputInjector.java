@@ -4,9 +4,9 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.flipkart.krystal.config.Tag;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
@@ -101,8 +101,8 @@ public final class InputInjector implements OutputLogicDecorator {
                 String inputName = facetDefinition.name();
                 if (facetDefinition instanceof InputDef<?> inputDef) {
                   if (inputDef.sources().contains(InputSource.CLIENT)) {
-                    ValueOrError<Object> value = facets.getInputValue(inputName);
-                    if (!ValueOrError.empty().equals(value)) {
+                    Errable<Object> value = facets.getInputValue(inputName);
+                    if (!Errable.empty().equals(value)) {
                       continue;
                     }
                     // Input was not resolved by another vajram. Check if it is resolvable
@@ -111,7 +111,7 @@ public final class InputInjector implements OutputLogicDecorator {
                   if (inputDef.sources().contains(InputSource.SESSION)) {
                     ImmutableMap<Object, Tag> inputTags =
                         facetTags.getOrDefault(inputName, ImmutableMap.of());
-                    ValueOrError<Object> value =
+                    Errable<Object> value =
                         getFromInjectionAdaptor(
                             inputDef.type(),
                             Optional.ofNullable(inputTags.get(Named.class))
@@ -138,21 +138,21 @@ public final class InputInjector implements OutputLogicDecorator {
     }
   }
 
-  private ValueOrError<Object> getFromInjectionAdaptor(
+  private Errable<Object> getFromInjectionAdaptor(
       DataType<?> dataType, @Nullable String injectionName) {
     if (inputInjectionProvider == null) {
-      return ValueOrError.withError(
+      return Errable.withError(
           new Exception("Dependency injector is null, cannot resolve SESSION input"));
     }
 
     if (dataType == null) {
-      return ValueOrError.withError(new Exception("Data type not found"));
+      return Errable.withError(new Exception("Data type not found"));
     }
     Type type;
     try {
       type = dataType.javaReflectType();
     } catch (ClassNotFoundException e) {
-      return ValueOrError.withError(e);
+      return Errable.withError(e);
     }
     @Nullable Object resolvedObject = null;
     if (injectionName != null) {
@@ -161,6 +161,6 @@ public final class InputInjector implements OutputLogicDecorator {
     if (resolvedObject == null) {
       resolvedObject = inputInjectionProvider.getInstance(((Class<?>) type));
     }
-    return ValueOrError.withValue(resolvedObject);
+    return Errable.withValue(resolvedObject);
   }
 }

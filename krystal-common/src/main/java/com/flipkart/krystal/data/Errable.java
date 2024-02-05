@@ -24,24 +24,22 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *       impossible.
  * </ul>
  */
-public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error)
-    implements FacetValue<T> {
+public record Errable<T>(Optional<T> value, Optional<Throwable> error) implements FacetValue<T> {
 
-  private static final ValueOrError<?> EMPTY =
-      new ValueOrError<>(Optional.empty(), Optional.empty());
+  private static final Errable<?> EMPTY = new Errable<>(Optional.empty(), Optional.empty());
 
-  public ValueOrError {
+  public Errable {
     if ((value.isPresent() && error.isPresent())) {
       throw new IllegalArgumentException("Both of 'value' and 'error' cannot be present together");
     }
   }
 
-  public static <T> ValueOrError<T> empty() {
+  public static <T> Errable<T> empty() {
     //noinspection unchecked
-    return (ValueOrError<T>) EMPTY;
+    return (Errable<T>) EMPTY;
   }
 
-  public static <T> ValueOrError<T> valueOrError(Callable<T> valueProvider) {
+  public static <T> Errable<T> valueOrError(Callable<T> valueProvider) {
     try {
       return withValue(valueProvider.call());
     } catch (Throwable e) {
@@ -49,22 +47,21 @@ public record ValueOrError<T>(Optional<T> value, Optional<Throwable> error)
     }
   }
 
-  public static <S, T> Function<S, ValueOrError<T>> valueOrError(Function<S, T> valueComputer) {
+  public static <S, T> Function<S, Errable<T>> valueOrError(Function<S, T> valueComputer) {
     return s -> valueOrError(() -> valueComputer.apply(s));
   }
 
-  public static <T> ValueOrError<T> withValue(@Nullable T t) {
+  public static <T> Errable<T> withValue(@Nullable T t) {
     return valueOrError(t, null);
   }
 
-  public static <T> ValueOrError<T> withError(Throwable t) {
+  public static <T> Errable<T> withError(Throwable t) {
     return valueOrError(null, t);
   }
 
-  public static <T> ValueOrError<T> valueOrError(
-      @Nullable Object t, @Nullable Throwable throwable) {
+  public static <T> Errable<T> valueOrError(@Nullable Object t, @Nullable Throwable throwable) {
     //noinspection unchecked,rawtypes
-    return new ValueOrError<T>(
+    return new Errable<T>(
         (t instanceof Optional o) ? o : (Optional<T>) Optional.ofNullable(t),
         Optional.ofNullable(throwable));
   }

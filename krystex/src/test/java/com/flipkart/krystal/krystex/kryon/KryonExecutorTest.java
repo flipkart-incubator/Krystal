@@ -1,7 +1,7 @@
 package com.flipkart.krystal.krystex.kryon;
 
-import static com.flipkart.krystal.data.ValueOrError.valueOrError;
-import static com.flipkart.krystal.data.ValueOrError.withValue;
+import static com.flipkart.krystal.data.Errable.valueOrError;
+import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;

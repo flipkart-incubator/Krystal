@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInput;
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
 import static com.flipkart.krystal.vajram.samples.calculator.Add2And3FacetUtil.sumOf2And3_s;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
@@ -18,16 +18,18 @@ import com.google.common.collect.ImmutableCollection;
 /** Returns the sum of numbers '2' and '3' */
 @VajramDef
 abstract class Add2And3 extends ComputeVajram<Integer> {
-  @Dependency(onVajram = Adder.class)
-  int sumOf2And3;
+  static class _Facets {
+    @Dependency(onVajram = Adder.class)
+    int sumOf2And3;
+  }
 
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
     return resolve(
         dep(
             sumOf2And3_s,
-            depInput(AdderRequest.numberOne_s).using(() -> 2),
-            depInput(AdderRequest.numberTwo_s).using(() -> 3)));
+            depInput(AdderRequest.numberOne_s).usingValueAsResolver(() -> 2),
+            depInput(AdderRequest.numberTwo_s).usingValueAsResolver(() -> 3)));
   }
 
   @Output

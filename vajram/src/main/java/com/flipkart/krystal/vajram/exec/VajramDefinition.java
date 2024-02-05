@@ -15,7 +15,7 @@ import com.flipkart.krystal.vajram.facets.QualifiedInputs;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolverDefinition;
-import com.flipkart.krystal.vajram.facets.resolution.Resolve;
+import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajram.tags.AnnotationTag;
 import com.flipkart.krystal.vajram.tags.Service;
 import com.flipkart.krystal.vajram.tags.ServiceApi;

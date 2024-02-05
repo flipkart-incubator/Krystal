@@ -3,10 +3,10 @@ package com.flipkart.krystal.krystex.logicdecorators.observability;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.Results;
-import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.google.common.collect.ImmutableCollection;
@@ -96,10 +96,10 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     Map<String, Object> inputMap = new LinkedHashMap<>();
     for (Entry<String, FacetValue<Object>> e : facets.values().entrySet()) {
       FacetValue<Object> value = e.getValue();
-      if (!(value instanceof ValueOrError<Object>)) {
+      if (!(value instanceof Errable<Object>)) {
         continue;
       }
-      Object collect = convertValueOrError((ValueOrError<Object>) value);
+      Object collect = convertValueOrError((Errable<Object>) value);
       if (collect != null) {
         inputMap.put(e.getKey(), collect);
       }
@@ -120,7 +120,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     return ImmutableMap.copyOf(inputMap);
   }
 
-  private Object convertValueOrError(ValueOrError<Object> voe) {
+  private Object convertValueOrError(Errable<Object> voe) {
     if (voe.error().isPresent()) {
       Throwable throwable = voe.error().get();
       return verbose ? getStackTraceAsString(throwable) : throwable.toString();

@@ -4,8 +4,8 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.function.Function.identity;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.ValueOrError;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map.Entry;
@@ -25,10 +25,9 @@ public abstract non-sealed class ComputeVajram<T> extends AbstractVajram<T> {
     }
   }
 
-  private static <T> CompletableFuture<@Nullable T> toFuture(Entry<Facets, ValueOrError<T>> e) {
+  private static <T> CompletableFuture<@Nullable T> toFuture(Entry<Facets, Errable<T>> e) {
     return e.getValue().toFuture();
   }
 
-  public abstract ImmutableMap<Facets, ValueOrError<T>> executeCompute(
-      ImmutableList<Facets> facetsList);
+  public abstract ImmutableMap<Facets, Errable<T>> executeCompute(ImmutableList<Facets> facetsList);
 }

@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.facets.resolution;
+package com.flipkart.krystal.vajram.facets.resolution.sdk;
 
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.toResolver;
 import static java.util.Arrays.stream;
@@ -6,7 +6,8 @@ import static java.util.Arrays.stream;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.VajramDependencySpec;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
-import com.flipkart.krystal.vajram.facets.resolution.FanoutResolverStage.ResolveFanoutStage;
+import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import com.google.common.collect.ImmutableList;
 import java.util.Collection;
 import java.util.List;
@@ -34,10 +35,10 @@ public final class InputResolvers {
    * @param <DV> The dependency vajram
    */
   @SafeVarargs
-  public static <T, CV extends VajramRequest<?>, DV extends VajramRequest<T>>
+  public static <T, R, CV extends VajramRequest<?>, DV extends VajramRequest<T>>
       List<InputResolver> dep(
-          VajramDependencySpec<T, CV, DV> dependency,
-          SimpleInputResolverSpec<?, ?, CV, DV>... resolverStages) {
+          VajramDependencySpec<T, R, CV, DV> dependency,
+          SimpleInputResolverSpec<?, CV, DV>... resolverStages) {
     return stream(resolverStages)
         .map(
             spec -> {

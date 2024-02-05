@@ -4,9 +4,9 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Optional.ofNullable;
 import static java.util.function.Function.identity;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
@@ -41,13 +41,14 @@ public final class InputResolverUtil {
       Collection<? extends SimpleInputResolver<?, ?, ?, ?>> depResolvers =
           resolvers.getOrDefault(dependencyName, List.of());
       for (SimpleInputResolver<?, ?, ?, ?> simpleResolver : depResolvers) {
-        String resolvable = simpleResolver.getResolverSpec().getTargetInput().name();
+        String resolvable = simpleResolver.getResolverSpec().targetInput().name();
+        //noinspection unchecked,rawtypes
         DependencyCommand<?> command =
             _resolutionHelper(
-                simpleResolver.getResolverSpec().getSourceInput(),
-                simpleResolver.getResolverSpec().getTransformer(),
-                simpleResolver.getResolverSpec().getFanoutTransformer(),
-                simpleResolver.getResolverSpec().getSkipConditions(),
+                (List) simpleResolver.getResolverSpec().sourceInputs(),
+                simpleResolver.getResolverSpec().transformer(),
+                simpleResolver.getResolverSpec().fanoutTransformer(),
+                simpleResolver.getResolverSpec().skipConditions(),
                 facets);
         if (command.shouldSkip()) {
           //noinspection unchecked
@@ -111,7 +112,7 @@ public final class InputResolverUtil {
     if (o instanceof Facets facets) {
       for (Entry<String, FacetValue<Object>> e : facets.values().entrySet()) {
         //noinspection unchecked,rawtypes
-        if (valuesMap.put(e.getKey(), ((ValueOrError) e.getValue()).value().orElse(null)) != null) {
+        if (valuesMap.put(e.getKey(), ((Errable) e.getValue()).value().orElse(null)) != null) {
           throw new IllegalStateException("Duplicate key");
         }
       }
@@ -123,36 +124,40 @@ public final class InputResolverUtil {
     }
   }
 
+  @SuppressWarnings("rawtypes")
   static <T> DependencyCommand<T> _resolutionHelper(
-      @Nullable VajramFacetSpec<?, ?> sourceInput,
-      @Nullable Function<? extends Optional<?>, ?> oneToOneTransformer,
-      @Nullable Function<? extends Optional<?>, ? extends Collection<?>> fanoutTransformer,
+      List<VajramFacetSpec> sourceInputs,
+      @Nullable Function<List<Errable<?>>, ?> oneToOneTransformer,
+      @Nullable Function<List<Errable<?>>, ? extends Collection<?>> fanoutTransformer,
       List<? extends SkipPredicate<?>> skipPredicates,
       Facets facets) {
     boolean fanout = fanoutTransformer != null;
-    final Optional<Object> inputValue;
-    if (sourceInput instanceof VajramDepSingleTypeSpec<?, ?, ?>) {
-      inputValue =
-          facets.getDepValue(sourceInput.name()).values().values().iterator().next().value();
-    } else if (sourceInput instanceof VajramDepFanoutTypeSpec<?, ?, ?>) {
-      inputValue =
-          Optional.of(
-              facets.getDepValue(sourceInput.name()).values().values().stream()
-                  .map(ValueOrError::value)
-                  .filter(Optional::isPresent)
-                  .map(Optional::get)
-                  .toList());
-    } else if (sourceInput != null) {
-      inputValue = facets.getInputValue(sourceInput.name()).value();
-    } else {
-      inputValue = Optional.empty();
+    List<Errable<?>> inputValues = new ArrayList<>();
+    for (VajramFacetSpec sourceInput : sourceInputs) {
+      final Errable<Object> inputValue;
+      if (sourceInput instanceof VajramDepSingleTypeSpec<?, ?, ?>) {
+        inputValue = facets.getDepValue(sourceInput.name()).values().values().iterator().next();
+      } else if (sourceInput instanceof VajramDepFanoutTypeSpec<?, ?, ?>) {
+        inputValue =
+            Errable.withValue(
+                facets.getDepValue(sourceInput.name()).values().values().stream()
+                    .map(Errable::value)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .toList());
+      } else if (sourceInput != null) {
+        inputValue = facets.getInputValue(sourceInput.name());
+      } else {
+        inputValue = Errable.empty();
+      }
+      inputValues.add(inputValue);
     }
 
     //noinspection unchecked
     Optional<SkipPredicate<Object>> skipPredicate =
         skipPredicates.stream()
             .map(p -> (SkipPredicate<Object>) p)
-            .filter(sSkipPredicate -> sSkipPredicate.condition().test(inputValue))
+            .filter(sSkipPredicate -> sSkipPredicate.condition().test(inputValues))
             .findFirst();
     if (skipPredicate.isPresent()) {
       if (fanout) {
@@ -162,23 +167,21 @@ public final class InputResolverUtil {
       }
     }
     //noinspection unchecked
-    Function<Optional<Object>, Object> transformer =
-        ofNullable((Function<Optional<Object>, Object>) oneToOneTransformer)
+    Function<List<Errable<?>>, Object> transformer =
+        ofNullable((Function<List<Errable<?>>, Object>) oneToOneTransformer)
             .or(
                 () ->
                     ofNullable(fanoutTransformer)
                         .map(
                             function ->
-                                (Function<Optional<Object>, Collection<Object>>)
+                                (Function<List<Errable<?>>, Collection<Object>>)
                                     function.andThen(objects -> (Collection<Object>) objects))
                         .map(x -> x.andThen(identity())))
-            .orElse(Optional::orElseThrow);
-    Optional<Object> transformedInput;
-    if (sourceInput == null) {
-      transformedInput = ofNullable(transformer.apply(Optional.empty()));
-    } else {
-      transformedInput = inputValue.map(t -> transformer.apply(Optional.of(t)));
-    }
+            .orElse(
+                valueOrErrors -> {
+                  throw new AssertionError();
+                });
+    Optional<Object> transformedInput = ofNullable(transformer.apply(inputValues));
     if (fanout) {
       //noinspection unchecked
       return MultiExecute.executeFanoutWith(
@@ -191,8 +194,9 @@ public final class InputResolverUtil {
     }
   }
 
-  static <S, T, CV extends VajramRequest<?>, DV extends VajramRequest<?>> InputResolver toResolver(
-      VajramDependencySpec<?, CV, DV> dependency, SimpleInputResolverSpec<S, T, CV, DV> spec) {
+  public static <T, CV extends VajramRequest<?>, DV extends VajramRequest<?>>
+      InputResolver toResolver(
+          VajramDependencySpec<?, ?, CV, DV> dependency, SimpleInputResolverSpec<T, CV, DV> spec) {
     return new SimpleInputResolver<>(dependency, spec);
   }
 

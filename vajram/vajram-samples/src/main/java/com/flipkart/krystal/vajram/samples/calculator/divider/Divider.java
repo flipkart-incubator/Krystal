@@ -10,8 +10,10 @@ import java.util.Optional;
 @VajramDef
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class Divider extends ComputeVajram<Integer> {
-  @Input int numerator;
-  @Input Optional<Integer> denominator;
+  static class _Facets {
+    @Input int numerator;
+    @Input Optional<Integer> denominator;
+  }
 
   @Output
   static int divide(DividerFacets facets) {

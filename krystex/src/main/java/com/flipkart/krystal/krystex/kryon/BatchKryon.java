@@ -1,7 +1,7 @@
 package com.flipkart.krystal.krystex.kryon;
 
-import static com.flipkart.krystal.data.ValueOrError.empty;
-import static com.flipkart.krystal.data.ValueOrError.withError;
+import static com.flipkart.krystal.data.Errable.empty;
+import static com.flipkart.krystal.data.Errable.withError;
 import static com.flipkart.krystal.krystex.kryon.KryonUtils.enqueueOrExecuteCommand;
 import static com.flipkart.krystal.krystex.resolution.ResolverCommand.multiExecuteWith;
 import static com.flipkart.krystal.krystex.resolution.ResolverCommand.skip;
@@ -14,10 +14,10 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.Results;
-import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
@@ -371,7 +371,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       outputLogicInputs.put(requestId, getFacetsForOutputLogic(dependantChain, requestId));
     }
     CompletableFuture<BatchResponse> resultForBatch = new CompletableFuture<>();
-    Map<RequestId, CompletableFuture<ValueOrError<Object>>> results =
+    Map<RequestId, CompletableFuture<Errable<Object>>> results =
         executeDecoratedOutputLogic(outputLogicDefinition, outputLogicInputs, dependantChain);
 
     allOf(results.values().toArray(CompletableFuture[]::new))
@@ -393,7 +393,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     return resultForBatch;
   }
 
-  private Map<RequestId, CompletableFuture<ValueOrError<Object>>> executeDecoratedOutputLogic(
+  private Map<RequestId, CompletableFuture<Errable<Object>>> executeDecoratedOutputLogic(
       OutputLogicDefinition<Object> outputLogicDefinition,
       Map<RequestId, OutputLogicFacets> inputs,
       DependantChain dependantChain) {
@@ -404,8 +404,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       logic = outputLogicDecorator.decorateLogic(logic, outputLogicDefinition);
     }
     OutputLogic<Object> finalLogic = logic;
-    Map<RequestId, CompletableFuture<ValueOrError<Object>>> resultsByRequest =
-        new LinkedHashMap<>();
+    Map<RequestId, CompletableFuture<Errable<Object>>> resultsByRequest = new LinkedHashMap<>();
     inputs.forEach(
         (requestId, outputLogicFacets) -> {
           // Retrieve existing result from cache if result for this set of inputs has already been
@@ -425,7 +424,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
             }
             resultsCache.put(outputLogicFacets.providedFacets(), cachedResult);
           }
-          resultsByRequest.put(requestId, cachedResult.handle(ValueOrError::valueOrError));
+          resultsByRequest.put(requestId, cachedResult.handle(Errable::valueOrError));
         });
     return resultsByRequest;
   }

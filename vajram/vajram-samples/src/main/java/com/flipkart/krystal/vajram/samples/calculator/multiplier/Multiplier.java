@@ -10,8 +10,10 @@ import java.util.Optional;
 @VajramDef
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class Multiplier extends ComputeVajram<Integer> {
-  @Input int numberOne;
-  @Input Optional<Integer> numberTwo;
+  static class _Facets {
+    @Input int numberOne;
+    @Input Optional<Integer> numberTwo;
+  }
 
   @Output
   public static int multiply(MultiplierFacets allInputs) {

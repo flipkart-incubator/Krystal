@@ -62,9 +62,9 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.utils.SkippedExecutionException;
@@ -91,7 +91,7 @@ import com.flipkart.krystal.vajram.facets.VajramDepFanoutTypeSpec;
 import com.flipkart.krystal.vajram.facets.VajramDepSingleTypeSpec;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
-import com.flipkart.krystal.vajram.facets.resolution.Resolve;
+import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajram.modulation.FacetsConverter;
 import com.flipkart.krystal.vajram.modulation.ModulatedFacets;
 import com.flipkart.krystal.vajram.modulation.UnmodulatedFacets;
@@ -317,7 +317,7 @@ public class VajramCodeGenerator {
                     ClassName.get(ImmutableMap.class),
                     ClassName.get(Facets.class),
                     ParameterizedTypeName.get(
-                        ClassName.get(ValueOrError.class), vajramResponseType.box())))
+                        ClassName.get(Errable.class), vajramResponseType.box())))
             .addAnnotation(Override.class);
     if (needsModulation) {
       CodeBlock.Builder codeBuilder = CodeBlock.builder();
@@ -337,7 +337,7 @@ public class VajramCodeGenerator {
       valueMap.put(LINK_HASH_MAP, ClassName.get(LinkedHashMap.class));
       valueMap.put(MAP, ClassName.get(Map.class));
       valueMap.put(LIST, ClassName.get(List.class));
-      valueMap.put(VAL_ERR, ValueOrError.class);
+      valueMap.put(VAL_ERR, Errable.class);
       valueMap.put(FUNCTION, ClassName.get(Function.class));
       valueMap.put(OPTIONAL, ClassName.get(Optional.class));
 
@@ -497,7 +497,7 @@ public class VajramCodeGenerator {
     } else {
       returnBuilder.add(
           "\nreturn $T.valueOrError(() -> $L(new $T(\n",
-          ValueOrError.class,
+          Errable.class,
           getParsedVajramData().outputLogic().getSimpleName(),
           ClassName.get(
               packageName, getFacetUtilClassName(vajramName), getAllFacetsClassname(vajramName)));
@@ -583,7 +583,7 @@ public class VajramCodeGenerator {
       valueMap.put(LINK_HASH_MAP, ClassName.get(LinkedHashMap.class));
       valueMap.put(MAP, ClassName.get(Map.class));
       valueMap.put(LIST, ClassName.get(List.class));
-      valueMap.put(VAL_ERR, ValueOrError.class);
+      valueMap.put(VAL_ERR, Errable.class);
       valueMap.put(FUNCTION, ClassName.get(Function.class));
       valueMap.put(OPTIONAL, ClassName.get(Optional.class));
 
@@ -876,13 +876,13 @@ public class VajramCodeGenerator {
             util.error(message, parameter);
             throw new VajramValidationException(message);
           }
-        } else if (util.isRawAssignable(parameter.asType(), ValueOrError.class)) {
+        } else if (util.isRawAssignable(parameter.asType(), Errable.class)) {
           // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
           // requested the 'ValueOrError'. So we extract the only ValueOrError from dependencyDef
           // response and provide it.
           ifBlockBuilder.addStatement(
               depValueAccessorCode,
-              ParameterizedTypeName.get(ClassName.get(ValueOrError.class), boxedDepType),
+              ParameterizedTypeName.get(ClassName.get(Errable.class), boxedDepType),
               variableName,
               boxedDepType,
               usingInputName);
@@ -968,7 +968,7 @@ public class VajramCodeGenerator {
           Facets.class,
           ImmutableMap.class,
           facets[0],
-          ValueOrError.class);
+          Errable.class);
     } else if (isFanOut) {
       if (util.isRawAssignable(returnType, Iterable.class)) {
         if (util.isRawAssignable(getTypeParameters(returnType).get(0), VajramRequest.class)) {
@@ -998,7 +998,7 @@ public class VajramCodeGenerator {
               Facets.class,
               ImmutableMap.class,
               facets[0],
-              ValueOrError.class);
+              Errable.class);
         }
       } else {
         String message =
@@ -1023,7 +1023,7 @@ public class VajramCodeGenerator {
             Facets.class,
             ImmutableMap.class,
             facets[0],
-            ValueOrError.class,
+            Errable.class,
             variableName);
 
       } else {
@@ -1033,7 +1033,7 @@ public class VajramCodeGenerator {
             Facets.class,
             ImmutableMap.class,
             facets[0],
-            ValueOrError.class,
+            Errable.class,
             variableName);
       }
     }
@@ -1397,10 +1397,7 @@ public class VajramCodeGenerator {
     for (FacetGenModel inputDef : inputDefs) {
       String inputJavaName = toJavaName(inputDef.name());
       toInputValues.addStatement(
-          "builder.put($S, $T.withValue(this.$L))",
-          inputDef.name(),
-          ValueOrError.class,
-          inputJavaName);
+          "builder.put($S, $T.withValue(this.$L))", inputDef.name(), Errable.class, inputJavaName);
     }
     toInputValues.addStatement("return new $T(builder)", Facets.class);
 
