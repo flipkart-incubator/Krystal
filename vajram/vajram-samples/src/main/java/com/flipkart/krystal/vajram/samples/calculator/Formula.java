@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInput;
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
 import static com.flipkart.krystal.vajram.samples.calculator.FormulaFacetUtil.quotient_s;
 import static com.flipkart.krystal.vajram.samples.calculator.FormulaFacetUtil.sum_s;
 import static com.flipkart.krystal.vajram.samples.calculator.FormulaRequest.*;

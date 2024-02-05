@@ -2,9 +2,9 @@ package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2;
 
 import static com.flipkart.krystal.data.ValueOrError.valueOrError;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInputFanout;
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2FacetUtil.friendIds_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2FacetUtil.friendInfos_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.friendIds_n;
@@ -34,7 +34,6 @@ import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 
 @VajramDef
@@ -57,7 +56,7 @@ public abstract class HelloFriendsV2 extends ComputeVajram<String> {
                     friendInfos_s,
                     depInputFanout(TestUserServiceRequest.userId_s)
                         .using(friendIds_s)
-                        .asResolver(Optional::orElseThrow))));
+                        .asResolver(friendIds -> friendIds.value().orElseThrow()))));
     /*
      Following is not a preferred way to write resolvers by application developers.
      But it is mentioned here because some platform code might contain resolvers

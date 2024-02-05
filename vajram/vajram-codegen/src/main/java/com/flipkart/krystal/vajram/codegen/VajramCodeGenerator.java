@@ -91,7 +91,7 @@ import com.flipkart.krystal.vajram.facets.VajramDepFanoutTypeSpec;
 import com.flipkart.krystal.vajram.facets.VajramDepSingleTypeSpec;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
-import com.flipkart.krystal.vajram.facets.resolution.Resolve;
+import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajram.modulation.FacetsConverter;
 import com.flipkart.krystal.vajram.modulation.ModulatedFacets;
 import com.flipkart.krystal.vajram.modulation.UnmodulatedFacets;

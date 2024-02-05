@@ -1,10 +1,12 @@
-package com.flipkart.krystal.vajram.facets.resolution;
+package com.flipkart.krystal.vajram.facets.resolution.sdk;
 
+import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
+import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
+import com.flipkart.krystal.vajram.facets.resolution.SkipPredicate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -15,13 +17,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <CV> CurrentVajram: The current vajram which is resolving the input
  * @param <DV> DependencyVajram: The vajram whose input is being resolved
  */
-public final class TransformResolverStage<
+public final class Transform1ResolverStage<
     S, T, CV extends VajramRequest<?>, DV extends VajramRequest<?>> {
   private final VajramFacetSpec<T, DV> targetInput;
   private final VajramFacetSpec<S, CV> sourceInput;
-  private final List<SkipPredicate<S>> skipConditions = new ArrayList<>();
+  private final List<SkipPredicate<?>> skipConditions = new ArrayList<>();
 
-  TransformResolverStage(VajramFacetSpec<T, DV> targetInput, VajramFacetSpec<S, CV> sourceInput) {
+  Transform1ResolverStage(VajramFacetSpec<T, DV> targetInput, VajramFacetSpec<S, CV> sourceInput) {
     this.targetInput = targetInput;
     this.sourceInput = sourceInput;
   }
@@ -30,9 +32,12 @@ public final class TransformResolverStage<
    * @param whenToSkip The condition when the dependency needs to be skipped
    * @param reason The reason for skipping the dependency
    */
-  public TransformResolverStage<S, T, CV, DV> skipIf(
-      Predicate<Optional<S>> whenToSkip, String reason) {
-    this.skipConditions.add(new SkipPredicate<>(reason, whenToSkip));
+  public Transform1ResolverStage<S, T, CV, DV> skipIf(
+      Predicate<ValueOrError<S>> whenToSkip, String reason) {
+    //noinspection unchecked
+    this.skipConditions.add(
+        new SkipPredicate<>(
+            reason, valueOrErrors -> whenToSkip.test((ValueOrError<S>) valueOrErrors.get(0))));
     return this;
   }
 
@@ -41,9 +46,16 @@ public final class TransformResolverStage<
    *     value of target data type {@code T} (no fanout)
    * @return The resultant {@link SimpleInputResolverSpec}
    */
-  public SimpleInputResolverSpec<S, T, CV, DV> asResolver(
-      Function<Optional<S>, @Nullable T> transformer) {
+  public SimpleInputResolverSpec<T, CV, DV> asResolver(
+      Function<ValueOrError<S>, @Nullable T> transformer) {
     return new SimpleInputResolverSpec<>(
-        targetInput, sourceInput, skipConditions, transformer, null);
+        targetInput,
+        List.of(sourceInput),
+        skipConditions,
+        list -> {
+          //noinspection unchecked
+          return transformer.apply((ValueOrError<S>) list.get(0));
+        },
+        null);
   }
 }
