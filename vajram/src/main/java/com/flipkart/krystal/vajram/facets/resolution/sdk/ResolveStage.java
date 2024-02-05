@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.facets.resolution.sdk;
 
-import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
@@ -22,9 +22,8 @@ public final class ResolveStage<I, DV extends VajramRequest<?>> {
 
   /**
    * Use the value of the source input as-is, without any transformation. If the source input is
-   * {@link ValueOrError#empty()}, then the resolved value will also be {@link
-   * ValueOrError#empty()}. This is possible only if the dataType of the sourceInput and the target
-   * input are same.
+   * {@link Errable#empty()}, then the resolved value will also be {@link Errable#empty()}. This is
+   * possible only if the dataType of the sourceInput and the target input are same.
    *
    * @see #using(VajramFacetSpec)
    * @param sourceInput the spec of the source input being used for resolution

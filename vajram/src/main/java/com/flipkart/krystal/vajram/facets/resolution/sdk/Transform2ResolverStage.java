@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.facets.resolution.sdk;
 
-import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
@@ -39,15 +39,14 @@ public final class Transform2ResolverStage<
    * @param reason The reason for skipping the dependency
    */
   public Transform2ResolverStage<S1, S2, T, CV, DV> skipIf(
-      BiPredicate<ValueOrError<S1>, ValueOrError<S2>> whenToSkip, String reason) {
+      BiPredicate<Errable<S1>, Errable<S2>> whenToSkip, String reason) {
     //noinspection unchecked
     this.skipConditions.add(
         new SkipPredicate<>(
             reason,
             valueOrErrors ->
                 whenToSkip.test(
-                    (ValueOrError<S1>) valueOrErrors.get(0),
-                    (ValueOrError<S2>) valueOrErrors.get(1))));
+                    (Errable<S1>) valueOrErrors.get(0), (Errable<S2>) valueOrErrors.get(1))));
     return this;
   }
 
@@ -57,14 +56,14 @@ public final class Transform2ResolverStage<
    * @return The resultant {@link SimpleInputResolverSpec}
    */
   public SimpleInputResolverSpec<T, CV, DV> asResolver(
-      BiFunction<ValueOrError<S1>, ValueOrError<S2>, @Nullable T> transformer) {
+      BiFunction<Errable<S1>, Errable<S2>, @Nullable T> transformer) {
     return new SimpleInputResolverSpec<>(
         targetInput,
         List.of(sourceInput1, sourceInput2),
         skipConditions,
         list -> {
           //noinspection unchecked
-          return transformer.apply((ValueOrError<S1>) list.get(0), (ValueOrError<S2>) list.get(1));
+          return transformer.apply((Errable<S1>) list.get(0), (Errable<S2>) list.get(1));
         },
         null);
   }

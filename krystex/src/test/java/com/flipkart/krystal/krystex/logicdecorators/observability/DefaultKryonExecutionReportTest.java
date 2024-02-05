@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.logicdecorators.observability;
 
-import static com.flipkart.krystal.data.ValueOrError.withValue;
+import static com.flipkart.krystal.data.Errable.withValue;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.function.Function.identity;
 import static org.assertj.core.api.Assertions.assertThat;

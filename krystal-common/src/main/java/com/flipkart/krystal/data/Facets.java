@@ -18,11 +18,11 @@ public final class Facets {
 
   private static final Facets EMPTY = new Facets(ImmutableMap.of());
 
-  public <T> ValueOrError<T> getInputValue(String inputName) {
-    FacetValue<?> facetValue = values.getOrDefault(inputName, ValueOrError.empty());
-    if (facetValue instanceof ValueOrError<?> voe) {
+  public <T> Errable<T> getInputValue(String inputName) {
+    FacetValue<?> facetValue = values.getOrDefault(inputName, Errable.empty());
+    if (facetValue instanceof Errable<?> voe) {
       //noinspection unchecked
-      return (ValueOrError<T>) voe;
+      return (Errable<T>) voe;
     }
     throw new IllegalArgumentException("%s is not of type ValueOrError".formatted(inputName));
   }

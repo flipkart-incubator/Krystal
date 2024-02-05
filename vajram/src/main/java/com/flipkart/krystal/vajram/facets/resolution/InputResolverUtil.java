@@ -4,9 +4,9 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Optional.ofNullable;
 import static java.util.function.Function.identity;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
@@ -112,7 +112,7 @@ public final class InputResolverUtil {
     if (o instanceof Facets facets) {
       for (Entry<String, FacetValue<Object>> e : facets.values().entrySet()) {
         //noinspection unchecked,rawtypes
-        if (valuesMap.put(e.getKey(), ((ValueOrError) e.getValue()).value().orElse(null)) != null) {
+        if (valuesMap.put(e.getKey(), ((Errable) e.getValue()).value().orElse(null)) != null) {
           throw new IllegalStateException("Duplicate key");
         }
       }
@@ -127,28 +127,28 @@ public final class InputResolverUtil {
   @SuppressWarnings("rawtypes")
   static <T> DependencyCommand<T> _resolutionHelper(
       List<VajramFacetSpec> sourceInputs,
-      @Nullable Function<List<ValueOrError<?>>, ?> oneToOneTransformer,
-      @Nullable Function<List<ValueOrError<?>>, ? extends Collection<?>> fanoutTransformer,
+      @Nullable Function<List<Errable<?>>, ?> oneToOneTransformer,
+      @Nullable Function<List<Errable<?>>, ? extends Collection<?>> fanoutTransformer,
       List<? extends SkipPredicate<?>> skipPredicates,
       Facets facets) {
     boolean fanout = fanoutTransformer != null;
-    List<ValueOrError<?>> inputValues = new ArrayList<>();
+    List<Errable<?>> inputValues = new ArrayList<>();
     for (VajramFacetSpec sourceInput : sourceInputs) {
-      final ValueOrError<Object> inputValue;
+      final Errable<Object> inputValue;
       if (sourceInput instanceof VajramDepSingleTypeSpec<?, ?, ?>) {
         inputValue = facets.getDepValue(sourceInput.name()).values().values().iterator().next();
       } else if (sourceInput instanceof VajramDepFanoutTypeSpec<?, ?, ?>) {
         inputValue =
-            ValueOrError.withValue(
+            Errable.withValue(
                 facets.getDepValue(sourceInput.name()).values().values().stream()
-                    .map(ValueOrError::value)
+                    .map(Errable::value)
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .toList());
       } else if (sourceInput != null) {
         inputValue = facets.getInputValue(sourceInput.name());
       } else {
-        inputValue = ValueOrError.empty();
+        inputValue = Errable.empty();
       }
       inputValues.add(inputValue);
     }
@@ -167,14 +167,14 @@ public final class InputResolverUtil {
       }
     }
     //noinspection unchecked
-    Function<List<ValueOrError<?>>, Object> transformer =
-        ofNullable((Function<List<ValueOrError<?>>, Object>) oneToOneTransformer)
+    Function<List<Errable<?>>, Object> transformer =
+        ofNullable((Function<List<Errable<?>>, Object>) oneToOneTransformer)
             .or(
                 () ->
                     ofNullable(fanoutTransformer)
                         .map(
                             function ->
-                                (Function<List<ValueOrError<?>>, Collection<Object>>)
+                                (Function<List<Errable<?>>, Collection<Object>>)
                                     function.andThen(objects -> (Collection<Object>) objects))
                         .map(x -> x.andThen(identity())))
             .orElse(

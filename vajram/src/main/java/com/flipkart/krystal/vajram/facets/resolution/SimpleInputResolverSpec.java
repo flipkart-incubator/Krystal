@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
-import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import java.util.Collection;
@@ -19,6 +19,5 @@ public record SimpleInputResolverSpec<T, CV extends VajramRequest<?>, DV extends
     VajramFacetSpec<T, DV> targetInput,
     List<VajramFacetSpec<?, CV>> sourceInputs,
     List<SkipPredicate<?>> skipConditions,
-    @Nullable Function<List<ValueOrError<?>>, @Nullable T> transformer,
-    @Nullable Function<List<ValueOrError<?>>, ? extends Collection<? extends T>>
-        fanoutTransformer) {}
+    @Nullable Function<List<Errable<?>>, @Nullable T> transformer,
+    @Nullable Function<List<Errable<?>>, ? extends Collection<? extends T>> fanoutTransformer) {}

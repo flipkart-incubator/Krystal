@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.facets.resolution.sdk;
 
-import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
@@ -34,11 +34,11 @@ public final class Transform1FanoutResolverStage<
    * @param reason The reason for skipping the dependency
    */
   public Transform1FanoutResolverStage<S, T, CV, DV> skipIf(
-      Predicate<ValueOrError<S>> whenToSkip, String reason) {
+      Predicate<Errable<S>> whenToSkip, String reason) {
     //noinspection unchecked
     this.skipConditions.add(
         new SkipPredicate<>(
-            reason, valueOrErrors -> whenToSkip.test((ValueOrError<S>) valueOrErrors.get(0))));
+            reason, valueOrErrors -> whenToSkip.test((Errable<S>) valueOrErrors.get(0))));
     return this;
   }
 
@@ -48,7 +48,7 @@ public final class Transform1FanoutResolverStage<
    * @return The resultant {@link SimpleInputResolverSpec}
    */
   public SimpleInputResolverSpec<T, CV, DV> asResolver(
-      Function<ValueOrError<S>, ? extends Collection<? extends T>> transformer) {
+      Function<Errable<S>, ? extends Collection<? extends T>> transformer) {
     return new SimpleInputResolverSpec<>(
         targetInput,
         List.of(sourceInput),
@@ -56,7 +56,7 @@ public final class Transform1FanoutResolverStage<
         null,
         list -> {
           // noinspection unchecked
-          return transformer.apply((ValueOrError<S>) list.get(0));
+          return transformer.apply((Errable<S>) list.get(0));
         });
   }
 }

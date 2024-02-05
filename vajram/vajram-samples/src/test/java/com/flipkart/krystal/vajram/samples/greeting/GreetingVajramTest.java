@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.samples.greeting;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
-import static com.flipkart.krystal.data.ValueOrError.withValue;
+import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.google.inject.Guice.createInjector;
@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
@@ -181,7 +181,7 @@ class GreetingVajramTest {
                 VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder)
                     .withMock(
                         UserServiceRequest.builder().userId(USER_ID).build(),
-                        ValueOrError.withError(new IOException("Request Timeout")))
+                        Errable.withError(new IOException("Request Timeout")))
                     .buildConfig())) {
       future = executeVajram(krystexVajramExecutor);
     }

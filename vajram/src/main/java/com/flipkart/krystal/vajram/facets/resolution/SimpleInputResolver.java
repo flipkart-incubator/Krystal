@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
-import static com.flipkart.krystal.data.ValueOrError.withValue;
+import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
@@ -8,8 +8,8 @@ import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil._resolutionHelper;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.QualifiedInputs;
@@ -87,7 +87,7 @@ public final class SimpleInputResolver<
                           new Facets(
                               ImmutableMap.of(
                                   resolverSpec.targetInput().name(),
-                                  new ValueOrError<>(o, Optional.empty()))))
+                                  new Errable<>(o, Optional.empty()))))
                   .toList());
       }
     } catch (Exception e) {

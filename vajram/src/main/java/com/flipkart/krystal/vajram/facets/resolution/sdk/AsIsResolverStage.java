@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.facets.resolution.sdk;
 
-import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
@@ -19,11 +19,11 @@ public final class AsIsResolverStage<T, CV extends VajramRequest<?>, DV extends 
     this.sourceInput = sourceInput;
   }
 
-  public AsIsResolverStage<T, CV, DV> skipIf(Predicate<ValueOrError<T>> whenToSkip, String reason) {
+  public AsIsResolverStage<T, CV, DV> skipIf(Predicate<Errable<T>> whenToSkip, String reason) {
     //noinspection unchecked
     this.skipConditions.add(
         new SkipPredicate<>(
-            reason, valueOrErrors -> whenToSkip.test((ValueOrError<T>) valueOrErrors.get(0))));
+            reason, valueOrErrors -> whenToSkip.test((Errable<T>) valueOrErrors.get(0))));
     return this;
   }
 

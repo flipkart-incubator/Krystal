@@ -11,7 +11,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
@@ -265,10 +265,10 @@ class FormulaTest {
             VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder)
                 .withMock(
                     AdderRequest.builder().numberOne(20).numberTwo(5).build(),
-                    ValueOrError.withValue(25))
+                    Errable.withValue(25))
                 .withMock(
                     DividerRequest.builder().numerator(100).denominator(25).build(),
-                    ValueOrError.withValue(4))
+                    Errable.withValue(4))
                 .buildConfig())) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
@@ -293,7 +293,7 @@ class FormulaTest {
             VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder)
                 .withMock(
                     AdderRequest.builder().numberOne(20).numberTwo(5).build(),
-                    ValueOrError.withValue(25))
+                    Errable.withValue(25))
                 .buildConfig())) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
@@ -318,7 +318,7 @@ class FormulaTest {
             VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder)
                 .withMock(
                     DividerRequest.builder().numerator(100).denominator(25).build(),
-                    ValueOrError.withValue(4))
+                    Errable.withValue(4))
                 .buildConfig())) {
       future = executeVajram(krystexVajramExecutor, 0);
     }
@@ -342,8 +342,7 @@ class FormulaTest {
             new FormulaRequestContext(100, 0, 0, REQUEST_ID),
             VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder)
                 .withMock(
-                    AdderRequest.builder().numberOne(0).numberTwo(0).build(),
-                    ValueOrError.withValue(0))
+                    AdderRequest.builder().numberOne(0).numberTwo(0).build(), Errable.withValue(0))
                 .buildConfig())) {
       future = executeVajram(krystexVajramExecutor, 0);
     }

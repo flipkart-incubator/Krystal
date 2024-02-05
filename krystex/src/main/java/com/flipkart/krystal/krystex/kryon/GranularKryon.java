@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
-import static com.flipkart.krystal.data.ValueOrError.withError;
+import static com.flipkart.krystal.data.Errable.withError;
 import static com.flipkart.krystal.krystex.kryon.KryonUtils.enqueueOrExecuteCommand;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -10,10 +10,10 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.Results;
-import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.CallbackGranule;
@@ -589,14 +589,14 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                         (response, throwable) -> {
                           enqueueOrExecuteCommand(
                               () -> {
-                                ValueOrError<Object> valueOrError = response;
+                                Errable<Object> errable = response;
                                 if (throwable != null) {
-                                  valueOrError = withError(throwable);
+                                  errable = withError(throwable);
                                 }
                                 return new CallbackGranule(
                                     this.kryonId,
                                     depName,
-                                    new Results<>(ImmutableMap.of(Facets.empty(), valueOrError)),
+                                    new Results<>(ImmutableMap.of(Facets.empty(), errable)),
                                     requestId,
                                     getDepChainFor(requestId));
                               },
@@ -624,7 +624,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
       resultsCache.put(outputLogicFacets.providedFacets(), resultFuture);
     }
     resultFuture
-        .handle(ValueOrError::valueOrError)
+        .handle(Errable::valueOrError)
         .thenAccept(
             value ->
                 resultForRequest.complete(
