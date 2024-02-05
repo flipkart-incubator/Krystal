@@ -18,8 +18,10 @@ import com.google.common.collect.ImmutableCollection;
 /** Returns the sum of numbers '2' and '3' */
 @VajramDef
 abstract class Add2And3 extends ComputeVajram<Integer> {
-  @Dependency(onVajram = Adder.class)
-  int sumOf2And3;
+  static class _Facets {
+    @Dependency(onVajram = Adder.class)
+    int sumOf2And3;
+  }
 
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {

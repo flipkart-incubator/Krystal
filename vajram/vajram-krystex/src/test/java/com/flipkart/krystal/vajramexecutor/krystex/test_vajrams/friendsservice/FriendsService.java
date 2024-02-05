@@ -20,10 +20,11 @@ import java.util.concurrent.atomic.LongAdder;
 
 @VajramDef
 public abstract class FriendsService extends IOVajram<Set<String>> {
+  static class _Facets {
+    @Modulated @Input String userId;
+  }
 
   public static final LongAdder CALL_COUNTER = new LongAdder();
-
-  @Modulated @Input String userId;
 
   @Output
   static ImmutableMap<FriendsServiceModInputs, CompletableFuture<Set<String>>> call(

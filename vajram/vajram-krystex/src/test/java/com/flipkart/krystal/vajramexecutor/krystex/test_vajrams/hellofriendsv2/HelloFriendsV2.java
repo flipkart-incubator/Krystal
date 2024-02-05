@@ -38,14 +38,15 @@ import java.util.Set;
 
 @VajramDef
 public abstract class HelloFriendsV2 extends ComputeVajram<String> {
+  static class _Facets {
+    @Input String userId;
 
-  @Input String userId;
+    @Dependency(onVajram = FriendsService.class)
+    Set<String> friendIds;
 
-  @Dependency(onVajram = FriendsService.class)
-  Set<String> friendIds;
-
-  @Dependency(onVajram = TestUserService.class, canFanout = true)
-  /*Collection of*/ TestUserInfo friendInfos;
+    @Dependency(onVajram = TestUserService.class, canFanout = true)
+    /*Collection of*/ TestUserInfo friendInfos;
+  }
 
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {

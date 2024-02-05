@@ -30,15 +30,16 @@ import java.util.stream.Collectors;
 
 @VajramDef
 public abstract class MutualFriendsHello extends ComputeVajram<String> {
+  static class _Facets {
+    @Input Set<String> userIds;
+    @Input Optional<Boolean> skip;
 
-  @Input Set<String> userIds;
-  @Input Optional<Boolean> skip;
+    @Dependency(onVajram = FriendsService.class)
+    Set<String> friendIds;
 
-  @Dependency(onVajram = FriendsService.class)
-  Set<String> friendIds;
-
-  @Dependency(onVajram = HelloFriendsV2.class, canFanout = true)
-  String hellos;
+    @Dependency(onVajram = HelloFriendsV2.class, canFanout = true)
+    String hellos;
+  }
 
   @Output
   static String sayHelloToMutualFriends(MutualFriendsHelloFacets mutualFriendsHelloFacets) {

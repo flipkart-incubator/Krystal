@@ -21,17 +21,18 @@ import java.util.Optional;
 @VajramDef
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class SplitAdder extends ComputeVajram<Integer> {
+  static class _Facets {
+    @Input List<Integer> numbers;
 
-  @Input List<Integer> numbers;
+    @Dependency(onVajram = SplitAdder.class)
+    Optional<Integer> splitSum1;
 
-  @Dependency(onVajram = SplitAdder.class)
-  Optional<Integer> splitSum1;
+    @Dependency(onVajram = SplitAdder.class)
+    Optional<Integer> splitSum2;
 
-  @Dependency(onVajram = SplitAdder.class)
-  Optional<Integer> splitSum2;
-
-  @Dependency(onVajram = Adder.class)
-  Optional<Integer> sum;
+    @Dependency(onVajram = Adder.class)
+    Optional<Integer> sum;
+  }
 
   @Resolve(depName = splitSum1_n, depInputs = numbers_n)
   public static SingleExecute<ArrayList<Integer>> numbersForSubSplitter1(

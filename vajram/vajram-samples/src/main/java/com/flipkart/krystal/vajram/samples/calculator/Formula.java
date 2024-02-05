@@ -23,16 +23,17 @@ import com.google.common.collect.ImmutableCollection;
 /** a/(p+q) */
 @VajramDef
 public abstract class Formula extends ComputeVajram<Integer> {
+  static class _Facets {
+    @Input int a;
+    @Input int p;
+    @Input int q;
 
-  @Input int a;
-  @Input int p;
-  @Input int q;
+    @Dependency(onVajram = Adder.class)
+    int sum;
 
-  @Dependency(onVajram = Adder.class)
-  int sum;
-
-  @Dependency(onVajram = Divider.class)
-  int quotient;
+    @Dependency(onVajram = Divider.class)
+    int quotient;
+  }
 
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {

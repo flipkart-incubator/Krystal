@@ -24,12 +24,13 @@ import java.util.Set;
 
 @VajramDef
 public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
+  static class _Facets {
+    @Input Set<String> userIds;
+    @Input Optional<Boolean> skip;
 
-  @Input Set<String> userIds;
-  @Input Optional<Boolean> skip;
-
-  @Dependency(onVajram = HelloFriendsV2.class, canFanout = true)
-  String hellos;
+    @Dependency(onVajram = HelloFriendsV2.class, canFanout = true)
+    String hellos;
+  }
 
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {

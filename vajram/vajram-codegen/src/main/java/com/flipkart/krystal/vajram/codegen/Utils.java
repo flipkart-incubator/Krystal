@@ -131,8 +131,15 @@ public class Utils {
 
   public VajramInfo computeVajramInfo(TypeElement vajramClass) {
     VajramInfoLite vajramInfoLite = getVajramInfoLite(vajramClass);
-    List<? extends Element> enclosedElements = vajramClass.getEnclosedElements();
-    List<VariableElement> fields = ElementFilter.fieldsIn(enclosedElements);
+    Optional<Element> facetsClass =
+        vajramClass.getEnclosedElements().stream()
+            .filter(element -> element.getKind() == ElementKind.CLASS)
+            .filter(element -> element.getSimpleName().contentEquals("_Facets"))
+            .findFirst()
+            .map(element -> typeUtils.asElement(element.asType()));
+
+    List<VariableElement> fields =
+        ElementFilter.fieldsIn(facetsClass.map(Element::getEnclosedElements).orElse(List.of()));
     List<VariableElement> inputFields =
         fields.stream()
             .filter(

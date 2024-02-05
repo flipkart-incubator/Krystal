@@ -10,11 +10,12 @@ import java.util.concurrent.atomic.LongAdder;
 
 @VajramDef
 public abstract class Hello extends ComputeVajram<String> {
+  static class _Facets {
+    @Input String name;
+    @Input Optional<String> greeting;
+  }
 
   public static final LongAdder CALL_COUNTER = new LongAdder();
-
-  @Input String name;
-  @Input Optional<String> greeting;
 
   @Output
   static String greet(HelloFacets facets) {

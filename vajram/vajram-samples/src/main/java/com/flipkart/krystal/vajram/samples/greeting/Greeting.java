@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.samples.greeting;
 
 import static com.flipkart.krystal.vajram.samples.greeting.GreetingRequest.userId_n;
+import static com.flipkart.krystal.vajram.samples.greeting.GreetingRequest.userInfo_n;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
@@ -24,34 +25,27 @@ import java.util.Optional;
 @SuppressWarnings("initialization.field.uninitialized")
 // ComputeVajram means that this Vajram does not directly perform any blocking operations.
 public abstract class Greeting extends ComputeVajram<String> {
+  static class _Facets {
+    @Input String userId;
+    @Inject Optional<Logger> log;
 
-  @Input String userId;
+    @Inject
+    @Named("analytics_sink")
+    AnalyticsEventSink analyticsEventSink;
 
-  @Inject Optional<Logger> log;
+    @Dependency(onVajram = UserService.class)
+    Optional<UserInfo> userInfo;
+  }
 
-  @Inject
-  @Named("analytics_sink")
-  AnalyticsEventSink analyticsEventSink;
-
-  @Dependency(onVajram = UserService.class)
-  Optional<UserInfo> userInfo;
-
-  // Resolving (or providing) inputs of dependencies
-  // is the responsibility of this Vajram (inputs of a vajram are resolved by its client Vajrams).
-  // In this case the UserServiceVajram needs a user_id to retrieve user info from User Service.
+  // Resolving (or providing) inputs of its dependencies
+  // is the responsibility of this Vajram (i.e. inputs of a vajram are resolved by its client
+  // Vajrams).
+  // In this case the UserServiceVajram needs a user_id to retrieve the user info.
   // So it's GreetingVajram's responsibility to provide that input.
-  @Resolve(depName = "userInfo", depInputs = "userId")
+  @Resolve(depName = userInfo_n, depInputs = UserServiceRequest.userId_n)
   public static String userIdForUserService(@Using(userId_n) String userId) {
     return userId;
   }
-
-  // TODO: Iterable support for list resolution
-  //    @Resolve(value = "user_info", inputs = "UserServiceVajram.AccountId")
-  //    public String userIdForUserService1(@BindFrom("user_info") String userId) {
-  //        UserServiceRequest userServiceRequest =
-  // UserServiceRequest.builder().userId(userId).build();
-  //        return userId;
-  //    }
 
   // This is the core business logic of this Vajram
   // Sync vajrams can return any object. AsyncVajrams need to return {CompletableFuture}s

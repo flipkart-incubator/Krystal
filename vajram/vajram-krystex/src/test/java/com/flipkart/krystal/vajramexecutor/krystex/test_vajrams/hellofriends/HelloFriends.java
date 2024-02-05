@@ -29,15 +29,16 @@ import java.util.stream.IntStream;
 
 @VajramDef
 public abstract class HelloFriends extends ComputeVajram<String> {
+  static class _Facets {
+    @Input String userId;
+    @Input Optional<Integer> numberOfFriends;
 
-  @Input String userId;
-  @Input Optional<Integer> numberOfFriends;
+    @Dependency(onVajram = TestUserService.class)
+    TestUserInfo userInfo;
 
-  @Dependency(onVajram = TestUserService.class)
-  TestUserInfo userInfo;
-
-  @Dependency(onVajram = TestUserService.class, canFanout = true)
-  TestUserInfo friendInfos;
+    @Dependency(onVajram = TestUserService.class, canFanout = true)
+    TestUserInfo friendInfos;
+  }
 
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {

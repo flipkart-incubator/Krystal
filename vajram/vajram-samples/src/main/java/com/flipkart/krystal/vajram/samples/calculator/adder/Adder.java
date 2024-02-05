@@ -18,12 +18,12 @@ import java.util.concurrent.atomic.LongAdder;
 @VajramDef
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class Adder extends ComputeVajram<Integer> {
+  static class _Facets {
+    @Modulated @Input int numberOne;
+    @Modulated @Input Optional<Integer> numberTwo;
+  }
 
   public static final LongAdder CALL_COUNTER = new LongAdder();
-
-  @Modulated @Input int numberOne;
-
-  @Modulated @Input Optional<Integer> numberTwo;
 
   @Output
   static Map<AdderModInputs, Integer> add(

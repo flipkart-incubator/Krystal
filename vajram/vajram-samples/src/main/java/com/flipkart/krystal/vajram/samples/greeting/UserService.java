@@ -20,8 +20,9 @@ import java.util.stream.Collectors;
 @VajramDef
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class UserService extends IOVajram<UserInfo> {
-
-  @Modulated @Input String userId;
+  static class _Facets {
+    @Modulated @Input String userId;
+  }
 
   @Output
   static Map<UserServiceModInputs, CompletableFuture<UserInfo>> callUserService(

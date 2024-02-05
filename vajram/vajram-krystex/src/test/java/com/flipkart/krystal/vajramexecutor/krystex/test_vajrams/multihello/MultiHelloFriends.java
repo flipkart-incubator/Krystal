@@ -23,14 +23,15 @@ import java.util.Optional;
 
 @VajramDef()
 public abstract class MultiHelloFriends extends ComputeVajram<String> {
+  static class _Facets {
+    @Input List<String> userIds;
+    @Input Optional<Boolean> skip;
+
+    @Dependency(onVajram = HelloFriends.class, canFanout = true)
+    String hellos;
+  }
 
   private static final List<Integer> NUMBER_OF_FRIENDS = List.of(1, 2);
-
-  @Input List<String> userIds;
-  @Input Optional<Boolean> skip;
-
-  @Dependency(onVajram = HelloFriends.class, canFanout = true)
-  String hellos;
 
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
