@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
+import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.krystex.kryon.DefaultDependantChain;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.DependantChainStart;
@@ -11,12 +12,11 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.FacetValuesAdaptor;
 import com.flipkart.krystal.vajram.modulation.FacetsConverter;
 import com.flipkart.krystal.vajram.modulation.InputModulator;
-import com.flipkart.krystal.vajram.tags.AnnotationTag;
-import com.flipkart.krystal.vajram.tags.NamedValueTag;
+import com.flipkart.krystal.vajram.tags.AnnotationTags;
 import com.flipkart.krystal.vajram.tags.VajramTags;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -101,26 +101,18 @@ public record InputModulatorConfig(
     } else if (dependantChain instanceof DefaultDependantChain defaultDependantChain) {
       if (defaultDependantChain.dependantChain() instanceof DependantChainStart) {
         String vajramId =
-            Optional.ofNullable(
+            AnnotationTags.getNamedValueTag(
+                    VajramTags.VAJRAM_ID,
                     kryonDefinitionRegistry
                         .get(defaultDependantChain.kryonId())
                         .getOutputLogicDefinition()
-                        .logicTags()
-                        .get(VajramTags.VAJRAM_ID))
-                .map(
-                    tag -> {
-                      if (tag instanceof AnnotationTag<?> anno) {
-                        if (anno.annotation() instanceof NamedValueTag namedValueTag) {
-                          return namedValueTag.value();
-                        }
-                      }
-                      return null;
-                    })
+                        .logicTags())
                 .orElseThrow(
                     () ->
                         new NoSuchElementException(
                             "Could not find tag %s for kryon %s"
-                                .formatted(VajramTags.VAJRAM_ID, defaultDependantChain.kryonId())));
+                                .formatted(VajramTags.VAJRAM_ID, defaultDependantChain.kryonId())))
+                .value();
         return generateInstanceId(defaultDependantChain.dependantChain(), kryonDefinitionRegistry)
             .append('>')
             .append(vajramId)
