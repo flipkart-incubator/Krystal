@@ -648,8 +648,12 @@ public class VajramCodeGenerator {
                       .getParameters()
                       .forEach(
                           parameter -> {
-                            String bindParamName =
-                                checkNotNull(parameter.getAnnotation(Using.class)).value();
+                            String bindParamName;
+                            if (Objects.nonNull(parameter.getAnnotation(Using.class))) {
+                              bindParamName = parameter.getAnnotation(Using.class).value();
+                            } else {
+                              bindParamName = checkNotNull(parameter.getSimpleName().toString());
+                            }
                             if (!fanout.get()
                                 && depFanoutMap.containsKey(
                                     bindParamName)) { // if fanout is already set skip resetting it.
