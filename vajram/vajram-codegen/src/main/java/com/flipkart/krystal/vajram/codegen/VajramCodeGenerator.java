@@ -289,11 +289,19 @@ public class VajramCodeGenerator {
   }
 
   private static ImmutableSet<String> getResolverSources(ExecutableElement resolve) {
-    return resolve.getParameters().stream()
-        .filter(parameter -> parameter.getAnnotationsByType(Using.class).length > 0)
-        .map(parameter -> parameter.getAnnotation(Using.class))
-        .map(Using::value)
-        .collect(toImmutableSet());
+    return ImmutableSet.<String>builder()
+        .addAll(
+            resolve.getParameters().stream()
+                .filter(parameter -> parameter.getAnnotationsByType(Using.class).length > 0)
+                .map(parameter -> parameter.getAnnotation(Using.class))
+                .map(Using::value)
+                .collect(toImmutableSet()))
+        .addAll(
+            resolve.getParameters().stream()
+                .filter(parameter -> Objects.isNull(parameter.getAnnotation(Using.class)))
+                .map(parameter -> parameter.getSimpleName().toString())
+                .collect(toImmutableSet()))
+        .build();
   }
 
   /**
@@ -721,14 +729,18 @@ public class VajramCodeGenerator {
         .getParameters()
         .forEach(
             parameter -> {
-              String usingInputName =
-                  checkNotNull(
-                          parameter.getAnnotation(Using.class),
-                          "Resolver method params must have 'Using' annotation. Vajram: %s, method %s, param: %s",
-                          vajramName,
-                          method.getSimpleName(),
-                          parameter.getSimpleName())
-                      .value();
+              String usingInputName;
+              if (Objects.nonNull(parameter.getAnnotation(Using.class))) {
+                usingInputName = parameter.getAnnotation(Using.class).value();
+              } else {
+                usingInputName =
+                    checkNotNull(
+                        parameter.getSimpleName().toString(),
+                        "Resolver method params must have either 'Using' annotation OR parameter name for inferring Using annotation. Vajram: %s, method %s, param: %s",
+                        vajramName,
+                        method.getSimpleName(),
+                        parameter.getSimpleName());
+              }
               // check if the bind param has multiple resolvers
               if (facetModels.get(usingInputName) instanceof DependencyModel) {
                 generateDependencyResolutions(
