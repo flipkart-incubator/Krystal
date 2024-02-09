@@ -6,6 +6,7 @@ import com.flipkart.krystal.vajram.codegen.Utils;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -51,10 +52,38 @@ public record ParsedVajramData(
             vajramInfo.responseType()));
   }
 
+  public static void handleDuplicateDependencyBySameResolverException(List<ExecutableElement> methods){
+    HashMap<String, HashMap<String,Boolean>> lookUpMap = new HashMap<>();
+    for(ExecutableElement method: methods){
+      String depName = method.getAnnotation(Resolve.class).depName();
+      String [] depInputs = method.getAnnotation(Resolve.class).depInputs();
+      for(String depinput : depInputs){
+        if (lookUpMap.get(depName)!=null && lookUpMap.get(depName).get(depinput)!=null){
+          String errorMessage =
+              "Two Resolver resolving same input (%s) for dependency name (%s)"
+                  .formatted(
+                      lookUpMap.get(depName).get(depinput),
+                      lookUpMap.get(depName));
+          throw new VajramValidationException(errorMessage);
+        }
+        else if(lookUpMap.get(depName)!=null){
+          lookUpMap.get(depName).put(depinput,true);
+        }
+        else {
+          lookUpMap.put(depName,new HashMap<>());
+          lookUpMap.get(depName).put(depinput,true);
+        }
+      }
+    }
+  }
+
+
   public static ExecutableElement getOutputLogicAndResolverMethods(
       TypeElement vajramClass, List<ExecutableElement> resolveMethods, Utils util) {
     ExecutableElement outputLogic = null;
-    for (ExecutableElement method : getStaticMethods(vajramClass)) {
+    List<ExecutableElement> methods = getStaticMethods(vajramClass);
+    handleDuplicateDependencyBySameResolverException(methods);
+    for (ExecutableElement method : methods) {
       if (isResolver(method)) {
         resolveMethods.add(method);
       } else if (isOutputLogic(method)) {
