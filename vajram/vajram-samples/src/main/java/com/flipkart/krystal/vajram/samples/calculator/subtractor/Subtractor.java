@@ -16,7 +16,7 @@ public abstract class Subtractor extends ComputeVajram<Integer> {
   }
 
   @Output
-  public static int subtract(SubtractorFacets allInputs) {
+  static int subtract(SubtractorFacets allInputs) {
     return allInputs.numberOne() - allInputs.numberTwo().orElse(0);
   }
 }

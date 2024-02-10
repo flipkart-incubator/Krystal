@@ -624,7 +624,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
       resultsCache.put(outputLogicFacets.providedFacets(), resultFuture);
     }
     resultFuture
-        .handle(Errable::valueOrError)
+        .handle(Errable::errable)
         .thenAccept(
             value ->
                 resultForRequest.complete(

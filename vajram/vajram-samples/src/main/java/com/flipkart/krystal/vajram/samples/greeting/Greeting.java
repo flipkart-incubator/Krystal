@@ -50,7 +50,7 @@ public abstract class Greeting extends ComputeVajram<String> {
   // This is the core business logic of this Vajram
   // Sync vajrams can return any object. AsyncVajrams need to return {CompletableFuture}s
   @Output
-  public static String createGreetingMessage(GreetingFacets facets) {
+  static String createGreetingMessage(GreetingFacets facets) {
     String userId = facets.userId();
     Optional<UserInfo> userInfo = facets.userInfo();
     String greeting =
