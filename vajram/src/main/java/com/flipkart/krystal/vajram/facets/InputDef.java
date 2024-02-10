@@ -1,6 +1,8 @@
 package com.flipkart.krystal.vajram.facets;
 
+import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.datatypes.DataType;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 import lombok.Builder;
@@ -13,7 +15,8 @@ public record InputDef<T>(
     T defaultValue,
     String documentation,
     boolean needsModulation,
-    ImmutableSet<InputSource> sources)
+    ImmutableSet<InputSource> sources,
+    ImmutableMap<Object, Tag> tags)
     implements VajramFacetDefinition {
 
   private static final ImmutableSet<InputSource> DEFAULT_INPUT_SOURCES =

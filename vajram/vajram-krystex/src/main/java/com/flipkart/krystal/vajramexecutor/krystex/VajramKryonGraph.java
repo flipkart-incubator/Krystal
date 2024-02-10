@@ -554,7 +554,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                   .putAll(failedValidations)
                   .build();
             },
-            vajramDefinition.getOutputLogicTags());
+            ImmutableMap.copyOf(vajramDefinition.getOutputLogicTags()));
     registerInputInjector(outputLogic, vajramDefinition.getVajram());
     sessionScopedDecoratorConfigs
         .values()

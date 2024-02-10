@@ -185,11 +185,11 @@ The data structures are as follows:
 1. [`CompletableFuture`](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/CompletableFuture.html) -
    standard java data structures to represent a value or error which is being computed but not yet
    ready
-2. [`ValueOrError`](../krystal-common/src/main/java/com/flipkart/krystal/data/ValueOrError.java) - a
+2. [`Errable`](../krystal-common/src/main/java/com/flipkart/krystal/data/Errable.java) - a
    wrapper data structure encapsulating either a value or an error. This can be thought of as a
    completed version of a `CompletedFuture`. All empty values are supposed to be represented
-   by `ValueOrError#emtpty()`. krystex assumes `null`s are never returned.
-3. [`Inputs`](../krystal-common/src/main/java/com/flipkart/krystal/data/Inputs.java) - A container
+   by `Errable#emtpty()`. krystex assumes `null`s are never returned.
+3. [`Facets`](../krystal-common/src/main/java/com/flipkart/krystal/data/Inputs.java) - A container
    object which can holds input and dependency values of a kryon.
 4. [`Results`](../krystal-common/src/main/java/com/flipkart/krystal/data/Results.java) - A container
    object which holds the results of executing a given dependency of a kryon multiple times in a

@@ -8,7 +8,8 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy
 import static com.flipkart.krystal.vajram.VajramID.ofVajram;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
-import static com.flipkart.krystal.vajram.tags.AnnotationTag.getAnnotationByType;
+import static com.flipkart.krystal.vajram.tags.AnnotationTags.getAnnotationByType;
+import static com.flipkart.krystal.vajram.tags.AnnotationTags.getNamedValueTag;
 import static com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig.sharedModulator;
 import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -852,8 +853,7 @@ class KrystexVajramExecutorTest {
 
     Predicate<LogicExecutionContext> isIOVajram =
         (context) -> {
-          return getAnnotationByType(
-                  VajramTags.VAJRAM_TYPE, NamedValueTag.class, context.logicTags())
+          return getNamedValueTag(VajramTags.VAJRAM_TYPE, context.logicTags())
               .map(namedValueTag -> VajramTypes.IO_VAJRAM.equals(namedValueTag.value()))
               .orElse(false);
         };
@@ -864,7 +864,7 @@ class KrystexVajramExecutorTest {
           String instanceId;
           if (service.isEmpty()) {
             Optional<NamedValueTag> namedValueTag =
-                getAnnotationByType(VajramTags.VAJRAM_ID, NamedValueTag.class, logicTags);
+                getNamedValueTag(VajramTags.VAJRAM_ID, logicTags);
             if (namedValueTag.isEmpty()) {
               throw new IllegalStateException("Missing vajramId tag");
             }

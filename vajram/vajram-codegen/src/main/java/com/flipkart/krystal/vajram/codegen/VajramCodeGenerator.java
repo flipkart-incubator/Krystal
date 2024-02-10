@@ -496,7 +496,7 @@ public class VajramCodeGenerator {
               packageName, getFacetUtilClassName(vajramName), getAllFacetsClassname(vajramName)));
     } else {
       returnBuilder.add(
-          "\nreturn $T.valueOrError(() -> $L(new $T(\n",
+          "\nreturn $T.errable(() -> $L(new $T(\n",
           Errable.class,
           getParsedVajramData().outputLogic().getSimpleName(),
           ClassName.get(
@@ -871,14 +871,14 @@ public class VajramCodeGenerator {
           } else {
             String message =
                 ("A resolver ('%s') must not access an optional dependencyDef ('%s') directly."
-                        + "Use Optional<>, ValueOrError<>, or DependencyResponse<> instead")
+                        + "Use Optional<>, Errable<>, or DependencyResponse<> instead")
                     .formatted(resolverName, usingInputName);
             util.error(message, parameter);
             throw new VajramValidationException(message);
           }
         } else if (util.isRawAssignable(parameter.asType(), Errable.class)) {
           // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
-          // requested the 'ValueOrError'. So we extract the only ValueOrError from dependencyDef
+          // requested the 'Errable'. So we extract the only Errable from dependencyDef
           // response and provide it.
           ifBlockBuilder.addStatement(
               depValueAccessorCode,
@@ -888,7 +888,7 @@ public class VajramCodeGenerator {
               usingInputName);
         } else if (util.isRawAssignable(parameter.asType(), Optional.class)) {
           // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
-          // requested an 'Optional'. So we retrieve the only ValueOrError from the dependencyDef
+          // requested an 'Optional'. So we retrieve the only Errable from the dependencyDef
           // response, extract the optional and provide it.
           String code = depValueAccessorCode + ".value()";
           ifBlockBuilder.addStatement(

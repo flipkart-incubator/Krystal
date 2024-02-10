@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-@VajramDef()
+@VajramDef
 public abstract class MultiHelloFriends extends ComputeVajram<String> {
   static class _Facets {
     @Input List<String> userIds;
