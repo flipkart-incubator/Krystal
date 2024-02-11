@@ -59,11 +59,11 @@ public record Errable<T>(Optional<T> value, Optional<Throwable> error) implement
     return s -> errableFrom(() -> valueComputer.apply(s));
   }
 
-  public static <T> Errable<T> errableFrom(@Nullable Object t, @Nullable Throwable throwable) {
+  public static <T> Errable<T> errableFrom(@Nullable Object value, @Nullable Throwable error) {
     //noinspection unchecked,rawtypes
     return new Errable<T>(
-        (t instanceof Optional o) ? o : (Optional<T>) Optional.ofNullable(t),
-        Optional.ofNullable(throwable));
+        (value instanceof Optional o) ? o : (Optional<T>) Optional.ofNullable(value),
+        Optional.ofNullable(error));
   }
 
   /**
