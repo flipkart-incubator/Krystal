@@ -143,7 +143,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     private final String kryonId;
     private final ImmutableList<ImmutableMap<String, Object>> inputsList;
     private final @Nullable ImmutableList<ImmutableMap<String, Object>> dependencyResults;
-    @Nullable private Object result;
+    private @Nullable Object result;
     @Getter private final long startTimeMs;
     @Getter private long endTimeMs;
 

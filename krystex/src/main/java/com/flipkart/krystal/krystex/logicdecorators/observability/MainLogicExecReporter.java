@@ -55,7 +55,10 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
                             .collect(
                                 toImmutableMap(
                                     Entry::getKey,
-                                    e -> e.getValue().handle(Errable::errable).getNow(empty())))));
+                                    e ->
+                                        e.getValue()
+                                            .handle(Errable::errableFrom)
+                                            .getNow(empty())))));
               });
       return results;
     };
