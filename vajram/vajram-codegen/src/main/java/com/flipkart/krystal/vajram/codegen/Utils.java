@@ -5,6 +5,7 @@ import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_FACETS;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants.INPUTS_NEEDING_MODULATION;
 import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.datatypes.DataType;
@@ -22,6 +23,7 @@ import com.flipkart.krystal.vajram.codegen.models.InputModel.InputModelBuilder;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfoLite;
 import com.flipkart.krystal.vajram.facets.InputSource;
+import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.modulation.Modulated;
 import com.google.common.primitives.Primitives;
 import com.squareup.javapoet.AnnotationSpec;
@@ -43,6 +45,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -480,5 +483,31 @@ public class Utils {
     }
     return classBuilder.addAnnotation(
         AnnotationSpec.builder(Generated.class).addMember("by", "$S", generator.getName()).build());
+  }
+
+  /**
+   * Infer facet name provided through @Using annotation. If @Using annotation is not present, then
+   * infer facet name from the parameter name
+   *
+   * @param parameter the bind parameter in the resolver method
+   * @param methodName Name of the vajram resolve method
+   * @param vajramName Name of the vajram
+   * @return facet name in the form of String
+   */
+  public String inferFacetName(VariableElement parameter, String methodName, String vajramName) {
+    String usingInputName;
+    if (Objects.nonNull(parameter.getAnnotation(Using.class))) {
+      usingInputName = parameter.getAnnotation(Using.class).value();
+    } else {
+      usingInputName =
+          checkNotNull(
+              parameter.getSimpleName().toString(),
+              "Resolver method params must have either 'Using' annotation OR parameter name for inferring Using annotation. Vajram: %s, method %s, param: %s",
+              vajramName,
+              methodName,
+              parameter.getSimpleName());
+    }
+
+    return usingInputName;
   }
 }

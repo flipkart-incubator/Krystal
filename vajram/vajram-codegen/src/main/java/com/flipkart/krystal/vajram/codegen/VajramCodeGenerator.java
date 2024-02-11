@@ -656,12 +656,9 @@ public class VajramCodeGenerator {
                       .getParameters()
                       .forEach(
                           parameter -> {
-                            String bindParamName;
-                            if (Objects.nonNull(parameter.getAnnotation(Using.class))) {
-                              bindParamName = parameter.getAnnotation(Using.class).value();
-                            } else {
-                              bindParamName = checkNotNull(parameter.getSimpleName().toString());
-                            }
+                            String bindParamName =
+                                util.inferFacetName(
+                                    parameter, method.getSimpleName().toString(), vajramName);
                             if (!fanout.get()
                                 && depFanoutMap.containsKey(
                                     bindParamName)) { // if fanout is already set skip resetting it.
@@ -729,18 +726,8 @@ public class VajramCodeGenerator {
         .getParameters()
         .forEach(
             parameter -> {
-              String usingInputName;
-              if (Objects.nonNull(parameter.getAnnotation(Using.class))) {
-                usingInputName = parameter.getAnnotation(Using.class).value();
-              } else {
-                usingInputName =
-                    checkNotNull(
-                        parameter.getSimpleName().toString(),
-                        "Resolver method params must have either 'Using' annotation OR parameter name for inferring Using annotation. Vajram: %s, method %s, param: %s",
-                        vajramName,
-                        method.getSimpleName(),
-                        parameter.getSimpleName());
-              }
+              String usingInputName =
+                  util.inferFacetName(parameter, method.getSimpleName().toString(), vajramName);
               // check if the bind param has multiple resolvers
               if (facetModels.get(usingInputName) instanceof DependencyModel) {
                 generateDependencyResolutions(
