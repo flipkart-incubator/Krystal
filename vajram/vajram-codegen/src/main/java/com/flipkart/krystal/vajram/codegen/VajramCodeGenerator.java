@@ -876,7 +876,9 @@ public class VajramCodeGenerator {
             util.error(message, parameter);
             throw new VajramValidationException(message);
           }
-        } else if (util.isRawAssignable(parameter.asType(), Errable.class)) {
+        }
+        else if(!vajramInputDef.isMandatory()){
+        if (util.isRawAssignable(parameter.asType(), Errable.class)) {
           // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
           // requested the 'ValueOrError'. So we extract the only ValueOrError from dependencyDef
           // response and provide it.
@@ -897,7 +899,9 @@ public class VajramCodeGenerator {
               variableName,
               boxedDepType,
               usingInputName);
-        } else {
+        }
+        }
+        else {
           String message =
               "Unrecognized parameter type %s in resolver %s of vajram %s"
                   .formatted(parameter.asType(), resolverName, this.vajramName);
