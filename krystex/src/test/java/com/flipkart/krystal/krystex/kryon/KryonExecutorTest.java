@@ -1,6 +1,5 @@
 package com.flipkart.krystal.krystex.kryon;
 
-import static com.flipkart.krystal.data.Errable.valueOrError;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
@@ -14,6 +13,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
@@ -344,7 +344,7 @@ class KryonExecutorTest {
             inputs,
             inputsList ->
                 inputsList.stream()
-                    .collect(toImmutableMap(identity(), valueOrError(logic)))
+                    .collect(toImmutableMap(identity(), Errable.errableFrom(logic)))
                     .entrySet()
                     .stream()
                     .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture())),

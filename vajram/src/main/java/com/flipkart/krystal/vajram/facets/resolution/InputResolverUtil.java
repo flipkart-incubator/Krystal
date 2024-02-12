@@ -178,7 +178,7 @@ public final class InputResolverUtil {
                                     function.andThen(objects -> (Collection<Object>) objects))
                         .map(x -> x.andThen(identity())))
             .orElse(
-                valueOrErrors -> {
+                errables -> {
                   throw new AssertionError();
                 });
     Optional<Object> transformedInput = ofNullable(transformer.apply(inputValues));

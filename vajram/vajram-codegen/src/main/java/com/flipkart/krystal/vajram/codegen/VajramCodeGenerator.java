@@ -496,7 +496,7 @@ public class VajramCodeGenerator {
               packageName, getFacetUtilClassName(vajramName), getAllFacetsClassname(vajramName)));
     } else {
       returnBuilder.add(
-          "\nreturn $T.valueOrError(() -> $L(new $T(\n",
+          "\nreturn $T.errableFrom(() -> $L(new $T(\n",
           Errable.class,
           getParsedVajramData().outputLogic().getSimpleName(),
           ClassName.get(

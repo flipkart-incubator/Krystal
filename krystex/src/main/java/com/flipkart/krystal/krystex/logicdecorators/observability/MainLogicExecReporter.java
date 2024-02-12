@@ -57,7 +57,7 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
                                     Entry::getKey,
                                     e ->
                                         e.getValue()
-                                            .handle(Errable::valueOrError)
+                                            .handle(Errable::errableFrom)
                                             .getNow(empty())))));
               });
       return results;
