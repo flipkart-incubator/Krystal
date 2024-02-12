@@ -900,13 +900,13 @@ public class VajramCodeGenerator {
                 boxedDepType,
                 usingInputName);
           }
-        }
-        else {
-          String message =
-              "Unrecognized parameter type %s in resolver %s of vajram %s"
-                  .formatted(parameter.asType(), resolverName, this.vajramName);
-          util.error(message, parameter);
-          throw new VajramValidationException(message);
+          else {
+            String message =
+                "Unrecognized parameter type %s in resolver %s of vajram %s"
+                    .formatted(parameter.asType(), resolverName, this.vajramName);
+            util.error(message, parameter);
+            throw new VajramValidationException(message);
+          }
         }
       }
     }
