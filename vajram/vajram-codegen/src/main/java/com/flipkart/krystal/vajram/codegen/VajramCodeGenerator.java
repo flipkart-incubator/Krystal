@@ -878,28 +878,28 @@ public class VajramCodeGenerator {
           }
         }
         else if(!vajramInputDef.isMandatory()){
-        if (util.isRawAssignable(parameter.asType(), Errable.class)) {
-          // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
-          // requested the 'ValueOrError'. So we extract the only ValueOrError from dependencyDef
-          // response and provide it.
-          ifBlockBuilder.addStatement(
+          if (util.isRawAssignable(parameter.asType(), Errable.class)) {
+            // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
+            // requested the 'ValueOrError'. So we extract the only ValueOrError from dependencyDef
+            // response and provide it.
+            ifBlockBuilder.addStatement(
               depValueAccessorCode,
               ParameterizedTypeName.get(ClassName.get(Errable.class), boxedDepType),
               variableName,
               boxedDepType,
               usingInputName);
-        } else if (util.isRawAssignable(parameter.asType(), Optional.class)) {
-          // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
-          // requested an 'Optional'. So we retrieve the only ValueOrError from the dependencyDef
-          // response, extract the optional and provide it.
-          String code = depValueAccessorCode + ".value()";
-          ifBlockBuilder.addStatement(
-              code,
-              ParameterizedTypeName.get(ClassName.get(Optional.class), boxedDepType),
-              variableName,
-              boxedDepType,
-              usingInputName);
-        }
+          } else if (util.isRawAssignable(parameter.asType(), Optional.class)) {
+            // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
+            // requested an 'Optional'. So we retrieve the only ValueOrError from the dependencyDef
+            // response, extract the optional and provide it.
+            String code = depValueAccessorCode + ".value()";
+            ifBlockBuilder.addStatement(
+                code,
+                ParameterizedTypeName.get(ClassName.get(Optional.class), boxedDepType),
+                variableName,
+                boxedDepType,
+                usingInputName);
+          }
         }
         else {
           String message =
