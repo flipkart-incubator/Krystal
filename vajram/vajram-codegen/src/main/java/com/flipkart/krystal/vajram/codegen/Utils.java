@@ -490,22 +490,14 @@ public class Utils {
    * infer facet name from the parameter name
    *
    * @param parameter the bind parameter in the resolver method
-   * @param methodName Name of the vajram resolve method
-   * @param vajramName Name of the vajram
    * @return facet name in the form of String
    */
-  public String inferFacetName(VariableElement parameter, String methodName, String vajramName) {
+  public String inferFacetName(VariableElement parameter) {
     String usingInputName;
     if (Objects.nonNull(parameter.getAnnotation(Using.class))) {
       usingInputName = parameter.getAnnotation(Using.class).value();
     } else {
-      usingInputName =
-          checkNotNull(
-              parameter.getSimpleName().toString(),
-              "Resolver method params must have either 'Using' annotation OR parameter name for inferring Using annotation. Vajram: %s, method %s, param: %s",
-              vajramName,
-              methodName,
-              parameter.getSimpleName());
+      usingInputName = parameter.getSimpleName().toString();
     }
 
     return usingInputName;
