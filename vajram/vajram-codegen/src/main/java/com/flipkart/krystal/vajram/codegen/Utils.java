@@ -22,6 +22,7 @@ import com.flipkart.krystal.vajram.codegen.models.InputModel.InputModelBuilder;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfoLite;
 import com.flipkart.krystal.vajram.facets.InputSource;
+import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.modulation.Modulated;
 import com.google.common.primitives.Primitives;
 import com.squareup.javapoet.AnnotationSpec;
@@ -43,6 +44,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -480,5 +482,23 @@ public class Utils {
     }
     return classBuilder.addAnnotation(
         AnnotationSpec.builder(Generated.class).addMember("by", "$S", generator.getName()).build());
+  }
+
+  /**
+   * Infer facet name provided through @Using annotation. If @Using annotation is not present, then
+   * infer facet name from the parameter name
+   *
+   * @param parameter the bind parameter in the resolver method
+   * @return facet name in the form of String
+   */
+  public String inferFacetName(VariableElement parameter) {
+    String usingInputName;
+    if (Objects.nonNull(parameter.getAnnotation(Using.class))) {
+      usingInputName = parameter.getAnnotation(Using.class).value();
+    } else {
+      usingInputName = parameter.getSimpleName().toString();
+    }
+
+    return usingInputName;
   }
 }

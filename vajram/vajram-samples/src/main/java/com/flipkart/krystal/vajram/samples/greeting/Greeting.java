@@ -43,7 +43,7 @@ public abstract class Greeting extends ComputeVajram<String> {
   // In this case the UserServiceVajram needs a user_id to retrieve the user info.
   // So it's GreetingVajram's responsibility to provide that input.
   @Resolve(depName = userInfo_n, depInputs = UserServiceRequest.userId_n)
-  public static String userIdForUserService(@Using(userId_n) String userId) {
+  public static String userIdForUserService(String userId) {
     return userId;
   }
 
