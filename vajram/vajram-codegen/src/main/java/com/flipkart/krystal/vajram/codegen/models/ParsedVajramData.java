@@ -52,7 +52,7 @@ public record ParsedVajramData(
             vajramInfo.responseType()));
   }
 
-  public static void handleDuplicateDependencyBySameResolverException(List<ExecutableElement> methods){
+  public static void handleDuplicateDependencyBySameResolverException(List<ExecutableElement> methods, Utils util){
     HashMap<String, HashMap<String,Boolean>> lookUpMap = new HashMap<>();
     for(ExecutableElement method: methods){
       String depName = method.getAnnotation(Resolve.class).depName();
@@ -64,6 +64,7 @@ public record ParsedVajramData(
                   .formatted(
                       lookUpMap.get(depName).get(depinput),
                       lookUpMap.get(depName));
+          util.error(errorMessage, method);
           throw new VajramValidationException(errorMessage);
         }
         else if(lookUpMap.get(depName)!=null){
@@ -82,7 +83,7 @@ public record ParsedVajramData(
       TypeElement vajramClass, List<ExecutableElement> resolveMethods, Utils util) {
     ExecutableElement outputLogic = null;
     List<ExecutableElement> methods = getStaticMethods(vajramClass);
-    handleDuplicateDependencyBySameResolverException(methods);
+    handleDuplicateDependencyBySameResolverException(methods,util);
     for (ExecutableElement method : methods) {
       if (isResolver(method)) {
         resolveMethods.add(method);
