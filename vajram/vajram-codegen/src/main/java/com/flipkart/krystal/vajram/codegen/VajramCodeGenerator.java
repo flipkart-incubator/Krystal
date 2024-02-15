@@ -288,7 +288,7 @@ public class VajramCodeGenerator {
     return Optional.ofNullable(parsedVajramData).orElseGet(this::initParsedVajramData);
   }
 
-  private static ImmutableSet<String> getResolverSources(ExecutableElement resolve, Utils util) {
+  private ImmutableSet<String> getResolverSources(ExecutableElement resolve) {
     return resolve.getParameters().stream()
         .map(parameter -> util.inferFacetName(parameter))
         .collect(toImmutableSet());
@@ -922,7 +922,7 @@ public class VajramCodeGenerator {
 
     // call the resolve method
     ifBlockBuilder.add("$T $L = $L(", methodReturnType, variableName, method.getSimpleName());
-    ImmutableList<String> resolverSources = getResolverSources(method, util).asList();
+    ImmutableList<String> resolverSources = getResolverSources(method).asList();
     for (int i = 0; i < resolverSources.size(); i++) {
       String bindName = resolverSources.get(i);
       ifBlockBuilder.add("$L", toJavaName(bindName));
