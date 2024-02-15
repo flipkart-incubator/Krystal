@@ -871,7 +871,7 @@ public class VajramCodeGenerator {
           } else {
             String message =
                 ("A resolver ('%s') must not access an optional dependencyDef ('%s') directly."
-                        + "Use Optional<>, ValueOrError<>, or DependencyResponse<> instead")
+                        + "Use Optional<>, Errable<>, or DependencyResponse<> instead")
                     .formatted(resolverName, usingInputName);
             util.error(message, parameter);
             throw new VajramValidationException(message);
