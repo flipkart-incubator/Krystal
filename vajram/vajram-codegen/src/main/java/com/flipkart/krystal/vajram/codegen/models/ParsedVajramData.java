@@ -8,6 +8,7 @@ import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 import javax.lang.model.element.Element;
@@ -67,13 +68,7 @@ public record ParsedVajramData(
           util.error(errorMessage, method);
           throw new VajramValidationException(errorMessage);
         }
-        else if(lookUpMap.get(depName)!=null){
-          lookUpMap.get(depName).put(depinput,true);
-        }
-        else {
-          lookUpMap.put(depName,new HashMap<>());
-          lookUpMap.get(depName).put(depinput,true);
-        }
+        lookUpMap.computeIfAbsent(depName,k-> (HashMap<String, Boolean>) Map.of(depinput,true)).computeIfAbsent(depinput,k->true);
       }
     }
   }
