@@ -14,14 +14,14 @@ public record DependencyResponse<R extends VajramRequest, V>(
   }
 
   public Optional<V> getOnlyValue() {
-    Errable<V> value = getOnlyValueOrError();
+    Errable<V> value = getOnlyErrable();
     if (value.error().isPresent()) {
       throw new IllegalStateException("Received an error.", value.error().get());
     }
     return value.value();
   }
 
-  private Errable<V> getOnlyValueOrError() {
+  private Errable<V> getOnlyErrable() {
     ImmutableCollection<Errable<V>> values = values();
     if (values.size() != 1) {
       throw new IllegalStateException(

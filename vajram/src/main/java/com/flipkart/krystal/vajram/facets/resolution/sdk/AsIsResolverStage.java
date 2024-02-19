@@ -23,7 +23,7 @@ public final class AsIsResolverStage<T, CV extends VajramRequest<?>, DV extends 
     //noinspection unchecked
     this.skipConditions.add(
         new SkipPredicate<>(
-            reason, valueOrErrors -> whenToSkip.test((Errable<T>) valueOrErrors.get(0))));
+            reason, errables -> whenToSkip.test((Errable<T>) errables.get(0))));
     return this;
   }
 

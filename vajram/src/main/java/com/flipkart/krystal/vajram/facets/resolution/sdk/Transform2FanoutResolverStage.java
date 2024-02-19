@@ -44,9 +44,9 @@ public final class Transform2FanoutResolverStage<
     this.skipConditions.add(
         new SkipPredicate<>(
             reason,
-            valueOrErrors ->
+            errables ->
                 whenToSkip.test(
-                    (Errable<S1>) valueOrErrors.get(0), (Errable<S2>) valueOrErrors.get(1))));
+                    (Errable<S1>) errables.get(0), (Errable<S2>) errables.get(1))));
     return this;
   }
 

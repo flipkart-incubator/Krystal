@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
-import static com.flipkart.krystal.data.Errable.valueOrError;
+import static com.flipkart.krystal.data.Errable.errable;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
@@ -344,7 +344,7 @@ class KryonExecutorTest {
             inputs,
             inputsList ->
                 inputsList.stream()
-                    .collect(toImmutableMap(identity(), valueOrError(logic)))
+                    .collect(toImmutableMap(identity(), errable(logic)))
                     .entrySet()
                     .stream()
                     .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture())),
