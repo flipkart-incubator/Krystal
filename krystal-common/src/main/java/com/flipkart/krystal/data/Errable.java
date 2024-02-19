@@ -39,15 +39,7 @@ public record Errable<T>(Optional<T> value, Optional<Throwable> error) implement
     return (Errable<T>) EMPTY;
   }
 
-  public static <T> Errable<T> withValue(@Nullable T t) {
-    return errableFrom(t, null);
-  }
-
-  public static <T> Errable<T> withError(Throwable t) {
-    return errableFrom(null, t);
-  }
-
-  public static <T> Errable<T> errableFrom(Callable<T> valueProvider) {
+  public static <T> Errable<T> errable(Callable<T> valueProvider) {
     try {
       return withValue(valueProvider.call());
     } catch (Throwable e) {
@@ -55,15 +47,23 @@ public record Errable<T>(Optional<T> value, Optional<Throwable> error) implement
     }
   }
 
-  public static <S, T> Function<S, Errable<T>> errableFrom(Function<S, T> valueComputer) {
-    return s -> errableFrom(() -> valueComputer.apply(s));
+  public static <S, T> Function<S, Errable<T>> errable(Function<S, T> valueComputer) {
+    return s -> errable(() -> valueComputer.apply(s));
   }
 
-  public static <T> Errable<T> errableFrom(@Nullable Object value, @Nullable Throwable error) {
+  public static <T> Errable<T> withValue(@Nullable T t) {
+    return errable(t, null);
+  }
+
+  public static <T> Errable<T> withError(Throwable t) {
+    return errable(null, t);
+  }
+
+  public static <T> Errable<T> errable(@Nullable Object t, @Nullable Throwable throwable) {
     //noinspection unchecked,rawtypes
     return new Errable<T>(
-        (value instanceof Optional o) ? o : (Optional<T>) Optional.ofNullable(value),
-        Optional.ofNullable(error));
+        (t instanceof Optional o) ? o : (Optional<T>) Optional.ofNullable(t),
+        Optional.ofNullable(throwable));
   }
 
   /**

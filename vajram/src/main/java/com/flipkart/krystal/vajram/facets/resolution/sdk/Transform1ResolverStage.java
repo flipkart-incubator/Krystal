@@ -36,7 +36,8 @@ public final class Transform1ResolverStage<
       Predicate<Errable<S>> whenToSkip, String reason) {
     //noinspection unchecked
     this.skipConditions.add(
-        new SkipPredicate<>(reason, errable -> whenToSkip.test((Errable<S>) errable.get(0))));
+        new SkipPredicate<>(
+            reason, errables -> whenToSkip.test((Errable<S>) errables.get(0))));
     return this;
   }
 

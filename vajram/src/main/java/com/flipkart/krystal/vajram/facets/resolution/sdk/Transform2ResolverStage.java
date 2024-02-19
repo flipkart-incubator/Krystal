@@ -45,7 +45,8 @@ public final class Transform2ResolverStage<
         new SkipPredicate<>(
             reason,
             errables ->
-                whenToSkip.test((Errable<S1>) errables.get(0), (Errable<S2>) errables.get(1))));
+                whenToSkip.test(
+                    (Errable<S1>) errables.get(0), (Errable<S2>) errables.get(1))));
     return this;
   }
 
