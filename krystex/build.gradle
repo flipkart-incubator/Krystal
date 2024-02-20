@@ -7,6 +7,14 @@ dependencies {
     implementation 'io.github.resilience4j:resilience4j-all:' + r4j_version
     implementation 'io.github.resilience4j:resilience4j-circuitbreaker:' + r4j_version
     implementation 'io.github.resilience4j:resilience4j-bulkhead:' + r4j_version
+
+    def jacksonVersion = '2.14.2'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:' + jacksonVersion
+    implementation 'com.fasterxml.jackson.core:jackson-databind:' + jacksonVersion
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:' + jacksonVersion
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:' + jacksonVersion
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jacksonVersion
+
 }
 
 publishing {

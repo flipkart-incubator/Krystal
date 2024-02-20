@@ -68,7 +68,6 @@ public final class KryonExecutor implements KrystalExecutor {
   private final KryonExecutorConfig executorConfig;
   private final Lease<? extends ExecutorService> commandQueueLease;
   private final String instanceId;
-
   /**
    * We need to have a list of request scope global decorators corresponding to each type, in case
    * we want to have a decorator of one type but based on some config in request, we want to choose
@@ -451,7 +450,19 @@ public final class KryonExecutor implements KrystalExecutor {
                     allExecutions.values().stream()
                         .map(getFuture())
                         .toArray(CompletableFuture[]::new))
-                .whenComplete((unused, throwable) -> commandQueueLease.close()));
+                .whenComplete(
+                    (unused, throwable) -> {
+                      for (Map.Entry<String, Map<String, OutputLogicDecorator>> decoratorsDetails :
+                          requestScopedMainDecorators.entrySet()) {
+                        Map<String, OutputLogicDecorator> decoratorsDetailsValue =
+                            decoratorsDetails.getValue();
+                        for (Map.Entry<String, OutputLogicDecorator> decorator :
+                            decoratorsDetailsValue.entrySet()) {
+                          decorator.getValue().onComplete();
+                        }
+                      }
+                      commandQueueLease.close();
+                    }));
   }
 
   private static Function<KryonExecution, CompletableFuture<@Nullable Object>> getFuture() {

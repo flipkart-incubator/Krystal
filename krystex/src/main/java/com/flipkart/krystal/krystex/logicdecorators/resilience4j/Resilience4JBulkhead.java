@@ -205,4 +205,9 @@ public final class Resilience4JBulkhead implements OutputLogicDecorator {
       this(null, threadPoolBulkheadConfig);
     }
   }
+
+  @Override
+  public void onComplete() {
+    // do nothing
+  }
 }
