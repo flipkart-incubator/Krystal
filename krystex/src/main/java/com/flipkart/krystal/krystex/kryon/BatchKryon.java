@@ -424,7 +424,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
             }
             resultsCache.put(outputLogicFacets.providedFacets(), cachedResult);
           }
-          resultsByRequest.put(requestId, cachedResult.handle(Errable::valueOrError));
+          resultsByRequest.put(requestId, cachedResult.handle(Errable::errableFrom));
         });
     return resultsByRequest;
   }

@@ -288,11 +288,9 @@ public class VajramCodeGenerator {
     return Optional.ofNullable(parsedVajramData).orElseGet(this::initParsedVajramData);
   }
 
-  private static ImmutableSet<String> getResolverSources(ExecutableElement resolve) {
+  private ImmutableSet<String> getResolverSources(ExecutableElement resolve) {
     return resolve.getParameters().stream()
-        .filter(parameter -> parameter.getAnnotationsByType(Using.class).length > 0)
-        .map(parameter -> parameter.getAnnotation(Using.class))
-        .map(Using::value)
+        .map(parameter -> util.inferFacetName(parameter))
         .collect(toImmutableSet());
   }
 
@@ -496,7 +494,7 @@ public class VajramCodeGenerator {
               packageName, getFacetUtilClassName(vajramName), getAllFacetsClassname(vajramName)));
     } else {
       returnBuilder.add(
-          "\nreturn $T.valueOrError(() -> $L(new $T(\n",
+          "\nreturn $T.errableFrom(() -> $L(new $T(\n",
           Errable.class,
           getParsedVajramData().outputLogic().getSimpleName(),
           ClassName.get(
@@ -648,8 +646,7 @@ public class VajramCodeGenerator {
                       .getParameters()
                       .forEach(
                           parameter -> {
-                            String bindParamName =
-                                checkNotNull(parameter.getAnnotation(Using.class)).value();
+                            String bindParamName = util.inferFacetName(parameter);
                             if (!fanout.get()
                                 && depFanoutMap.containsKey(
                                     bindParamName)) { // if fanout is already set skip resetting it.
@@ -717,14 +714,7 @@ public class VajramCodeGenerator {
         .getParameters()
         .forEach(
             parameter -> {
-              String usingInputName =
-                  checkNotNull(
-                          parameter.getAnnotation(Using.class),
-                          "Resolver method params must have 'Using' annotation. Vajram: %s, method %s, param: %s",
-                          vajramName,
-                          method.getSimpleName(),
-                          parameter.getSimpleName())
-                      .value();
+              String usingInputName = util.inferFacetName(parameter);
               // check if the bind param has multiple resolvers
               if (facetModels.get(usingInputName) instanceof DependencyModel) {
                 generateDependencyResolutions(
@@ -871,14 +861,14 @@ public class VajramCodeGenerator {
           } else {
             String message =
                 ("A resolver ('%s') must not access an optional dependencyDef ('%s') directly."
-                        + "Use Optional<>, ValueOrError<>, or DependencyResponse<> instead")
+                        + "Use Optional<>, Errable<>, or DependencyResponse<> instead")
                     .formatted(resolverName, usingInputName);
             util.error(message, parameter);
             throw new VajramValidationException(message);
           }
         } else if (util.isRawAssignable(parameter.asType(), Errable.class)) {
           // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
-          // requested the 'ValueOrError'. So we extract the only ValueOrError from dependencyDef
+          // requested the 'Errable'. So we extract the only Errable from dependencyDef
           // response and provide it.
           ifBlockBuilder.addStatement(
               depValueAccessorCode,
@@ -888,7 +878,7 @@ public class VajramCodeGenerator {
               usingInputName);
         } else if (util.isRawAssignable(parameter.asType(), Optional.class)) {
           // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
-          // requested an 'Optional'. So we retrieve the only ValueOrError from the dependencyDef
+          // requested an 'Optional'. So we retrieve the only Errable from the dependencyDef
           // response, extract the optional and provide it.
           String code = depValueAccessorCode + ".value()";
           ifBlockBuilder.addStatement(

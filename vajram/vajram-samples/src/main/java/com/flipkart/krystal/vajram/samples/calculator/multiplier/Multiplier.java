@@ -16,7 +16,7 @@ public abstract class Multiplier extends ComputeVajram<Integer> {
   }
 
   @Output
-  public static int multiply(MultiplierFacets allInputs) {
+  static int multiply(MultiplierFacets allInputs) {
     return allInputs.numberOne() * allInputs.numberTwo().orElse(1);
   }
 }

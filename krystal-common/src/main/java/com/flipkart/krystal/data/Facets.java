@@ -24,7 +24,7 @@ public final class Facets {
       //noinspection unchecked
       return (Errable<T>) voe;
     }
-    throw new IllegalArgumentException("%s is not of type ValueOrError".formatted(inputName));
+    throw new IllegalArgumentException("%s is not of type Errable".formatted(inputName));
   }
 
   public <T> Optional<T> getInputValueOpt(String inputName) {

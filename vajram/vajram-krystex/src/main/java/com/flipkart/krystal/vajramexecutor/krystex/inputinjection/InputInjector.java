@@ -117,10 +117,9 @@ public final class InputInjector implements OutputLogicDecorator {
                             Optional.ofNullable(inputTags.get(Named.class))
                                 .map(
                                     tag -> {
-                                      if (tag instanceof AnnotationTag<?> anno) {
-                                        if (anno.annotation() instanceof Named named) {
-                                          return named.value();
-                                        }
+                                      if (tag instanceof AnnotationTag<?> annoTag
+                                          && annoTag.tagValue() instanceof Named named) {
+                                        return named.value();
                                       }
                                       return null;
                                     })

@@ -99,7 +99,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
       if (!(value instanceof Errable<Object>)) {
         continue;
       }
-      Object collect = convertValueOrError((Errable<Object>) value);
+      Object collect = convertErrable((Errable<Object>) value);
       if (collect != null) {
         inputMap.put(e.getKey(), collect);
       }
@@ -120,7 +120,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     return ImmutableMap.copyOf(inputMap);
   }
 
-  private Object convertValueOrError(Errable<Object> voe) {
+  private Object convertErrable(Errable<Object> voe) {
     if (voe.error().isPresent()) {
       Throwable throwable = voe.error().get();
       return verbose ? getStackTraceAsString(throwable) : throwable.toString();
@@ -133,7 +133,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     return results.values().entrySet().stream()
         .collect(
             Collectors.toMap(
-                e -> extractAndConvertInputs(e.getKey()), e -> convertValueOrError(e.getValue())));
+                e -> extractAndConvertInputs(e.getKey()), e -> convertErrable(e.getValue())));
   }
 
   @ToString
@@ -143,7 +143,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     private final String kryonId;
     private final ImmutableList<ImmutableMap<String, Object>> inputsList;
     private final @Nullable ImmutableList<ImmutableMap<String, Object>> dependencyResults;
-    @Nullable private Object result;
+    private @Nullable Object result;
     @Getter private final long startTimeMs;
     @Getter private long endTimeMs;
 
