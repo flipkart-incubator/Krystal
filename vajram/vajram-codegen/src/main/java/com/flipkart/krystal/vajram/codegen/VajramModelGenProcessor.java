@@ -31,48 +31,52 @@ public class VajramModelGenProcessor extends AbstractProcessor {
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     Utils util = new Utils(processingEnv, this.getClass());
-    String phaseString = processingEnv.getOptions().get(COGENGEN_PHASE_KEY);
     try {
-      if (phaseString == null || !MODELS.equals(CodegenPhase.valueOf(phaseString))) {
-        util.note(
-            "Skipping VajramModelGenProcessor since codegen phase is %s"
-                .formatted(String.valueOf(phaseString)));
-        return false;
+      String phaseString = processingEnv.getOptions().get(COGENGEN_PHASE_KEY);
+      try {
+        if (phaseString == null || !MODELS.equals(CodegenPhase.valueOf(phaseString))) {
+          util.note(
+              "Skipping VajramModelGenProcessor since codegen phase is %s"
+                  .formatted(String.valueOf(phaseString)));
+          return false;
+        }
+      } catch (IllegalArgumentException e) {
+        util.error(
+            ("VajramModelGenProcessor could not parse phase string '%s'. "
+                    + "Exactly one of %s must be passed as value to java compiler "
+                    + "via the annotation processor argument '-A%s='")
+                .formatted(
+                    String.valueOf(phaseString),
+                    Arrays.toString(CodegenPhase.values()),
+                    COGENGEN_PHASE_KEY),
+            null);
       }
-    } catch (IllegalArgumentException e) {
-      util.error(
-          ("VajramModelGenProcessor could not parse phase string '%s'. "
-                  + "Exactly one of %s must be passed as value to java compiler "
-                  + "via the annotation processor argument '-A%s='")
+      List<TypeElement> vajramDefinitions = util.getVajramClasses(roundEnv);
+      util.note(
+          "Vajram Defs received by VajramModelGenProcessor: %s"
               .formatted(
-                  String.valueOf(phaseString),
-                  Arrays.toString(CodegenPhase.values()),
-                  COGENGEN_PHASE_KEY),
-          null);
-    }
-    List<TypeElement> vajramDefinitions = util.getVajramClasses(roundEnv);
-    util.note(
-        "Vajram Defs received by VajramModelGenProcessor: %s"
-            .formatted(
-                vajramDefinitions.stream()
-                    .map(Objects::toString)
-                    .collect(
-                        joining(lineSeparator(), '[' + lineSeparator(), lineSeparator() + ']'))));
-    for (TypeElement vajramClass : vajramDefinitions) {
-      VajramInfo vajramInfo = util.computeVajramInfo(vajramClass);
+                  vajramDefinitions.stream()
+                      .map(Objects::toString)
+                      .collect(
+                          joining(lineSeparator(), '[' + lineSeparator(), lineSeparator() + ']'))));
+      for (TypeElement vajramClass : vajramDefinitions) {
+        VajramInfo vajramInfo = util.computeVajramInfo(vajramClass);
 
-      VajramCodeGenerator vajramCodeGenerator = util.createCodeGenerator(vajramInfo);
+        VajramCodeGenerator vajramCodeGenerator = util.createCodeGenerator(vajramInfo);
 
-      util.generateSourceFile(
-          vajramCodeGenerator.getPackageName() + '.' + vajramCodeGenerator.getRequestClassName(),
-          vajramCodeGenerator.codeGenVajramRequest(),
-          vajramClass);
-      util.generateSourceFile(
-          vajramCodeGenerator.getPackageName()
-              + '.'
-              + getFacetUtilClassName(vajramCodeGenerator.getVajramName()),
-          vajramCodeGenerator.codeGenInputUtil(),
-          vajramClass);
+        util.generateSourceFile(
+            vajramCodeGenerator.getPackageName() + '.' + vajramCodeGenerator.getRequestClassName(),
+            vajramCodeGenerator.codeGenVajramRequest(),
+            vajramClass);
+        util.generateSourceFile(
+            vajramCodeGenerator.getPackageName()
+                + '.'
+                + getFacetUtilClassName(vajramCodeGenerator.getVajramName()),
+            vajramCodeGenerator.codeGenInputUtil(),
+            vajramClass);
+      }
+    } catch (Exception e) {
+      util.error("Encountered exception in " + this.getClass().getName(), null);
     }
     return true;
   }

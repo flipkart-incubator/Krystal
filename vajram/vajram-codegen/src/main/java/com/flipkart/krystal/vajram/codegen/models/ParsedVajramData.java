@@ -53,32 +53,32 @@ public record ParsedVajramData(
             vajramInfo.responseType()));
   }
 
-  public static void handleDuplicateDependencyBySameResolverException(List<ExecutableElement> methods, Utils util){
-    HashMap<String, HashMap<String,Boolean>> lookUpMap = new HashMap<>();
-    for(ExecutableElement method: methods){
+  public static void handleDuplicateDependencyBySameResolverException(
+      List<ExecutableElement> methods, Utils util) {
+    //add comments
+    Map<String, Map<String, Boolean>> lookUpMap = new HashMap<>();
+    for (ExecutableElement method : methods) {
       String depName = method.getAnnotation(Resolve.class).depName();
-      String [] depInputs = method.getAnnotation(Resolve.class).depInputs();
-      for(String depinput : depInputs){
-        if (lookUpMap.get(depName)!=null && lookUpMap.get(depName).get(depinput)!=null){
+      String[] depInputs = method.getAnnotation(Resolve.class).depInputs();
+      for (String depinput : depInputs) {
+        if (lookUpMap.getOrDefault(depName, Map.of()).getOrDefault(depinput, false)) {
           String errorMessage =
               "Two Resolver resolving same input (%s) for dependency name (%s)"
-                  .formatted(
-                      lookUpMap.get(depName).get(depinput),
-                      lookUpMap.get(depName));
+                  .formatted(depinput, depName);
           util.error(errorMessage, method);
           throw new VajramValidationException(errorMessage);
         }
-        lookUpMap.computeIfAbsent(depName,k-> (HashMap<String, Boolean>) Map.of(depinput,true)).computeIfAbsent(depinput,k->true);
+        lookUpMap
+            .computeIfAbsent(depName, k -> Map.of(depinput, true))
+            .computeIfAbsent(depinput, k -> true);
       }
     }
   }
-
 
   public static ExecutableElement getOutputLogicAndResolverMethods(
       TypeElement vajramClass, List<ExecutableElement> resolveMethods, Utils util) {
     ExecutableElement outputLogic = null;
     List<ExecutableElement> methods = getStaticMethods(vajramClass);
-    handleDuplicateDependencyBySameResolverException(methods,util);
     for (ExecutableElement method : methods) {
       if (isResolver(method)) {
         resolveMethods.add(method);
@@ -98,6 +98,7 @@ public record ParsedVajramData(
         }
       }
     }
+    handleDuplicateDependencyBySameResolverException(resolveMethods, util);
     if (outputLogic == null) {
       String errorMessage = "Missing output logic method";
       util.error(errorMessage, vajramClass);
