@@ -30,7 +30,6 @@ import java.lang.annotation.Annotation;
 import java.lang.annotation.Repeatable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -116,18 +115,14 @@ public final class VajramDefinition {
       String[] targetInputs = resolver.depInputs();
       ImmutableSet<String> sources =
           Arrays.stream(resolverMethod.getParameters())
-              .map(Parameter::getAnnotations)
               .map(
-                  annotations ->
-                      Arrays.stream(annotations)
+                  parameter ->
+                      Arrays.stream(parameter.getAnnotations())
                           .filter(annotation -> annotation instanceof Using)
                           .map(annotation -> (Using) annotation)
-                          .findAny())
-              .filter(Optional::isPresent)
-              .map(Optional::orElseThrow)
-              .toList()
-              .stream()
-              .map(Using::value)
+                          .findAny()
+                          .map(Using::value)
+                          .orElseGet(parameter::getName))
               .collect(toImmutableSet());
       inputResolvers.add(
           new DefaultInputResolverDefinition(
