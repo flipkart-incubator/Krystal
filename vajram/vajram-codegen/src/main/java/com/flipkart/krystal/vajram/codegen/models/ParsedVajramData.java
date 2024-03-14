@@ -53,7 +53,7 @@ public record ParsedVajramData(
             vajramInfo.responseType()));
   }
 
-  public static void handleDuplicateDependencyBySameResolverException(
+  public static void validateNoDuplicateResolvers(
       List<ExecutableElement> methods, Utils util) {
     //add comments
     Map<String, Map<String, Boolean>> lookUpMap = new HashMap<>();
@@ -98,7 +98,7 @@ public record ParsedVajramData(
         }
       }
     }
-    handleDuplicateDependencyBySameResolverException(resolveMethods, util);
+    validateNoDuplicateResolvers(resolveMethods, util);
     if (outputLogic == null) {
       String errorMessage = "Missing output logic method";
       util.error(errorMessage, vajramClass);
