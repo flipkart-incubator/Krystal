@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
+import static com.flipkart.krystal.vajram.codegen.Constants.BATCHABLE_INPUTS;
 import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_FACETS;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_CLASS_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.Constants.INPUTS_NEEDING_MODULATION;
 import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -15,6 +15,7 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
+import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.codegen.models.DependencyModel;
 import com.flipkart.krystal.vajram.codegen.models.DependencyModel.DependencyModelBuilder;
 import com.flipkart.krystal.vajram.codegen.models.InputModel;
@@ -23,7 +24,6 @@ import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfoLite;
 import com.flipkart.krystal.vajram.facets.InputSource;
 import com.flipkart.krystal.vajram.facets.Using;
-import com.flipkart.krystal.vajram.modulation.Modulated;
 import com.google.common.primitives.Primitives;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
@@ -172,9 +172,8 @@ public class Utils {
                               .asType()
                               .accept(new DeclaredTypeVisitor(this, true, inputField), null);
                       inputBuilder.type(dataType);
-                      inputBuilder.needsModulation(
-                          Optional.ofNullable(inputField.getAnnotation(Modulated.class))
-                              .isPresent());
+                      inputBuilder.needsBatching(
+                          Optional.ofNullable(inputField.getAnnotation(Batch.class)).isPresent());
                       Optional<Input> inputAnno =
                           Optional.ofNullable(inputField.getAnnotation(Input.class));
                       Set<InputSource> sources = new LinkedHashSet<>();
@@ -400,8 +399,8 @@ public class Utils {
     return vajramName + COMMON_FACETS;
   }
 
-  public static String getInputModulationClassname(String vajramName) {
-    return vajramName + INPUTS_NEEDING_MODULATION;
+  public static String getBatchedInputsClassname(String vajramName) {
+    return vajramName + BATCHABLE_INPUTS;
   }
 
   public static TypeName getMethodReturnType(Method method) {
