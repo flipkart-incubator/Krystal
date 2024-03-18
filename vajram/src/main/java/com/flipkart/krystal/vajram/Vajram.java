@@ -3,11 +3,11 @@ package com.flipkart.krystal.vajram;
 import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.vajram.batching.FacetsConverter;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.FacetValuesAdaptor;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
-import com.flipkart.krystal.vajram.modulation.FacetsConverter;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;

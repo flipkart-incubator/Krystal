@@ -10,7 +10,6 @@ import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.flipkart.krystal.vajram.tags.AnnotationTags.getAnnotationByType;
 import static com.flipkart.krystal.vajram.tags.AnnotationTags.getNamedValueTag;
-import static com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig.sharedModulator;
 import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -39,7 +38,7 @@ import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecR
 import com.flipkart.krystal.krystex.logicdecorators.resilience4j.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.logicdecorators.resilience4j.Resilience4JCircuitBreaker;
 import com.flipkart.krystal.vajram.MandatoryFacetsMissingException;
-import com.flipkart.krystal.vajram.modulation.Batcher;
+import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.tags.NamedValueTag;
 import com.flipkart.krystal.vajram.tags.Service;
 import com.flipkart.krystal.vajram.tags.ServiceApi;
@@ -157,7 +156,7 @@ class KrystexVajramExecutorTest {
 
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
-  void executeIo_singleRequestNoModulator_success(
+  void executeIo_singleRequestNoBatcher_success(
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     graph =
         loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice")
@@ -183,17 +182,17 @@ class KrystexVajramExecutorTest {
 
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
-  void executeIo_withModulatorMultipleRequests_calledOnlyOnce(
+  void executeIo_withBatcherMultipleRequests_calledOnlyOnce(
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends")
             .build();
-    graph.registerInputModulators(
+    graph.registerInputBatchers(
         ofVajram(TestUserService.class),
-        sharedModulator(
-            () -> new Batcher<>(3),
+        InputBatcherConfig.sharedBatcher(
+            () -> new InputBatcherImpl<>(3),
             getVajramIdString(TestUserService.class) + "Batcher",
             graph.computeDependantChain(getVajramIdString(HelloFriends.class), "userInfo"),
             graph.computeDependantChain(getVajramIdString(HelloFriends.class), "friendInfos")));
@@ -229,8 +228,9 @@ class KrystexVajramExecutorTest {
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2")
             .build();
-    graph.registerInputModulators(
-        ofVajram(TestUserService.class), InputModulatorConfig.simple(() -> new Batcher<>(2)));
+    graph.registerInputBatchers(
+        ofVajram(TestUserService.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl<>(2)));
     CompletableFuture<String> helloString;
     requestContext.requestId("sequentialDependency");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
@@ -280,7 +280,7 @@ class KrystexVajramExecutorTest {
 
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
-  void execute_multiRequestNoInputModulator_cacheHitSuccess(
+  void execute_multiRequestNoInputBatcher_cacheHitSuccess(
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     graph =
         loadFromClasspath(
@@ -321,7 +321,7 @@ class KrystexVajramExecutorTest {
 
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
-  void execute_multiRequestWithModulator_cacheHitSuccess(
+  void execute_multiRequestWithBatcher_cacheHitSuccess(
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     graph =
         loadFromClasspath(
@@ -378,8 +378,9 @@ class KrystexVajramExecutorTest {
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello")
             .build();
-    graph.registerInputModulators(
-        ofVajram(TestUserService.class), InputModulatorConfig.simple(() -> new Batcher<>(6)));
+    graph.registerInputBatchers(
+        ofVajram(TestUserService.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl<>(6)));
     CompletableFuture<String> multiHellos;
     requestContext.requestId("execute_multiResolverFanouts_permutesTheFanouts");
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
@@ -422,7 +423,7 @@ class KrystexVajramExecutorTest {
 
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
-  void flush_singleDepthParallelDependencyDefaultInputModulatorConfig_flushes2Batchers(
+  void flush_singleDepthParallelDependencyDefaultInputBatcherConfig_flushes2Batchers(
       KryonExecStrategy kryonExecStrategy,
       GraphTraversalStrategy graphTraversalStrategy,
       TestInfo testInfo) {
@@ -432,8 +433,9 @@ class KrystexVajramExecutorTest {
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello")
             .build();
-    graph.registerInputModulators(
-        ofVajram(TestUserService.class), InputModulatorConfig.simple(() -> new Batcher<>(100)));
+    graph.registerInputBatchers(
+        ofVajram(TestUserService.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
@@ -460,7 +462,7 @@ class KrystexVajramExecutorTest {
               Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1)
               Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1), Firstname Lastname (user_id_2:friend_2)""");
     assertThat(TestUserService.CALL_COUNTER.sum()).isEqualTo(2 /*
-             Default InputModulatorConfig allocates one InputModulationDecorator for each
+             Default InputModulatorConfig allocates one InputBatchingDecorator for each
              dependant call chain.
              TestUserServiceVajram is called via two dependantChains:
              [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_info
@@ -470,7 +472,7 @@ class KrystexVajramExecutorTest {
 
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
-  void flush_singleDepthParallelDependencySharedInputModulatorConfig_flushes1Batcher(
+  void flush_singleDepthParallelDependencySharedInputBatcherConfig_flushes1Batcher(
       KryonExecStrategy kryonExecStrategy,
       GraphTraversalStrategy graphTraversalStrategy,
       TestInfo testInfo) {
@@ -480,10 +482,10 @@ class KrystexVajramExecutorTest {
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello")
             .build();
-    graph.registerInputModulators(
+    graph.registerInputBatchers(
         ofVajram(TestUserService.class),
-        sharedModulator(
-            () -> new Batcher<>(100),
+        InputBatcherConfig.sharedBatcher(
+            () -> new InputBatcherImpl<>(100),
             getVajramIdString(TestUserService.class) + "Batcher",
             graph.computeDependantChain(
                 getVajramIdString(MultiHelloFriends.class), "hellos", "userInfo"),
@@ -529,7 +531,7 @@ class KrystexVajramExecutorTest {
 
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
-  void flush_singleDepthSkipParallelDependencySharedInputModulatorConfig_flushes1Batcher(
+  void flush_singleDepthSkipParallelDependencySharedInputBatcherConfig_flushes1Batcher(
       KryonExecStrategy kryonExecStrategy,
       GraphTraversalStrategy graphTraversalStrategy,
       TestInfo testInfo) {
@@ -540,10 +542,10 @@ class KrystexVajramExecutorTest {
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello")
             .build();
-    graph.registerInputModulators(
+    graph.registerInputBatchers(
         ofVajram(TestUserService.class),
-        sharedModulator(
-            () -> new Batcher<>(100),
+        InputBatcherConfig.sharedBatcher(
+            () -> new InputBatcherImpl<>(100),
             getVajramIdString(TestUserService.class) + "Batcher",
             graph.computeDependantChain(
                 getVajramIdString(MultiHelloFriends.class), "hellos", "user_infos"),
@@ -593,10 +595,12 @@ class KrystexVajramExecutorTest {
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2")
             .build();
-    graph.registerInputModulators(
-        ofVajram(TestUserService.class), InputModulatorConfig.simple(() -> new Batcher<>(100)));
-    graph.registerInputModulators(
-        ofVajram(FriendsService.class), InputModulatorConfig.simple(() -> new Batcher<>(100)));
+    graph.registerInputBatchers(
+        ofVajram(TestUserService.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
+    graph.registerInputBatchers(
+        ofVajram(FriendsService.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
@@ -636,17 +640,18 @@ class KrystexVajramExecutorTest {
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello")
             .build();
-    graph.registerInputModulators(
-        ofVajram(TestUserService.class), InputModulatorConfig.simple(() -> new Batcher<>(100)));
-    graph.registerInputModulators(
+    graph.registerInputBatchers(
+        ofVajram(TestUserService.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
+    graph.registerInputBatchers(
         ofVajram(FriendsService.class),
-        sharedModulator(
-            () -> new Batcher<>(100),
+        InputBatcherConfig.sharedBatcher(
+            () -> new InputBatcherImpl<>(100),
             getVajramIdString(FriendsService.class) + "_1",
             graph.computeDependantChain(
                 getVajramIdString(MutualFriendsHello.class), "hellos", "friendIds")),
-        sharedModulator(
-            () -> new Batcher<>(100),
+        InputBatcherConfig.sharedBatcher(
+            () -> new InputBatcherImpl<>(100),
             getVajramIdString(FriendsService.class) + "_2",
             graph.computeDependantChain(getVajramIdString(MutualFriendsHello.class), "friendIds")));
     CompletableFuture<String> multiHellos;
@@ -689,17 +694,18 @@ class KrystexVajramExecutorTest {
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello")
             .build();
-    graph.registerInputModulators(
-        ofVajram(TestUserService.class), InputModulatorConfig.simple(() -> new Batcher<>(100)));
-    graph.registerInputModulators(
+    graph.registerInputBatchers(
+        ofVajram(TestUserService.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
+    graph.registerInputBatchers(
         ofVajram(FriendsService.class),
-        sharedModulator(
-            () -> new Batcher<>(100),
+        InputBatcherConfig.sharedBatcher(
+            () -> new InputBatcherImpl<>(100),
             getVajramIdString(FriendsService.class) + "_1",
             graph.computeDependantChain(
                 getVajramIdString(MutualFriendsHello.class), "hellos", "friendIds")),
-        sharedModulator(
-            () -> new Batcher<>(100),
+        InputBatcherConfig.sharedBatcher(
+            () -> new InputBatcherImpl<>(100),
             getVajramIdString(FriendsService.class) + "_2",
             graph.computeDependantChain(getVajramIdString(MutualFriendsHello.class), "friendIds")));
 
@@ -741,9 +747,9 @@ class KrystexVajramExecutorTest {
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2")
             .build();
-    graph.registerInputModulators(
+    graph.registerInputBatchers(
         ofVajram(FriendsService.class),
-        new InputModulatorConfig(
+        new InputBatcherConfig(
             logicExecutionContext -> "",
             _x -> true,
             modulatorContext ->
@@ -767,9 +773,9 @@ class KrystexVajramExecutorTest {
                     return "friendService";
                   }
                 }));
-    graph.registerInputModulators(
+    graph.registerInputBatchers(
         ofVajram(TestUserService.class),
-        new InputModulatorConfig(
+        new InputBatcherConfig(
             logicExecutionContext1 -> "1",
             _x -> true,
             modulatorContext1 ->
@@ -901,7 +907,7 @@ class KrystexVajramExecutorTest {
                 ImmutableSet.of(
                     Resilience4JCircuitBreaker.DECORATOR_TYPE,
                     Resilience4JBulkhead.DECORATOR_TYPE,
-                    InputModulationDecorator.DECORATOR_TYPE)));
+                    InputBatchingDecorator.DECORATOR_TYPE)));
   }
 
   public static Stream<Arguments> executorConfigsToTest() {

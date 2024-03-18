@@ -60,7 +60,7 @@ import com.flipkart.krystal.vajram.facets.resolution.InputResolverDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.ResolutionResult;
 import com.flipkart.krystal.vajram.facets.resolution.ResolutionRequest;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
-import com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig.ModulatorContext;
+import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig.BatcherContext;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjector;
 import com.google.common.collect.ImmutableCollection;
@@ -149,7 +149,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     return new KrystexVajramExecutor<>(this, requestContext, executorPool, krystexConfig);
   }
 
-  public void registerInputModulators(VajramID vajramID, InputModulatorConfig... inputModulators) {
+  public void registerInputBatchers(VajramID vajramID, InputBatcherConfig... inputModulators) {
     KryonId kryonId = getKryonId(vajramID);
     VajramDefinition vajramDefinition = vajramDefinitions.get(vajramID);
     OutputLogicDefinition<Object> outputLogicDefinition =
@@ -159,24 +159,24 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     }
     Vajram<?> vajram = vajramDefinition.getVajram();
     List<OutputLogicDecoratorConfig> outputLogicDecoratorConfigList = new ArrayList<>();
-    for (InputModulatorConfig inputModulatorConfig : inputModulators) {
+    for (InputBatcherConfig inputBatcherConfig : inputModulators) {
       Predicate<LogicExecutionContext> biFunction =
           logicExecutionContext -> {
             return vajram.getFacetDefinitions().stream()
                     .filter(facetDefinition -> facetDefinition instanceof InputDef<?>)
                     .map(facetDefinition -> (InputDef<?>) facetDefinition)
-                    .anyMatch(InputDef::needsModulation)
-                && inputModulatorConfig.shouldModulate().test(logicExecutionContext);
+                    .anyMatch(InputDef::needsBatching)
+                && inputBatcherConfig.shouldModulate().test(logicExecutionContext);
           };
       outputLogicDecoratorConfigList.add(
           new OutputLogicDecoratorConfig(
-              InputModulationDecorator.DECORATOR_TYPE,
+              InputBatchingDecorator.DECORATOR_TYPE,
               biFunction,
-              inputModulatorConfig.instanceIdGenerator(),
+              inputBatcherConfig.instanceIdGenerator(),
               decoratorContext ->
-                  inputModulatorConfig
+                  inputBatcherConfig
                       .decoratorFactory()
-                      .apply(new ModulatorContext(vajram, decoratorContext))));
+                      .apply(new BatcherContext(vajram, decoratorContext))));
     }
     outputLogicDefinition.registerRequestScopedDecorator(outputLogicDecoratorConfigList);
   }

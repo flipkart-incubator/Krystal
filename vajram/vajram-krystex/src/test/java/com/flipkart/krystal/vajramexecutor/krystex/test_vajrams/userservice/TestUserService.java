@@ -8,10 +8,10 @@ import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.modulation.Modulated;
-import com.flipkart.krystal.vajram.modulation.ModulatedFacets;
+import com.flipkart.krystal.vajram.batching.Batch;
+import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceFacetUtil.TestUserServiceCommonFacets;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceFacetUtil.TestUserServiceModInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceFacetUtil.TestUserServiceInputBatch;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.LongAdder;
 @VajramDef
 public abstract class TestUserService extends IOVajram<TestUserInfo> {
   static class _Facets {
-    @Modulated @Input String userId;
+    @Batch @Input String userId;
   }
 
   private static final ScheduledExecutorService LATENCY_INDUCER =
@@ -32,15 +32,15 @@ public abstract class TestUserService extends IOVajram<TestUserInfo> {
   public static final Set<TestUserServiceRequest> REQUESTS = new LinkedHashSet<>();
 
   @Output
-  static ImmutableMap<TestUserServiceModInputs, CompletableFuture<TestUserInfo>> callUserService(
-      ModulatedFacets<TestUserServiceModInputs, TestUserServiceCommonFacets> modulatedRequest) {
+  static ImmutableMap<TestUserServiceInputBatch, CompletableFuture<TestUserInfo>> callUserService(
+      BatchedFacets<TestUserServiceInputBatch, TestUserServiceCommonFacets> modulatedRequest) {
     CALL_COUNTER.increment();
-    modulatedRequest.modInputs().stream()
+    modulatedRequest.batchedInputs().stream()
         .map(im -> TestUserServiceRequest.builder().userId(im.userId()).build())
         .forEach(REQUESTS::add);
 
     // Make a call to user service and get user info
-    return modulatedRequest.modInputs().stream()
+    return modulatedRequest.batchedInputs().stream()
         .collect(
             toImmutableMap(
                 inputsNeedingModulation -> inputsNeedingModulation,
