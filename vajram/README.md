@@ -49,8 +49,7 @@ Every Vajram is defined by the following properties
     * **Optionality**: Inputs can either be mandatory or optional (optional is the default). If a
       null value is passed to a mandatory input of a vajram, the vajram is never executed, and an
       exception is thrown instead.
-    * **Needs Modulations**: Indicates to the platform that the input needs to be modulated (
-      batched) before executing this vajram
+    * **Needs Batching**: Indicates to the platform that the input needs to be batched before executing this vajram
     * **Docmentation**: Describes this input
 * **Dependencies**:
     * **Dependency Name**: Every dependency has a name unique within that vajram.
@@ -213,17 +212,17 @@ processing) reads the input and dependency definitions and generates the followi
   phase. This class also contains a method to convert this functional entity into a framework
   entity - this method is used by the framework.
 * `package-private` InputUtil class which contains
-    * If none of the inputs are modulated
+    * If none of the inputs are batched
         * `package-private` AllInputs class which encapsulates the values of all the `CLIENT`
           provided
           inputs, `APPLICATION` provided inputs, and dependency outputs in a type safe manner. This
           object is for use by the `@Output` function.
-    * If at least one of the inputs is modulated, the following classes are generated and are useful
-      for modulation by the [`InputModulator`](#inputmodulator) interface.
-        * `package-private` InputsNeedingModulation class which encapsulates the values of
-          those `CLIENT` provided inputs which have been marked as needing modulation.
+    * If at least one of the inputs is batched, the following classes are generated and are useful
+      for batching by the [`InputBatcher`](#inputbatcher) interface.
+        * `package-private` BatchableInputs class which encapsulates the values of
+          those `CLIENT` provided inputs which have been marked as needing batching.
         * `package-private` CommonInputs class which encapsulates the values of those inputs which
-          do not need modulation as well as dependency values
+          do not need batching as well as dependency values
 
 #### Impl generation
 
@@ -249,19 +248,19 @@ understands the intent of the developer and accordingly transforms these objects
 frameowrk objects. This `Impl` class is intended to be used only by the framework and not by any
 other developers.
 
-### Input Modulation
+### Input Batching
 
 #### Definition
 
-Input modulation is the process of squashing/collapsing/merging multiple independent inputs to a vajram operation so that the vajram can compute outputs to these inputs in an optimal fashion consuming minimum resources like network bandwidth, disk IO etc. Input modulation is a generalization of the concept we know as Batching.
+Input batching is the process of squashing/collapsing/merging multiple independent inputs to a vajram operation so that the vajram can compute outputs to these inputs in an optimal fashion consuming minimum resources like network bandwidth, disk IO etc. Input batching is a generalization of the concept we know as Batching.
 
 ##### Batching vs Modulation
 
-Why are we calling this feature Input Modulation and not batching? This is because there might be other kinds of request merging which are different from batching. Batching is a process where we take N requests objects each consisting of one input parameter and merge them into a single request object containing a list of all N parameters. On the other hand,let us say there is an API which provides three info levels within a given API - LOW, MEDIUM, HIGH. Depending on the info level passed in the API, the server returns varying amounts of data — where LOW is a subset of MEDIUM which itself is a subset of HIGH. If two clients request data from the API, one with the LOW info level and one with MEDIUM, we would ideally want to make a single call with MEDIUM as the info level. Here the modulation modulates both the requests into a single request containing the MEDIUM info level.
+There is a feature similar to batching called modulation which involved request merging which is different from batching. Batching is a process where we take N requests objects each consisting of one input parameter and merge them into a single request object containing a list of all N parameters. On the other hand,let us say there is an API which provides three info levels within a given API - LOW, MEDIUM, HIGH. Depending on the info level passed in the API, the server returns varying amounts of data — where LOW is a subset of MEDIUM which itself is a subset of HIGH. If two clients request data from the API, one with the LOW info level and one with MEDIUM, we would ideally want to make a single call with MEDIUM as the info level. Here the modulation modulates both the requests into a single request containing the MEDIUM info level.
 
 #### Problems
 
-Let us understand the philosophy and design Krystal Programming model's input modulation feature by
+Let us understand the philosophy and design Krystal Programming model's input batching feature by
 considering a
 hypothetical example. Let us consider a user path system which performs scatter gather operations to
 serve widgets to
@@ -354,24 +353,21 @@ Service calls and reduction in system performance.
 
 #### Design
 
-##### InputModulator
+##### InputBatcher
 
 To solve the above problems, the Krystal Programming model introduces the concept called input
-modulation. Every Vajram which encapsulates potentially blocking logic, and can optimize its
+batching. Every Vajram which encapsulates potentially blocking logic, and can optimize its
 performance by merging/squashing multiple independent requests into a single request, can declare
-its inputs as needing modulation by the `InputModulator` component.
+its inputs as needing batching by the `InputBatcher` component.
 
-An input modulator is a stateful object that presents these APIs:
+An input batcher is a stateful object that presents these APIs:
 
 ```java
-interface InputModulator {
+public interface InputBatcher<BatchableInputs, CommonFacets> extends ConfigListener {
 
-  List<ModulatedRequest> add(
-      InputsNeedingModulation inputsNeedingModulation, CommonInputs commonInputs);
+  void batch();
 
-  void modulate();
-
-  void onModulation(Consumer<List<ModulatedRequest>> listener);
+  void onBatching(Consumer<ImmutableList<BatchedFacets<BatchableInputs, CommonFacets>>> callback);
 }
 ```
 
@@ -379,13 +375,13 @@ interface InputModulator {
 
 Whenever a client of Entity Service requests some data from Entity Service, the Krystal Runtime
 passes on this request
-object to the add method of the input modulator of Entity Service vajram which stores it in memory
+object to the add method of the input batcher of Entity Service vajram which stores it in memory
 and in most cases**
 returns an empty list. This is repeated for every other Vajram which depends on Entity Service.
 Every time a new request
-is added to the input modulator, it checks if the current set of requests has reached the max batch
+is added to the input batcher, it checks if the current set of requests has reached the max batch
 size (a
-configuration parameter of the input modulator). If this is the case, the input modulator squashes
+configuration parameter of the input batcher). If this is the case, the input batcher squashes
 all the pending
 requests into an optimal set of batched request objects and returns this list instead of an empty
 list. This is an
@@ -397,7 +393,7 @@ session irrespective of the number of requests. Also, even if a max batch size i
 possible that all the
 clients of the API have not requested enough data to reach the max batch size. In these scenarios,
 the add method never
-returns a list of modulated requests and thus we need a way to proactively trigger the API call with
+returns a list of batched requests and thus we need a way to proactively trigger the API call with
 the available set
 of requests. This is where the modulate and register methods come in.
 
@@ -413,28 +409,28 @@ completed requesting data from Entity Service. There are multiple ways the runti
 won't go into here (
 See Krystex LLD for reference implementation). When the runtime realizes that the clients have
 finished requesting data
-from Entity Service, the runtime calls the modulate method of the input modulator which merges all
+from Entity Service, the runtime calls the modulate method of the input batcher which merges all
 the pending requests
-and returns the list of modulated requests which are then used by the Runtime to make the network
+and returns the list of batched requests which are then used by the Runtime to make the network
 call(s).
 
 ##### register(...)
 
-Another strategy for modulation is for the input modulator to have a timeout for which it will wait
+Another strategy for batching is for the input batcher to have a timeout for which it will wait
 for new requests.
-After that timeout is breached, the input modulator modulates all the pending requests. When it does
+After that timeout is breached, the input batcher modulates all the pending requests. When it does
 this, it needs a
-way to notify the runtime that the modulation is done. So the runtime can register a listener via
+way to notify the runtime that the batching is done. So the runtime can register a listener via
 the register method.
-This listener is called with the modulated input when the input modulator decides it is time to
+This listener is called with the batched input when the input batcher decides it is time to
 modulate. This listener
 can then trigger the actual netwerk call.
 
-![](assets/modulation_workflow.png)
+![](../assets/batching_workflow.png)
 
-#### Demodulation
+#### Debatching
 
-If a client has requested data for attribute 'a', and the input modulator has modulated the input
+If a client has requested data for attribute 'a', and the input batcher has batched the input
 into a list of
 attributes 'a', 'b' and 'c' and the Entity Service API returns the response as a Map contains the
 three attribute names
@@ -442,10 +438,10 @@ as keys and attribute values as values, it doesn't make sense to return this map
 who then expected to
 query the map for their data. We would want to keep the contracts clean and return only the data
 requested by a
-particular client. This process of taking the response of a batched/modulated API and extracting out
+particular client. This process of taking the response of a batched API and extracting out
 the necessary
-information for a given unmodulated request is called demodulation and can be performed either by
-the input modulator,
+information for a given unbatched request is called debatching and can be performed either by
+the input batcher,
 or by the Blocking Vajram itself.
 
 #### Rationale
@@ -456,7 +452,7 @@ The above design solves multiple problems
    clients - If
    tomorrow a new API with the same functional semantics, but a different batching strategy is
    written, we can just
-   change the input modulator for the Vajram and keep the client contracts and code untouched.
+   change the input batcher for the Vajram and keep the client contracts and code untouched.
 2. Decouples clients from each other - Not keeping clients of your API independent can have
    significant negative
    consequences for evolvability and maintainability of their code. If the programming model doesn't
@@ -496,7 +492,7 @@ The above design solves multiple problems
 
 ##### [graphql/dataloader](https://github.com/graphql/dataloader)
 
-The Graphql Dataloader solves the batching problem (not the general input modulation problem) for
+The Graphql Dataloader solves the batching problem (not the general input batching problem) for
 the javascript
 programming language. The trigger for modulating is one tick in the javascript runtime eventloop,
 though users can

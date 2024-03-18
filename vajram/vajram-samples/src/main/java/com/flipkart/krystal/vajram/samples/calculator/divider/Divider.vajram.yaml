@@ -1,8 +1,0 @@
-output:
-  dataType: integer
-inputs:
-  - name: numerator
-    dataType: integer
-    mandatory: true
-  - name: denominator
-    dataType: integer

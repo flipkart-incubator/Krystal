@@ -149,7 +149,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     return new KrystexVajramExecutor<>(this, requestContext, executorPool, krystexConfig);
   }
 
-  public void registerInputBatchers(VajramID vajramID, InputBatcherConfig... inputModulators) {
+  public void registerInputBatchers(VajramID vajramID, InputBatcherConfig... inputBatcherConfigs) {
     KryonId kryonId = getKryonId(vajramID);
     VajramDefinition vajramDefinition = vajramDefinitions.get(vajramID);
     OutputLogicDefinition<Object> outputLogicDefinition =
@@ -159,7 +159,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     }
     Vajram<?> vajram = vajramDefinition.getVajram();
     List<OutputLogicDecoratorConfig> outputLogicDecoratorConfigList = new ArrayList<>();
-    for (InputBatcherConfig inputBatcherConfig : inputModulators) {
+    for (InputBatcherConfig inputBatcherConfig : inputBatcherConfigs) {
       Predicate<LogicExecutionContext> biFunction =
           logicExecutionContext -> {
             return vajram.getFacetDefinitions().stream()

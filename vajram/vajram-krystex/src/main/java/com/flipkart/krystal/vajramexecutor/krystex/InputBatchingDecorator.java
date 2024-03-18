@@ -65,20 +65,20 @@ public final class InputBatchingDecorator<
         requests -> requests.forEach(request -> batchFacetsList(logicToDecorate, request)));
     return facetsList -> {
       List<UnBatchedFacets<I, C>> requests = facetsList.stream().map(facetsConverter).toList();
-      List<BatchedFacets<I, C>> batchedFacets =
+      List<BatchedFacets<I, C>> batchedFacetsList =
           requests.stream()
               .map(
-                  unmodulatedInput ->
+                  unbatchedInput ->
                       inputBatcher.add(
-                          unmodulatedInput.batchedInputs(), unmodulatedInput.commonFacets()))
+                          unbatchedInput.batchedInputs(), unbatchedInput.commonFacets()))
               .flatMap(Collection::stream)
               .toList();
       requests.forEach(
           request ->
               futureCache.computeIfAbsent(
                   request.toFacetValues(), e -> new CompletableFuture<@Nullable Object>()));
-      for (BatchedFacets<I, C> modulatedFacet : batchedFacets) {
-        batchFacetsList(logicToDecorate, modulatedFacet);
+      for (BatchedFacets<I, C> batchedFacets : batchedFacetsList) {
+        batchFacetsList(logicToDecorate, batchedFacets);
       }
       return requests.stream()
           .map(UnBatchedFacets::toFacetValues)
@@ -99,7 +99,7 @@ public final class InputBatchingDecorator<
     if (logicDecoratorCommand instanceof InitiateActiveDepChains initiateActiveDepChains) {
       LinkedHashSet<DependantChain> allActiveDepChains =
           new LinkedHashSet<>(initiateActiveDepChains.dependantsChains());
-      // Retain only the ones which are applicable for this input modulation decorator
+      // Retain only the ones which are applicable for this input batching decorator
       allActiveDepChains.removeIf(isApplicableToDependantChain.negate());
       this.activeDependantChains = ImmutableSet.copyOf(allActiveDepChains);
     } else if (logicDecoratorCommand instanceof FlushCommand flushCommand) {
@@ -132,7 +132,7 @@ public final class InputBatchingDecorator<
   @Override
   public void onConfigUpdate(ConfigProvider configProvider) {
     inputBatcher.onConfigUpdate(
-        new NestedConfig(String.format("input_modulation.%s.", instanceId), configProvider));
+        new NestedConfig(String.format("input_batching.%s.", instanceId), configProvider));
   }
 
   @Override

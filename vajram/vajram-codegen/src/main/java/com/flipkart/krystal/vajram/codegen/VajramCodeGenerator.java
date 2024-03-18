@@ -340,7 +340,7 @@ public class VajramCodeGenerator {
       TypeMirror returnType = getParsedVajramData().outputLogic().getReturnType();
       checkState(
           util.isRawAssignable(returnType, Map.class),
-          "Any vajram supporting inputDef modulation must return map. Vajram: %s",
+          "Any vajram supporting inputDef batching must return map. Vajram: %s",
           vajramName);
       TypeMirror mapValue = getTypeParameters(returnType).get(1);
       // TODO : check if this is needed for compute vajrams or should throw error
@@ -350,7 +350,7 @@ public class VajramCodeGenerator {
         codeBuilder.addNamed(INPUT_BATCHING_CODE_BLOCK, valueMap);
       }
       executeBuilder.addCode(codeBuilder.build());
-    } else { // TODO : Need non modulated IO vajram to test this
+    } else { // TODO : Need non batched IO vajram to test this
       nonBatchedComputeMethodBuilder(executeBuilder, false);
     }
     return executeBuilder.build();
@@ -480,7 +480,7 @@ public class VajramCodeGenerator {
       if (!util.isRawAssignable(returnType, CompletableFuture.class)) {
         // TODO: Validate IOVajram response type is CompletableFuture<Type>"
         String errorMessage =
-            "The OutputLogic of non-modulated IO vajram %s must return a CompletableFuture"
+            "The OutputLogic of non-batched IO vajram %s must return a CompletableFuture"
                 .formatted(vajramName);
         util.error(errorMessage, getParsedVajramData().outputLogic());
         throw new VajramValidationException(errorMessage);
@@ -515,19 +515,19 @@ public class VajramCodeGenerator {
   /**
    * Method to generate "getInputsConvertor" function
    *
-   * @param inputsNeedingModulation Generated Vajram specific InputUtil.InputsNeedingModulation
+   * @param batchableInputs Generated Vajram specific InputUtil.BatchableInputs
    *     class
    * @param commonInputs Generated Vajram specific InputUtil.CommonInputs class
    * @return {@link MethodSpec}
    */
   private MethodSpec createInputConvertersMethod(
-      ClassName inputsNeedingModulation, ClassName commonInputs) {
+      ClassName batchableInputs, ClassName commonInputs) {
     Builder inputConvertersBuilder =
         methodBuilder(METHOD_GET_INPUTS_CONVERTOR)
             .addModifiers(PUBLIC)
             .returns(
                 ParameterizedTypeName.get(
-                    ClassName.get(FacetsConverter.class), inputsNeedingModulation, commonInputs))
+                    ClassName.get(FacetsConverter.class), batchableInputs, commonInputs))
             .addAnnotation(Override.class);
     inputConvertersBuilder.addCode(
         CodeBlock.builder()
@@ -586,7 +586,7 @@ public class VajramCodeGenerator {
       TypeMirror returnType = getParsedVajramData().outputLogic().getReturnType();
       checkState(
           util.isRawAssignable(processingEnv.getTypeUtils().erasure(returnType), Map.class),
-          "Any vajram supporting inputDef modulation must return map. Vajram: %s",
+          "Any vajram supporting inputDef batching must return map. Vajram: %s",
           vajramName);
       TypeMirror mapValue = getTypeParameters(returnType).get(1);
       // TODO : check if this is needed for compute vajrams or should throw error
@@ -1461,13 +1461,13 @@ public class VajramCodeGenerator {
   }
 
   public String codeGenInputUtil() {
-    boolean doInputsNeedModulation =
+    boolean doInputsNeedBatching =
         vajramInfo
             .facetStream()
             .filter(d -> d instanceof InputModel<?>)
             .map(d -> (InputModel<?>) d)
             .anyMatch(InputModel::needsBatching);
-    if (doInputsNeedModulation) {
+    if (doInputsNeedBatching) {
       return codeGenBatchedInputUtil();
     } else {
       return codeGenSimpleInputUtil();
@@ -1570,7 +1570,7 @@ public class VajramCodeGenerator {
           fromAndToMethods(
               vajramFacetsDef.inputs().stream().filter(InputModel::needsBatching).toList(),
               ClassName.get(packageName, getFacetUtilClassName(vajramName), imClassName));
-      TypeSpec.Builder inputsNeedingModulation =
+      TypeSpec.Builder inputsNeedingBatching =
           util.classBuilder(imClassName)
               .addModifiers(STATIC)
               .addSuperinterface(FacetValuesAdaptor.class)
@@ -1607,9 +1607,9 @@ public class VajramCodeGenerator {
                         inputDef.type(), List.of(AnnotationSpec.builder(Nullable.class).build()));
                 TypeAndName boxedInputType = boxPrimitive(inputType);
                 if (inputDef.needsBatching()) {
-                  inputsNeedingModulation.addField(
+                  inputsNeedingBatching.addField(
                       boxedInputType.typeName(), inputJavaName, PRIVATE, FINAL);
-                  inputsNeedingModulation.addMethod(
+                  inputsNeedingBatching.addMethod(
                       getterCodeForInput(inputDef, inputJavaName, inputType));
                   imFieldsList.add(new FieldTypeName(boxedInputType.typeName(), inputJavaName));
                 } else {
@@ -1631,7 +1631,7 @@ public class VajramCodeGenerator {
               });
       // create constructors
       generateConstructor(ciFieldsList).ifPresent(commonInputs::addMethod);
-      generateConstructor(imFieldsList).ifPresent(inputsNeedingModulation::addMethod);
+      generateConstructor(imFieldsList).ifPresent(inputsNeedingBatching::addMethod);
 
       TypeName parameterizedTypeName =
           ParameterizedTypeName.get(ClassName.get(FacetsConverter.class), imType, ciType);
@@ -1662,7 +1662,7 @@ public class VajramCodeGenerator {
       JavaFile.builder(
               packageName,
               inputUtilClass
-                  .addType(inputsNeedingModulation.build())
+                  .addType(inputsNeedingBatching.build())
                   .addType(commonInputs.build())
                   .addField(converter.build())
                   .build())

@@ -25,19 +25,19 @@ public record InputBatcherConfig(
     Function<BatcherContext, OutputLogicDecorator> decoratorFactory) {
 
   /**
-   * Creates a default InputModulatorConfig which guarantees that every unique {@link
+   * Creates a default InputBatcherConfig which guarantees that every unique {@link
    * DependantChain} of a vajram gets its own {@link InputBatchingDecorator} and its own
    * corresponding {@link InputBatcher}. The instance id corresponding to a particular {@link
    * DependantChain} is of the form:
    *
    * <p>{@code [Start]>vajramId_1:dep_1>vajramId_2:dep_2>....>vajramId_n:dep_n}
    *
-   * @param inputModulatorSupplier Supplies the {@link InputBatcher} corresponding to an {@link
+   * @param inputBatcherSupplier Supplies the {@link InputBatcher} corresponding to an {@link
    *     InputBatchingDecorator}. This supplier is guaranteed to be called exactly once for every
    *     unique {@link InputBatchingDecorator} instance.
    */
   public static InputBatcherConfig simple(
-      Supplier<InputBatcher<FacetValuesAdaptor, FacetValuesAdaptor>> inputModulatorSupplier) {
+      Supplier<InputBatcher<FacetValuesAdaptor, FacetValuesAdaptor>> inputBatcherSupplier) {
     return new InputBatcherConfig(
         logicExecutionContext ->
             generateInstanceId(
@@ -52,7 +52,7 @@ public record InputBatcherConfig(
                   batcherContext.vajram().getInputsConvertor();
           return new InputBatchingDecorator<>(
               batcherContext.decoratorContext().instanceId(),
-              inputModulatorSupplier.get(),
+              inputBatcherSupplier.get(),
               inputsConvertor,
               dependantChain ->
                   batcherContext
@@ -64,14 +64,14 @@ public record InputBatcherConfig(
   }
 
   public static InputBatcherConfig sharedBatcher(
-      Supplier<InputBatcher<FacetValuesAdaptor, FacetValuesAdaptor>> inputModulatorSupplier,
+      Supplier<InputBatcher<FacetValuesAdaptor, FacetValuesAdaptor>> inputBatcherSupplier,
       String instanceId,
       DependantChain... dependantChains) {
-    return sharedBatcher(inputModulatorSupplier, instanceId, ImmutableSet.copyOf(dependantChains));
+    return sharedBatcher(inputBatcherSupplier, instanceId, ImmutableSet.copyOf(dependantChains));
   }
 
   public static InputBatcherConfig sharedBatcher(
-      Supplier<InputBatcher<FacetValuesAdaptor, FacetValuesAdaptor>> inputModulatorSupplier,
+      Supplier<InputBatcher<FacetValuesAdaptor, FacetValuesAdaptor>> inputBatcherSupplier,
       String instanceId,
       ImmutableSet<DependantChain> dependantChains) {
     return new InputBatcherConfig(
@@ -83,7 +83,7 @@ public record InputBatcherConfig(
               (FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>)
                   batcherContext.vajram().getInputsConvertor();
           return new InputBatchingDecorator<>(
-              instanceId, inputModulatorSupplier.get(), inputsConvertor, dependantChains::contains);
+              instanceId, inputBatcherSupplier.get(), inputsConvertor, dependantChains::contains);
         });
   }
 

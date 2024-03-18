@@ -33,17 +33,17 @@ public abstract class TestUserService extends IOVajram<TestUserInfo> {
 
   @Output
   static ImmutableMap<TestUserServiceInputBatch, CompletableFuture<TestUserInfo>> callUserService(
-      BatchedFacets<TestUserServiceInputBatch, TestUserServiceCommonFacets> modulatedRequest) {
+      BatchedFacets<TestUserServiceInputBatch, TestUserServiceCommonFacets> batchedRequest) {
     CALL_COUNTER.increment();
-    modulatedRequest.batchedInputs().stream()
+    batchedRequest.batchedInputs().stream()
         .map(im -> TestUserServiceRequest.builder().userId(im.userId()).build())
         .forEach(REQUESTS::add);
 
     // Make a call to user service and get user info
-    return modulatedRequest.batchedInputs().stream()
+    return batchedRequest.batchedInputs().stream()
         .collect(
             toImmutableMap(
-                inputsNeedingModulation -> inputsNeedingModulation,
+                inputBatch -> inputBatch,
                 modInputs -> {
                   CompletableFuture<TestUserInfo> future = new CompletableFuture<>();
                   LATENCY_INDUCER.schedule(

@@ -162,7 +162,7 @@ class KrystexVajramExecutorTest {
         loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice")
             .build();
     CompletableFuture<TestUserInfo> userInfo123;
-    requestContext.requestId("ioVajramSingleRequestNoModulator");
+    requestContext.requestId("ioVajramSingleRequestNoBatcher");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
             requestContext,
@@ -198,7 +198,7 @@ class KrystexVajramExecutorTest {
             graph.computeDependantChain(getVajramIdString(HelloFriends.class), "friendInfos")));
 
     CompletableFuture<String> helloString;
-    requestContext.requestId("ioVajramWithModulatorMultipleRequests");
+    requestContext.requestId("ioVajramWithBatcherMultipleRequests");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
             requestContext,
@@ -289,7 +289,7 @@ class KrystexVajramExecutorTest {
             .build();
     CompletableFuture<TestUserInfo> userInfo;
     CompletableFuture<String> helloFriends;
-    requestContext.requestId("multiRequestNoInputModulator_cacheHitSuccess");
+    requestContext.requestId("multiRequestNoInputBatcher_cacheHitSuccess");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
             requestContext,
@@ -330,7 +330,7 @@ class KrystexVajramExecutorTest {
             .build();
     CompletableFuture<TestUserInfo> userInfo;
     CompletableFuture<String> helloFriends;
-    requestContext.requestId("ioVajramSingleRequestNoModulator");
+    requestContext.requestId("ioVajramSingleRequestNoBatcher");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
             requestContext,
@@ -462,7 +462,7 @@ class KrystexVajramExecutorTest {
               Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1)
               Hello Friends of Firstname Lastname (user_id_2)! Firstname Lastname (user_id_2:friend_1), Firstname Lastname (user_id_2:friend_2)""");
     assertThat(TestUserService.CALL_COUNTER.sum()).isEqualTo(2 /*
-             Default InputModulatorConfig allocates one InputBatchingDecorator for each
+             Default InputBatcherConfig allocates one InputBatchingDecorator for each
              dependant call chain.
              TestUserServiceVajram is called via two dependantChains:
              [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_info
@@ -523,7 +523,7 @@ class KrystexVajramExecutorTest {
              TestUserServiceVajram is called via two dependantChains:
              ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_info)
              ([Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos)
-             Since input modulator is shared across these dependantChains, only one call must be
+             Since input batcher is shared across these dependantChains, only one call must be
              made
             */
             1);
@@ -752,7 +752,7 @@ class KrystexVajramExecutorTest {
         new InputBatcherConfig(
             logicExecutionContext -> "",
             _x -> true,
-            modulatorContext ->
+            batcherContext ->
                 new OutputLogicDecorator() {
                   @Override
                   public OutputLogic<Object> decorateLogic(
@@ -778,7 +778,7 @@ class KrystexVajramExecutorTest {
         new InputBatcherConfig(
             logicExecutionContext1 -> "1",
             _x -> true,
-            modulatorContext1 ->
+            batcherContext ->
                 new OutputLogicDecorator() {
                   @Override
                   public OutputLogic<Object> decorateLogic(

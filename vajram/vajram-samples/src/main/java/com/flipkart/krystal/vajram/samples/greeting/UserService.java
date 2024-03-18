@@ -26,11 +26,11 @@ public abstract class UserService extends IOVajram<UserInfo> {
 
   @Output
   static Map<UserServiceInputBatch, CompletableFuture<UserInfo>> callUserService(
-      BatchedFacets<UserServiceInputBatch, UserServiceCommonFacets> modulatedRequest) {
+      BatchedFacets<UserServiceInputBatch, UserServiceCommonFacets> batchedRequest) {
 
     // Make a call to user service and get user info
     CompletableFuture<List<UserInfo>> serviceResponse =
-        batchServiceCall(modulatedRequest.batchedInputs());
+        batchServiceCall(batchedRequest.batchedInputs());
 
     CompletableFuture<Map<UserServiceInputBatch, UserInfo>> resultsFuture =
         serviceResponse.thenApply(
@@ -40,7 +40,7 @@ public abstract class UserService extends IOVajram<UserInfo> {
                         Collectors.toMap(
                             userInfo -> new UserServiceInputBatch(userInfo.userId()),
                             userInfo -> userInfo)));
-    return modulatedRequest.batchedInputs().stream()
+    return batchedRequest.batchedInputs().stream()
         .collect(
             toImmutableMap(
                 im -> im,
