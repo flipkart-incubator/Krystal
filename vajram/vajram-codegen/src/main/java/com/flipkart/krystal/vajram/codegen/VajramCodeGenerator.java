@@ -515,8 +515,7 @@ public class VajramCodeGenerator {
   /**
    * Method to generate "getInputsConvertor" function
    *
-   * @param batchableInputs Generated Vajram specific InputUtil.BatchableInputs
-   *     class
+   * @param batchableInputs Generated Vajram specific InputUtil.BatchableInputs class
    * @param commonInputs Generated Vajram specific InputUtil.CommonInputs class
    * @return {@link MethodSpec}
    */

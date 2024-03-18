@@ -10,8 +10,8 @@ import java.util.function.Consumer;
  * achieved by squashing multiple inputs into a single requests. (For example when making I/O calls
  * like network calls/Database queries).
  *
- * <p>Input batcher work by collecting multiple sets of inputs into a collection and "modulate"
- * them by squashing/merging these when some condition is met. For example, {@link InputBatcherImpl}
+ * <p>Input batcher work by collecting multiple sets of inputs into a collection and "modulate" them
+ * by squashing/merging these when some condition is met. For example, {@link InputBatcherImpl}
  * keeps collecting inputs until a minimum batch size is reached.
  *
  * @param <BatchableInputs> Those inputs which can to be batched into a single request.

@@ -25,10 +25,10 @@ public record InputBatcherConfig(
     Function<BatcherContext, OutputLogicDecorator> decoratorFactory) {
 
   /**
-   * Creates a default InputBatcherConfig which guarantees that every unique {@link
-   * DependantChain} of a vajram gets its own {@link InputBatchingDecorator} and its own
-   * corresponding {@link InputBatcher}. The instance id corresponding to a particular {@link
-   * DependantChain} is of the form:
+   * Creates a default InputBatcherConfig which guarantees that every unique {@link DependantChain}
+   * of a vajram gets its own {@link InputBatchingDecorator} and its own corresponding {@link
+   * InputBatcher}. The instance id corresponding to a particular {@link DependantChain} is of the
+   * form:
    *
    * <p>{@code [Start]>vajramId_1:dep_1>vajramId_2:dep_2>....>vajramId_n:dep_n}
    *
