@@ -14,7 +14,7 @@ public record InputModel<T>(
     boolean isMandatory,
     T defaultValue,
     String documentation,
-    boolean needsBatching,
+    boolean isBatched,
     ImmutableSet<InputSource> sources,
     VariableElement facetField)
     implements FacetGenModel {

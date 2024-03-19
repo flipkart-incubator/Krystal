@@ -172,7 +172,7 @@ public class Utils {
                               .asType()
                               .accept(new DeclaredTypeVisitor(this, true, inputField), null);
                       inputBuilder.type(dataType);
-                      inputBuilder.needsBatching(
+                      inputBuilder.isBatched(
                           Optional.ofNullable(inputField.getAnnotation(Batch.class)).isPresent());
                       Optional<Input> inputAnno =
                           Optional.ofNullable(inputField.getAnnotation(Input.class));
