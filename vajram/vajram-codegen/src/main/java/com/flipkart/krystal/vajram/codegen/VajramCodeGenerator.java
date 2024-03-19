@@ -244,7 +244,7 @@ public class VajramCodeGenerator {
           createIOVajramExecuteMethod(
               inputBatch,
               commonInputs,
-              vajramResponseType.annotated(AnnotationSpec.builder(Nullable.class).build())));
+              vajramResponseType.box().annotated(AnnotationSpec.builder(Nullable.class).build())));
     } else {
       methodSpecs.add(
           createComputeVajramExecuteMethod(vajramResponseType, inputBatch, commonInputs));
