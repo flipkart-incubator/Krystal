@@ -176,7 +176,7 @@ public class VajramCodeGenerator {
                     Function.identity(),
                     (o1, o2) -> o1,
                     LinkedHashMap::new)); // need ordered map for dependencies
-    this.needsBatching = vajramInfo.inputs().stream().anyMatch(InputModel::needsBatching);
+    this.needsBatching = vajramInfo.inputs().stream().anyMatch(InputModel::isBatched);
   }
 
   public String getVajramName() {
@@ -1129,7 +1129,7 @@ public class VajramCodeGenerator {
     }
     inputDefBuilder.add(")");
     inputDefBuilder.add(".isMandatory($L)", inputDef.isMandatory());
-    inputDefBuilder.add(".needsBatching($L)", inputDef.needsBatching());
+    inputDefBuilder.add(".isBatched($L)", inputDef.isBatched());
     // last line
     inputDefBuilder.add(".build()");
   }
@@ -1465,7 +1465,7 @@ public class VajramCodeGenerator {
             .facetStream()
             .filter(d -> d instanceof InputModel<?>)
             .map(d -> (InputModel<?>) d)
-            .anyMatch(InputModel::needsBatching);
+            .anyMatch(InputModel::isBatched);
     if (doInputsNeedBatching) {
       return codeGenBatchedInputUtil();
     } else {
@@ -1567,7 +1567,7 @@ public class VajramCodeGenerator {
       String ciClassName = getCommonFacetsClassname(vajramName);
       FromAndTo imFromAndTo =
           fromAndToMethods(
-              vajramFacetsDef.inputs().stream().filter(InputModel::needsBatching).toList(),
+              vajramFacetsDef.inputs().stream().filter(InputModel::isBatched).toList(),
               ClassName.get(packageName, getFacetUtilClassName(vajramName), imClassName));
       TypeSpec.Builder inputsNeedingBatching =
           util.classBuilder(imClassName)
@@ -1580,8 +1580,7 @@ public class VajramCodeGenerator {
       FromAndTo ciFromAndTo =
           fromAndToMethods(
               Stream.concat(
-                      vajramFacetsDef.inputs().stream()
-                          .filter(inputDef -> !inputDef.needsBatching()),
+                      vajramFacetsDef.inputs().stream().filter(inputDef -> !inputDef.isBatched()),
                       vajramFacetsDef.dependencies().stream())
                   .toList(),
               ClassName.get(packageName, getFacetUtilClassName(vajramName), ciClassName));
@@ -1605,7 +1604,7 @@ public class VajramCodeGenerator {
                     getTypeName(
                         inputDef.type(), List.of(AnnotationSpec.builder(Nullable.class).build()));
                 TypeAndName boxedInputType = boxPrimitive(inputType);
-                if (inputDef.needsBatching()) {
+                if (inputDef.isBatched()) {
                   inputsNeedingBatching.addField(
                       boxedInputType.typeName(), inputJavaName, PRIVATE, FINAL);
                   inputsNeedingBatching.addMethod(
