@@ -13,11 +13,11 @@ import com.flipkart.krystal.krystex.logicdecoration.FlushCommand;
 import com.flipkart.krystal.krystex.logicdecoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecoratorCommand;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
+import com.flipkart.krystal.vajram.batching.BatchedFacets;
+import com.flipkart.krystal.vajram.batching.FacetsConverter;
+import com.flipkart.krystal.vajram.batching.InputBatcher;
+import com.flipkart.krystal.vajram.batching.UnBatchedFacets;
 import com.flipkart.krystal.vajram.facets.FacetValuesAdaptor;
-import com.flipkart.krystal.vajram.modulation.FacetsConverter;
-import com.flipkart.krystal.vajram.modulation.InputModulator;
-import com.flipkart.krystal.vajram.modulation.ModulatedFacets;
-import com.flipkart.krystal.vajram.modulation.UnmodulatedFacets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -33,27 +33,27 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class InputModulationDecorator<
-        I /*InputsNeedingModulation*/ extends FacetValuesAdaptor,
-        C /*CommonInputs*/ extends FacetValuesAdaptor>
+public final class InputBatchingDecorator<
+        I /*BatchableInputs*/ extends FacetValuesAdaptor,
+        C /*CommonFacets*/ extends FacetValuesAdaptor>
     implements OutputLogicDecorator {
 
-  public static final String DECORATOR_TYPE = InputModulationDecorator.class.getName();
+  public static final String DECORATOR_TYPE = InputBatchingDecorator.class.getName();
   private final String instanceId;
-  private final InputModulator<I, C> inputModulator;
+  private final InputBatcher<I, C> inputBatcher;
   private final FacetsConverter<I, C> facetsConverter;
   private final Predicate<DependantChain> isApplicableToDependantChain;
   private final Map<Facets, CompletableFuture<@Nullable Object>> futureCache = new HashMap<>();
   private ImmutableSet<DependantChain> activeDependantChains = ImmutableSet.of();
   private final Set<DependantChain> flushedDependantChains = new LinkedHashSet<>();
 
-  public InputModulationDecorator(
+  public InputBatchingDecorator(
       String instanceId,
-      InputModulator<I, C> inputModulator,
+      InputBatcher<I, C> inputBatcher,
       FacetsConverter<I, C> facetsConverter,
       Predicate<DependantChain> isApplicableToDependantChain) {
     this.instanceId = instanceId;
-    this.inputModulator = inputModulator;
+    this.inputBatcher = inputBatcher;
     this.facetsConverter = facetsConverter;
     this.isApplicableToDependantChain = isApplicableToDependantChain;
   }
@@ -61,27 +61,27 @@ public final class InputModulationDecorator<
   @Override
   public OutputLogic<Object> decorateLogic(
       OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
-    inputModulator.onModulation(
-        requests -> requests.forEach(request -> modulateInputsList(logicToDecorate, request)));
-    return inputsList -> {
-      List<UnmodulatedFacets<I, C>> requests = inputsList.stream().map(facetsConverter).toList();
-      List<ModulatedFacets<I, C>> modulatedFacets =
+    inputBatcher.onBatching(
+        requests -> requests.forEach(request -> batchFacetsList(logicToDecorate, request)));
+    return facetsList -> {
+      List<UnBatchedFacets<I, C>> requests = facetsList.stream().map(facetsConverter).toList();
+      List<BatchedFacets<I, C>> batchedFacetsList =
           requests.stream()
               .map(
-                  unmodulatedInput ->
-                      inputModulator.add(
-                          unmodulatedInput.modulatedInputs(), unmodulatedInput.commonFacets()))
+                  unbatchedInput ->
+                      inputBatcher.add(
+                          unbatchedInput.batchedInputs(), unbatchedInput.commonFacets()))
               .flatMap(Collection::stream)
               .toList();
       requests.forEach(
           request ->
               futureCache.computeIfAbsent(
                   request.toFacetValues(), e -> new CompletableFuture<@Nullable Object>()));
-      for (ModulatedFacets<I, C> modulatedFacet : modulatedFacets) {
-        modulateInputsList(logicToDecorate, modulatedFacet);
+      for (BatchedFacets<I, C> batchedFacets : batchedFacetsList) {
+        batchFacetsList(logicToDecorate, batchedFacets);
       }
       return requests.stream()
-          .map(UnmodulatedFacets::toFacetValues)
+          .map(UnBatchedFacets::toFacetValues)
           .collect(
               ImmutableMap.<Facets, Facets, CompletableFuture<@Nullable Object>>toImmutableMap(
                   Function.identity(),
@@ -99,26 +99,26 @@ public final class InputModulationDecorator<
     if (logicDecoratorCommand instanceof InitiateActiveDepChains initiateActiveDepChains) {
       LinkedHashSet<DependantChain> allActiveDepChains =
           new LinkedHashSet<>(initiateActiveDepChains.dependantsChains());
-      // Retain only the ones which are applicable for this input modulation decorator
+      // Retain only the ones which are applicable for this input batching decorator
       allActiveDepChains.removeIf(isApplicableToDependantChain.negate());
       this.activeDependantChains = ImmutableSet.copyOf(allActiveDepChains);
     } else if (logicDecoratorCommand instanceof FlushCommand flushCommand) {
       flushedDependantChains.add(flushCommand.dependantsChain());
       if (flushedDependantChains.containsAll(activeDependantChains)) {
-        inputModulator.modulate();
+        inputBatcher.batch();
         flushedDependantChains.clear();
       }
     }
   }
 
-  private void modulateInputsList(
-      OutputLogic<Object> logicToDecorate, ModulatedFacets<I, C> modulatedFacets) {
-    ImmutableList<UnmodulatedFacets<I, C>> requests =
-        modulatedFacets.modInputs().stream()
-            .map(each -> new UnmodulatedFacets<>(each, modulatedFacets.commonFacets()))
+  private void batchFacetsList(
+      OutputLogic<Object> logicToDecorate, BatchedFacets<I, C> batchedFacets) {
+    ImmutableList<UnBatchedFacets<I, C>> requests =
+        batchedFacets.batchedInputs().stream()
+            .map(each -> new UnBatchedFacets<>(each, batchedFacets.commonFacets()))
             .collect(toImmutableList());
     logicToDecorate
-        .execute(requests.stream().map(UnmodulatedFacets::toFacetValues).collect(toImmutableList()))
+        .execute(requests.stream().map(UnBatchedFacets::toFacetValues).collect(toImmutableList()))
         .forEach(
             (inputs, resultFuture) -> {
               //noinspection RedundantTypeArguments: To Handle nullChecker errors
@@ -131,8 +131,8 @@ public final class InputModulationDecorator<
 
   @Override
   public void onConfigUpdate(ConfigProvider configProvider) {
-    inputModulator.onConfigUpdate(
-        new NestedConfig(String.format("input_modulation.%s.", instanceId), configProvider));
+    inputBatcher.onConfigUpdate(
+        new NestedConfig(String.format("input_batching.%s.", instanceId), configProvider));
   }
 
   @Override
