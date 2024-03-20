@@ -31,52 +31,48 @@ public class VajramImplGenProcessor extends AbstractProcessor {
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     Utils util = new Utils(processingEnv, this.getClass());
+    String phaseString = processingEnv.getOptions().get(COGENGEN_PHASE_KEY);
     try {
-      String phaseString = processingEnv.getOptions().get(COGENGEN_PHASE_KEY);
-      try {
-        if (phaseString == null || !IMPLS.equals(CodegenPhase.valueOf(phaseString))) {
-          util.note(
-              "Skipping VajramImplGenProcessor since codegen phase is %s"
-                  .formatted(String.valueOf(phaseString)));
-          return false;
-        }
-      } catch (IllegalArgumentException e) {
-        util.error(
-            ("VajramImplGenProcessor could not parse phase string '%s'. "
-                    + "Exactly one of %s must be passed as value to java compiler "
-                    + "via the annotation processor argument '-A%s='")
-                .formatted(
-                    String.valueOf(phaseString),
-                    Arrays.toString(CodegenPhase.values()),
-                    COGENGEN_PHASE_KEY),
-            null);
+      if (phaseString == null || !IMPLS.equals(CodegenPhase.valueOf(phaseString))) {
+        util.note(
+            "Skipping VajramImplGenProcessor since codegen phase is %s"
+                .formatted(String.valueOf(phaseString)));
+        return false;
       }
-      List<TypeElement> vajramDefinitions = util.getVajramClasses(roundEnv);
-      util.note(
-          "Vajram Defs received by VajramImplGenProcessor: %s"
+    } catch (IllegalArgumentException e) {
+      util.error(
+          ("VajramImplGenProcessor could not parse phase string '%s'. "
+                  + "Exactly one of %s must be passed as value to java compiler "
+                  + "via the annotation processor argument '-A%s='")
               .formatted(
-                  vajramDefinitions.stream()
-                      .map(Objects::toString)
-                      .collect(
-                          joining(lineSeparator(), '[' + lineSeparator(), lineSeparator() + ']'))));
-      for (TypeElement vajramClass : vajramDefinitions) {
-        VajramInfo vajramInfo = util.computeVajramInfo(vajramClass);
-        VajramCodeGenerator vajramCodeGenerator = util.createCodeGenerator(vajramInfo);
+                  String.valueOf(phaseString),
+                  Arrays.toString(CodegenPhase.values()),
+                  COGENGEN_PHASE_KEY),
+          null);
+    }
+    List<TypeElement> vajramDefinitions = util.getVajramClasses(roundEnv);
+    util.note(
+        "Vajram Defs received by VajramImplGenProcessor: %s"
+            .formatted(
+                vajramDefinitions.stream()
+                    .map(Objects::toString)
+                    .collect(
+                        joining(lineSeparator(), '[' + lineSeparator(), lineSeparator() + ']'))));
+    for (TypeElement vajramClass : vajramDefinitions) {
+      VajramInfo vajramInfo = util.computeVajramInfo(vajramClass);
+      VajramCodeGenerator vajramCodeGenerator = util.createCodeGenerator(vajramInfo);
 
-        String className =
-            vajramCodeGenerator.getPackageName()
-                + '.'
-                + getVajramImplClassName(vajramInfo.vajramId().vajramId());
-        try {
-          util.generateSourceFile(className, vajramCodeGenerator.codeGenVajramImpl(), vajramClass);
-        } catch (Exception e) {
-          util.note(
-              "Error while generating file for class %s. Ignoring the error as it should be skipped in subsequent runs. Exception: %s"
-                  .formatted(className, e));
-        }
+      String className =
+          vajramCodeGenerator.getPackageName()
+              + '.'
+              + getVajramImplClassName(vajramInfo.vajramId().vajramId());
+      try {
+        util.generateSourceFile(className, vajramCodeGenerator.codeGenVajramImpl(), vajramClass);
+      } catch (Exception e) {
+        util.note(
+            "Error while generating file for class %s. Ignoring the error as it should be skipped in subsequent runs. Exception: %s"
+                .formatted(className, e));
       }
-    } catch (Exception e) {
-      util.error("Encountered exception in " + this.getClass().getName(), null);
     }
     return true;
   }
