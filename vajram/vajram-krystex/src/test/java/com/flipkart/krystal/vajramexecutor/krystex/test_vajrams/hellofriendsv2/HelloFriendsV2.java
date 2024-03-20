@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2;
 
-import static com.flipkart.krystal.data.Errable.errable;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
@@ -11,6 +10,7 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofrie
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.userId_n;
 import static java.util.stream.Collectors.joining;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
@@ -75,8 +75,8 @@ public abstract class HelloFriendsV2 extends ComputeVajram<String> {
                 new Facets(
                     ImmutableMap.of(
                         FriendsServiceRequest.userId_n,
-                        errable(() -> facets.getInputValue(userId_n).getValueOrThrow()))));
-          }
+                        Errable.errableFrom(
+                            () -> facets.getInputValue(userId_n).getValueOrThrow()))));          }
         });
     return ImmutableList.copyOf(resolvers);
   }
