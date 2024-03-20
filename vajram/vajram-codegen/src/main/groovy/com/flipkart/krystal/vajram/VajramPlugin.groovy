@@ -63,7 +63,17 @@ class VajramPlugin implements Plugin<Project> {
 
         project.tasks.named('compileJava', JavaCompile).configure {
             dependsOn 'codeGenVajramModels'
-            options.compilerArgs += ['-A' + COGENGEN_PHASE_KEY + '=' + IMPLS]
+
+            options.compilerArgs += [
+
+                    // So that vajram impls are generated during compilation
+                    '-A' + COGENGEN_PHASE_KEY + '=' + IMPLS,
+
+                    // So that @Resolver method param names can be read at runtime
+                    // in case @Using annotation has not been used on the parameters
+                    // See VajramDefinition#parseInputResolvers
+                    '-parameters'
+            ]
         }
 
         project.tasks.register('testCodeGenVajramModels', JavaCompile) {

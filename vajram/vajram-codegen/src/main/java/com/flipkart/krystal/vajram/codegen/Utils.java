@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
+import static com.flipkart.krystal.vajram.codegen.Constants.BATCHABLE_INPUTS;
 import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_FACETS;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_CLASS_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.Constants.INPUTS_NEEDING_MODULATION;
 import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -15,6 +15,7 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
+import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.codegen.models.DependencyModel;
 import com.flipkart.krystal.vajram.codegen.models.DependencyModel.DependencyModelBuilder;
 import com.flipkart.krystal.vajram.codegen.models.InputModel;
@@ -22,7 +23,7 @@ import com.flipkart.krystal.vajram.codegen.models.InputModel.InputModelBuilder;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfoLite;
 import com.flipkart.krystal.vajram.facets.InputSource;
-import com.flipkart.krystal.vajram.modulation.Modulated;
+import com.flipkart.krystal.vajram.facets.Using;
 import com.google.common.primitives.Primitives;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
@@ -43,6 +44,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -170,9 +172,8 @@ public class Utils {
                               .asType()
                               .accept(new DeclaredTypeVisitor(this, true, inputField), null);
                       inputBuilder.type(dataType);
-                      inputBuilder.needsModulation(
-                          Optional.ofNullable(inputField.getAnnotation(Modulated.class))
-                              .isPresent());
+                      inputBuilder.isBatched(
+                          Optional.ofNullable(inputField.getAnnotation(Batch.class)).isPresent());
                       Optional<Input> inputAnno =
                           Optional.ofNullable(inputField.getAnnotation(Input.class));
                       Set<InputSource> sources = new LinkedHashSet<>();
@@ -398,8 +399,8 @@ public class Utils {
     return vajramName + COMMON_FACETS;
   }
 
-  public static String getInputModulationClassname(String vajramName) {
-    return vajramName + INPUTS_NEEDING_MODULATION;
+  public static String getBatchedInputsClassname(String vajramName) {
+    return vajramName + BATCHABLE_INPUTS;
   }
 
   public static TypeName getMethodReturnType(Method method) {
@@ -480,5 +481,23 @@ public class Utils {
     }
     return classBuilder.addAnnotation(
         AnnotationSpec.builder(Generated.class).addMember("by", "$S", generator.getName()).build());
+  }
+
+  /**
+   * Infer facet name provided through @Using annotation. If @Using annotation is not present, then
+   * infer facet name from the parameter name
+   *
+   * @param parameter the bind parameter in the resolver method
+   * @return facet name in the form of String
+   */
+  public String inferFacetName(VariableElement parameter) {
+    String usingInputName;
+    if (Objects.nonNull(parameter.getAnnotation(Using.class))) {
+      usingInputName = parameter.getAnnotation(Using.class).value();
+    } else {
+      usingInputName = parameter.getSimpleName().toString();
+    }
+
+    return usingInputName;
   }
 }

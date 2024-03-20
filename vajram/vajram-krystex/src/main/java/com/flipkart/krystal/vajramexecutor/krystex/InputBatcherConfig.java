@@ -8,9 +8,9 @@ import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.DecoratorContext;
 import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.batching.FacetsConverter;
+import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.flipkart.krystal.vajram.facets.FacetValuesAdaptor;
-import com.flipkart.krystal.vajram.modulation.FacetsConverter;
-import com.flipkart.krystal.vajram.modulation.InputModulator;
 import com.flipkart.krystal.vajram.tags.AnnotationTags;
 import com.flipkart.krystal.vajram.tags.VajramTags;
 import com.google.common.collect.ImmutableSet;
@@ -19,43 +19,43 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-public record InputModulatorConfig(
+public record InputBatcherConfig(
     Function<LogicExecutionContext, String> instanceIdGenerator,
     Predicate<LogicExecutionContext> shouldModulate,
-    Function<ModulatorContext, OutputLogicDecorator> decoratorFactory) {
+    Function<BatcherContext, OutputLogicDecorator> decoratorFactory) {
 
   /**
-   * Creates a default InputModulatorConfig which guarantees that every unique {@link
-   * DependantChain} of a vajram gets its own {@link InputModulationDecorator} and its own
-   * corresponding {@link InputModulator}. The instance id corresponding to a particular {@link
-   * DependantChain} is of the form:
+   * Creates a default InputBatcherConfig which guarantees that every unique {@link DependantChain}
+   * of a vajram gets its own {@link InputBatchingDecorator} and its own corresponding {@link
+   * InputBatcher}. The instance id corresponding to a particular {@link DependantChain} is of the
+   * form:
    *
    * <p>{@code [Start]>vajramId_1:dep_1>vajramId_2:dep_2>....>vajramId_n:dep_n}
    *
-   * @param inputModulatorSupplier Supplies the {@link InputModulator} corresponding to an {@link
-   *     InputModulationDecorator}. This supplier is guaranteed to be called exactly once for every
-   *     unique {@link InputModulationDecorator} instance.
+   * @param inputBatcherSupplier Supplies the {@link InputBatcher} corresponding to an {@link
+   *     InputBatchingDecorator}. This supplier is guaranteed to be called exactly once for every
+   *     unique {@link InputBatchingDecorator} instance.
    */
-  public static InputModulatorConfig simple(
-      Supplier<InputModulator<FacetValuesAdaptor, FacetValuesAdaptor>> inputModulatorSupplier) {
-    return new InputModulatorConfig(
+  public static InputBatcherConfig simple(
+      Supplier<InputBatcher<FacetValuesAdaptor, FacetValuesAdaptor>> inputBatcherSupplier) {
+    return new InputBatcherConfig(
         logicExecutionContext ->
             generateInstanceId(
                     logicExecutionContext.dependants(),
                     logicExecutionContext.kryonDefinitionRegistry())
                 .toString(),
         _x -> true,
-        modulatorContext -> {
+        batcherContext -> {
           @SuppressWarnings("unchecked")
           var inputsConvertor =
               (FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>)
-                  modulatorContext.vajram().getInputsConvertor();
-          return new InputModulationDecorator<>(
-              modulatorContext.decoratorContext().instanceId(),
-              inputModulatorSupplier.get(),
+                  batcherContext.vajram().getInputsConvertor();
+          return new InputBatchingDecorator<>(
+              batcherContext.decoratorContext().instanceId(),
+              inputBatcherSupplier.get(),
               inputsConvertor,
               dependantChain ->
-                  modulatorContext
+                  batcherContext
                       .decoratorContext()
                       .logicExecutionContext()
                       .dependants()
@@ -63,28 +63,27 @@ public record InputModulatorConfig(
         });
   }
 
-  public static InputModulatorConfig sharedModulator(
-      Supplier<InputModulator<FacetValuesAdaptor, FacetValuesAdaptor>> inputModulatorSupplier,
+  public static InputBatcherConfig sharedBatcher(
+      Supplier<InputBatcher<FacetValuesAdaptor, FacetValuesAdaptor>> inputBatcherSupplier,
       String instanceId,
       DependantChain... dependantChains) {
-    return sharedModulator(
-        inputModulatorSupplier, instanceId, ImmutableSet.copyOf(dependantChains));
+    return sharedBatcher(inputBatcherSupplier, instanceId, ImmutableSet.copyOf(dependantChains));
   }
 
-  public static InputModulatorConfig sharedModulator(
-      Supplier<InputModulator<FacetValuesAdaptor, FacetValuesAdaptor>> inputModulatorSupplier,
+  public static InputBatcherConfig sharedBatcher(
+      Supplier<InputBatcher<FacetValuesAdaptor, FacetValuesAdaptor>> inputBatcherSupplier,
       String instanceId,
       ImmutableSet<DependantChain> dependantChains) {
-    return new InputModulatorConfig(
+    return new InputBatcherConfig(
         logicExecutionContext -> instanceId,
         logicExecutionContext -> dependantChains.contains(logicExecutionContext.dependants()),
-        modulatorContext -> {
+        batcherContext -> {
           @SuppressWarnings("unchecked")
           var inputsConvertor =
               (FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>)
-                  modulatorContext.vajram().getInputsConvertor();
-          return new InputModulationDecorator<>(
-              instanceId, inputModulatorSupplier.get(), inputsConvertor, dependantChains::contains);
+                  batcherContext.vajram().getInputsConvertor();
+          return new InputBatchingDecorator<>(
+              instanceId, inputBatcherSupplier.get(), inputsConvertor, dependantChains::contains);
         });
   }
 
@@ -125,5 +124,5 @@ public record InputModulatorConfig(
     throw new UnsupportedOperationException();
   }
 
-  public record ModulatorContext(Vajram<?> vajram, DecoratorContext decoratorContext) {}
+  public record BatcherContext(Vajram<?> vajram, DecoratorContext decoratorContext) {}
 }

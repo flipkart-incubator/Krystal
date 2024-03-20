@@ -14,7 +14,7 @@ public record InputDef<T>(
     boolean isMandatory,
     T defaultValue,
     String documentation,
-    boolean needsModulation,
+    boolean isBatched,
     ImmutableSet<InputSource> sources,
     ImmutableMap<Object, Tag> tags)
     implements VajramFacetDefinition {

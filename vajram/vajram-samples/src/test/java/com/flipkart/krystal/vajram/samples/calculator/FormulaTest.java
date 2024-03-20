@@ -20,12 +20,12 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
-import com.flipkart.krystal.vajram.modulation.Batcher;
+import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
 import com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest;
 import com.flipkart.krystal.vajram.samples.calculator.divider.DividerRequest;
-import com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig;
+import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
@@ -53,9 +53,9 @@ class FormulaTest {
   void formula_success() {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
-    graph.registerInputModulators(
+    graph.registerInputBatchers(
         vajramID(getVajramIdString(Adder.class)),
-        InputModulatorConfig.simple(() -> new Batcher<>(100)));
+        InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
     try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
         graph.createExecutor(new FormulaRequestContext(100, 20, 5, REQUEST_ID))) {
       future = executeVajram(krystexVajramExecutor, 0);
@@ -136,9 +136,9 @@ class FormulaTest {
     int innerLoopCount = 1000;
     int loopCount = outerLoopCount * innerLoopCount;
     VajramKryonGraph graph = this.graph.maxParallelismPerCore(1).build();
-    graph.registerInputModulators(
+    graph.registerInputBatchers(
         vajramID(getVajramIdString(Adder.class)),
-        InputModulatorConfig.simple(() -> new Batcher<>(innerLoopCount)));
+        InputBatcherConfig.simple(() -> new InputBatcherImpl<>(innerLoopCount)));
     long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
     long javaFuturesTimeNs = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
     //noinspection unchecked
@@ -252,9 +252,9 @@ class FormulaTest {
   void formula_success_withAllMockedDependencies() throws Exception {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
-    graph.registerInputModulators(
+    graph.registerInputBatchers(
         vajramID(getVajramIdString(Adder.class)),
-        InputModulatorConfig.simple(() -> new Batcher<>(100)));
+        InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
     KryonExecutorConfigBuilder kryonExecutorConfigBuilder =
         KryonExecutorConfig.builder()
             .kryonExecStrategy(KryonExecStrategy.BATCH)
@@ -280,9 +280,9 @@ class FormulaTest {
   void formula_success_with_mockedDependencyAdder() throws Exception {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
-    graph.registerInputModulators(
+    graph.registerInputBatchers(
         vajramID(getVajramIdString(Adder.class)),
-        InputModulatorConfig.simple(() -> new Batcher<>(100)));
+        InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
     KryonExecutorConfigBuilder kryonExecutorConfigBuilder =
         KryonExecutorConfig.builder()
             .kryonExecStrategy(KryonExecStrategy.BATCH)
@@ -305,9 +305,9 @@ class FormulaTest {
   void formula_success_with_mockedDependencyDivider() throws Exception {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
-    graph.registerInputModulators(
+    graph.registerInputBatchers(
         vajramID(getVajramIdString(Adder.class)),
-        InputModulatorConfig.simple(() -> new Batcher<>(100)));
+        InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
     KryonExecutorConfigBuilder kryonExecutorConfigBuilder =
         KryonExecutorConfig.builder()
             .kryonExecStrategy(KryonExecStrategy.BATCH)
@@ -330,9 +330,9 @@ class FormulaTest {
   void formula_failure() throws Exception {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
-    graph.registerInputModulators(
+    graph.registerInputBatchers(
         vajramID(getVajramIdString(Adder.class)),
-        InputModulatorConfig.simple(() -> new Batcher<>(100)));
+        InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
     KryonExecutorConfigBuilder kryonExecutorConfigBuilder =
         KryonExecutorConfig.builder()
             .kryonExecStrategy(KryonExecStrategy.BATCH)

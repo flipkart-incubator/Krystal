@@ -45,9 +45,9 @@ On the other hand let us say you have a piece of business logic which does not m
       3. Optionality guidelines: 
          1. When writing a new vajram, prefer marking inputs as mandatory. An input should be optional iff there is a good, sensible default which is generic enough that it is valid in most scenarios.
          2. When adding new inputs to an existing vajram which has clients, only Optional inputs should be added. The defaults for the new inputs should handle existings clients' traffic in a backward compatible way.
-   6. Decide the **Input Modulation** strategy: Input modulation is the process of merging/batching multiple executions of a vajram with different inputs into a single vajram call. This is generally useful as a performance optimization - to do less work than would otherwise be needed, or to opimize IO calls by minimizing chattiness. You can read more on this [here](README.md#input-modulation).
-      1. Inputs which need modulation should be marked via the needsModulation <!---TODO: Add link to needsModulation annotation field--> parameter
-      2. Modulation is not part of the contract with clients so this can be added/changed as needed without breaking clients.
+   6. Decide the **Input Batching** strategy: Input batching is the process of merging/batching multiple executions of a vajram with different inputs into a single vajram call. This is generally useful as a performance optimization - to do less work than would otherwise be needed, or to opimize IO calls by minimizing chattiness. You can read more on this [here](README.md#input-batching).
+      1. Inputs which need batching should be marked via the [@Batch](src/main/java/com/flipkart/krystal/vajram/batching/Batch.java) annotation
+      2. Batching is not part of the contract with clients so this can be added/changed as needed without breaking clients.
 5. After adding all inputs to the vajram class, build the project to trigger model generation.
    1. This can be done by performing `./gradlew build` or `./gradlew codeGenVajramModels`.
    2. At this point the vajram code generator plugin with run annotation processors on all classes with the `@VajramDef` annotation to generate data classes.
