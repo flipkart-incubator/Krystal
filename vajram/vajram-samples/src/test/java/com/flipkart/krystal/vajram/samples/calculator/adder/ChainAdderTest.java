@@ -29,9 +29,9 @@ import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonEx
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
-import com.flipkart.krystal.vajram.modulation.Batcher;
+import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.samples.calculator.Formula;
-import com.flipkart.krystal.vajramexecutor.krystex.InputModulatorConfig;
+import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
@@ -68,10 +68,10 @@ class ChainAdderTest {
     CompletableFuture<Integer> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
     MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(kryonExecutionReport);
-    graph.registerInputModulators(
+    graph.registerInputBatchers(
         vajramID(getVajramIdString(Adder.class)),
-        InputModulatorConfig.sharedModulator(
-            () -> new Batcher<>(100), "adderBatcher", getBatchedDepChains()));
+        InputBatcherConfig.sharedBatcher(
+            () -> new InputBatcherImpl<>(100), "adderBatcher", getBatchedDepChains()));
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
         graph.createExecutor(
             new RequestContext("chainAdderTest"),
@@ -122,10 +122,10 @@ class ChainAdderTest {
     long startTime = System.nanoTime();
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
-    graph.registerInputModulators(
+    graph.registerInputBatchers(
         vajramID(getVajramIdString(Adder.class)),
-        InputModulatorConfig.sharedModulator(
-            () -> new Batcher<>(100), "adderBatcher", getBatchedDepChains()));
+        InputBatcherConfig.sharedBatcher(
+            () -> new InputBatcherImpl<>(100), "adderBatcher", getBatchedDepChains()));
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
@@ -191,10 +191,10 @@ class ChainAdderTest {
     long startTime = System.nanoTime();
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
-    graph.registerInputModulators(
+    graph.registerInputBatchers(
         vajramID(getVajramIdString(Adder.class)),
-        InputModulatorConfig.sharedModulator(
-            () -> new Batcher<>(100), "adderBatcher", getBatchedDepChains()));
+        InputBatcherConfig.sharedBatcher(
+            () -> new InputBatcherImpl<>(100), "adderBatcher", getBatchedDepChains()));
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =

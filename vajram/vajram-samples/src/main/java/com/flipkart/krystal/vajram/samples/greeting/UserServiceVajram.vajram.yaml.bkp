@@ -1,8 +1,0 @@
-output:
-  dataType: custom_java
-  customDataType: com.flipkart.krystal.vajram.samples.greeting.UserInfo
-inputs:
-  - name: user_id
-    dataType: string
-    mandatory: true
-    needsModulation: true

@@ -43,9 +43,9 @@ public final class MyUsefulService implements LatticeServiceApplication<MyUseful
             // and internal `ComputeVajram`s or `IOVajram`s which are direct/indirect dependencies of the above `RemoteVajram`s.
             .loadFromClasspath("com.flipkart.myusefulvajrams", "com.flipkart.myotherusefulvajrams").build();
     // `putUsefulInfo` is an IO vajram with maxBatchSize 20
-    graph.registerInputModulators(vajramID("putUsefulInfo", InputModulatorConfig.simple(() -> new Batcher<>(20))));
+    graph.registerInputBatchers(vajramID("putUsefulInfo", InputBatcherConfig.simple(() -> new Batcher<>(20))));
     // `getUsefulInfo` is an IO vajram with maxBatchSize 100
-    graph.registerInputModulators(vajramID("getUsefulInfo", InputModulatorConfig.shared(() -> new Batcher<>(100)))); 
+    graph.registerInputBatchers(vajramID("getUsefulInfo", InputBatcherConfig.shared(() -> new Batcher<>(100)))); 
     return graph;
   } 
 }
