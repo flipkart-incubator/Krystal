@@ -58,7 +58,6 @@ public record ParsedVajramData(
     Map<String, Map<String, Boolean>> lookUpMap = new HashMap<>();
     for (ExecutableElement method : methods) {
       String depName = method.getAnnotation(Resolve.class).depName();
-      lookUpMap.computeIfAbsent(depName, k -> new HashMap<>());
       String[] depInputs = method.getAnnotation(Resolve.class).depInputs();
       for (String depinput : depInputs) {
         if (lookUpMap.getOrDefault(depName, Map.of()).getOrDefault(depinput, false)) {
@@ -68,7 +67,7 @@ public record ParsedVajramData(
           util.error(errorMessage, method);
           throw new VajramValidationException(errorMessage);
         }
-        lookUpMap.getOrDefault(depName, Map.of()).put(depinput, true);
+        lookUpMap.computeIfAbsent(depName, k -> new HashMap<>()).put(depinput, true);
       }
     }
   }
