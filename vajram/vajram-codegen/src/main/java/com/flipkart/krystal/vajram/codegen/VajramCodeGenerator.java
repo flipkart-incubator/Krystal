@@ -778,7 +778,7 @@ public class VajramCodeGenerator {
       CodeBlock.Builder ifBlockBuilder,
       Map<String, Boolean> depFanoutMap,
       VariableElement parameter) {
-    FacetGenModel vajramInputDef = facetModels.get(usingInputName);
+    FacetGenModel facetDef = facetModels.get(usingInputName);
     Resolve resolve =
         checkNotNull(method.getAnnotation(Resolve.class), "Resolver method cannot be null");
     String resolvedDep = resolve.depName();
@@ -794,7 +794,7 @@ public class VajramCodeGenerator {
       throw new VajramValidationException(message);
     }
     //    ReturnType returnType
-    if (vajramInputDef instanceof DependencyModel dependencyModel) {
+    if (facetDef instanceof DependencyModel dependencyModel) {
       String variableName = toJavaName(usingInputName);
       final VajramInfoLite vajramInfoLite =
           checkNotNull(
@@ -835,12 +835,13 @@ public class VajramCodeGenerator {
                  .iterator()
                  .next()
                  .getValue()""";
-        if (unboxedDepType.equals(TypeName.get(parameter.asType()))) {
-          // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
-          // requested the value directly. So we extract the only value from dependencyDef response
-          // and
-          // provide it.
-          if (vajramInputDef.isMandatory()) {
+        if (facetDef.isMandatory()) {
+          if (unboxedDepType.equals(TypeName.get(parameter.asType()))) {
+            // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
+            // requested the value directly. So we extract the only value from dependencyDef
+            // response
+            // and
+            // provide it.
             String code =
                 depValueAccessorCode
                     + """
@@ -863,33 +864,36 @@ public class VajramCodeGenerator {
             util.error(message, parameter);
             throw new VajramValidationException(message);
           }
-        } else if (util.isRawAssignable(parameter.asType(), Errable.class)) {
-          // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
-          // requested the 'Errable'. So we extract the only Errable from dependencyDef
-          // response and provide it.
-          ifBlockBuilder.addStatement(
-              depValueAccessorCode,
-              ParameterizedTypeName.get(ClassName.get(Errable.class), boxedDepType),
-              variableName,
-              boxedDepType,
-              usingInputName);
-        } else if (util.isRawAssignable(parameter.asType(), Optional.class)) {
-          // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
-          // requested an 'Optional'. So we retrieve the only Errable from the dependencyDef
-          // response, extract the optional and provide it.
-          String code = depValueAccessorCode + ".value()";
-          ifBlockBuilder.addStatement(
-              code,
-              ParameterizedTypeName.get(ClassName.get(Optional.class), boxedDepType),
-              variableName,
-              boxedDepType,
-              usingInputName);
         } else {
-          String message =
-              "Unrecognized parameter type %s in resolver %s of vajram %s"
-                  .formatted(parameter.asType(), resolverName, this.vajramName);
-          util.error(message, parameter);
-          throw new VajramValidationException(message);
+          // dependency is optional then accept only errable and optional in resolver
+          if (util.isRawAssignable(parameter.asType(), Errable.class)) {
+            // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
+            // requested the 'Errable'. So we extract the only Errable from dependencyDef
+            // response and provide it.
+            ifBlockBuilder.addStatement(
+                depValueAccessorCode,
+                ParameterizedTypeName.get(ClassName.get(Errable.class), boxedDepType),
+                variableName,
+                boxedDepType,
+                usingInputName);
+          } else if (util.isRawAssignable(parameter.asType(), Optional.class)) {
+            // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
+            // requested an 'Optional'. So we retrieve the only Errable from the dependencyDef
+            // response, extract the optional and provide it.
+            String code = depValueAccessorCode + ".value()";
+            ifBlockBuilder.addStatement(
+                code,
+                ParameterizedTypeName.get(ClassName.get(Optional.class), boxedDepType),
+                variableName,
+                boxedDepType,
+                usingInputName);
+          } else {
+            String message =
+                "Unrecognized parameter type %s in resolver %s of vajram %s"
+                    .formatted(parameter.asType(), resolverName, this.vajramName);
+            util.error(message, parameter);
+            throw new VajramValidationException(message);
+          }
         }
       }
     }

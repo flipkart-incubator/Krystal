@@ -6,7 +6,9 @@ import com.flipkart.krystal.vajram.codegen.Utils;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 import javax.lang.model.element.Element;
@@ -51,10 +53,30 @@ public record ParsedVajramData(
             vajramInfo.responseType()));
   }
 
+  public static void validateNoDuplicateResolvers(List<ExecutableElement> methods, Utils util) {
+    // add comments
+    Map<String, Map<String, Boolean>> lookUpMap = new HashMap<>();
+    for (ExecutableElement method : methods) {
+      String depName = method.getAnnotation(Resolve.class).depName();
+      String[] depInputs = method.getAnnotation(Resolve.class).depInputs();
+      for (String depinput : depInputs) {
+        if (lookUpMap.getOrDefault(depName, Map.of()).getOrDefault(depinput, false)) {
+          String errorMessage =
+              "Two Resolver resolving same input (%s) for dependency name (%s)"
+                  .formatted(depinput, depName);
+          util.error(errorMessage, method);
+          throw new VajramValidationException(errorMessage);
+        }
+        lookUpMap.computeIfAbsent(depName, k -> new HashMap<>()).put(depinput, true);
+      }
+    }
+  }
+
   public static ExecutableElement getOutputLogicAndResolverMethods(
       TypeElement vajramClass, List<ExecutableElement> resolveMethods, Utils util) {
     ExecutableElement outputLogic = null;
-    for (ExecutableElement method : getStaticMethods(vajramClass)) {
+    List<ExecutableElement> methods = getStaticMethods(vajramClass);
+    for (ExecutableElement method : methods) {
       if (isResolver(method)) {
         resolveMethods.add(method);
       } else if (isOutputLogic(method)) {
@@ -73,6 +95,7 @@ public record ParsedVajramData(
         }
       }
     }
+    validateNoDuplicateResolvers(resolveMethods, util);
     if (outputLogic == null) {
       String errorMessage = "Missing output logic method";
       util.error(errorMessage, vajramClass);
