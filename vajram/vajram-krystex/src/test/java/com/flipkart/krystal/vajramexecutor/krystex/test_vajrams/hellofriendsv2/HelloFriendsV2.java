@@ -76,7 +76,8 @@ public abstract class HelloFriendsV2 extends ComputeVajram<String> {
                     ImmutableMap.of(
                         FriendsServiceRequest.userId_n,
                         Errable.errableFrom(
-                            () -> facets.getInputValue(userId_n).getValueOrThrow()))));          }
+                            () -> facets.getInputValue(userId_n).getValueOrThrow()))));
+          }
         });
     return ImmutableList.copyOf(resolvers);
   }
