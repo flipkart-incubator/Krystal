@@ -253,6 +253,41 @@ class KrystexVajramExecutorTest {
 
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
+  void executeWithFacets_success(
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
+    graph =
+        loadFromClasspath(
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2")
+            .build();
+    graph.registerInputBatchers(
+        ofVajram(TestUserService.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl<>(2)));
+    CompletableFuture<String> helloString;
+    requestContext.requestId("sequentialDependency");
+    try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
+        graph.createExecutor(
+            requestContext,
+            KryonExecutorConfig.builder()
+                .kryonExecStrategy(kryonExecStrategy)
+                .graphTraversalStrategy(graphTraversalStrategy)
+                .build())) {
+      helloString =
+          krystexVajramExecutor.executeWithFacets(
+              ofVajram(HelloFriendsV2.class),
+              testRequestContext -> helloFriendsV2Request(testRequestContext).toFacetValues(),
+              KryonExecutionConfig.builder().executionId("execution").build());
+    }
+    assertThat(helloString)
+        .succeedsWithin(TIMEOUT)
+        .isEqualTo(
+            ("Hello Friends! Firstname Lastname (user_id_1:friend1), Firstname Lastname (user_id_1:friend2)"));
+    assertEquals(1, TestUserService.CALL_COUNTER.sum());
+  }
+
+  @ParameterizedTest
+  @MethodSource("executorConfigsToTest")
   void executeCompute_missingMandatoryInput_throwsException(
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     graph =

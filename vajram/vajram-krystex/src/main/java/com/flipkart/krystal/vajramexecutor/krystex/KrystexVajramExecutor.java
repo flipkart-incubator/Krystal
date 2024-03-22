@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
@@ -9,6 +10,7 @@ import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.exec.VajramExecutor;
+import com.flipkart.krystal.vajram.facets.FacetValuesAdaptor;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
@@ -38,20 +40,26 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
 
   @Override
   public <T> CompletableFuture<@Nullable T> execute(
-      VajramID vajramId, Function<C, VajramRequest> vajramRequestBuilder) {
+      VajramID vajramId, Function<C, VajramRequest<T>> vajramRequestCreator) {
     return execute(
         vajramId,
-        vajramRequestBuilder,
+        vajramRequestCreator,
         KryonExecutionConfig.builder().executionId("defaultExecution").build());
   }
 
   public <T> CompletableFuture<@Nullable T> execute(
       VajramID vajramId,
-      Function<C, VajramRequest> vajramRequestBuilder,
+      Function<C, VajramRequest<T>> vajramRequestCreator,
       KryonExecutionConfig executionConfig) {
+    return executeWithFacets(
+        vajramId, vajramRequestCreator.andThen(FacetValuesAdaptor::toFacetValues), executionConfig);
+  }
+
+  public <T> CompletableFuture<@Nullable T> executeWithFacets(
+      VajramID vajramId, Function<C, Facets> facetsCreator, KryonExecutionConfig executionConfig) {
     return krystalExecutor.executeKryon(
         vajramKryonGraph.getKryonId(vajramId),
-        vajramRequestBuilder.apply(applicationRequestContext).toFacetValues(),
+        facetsCreator.apply(applicationRequestContext),
         executionConfig);
   }
 
