@@ -149,10 +149,9 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
 
   private void executeOutputLogicIfPossible(
       RequestId requestId, CompletableFuture<GranuleResponse> resultForRequest) {
-    // If all the inputs and dependency values are available, then prepare to run outputLogic
-    OutputLogicDefinition<Object> outputLogicDefinition =
-        kryonDefinition.getOutputLogicDefinition();
-    ImmutableSet<String> inputNames = outputLogicDefinition.inputNames();
+    // If all the inputs and dependency values needed by the output logic are available, then
+    // prepare to run outputLogic
+    ImmutableSet<String> inputNames = kryonDefinition.getOutputLogicDefinition().inputNames();
     Set<String> collect =
         new LinkedHashSet<>(
             inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
@@ -170,7 +169,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
     // Since this kryon is skipped, we need to get all the pending resolvers (irrespective of
     // whether their inputs are available or not) and mark them resolved.
     Set<ResolverDefinition> pendingResolvers =
-        resolverDefinitionsByInput.values().stream()
+        kryonDefinition.resolverDefinitionsByInput().values().stream()
             .flatMap(Collection::stream)
             .filter(
                 resolverDefinition ->
@@ -226,14 +225,11 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
   }
 
   private void execute(RequestId requestId, ImmutableSet<String> newInputNames) {
-    OutputLogicDefinition<Object> outputLogicDefinition =
-        kryonDefinition.getOutputLogicDefinition();
-
     Map<String, FacetValue<Object>> allInputs =
         inputsValueCollector.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
     Map<String, Results<Object>> allDependencies =
         dependencyValuesCollector.computeIfAbsent(requestId, k -> new LinkedHashMap<>());
-    ImmutableSet<String> allInputNames = outputLogicDefinition.inputNames();
+    ImmutableSet<String> allInputNames = kryonDefinition.facetNames();
     Set<String> availableInputs = Sets.union(allInputs.keySet(), allDependencies.keySet());
     if (availableInputs.isEmpty()) {
       if (!allInputNames.isEmpty()
@@ -262,7 +258,8 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
 
     Set<ResolverDefinition> pendingResolvers;
     Set<ResolverDefinition> pendingUnboundResolvers =
-        resolverDefinitionsByInput
+        kryonDefinition
+            .resolverDefinitionsByInput()
             .getOrDefault(Optional.<String>empty(), ImmutableSet.of())
             .stream()
             .filter(
@@ -273,7 +270,8 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
         newInputNames.stream()
             .flatMap(
                 input ->
-                    resolverDefinitionsByInput
+                    kryonDefinition
+                        .resolverDefinitionsByInput()
                         .getOrDefault(Optional.ofNullable(input), ImmutableSet.of())
                         .stream()
                         .filter(
@@ -461,7 +459,9 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
       }
     }
     ImmutableSet<ResolverDefinition> resolverDefinitionsForDependency =
-        this.resolverDefinitionsByDependencies.getOrDefault(dependencyName, ImmutableSet.of());
+        kryonDefinition
+            .resolverDefinitionsByDependencies()
+            .getOrDefault(dependencyName, ImmutableSet.of());
     if (resolverDefinitionsForDependency.equals(dependencyKryonExecutions.executedResolvers())) {
       allOf(
               dependencyKryonExecutions
@@ -522,7 +522,9 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
         requestsByDependantChain.getOrDefault(dependantChain, ImmutableSet.of());
     KryonId depKryonId = getDepKryonId(dependencyName);
     ImmutableSet<ResolverDefinition> resolverDefinitionsForDependency =
-        this.resolverDefinitionsByDependencies.getOrDefault(dependencyName, ImmutableSet.of());
+        kryonDefinition
+            .resolverDefinitionsByDependencies()
+            .getOrDefault(dependencyName, ImmutableSet.of());
     if (!requestsForDependantChain.isEmpty()
         && requestsForDependantChain.stream()
             .allMatch(

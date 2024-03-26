@@ -2,18 +2,14 @@ package com.flipkart.krystal.krystex.kryon;
 
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
-import com.flipkart.krystal.krystex.kryon.KryonDefinition.KryonDefinitionView;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
-import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Optional;
 import java.util.TreeSet;
 import java.util.function.Function;
 
@@ -30,11 +26,6 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
 
   protected final LogicDecorationOrdering logicDecorationOrdering;
 
-  protected final ImmutableMap<Optional<String>, ImmutableSet<ResolverDefinition>>
-      resolverDefinitionsByInput;
-  protected final ImmutableMap<String, ImmutableSet<ResolverDefinition>>
-      resolverDefinitionsByDependencies;
-  protected final ImmutableSet<String> dependenciesWithNoResolvers;
   protected final RequestIdGenerator requestIdGenerator;
 
   AbstractKryon(
@@ -49,11 +40,6 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
     this.kryonExecutor = kryonExecutor;
     this.requestScopedDecoratorsSupplier = requestScopedDecoratorsSupplier;
     this.logicDecorationOrdering = logicDecorationOrdering;
-    KryonDefinitionView kryonDefinitionView = definition.kryonDefinitionView();
-    this.resolverDefinitionsByInput = kryonDefinitionView.resolverDefinitionsByInput();
-    this.resolverDefinitionsByDependencies =
-        kryonDefinitionView.resolverDefinitionsByDependencies();
-    this.dependenciesWithNoResolvers = kryonDefinitionView.dependenciesWithNoResolvers();
     this.requestIdGenerator = requestIdGenerator;
   }
 

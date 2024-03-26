@@ -269,11 +269,19 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
         createKryonDefinitionsForDependencies(vajramDefinition);
 
     OutputLogicDefinition<?> outputLogicDefinition =
-        createVajramKryonLogic(kryonId, vajramDefinition);
+        createKryonOutputLogic(kryonId, vajramDefinition);
+
+    ImmutableSet<String> inputNames =
+        vajramDefinition.getVajram().getFacetDefinitions().stream()
+            .filter(this::isVisibleToKrystex)
+            .filter(vajramFacetDefinition -> vajramFacetDefinition instanceof InputDef<?>)
+            .map(VajramFacetDefinition::name)
+            .collect(toImmutableSet());
 
     KryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newKryonDefinition(
             kryonId.value(),
+            inputNames,
             outputLogicDefinition.kryonLogicId(),
             depNameToProviderKryon,
             inputResolverCreationResult.resolverDefinitions(),
@@ -513,7 +521,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     throw new MandatoryFacetsMissingException(vajramID, missingMandatoryValues);
   }
 
-  private OutputLogicDefinition<?> createVajramKryonLogic(
+  private OutputLogicDefinition<?> createKryonOutputLogic(
       KryonId kryonId, VajramDefinition vajramDefinition) {
     VajramID vajramId = vajramDefinition.getVajram().getId();
     ImmutableCollection<VajramFacetDefinition> facetDefinitions =

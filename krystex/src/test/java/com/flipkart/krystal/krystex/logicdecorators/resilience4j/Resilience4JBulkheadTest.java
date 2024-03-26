@@ -60,7 +60,7 @@ class Resilience4JBulkheadTest {
   void bulkhead_restrictsConcurrency() {
     CountDownLatch countDownLatch = new CountDownLatch(1);
     ExecutorService executorService = Executors.newSingleThreadExecutor();
-    OutputLogicDefinition<String> outputLogicId =
+    OutputLogicDefinition<String> outputLogicDef =
         newAsyncLogic(
             "bulkhead_restrictsConcurrency",
             Set.of("input"),
@@ -92,7 +92,7 @@ class Resilience4JBulkheadTest {
             };
           }
         });
-    outputLogicId.registerRequestScopedDecorator(
+    outputLogicDef.registerRequestScopedDecorator(
         List.of(
             new OutputLogicDecoratorConfig(
                 Resilience4JBulkhead.DECORATOR_TYPE,
@@ -100,7 +100,8 @@ class Resilience4JBulkheadTest {
                 logicExecutionContext -> "",
                 decoratorContext -> resilience4JBulkhead)));
     KryonDefinition kryonDefinition =
-        kryonDefinitionRegistry.newKryonDefinition("kryon", outputLogicId.kryonLogicId());
+        kryonDefinitionRegistry.newKryonDefinition(
+            "kryon", Set.of("input"), outputLogicDef.kryonLogicId());
 
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         kryonExecutor.executeKryon(
@@ -172,7 +173,8 @@ class Resilience4JBulkheadTest {
                 logicExecutionContext -> "",
                 decoratorContext -> resilience4JBulkhead)));
     KryonDefinition kryonDefinition =
-        kryonDefinitionRegistry.newKryonDefinition("kryon", outputLogic.kryonLogicId());
+        kryonDefinitionRegistry.newKryonDefinition(
+            "kryon", Set.of("input"), outputLogic.kryonLogicId());
 
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         kryonExecutor.executeKryon(
