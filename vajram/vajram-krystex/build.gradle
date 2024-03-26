@@ -1,6 +1,3 @@
-import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY
-import static com.flipkart.krystal.vajram.codegen.models.CodegenPhase.IMPLS
-
 plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
 }

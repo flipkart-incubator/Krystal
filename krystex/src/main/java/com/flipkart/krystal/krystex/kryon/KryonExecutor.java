@@ -1,11 +1,11 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import static com.flipkart.krystal.krystex.kryon.FacetType.INPUT;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.utils.Futures.linkFutures;
 import static com.flipkart.krystal.utils.Futures.propagateCancellation;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.union;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -377,9 +377,7 @@ public final class KryonExecutor implements KrystalExecutor {
         this.<GranuleResponse>executeCommand(
                 new ForwardGranule(
                     kryonId,
-                    kryonDefinition.getOutputLogicDefinition().inputNames().stream()
-                        .filter(s -> !kryonDefinition.dependencyKryons().containsKey(s))
-                        .collect(toImmutableSet()),
+                    kryonDefinition.facetsByType(INPUT),
                     kryonExecution.facets(),
                     kryonDefinitionRegistry.getDependantChainsStart(),
                     requestId))
@@ -400,9 +398,7 @@ public final class KryonExecutor implements KrystalExecutor {
                   this.executeCommand(
                       new ForwardBatch(
                           kryonId,
-                          kryonDefinition.getOutputLogicDefinition().inputNames().stream()
-                              .filter(s -> !kryonDefinition.dependencyKryons().containsKey(s))
-                              .collect(toImmutableSet()),
+                          kryonDefinition.facetsByType(INPUT),
                           kryonResults.stream()
                               .collect(
                                   toImmutableMap(
