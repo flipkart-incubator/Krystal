@@ -136,15 +136,22 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     return Stream.concat(
             Stream.concat(
                     Stream.of(Optional.<String>empty()), newInputNames.stream().map(Optional::of))
-                .map(key -> resolverDefinitionsByInput.getOrDefault(key, ImmutableSet.of()))
+                .map(
+                    key ->
+                        kryonDefinition
+                            .resolverDefinitionsByInput()
+                            .getOrDefault(key, ImmutableSet.of()))
                 .flatMap(Collection::stream)
                 .map(ResolverDefinition::dependencyName),
-            dependenciesWithNoResolvers.stream())
+            kryonDefinition.dependenciesWithNoResolvers().stream())
         .distinct()
         .filter(depName -> !executedDeps.contains(depName))
         .filter(
             depName ->
-                resolverDefinitionsByDependencies.getOrDefault(depName, ImmutableSet.of()).stream()
+                kryonDefinition
+                    .resolverDefinitionsByDependencies()
+                    .getOrDefault(depName, ImmutableSet.of())
+                    .stream()
                     .map(ResolverDefinition::boundFrom)
                     .flatMap(Collection::stream)
                     .allMatch(availableInputs::contains))
@@ -152,7 +159,9 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
             toMap(
                 identity(),
                 depName ->
-                    resolverDefinitionsByDependencies.getOrDefault(depName, ImmutableSet.of())));
+                    kryonDefinition
+                        .resolverDefinitionsByDependencies()
+                        .getOrDefault(depName, ImmutableSet.of())));
   }
 
   private void triggerDependencies(
@@ -344,7 +353,8 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
   private Optional<CompletableFuture<BatchResponse>> executeOutputLogicIfPossible(
       DependantChain dependantChain) {
     ForwardBatch forwardCommand = getForwardCommand(dependantChain);
-    // If all the inputs and dependency values are available, then prepare to run outputLogic
+    // If all the inputs and dependency values needed by the output logic are available, then
+    // prepare to run outputLogic
     ImmutableSet<String> inputNames = kryonDefinition.getOutputLogicDefinition().inputNames();
     if (availableInputsByDepChain
         .getOrDefault(dependantChain, ImmutableSet.of())
@@ -529,9 +539,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
               .formatted(inputNames, kryonId, forwardBatch.dependantChain()));
     }
     SetView<String> resolvableInputNames =
-        Sets.difference(
-            kryonDefinition.getOutputLogicDefinition().inputNames(),
-            kryonDefinition.dependencyKryons().keySet());
+        Sets.difference(kryonDefinition.facetNames(), kryonDefinition.dependencyKryons().keySet());
     if (!inputNames.containsAll(resolvableInputNames)) {
       throw new IllegalArgumentException(
           "Did not receive inputs " + Sets.difference(resolvableInputNames, inputNames));
