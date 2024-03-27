@@ -49,8 +49,6 @@ import static com.flipkart.krystal.vajram.codegen.Utils.getFacetUtilClassName;
 import static com.flipkart.krystal.vajram.codegen.Utils.getTypeParameters;
 import static com.flipkart.krystal.vajram.codegen.Utils.getVajramImplClassName;
 import static com.flipkart.krystal.vajram.codegen.models.ParsedVajramData.fromVajram;
-import static com.google.common.base.CaseFormat.LOWER_CAMEL;
-import static com.google.common.base.CaseFormat.LOWER_UNDERSCORE;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -63,7 +61,6 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
@@ -97,7 +94,6 @@ import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.reflect.TypeToken;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
@@ -1369,38 +1365,42 @@ public class VajramCodeGenerator {
 
   private FromAndTo fromAndToMethods(
       List<? extends FacetGenModel> inputDefs, ClassName enclosingClass) {
-    //noinspection rawtypes
-    Builder toInputValues =
+    Builder toFacetValues =
         methodBuilder("toFacetValues")
             .returns(Facets.class)
             .addModifiers(PUBLIC)
             .addAnnotation(Override.class)
             .addStatement(
-                "$T builder = new $T<>($L)",
-                new TypeToken<Map<String, FacetValue<Object>>>() {}.getType(),
-                new TypeToken<HashMap>() {}.getType(),
-                inputDefs.size());
-    Builder fromInputValues =
+                "return new $T($T.of(%s))"
+                    .formatted(
+                        inputDefs.stream()
+                            .map(facetGenModel -> "$S, $T.withValue(this.$L)")
+                            .collect(Collectors.joining(","))),
+                Stream.of(
+                        Stream.of(Facets.class, ImmutableMap.class),
+                        inputDefs.stream()
+                            .flatMap(
+                                facet ->
+                                    Stream.of(
+                                        facet.name(), Errable.class, toJavaName(facet.name()))))
+                    .flatMap(Function.identity())
+                    .toArray());
+
+    Builder fromFacetValues =
         methodBuilder("from")
             .returns(enclosingClass)
             .addModifiers(PUBLIC, STATIC)
             .addParameter(Facets.class, "values");
-    for (FacetGenModel inputDef : inputDefs) {
-      String inputJavaName = toJavaName(inputDef.name());
-      toInputValues.addStatement(
-          "builder.put($S, $T.withValue(this.$L))", inputDef.name(), Errable.class, inputJavaName);
-    }
-    toInputValues.addStatement("return new $T(builder)", Facets.class);
 
     List<String> inputNames = inputDefs.stream().map(FacetGenModel::name).toList();
-    fromInputValues.addStatement(
+    fromFacetValues.addStatement(
         "return new $T(%s)"
             .formatted(
                 inputNames.stream()
                     .map(s -> "values.getInputValueOrDefault($S, null)")
                     .collect(Collectors.joining(", "))),
         Stream.concat(Stream.of(enclosingClass), inputNames.stream()).toArray());
-    return new FromAndTo(fromInputValues.build(), toInputValues.build());
+    return new FromAndTo(fromFacetValues.build(), toFacetValues.build());
   }
 
   private TypeAndName getTypeName(DataType<?> dataType) {
@@ -1734,10 +1734,7 @@ public class VajramCodeGenerator {
   }
 
   private static String toJavaName(String inputName) {
-    if (!inputName.contains("_")) {
-      return inputName;
-    }
-    return LOWER_UNDERSCORE.to(LOWER_CAMEL, inputName);
+    return inputName;
   }
 
   private static TypeName optional(TypeName javaType) {
