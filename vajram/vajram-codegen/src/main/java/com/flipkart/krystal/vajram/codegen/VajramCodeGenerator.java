@@ -128,6 +128,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
+import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.PrimitiveType;
@@ -225,21 +226,23 @@ public class VajramCodeGenerator {
     final ClassName inputBatch =
         ClassName.get(
             getParsedVajramData().packageName(),
-            getFacetUtilClassName(getParsedVajramData().vajramName()),
+            getFacetUtilClassName(getParsedVajramData().vajramInfo().vajramId().vajramId()),
             getBatchedInputsClassname(vajramName));
     final ClassName commonInputs =
         ClassName.get(
             getParsedVajramData().packageName(),
-            getFacetUtilClassName(getParsedVajramData().vajramName()),
+            getFacetUtilClassName(getParsedVajramData().vajramInfo().vajramId().vajramId()),
             getCommonFacetsClassname(vajramName));
-    final TypeName vajramResponseType = util.toTypeName(getParsedVajramData().responseType());
+    final TypeName vajramResponseType =
+        util.toTypeName(getParsedVajramData().vajramInfo().responseType());
 
     MethodSpec facetDefinitionsMethod = createFacetDefinitions();
     methodSpecs.add(facetDefinitionsMethod);
     Optional<MethodSpec> inputResolverMethod = createResolvers(resolverMap, depFanoutMap);
     inputResolverMethod.ifPresent(methodSpecs::add);
 
-    if (util.isRawAssignable(getParsedVajramData().vajramClass().asType(), IOVajram.class)) {
+    if (util.isRawAssignable(
+        getParsedVajramData().vajramInfo().vajramClass().asType(), IOVajram.class)) {
       methodSpecs.add(
           createIOVajramExecuteMethod(
               inputBatch,
@@ -316,40 +319,15 @@ public class VajramCodeGenerator {
                         ClassName.get(Errable.class), vajramResponseType.box())))
             .addAnnotation(Override.class);
     if (needsBatching) {
-      CodeBlock.Builder codeBuilder = CodeBlock.builder();
-      Map<String, Object> valueMap = new HashMap<>();
-      valueMap.put(INPUTS, ClassName.get(Facets.class));
-      valueMap.put(UNMOD_INPUT, ClassName.get(UnBatchedFacets.class));
-      valueMap.put(INPUT_BATCHING, batchableInputs);
-      valueMap.put(COMMON_INPUT, commonInputs);
-      valueMap.put(RETURN_TYPE, vajramResponseType.box());
-      valueMap.put(VAJRAM_LOGIC_METHOD, getParsedVajramData().outputLogic().getSimpleName());
-      valueMap.put(MOD_INPUT, ClassName.get(BatchedFacets.class));
-      valueMap.put(IM_MAP, ClassName.get(ImmutableMap.class));
-      valueMap.put(IM_LIST, ClassName.get(ImmutableList.class));
-      valueMap.put(HASH_MAP, ClassName.get(HashMap.class));
-      valueMap.put(ARRAY_LIST, ClassName.get(ArrayList.class));
-      valueMap.put(COM_FUTURE, ClassName.get(CompletableFuture.class));
-      valueMap.put(LINK_HASH_MAP, ClassName.get(LinkedHashMap.class));
-      valueMap.put(MAP, ClassName.get(Map.class));
-      valueMap.put(LIST, ClassName.get(List.class));
-      valueMap.put(VAL_ERR, Errable.class);
-      valueMap.put(FUNCTION, ClassName.get(Function.class));
-      valueMap.put(OPTIONAL, ClassName.get(Optional.class));
-
-      TypeMirror returnType = getParsedVajramData().outputLogic().getReturnType();
-      checkState(
-          util.isRawAssignable(returnType, Map.class),
-          "Any vajram supporting inputDef batching must return map. Vajram: %s",
-          vajramName);
-      TypeMirror mapValue = getTypeParameters(returnType).get(1);
-      // TODO : check if this is needed for compute vajrams or should throw error
-      if (util.isRawAssignable(mapValue, CompletableFuture.class)) {
-        codeBuilder.addNamed(INPUT_BATCHING_FUTURE_CODE_BLOCK, valueMap);
-      } else {
-        codeBuilder.addNamed(INPUT_BATCHING_CODE_BLOCK, valueMap);
-      }
-      executeBuilder.addCode(codeBuilder.build());
+      String message = "Batching is not supported in ComputeVajrams";
+      util.error(
+          message,
+          getParsedVajramData().vajramInfo().inputs().stream()
+              .filter(InputModel::isBatched)
+              .findAny()
+              .<Element>map(InputModel::facetField)
+              .orElse(getParsedVajramData().vajramInfo().vajramClass()));
+      throw new VajramValidationException(message);
     } else { // TODO : Need non batched IO vajram to test this
       nonBatchedComputeMethodBuilder(executeBuilder, false);
     }

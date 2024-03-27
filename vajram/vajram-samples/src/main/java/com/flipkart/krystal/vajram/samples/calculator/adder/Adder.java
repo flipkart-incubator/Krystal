@@ -1,9 +1,10 @@
 package com.flipkart.krystal.vajram.samples.calculator.adder;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Function.identity;
 
-import com.flipkart.krystal.vajram.ComputeVajram;
+import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -13,11 +14,12 @@ import com.flipkart.krystal.vajram.samples.calculator.adder.AdderFacetUtil.Adder
 import com.flipkart.krystal.vajram.samples.calculator.adder.AdderFacetUtil.AdderInputBatch;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
 
 @VajramDef
 @SuppressWarnings("initialization.field.uninitialized")
-public abstract class Adder extends ComputeVajram<Integer> {
+public abstract class Adder extends IOVajram<Integer> {
   static class _Facets {
     @Batch @Input int numberOne;
     @Batch @Input Optional<Integer> numberTwo;
@@ -26,11 +28,13 @@ public abstract class Adder extends ComputeVajram<Integer> {
   public static final LongAdder CALL_COUNTER = new LongAdder();
 
   @Output
-  static Map<AdderInputBatch, Integer> add(
+  static Map<AdderInputBatch, CompletableFuture<Integer>> add(
       BatchedFacets<AdderInputBatch, AdderCommonFacets> batchedFacets) {
     CALL_COUNTER.increment();
     return batchedFacets.batchedInputs().stream()
-        .collect(toImmutableMap(identity(), im -> add(im.numberOne(), im.numberTwo().orElse(0))));
+        .collect(
+            toImmutableMap(
+                identity(), im -> completedFuture(add(im.numberOne(), im.numberTwo().orElse(0)))));
   }
 
   public static int add(int a, int b) {

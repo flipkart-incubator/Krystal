@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.codegen.models;
 
-import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.codegen.Utils;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
@@ -20,17 +19,14 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public record ParsedVajramData(
-    String vajramName,
     List<ExecutableElement> resolvers,
     ExecutableElement outputLogic,
-    TypeElement vajramClass,
     String packageName,
-    DataType<?> responseType) {
+    VajramInfo vajramInfo) {
 
   public static Optional<ParsedVajramData> fromVajram(VajramInfo vajramInfo, Utils util) {
-    TypeElement vajramClass = vajramInfo.vajramClass();
     String packageName = vajramInfo.packageName();
-    for (ExecutableElement method : iter(getAllMethods(vajramClass))) {
+    for (ExecutableElement method : iter(getAllMethods(vajramInfo.vajramClass()))) {
       String errorMessage =
           "Vajram class %s has non-static method %s"
               .formatted(vajramInfo.vajramId(), method.getSimpleName());
@@ -42,15 +38,8 @@ public record ParsedVajramData(
 
     List<ExecutableElement> resolverMethods = new ArrayList<>();
     ExecutableElement outputLogic =
-        getOutputLogicAndResolverMethods(vajramClass, resolverMethods, util);
-    return Optional.of(
-        new ParsedVajramData(
-            vajramInfo.vajramId().vajramId(),
-            resolverMethods,
-            outputLogic,
-            vajramClass,
-            packageName,
-            vajramInfo.responseType()));
+        getOutputLogicAndResolverMethods(vajramInfo.vajramClass(), resolverMethods, util);
+    return Optional.of(new ParsedVajramData(resolverMethods, outputLogic, packageName, vajramInfo));
   }
 
   public static void validateNoDuplicateResolvers(List<ExecutableElement> methods, Utils util) {
