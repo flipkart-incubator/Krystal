@@ -86,10 +86,10 @@ public final class JavaType<T> implements DataType<T> {
     }
   }
 
-  public static JavaType<?> create(
+  public static <T> JavaType<T> create(
       String canonicalClassName, List<? extends DataType<?>> typeParameters) {
     if (dataTypeMappings.containsKey(canonicalClassName)) {
-      return dataTypeMappings.get(canonicalClassName).apply(typeParameters);
+      return (JavaType<T>) dataTypeMappings.get(canonicalClassName).apply(typeParameters);
     } else {
       return new JavaType<>(canonicalClassName, typeParameters);
     }

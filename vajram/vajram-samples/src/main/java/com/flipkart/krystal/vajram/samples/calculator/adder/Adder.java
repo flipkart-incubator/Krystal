@@ -18,14 +18,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
 
 @VajramDef
-@SuppressWarnings("initialization.field.uninitialized")
 public abstract class Adder extends IOVajram<Integer> {
+  public static final LongAdder CALL_COUNTER = new LongAdder();
+
+  @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
     @Batch @Input int numberOne;
     @Batch @Input Optional<Integer> numberTwo;
   }
-
-  public static final LongAdder CALL_COUNTER = new LongAdder();
 
   @Output
   static Map<AdderInputBatch, CompletableFuture<Integer>> add(

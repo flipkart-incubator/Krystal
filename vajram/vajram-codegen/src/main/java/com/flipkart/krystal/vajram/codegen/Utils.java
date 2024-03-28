@@ -49,7 +49,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
-import javax.annotation.processing.FilerException;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
@@ -118,12 +117,6 @@ public class Utils {
       try (PrintWriter out = new PrintWriter(requestFile.openWriter())) {
         out.println(code);
       }
-    } catch (FilerException e) {
-      // Since we do multiple passes (codeGenVajramModels, and compileJava) where this annotation
-      // processor is executed, we might end up creating the same file multiple times. This is not
-      // an error, hence we ignore this exceeption
-      //      note("Could not create source file for %s. Due to exception %s".formatted(className,
-      // e));
     } catch (Exception e) {
       error(
           "Error creating java file for className: %s. Error: %s".formatted(className, e),
@@ -167,10 +160,10 @@ public class Utils {
                           InputModel.builder().facetField(inputField);
                       inputBuilder.name(inputField.getSimpleName().toString());
                       inputBuilder.isMandatory(!isOptional(inputField.asType(), processingEnv));
-                      DataType<?> dataType =
+                      DataType<Object> dataType =
                           inputField
                               .asType()
-                              .accept(new DeclaredTypeVisitor(this, true, inputField), null);
+                              .accept(new DeclaredTypeVisitor<>(this, true, inputField), null);
                       inputBuilder.type(dataType);
                       inputBuilder.isBatched(
                           Optional.ofNullable(inputField.getAnnotation(Batch.class)).isPresent());
@@ -206,20 +199,14 @@ public class Utils {
                 typeMirror ->
                     !((QualifiedNameable) typeUtils.asElement(typeMirror))
                         .getQualifiedName()
-                        .equals(
-                            elementUtils
-                                .getTypeElement(VajramRequest.class.getName())
-                                .getQualifiedName()));
+                        .equals(getTypeElement(VajramRequest.class.getName()).getQualifiedName()));
     Optional<TypeMirror> vajramType =
         getTypeFromAnnotationMember(dependency::onVajram)
             .filter(
                 typeMirror ->
                     !((QualifiedNameable) typeUtils.asElement(typeMirror))
                         .getQualifiedName()
-                        .equals(
-                            elementUtils
-                                .getTypeElement(Vajram.class.getName())
-                                .getQualifiedName()));
+                        .equals(getTypeElement(Vajram.class.getName()).getQualifiedName()));
     TypeMirror vajramOrReqType =
         vajramReqType
             .or(() -> vajramType)
@@ -240,7 +227,7 @@ public class Utils {
           depField);
     } else {
       DataType<?> declaredDataType =
-          new DeclaredTypeVisitor(this, true, depField).visit(depField.asType());
+          new DeclaredTypeVisitor<>(this, true, depField).visit(depField.asType());
       TypeElement vajramOrReqElement =
           (TypeElement) processingEnv.getTypeUtils().asElement(vajramOrReqType);
       VajramInfoLite depVajramId = getVajramInfoLite(vajramOrReqElement);
@@ -265,6 +252,14 @@ public class Utils {
     throw new RuntimeException("Invalid Dependency specification");
   }
 
+  TypeElement getTypeElement(String name) {
+    return Optional.ofNullable(elementUtils.getTypeElement(name))
+        .orElseThrow(
+            () ->
+                new IllegalStateException(
+                    "Could not find type element with name %s".formatted(name)));
+  }
+
   private VajramInfoLite getVajramInfoLite(TypeElement vajramOrReqClass) {
     String vajramClassSimpleName = vajramOrReqClass.getSimpleName().toString();
     if (isRawAssignable(vajramOrReqClass.asType(), VajramRequest.class)) {
@@ -273,7 +268,7 @@ public class Utils {
       return new VajramInfoLite(
           vajramClassSimpleName.substring(
               0, vajramClassSimpleName.length() - REQUEST_SUFFIX.length()),
-          new DeclaredTypeVisitor(this, false, responseTypeElement).visit(responseType));
+          new DeclaredTypeVisitor<>(this, false, responseTypeElement).visit(responseType));
     } else if (isRawAssignable(vajramOrReqClass.asType(), Vajram.class)) {
       TypeMirror responseType = getResponseType(vajramOrReqClass, Vajram.class);
       TypeElement responseTypeElement = (TypeElement) typeUtils.asElement(responseType);
@@ -285,7 +280,7 @@ public class Utils {
       }
       return new VajramInfoLite(
           vajramClassSimpleName,
-          new DeclaredTypeVisitor(this, false, responseTypeElement).visit(responseType));
+          new DeclaredTypeVisitor<>(this, false, responseTypeElement).visit(responseType));
     } else {
       throw new IllegalArgumentException(
           "Unknown class hierarchy of vajram class %s. Expected %s or %s"
@@ -452,8 +447,7 @@ public class Utils {
    */
   public boolean isRawAssignable(TypeMirror from, Class<?> to) {
     return typeUtils.isAssignable(
-        typeUtils.erasure(from),
-        typeUtils.erasure(elementUtils.getTypeElement(to.getName()).asType()));
+        typeUtils.erasure(from), typeUtils.erasure(getTypeElement(to.getName()).asType()));
   }
 
   public TypeMirror box(TypeMirror type) {
