@@ -394,7 +394,7 @@ public class Utils {
     return vajramName + COMMON_FACETS;
   }
 
-  public static String getBatchedInputsClassname(String vajramName) {
+  public static String getBatchedFacetsClassname(String vajramName) {
     return vajramName + BATCHABLE_INPUTS;
   }
 

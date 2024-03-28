@@ -114,7 +114,7 @@ public final class InputBatchingDecorator<
   private void batchFacetsList(
       OutputLogic<Object> logicToDecorate, BatchedFacets<I, C> batchedFacets) {
     ImmutableList<UnBatchedFacets<I, C>> requests =
-        batchedFacets.batchedInputs().stream()
+        batchedFacets.batch().stream()
             .map(each -> new UnBatchedFacets<>(each, batchedFacets.commonFacets()))
             .collect(toImmutableList());
     logicToDecorate

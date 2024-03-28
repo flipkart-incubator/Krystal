@@ -31,7 +31,7 @@ public abstract class FriendsService extends IOVajram<Set<String>> {
       BatchedFacets<FriendsServiceInputBatch, FriendsServiceCommonFacets> batchedFacets) {
     CALL_COUNTER.increment();
     Map<FriendsServiceInputBatch, CompletableFuture<Set<String>>> result = new LinkedHashMap<>();
-    for (FriendsServiceInputBatch inputsBatch : batchedFacets.batchedInputs()) {
+    for (FriendsServiceInputBatch inputsBatch : batchedFacets.batch()) {
       String userId = inputsBatch.userId();
       result.put(inputsBatch, completedFuture(getFriends(userId)));
     }

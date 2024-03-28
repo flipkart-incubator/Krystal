@@ -2,5 +2,4 @@ package com.flipkart.krystal.vajram.batching;
 
 import com.google.common.collect.ImmutableList;
 
-public record BatchedFacets<BatchableInputs, CommonFacets>(
-    ImmutableList<BatchableInputs> batchedInputs, CommonFacets commonFacets) {}
+public record BatchedFacets<Batched, Common>(ImmutableList<Batched> batch, Common commonFacets) {}

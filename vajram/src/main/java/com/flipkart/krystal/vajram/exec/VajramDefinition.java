@@ -11,8 +11,10 @@ import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.DefaultInputResolverDefinition;
 import com.flipkart.krystal.vajram.facets.DependencyDef;
+import com.flipkart.krystal.vajram.facets.InputDef;
 import com.flipkart.krystal.vajram.facets.QualifiedInputs;
 import com.flipkart.krystal.vajram.facets.Using;
+import com.flipkart.krystal.vajram.facets.VajramFacetContainer;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolverDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
@@ -30,6 +32,7 @@ import java.lang.annotation.Annotation;
 import java.lang.annotation.Repeatable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -50,6 +53,8 @@ public final class VajramDefinition {
 
   @Getter private final ImmutableMap<AnnotationTagKey, Tag> outputLogicTags;
 
+  @Getter private final ImmutableSet<String> outputLogicSources;
+
   @Getter
   private final ImmutableMap</*FacetName*/ String, ImmutableMap</*TagKey*/ Object, Tag>> facetTags;
 
@@ -58,6 +63,39 @@ public final class VajramDefinition {
     this.inputResolverDefinitions = ImmutableList.copyOf(parseInputResolvers(vajram));
     this.outputLogicTags = parseOutputLogicTags(vajram);
     this.facetTags = parseFacetTags(vajram);
+    this.outputLogicSources = parseOutputLogicSources(vajram);
+  }
+
+  private static ImmutableSet<String> parseOutputLogicSources(Vajram<?> vajram) {
+    Optional<Method> outputLogicMethod =
+        Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
+            .filter(method -> method.getAnnotation(Output.class) != null)
+            .findFirst();
+    ImmutableSet<String> allFacetNames =
+        vajram.getFacetDefinitions().stream()
+            .map(VajramFacetDefinition::name)
+            .collect(toImmutableSet());
+    if (outputLogicMethod.isPresent()
+        && vajram.getFacetDefinitions().stream()
+            .noneMatch(f -> f instanceof InputDef<?> input && input.isBatched())) {
+      // This is a vajram which doesn't have batched facets. So we can infer the output logic's
+      // sources from the parameters
+      Parameter[] outputLogicParams = outputLogicMethod.get().getParameters();
+      if (outputLogicParams.length == 1
+          && VajramFacetContainer.class.isAssignableFrom(outputLogicParams[0].getType())) {
+        /*
+         This means the output logic is consuming the auto-generated Facets class which implies it
+         consumes all the facets
+        */
+        return allFacetNames;
+      } else {
+        return Arrays.stream(outputLogicParams)
+            .map(VajramDefinition::inferFacetName)
+            .collect(toImmutableSet());
+      }
+    }
+    // The output logic consumes all facets
+    return allFacetNames;
   }
 
   private static ImmutableMap<String, ImmutableMap<Object, Tag>> parseFacetTags(Vajram<?> vajram) {
@@ -115,14 +153,7 @@ public final class VajramDefinition {
       String[] targetInputs = resolver.depInputs();
       ImmutableSet<String> sources =
           Arrays.stream(resolverMethod.getParameters())
-              .map(
-                  parameter ->
-                      Arrays.stream(parameter.getAnnotations())
-                          .filter(annotation -> annotation instanceof Using)
-                          .map(annotation -> (Using) annotation)
-                          .findAny()
-                          .map(Using::value)
-                          .orElseGet(parameter::getName))
+              .map(VajramDefinition::inferFacetName)
               .collect(toImmutableSet());
       inputResolvers.add(
           new DefaultInputResolverDefinition(
@@ -133,6 +164,15 @@ public final class VajramDefinition {
                   ImmutableSet.copyOf(targetInputs))));
     }
     return inputResolvers;
+  }
+
+  private static String inferFacetName(Parameter parameter) {
+    return Arrays.stream(parameter.getAnnotations())
+        .filter(annotation -> annotation instanceof Using)
+        .map(annotation -> (Using) annotation)
+        .findAny()
+        .map(Using::value)
+        .orElseGet(parameter::getName);
   }
 
   private static ImmutableMap<AnnotationTagKey, Tag> parseOutputLogicTags(Vajram<?> vajram) {

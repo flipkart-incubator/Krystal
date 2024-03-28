@@ -47,27 +47,6 @@ public final class Constants {
   public static final String IM_LIST = "imList";
   public static final String FUNCTION = "function";
   public static final String OPTIONAL = "optional";
-  public static final String INPUT_BATCHING_CODE_BLOCK =
-      """
-                $map:T<$inputBatching:T, $facets:T> mapping = new $hashMap:T<>();
-                $commonInput:T commonFacets = null;
-                for ($facets:T facets : facetsList) {
-                  $unmodInput:T<$inputBatching:T, $commonInput:T> allInputs =
-                      getInputsConvertor().apply(facets);
-                  commonFacets = allInputs.commonFacets();
-                  $inputBatching:T im = allInputs.batchedInputs();
-                  mapping.put(im, facets);
-                }
-                $map:T<$facets:T, $valErr:T<$returnType:T>> returnValue = new $linkHashMap:T<>();
-
-                if (commonFacets != null) {
-                  var results = $outputLogicMethod:L(new $modInput:T<>($imList:T.copyOf(mapping.keySet()), commonFacets));
-                  results.forEach((im, value) -> returnValue.put(
-                       $optional:T.ofNullable(mapping.get(im)).orElseThrow(),
-                       $valErr:T.withValue(value)));
-                }
-                return $imMap:T.copyOf(returnValue);
-            """;
 
   public static final String INPUT_BATCHING_FUTURE_CODE_BLOCK =
       """

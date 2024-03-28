@@ -129,6 +129,13 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     this.vajramMetadataMap = new HashMap<>();
   }
 
+  private static boolean isVisibleToKrystex(VajramFacetDefinition vajramFacetDefinition) {
+    if (vajramFacetDefinition instanceof InputDef<?> inputDef) {
+      return inputDef.sources().contains(CLIENT);
+    }
+    return true;
+  }
+
   public MultiLeasePool<? extends ExecutorService> getExecutorPool() {
     return executorPool;
   }
@@ -273,7 +280,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
 
     ImmutableSet<String> inputNames =
         vajramDefinition.getVajram().getFacetDefinitions().stream()
-            .filter(this::isVisibleToKrystex)
+            .filter(VajramKryonGraph::isVisibleToKrystex)
             .filter(vajramFacetDefinition -> vajramFacetDefinition instanceof InputDef<?>)
             .map(VajramFacetDefinition::name)
             .collect(toImmutableSet());
@@ -526,19 +533,20 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     VajramID vajramId = vajramDefinition.getVajram().getId();
     ImmutableCollection<VajramFacetDefinition> facetDefinitions =
         vajramDefinition.getVajram().getFacetDefinitions();
-    ImmutableSet<String> inputNames =
+    ImmutableSet<String> kryonOutputLogicSources =
         facetDefinitions.stream()
-            .filter(this::isVisibleToKrystex)
+            .filter(VajramKryonGraph::isVisibleToKrystex)
             .map(VajramFacetDefinition::name)
+            .filter(vajramDefinition.getOutputLogicSources()::contains)
             .collect(toImmutableSet());
     KryonLogicId outputLogicName = new KryonLogicId(kryonId, "%s:outputLogic".formatted(vajramId));
-    // Step 4: Create and register Kryon for the output logic
 
+    // Step 4: Create and register Kryon for the output logic
     OutputLogicDefinition<?> outputLogic =
         logicRegistryDecorator.newOutputLogic(
             vajramDefinition.getVajram() instanceof IOVajram<?>,
             outputLogicName,
-            inputNames,
+            kryonOutputLogicSources,
             inputsList -> {
               List<Facets> validInputs = new ArrayList<>();
               Map<Facets, CompletableFuture<@Nullable Object>> failedValidations =
@@ -568,13 +576,6 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
         .values()
         .forEach(outputLogic::registerSessionScopedLogicDecorator);
     return outputLogic;
-  }
-
-  private boolean isVisibleToKrystex(VajramFacetDefinition vajramFacetDefinition) {
-    if (vajramFacetDefinition instanceof InputDef<?> inputDef) {
-      return inputDef.sources().contains(CLIENT);
-    }
-    return true;
   }
 
   private <T> void registerInputInjector(

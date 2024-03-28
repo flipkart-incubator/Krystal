@@ -35,12 +35,12 @@ public abstract class TestUserService extends IOVajram<TestUserInfo> {
   static ImmutableMap<TestUserServiceInputBatch, CompletableFuture<TestUserInfo>> callUserService(
       BatchedFacets<TestUserServiceInputBatch, TestUserServiceCommonFacets> batchedRequest) {
     CALL_COUNTER.increment();
-    batchedRequest.batchedInputs().stream()
+    batchedRequest.batch().stream()
         .map(im -> TestUserServiceRequest.builder().userId(im.userId()).build())
         .forEach(REQUESTS::add);
 
     // Make a call to user service and get user info
-    return batchedRequest.batchedInputs().stream()
+    return batchedRequest.batch().stream()
         .collect(
             toImmutableMap(
                 inputBatch -> inputBatch,

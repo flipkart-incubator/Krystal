@@ -17,7 +17,6 @@ import static com.flipkart.krystal.vajram.codegen.Constants.IM_MAP;
 import static com.flipkart.krystal.vajram.codegen.Constants.INPUTS;
 import static com.flipkart.krystal.vajram.codegen.Constants.INPUTS_LIST;
 import static com.flipkart.krystal.vajram.codegen.Constants.INPUT_BATCHING;
-import static com.flipkart.krystal.vajram.codegen.Constants.INPUT_BATCHING_CODE_BLOCK;
 import static com.flipkart.krystal.vajram.codegen.Constants.INPUT_BATCHING_FUTURE_CODE_BLOCK;
 import static com.flipkart.krystal.vajram.codegen.Constants.INPUT_SRC;
 import static com.flipkart.krystal.vajram.codegen.Constants.LINK_HASH_MAP;
@@ -43,7 +42,7 @@ import static com.flipkart.krystal.vajram.codegen.Utils.COMMA;
 import static com.flipkart.krystal.vajram.codegen.Utils.CONVERTER;
 import static com.flipkart.krystal.vajram.codegen.Utils.DOT;
 import static com.flipkart.krystal.vajram.codegen.Utils.getAllFacetsClassname;
-import static com.flipkart.krystal.vajram.codegen.Utils.getBatchedInputsClassname;
+import static com.flipkart.krystal.vajram.codegen.Utils.getBatchedFacetsClassname;
 import static com.flipkart.krystal.vajram.codegen.Utils.getCommonFacetsClassname;
 import static com.flipkart.krystal.vajram.codegen.Utils.getFacetUtilClassName;
 import static com.flipkart.krystal.vajram.codegen.Utils.getTypeParameters;
@@ -88,6 +87,7 @@ import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.SingleExecute;
 import com.flipkart.krystal.vajram.facets.VajramDepFanoutTypeSpec;
 import com.flipkart.krystal.vajram.facets.VajramDepSingleTypeSpec;
+import com.flipkart.krystal.vajram.facets.VajramFacetContainer;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
@@ -223,7 +223,7 @@ public class VajramCodeGenerator {
         ClassName.get(
             getParsedVajramData().packageName(),
             getFacetUtilClassName(getParsedVajramData().vajramInfo().vajramId().vajramId()),
-            getBatchedInputsClassname(vajramName));
+            getBatchedFacetsClassname(vajramName));
     final ClassName commonInputs =
         ClassName.get(
             getParsedVajramData().packageName(),
@@ -577,13 +577,15 @@ public class VajramCodeGenerator {
 
     CodeBlock.Builder codeBuilder = CodeBlock.builder();
     if (needsBatching) {
+      ExecutableElement outputLogic = getParsedVajramData().outputLogic();
+
       Map<String, Object> valueMap = new HashMap<>();
       valueMap.put(INPUTS, ClassName.get(Facets.class));
       valueMap.put(UNMOD_INPUT, ClassName.get(UnBatchedFacets.class));
       valueMap.put(INPUT_BATCHING, batchableInputs);
       valueMap.put(COMMON_INPUT, commonFacets);
       valueMap.put(RETURN_TYPE, vajramResponseType);
-      valueMap.put(VAJRAM_LOGIC_METHOD, getParsedVajramData().outputLogic().getSimpleName());
+      valueMap.put(VAJRAM_LOGIC_METHOD, outputLogic.getSimpleName());
       valueMap.put(MOD_INPUT, ClassName.get(BatchedFacets.class));
       valueMap.put(IM_MAP, ClassName.get(ImmutableMap.class));
       valueMap.put(IM_LIST, ClassName.get(ImmutableList.class));
@@ -597,18 +599,22 @@ public class VajramCodeGenerator {
       valueMap.put(FUNCTION, ClassName.get(Function.class));
       valueMap.put(OPTIONAL, ClassName.get(Optional.class));
 
-      TypeMirror returnType = getParsedVajramData().outputLogic().getReturnType();
+      TypeMirror returnType = outputLogic.getReturnType();
       checkState(
           util.isRawAssignable(processingEnv.getTypeUtils().erasure(returnType), Map.class),
-          "Any vajram supporting inputDef batching must return map. Vajram: %s",
+          "A vajram supporting input batching must return map. Vajram: %s",
           vajramName);
       TypeMirror mapValue = getTypeParameters(returnType).get(1);
-      // TODO : check if this is needed for compute vajrams or should throw error
-      if (util.isRawAssignable(mapValue, CompletableFuture.class)) {
-        codeBuilder.addNamed(INPUT_BATCHING_FUTURE_CODE_BLOCK, valueMap);
-      } else {
-        codeBuilder.addNamed(INPUT_BATCHING_CODE_BLOCK, valueMap);
+      if (!util.isRawAssignable(mapValue, CompletableFuture.class)) {
+        String message =
+            """
+                Batched IO Vajram should return a map whose value type must be `CompletableFuture`.
+                Violating vajram: %s"""
+                .formatted(vajramName);
+        util.error(message, outputLogic);
+        throw new VajramValidationException(message);
       }
+      codeBuilder.addNamed(INPUT_BATCHING_FUTURE_CODE_BLOCK, valueMap);
       executeMethodBuilder.addCode(codeBuilder.build());
     } else {
       nonBatchedExecuteMethodBuilder(executeMethodBuilder, true);
@@ -1498,10 +1504,10 @@ public class VajramCodeGenerator {
 
   private String codeGenSimpleInputUtil() {
     TypeSpec.Builder inputUtilClass = createInputUtilClass();
-    String className = getAllFacetsClassname(vajramName);
     TypeSpec.Builder allInputsClass =
-        util.classBuilder(className)
+        util.classBuilder(getAllFacetsClassname(vajramName))
             .addModifiers(FINAL, STATIC)
+            .addSuperinterface(VajramFacetContainer.class)
             .addAnnotations(recordAnnotations());
     List<FieldTypeName> fieldsList = new ArrayList<>();
     vajramInfo
@@ -1586,7 +1592,7 @@ public class VajramCodeGenerator {
     try {
       TypeSpec.Builder inputUtilClass = createInputUtilClass();
       VajramInfo vajramFacetsDef = vajramInfo;
-      String imClassName = getBatchedInputsClassname(vajramName);
+      String imClassName = getBatchedFacetsClassname(vajramName);
       String ciClassName = getCommonFacetsClassname(vajramName);
       FromAndTo imFromAndTo =
           fromAndToMethods(
