@@ -10,8 +10,8 @@ import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceFacetUtil.TestUserServiceBatchFacets;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceFacetUtil.TestUserServiceCommonFacets;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceFacetUtil.TestUserServiceInputBatch;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -32,8 +32,8 @@ public abstract class TestUserService extends IOVajram<TestUserInfo> {
   public static final Set<TestUserServiceRequest> REQUESTS = new LinkedHashSet<>();
 
   @Output
-  static ImmutableMap<TestUserServiceInputBatch, CompletableFuture<TestUserInfo>> callUserService(
-      BatchedFacets<TestUserServiceInputBatch, TestUserServiceCommonFacets> batchedRequest) {
+  static ImmutableMap<TestUserServiceBatchFacets, CompletableFuture<TestUserInfo>> callUserService(
+      BatchedFacets<TestUserServiceBatchFacets, TestUserServiceCommonFacets> batchedRequest) {
     CALL_COUNTER.increment();
     batchedRequest.batch().stream()
         .map(im -> TestUserServiceRequest.builder().userId(im.userId()).build())

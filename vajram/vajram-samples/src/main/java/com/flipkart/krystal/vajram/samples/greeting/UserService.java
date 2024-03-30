@@ -9,8 +9,8 @@ import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
+import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacetUtil.UserServiceBatchFacets;
 import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacetUtil.UserServiceCommonFacets;
-import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacetUtil.UserServiceInputBatch;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -25,19 +25,19 @@ public abstract class UserService extends IOVajram<UserInfo> {
   }
 
   @Output
-  static Map<UserServiceInputBatch, CompletableFuture<UserInfo>> callUserService(
-      BatchedFacets<UserServiceInputBatch, UserServiceCommonFacets> batchedRequest) {
+  static Map<UserServiceBatchFacets, CompletableFuture<UserInfo>> callUserService(
+      BatchedFacets<UserServiceBatchFacets, UserServiceCommonFacets> batchedRequest) {
 
     // Make a call to user service and get user info
     CompletableFuture<List<UserInfo>> serviceResponse = batchServiceCall(batchedRequest.batch());
 
-    CompletableFuture<Map<UserServiceInputBatch, UserInfo>> resultsFuture =
+    CompletableFuture<Map<UserServiceBatchFacets, UserInfo>> resultsFuture =
         serviceResponse.thenApply(
             userInfos ->
                 userInfos.stream()
                     .collect(
                         Collectors.toMap(
-                            userInfo -> new UserServiceInputBatch(userInfo.userId()),
+                            userInfo -> new UserServiceBatchFacets(userInfo.userId()),
                             userInfo -> userInfo)));
     return batchedRequest.batch().stream()
         .collect(
@@ -49,10 +49,10 @@ public abstract class UserService extends IOVajram<UserInfo> {
   }
 
   private static CompletableFuture<List<UserInfo>> batchServiceCall(
-      List<UserServiceInputBatch> modInputs) {
+      List<UserServiceBatchFacets> modInputs) {
     return completedFuture(
         modInputs.stream()
-            .map(UserServiceInputBatch::userId)
+            .map(UserServiceBatchFacets::userId)
             .map(userId -> new UserInfo(userId, "Firstname Lastname (%s)".formatted(userId)))
             .toList());
   }

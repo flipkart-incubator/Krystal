@@ -38,7 +38,7 @@ public final class Constants {
   public static final String GET_FACET_DEFINITIONS = "getFacetDefinitions";
   public static final String FACETS_CLASS_SUFFIX = "Facets";
   public static final String INPUTS_LIST = "facetsList";
-  public static final String BATCHABLE_INPUTS = "InputBatch";
+  public static final String BATCHABLE_FACETS = "BatchFacets";
   public static final String COMMON_FACETS = "CommonFacets";
   public static final String INPUTS = "facets";
   public static final String UNMOD_INPUT = "unmodInput";

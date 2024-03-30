@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
-import static com.flipkart.krystal.vajram.codegen.Constants.BATCHABLE_INPUTS;
+import static com.flipkart.krystal.vajram.codegen.Constants.BATCHABLE_FACETS;
 import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_FACETS;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
@@ -395,7 +395,7 @@ public class Utils {
   }
 
   public static String getBatchedFacetsClassname(String vajramName) {
-    return vajramName + BATCHABLE_INPUTS;
+    return vajramName + BATCHABLE_FACETS;
   }
 
   public static TypeName getMethodReturnType(Method method) {

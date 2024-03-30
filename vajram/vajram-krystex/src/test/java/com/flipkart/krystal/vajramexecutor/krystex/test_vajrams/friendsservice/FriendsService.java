@@ -8,8 +8,8 @@ import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceFacetUtil.FriendsServiceBatchFacets;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceFacetUtil.FriendsServiceCommonFacets;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceFacetUtil.FriendsServiceInputBatch;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
@@ -27,11 +27,11 @@ public abstract class FriendsService extends IOVajram<Set<String>> {
   public static final LongAdder CALL_COUNTER = new LongAdder();
 
   @Output
-  static ImmutableMap<FriendsServiceInputBatch, CompletableFuture<Set<String>>> call(
-      BatchedFacets<FriendsServiceInputBatch, FriendsServiceCommonFacets> batchedFacets) {
+  static ImmutableMap<FriendsServiceBatchFacets, CompletableFuture<Set<String>>> call(
+      BatchedFacets<FriendsServiceBatchFacets, FriendsServiceCommonFacets> batchedFacets) {
     CALL_COUNTER.increment();
-    Map<FriendsServiceInputBatch, CompletableFuture<Set<String>>> result = new LinkedHashMap<>();
-    for (FriendsServiceInputBatch inputsBatch : batchedFacets.batch()) {
+    Map<FriendsServiceBatchFacets, CompletableFuture<Set<String>>> result = new LinkedHashMap<>();
+    for (FriendsServiceBatchFacets inputsBatch : batchedFacets.batch()) {
       String userId = inputsBatch.userId();
       result.put(inputsBatch, completedFuture(getFriends(userId)));
     }
