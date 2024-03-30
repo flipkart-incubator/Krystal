@@ -32,7 +32,7 @@ gradlePlugin {
 tasks.named('spotlessJava').configure { mustRunAfter('compileGroovy') }
 
 dependencies {
-    api project(':vajram')
+    api project(':vajram-java-sdk')
     implementation 'com.squareup:javapoet'
     implementation 'commons-cli:commons-cli'
     implementation 'org.projectlombok:lombok'

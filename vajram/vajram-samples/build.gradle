@@ -7,7 +7,7 @@ version project.krystal_version
 
 dependencies {
     implementation project(':krystal-common')
-    implementation project(':vajram')
+    implementation project(':vajram-java-sdk')
 
     annotationProcessor 'com.flipkart.krystal:krystal-plugin'
 

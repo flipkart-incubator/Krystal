@@ -5,7 +5,7 @@ plugins {
 description 'An implementation of a vajram executor powered by the Krystex module.'
 
 dependencies {
-    api project(':vajram')
+    api project(':vajram-java-sdk')
     api project(':krystex')
 
     annotationProcessor 'com.flipkart.krystal:krystal-plugin'
