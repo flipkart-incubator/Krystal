@@ -163,7 +163,7 @@ public abstract class GreetingVajram extends ComputeVajram<String> {
 
 One of the core tenets of Krystal is to allow for a reactive execution environment to minimize usage
 of resources like
-threads. The vajram (and [krystex kryon](../krystex/README.md#kryon)) abstractions are designed to
+threads. The vajram (and [krystex kryon](../../krystex/README.md#kryon)) abstractions are designed to
 allow for this optimization. By requiring inputs and dependencies to be declared statically, the
 Krystal framework is able to load the complete call graph as a directed acyclic graph (DAG) *
 *without** having to execute any part of the code. This has multiple advantages:
@@ -177,7 +177,7 @@ Krystal framework is able to load the complete call graph as a directed acyclic 
   in effect converts a parallel dependency to a sequential dependency - this can increase the
   latency of an application. Static declarations make catching such changes very easy.
 * **Call graph optimization**: Because of these static declarations, the Krystal
-  runtime ([Krystex](../krystex)) is a bird's eye view of the state of a request execution and is
+  runtime ([Krystex](../../krystex)) is a bird's eye view of the state of a request execution and is
   able to optimally achieve maximal concurrency as well as batching of IO calls. Doing this is
   almost impossible without static input and dependency definitions.
 * Allow for extensive [code generation](#code-generation)
@@ -433,7 +433,7 @@ This listener is called with the batched input when the input batcher decides it
 modulate. This listener
 can then trigger the actual netwerk call.
 
-![](../assets/batching_workflow.png)
+![](../../assets/batching_workflow.png)
 
 #### Debatching
 
