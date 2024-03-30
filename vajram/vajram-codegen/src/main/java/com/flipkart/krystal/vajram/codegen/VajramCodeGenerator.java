@@ -87,7 +87,7 @@ import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.SingleExecute;
 import com.flipkart.krystal.vajram.facets.VajramDepFanoutTypeSpec;
 import com.flipkart.krystal.vajram.facets.VajramDepSingleTypeSpec;
-import com.flipkart.krystal.vajram.facets.VajramFacetContainer;
+import com.flipkart.krystal.vajram.facets.FacetContainer;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
@@ -1507,7 +1507,7 @@ public class VajramCodeGenerator {
     TypeSpec.Builder allInputsClass =
         util.classBuilder(getAllFacetsClassname(vajramName))
             .addModifiers(FINAL, STATIC)
-            .addSuperinterface(VajramFacetContainer.class)
+            .addSuperinterface(FacetContainer.class)
             .addAnnotations(recordAnnotations());
     List<FieldTypeName> fieldsList = new ArrayList<>();
     vajramInfo

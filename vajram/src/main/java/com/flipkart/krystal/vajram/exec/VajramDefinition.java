@@ -14,7 +14,7 @@ import com.flipkart.krystal.vajram.facets.DependencyDef;
 import com.flipkart.krystal.vajram.facets.InputDef;
 import com.flipkart.krystal.vajram.facets.QualifiedInputs;
 import com.flipkart.krystal.vajram.facets.Using;
-import com.flipkart.krystal.vajram.facets.VajramFacetContainer;
+import com.flipkart.krystal.vajram.facets.FacetContainer;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolverDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
@@ -82,7 +82,7 @@ public final class VajramDefinition {
       // sources from the parameters
       Parameter[] outputLogicParams = outputLogicMethod.get().getParameters();
       if (outputLogicParams.length == 1
-          && VajramFacetContainer.class.isAssignableFrom(outputLogicParams[0].getType())) {
+          && FacetContainer.class.isAssignableFrom(outputLogicParams[0].getType())) {
         /*
          This means the output logic is consuming the auto-generated Facets class which implies it
          consumes all the facets
@@ -93,9 +93,10 @@ public final class VajramDefinition {
             .map(VajramDefinition::inferFacetName)
             .collect(toImmutableSet());
       }
+    } else {
+      // The output logic consumes all facets
+      return allFacetNames;
     }
-    // The output logic consumes all facets
-    return allFacetNames;
   }
 
   private static ImmutableMap<String, ImmutableMap<Object, Tag>> parseFacetTags(Vajram<?> vajram) {
