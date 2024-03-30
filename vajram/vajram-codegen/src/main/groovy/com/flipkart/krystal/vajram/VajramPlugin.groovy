@@ -24,11 +24,11 @@ class VajramPlugin implements Plugin<Project> {
         String mainSrcDir = 'src/main/java'
         String testSrcDir = 'src/test/java'
 
-        String mainModelsGenDir = project.buildDir.getPath() + vajramModelsGenDir + '/main'
-        String mainImplsGenDir = project.buildDir.getPath() + srcGenDir + '/main'
+        String mainModelsGenDir = getBuildDir(project).getPath() + vajramModelsGenDir + '/main'
+        String mainImplsGenDir = getBuildDir(project).getPath() + srcGenDir + '/main'
 
-        String testModelsGenDir = project.buildDir.getPath() + vajramModelsGenDir + '/test'
-        String testImplsGenDir = project.buildDir.getPath() + srcGenDir + '/test'
+        String testModelsGenDir = getBuildDir(project).getPath() + vajramModelsGenDir + '/test'
+        String testImplsGenDir = getBuildDir(project).getPath() + srcGenDir + '/test'
 
         project.sourceSets {
             main {
@@ -56,7 +56,7 @@ class VajramPlugin implements Plugin<Project> {
             // See: https://docs.gradle.org/current/userguide/build_cache_concepts.html#concepts_overlapping_outputs
             getDestinationDirectory().set(
                     project.getObjects().directoryProperty().fileValue(
-                            project.getLayout().getBuildDirectory().getAsFile().get().toPath().resolve(EMPTY_DIR).toFile()))
+                            getBuildDir(project).toPath().resolve(EMPTY_DIR).toFile()))
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
             options.generatedSourceOutputDirectory.fileValue(project.file(mainModelsGenDir))
@@ -90,7 +90,9 @@ class VajramPlugin implements Plugin<Project> {
             // with the full compile step. This is so that gradle caching works optimally - gradle doesn't cache outputs of tasks
             // which share output directories with other tasks -
             // See: https://docs.gradle.org/current/userguide/build_cache_concepts.html#concepts_overlapping_outputs
-            destinationDirectory = project.getObjects().directoryProperty().fileValue(project.buildDir.toPath().resolve(EMPTY_DIR).toFile())
+            getDestinationDirectory().set(
+                    project.getObjects().directoryProperty().fileValue(
+                            getBuildDir(project).toPath().resolve(EMPTY_DIR).toFile()))
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileTestJava.options.annotationProcessorPath
             options.generatedSourceOutputDirectory.fileValue(project.file(testModelsGenDir))
@@ -102,5 +104,9 @@ class VajramPlugin implements Plugin<Project> {
         }
 
         project.tasks.named("jar").configure { it.dependsOn("compileJava") }
+    }
+
+    private static File getBuildDir(Project project) {
+        project.getLayout().getBuildDirectory().getAsFile().get()
     }
 }
