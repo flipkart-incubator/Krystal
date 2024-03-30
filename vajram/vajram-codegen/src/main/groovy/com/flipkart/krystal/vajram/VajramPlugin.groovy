@@ -54,7 +54,9 @@ class VajramPlugin implements Plugin<Project> {
             // with the full compile step. This is so that gradle caching works optimally - gradle doesn't cache outputs of tasks
             // which share output directories with other tasks -
             // See: https://docs.gradle.org/current/userguide/build_cache_concepts.html#concepts_overlapping_outputs
-            destinationDirectory = project.getObjects().directoryProperty().fileValue(project.buildDir.toPath().resolve(EMPTY_DIR).toFile())
+            destinationDirectory =
+                    project.getObjects().directoryProperty().fileValue(
+                            project.getLayout().getBuildDirectory().getAsFile().get().toPath().resolve(EMPTY_DIR).toFile())
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
             options.generatedSourceOutputDirectory.fileValue(project.file(mainModelsGenDir))

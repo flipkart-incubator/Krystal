@@ -148,6 +148,10 @@ public final class JavaType<T> implements DataType<T> {
       }
     }
     TypeElement typeElement = processingEnv.getElementUtils().getTypeElement(canonicalClassName);
+    if (typeElement == null) {
+      throw new IllegalArgumentException(
+          "Could not find typeElement for canonical class name %s".formatted(canonicalClassName));
+    }
     return processingEnv
         .getTypeUtils()
         .getDeclaredType(
