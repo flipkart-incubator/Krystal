@@ -24,7 +24,7 @@ import static com.flipkart.krystal.vajram.codegen.Constants.LIST;
 import static com.flipkart.krystal.vajram.codegen.Constants.MAP;
 import static com.flipkart.krystal.vajram.codegen.Constants.METHOD_EXECUTE;
 import static com.flipkart.krystal.vajram.codegen.Constants.METHOD_EXECUTE_COMPUTE;
-import static com.flipkart.krystal.vajram.codegen.Constants.METHOD_GET_INPUTS_CONVERTOR;
+import static com.flipkart.krystal.vajram.codegen.Constants.METHOD_GET_FACETS_CONVERTOR;
 import static com.flipkart.krystal.vajram.codegen.Constants.METHOD_RESOLVE_INPUT_OF_DEPENDENCY;
 import static com.flipkart.krystal.vajram.codegen.Constants.MOD_INPUT;
 import static com.flipkart.krystal.vajram.codegen.Constants.OPTIONAL;
@@ -248,7 +248,7 @@ public class VajramCodeGenerator {
       methodSpecs.add(createComputeVajramExecuteMethod(vajramResponseType));
     }
     if (needsBatching) {
-      methodSpecs.add(createInputConvertersMethod(inputBatch, commonInputs));
+      methodSpecs.add(createBatchFacetConvertersMethod(inputBatch, commonInputs));
     }
 
     StringWriter writer = new StringWriter();
@@ -528,25 +528,28 @@ public class VajramCodeGenerator {
   }
 
   /**
-   * Method to generate "getInputsConvertor" function
+   * Method to generate "getFacetsConvertor" function
    *
    * @param batchableInputs Generated Vajram specific InputUtil.BatchableInputs class
    * @param commonInputs Generated Vajram specific InputUtil.CommonInputs class
    * @return {@link MethodSpec}
    */
-  private MethodSpec createInputConvertersMethod(
+  private MethodSpec createBatchFacetConvertersMethod(
       ClassName batchableInputs, ClassName commonInputs) {
     Builder inputConvertersBuilder =
-        methodBuilder(METHOD_GET_INPUTS_CONVERTOR)
+        methodBuilder(METHOD_GET_FACETS_CONVERTOR)
             .addModifiers(PUBLIC)
             .returns(
                 ParameterizedTypeName.get(
-                    ClassName.get(FacetsConverter.class), batchableInputs, commonInputs))
+                    ClassName.get(Optional.class),
+                    ParameterizedTypeName.get(
+                        ClassName.get(FacetsConverter.class), batchableInputs, commonInputs)))
             .addAnnotation(Override.class);
     inputConvertersBuilder.addCode(
         CodeBlock.builder()
             .addStatement(
-                "return $T.CONVERTER",
+                "return $T.of($T.%s)".formatted(CONVERTER),
+                Optional.class,
                 ClassName.get(packageName, getFacetUtilClassName(vajramName)))
             .build());
     return inputConvertersBuilder.build();
@@ -583,6 +586,8 @@ public class VajramCodeGenerator {
       valueMap.put(INPUTS, ClassName.get(Facets.class));
       valueMap.put(UNMOD_INPUT, ClassName.get(UnBatchedFacets.class));
       valueMap.put(INPUT_BATCHING, batchableInputs);
+      valueMap.put(
+          Constants.FACET_UTIL, ClassName.get(packageName, getFacetUtilClassName(vajramName)));
       valueMap.put(COMMON_INPUT, commonFacets);
       valueMap.put(RETURN_TYPE, vajramResponseType);
       valueMap.put(VAJRAM_LOGIC_METHOD, outputLogic.getSimpleName());
@@ -1620,8 +1625,10 @@ public class VajramCodeGenerator {
               .addAnnotations(recordAnnotations())
               .addMethod(ciFromAndTo.to())
               .addMethod(ciFromAndTo.from());
-      ClassName imType = ClassName.get(packageName, getFacetUtilClassName(vajramName), imClassName);
-      ClassName ciType = ClassName.get(packageName, getFacetUtilClassName(vajramName), ciClassName);
+      ClassName batchFacetsType =
+          ClassName.get(packageName, getFacetUtilClassName(vajramName), imClassName);
+      ClassName commonFacetsType =
+          ClassName.get(packageName, getFacetUtilClassName(vajramName), ciClassName);
       List<FieldTypeName> ciFieldsList = new ArrayList<>();
       List<FieldTypeName> imFieldsList = new ArrayList<>();
       vajramFacetsDef
@@ -1661,7 +1668,8 @@ public class VajramCodeGenerator {
       generateConstructor(imFieldsList).ifPresent(inputsNeedingBatching::addMethod);
 
       TypeName parameterizedTypeName =
-          ParameterizedTypeName.get(ClassName.get(FacetsConverter.class), imType, ciType);
+          ParameterizedTypeName.get(
+              ClassName.get(FacetsConverter.class), batchFacetsType, commonFacetsType);
       CodeBlock.Builder initializer =
           CodeBlock.builder()
               .add(
@@ -1669,17 +1677,18 @@ public class VajramCodeGenerator {
                   util.classBuilder("")
                       .addSuperinterface(parameterizedTypeName)
                       .addMethod(
-                          methodBuilder("apply")
+                          methodBuilder("getBatched")
                               .addModifiers(PUBLIC)
-                              .returns(
-                                  ParameterizedTypeName.get(
-                                      ClassName.get(UnBatchedFacets.class), imType, ciType))
-                              .addParameter(Facets.class, "inputValues")
-                              .addStatement(
-                                  "return new $T<>($T.from(inputValues),$T.from(inputValues))",
-                                  UnBatchedFacets.class,
-                                  imType,
-                                  ciType)
+                              .returns(batchFacetsType)
+                              .addParameter(Facets.class, "facetValues")
+                              .addStatement("return $T.from(facetValues)", batchFacetsType)
+                              .build())
+                      .addMethod(
+                          methodBuilder("getCommon")
+                              .addModifiers(PUBLIC)
+                              .returns(commonFacetsType)
+                              .addParameter(Facets.class, "facetValues")
+                              .addStatement("return $T.from(facetValues)", commonFacetsType)
                               .build())
                       .build());
       FieldSpec.Builder converter =

@@ -7,7 +7,7 @@ import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.DecoratorContext;
-import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.BatchableVajram;
 import com.flipkart.krystal.vajram.batching.FacetsConverter;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.flipkart.krystal.vajram.facets.FacetValuesAdaptor;
@@ -15,13 +15,14 @@ import com.flipkart.krystal.vajram.tags.AnnotationTags;
 import com.flipkart.krystal.vajram.tags.VajramTags;
 import com.google.common.collect.ImmutableSet;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public record InputBatcherConfig(
     Function<LogicExecutionContext, String> instanceIdGenerator,
-    Predicate<LogicExecutionContext> shouldModulate,
+    Predicate<BatcherContext> shouldBatch,
     Function<BatcherContext, OutputLogicDecorator> decoratorFactory) {
 
   /**
@@ -44,16 +45,20 @@ public record InputBatcherConfig(
                     logicExecutionContext.dependants(),
                     logicExecutionContext.kryonDefinitionRegistry())
                 .toString(),
-        _x -> true,
+        batcherContext -> batcherContext.vajram().getBatchFacetsConvertor().isPresent(),
         batcherContext -> {
           @SuppressWarnings("unchecked")
-          var inputsConvertor =
-              (FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>)
-                  batcherContext.vajram().getInputsConvertor();
+          Optional<FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>> facetsConvertor =
+              (Optional<FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>>)
+                  batcherContext.vajram().getBatchFacetsConvertor();
+          if (facetsConvertor.isEmpty()) {
+            throw new IllegalStateException(
+                "Cannot create decorator when vajram doesn't provide facets converter");
+          }
           return new InputBatchingDecorator<>(
               batcherContext.decoratorContext().instanceId(),
               inputBatcherSupplier.get(),
-              inputsConvertor,
+              facetsConvertor.get(),
               dependantChain ->
                   batcherContext
                       .decoratorContext()
@@ -76,14 +81,24 @@ public record InputBatcherConfig(
       ImmutableSet<DependantChain> dependantChains) {
     return new InputBatcherConfig(
         logicExecutionContext -> instanceId,
-        logicExecutionContext -> dependantChains.contains(logicExecutionContext.dependants()),
+        batcherContext ->
+            batcherContext.vajram().getBatchFacetsConvertor().isPresent()
+                && dependantChains.contains(
+                    batcherContext.decoratorContext().logicExecutionContext().dependants()),
         batcherContext -> {
           @SuppressWarnings("unchecked")
-          var inputsConvertor =
-              (FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>)
-                  batcherContext.vajram().getInputsConvertor();
+          Optional<FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>> facetsConvertor =
+              (Optional<FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>>)
+                  batcherContext.vajram().getBatchFacetsConvertor();
+          if (facetsConvertor.isEmpty()) {
+            throw new IllegalStateException(
+                "Cannot create decorator when vajram doesn't provide facets converter");
+          }
           return new InputBatchingDecorator<>(
-              instanceId, inputBatcherSupplier.get(), inputsConvertor, dependantChains::contains);
+              instanceId,
+              inputBatcherSupplier.get(),
+              facetsConvertor.get(),
+              dependantChains::contains);
         });
   }
 
@@ -124,5 +139,5 @@ public record InputBatcherConfig(
     throw new UnsupportedOperationException();
   }
 
-  public record BatcherContext(Vajram<?> vajram, DecoratorContext decoratorContext) {}
+  public record BatcherContext(BatchableVajram<?> vajram, DecoratorContext decoratorContext) {}
 }

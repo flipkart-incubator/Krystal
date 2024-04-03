@@ -9,6 +9,7 @@ public final class Constants {
   public static final String RESOLVABLE_INPUTS = "resolvableInputs";
   public static final String INPUT_SRC = "inputSrc";
   public static final String INPUT_BATCHING = "inputBatching";
+  public static final String FACET_UTIL = "facetUtil";
   public static final String COMMON_INPUT = "commonInput";
   public static final String RETURN_TYPE = "returnType";
   public static final String VAJRAM_LOGIC_METHOD = "outputLogicMethod";
@@ -31,7 +32,7 @@ public final class Constants {
   public static final String ILLEGAL_ARGUMENT = "illegalArgument";
   public static final String REQUEST = "request";
   public static final String RESPONSES_SUFFIX = "Responses";
-  public static final String METHOD_GET_INPUTS_CONVERTOR = "getInputsConvertor";
+  public static final String METHOD_GET_FACETS_CONVERTOR = "getBatchFacetsConvertor";
   public static final String METHOD_EXECUTE = "execute";
   public static final String METHOD_RESOLVE_INPUT_OF_DEPENDENCY = "resolveInputOfDependency";
   public static final String METHOD_EXECUTE_COMPUTE = "executeCompute";
@@ -54,7 +55,8 @@ public final class Constants {
                 $commonInput:T commonFacets = null;
                 for ($facets:T facets : facetsList) {
                   $unmodInput:T<$inputBatching:T, $commonInput:T> allInputs =
-                      getInputsConvertor().apply(facets);
+                      new $unmodInput:T($facetUtil:T.BATCH_CONVERTER.getBatched(facets)
+                                        ,$facetUtil:T.BATCH_CONVERTER.getCommon(facets));
                   commonFacets = allInputs.commonFacets();
                   $inputBatching:T im = allInputs.batchedInputs();
                   mapping.put(im, facets);

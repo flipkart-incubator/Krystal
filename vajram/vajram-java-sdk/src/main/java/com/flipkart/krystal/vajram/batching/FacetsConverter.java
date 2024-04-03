@@ -2,9 +2,13 @@ package com.flipkart.krystal.vajram.batching;
 
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.vajram.facets.FacetValuesAdaptor;
-import java.util.function.Function;
 
-@FunctionalInterface
 public interface FacetsConverter<
-        BatchedInputs extends FacetValuesAdaptor, CommonFacets extends FacetValuesAdaptor>
-    extends Function<Facets, UnBatchedFacets<BatchedInputs, CommonFacets>> {}
+    BatchedFacets extends FacetValuesAdaptor, CommonFacets extends FacetValuesAdaptor> {
+
+  /** Extracts the batched facets and returns an object containing only these facets */
+  BatchedFacets getBatched(Facets facets);
+
+  /** Extracts the common facets and returns an object containing only these facets */
+  CommonFacets getCommon(Facets facets);
+}

@@ -33,6 +33,7 @@ import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.DecoratorContext;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
 import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
 import com.flipkart.krystal.krystex.resolution.ResolverCommand;
@@ -40,6 +41,7 @@ import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.flipkart.krystal.krystex.resolution.ResolverLogicDefinition;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
+import com.flipkart.krystal.vajram.BatchableVajram;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.Vajram;
@@ -165,25 +167,36 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
       throw new IllegalArgumentException("Unable to find vajram with id %s".formatted(vajramID));
     }
     Vajram<?> vajram = vajramDefinition.getVajram();
+    if (!(vajram instanceof BatchableVajram<?> batchableVajram)) {
+      throw new VajramDefinitionException(
+          "Cannot register input Batchers for vajram %s since it is not a BatchableVajram"
+              .formatted(vajramID.vajramId()));
+    }
     List<OutputLogicDecoratorConfig> outputLogicDecoratorConfigList = new ArrayList<>();
     for (InputBatcherConfig inputBatcherConfig : inputBatcherConfigs) {
-      Predicate<LogicExecutionContext> biFunction =
+      Predicate<LogicExecutionContext> shouldDecorate =
           logicExecutionContext -> {
-            return vajram.getFacetDefinitions().stream()
+            BatcherContext batcherContext =
+                new BatcherContext(
+                    batchableVajram,
+                    new DecoratorContext(
+                        inputBatcherConfig.instanceIdGenerator().apply(logicExecutionContext),
+                        logicExecutionContext));
+            return inputBatcherConfig.shouldBatch().test(batcherContext)
+                && vajram.getFacetDefinitions().stream()
                     .filter(facetDefinition -> facetDefinition instanceof InputDef<?>)
                     .map(facetDefinition -> (InputDef<?>) facetDefinition)
-                    .anyMatch(InputDef::isBatched)
-                && inputBatcherConfig.shouldModulate().test(logicExecutionContext);
+                    .anyMatch(InputDef::isBatched);
           };
       outputLogicDecoratorConfigList.add(
           new OutputLogicDecoratorConfig(
               InputBatchingDecorator.DECORATOR_TYPE,
-              biFunction,
+              shouldDecorate,
               inputBatcherConfig.instanceIdGenerator(),
               decoratorContext ->
                   inputBatcherConfig
                       .decoratorFactory()
-                      .apply(new BatcherContext(vajram, decoratorContext))));
+                      .apply(new BatcherContext(batchableVajram, decoratorContext))));
     }
     outputLogicDefinition.registerRequestScopedDecorator(outputLogicDecoratorConfigList);
   }

@@ -78,7 +78,7 @@ public class Utils {
   public static final String REQUEST_SUFFIX = "Request";
   public static final String IMPL = "Impl";
   public static final String FACET_UTIL = "FacetUtil";
-  public static final String CONVERTER = "CONVERTER";
+  public static final String CONVERTER = "BATCH_CONVERTER";
 
   @Getter private final ProcessingEnvironment processingEnv;
   private final Types typeUtils;

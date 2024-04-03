@@ -64,7 +64,13 @@ public final class InputBatchingDecorator<
     inputBatcher.onBatching(
         requests -> requests.forEach(request -> batchFacetsList(logicToDecorate, request)));
     return facetsList -> {
-      List<UnBatchedFacets<I, C>> requests = facetsList.stream().map(facetsConverter).toList();
+      List<UnBatchedFacets<I, C>> requests =
+          facetsList.stream()
+              .map(
+                  facets ->
+                      new UnBatchedFacets<>(
+                          facetsConverter.getBatched(facets), facetsConverter.getCommon(facets)))
+              .toList();
       List<BatchedFacets<I, C>> batchedFacetsList =
           requests.stream()
               .map(

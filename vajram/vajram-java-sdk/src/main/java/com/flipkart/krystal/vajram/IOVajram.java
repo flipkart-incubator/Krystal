@@ -22,4 +22,5 @@ import java.util.concurrent.ExecutorService;
  *
  * @param <T> The type of the output of this vajram
  */
-public abstract non-sealed class IOVajram<T> extends AbstractVajram<T> {}
+public abstract non-sealed class IOVajram<T> extends AbstractVajram<T>
+    implements BatchableVajram<T> {}
