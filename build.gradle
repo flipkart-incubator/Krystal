@@ -1,4 +1,5 @@
 plugins {
+    id 'java'
     id 'com.diffplug.spotless' version '6.16.0'
     id 'org.checkerframework' version '0.6.30'
 }
@@ -19,15 +20,40 @@ checkerFramework {
 }
 
 subprojects {
-    apply plugin: 'java-library'
-    apply plugin: 'idea'
     apply plugin: 'maven-publish'
-    apply plugin: 'com.diffplug.spotless'
-    apply plugin: 'org.checkerframework'
-    apply plugin: 'jacoco'
+    apply plugin: 'idea'
 
     group 'com.flipkart.krystal'
     version project.krystal_version
+
+    publishing {
+        repositories {
+            maven {
+                url "https://clojars.org/repo"
+                credentials {
+                    username = rootProject.ext.clojarsusername
+                    password = rootProject.ext.clojarspassword
+                }
+            }
+        }
+        publications.withType(MavenPublication).configureEach {
+            pom {
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+            }
+        }
+    }
+}
+
+configure(subprojects.findAll { it.name != 'krystal-bom' }) {
+    apply plugin: 'java-library'
+    apply plugin: 'com.diffplug.spotless'
+    apply plugin: 'org.checkerframework'
+    apply plugin: 'jacoco'
 
     spotless {
         java {
@@ -106,28 +132,6 @@ subprojects {
         withSourcesJar()
     }
     tasks.named('sourcesJar').configure { mustRunAfter('compileJava') }
-
-    publishing {
-        repositories {
-            maven {
-                url "https://clojars.org/repo"
-                credentials {
-                    username = rootProject.ext.clojarsusername
-                    password = rootProject.ext.clojarspassword
-                }
-            }
-        }
-        publications.withType(MavenPublication).configureEach {
-            pom {
-                licenses {
-                    license {
-                        name = 'The Apache License, Version 2.0'
-                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                    }
-                }
-            }
-        }
-    }
 
     test {
         useJUnitPlatform()
