@@ -97,8 +97,8 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
             implementation 'com.google.auto.service:auto-service:1.1.1'
             annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
 
-            annotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
-            testAnnotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
+            annotationProcessor 'com.flipkart.krystal:vajram-codegen:' + krystal_version
+            testAnnotationProcessor 'com.flipkart.krystal:vajram-codegen:' + krystal_version
 
             String lombok_version = '1.18.30'
             implementation 'org.projectlombok:lombok:' + lombok_version

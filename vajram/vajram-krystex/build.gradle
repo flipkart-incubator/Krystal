@@ -8,8 +8,8 @@ dependencies {
     api project(':vajram')
     api project(':krystex')
 
-    annotationProcessor 'com.flipkart.krystal:krystal-plugin'
-    testAnnotationProcessor 'com.flipkart.krystal:krystal-plugin'
+    annotationProcessor 'com.flipkart.krystal:vajram-codegen'
+    testAnnotationProcessor 'com.flipkart.krystal:vajram-codegen'
 
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
