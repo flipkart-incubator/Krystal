@@ -1,0 +1,21 @@
+pluginManagement {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven {url 'https://clojars.org/repo'}
+        gradlePluginPortal()
+    }
+}
+
+
+dependencyResolutionManagement {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven {url 'https://clojars.org/repo'}
+        gradlePluginPortal()
+    }
+}
+
+
+rootProject.name = 'krystal-bom'
