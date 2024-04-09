@@ -46,14 +46,3 @@ checkerFramework {
             '-AresolveReflection',
     ]
 }
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId = 'com.flipkart.krystal'
-            artifactId = 'krystal-plugin'
-            version = project.version
-            from components.java
-        }
-    }
-}

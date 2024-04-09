@@ -37,4 +37,6 @@ project(':vajram-krystex').projectDir = file('vajram/vajram-krystex')
 include 'vajram-lang'
 project(':vajram-lang').projectDir = file('vajram/vajram-lang')
 
+include 'krystal-bom'
+
 include 'code-coverage-report'

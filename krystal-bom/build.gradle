@@ -1,56 +1,13 @@
 plugins {
     id 'java-platform'
-    id 'maven-publish'
-}
-
-group = 'com.flipkart.krystal'
-version = '6.0.6-SNAPSHOT'
-
-repositories {
-    mavenLocal()
-    maven {
-        url "https://clojars.org/repo"
-    }
-    mavenCentral()
 }
 
 dependencies {
     constraints {
-        api 'com.flipkart.krystal:com.flipkart.krystal.gradle.plugin:' + project.version
-        api 'com.flipkart.krystal:krystal-plugin:' + project.version
-        api 'com.flipkart.krystal:vajram-codegen:' + project.version
-        api 'com.flipkart.krystal:vajram:' + project.version
-        api 'com.flipkart.krystal:krystal-common:' + project.version
-        api 'com.flipkart.krystal:vajram-krystex:' + project.version
-    }
-}
-
-publishing {
-    repositories {
-        maven {
-            url "https://clojars.org/repo"
-            credentials {
-                username = rootProject.ext.clojarsusername
-                password = rootProject.ext.clojarspassword
-            }
-        }
-    }
-    publications {
-        maven(MavenPublication) {
-            groupId = project.group
-            artifactId = project.name
-            version = project.version
-            from components.javaPlatform
-        }
-    }
-    publications.withType(MavenPublication).configureEach {
-        pom {
-            licenses {
-                license {
-                    name = 'The Apache License, Version 2.0'
-                    url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                }
-            }
-        }
+        api 'com.flipkart.krystal:com.flipkart.krystal.gradle.plugin:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-codegen:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram:' + project.krystal_version
+        api 'com.flipkart.krystal:krystal-common:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-krystex:' + project.krystal_version
     }
 }
