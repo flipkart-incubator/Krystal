@@ -98,7 +98,7 @@ import jakarta.inject.Inject;
  * Given a userId, this Vajram composes and returns a 'Hello!' greeting addressing the user by name
  * (as declared by the user in their profile).
  */
-@VajramDef("com.flipkart.greetingVajram") // Unique Id of this Vajram
+@VajramDef // Unique Id of this Vajram is the class name
 // SyncVajram means that this Vajram does not directly perform any blocking operations.
 public abstract class GreetingVajram extends ComputeVajram<String> {
 
