@@ -1,0 +1,81 @@
+plugins {
+    id 'java-platform'
+    id 'maven-publish'
+}
+
+group = 'com.flipkart'
+version = '0.1-SNAPSHOT'
+
+ext {
+    clojarsusername = project.properties['clojarsusername'] ?: ""
+    clojarspassword = project.properties['clojarspassword'] ?: ""
+}
+
+repositories {
+    mavenLocal()
+    maven {
+        url "https://clojars.org/repo"
+    }
+    mavenCentral()
+}
+
+javaPlatform {
+    allowDependencies()
+}
+dependencies {
+    api platform('com.fasterxml.jackson:jackson-bom:2.16.1')
+
+    api platform('com.flipkart.krystal:krystal-bom:6.0.6-SNAPSHOT')
+
+    api platform('com.google.inject:guice-bom:7.0.0')
+    api platform('com.google.guava:guava-bom:33.1.0-jre')
+
+    api platform('io.github.resilience4j:resilience4j-bom:2.2.0')
+
+    api platform('org.junit:junit-bom:5.10.1')
+    api platform('org.assertj:assertj-bom:3.25.2')
+
+    constraints {
+        api 'com.google.auto.service:auto-service:1.1.1'
+        api 'com.squareup:javapoet:1.13.0'
+
+        api 'commons-cli:commons-cli:1.6.0'
+
+        api 'jakarta.inject:jakarta.inject-api:2.0.1'
+
+        api 'org.checkerframework:checker-qual:3.42.0'
+        api 'org.projectlombok:lombok:1.18.30'
+        api 'org.reflections:reflections:0.10.2'
+        api 'org.slf4j:slf4j-api:2.0.11'
+
+    }
+}
+publishing {
+    repositories {
+        maven {
+            url "https://clojars.org/repo"
+            credentials {
+                username = rootProject.ext.clojarsusername
+                password = rootProject.ext.clojarspassword
+            }
+        }
+    }
+    publications {
+        maven(MavenPublication) {
+            groupId = project.group
+            artifactId = project.name
+            version = project.version
+            from components.javaPlatform
+        }
+    }
+    publications.withType(MavenPublication).configureEach {
+        pom {
+            licenses {
+                license {
+                    name = 'The Apache License, Version 2.0'
+                    url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                }
+            }
+        }
+    }
+}
