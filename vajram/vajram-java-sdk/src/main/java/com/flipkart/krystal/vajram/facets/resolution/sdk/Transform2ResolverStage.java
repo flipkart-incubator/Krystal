@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.facets.resolution.sdk;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.vajram.VajramRequest;
+import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SkipPredicate;
@@ -19,7 +19,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <DV> DependencyVajram: The vajram whose input is being resolved
  */
 public final class Transform2ResolverStage<
-    S1, S2, T, CV extends VajramRequest<?>, DV extends VajramRequest<?>> {
+    S1, S2, T, CV extends ImmutableRequest<?>, DV extends ImmutableRequest<?>> {
   private final VajramFacetSpec<T, DV> targetInput;
   private final VajramFacetSpec<S1, CV> sourceInput1;
   private final VajramFacetSpec<S2, CV> sourceInput2;

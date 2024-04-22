@@ -2,16 +2,16 @@ package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHe
 
 import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.friendIds_n;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.hellos_n;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.skip_n;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.userIds_n;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.friendIds_i;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.hellos_i;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.skip_i;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.userIds_i;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.Dependency;
+import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.DependencyResponse;
-import com.flipkart.krystal.vajram.Input;
-import com.flipkart.krystal.vajram.Output;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.Using;
@@ -54,15 +54,15 @@ public abstract class MutualFriendsHello extends ComputeVajram<String> {
     return String.join("\n", result);
   }
 
-  @Resolve(depName = friendIds_n, depInputs = FriendsServiceRequest.userId_n)
-  public static MultiExecute<String> userIdForFriendService(@Using(userIds_n) Set<String> userIds) {
+  @Resolve(dep = friendIds_i, depInputs = FriendsServiceRequest.userId_i)
+  public static MultiExecute<String> userIdForFriendService(@Using(userIds_i) Set<String> userIds) {
     return executeFanoutWith(userIds);
   }
 
-  @Resolve(depName = hellos_n, depInputs = HelloFriendsV2Request.userId_n)
+  @Resolve(dep = hellos_i, depInputs = HelloFriendsV2Request.userId_i)
   public static MultiExecute<String> userIDForHelloService(
-      @Using(friendIds_n) DependencyResponse<FriendsServiceRequest, Set<String>> friendIdMap,
-      @Using(skip_n) Optional<Boolean> skip) {
+      @Using(friendIds_i) DependencyResponse<FriendsServiceRequest, Set<String>> friendIdMap,
+      @Using(skip_i) Optional<Boolean> skip) {
     if (skip.orElse(false)) {
       return skipFanout("skip requested");
     }

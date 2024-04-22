@@ -1,11 +1,13 @@
 package com.flipkart.krystal.krystex.logicdecorators.observability;
 
 import static com.flipkart.krystal.data.Errable.empty;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.Response;
 import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
@@ -13,7 +15,6 @@ import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.google.common.collect.ImmutableMap;
-import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -50,15 +51,14 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
                 kryonExecutionReport.reportMainLogicEnd(
                     kryonId,
                     kryonLogicId,
-                    new Results<>(
+                    new LogicExecResults(
                         results.entrySet().stream()
-                            .collect(
-                                toImmutableMap(
-                                    Entry::getKey,
-                                    e ->
-                                        e.getValue()
-                                            .handle(Errable::errableFrom)
-                                            .getNow(empty())))));
+                            .map(
+                                e ->
+                                    new LogicExecResponse(
+                                        e.getKey(),
+                                        e.getValue().handle(Errable::errableFrom).getNow(empty())))
+                            .collect(toImmutableList())));
               });
       return results;
     };

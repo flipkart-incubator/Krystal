@@ -5,17 +5,17 @@ import com.google.common.collect.ImmutableSet;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record QualifiedInputs(
-    String dependencyName, @Nullable DataAccessSpec spec, ImmutableSet<String> inputNames) {
+    int dependencyId, @Nullable DataAccessSpec spec, ImmutableSet<String> inputNames) {
 
-  public QualifiedInputs(String dependencyName, DataAccessSpec spec, String targetInputName) {
-    this(dependencyName, spec, ImmutableSet.of(targetInputName));
+  public QualifiedInputs(int dependencyId, DataAccessSpec spec, String targetInput) {
+    this(dependencyId, spec, ImmutableSet.of(targetInput));
   }
 
-  public QualifiedInputs(String dependencyName, ImmutableSet<String> inputNames) {
-    this(dependencyName, null, inputNames);
+  public QualifiedInputs(int dependencyId, ImmutableSet<String> inputNames) {
+    this(dependencyId, null, inputNames);
   }
 
-  public QualifiedInputs(String dependencyName, String inputName) {
-    this(dependencyName, null, ImmutableSet.of(inputName));
+  public QualifiedInputs(int dependencyId, String inputName) {
+    this(dependencyId, null, ImmutableSet.of(inputName));
   }
-}
+  }

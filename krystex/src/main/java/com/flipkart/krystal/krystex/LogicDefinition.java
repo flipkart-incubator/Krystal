@@ -2,24 +2,31 @@ package com.flipkart.krystal.krystex;
 
 import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
-import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
-import com.flipkart.krystal.krystex.resolution.ResolverLogicDefinition;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 
-public abstract sealed class LogicDefinition<L extends Logic>
-    permits OutputLogicDefinition, MultiResolverDefinition, ResolverLogicDefinition {
+public class LogicDefinition<L extends Logic> {
 
   private final KryonLogicId kryonLogicId;
-  private final ImmutableSet<String> inputNames;
+  private final ImmutableSet<Integer> inputIds;
   private final ImmutableMap<Object, Tag> logicTags;
   private final L logic;
 
-  protected LogicDefinition(
-      KryonLogicId kryonLogicId, Set<String> inputs, ImmutableMap<Object, Tag> logicTags, L logic) {
+  public LogicDefinition(KryonLogicId kryonLogicId, L logic) {
     this.kryonLogicId = kryonLogicId;
-    this.inputNames = ImmutableSet.copyOf(inputs);
+    this.inputIds = ImmutableSet.of();
+    this.logicTags = ImmutableMap.of();
+    this.logic = logic;
+  }
+
+  public LogicDefinition(
+      KryonLogicId kryonLogicId,
+      Set<Integer> inputs,
+      ImmutableMap<Object, Tag> logicTags,
+      L logic) {
+    this.kryonLogicId = kryonLogicId;
+    this.inputIds = ImmutableSet.copyOf(inputs);
     this.logicTags = logicTags;
     this.logic = logic;
   }
@@ -28,8 +35,8 @@ public abstract sealed class LogicDefinition<L extends Logic>
     return kryonLogicId;
   }
 
-  public ImmutableSet<String> inputNames() {
-    return inputNames;
+  public ImmutableSet<Integer> inputNames() {
+    return inputIds;
   }
 
   public ImmutableMap<Object, Tag> logicTags() {

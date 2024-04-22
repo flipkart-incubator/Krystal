@@ -5,16 +5,20 @@ import static com.flipkart.krystal.vajram.codegen.Constants.BATCHABLE_FACETS;
 import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_FACETS;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
+import static com.flipkart.krystal.vajram.utils.Constants.FACETS_CLASS_NAME;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.flipkart.krystal.datatypes.DataType;
-import com.flipkart.krystal.vajram.Dependency;
+import com.flipkart.krystal.vajram.exception.VajramValidationException;
+import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.Generated;
-import com.flipkart.krystal.vajram.Input;
+import com.flipkart.krystal.vajram.facets.FacetId;
+import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramID;
-import com.flipkart.krystal.vajram.VajramRequest;
+import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.codegen.models.DependencyModel;
 import com.flipkart.krystal.vajram.codegen.models.DependencyModel.DependencyModelBuilder;
@@ -23,7 +27,12 @@ import com.flipkart.krystal.vajram.codegen.models.InputModel.InputModelBuilder;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfoLite;
 import com.flipkart.krystal.vajram.facets.InputSource;
-import com.flipkart.krystal.vajram.facets.Using;
+import com.flipkart.krystal.vajram.facets.ReservedFacets;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Primitives;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
@@ -44,10 +53,11 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 import javax.annotation.Nullable;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
@@ -68,10 +78,11 @@ import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.JavaFileObject;
 import lombok.Getter;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class Utils {
 
-  private static final boolean DEBUG = false;
+  private static final boolean DEBUG = true;
 
   public static final String DOT = ".";
   public static final String COMMA = ",";
@@ -129,12 +140,41 @@ public class Utils {
     Optional<Element> facetsClass =
         vajramClass.getEnclosedElements().stream()
             .filter(element -> element.getKind() == ElementKind.CLASS)
-            .filter(element -> element.getSimpleName().contentEquals("_Facets"))
+            .filter(element -> element.getSimpleName().contentEquals(FACETS_CLASS_NAME))
             .findFirst()
             .map(element -> typeUtils.asElement(element.asType()));
-
+    Set<Integer> reservedFacets =
+        facetsClass
+            .map(f -> f.getAnnotation(ReservedFacets.class))
+            .map(ReservedFacets::ids)
+            .map(IntStream::of)
+            .map(IntStream::boxed)
+            .map(integerStream -> integerStream.collect(toImmutableSet()))
+            .orElse(ImmutableSet.of());
     List<VariableElement> fields =
         ElementFilter.fieldsIn(facetsClass.map(Element::getEnclosedElements).orElse(List.of()));
+    BiMap<String, Integer> givenIdsByName = HashBiMap.create();
+    for (VariableElement field : fields) {
+      Optional<Integer> i =
+          Optional.ofNullable(field.getAnnotation(FacetId.class)).map(FacetId::value);
+      if (i.isPresent()) {
+        int givenId = i.get();
+        String facetName = field.getSimpleName().toString();
+        if (reservedFacets.contains(givenId)) {
+          throw errorAndThrow(
+              "Facet %s cannot use the reserved facet id %d".formatted(facetName, givenId), field);
+        } else if (givenIdsByName.inverse().containsKey(givenId)) {
+          throw errorAndThrow(
+              "FacetId %d is already assigned to Facet %s"
+                  .formatted(
+                      givenId, givenIdsByName.inverse().getOrDefault(givenId, "unknown facet")),
+              field);
+        } else {
+          givenIdsByName.put(facetName, givenId);
+        }
+      }
+    }
+    Set<Integer> takenFacetIds = Sets.union(reservedFacets, givenIdsByName.values());
     List<VariableElement> inputFields =
         fields.stream()
             .filter(
@@ -148,6 +188,7 @@ public class Utils {
             .toList();
     PackageElement enclosingElement = (PackageElement) vajramClass.getEnclosingElement();
     String packageName = enclosingElement.getQualifiedName().toString();
+    AtomicInteger nextFacetId = new AtomicInteger(1);
     VajramInfo vajramInfo =
         new VajramInfo(
             vajramID(vajramInfoLite.vajramId()),
@@ -155,43 +196,74 @@ public class Utils {
             packageName,
             inputFields.stream()
                 .map(
-                    inputField -> {
-                      InputModelBuilder<Object> inputBuilder =
-                          InputModel.builder().facetField(inputField);
-                      inputBuilder.name(inputField.getSimpleName().toString());
-                      inputBuilder.isMandatory(!isOptional(inputField.asType(), processingEnv));
-                      DataType<Object> dataType =
-                          inputField
-                              .asType()
-                              .accept(new DeclaredTypeVisitor<>(this, true, inputField), null);
-                      inputBuilder.type(dataType);
-                      inputBuilder.isBatched(
-                          Optional.ofNullable(inputField.getAnnotation(Batch.class)).isPresent());
-                      Optional<Input> inputAnno =
-                          Optional.ofNullable(inputField.getAnnotation(Input.class));
-                      Set<InputSource> sources = new LinkedHashSet<>();
-                      if (inputAnno.isPresent()) {
-                        sources.add(InputSource.CLIENT);
-                      }
-                      if (inputField.getAnnotation(Inject.class) != null) {
-                        sources.add(InputSource.SESSION);
-                      }
-                      inputBuilder.sources(sources);
-                      return inputBuilder.build();
-                    })
+                    inputField ->
+                        toInputModel(inputField, givenIdsByName, takenFacetIds, nextFacetId))
                 .collect(toImmutableList()),
             dependencyFields.stream()
-                .map(depField -> toDependencyModel(vajramInfoLite.vajramId(), depField))
+                .map(
+                    depField ->
+                        toDependencyModel(
+                            vajramInfoLite.vajramId(),
+                            depField,
+                            givenIdsByName,
+                            takenFacetIds,
+                            nextFacetId))
                 .collect(toImmutableList()),
+            ImmutableBiMap.copyOf(givenIdsByName),
             vajramClass);
     note("VajramInfo: %s".formatted(vajramInfo));
     return vajramInfo;
   }
 
-  private DependencyModel toDependencyModel(String vajramId, VariableElement depField) {
+  private InputModel<Object> toInputModel(
+      VariableElement inputField,
+      BiMap<String, Integer> givenIdsByName,
+      Set<Integer> takenFacetIds,
+      AtomicInteger nextFacetId) {
+    InputModelBuilder<Object> inputBuilder = InputModel.builder().facetField(inputField);
+    String facetName = inputField.getSimpleName().toString();
+    inputBuilder.id(
+        Optional.ofNullable(givenIdsByName.get(facetName))
+            .orElseGet(() -> getNextAvailableFacetId(takenFacetIds, nextFacetId)));
+    inputBuilder.name(facetName);
+    inputBuilder.isMandatory(!isOptional(inputField.asType(), processingEnv));
+    DataType<Object> dataType =
+        inputField.asType().accept(new DeclaredTypeVisitor<>(this, true, inputField), null);
+    inputBuilder.type(dataType);
+    inputBuilder.isBatched(Optional.ofNullable(inputField.getAnnotation(Batch.class)).isPresent());
+    Optional<Input> inputAnno = Optional.ofNullable(inputField.getAnnotation(Input.class));
+    Set<InputSource> sources = new LinkedHashSet<>();
+    if (inputAnno.isPresent()) {
+      sources.add(InputSource.CLIENT);
+    }
+    if (inputField.getAnnotation(Inject.class) != null) {
+      sources.add(InputSource.SESSION);
+    }
+    inputBuilder.sources(sources);
+    return inputBuilder.build();
+  }
+
+  private static int getNextAvailableFacetId(
+      Set<Integer> takenFacetIds, AtomicInteger nextFacetId) {
+    while (takenFacetIds.contains(nextFacetId.get())) {
+      nextFacetId.getAndIncrement();
+    }
+    return nextFacetId.getAndIncrement();
+  }
+
+  private DependencyModel toDependencyModel(
+      String vajramId,
+      VariableElement depField,
+      BiMap<String, Integer> givenIdsByName,
+      Set<Integer> takenFacetIds,
+      AtomicInteger nextFacetId) {
+    String facetName = depField.getSimpleName().toString();
     Dependency dependency = depField.getAnnotation(Dependency.class);
     DependencyModelBuilder depBuilder = DependencyModel.builder().facetField(depField);
-    depBuilder.name(depField.getSimpleName().toString());
+    depBuilder.id(
+        Optional.ofNullable(givenIdsByName.get(facetName))
+            .orElseGet(() -> getNextAvailableFacetId(takenFacetIds, nextFacetId)));
+    depBuilder.name(facetName);
     depBuilder.isMandatory(!isOptional(depField.asType(), processingEnv));
     Optional<TypeMirror> vajramReqType =
         getTypeFromAnnotationMember(dependency::withVajramReq)
@@ -199,7 +271,8 @@ public class Utils {
                 typeMirror ->
                     !((QualifiedNameable) typeUtils.asElement(typeMirror))
                         .getQualifiedName()
-                        .equals(getTypeElement(VajramRequest.class.getName()).getQualifiedName()));
+                        .equals(
+                            getTypeElement(ImmutableRequest.class.getName()).getQualifiedName()));
     Optional<TypeMirror> vajramType =
         getTypeFromAnnotationMember(dependency::onVajram)
             .filter(
@@ -244,12 +317,11 @@ public class Utils {
       depBuilder.responseType(declaredDataType);
       return depBuilder.build();
     }
-    error(
+    throw errorAndThrow(
         ("Invalid dependency spec of dependency '%s' of vajram '%s'."
                 + " Found withVajramReq=%s and onVajram=%s")
             .formatted(depField.getSimpleName(), vajramId, vajramReqType.get(), vajramType.get()),
         depField);
-    throw new RuntimeException("Invalid Dependency specification");
   }
 
   TypeElement getTypeElement(String name) {
@@ -262,8 +334,8 @@ public class Utils {
 
   private VajramInfoLite getVajramInfoLite(TypeElement vajramOrReqClass) {
     String vajramClassSimpleName = vajramOrReqClass.getSimpleName().toString();
-    if (isRawAssignable(vajramOrReqClass.asType(), VajramRequest.class)) {
-      TypeMirror responseType = getResponseType(vajramOrReqClass, VajramRequest.class);
+    if (isRawAssignable(vajramOrReqClass.asType(), ImmutableRequest.class)) {
+      TypeMirror responseType = getResponseType(vajramOrReqClass, ImmutableRequest.class);
       TypeElement responseTypeElement = (TypeElement) typeUtils.asElement(responseType);
       return new VajramInfoLite(
           vajramClassSimpleName.substring(
@@ -284,14 +356,14 @@ public class Utils {
     } else {
       throw new IllegalArgumentException(
           "Unknown class hierarchy of vajram class %s. Expected %s or %s"
-              .formatted(vajramOrReqClass, Vajram.class, VajramRequest.class));
+              .formatted(vajramOrReqClass, Vajram.class, ImmutableRequest.class));
     }
   }
 
   private String getVajramReqClassName(TypeElement vajramClass) {
     if (isRawAssignable(vajramClass.asType(), Vajram.class)) {
       return vajramClass.getQualifiedName().toString() + REQUEST_SUFFIX;
-    } else if (isRawAssignable(vajramClass.asType(), VajramRequest.class)) {
+    } else if (isRawAssignable(vajramClass.asType(), ImmutableRequest.class)) {
       return vajramClass.getQualifiedName().toString();
     } else {
       throw new AssertionError("This should not happen!");
@@ -363,6 +435,11 @@ public class Utils {
           .getMessager()
           .printMessage(Kind.NOTE, "[%s] %s".formatted(getTimestamp(), message));
     }
+  }
+
+  public VajramValidationException errorAndThrow(String message, @Nullable Element element) {
+    error(message, element);
+    return new VajramValidationException(message);
   }
 
   public void error(String message, @Nullable Element element) {
@@ -475,23 +552,5 @@ public class Utils {
     }
     return classBuilder.addAnnotation(
         AnnotationSpec.builder(Generated.class).addMember("by", "$S", generator.getName()).build());
-  }
-
-  /**
-   * Infer facet name provided through @Using annotation. If @Using annotation is not present, then
-   * infer facet name from the parameter name
-   *
-   * @param parameter the bind parameter in the resolver method
-   * @return facet name in the form of String
-   */
-  public String inferFacetName(VariableElement parameter) {
-    String usingInputName;
-    if (Objects.nonNull(parameter.getAnnotation(Using.class))) {
-      usingInputName = parameter.getAnnotation(Using.class).value();
-    } else {
-      usingInputName = parameter.getSimpleName().toString();
-    }
-
-    return usingInputName;
   }
 }

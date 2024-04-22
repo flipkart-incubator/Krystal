@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.codegen.models;
 
-import com.flipkart.krystal.vajram.Output;
+import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.codegen.Utils;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
@@ -38,32 +38,37 @@ public record ParsedVajramData(
 
     List<ExecutableElement> resolverMethods = new ArrayList<>();
     ExecutableElement outputLogic =
-        getOutputLogicAndResolverMethods(vajramInfo.vajramClass(), resolverMethods, util);
+        getOutputLogicAndResolverMethods(vajramInfo, resolverMethods, util);
     return Optional.of(new ParsedVajramData(resolverMethods, outputLogic, packageName, vajramInfo));
   }
 
-  public static void validateNoDuplicateResolvers(List<ExecutableElement> methods, Utils util) {
+  public static void validateNoDuplicateResolvers(
+      List<ExecutableElement> methods, VajramInfo vajramInfo, Utils util) {
     // add comments
-    Map<String, Map<String, Boolean>> lookUpMap = new HashMap<>();
+    Map<Integer, Map<String, Boolean>> lookUpMap = new HashMap<>();
     for (ExecutableElement method : methods) {
-      String depName = method.getAnnotation(Resolve.class).depName();
+      int depId =
+          Optional.ofNullable(
+                  vajramInfo.facetIdsByName().get(method.getAnnotation(Resolve.class).depName()))
+              .orElseThrow();
       String[] depInputs = method.getAnnotation(Resolve.class).depInputs();
       for (String depinput : depInputs) {
-        if (lookUpMap.getOrDefault(depName, Map.of()).getOrDefault(depinput, false)) {
+        if (lookUpMap.getOrDefault(depId, Map.of()).getOrDefault(depinput, false)) {
           String errorMessage =
               "Two Resolver resolving same input (%s) for dependency name (%s)"
-                  .formatted(depinput, depName);
+                  .formatted(depinput, depId);
           util.error(errorMessage, method);
           throw new VajramValidationException(errorMessage);
         }
-        lookUpMap.computeIfAbsent(depName, k -> new HashMap<>()).put(depinput, true);
+        lookUpMap.computeIfAbsent(depId, k -> new HashMap<>()).put(depinput, true);
       }
     }
   }
 
   public static ExecutableElement getOutputLogicAndResolverMethods(
-      TypeElement vajramClass, List<ExecutableElement> resolveMethods, Utils util) {
+      VajramInfo vajramInfo, List<ExecutableElement> resolveMethods, Utils util) {
     ExecutableElement outputLogic = null;
+    TypeElement vajramClass = vajramInfo.vajramClass();
     List<ExecutableElement> methods = getStaticMethods(vajramClass);
     for (ExecutableElement method : methods) {
       if (isResolver(method)) {
@@ -84,7 +89,7 @@ public record ParsedVajramData(
         }
       }
     }
-    validateNoDuplicateResolvers(resolveMethods, util);
+    validateNoDuplicateResolvers(resolveMethods, vajramInfo, util);
     if (outputLogic == null) {
       String errorMessage = "Missing output logic method";
       util.error(errorMessage, vajramClass);

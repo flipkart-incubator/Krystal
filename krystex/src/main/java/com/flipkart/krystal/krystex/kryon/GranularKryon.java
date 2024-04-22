@@ -3,7 +3,8 @@ package com.flipkart.krystal.krystex.kryon;
 import static com.flipkart.krystal.data.Errable.withError;
 import static com.flipkart.krystal.krystex.kryon.KryonUtils.enqueueOrExecuteCommand;
 import static com.google.common.base.Functions.identity;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.Math.max;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.stream.Collectors.groupingBy;
@@ -11,9 +12,17 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.FacetValue;
+import com.flipkart.krystal.data.FacetContainer;
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetsBuilder;
+import com.flipkart.krystal.data.ImmutableFacets;
+import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.data.RequestBuilder;
+import com.flipkart.krystal.data.Response;
 import com.flipkart.krystal.data.Results;
+import com.flipkart.krystal.except.IllegalModificationException;
+import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.CallbackGranule;
@@ -28,7 +37,7 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.request.StringReqGenerator;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
-import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
+import com.flipkart.krystal.krystex.resolution.MultiResolver;
 import com.flipkart.krystal.krystex.resolution.ResolverCommand;
 import com.flipkart.krystal.krystex.resolution.ResolverCommand.SkipDependency;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
@@ -36,7 +45,6 @@ import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -48,18 +56,17 @@ import java.util.SortedSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse> {
 
-  private final Map<RequestId, Map<String, DependencyKryonExecutions>> dependencyExecutions =
+  private final Map<RequestId, Map<Integer, DependencyKryonExecutions>> dependencyExecutions =
       new LinkedHashMap<>();
 
-  private final Map<RequestId, Map<String, FacetValue<Object>>> inputsValueCollector =
-      new LinkedHashMap<>();
+  private final Map<RequestId, RequestBuilder<Object>> inputsValueCollector = new LinkedHashMap<>();
 
-  private final Map<RequestId, Map<String, Results<Object>>> dependencyValuesCollector =
-      new LinkedHashMap<>();
+  private final Map<RequestId, FacetsBuilder> dependencyValuesCollector = new LinkedHashMap<>();
 
   /** A unique Result future for every requestId. */
   private final Map<RequestId, CompletableFuture<GranuleResponse>> resultsByRequest =
@@ -69,7 +76,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
    * A unique {@link CompletableFuture} for every new set of Inputs. This acts as a cache so that
    * the same computation is not repeated multiple times .
    */
-  private final Map<Facets, CompletableFuture<@Nullable Object>> resultsCache =
+  private final Map<Request<Object>, CompletableFuture<@Nullable Object>> resultsCache =
       new LinkedHashMap<>();
 
   private final Map<RequestId, Boolean> outputLogicExecuted = new LinkedHashMap<>();
@@ -83,6 +90,9 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
   private final Map<DependantChain, Set<RequestId>> requestsByDependantChain =
       new LinkedHashMap<>();
   private final Map<RequestId, DependantChain> dependantChainByRequest = new LinkedHashMap<>();
+
+  @MonotonicNonNull private ImmutableRequest<Object> emptyRequest;
+  @MonotonicNonNull private ImmutableFacets emptyFacets;
 
   GranularKryon(
       KryonDefinition kryonDefinition,
@@ -151,12 +161,11 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
       RequestId requestId, CompletableFuture<GranuleResponse> resultForRequest) {
     // If all the inputs and dependency values needed by the output logic are available, then
     // prepare to run outputLogic
-    ImmutableSet<String> inputNames = kryonDefinition.getOutputLogicDefinition().inputNames();
-    Set<String> collect =
-        new LinkedHashSet<>(
-            inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
-    collect.addAll(dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).keySet());
-    if (collect.containsAll(inputNames)) { // All the inputs of the kryon logic have data present
+    ImmutableSet<Integer> inputNames = kryonDefinition.getOutputLogicDefinition().inputNames();
+    Facets facets =
+        dependencyValuesCollector.computeIfAbsent(requestId, r -> emptyFacets()._asBuilder());
+    if (inputNames.stream()
+        .allMatch(facets::_hasValue)) { // All the inputs of the kryon logic have data present
       executeOutputLogic(resultForRequest, requestId);
     }
   }
@@ -206,34 +215,34 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
   }
 
   private void executeWithInputs(RequestId requestId, ForwardGranule forwardGranule) {
-    collectInputValues(requestId, forwardGranule.inputNames(), forwardGranule.values());
-    execute(requestId, forwardGranule.inputNames());
+    collectInputValues(requestId, forwardGranule.inputIds(), forwardGranule.request());
+    execute(requestId, forwardGranule.inputIds());
   }
 
   private void executeWithDependency(RequestId requestId, CallbackGranule executeWithInput) {
-    String dependencyName = executeWithInput.dependencyName();
-    ImmutableSet<String> inputNames = ImmutableSet.of(dependencyName);
-    if (dependencyValuesCollector
-            .computeIfAbsent(requestId, k -> new LinkedHashMap<>())
-            .putIfAbsent(dependencyName, executeWithInput.results())
-        != null) {
+    int dependencyId = executeWithInput.dependencyId();
+    ImmutableSet<Integer> inputNames = ImmutableSet.of(dependencyId);
+    try {
+      dependencyValuesCollector
+          .computeIfAbsent(requestId, k -> emptyFacets()._asBuilder())
+          ._set(dependencyId, executeWithInput.results());
+    } catch (IllegalModificationException e) {
       throw new DuplicateRequestException(
           "Duplicate data for dependency %s of kryon %s in request %s"
-              .formatted(dependencyName, kryonId, requestId));
+              .formatted(dependencyId, kryonId, requestId),
+          e);
     }
     execute(requestId, inputNames);
   }
 
-  private void execute(RequestId requestId, ImmutableSet<String> newInputNames) {
-    Map<String, FacetValue<Object>> allInputs =
-        inputsValueCollector.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
-    Map<String, Results<Object>> allDependencies =
-        dependencyValuesCollector.computeIfAbsent(requestId, k -> new LinkedHashMap<>());
-    ImmutableSet<String> allInputNames = kryonDefinition.facetNames();
-    Set<String> availableInputs = Sets.union(allInputs.keySet(), allDependencies.keySet());
+  private void execute(RequestId requestId, ImmutableSet<Integer> newInputNames) {
+    FacetsBuilder allFacets =
+        dependencyValuesCollector.computeIfAbsent(requestId, k -> emptyFacets()._asBuilder());
+    ImmutableSet<Integer> allInputNames = kryonDefinition.facetIds();
+    Set<Integer> availableInputs = allFacets._asMap().keySet();
     if (availableInputs.isEmpty()) {
       if (!allInputNames.isEmpty()
-          && kryonDefinition.resolverDefinitions().isEmpty()
+          && kryonDefinition.resolverDefinitionsById().isEmpty()
           && !kryonDefinition.dependencyKryons().isEmpty()) {
         executeDependenciesWhenNoResolvers(requestId);
       }
@@ -245,14 +254,14 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
 
   /**
    * @param requestId The requestId.
-   * @param newInputNames The input names for which new values were just made available.
+   * @param newInputIds The input names for which new values were just made available.
    * @param availableInputs The inputs for which values are available.
    * @return the resolver definitions which need at least one of the provided {@code inputNames} and
    *     all of whose inputs' values are available. i.e. resolvers which should be executed
    *     immediately
    */
   private Set<ResolverDefinition> getPendingResolvers(
-      RequestId requestId, ImmutableSet<String> newInputNames, Set<String> availableInputs) {
+      RequestId requestId, ImmutableSet<Integer> newInputIds, Set<Integer> availableInputs) {
     Map<ResolverDefinition, ResolverCommand> resolverResults =
         this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
 
@@ -260,14 +269,14 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
     Set<ResolverDefinition> pendingUnboundResolvers =
         kryonDefinition
             .resolverDefinitionsByInput()
-            .getOrDefault(Optional.<String>empty(), ImmutableSet.of())
+            .getOrDefault(Optional.<Integer>empty(), ImmutableSet.of())
             .stream()
             .filter(
                 resolverDefinition -> availableInputs.containsAll(resolverDefinition.boundFrom()))
             .filter(resolverDefinition -> !resolverResults.containsKey(resolverDefinition))
             .collect(toSet());
     pendingResolvers =
-        newInputNames.stream()
+        newInputIds.stream()
             .flatMap(
                 input ->
                     kryonDefinition
@@ -289,7 +298,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
       return;
     }
 
-    Optional<MultiResolverDefinition> multiResolverOpt =
+    Optional<LogicDefinition<MultiResolver>> multiResolverOpt =
         kryonDefinition
             .multiResolverLogicId()
             .map(
@@ -301,51 +310,51 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
     if (multiResolverOpt.isEmpty()) {
       return;
     }
-    MultiResolverDefinition multiResolver = multiResolverOpt.get();
+    LogicDefinition<MultiResolver> multiResolver = multiResolverOpt.get();
 
-    Map<String, Set<ResolverDefinition>> resolversByDependency =
-        pendingResolvers.stream().collect(groupingBy(ResolverDefinition::dependencyName, toSet()));
+    Map<Integer, Set<ResolverDefinition>> resolversByDependency =
+        pendingResolvers.stream().collect(groupingBy(ResolverDefinition::dependencyId, toSet()));
     Optional<SkipGranule> skipRequested =
         this.skipLogicRequested.getOrDefault(requestId, Optional.empty());
-    Map<String, ResolverCommand> resolverCommands;
+    Map<Integer, ResolverCommand> resolverCommands;
     if (skipRequested.isPresent()) {
       SkipDependency skip =
           ResolverCommand.skip(skipRequested.get().skipDependencyCommand().reason());
       resolverCommands =
           resolversByDependency.keySet().stream().collect(toMap(identity(), _k -> skip));
     } else {
-      Facets facets =
-          getInputsFor(
-              requestId,
-              pendingResolvers.stream()
-                  .map(ResolverDefinition::boundFrom)
-                  .flatMap(Collection::stream)
-                  .collect(toSet()));
+      Facets facets = getFacetsFor(requestId);
       resolverCommands =
           multiResolver
               .logic()
               .resolve(
                   resolversByDependency.entrySet().stream()
-                      .map(e -> new DependencyResolutionRequest(e.getKey(), e.getValue()))
+                      .map(
+                          e ->
+                              new DependencyResolutionRequest(
+                                  e.getKey(),
+                                  e.getValue().stream()
+                                      .map(ResolverDefinition::resolverId)
+                                      .toList()))
                       .toList(),
                   facets);
     }
     resolverCommands.forEach(
-        (depName, resolverCommand) -> {
+        (depId, resolverCommand) -> {
           handleResolverCommand(
               requestId,
-              depName,
-              resolversByDependency.getOrDefault(depName, ImmutableSet.of()),
+              depId,
+              resolversByDependency.getOrDefault(depId, ImmutableSet.of()),
               resolverCommand);
         });
   }
 
   private void handleResolverCommand(
       RequestId requestId,
-      String dependencyName,
+      int dependencyId,
       Set<ResolverDefinition> resolverDefinitions,
       ResolverCommand resolverCommand) {
-    KryonId depKryonId = getDepKryonId(dependencyName);
+    KryonId depKryonId = getDepKryonId(dependencyId);
     Map<ResolverDefinition, ResolverCommand> resolverResults =
         this.resolverResults.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
     resolverDefinitions.forEach(
@@ -354,18 +363,18 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
     DependencyKryonExecutions dependencyKryonExecutions =
         dependencyExecutions
             .computeIfAbsent(requestId, k -> new LinkedHashMap<>())
-            .computeIfAbsent(dependencyName, k -> new DependencyKryonExecutions());
+            .computeIfAbsent(dependencyId, k -> new DependencyKryonExecutions());
     dependencyKryonExecutions.executedResolvers().addAll(resolverDefinitions);
     if (resolverCommand instanceof SkipDependency) {
-      if (dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of()).get(dependencyName)
-          == null) {
+      if (!dependencyValuesCollector
+          .computeIfAbsent(requestId, _k -> emptyFacets()._asBuilder())
+          ._hasValue(dependencyId)) {
         /* This is for the case where for some resolvers the input has already been resolved, but we
         do need to skip them as well, as our current resolver is skipped.*/
         Set<RequestId> requestIdSet =
             new HashSet<>(dependencyKryonExecutions.individualCallResponses().keySet());
         RequestId dependencyRequestId =
-            requestIdGenerator.newSubRequest(
-                requestId, () -> "%s[%s]".formatted(dependencyName, 0));
+            requestIdGenerator.newSubRequest(requestId, () -> "%s[%s]".formatted(dependencyId, 0));
         /*Skipping Current resolver, as it's a skip, we don't need to iterate
          * over fanout requests as the input is empty*/
         requestIdSet.add(dependencyRequestId);
@@ -378,7 +387,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                       .getOrDefault(
                           requestId,
                           kryonDefinition.kryonDefinitionRegistry().getDependantChainsStart())
-                      .extend(kryonId, dependencyName),
+                      .extend(kryonId, dependencyId),
                   (SkipDependency) resolverCommand);
           dependencyKryonExecutions
               .individualCallResponses()
@@ -391,50 +400,50 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
       // The current resolver  has triggered a fan-out.
       // So we need multiply the total number of requests to the dependency by n where n is
       // the size of the fan-out triggered by this resolver
-      ImmutableList<Facets> inputList = resolverCommand.getInputs();
+      ImmutableList<? extends Request<Object>> inputList = resolverCommand.getInputs();
       long executionsInProgress = dependencyKryonExecutions.executionCounter().longValue();
-      Map<RequestId, Facets> oldInputs = new LinkedHashMap<>();
+      Map<RequestId, Request<Object>> oldInputs = new LinkedHashMap<>();
       for (int i = 0; i < executionsInProgress; i++) {
         int iFinal = i;
         RequestId rid =
             requestIdGenerator.newSubRequest(
-                requestId, () -> "%s[%s]".formatted(dependencyName, iFinal));
+                requestId, () -> "%s[%s]".formatted(dependencyId, iFinal));
         oldInputs.put(
             rid,
-            new Facets(
-                dependencyKryonExecutions
-                    .individualCallInputs()
-                    .getOrDefault(rid, Facets.empty())
-                    .values()));
+            dependencyKryonExecutions
+                .individualCallInputs()
+                .getOrDefault(rid, getNewDepRequest(dependencyId)));
       }
 
       long batchSize = max(executionsInProgress, 1);
       long requestCounter = 0;
       for (int j = 0; j < inputList.size(); j++) {
         int jFinal = j;
-        Facets facets = inputList.get(j);
+        Request<Object> facets = inputList.get(j);
         for (int i = 0; i < batchSize; i++) {
           int iFinal = i;
           RequestId dependencyRequestId =
               requestIdGenerator.newSubRequest(
-                  requestId, () -> "%s[%s]".formatted(dependencyName, jFinal * batchSize + iFinal));
+                  requestId, () -> "%s[%s]".formatted(dependencyId, jFinal * batchSize + iFinal));
           RequestId inProgressRequestId;
           if (executionsInProgress > 0) {
             inProgressRequestId =
                 requestIdGenerator.newSubRequest(
-                    requestId, () -> "%s[%s]".formatted(dependencyName, iFinal));
+                    requestId, () -> "%s[%s]".formatted(dependencyId, iFinal));
           } else {
             inProgressRequestId = dependencyRequestId;
           }
-          Facets oldInput = oldInputs.getOrDefault(inProgressRequestId, Facets.empty());
+          Request<Object> oldInput =
+              oldInputs.getOrDefault(inProgressRequestId, getNewDepRequest(dependencyId));
           if (requestCounter >= executionsInProgress) {
             dependencyKryonExecutions.executionCounter().increment();
           }
-          Facets newFacets;
+          RequestBuilder<Object> newFacets;
           if (j == 0) {
-            newFacets = facets;
+            newFacets = facets._asBuilder();
           } else {
-            newFacets = Facets.union(oldInput.values(), facets.values());
+            newFacets = oldInput._asBuilder();
+            facets._asMap().forEach(newFacets::_set);
           }
           dependencyKryonExecutions.individualCallInputs().put(dependencyRequestId, newFacets);
           dependencyKryonExecutions
@@ -444,7 +453,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                   kryonExecutor.executeCommand(
                       new ForwardGranule(
                           depKryonId,
-                          newFacets.values().keySet(),
+                          ImmutableSet.copyOf(newFacets._asMap().keySet()),
                           newFacets,
                           dependantChainByRequest
                               .getOrDefault(
@@ -452,7 +461,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                                   kryonDefinition
                                       .kryonDefinitionRegistry()
                                       .getDependantChainsStart())
-                              .extend(kryonId, dependencyName),
+                              .extend(kryonId, dependencyId),
                           dependencyRequestId)));
         }
         requestCounter += batchSize;
@@ -461,7 +470,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
     ImmutableSet<ResolverDefinition> resolverDefinitionsForDependency =
         kryonDefinition
             .resolverDefinitionsByDependencies()
-            .getOrDefault(dependencyName, ImmutableSet.of());
+            .getOrDefault(dependencyId, ImmutableSet.of());
     if (resolverDefinitionsForDependency.equals(dependencyKryonExecutions.executedResolvers())) {
       allOf(
               dependencyKryonExecutions
@@ -472,10 +481,13 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
               (unused, throwable) -> {
                 enqueueOrExecuteCommand(
                     () -> {
-                      Results<Object> results;
+                      Results<?, Object> results;
                       if (throwable != null) {
                         results =
-                            new Results<>(ImmutableMap.of(Facets.empty(), withError(throwable)));
+                            new Results<>(
+                                ImmutableList.of(
+                                    new Response<>(
+                                        getNewDepRequest(dependencyId), withError(throwable))));
                       } else {
                         results =
                             new Results<>(
@@ -484,13 +496,16 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                                     .values()
                                     .stream()
                                     .map(cf -> cf.getNow(new GranuleResponse()))
-                                    .collect(
-                                        toImmutableMap(
-                                            GranuleResponse::facets, GranuleResponse::response)));
+                                    .map(
+                                        granuleResponse ->
+                                            new Response<>(
+                                                granuleResponse.facets(),
+                                                granuleResponse.response()))
+                                    .collect(toImmutableList()));
                       }
                       return new CallbackGranule(
                           this.kryonId,
-                          dependencyName,
+                          dependencyId,
                           results,
                           requestId,
                           getDepChainFor(requestId));
@@ -501,10 +516,31 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
               });
 
       flushDependencyIfNeeded(
-          dependencyName,
+          dependencyId,
           dependantChainByRequest.getOrDefault(
               requestId, kryonDefinition.kryonDefinitionRegistry().getDependantChainsStart()));
     }
+  }
+
+  private ImmutableFacets emptyFacets() {
+    return emptyFacets != null
+        ? emptyFacets
+        : (emptyFacets =
+            kryonDefinition.facetsFromRequest().logic().facetsFromRequest(emptyRequest())._build());
+  }
+
+  private Request<Object> emptyRequest() {
+    return emptyRequest != null
+        ? emptyRequest
+        : (emptyRequest = kryonDefinition.createNewRequest().logic().newRequestBuilder()._build());
+  }
+
+  private RequestBuilder<Object> getNewDepRequest(int depId) {
+    KryonId depKId =
+        checkNotNull(
+            kryonDefinition.dependencyKryons().get(depId), "Invalid dependency facet id %s", depId);
+    KryonDefinition depDef = kryonDefinition.kryonDefinitionRegistry().get(depKId);
+    return depDef.createNewRequest().logic().newRequestBuilder();
   }
 
   private void flushAllDependenciesIfNeeded(DependantChain dependantChain) {
@@ -514,17 +550,17 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
         .forEach(dependencyName -> flushDependencyIfNeeded(dependencyName, dependantChain));
   }
 
-  private void flushDependencyIfNeeded(String dependencyName, DependantChain dependantChain) {
+  private void flushDependencyIfNeeded(Integer dependencyId, DependantChain dependantChain) {
     if (!flushedDependantChain.contains(dependantChain)) {
       return;
     }
     Set<RequestId> requestsForDependantChain =
         requestsByDependantChain.getOrDefault(dependantChain, ImmutableSet.of());
-    KryonId depKryonId = getDepKryonId(dependencyName);
+    KryonId depKryonId = getDepKryonId(dependencyId);
     ImmutableSet<ResolverDefinition> resolverDefinitionsForDependency =
         kryonDefinition
             .resolverDefinitionsByDependencies()
-            .getOrDefault(dependencyName, ImmutableSet.of());
+            .getOrDefault(dependencyId, ImmutableSet.of());
     if (!requestsForDependantChain.isEmpty()
         && requestsForDependantChain.stream()
             .allMatch(
@@ -532,58 +568,43 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                     resolverDefinitionsForDependency.equals(
                         this.dependencyExecutions
                             .computeIfAbsent(requestId, k -> new LinkedHashMap<>())
-                            .computeIfAbsent(dependencyName, k -> new DependencyKryonExecutions())
+                            .computeIfAbsent(dependencyId, k -> new DependencyKryonExecutions())
                             .executedResolvers()))) {
 
       kryonExecutor.executeCommand(
-          new Flush(depKryonId, dependantChain.extend(kryonId, dependencyName)));
+          new Flush(depKryonId, dependantChain.extend(kryonId, dependencyId)));
     }
   }
 
-  private KryonId getDepKryonId(String dependencyName) {
-    KryonId depKryonId = kryonDefinition.dependencyKryons().get(dependencyName);
+  private KryonId getDepKryonId(int dependencyId) {
+    KryonId depKryonId = kryonDefinition.dependencyKryons().get(dependencyId);
     if (depKryonId == null) {
       throw new AssertionError("This is a bug");
     }
     return depKryonId;
   }
 
-  private Facets getInputsFor(RequestId requestId, Set<String> boundFrom) {
-    Map<String, FacetValue<Object>> allInputs =
-        inputsValueCollector.computeIfAbsent(requestId, r -> new LinkedHashMap<>());
-    Map<String, FacetValue<Object>> inputValues = new LinkedHashMap<>();
-    for (String boundFromInput : boundFrom) {
-      FacetValue<Object> voe = allInputs.get(boundFromInput);
-      if (voe == null) {
-        inputValues.put(
-            boundFromInput,
-            dependencyValuesCollector
-                .computeIfAbsent(requestId, k -> new LinkedHashMap<>())
-                .getOrDefault(boundFromInput, Results.empty()));
-      } else {
-        inputValues.put(boundFromInput, voe);
-      }
-    }
-    return new Facets(inputValues);
+  private Facets getFacetsFor(RequestId requestId) {
+    return dependencyValuesCollector.computeIfAbsent(requestId, r -> emptyFacets()._asBuilder());
   }
 
   private void executeDependenciesWhenNoResolvers(RequestId requestId) {
     kryonDefinition
         .dependencyKryons()
         .forEach(
-            (depName, depKryonId) -> {
+            (depId, depKryonId) -> {
               if (!dependencyValuesCollector
-                  .getOrDefault(requestId, ImmutableMap.of())
-                  .containsKey(depName)) {
+                  .computeIfAbsent(requestId, _k -> emptyFacets()._asBuilder())
+                  ._hasValue(depId)) {
                 RequestId dependencyRequestId =
-                    requestIdGenerator.newSubRequest(requestId, () -> "%s".formatted(depName));
+                    requestIdGenerator.newSubRequest(requestId, () -> "%s".formatted(depId));
                 CompletableFuture<GranuleResponse> kryonResponse =
                     kryonExecutor.executeCommand(
                         new ForwardGranule(
                             depKryonId,
                             ImmutableSet.of(),
-                            Facets.empty(),
-                            getDepChainFor(requestId).extend(kryonId, depName),
+                            getNewDepRequest(depId),
+                            getDepChainFor(requestId).extend(kryonId, depId),
                             dependencyRequestId));
                 kryonResponse
                     .thenApply(GranuleResponse::response)
@@ -597,8 +618,9 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                                 }
                                 return new CallbackGranule(
                                     this.kryonId,
-                                    depName,
-                                    new Results<>(ImmutableMap.of(Facets.empty(), errable)),
+                                    depId,
+                                    new Results<>(
+                                        ImmutableList.of(new Response<>(emptyRequest(), errable))),
                                     requestId,
                                     getDepChainFor(requestId));
                               },
@@ -614,23 +636,22 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
       CompletableFuture<GranuleResponse> resultForRequest, RequestId requestId) {
     OutputLogicDefinition<Object> outputLogicDefinition =
         kryonDefinition.getOutputLogicDefinition();
-    OutputLogicFacets outputLogicFacets = getInputsForOutputLogic(requestId);
+    OutputLogicFacets outputLogicFacets = getFacetsForOutputLogic(requestId);
     // Retrieve existing result from cache if result for this set of inputs has already been
     // calculated
     CompletableFuture<@Nullable Object> resultFuture =
-        resultsCache.get(outputLogicFacets.providedFacets());
+        resultsCache.get(outputLogicFacets.request());
     if (resultFuture == null) {
       resultFuture =
           executeDecoratedOutputLogic(
               outputLogicFacets.allFacets(), outputLogicDefinition, requestId);
-      resultsCache.put(outputLogicFacets.providedFacets(), resultFuture);
+      resultsCache.put(outputLogicFacets.request(), resultFuture);
     }
     resultFuture
         .handle(Errable::errableFrom)
         .thenAccept(
             value ->
-                resultForRequest.complete(
-                    new GranuleResponse(outputLogicFacets.providedFacets(), value)));
+                resultForRequest.complete(new GranuleResponse(outputLogicFacets.request(), value)));
     outputLogicExecuted.put(requestId, true);
     flushDecoratorsIfNeeded(getDepChainFor(requestId));
   }
@@ -659,24 +680,26 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
         .orElseThrow(() -> new AssertionError("This is a bug"));
   }
 
-  private OutputLogicFacets getInputsForOutputLogic(RequestId requestId) {
-    Facets inputValues =
-        new Facets(inputsValueCollector.getOrDefault(requestId, ImmutableMap.of()));
-    Map<String, Results<Object>> dependencyValues =
-        dependencyValuesCollector.getOrDefault(requestId, ImmutableMap.of());
-    Facets allFacets = Facets.union(dependencyValues, inputValues.values());
+  private OutputLogicFacets getFacetsForOutputLogic(RequestId requestId) {
+    RequestBuilder<Object> inputValues =
+        inputsValueCollector.computeIfAbsent(requestId, _r -> emptyRequest()._asBuilder());
+    FacetsBuilder allFacets =
+        dependencyValuesCollector.computeIfAbsent(requestId, _r -> emptyFacets()._asBuilder());
     return new OutputLogicFacets(inputValues, allFacets);
   }
 
-  private void collectInputValues(RequestId requestId, Set<String> inputNames, Facets facets) {
-    for (String inputName : inputNames) {
-      if (inputsValueCollector
-              .computeIfAbsent(requestId, r -> new LinkedHashMap<>())
-              .putIfAbsent(inputName, facets.getInputValue(inputName))
-          != null) {
+  private void collectInputValues(
+      RequestId requestId, Set<Integer> inputIds, FacetContainer facets) {
+    for (Integer inputId : inputIds) {
+      try {
+        inputsValueCollector
+            .computeIfAbsent(requestId, r -> emptyRequest()._asBuilder())
+            ._set(inputId, facets._get(inputId));
+      } catch (IllegalModificationException e) {
         throw new DuplicateRequestException(
             "Duplicate data for inputs %s of kryon %s in request %s"
-                .formatted(inputNames, kryonId, requestId));
+                .formatted(inputIds, kryonId, requestId),
+            e);
       }
     }
   }
@@ -684,7 +707,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
   private record DependencyKryonExecutions(
       LongAdder executionCounter,
       Set<ResolverDefinition> executedResolvers,
-      Map<RequestId, Facets> individualCallInputs,
+      Map<RequestId, Request<Object>> individualCallInputs,
       Map<RequestId, CompletableFuture<GranuleResponse>> individualCallResponses) {
 
     private DependencyKryonExecutions() {

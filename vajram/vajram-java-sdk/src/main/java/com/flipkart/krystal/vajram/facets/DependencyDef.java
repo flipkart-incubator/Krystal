@@ -7,6 +7,7 @@ import lombok.Builder;
 
 @Builder
 public record DependencyDef<T>(
+    int id,
     String name,
     DataAccessSpec dataAccessSpec,
     boolean isMandatory,

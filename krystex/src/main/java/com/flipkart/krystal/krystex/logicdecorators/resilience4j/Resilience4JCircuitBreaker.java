@@ -18,7 +18,6 @@ public final class Resilience4JCircuitBreaker implements OutputLogicDecorator {
   public static final String DECORATOR_TYPE = Resilience4JCircuitBreaker.class.getName();
 
   private final String instanceId;
-
   private @Nullable CircuitBreaker circuitBreaker;
 
   /**

@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.codegen.utils;
 
 import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 
-import com.flipkart.krystal.vajram.VajramRequest;
+import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.vajram.codegen.Utils;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.squareup.javapoet.ClassName;
@@ -60,7 +60,7 @@ public class CodegenUtilsTest {
       return Collections.emptySet();
     }
 
-    public Set<VajramRequest> fanoutMethod2() {
+    public Set<ImmutableRequest> fanoutMethod2() {
       return Collections.emptySet();
     }
 

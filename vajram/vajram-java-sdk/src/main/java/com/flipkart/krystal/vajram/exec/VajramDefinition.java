@@ -1,21 +1,26 @@
 package com.flipkart.krystal.vajram.exec;
 
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.getQualifiedInputsComparator;
+import static com.flipkart.krystal.vajram.utils.Constants.FACETS_CLASS_NAME;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toMap;
 
 import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.VajramDefinitionException;
 import com.flipkart.krystal.vajram.facets.DefaultInputResolverDefinition;
 import com.flipkart.krystal.vajram.facets.DependencyDef;
-import com.flipkart.krystal.vajram.facets.FacetContainer;
+import com.flipkart.krystal.data.FacetContainer;
 import com.flipkart.krystal.vajram.facets.InputDef;
+import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.QualifiedInputs;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
+import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolverDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajram.tags.AnnotationTag;
@@ -40,6 +45,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeSet;
 import java.util.function.Function;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -47,33 +53,46 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class VajramDefinition {
 
-  @Getter private final Vajram<?> vajram;
+  private static final Field[] NO_FACET_FIELDS = {};
+
+  @Getter private final Vajram<Object> vajram;
 
   @Getter private final ImmutableCollection<InputResolverDefinition> inputResolverDefinitions;
 
   @Getter private final ImmutableMap<AnnotationTagKey, Tag> outputLogicTags;
 
-  @Getter private final ImmutableSet<String> outputLogicSources;
+  @Getter private final ImmutableSet<Integer> outputLogicSources;
 
   @Getter
-  private final ImmutableMap</*FacetName*/ String, ImmutableMap</*TagKey*/ Object, Tag>> facetTags;
+  private final ImmutableMap</*FacetId*/ Integer, ImmutableMap</*TagKey*/ Object, Tag>> facetTags;
 
-  public VajramDefinition(Vajram<?> vajram) {
+  @Getter private final ImmutableMap<String, VajramFacetDefinition> facetsByName;
+
+  @Getter private final ImmutableMap<Integer, VajramFacetDefinition> facetsById;
+
+  public VajramDefinition(Vajram<Object> vajram) {
     this.vajram = vajram;
-    this.inputResolverDefinitions = ImmutableList.copyOf(parseInputResolvers(vajram));
+    this.facetsByName =
+        vajram.getFacetDefinitions().stream()
+            .collect(toImmutableMap(VajramFacetDefinition::name, Function.identity()));
+    this.facetsById =
+        vajram.getFacetDefinitions().stream()
+            .collect(toImmutableMap(VajramFacetDefinition::id, Function.identity()));
+    this.inputResolverDefinitions = ImmutableList.copyOf(parseInputResolvers(vajram, facetsByName));
     this.outputLogicTags = parseOutputLogicTags(vajram);
     this.facetTags = parseFacetTags(vajram);
-    this.outputLogicSources = parseOutputLogicSources(vajram);
+    this.outputLogicSources = parseOutputLogicSources(vajram, facetsByName);
   }
 
-  private static ImmutableSet<String> parseOutputLogicSources(Vajram<?> vajram) {
+  private static ImmutableSet<Integer> parseOutputLogicSources(
+      Vajram<?> vajram, ImmutableMap<String, VajramFacetDefinition> facetsByName) {
     Optional<Method> outputLogicMethod =
         Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
             .filter(method -> method.getAnnotation(Output.class) != null)
             .findFirst();
-    ImmutableSet<String> allFacetNames =
+    ImmutableSet<Integer> allFacetIds =
         vajram.getFacetDefinitions().stream()
-            .map(VajramFacetDefinition::name)
+            .map(VajramFacetDefinition::id)
             .collect(toImmutableSet());
     if (outputLogicMethod.isPresent()
         && vajram.getFacetDefinitions().stream()
@@ -87,93 +106,112 @@ public final class VajramDefinition {
          This means the output logic is consuming the auto-generated Facets class which implies it
          consumes all the facets
         */
-        return allFacetNames;
+        return allFacetIds;
       } else {
         return Arrays.stream(outputLogicParams)
-            .map(VajramDefinition::inferFacetName)
+            .map((Parameter parameter) -> inferFacetId(parameter, facetsByName))
             .collect(toImmutableSet());
       }
     } else {
       // The output logic consumes all facets
-      return allFacetNames;
+      return allFacetIds;
     }
   }
 
-  private static ImmutableMap<String, ImmutableMap<Object, Tag>> parseFacetTags(Vajram<?> vajram) {
+  private static ImmutableMap<Integer, ImmutableMap<Object, Tag>> parseFacetTags(Vajram<?> vajram) {
     ImmutableMap<String, VajramFacetDefinition> facetDefs =
         vajram.getFacetDefinitions().stream()
             .collect(toImmutableMap(VajramFacetDefinition::name, Function.identity()));
-    Map<String, ImmutableMap<Object, Tag>> result = new LinkedHashMap<>();
-    for (Field declaredField : vajram.getClass().getDeclaredFields()) {
-      Map<Object, Tag> tags = new LinkedHashMap<>();
+    Map<Integer, ImmutableMap<Object, Tag>> result = new LinkedHashMap<>();
+    for (Field declaredField :
+        getFacetsClass(vajram).map(Class::getDeclaredFields).orElse(NO_FACET_FIELDS)) {
       String facetName = declaredField.getName();
       VajramFacetDefinition facetDef = facetDefs.get(facetName);
       if (facetDef != null) {
-        tags.putAll(facetDef.tags());
-      }
-      Annotation[] annotations = declaredField.getAnnotations();
-      for (Annotation annotation : annotations) {
-        boolean isRepeatable = annotation.getClass().getAnnotation(Repeatable.class) != null;
-        if (isRepeatable) {
-          log.warn("Repeatable annotations are not supported as tags. Ignoring {}", annotation);
-        } else {
-          AnnotationTag<Annotation> annotationTag = AnnotationTag.from(annotation);
-          tags.put(annotationTag.tagKey(), annotationTag);
+        Map<Object, Tag> tags = new LinkedHashMap<>(facetDef.tags());
+        Annotation[] annotations = declaredField.getAnnotations();
+        for (Annotation annotation : annotations) {
+          boolean isRepeatable = annotation.getClass().getAnnotation(Repeatable.class) != null;
+          if (isRepeatable) {
+            log.warn("Repeatable annotations are not supported as tags. Ignoring {}", annotation);
+          } else {
+            AnnotationTag<Annotation> annotationTag = AnnotationTag.from(annotation);
+            tags.put(annotationTag.tagKey(), annotationTag);
+          }
         }
+        result.put(facetDef.id(), ImmutableMap.copyOf(tags));
       }
-      result.put(facetName, ImmutableMap.copyOf(tags));
     }
     return ImmutableMap.copyOf(result);
   }
 
-  private static Collection<InputResolverDefinition> parseInputResolvers(Vajram<?> vajram) {
-    List<InputResolverDefinition> inputResolvers =
-        new ArrayList<>(vajram.getSimpleInputResolvers());
+  private static Collection<InputResolverDefinition> parseInputResolvers(
+      Vajram<?> vajram, ImmutableMap<String, VajramFacetDefinition> facetsByName) {
     ImmutableSet<Method> resolverMethods =
         Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
             .filter(method -> method.isAnnotationPresent(Resolve.class))
             .collect(toImmutableSet());
 
-    ImmutableMap<String, DependencyDef<?>> dependencyDefinitions =
-        vajram.getFacetDefinitions().stream()
-            .filter(vi -> vi instanceof DependencyDef)
-            .map(vi -> (DependencyDef<?>) vi)
-            .collect(toImmutableMap(VajramFacetDefinition::name, Function.identity()));
+    record ResolverDetails(QualifiedInputs qualifiedInputs, Method resolverMethod) {}
 
+    TreeSet<ResolverDetails> resolverDetails =
+        new TreeSet<>(comparing(ResolverDetails::qualifiedInputs, getQualifiedInputsComparator()));
     for (Method resolverMethod : resolverMethods) {
       Resolve resolver = resolverMethod.getAnnotation(Resolve.class);
       if (resolver == null) {
         throw new AssertionError();
       }
-      String targetDependency = resolver.depName();
-      DependencyDef<?> dependencyDef = dependencyDefinitions.get(targetDependency);
-      if (dependencyDef == null) {
+      String targetDependencyName = resolver.depName();
+      VajramFacetDefinition facetDef = facetsByName.get(targetDependencyName);
+      if (!(facetDef instanceof DependencyDef<?> dependencyDef)) {
         throw new IllegalStateException(
-            "Could not find dependency with name %s".formatted(targetDependency));
+            "Could not find dependency with name %s".formatted(targetDependencyName));
       }
       String[] targetInputs = resolver.depInputs();
-      ImmutableSet<String> sources =
-          Arrays.stream(resolverMethod.getParameters())
-              .map(VajramDefinition::inferFacetName)
+      resolverDetails.add(
+          new ResolverDetails(
+              new QualifiedInputs(
+                  dependencyDef.id(),
+                  dependencyDef.dataAccessSpec(),
+                  Arrays.stream(targetInputs).collect(toImmutableSet())),
+              resolverMethod));
+    }
+    int i = 1;
+    List<InputResolverDefinition> inputResolvers = new ArrayList<>();
+    for (ResolverDetails resolverDetail : resolverDetails) {
+      ImmutableSet<Integer> sources =
+          Arrays.stream(resolverDetail.resolverMethod().getParameters())
+              .map((Parameter parameter) -> inferFacetId(parameter, facetsByName))
               .collect(toImmutableSet());
       inputResolvers.add(
-          new DefaultInputResolverDefinition(
-              sources,
-              new QualifiedInputs(
-                  targetDependency,
-                  dependencyDef.dataAccessSpec(),
-                  ImmutableSet.copyOf(targetInputs))));
+          new DefaultInputResolverDefinition(i++, sources, resolverDetail.qualifiedInputs()));
+    }
+    for (InputResolver simpleInputResolver : vajram.getSimpleInputResolvers()) {
+      simpleInputResolver.setResolverId(i++);
+      inputResolvers.add(simpleInputResolver);
     }
     return inputResolvers;
   }
 
-  private static String inferFacetName(Parameter parameter) {
+  private static int inferFacetId(
+      Parameter parameter, Map<String, VajramFacetDefinition> facetsByName) {
     return Arrays.stream(parameter.getAnnotations())
         .filter(annotation -> annotation instanceof Using)
         .map(annotation -> (Using) annotation)
         .findAny()
         .map(Using::value)
-        .orElseGet(parameter::getName);
+        .map(facetsByName::get)
+        .map(VajramFacetDefinition::id)
+        .orElseGet(
+            () -> {
+              String paramName = parameter.getName();
+              VajramFacetDefinition vajramFacetDefinition = facetsByName.get(paramName);
+              if (vajramFacetDefinition == null) {
+                throw new VajramDefinitionException(
+                    "Unknown facet '%s' defined as parameter".formatted(paramName));
+              }
+              return vajramFacetDefinition.id();
+            });
   }
 
   private static ImmutableMap<AnnotationTagKey, Tag> parseOutputLogicTags(Vajram<?> vajram) {
@@ -212,5 +250,11 @@ public final class VajramDefinition {
       return vajramClass;
     }
     return getVajramSourceClass(superclass);
+  }
+
+  private static Optional<Class<?>> getFacetsClass(Vajram<?> vajram) {
+    return Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredClasses())
+        .filter(aClass -> FACETS_CLASS_NAME.equals(aClass.getSimpleName()))
+        .findFirst();
   }
 }

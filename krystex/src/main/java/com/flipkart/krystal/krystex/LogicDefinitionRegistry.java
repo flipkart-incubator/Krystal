@@ -1,8 +1,8 @@
 package com.flipkart.krystal.krystex;
 
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
-import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
-import com.flipkart.krystal.krystex.resolution.ResolverLogicDefinition;
+import com.flipkart.krystal.krystex.resolution.MultiResolver;
+import com.flipkart.krystal.krystex.resolution.ResolverLogic;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -10,9 +10,9 @@ import java.util.NoSuchElementException;
 public final class LogicDefinitionRegistry {
   private final Map<KryonLogicId, OutputLogicDefinition<?>> outputLogicDefinitions =
       new HashMap<>();
-  private final Map<KryonLogicId, ResolverLogicDefinition> resolverLogicDefinitions =
+  private final Map<KryonLogicId, LogicDefinition<ResolverLogic>> resolverLogicDefinitions =
       new HashMap<>();
-  private final Map<KryonLogicId, MultiResolverDefinition> multiResolverDefinitions =
+  private final Map<KryonLogicId, LogicDefinition<MultiResolver>> multiResolverDefinitions =
       new HashMap<>();
 
   public <T> OutputLogicDefinition<T> getOutputLogic(KryonLogicId kryonLogicId) {
@@ -24,8 +24,9 @@ public final class LogicDefinitionRegistry {
     return (OutputLogicDefinition<T>) outputLogicDefinition;
   }
 
-  public MultiResolverDefinition getMultiResolver(KryonLogicId kryonLogicId) {
-    MultiResolverDefinition multiResolverDefinition = multiResolverDefinitions.get(kryonLogicId);
+  public LogicDefinition<MultiResolver> getMultiResolver(KryonLogicId kryonLogicId) {
+    LogicDefinition<MultiResolver> multiResolverDefinition =
+        multiResolverDefinitions.get(kryonLogicId);
     if (multiResolverDefinition == null) {
       throw new NoSuchElementException(
           "Could not find multiResolverDefinition for " + kryonLogicId);
@@ -40,14 +41,14 @@ public final class LogicDefinitionRegistry {
     outputLogicDefinitions.put(outputLogicDefinition.kryonLogicId(), outputLogicDefinition);
   }
 
-  public void addResolver(ResolverLogicDefinition def) {
+  public void addResolver(LogicDefinition<ResolverLogic> def) {
     if (resolverLogicDefinitions.containsKey(def.kryonLogicId())) {
       return;
     }
     resolverLogicDefinitions.put(def.kryonLogicId(), def);
   }
 
-  public void addMultiResolver(MultiResolverDefinition def) {
+  public void addMultiResolver(LogicDefinition<MultiResolver> def) {
     if (multiResolverDefinitions.containsKey(def.kryonLogicId())) {
       return;
     }

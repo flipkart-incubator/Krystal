@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.facets;
 
 import static lombok.EqualsAndHashCode.CacheStrategy.LAZY;
 
-import com.flipkart.krystal.vajram.VajramRequest;
+import com.flipkart.krystal.data.ImmutableRequest;
 import lombok.EqualsAndHashCode;
 
 /**
@@ -15,10 +15,10 @@ import lombok.EqualsAndHashCode;
  */
 @EqualsAndHashCode(callSuper = true, cacheStrategy = LAZY)
 public final class VajramDepSingleTypeSpec<
-        T, CV extends VajramRequest<?>, DV extends VajramRequest<T>>
+        T, CV extends ImmutableRequest<?>, DV extends ImmutableRequest<T>>
     extends VajramDependencySpec<T, T, CV, DV> {
 
-  public VajramDepSingleTypeSpec(String name, Class<CV> ofVajram, Class<DV> onVajram) {
-    super(name, ofVajram, onVajram);
+  public VajramDepSingleTypeSpec(int id, String name, Class<CV> ofVajram, Class<DV> onVajram) {
+    super(id, name, ofVajram, onVajram);
   }
 }

@@ -5,8 +5,8 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.Input;
-import com.flipkart.krystal.vajram.Output;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
@@ -34,7 +34,8 @@ public abstract class Adder extends IOVajram<Integer> {
     return batchedFacets.batch().stream()
         .collect(
             toImmutableMap(
-                identity(), im -> completedFuture(add(im.numberOne(), im.numberTwo().orElse(0)))));
+                identity(),
+                batch -> completedFuture(add(batch.numberOne(), batch.numberTwo().orElse(0)))));
   }
 
   public static int add(int a, int b) {

@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.facets;
 
-import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -9,7 +8,7 @@ public record SingleExecute<T>(@Nullable T input, boolean shouldSkip, String doc
     implements DependencyCommand<T> {
 
   @Override
-  public ImmutableCollection<Optional<T>> inputs() {
+  public ImmutableList<Optional<T>> inputs() {
     return ImmutableList.of(Optional.ofNullable(input));
   }
 

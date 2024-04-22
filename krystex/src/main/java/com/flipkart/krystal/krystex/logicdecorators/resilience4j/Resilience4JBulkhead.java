@@ -154,7 +154,7 @@ public final class Resilience4JBulkhead implements OutputLogicDecorator {
 
     @SuppressWarnings("RedundantTypeArguments") // Avoid nullChecker errors
     CompletionStage<ImmutableMap<Facets, CompletableFuture<@Nullable Object>>> decorate(
-        OutputLogic<Object> logicToDecorate, ImmutableList<Facets> facetsList) {
+        OutputLogic<Object> logicToDecorate, ImmutableList<? extends Facets> facetsList) {
       ThreadPoolBulkhead threadPoolBulkhead = this.threadPoolBulkhead;
       Bulkhead bulkhead = this.bulkhead;
       if (threadPoolBulkhead != null) {

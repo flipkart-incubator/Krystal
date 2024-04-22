@@ -7,7 +7,7 @@ import com.flipkart.krystal.krystex.kryon.KryonDecorator;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonId;
-import com.flipkart.krystal.vajram.VajramRequest;
+import com.flipkart.krystal.data.ImmutableRequest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,7 +23,7 @@ import java.util.function.Function;
  */
 public class VajramTestHarness {
 
-  private Map<String, Map<VajramRequest<Object>, Errable<Object>>> vajramIdMockData;
+  private Map<String, Map<ImmutableRequest<Object>, Errable<Object>>> vajramIdMockData;
   private KryonExecutorConfigBuilder kryonExecutorConfigBuilder;
 
   private VajramTestHarness(KryonExecutorConfigBuilder kryonExecutorBuilder) {
@@ -35,18 +35,18 @@ public class VajramTestHarness {
     return new VajramTestHarness(kryonExecutorBuilder);
   }
 
-  public <T> VajramTestHarness withMock(VajramRequest<T> request, Errable<T> response) {
+  public <T> VajramTestHarness withMock(ImmutableRequest<T> request, Errable<T> response) {
     String requestName = request.getClass().getSimpleName();
     int index = requestName.lastIndexOf('R');
     String vajramId = requestName.substring(0, index);
-    Map<VajramRequest<Object>, Errable<Object>> mockDataMap = this.vajramIdMockData.get(vajramId);
+    Map<ImmutableRequest<Object>, Errable<Object>> mockDataMap = this.vajramIdMockData.get(vajramId);
     if (Objects.isNull(mockDataMap)) {
       this.vajramIdMockData.put(
-          vajramId, Map.of((VajramRequest<Object>) request, (Errable<Object>) response));
+          vajramId, Map.of((ImmutableRequest<Object>) request, (Errable<Object>) response));
     } else {
-      Errable<Object> errable = mockDataMap.get((VajramRequest<Object>) request);
+      Errable<Object> errable = mockDataMap.get((ImmutableRequest<Object>) request);
       if (Objects.isNull(errable)) {
-        mockDataMap.put((VajramRequest<Object>) request, (Errable<Object>) response);
+        mockDataMap.put((ImmutableRequest<Object>) request, (Errable<Object>) response);
         this.vajramIdMockData.put(vajramId, mockDataMap);
       }
     }
@@ -54,7 +54,7 @@ public class VajramTestHarness {
   }
 
   private List<KryonDecorator> getVajramMocker(String kryonId) {
-    Map<VajramRequest<Object>, Errable<Object>> mockDataMap = this.vajramIdMockData.get(kryonId);
+    Map<ImmutableRequest<Object>, Errable<Object>> mockDataMap = this.vajramIdMockData.get(kryonId);
     return Objects.isNull(mockDataMap)
         ? List.of()
         : List.of(new VajramPrimer(vajramID(kryonId), mockDataMap, true));

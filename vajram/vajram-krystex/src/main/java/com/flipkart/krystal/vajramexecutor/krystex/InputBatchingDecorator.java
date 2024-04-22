@@ -6,6 +6,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.config.NestedConfig;
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.ImmutableFacets;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
@@ -13,16 +14,16 @@ import com.flipkart.krystal.krystex.logicdecoration.FlushCommand;
 import com.flipkart.krystal.krystex.logicdecoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecoratorCommand;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
+import com.flipkart.krystal.vajram.batching.BatchableImmutableFacets;
+import com.flipkart.krystal.vajram.batching.BatchableSupplier;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
-import com.flipkart.krystal.vajram.batching.FacetsConverter;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
-import com.flipkart.krystal.vajram.batching.UnBatchedFacets;
-import com.flipkart.krystal.vajram.facets.FacetValuesAdaptor;
+import com.flipkart.krystal.vajram.batching.BatchableFacets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -34,27 +35,28 @@ import java.util.function.Predicate;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputBatchingDecorator<
-        I /*BatchableInputs*/ extends FacetValuesAdaptor,
-        C /*CommonFacets*/ extends FacetValuesAdaptor>
+        I /*BatchableInputs*/ extends Facets, C /*CommonFacets*/ extends Facets>
     implements OutputLogicDecorator {
 
   public static final String DECORATOR_TYPE = InputBatchingDecorator.class.getName();
+
   private final String instanceId;
   private final InputBatcher<I, C> inputBatcher;
-  private final FacetsConverter<I, C> facetsConverter;
+  private final BatchableSupplier<I, C> batchableSupplier;
   private final Predicate<DependantChain> isApplicableToDependantChain;
-  private final Map<Facets, CompletableFuture<@Nullable Object>> futureCache = new HashMap<>();
+  private final Map<ImmutableFacets, CompletableFuture<@Nullable Object>> futureCache =
+      new LinkedHashMap<>();
   private ImmutableSet<DependantChain> activeDependantChains = ImmutableSet.of();
   private final Set<DependantChain> flushedDependantChains = new LinkedHashSet<>();
 
   public InputBatchingDecorator(
       String instanceId,
       InputBatcher<I, C> inputBatcher,
-      FacetsConverter<I, C> facetsConverter,
+      BatchableSupplier<I, C> batchableSupplier,
       Predicate<DependantChain> isApplicableToDependantChain) {
     this.instanceId = instanceId;
     this.inputBatcher = inputBatcher;
-    this.facetsConverter = facetsConverter;
+    this.batchableSupplier = batchableSupplier;
     this.isApplicableToDependantChain = isApplicableToDependantChain;
   }
 
@@ -64,35 +66,44 @@ public final class InputBatchingDecorator<
     inputBatcher.onBatching(
         requests -> requests.forEach(request -> batchFacetsList(logicToDecorate, request)));
     return facetsList -> {
-      List<UnBatchedFacets<I, C>> requests =
+      ImmutableList<BatchableImmutableFacets<I, C>> immutableFacetsList =
           facetsList.stream()
               .map(
-                  facets ->
-                      new UnBatchedFacets<>(
-                          facetsConverter.getBatched(facets), facetsConverter.getCommon(facets)))
-              .toList();
+                  f -> {
+                    if (f instanceof BatchableFacets) {
+                      //noinspection unchecked
+                      return (BatchableFacets<I, C>) f;
+                    } else {
+                      throw new IllegalStateException(
+                          "Expected to recieve instance of BatchableFacets in batcher %s but received %s"
+                              .formatted(
+                                  instanceId,
+                                  Optional.ofNullable(f)
+                                      .<Class<?>>map(Object::getClass)
+                                      .orElse(Void.class)));
+                    }
+                  })
+              .map(BatchableFacets::_build)
+              .collect(toImmutableList());
       List<BatchedFacets<I, C>> batchedFacetsList =
-          requests.stream()
-              .map(
-                  unbatchedInput ->
-                      inputBatcher.add(
-                          unbatchedInput.batchedInputs(), unbatchedInput.commonFacets()))
+          immutableFacetsList.stream()
+              .map(f -> (BatchableFacets<I, C>) f)
+              .map(unbatched -> inputBatcher.add(unbatched._batchable(), unbatched._common()))
               .flatMap(Collection::stream)
               .toList();
-      requests.forEach(
-          request ->
+      facetsList.forEach(
+          facets ->
               futureCache.computeIfAbsent(
-                  request.toFacetValues(), e -> new CompletableFuture<@Nullable Object>()));
+                  facets._build(), e -> new CompletableFuture<@Nullable Object>()));
       for (BatchedFacets<I, C> batchedFacets : batchedFacetsList) {
         batchFacetsList(logicToDecorate, batchedFacets);
       }
-      return requests.stream()
-          .map(UnBatchedFacets::toFacetValues)
+      return facetsList.stream()
           .collect(
               ImmutableMap.<Facets, Facets, CompletableFuture<@Nullable Object>>toImmutableMap(
                   Function.identity(),
                   key ->
-                      Optional.ofNullable(futureCache.get(key))
+                      Optional.ofNullable(futureCache.get(key._build()))
                           .orElseThrow(
                               () ->
                                   new AssertionError(
@@ -119,19 +130,19 @@ public final class InputBatchingDecorator<
 
   private void batchFacetsList(
       OutputLogic<Object> logicToDecorate, BatchedFacets<I, C> batchedFacets) {
-    ImmutableList<UnBatchedFacets<I, C>> requests =
+    ImmutableList<BatchableFacets<I, C>> requests =
         batchedFacets.batch().stream()
-            .map(each -> new UnBatchedFacets<>(each, batchedFacets.commonFacets()))
+            .map(each -> batchableSupplier.createBatchable(each, batchedFacets.common()))
             .collect(toImmutableList());
     logicToDecorate
-        .execute(requests.stream().map(UnBatchedFacets::toFacetValues).collect(toImmutableList()))
+        .execute(requests)
         .forEach(
             (inputs, resultFuture) -> {
               //noinspection RedundantTypeArguments: To Handle nullChecker errors
               linkFutures(
                   resultFuture,
                   futureCache.<CompletableFuture<@Nullable Object>>computeIfAbsent(
-                      inputs, request -> new CompletableFuture<@Nullable Object>()));
+                      inputs._build(), request -> new CompletableFuture<@Nullable Object>()));
             });
   }
 

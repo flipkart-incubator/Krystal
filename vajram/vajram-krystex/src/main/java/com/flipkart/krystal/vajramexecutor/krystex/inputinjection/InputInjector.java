@@ -1,12 +1,13 @@
 package com.flipkart.krystal.vajramexecutor.krystex.inputinjection;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
+import com.flipkart.krystal.data.FacetsBuilder;
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.Nil;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
@@ -25,11 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import jakarta.inject.Named;
 import java.lang.reflect.Type;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
 import org.checkerframework.checker.initialization.qual.UnderInitialization;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -37,6 +34,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class InputInjector implements OutputLogicDecorator {
 
   public static final String DECORATOR_TYPE = InputInjector.class.getName();
+
   @NotOnlyInitialized private final VajramKryonGraph vajramKryonGraph;
   private final @Nullable InputInjectionProvider inputInjectionProvider;
 
@@ -51,35 +49,23 @@ public final class InputInjector implements OutputLogicDecorator {
   public OutputLogic<Object> decorateLogic(
       OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
     return inputsList -> {
-      Map<Facets, Facets> newInputsToOldInputs = new HashMap<>();
       ImmutableList<Facets> inputValues =
           inputsList.stream()
               .map(
-                  inputs -> {
-                    Facets newFacets =
-                        injectFromSession(
-                            vajramKryonGraph
-                                .getVajramDefinition(
-                                    VajramID.vajramID(
-                                        Optional.ofNullable(originalLogicDefinition.kryonLogicId())
-                                            .map(KryonLogicId::kryonId)
-                                            .map(KryonId::value)
-                                            .orElse("")))
-                                .orElse(null),
-                            inputs);
-                    newInputsToOldInputs.put(newFacets, inputs);
-                    return newFacets;
-                  })
+                  inputs ->
+                      injectFromSession(
+                          vajramKryonGraph
+                              .getVajramDefinition(
+                                  VajramID.vajramID(
+                                      Optional.ofNullable(originalLogicDefinition.kryonLogicId())
+                                          .map(KryonLogicId::kryonId)
+                                          .map(KryonId::value)
+                                          .orElse("")))
+                              .orElse(null),
+                          inputs._asBuilder()))
               .collect(toImmutableList());
 
-      ImmutableMap<Facets, CompletableFuture<@Nullable Object>> result =
-          logicToDecorate.execute(inputValues);
-
-      // Change the Map key back to the original Inputs list as SESSION inputs were injected
-      return result.entrySet().stream()
-          .collect(
-              toImmutableMap(
-                  e -> newInputsToOldInputs.getOrDefault(e.getKey(), e.getKey()), Entry::getValue));
+      return logicToDecorate.execute(inputValues);
     };
   }
 
@@ -88,9 +74,9 @@ public final class InputInjector implements OutputLogicDecorator {
     return InputInjector.class.getName();
   }
 
-  private Facets injectFromSession(@Nullable VajramDefinition vajramDefinition, Facets facets) {
-    Map<String, FacetValue<Object>> newValues = new HashMap<>();
-    ImmutableMap<String, ImmutableMap<Object, Tag>> facetTags =
+  private FacetsBuilder injectFromSession(
+      @Nullable VajramDefinition vajramDefinition, FacetsBuilder facets) {
+    ImmutableMap<Integer, ImmutableMap<Object, Tag>> facetTags =
         vajramDefinition == null ? ImmutableMap.of() : vajramDefinition.getFacetTags();
     Optional.ofNullable(vajramDefinition)
         .map(VajramDefinition::getVajram)
@@ -98,19 +84,18 @@ public final class InputInjector implements OutputLogicDecorator {
         .ifPresent(
             facetDefinitions -> {
               for (VajramFacetDefinition facetDefinition : facetDefinitions) {
-                String inputName = facetDefinition.name();
+                int inputId = facetDefinition.id();
                 if (facetDefinition instanceof InputDef<?> inputDef) {
                   if (inputDef.sources().contains(InputSource.CLIENT)) {
-                    Errable<Object> value = facets.getInputValue(inputName);
-                    if (!Errable.empty().equals(value)) {
+                    if (facets._getErrable(inputId).valueOpt().isPresent()) {
                       continue;
                     }
-                    // Input was not resolved by another vajram. Check if it is resolvable
-                    // by SESSION
                   }
+                  // Input was not resolved by another vajram. Check if it is resolvable
+                  // by SESSION
                   if (inputDef.sources().contains(InputSource.SESSION)) {
                     ImmutableMap<Object, Tag> inputTags =
-                        facetTags.getOrDefault(inputName, ImmutableMap.of());
+                        facetTags.getOrDefault(inputId, ImmutableMap.of());
                     Errable<Object> value =
                         getFromInjectionAdaptor(
                             inputDef.type(),
@@ -124,17 +109,12 @@ public final class InputInjector implements OutputLogicDecorator {
                                       return null;
                                     })
                                 .orElse(null));
-                    newValues.put(inputName, value);
+                    facets._set(inputId, value);
                   }
                 }
               }
             });
-    if (!newValues.isEmpty()) {
-      facets.values().forEach(newValues::putIfAbsent);
-      return new Facets(newValues);
-    } else {
-      return facets;
-    }
+    return facets;
   }
 
   private Errable<Object> getFromInjectionAdaptor(

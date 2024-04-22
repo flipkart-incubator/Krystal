@@ -9,6 +9,7 @@ import lombok.Builder;
 
 @Builder
 public record InputDef<T>(
+    int id,
     String name,
     DataType<?> type,
     boolean isMandatory,

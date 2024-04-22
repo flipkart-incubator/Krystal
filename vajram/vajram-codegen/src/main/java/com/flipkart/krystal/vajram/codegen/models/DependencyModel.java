@@ -7,6 +7,7 @@ import lombok.Builder;
 
 @Builder
 public record DependencyModel(
+    int id,
     String name,
     VajramID depVajramId,
     DataType<?> responseType,

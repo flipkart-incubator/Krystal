@@ -1,26 +1,24 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2;
 
-import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
+import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2FacetUtil.friendIds_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2FacetUtil.friendInfos_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.friendIds_n;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.userId_n;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.friendIds_i;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.userId_i;
 import static java.util.stream.Collectors.joining;
 
-import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.RequestBuilder;
 import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.Dependency;
-import com.flipkart.krystal.vajram.Input;
-import com.flipkart.krystal.vajram.Output;
+import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.QualifiedInputs;
-import com.flipkart.krystal.vajram.facets.resolution.AbstractInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.SingleInputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2FacetUtil.HelloFriendsV2Facets;
@@ -29,7 +27,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.Test
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.List;
@@ -65,18 +62,17 @@ public abstract class HelloFriendsV2 extends ComputeVajram<String> {
      We write the below resolver so that these kind of resolvers are also tested in the unit tests.
     */
     resolvers.add(
-        new AbstractInputResolver(
-            ImmutableSet.of(userId_n),
-            new QualifiedInputs(friendIds_n, FriendsServiceRequest.userId_n)) {
+        new SingleInputResolver(
+            ImmutableSet.of(userId_i),
+            new QualifiedInputs(friendIds_i, FriendsServiceRequest.userId_i)) {
           @Override
-          public DependencyCommand<Facets> resolve(
-              String dependencyName, ImmutableSet<String> inputsToResolve, Facets facets) {
-            return executeWith(
-                new Facets(
-                    ImmutableMap.of(
-                        FriendsServiceRequest.userId_n,
-                        Errable.errableFrom(
-                            () -> facets.getInputValue(userId_n).getValueOrThrow()))));
+          public DependencyCommand<HelloFriendsV2Request> resolve(
+              ImmutableList<RequestBuilder<?>> depRequest, Facets facets) {
+            HelloFriendsV2Facets helloFriendsV2Facets = (HelloFriendsV2Facets) facets;
+            for (RequestBuilder<?> requestBuilder : depRequest) {
+              requestBuilder.userid(helloFriendsV2Facets.userId());
+            }
+            return executeFanoutWith(depRequest);
           }
         });
     return ImmutableList.copyOf(resolvers);

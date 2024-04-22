@@ -1,6 +1,5 @@
 package com.flipkart.krystal.krystex.resolution;
 
-import java.util.Set;
+import java.util.List;
 
-public record DependencyResolutionRequest(
-    String dependencyName, Set<ResolverDefinition> resolverDefinitions) {}
+public record DependencyResolutionRequest(int dependencyId, List<Integer> resolverIds) {}

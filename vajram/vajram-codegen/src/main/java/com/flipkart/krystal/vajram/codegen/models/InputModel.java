@@ -9,6 +9,7 @@ import lombok.Builder;
 
 @Builder
 public record InputModel<T>(
+    int id,
     String name,
     DataType<T> type,
     boolean isMandatory,

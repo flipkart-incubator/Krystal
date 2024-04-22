@@ -9,7 +9,7 @@ public final class IOLogicDefinition<T> extends OutputLogicDefinition<T> {
 
   public IOLogicDefinition(
       KryonLogicId kryonLogicId,
-      Set<String> inputs,
+      Set<Integer> inputs,
       OutputLogic<T> outputLogic,
       ImmutableMap<Object, Tag> logicTags) {
     super(kryonLogicId, inputs, logicTags, outputLogic);

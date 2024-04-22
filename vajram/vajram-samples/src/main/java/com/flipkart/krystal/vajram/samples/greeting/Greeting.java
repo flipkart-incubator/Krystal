@@ -1,11 +1,12 @@
 package com.flipkart.krystal.vajram.samples.greeting;
 
-import static com.flipkart.krystal.vajram.samples.greeting.GreetingRequest.userInfo_n;
+
+import static com.flipkart.krystal.vajram.samples.greeting.GreetingRequest.userInfo_i;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.Dependency;
-import com.flipkart.krystal.vajram.Input;
-import com.flipkart.krystal.vajram.Output;
+import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajram.samples.greeting.GreetingFacetUtil.GreetingFacets;
@@ -40,7 +41,7 @@ public abstract class Greeting extends ComputeVajram<String> {
   // Vajrams).
   // In this case the UserServiceVajram needs a user_id to retrieve the user info.
   // So it's GreetingVajram's responsibility to provide that input.
-  @Resolve(depName = userInfo_n, depInputs = UserServiceRequest.userId_n)
+  @Resolve(dep = userInfo_i, depInputs = UserServiceRequest.userId_i)
   public static String userIdForUserService(String userId) {
     return userId;
   }

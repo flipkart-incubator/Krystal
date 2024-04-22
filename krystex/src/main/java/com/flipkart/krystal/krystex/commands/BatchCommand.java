@@ -7,5 +7,5 @@ public sealed interface BatchCommand extends KryonCommand permits ForwardBatch, 
 
   Set<RequestId> requestIds();
 
-  Set<String> inputNames();
+  Set<Integer> facetIds();
 }

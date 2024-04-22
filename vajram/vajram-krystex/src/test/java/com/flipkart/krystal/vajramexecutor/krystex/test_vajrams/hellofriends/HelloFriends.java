@@ -12,9 +12,9 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.Dependency;
-import com.flipkart.krystal.vajram.Input;
-import com.flipkart.krystal.vajram.Output;
+import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsFacetUtil.HelloFriendsFacets;

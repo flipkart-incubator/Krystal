@@ -6,9 +6,7 @@ public class VajramValidationException extends RuntimeException {
 
   @Serial private static final long serialVersionUID = -7618868579700286025L;
 
-  public VajramValidationException() {
-    super();
-  }
+  public VajramValidationException() {}
 
   public VajramValidationException(String message) {
     super(message);

@@ -9,14 +9,14 @@ public abstract sealed class AbstractDependantChain implements DependantChain
     permits DefaultDependantChain, DependantChainStart {
 
   @EqualsAndHashCode.Exclude @ToString.Exclude
-  private final Map<KryonId, ConcurrentHashMap<String, DependantChain>> dependenciesInternPool =
+  private final Map<KryonId, ConcurrentHashMap<Integer, DependantChain>> dependenciesInternPool =
       new ConcurrentHashMap<>();
 
   @Override
-  public DependantChain extend(KryonId kryonId, String dependencyName) {
+  public DependantChain extend(KryonId kryonId, int dependencyId) {
     return dependenciesInternPool
         .computeIfAbsent(kryonId, _n -> new ConcurrentHashMap<>())
         .computeIfAbsent(
-            dependencyName, depName -> new DefaultDependantChain(kryonId, depName, this));
+            dependencyId, depName -> new DefaultDependantChain(kryonId, depName, this));
   }
 }

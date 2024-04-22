@@ -12,11 +12,11 @@ public record MultiExecute<T>(Collection<T> multiInputs, boolean shouldSkip, Str
     implements DependencyCommand<T> {
 
   @Override
-  public ImmutableCollection<Optional<T>> inputs() {
+  public ImmutableList<Optional<T>> inputs() {
     return multiInputs.stream().map(Optional::ofNullable).collect(toImmutableList());
   }
 
-  public static <T> MultiExecute<T> executeFanoutWith(Collection<T> inputs) {
+  public static <T> MultiExecute<T> executeFanoutWith(Collection<? extends T> inputs) {
     return new MultiExecute<>(ImmutableList.copyOf(inputs), false, EMPTY_STRING);
   }
 

@@ -10,8 +10,8 @@ import java.util.Set;
 
 public record CallbackBatch(
     KryonId kryonId,
-    String dependencyName,
-    ImmutableMap<RequestId, Results<Object>> resultsByRequest,
+    int dependencyId,
+    ImmutableMap<RequestId, Results<?, Object>> resultsByRequest,
     DependantChain dependantChain)
     implements BatchCommand {
 
@@ -21,11 +21,11 @@ public record CallbackBatch(
   }
 
   @Override
-  public Set<String> inputNames() {
-    return Set.of(dependencyName);
+  public Set<Integer> facetIds() {
+    return Set.of(dependencyId);
   }
 
-  public String dependencyName() {
-    return dependencyName;
+  public int dependencyId() {
+    return dependencyId;
   }
 }

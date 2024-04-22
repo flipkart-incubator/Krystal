@@ -6,12 +6,15 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Collection;
 
 public record AccessSpecMatchingResult<T extends DataAccessSpec>(
-    ImmutableMap<T, Vajram> exactMatches,
-    ImmutableMap<T, Vajram> superSetMatches,
+    ImmutableMap<T, Vajram<?>> exactMatches,
+    ImmutableMap<T, Vajram<?>> superSetMatches,
     ImmutableCollection<T> unsuccessfulMatches) {
 
-  public ImmutableMap<T, Vajram> successfulMatches() {
-    return ImmutableMap.<T, Vajram>builder().putAll(exactMatches).putAll(superSetMatches).build();
+  public ImmutableMap<T, Vajram<?>> successfulMatches() {
+    return ImmutableMap.<T, Vajram<?>>builder()
+        .putAll(exactMatches)
+        .putAll(superSetMatches)
+        .build();
   }
 
   public boolean hasUnsuccessfulMatches() {

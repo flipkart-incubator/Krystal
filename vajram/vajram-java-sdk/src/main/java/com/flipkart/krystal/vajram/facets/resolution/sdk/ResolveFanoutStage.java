@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.facets.resolution.sdk;
 
-import com.flipkart.krystal.vajram.VajramRequest;
+import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import java.util.Collection;
@@ -13,7 +13,7 @@ import java.util.function.Supplier;
  * @param <I> The data type of the input being resolved.
  * @param <DV> The dependency whose input is being resolved.
  */
-public final class ResolveFanoutStage<I, DV extends VajramRequest<?>> {
+public final class ResolveFanoutStage<I, DV extends ImmutableRequest<?>> {
 
   private final VajramFacetSpec<I, DV> targetInput;
 
@@ -29,17 +29,17 @@ public final class ResolveFanoutStage<I, DV extends VajramRequest<?>> {
    * @return The resultant {@link SimpleInputResolverSpec}
    * @param <CV> The current vajram which is doing the resolution
    */
-  public <CV extends VajramRequest<?>> SimpleInputResolverSpec<I, CV, DV> usingValuesAsResolver(
+  public <CV extends ImmutableRequest<?>> SimpleInputResolverSpec<I, CV, DV> usingValuesAsResolver(
       Supplier<? extends Collection<? extends I>> with) {
     return new SimpleInputResolverSpec<>(targetInput, List.of(), List.of(), null, o -> with.get());
   }
 
-  public <S, CV extends VajramRequest<?>> Transform1FanoutResolverStage<S, I, CV, DV> using(
+  public <S, CV extends ImmutableRequest<?>> Transform1FanoutResolverStage<S, I, CV, DV> using(
       VajramFacetSpec<S, CV> sourceInput) {
     return new Transform1FanoutResolverStage<>(targetInput, sourceInput);
   }
 
-  public <S1, S2, CV extends VajramRequest<?>>
+  public <S1, S2, CV extends ImmutableRequest<?>>
       Transform2FanoutResolverStage<S1, S2, I, CV, DV> using(
           VajramFacetSpec<S1, CV> sourceInput1, VajramFacetSpec<S2, CV> sourceInput2) {
     return new Transform2FanoutResolverStage<>(targetInput, sourceInput1, sourceInput2);

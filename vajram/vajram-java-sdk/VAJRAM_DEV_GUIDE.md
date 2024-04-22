@@ -34,7 +34,7 @@ On the other hand let us say you have a piece of business logic which does not m
       2. should be descriptive
       3. must be unique within the vajram
       4. must be unchanging across releases if you want to avoid breaking your clients.
-   3. Decide **Input Data Type**: the data types of these inputs must be **deeply immutable** to avoid data races - this is important since the execution is concurrent. The order of execution of various vajrams might vary for every execution based on IO latencies and availability. This means data races can lead to non-determinacy and thus unpredictable results.
+   3. Decide **Input Data Type**: the data types of these inputs must be **deeply immutable** to avoid data races - this is important since the execution is concurrent. The order of execution of various vajrams might vary for every execution based on IO latencies and availability. This means data races can lead to non-determinacy and thus unpredictable logicExecResults.
    4. Decide **Input sources**: What is the right source of each input? Should it be provided by the client? or the runtime environment? or both?
       1. `@Input`: These are inputs which can only be provided by the clients of this vajram
       2. `@jakarta.inject.Inject`: These are inputs which can only be provided by the runtime via injection(simlar to the [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection) design pattern)

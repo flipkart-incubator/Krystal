@@ -1,23 +1,29 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.Comparator.comparing;
+import static java.util.Comparator.comparingInt;
 import static java.util.Optional.ofNullable;
 import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.vajram.VajramRequest;
+import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.data.RequestBuilder;
+import com.flipkart.krystal.data.Response;
+import com.flipkart.krystal.data.Success;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
+import com.flipkart.krystal.vajram.facets.QualifiedInputs;
 import com.flipkart.krystal.vajram.facets.SingleExecute;
 import com.flipkart.krystal.vajram.facets.VajramDepFanoutTypeSpec;
 import com.flipkart.krystal.vajram.facets.VajramDepSingleTypeSpec;
 import com.flipkart.krystal.vajram.facets.VajramDependencySpec;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
-import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,20 +36,22 @@ public final class InputResolverUtil {
 
   public static ResolutionResult multiResolve(
       List<ResolutionRequest> resolutionRequests,
-      Map<String, Collection<? extends SimpleInputResolver<?, ?, ?, ?>>> resolvers,
+      Map<Integer, Collection<? extends SimpleInputResolver<?, ?, ?, ?>>> resolvers,
       Facets facets) {
 
-    Map<String, List<Map<String, @Nullable Object>>> results = new LinkedHashMap<>();
-    Map<String, DependencyCommand<Facets>> skippedDependencies = new LinkedHashMap<>();
+    Map<Integer, List<RequestBuilder<Object>>> results = new LinkedHashMap<>();
+    Map<Integer, DependencyCommand<? extends Request<Object>>> skippedDependencies =
+        new LinkedHashMap<>();
     for (ResolutionRequest resolutionRequest : resolutionRequests) {
-      String dependencyName = resolutionRequest.dependencyName();
-      List<Map<String, @Nullable Object>> depInputs = new ArrayList<>();
+      int dependencyId = resolutionRequest.dependencyId();
+      List<RequestBuilder<Object>> depReqs = new ArrayList<>();
+      depReqs.add(resolutionRequest.vajramRequest()._asBuilder());
       Collection<? extends SimpleInputResolver<?, ?, ?, ?>> depResolvers =
-          resolvers.getOrDefault(dependencyName, List.of());
+          resolvers.getOrDefault(dependencyId, List.of());
       for (SimpleInputResolver<?, ?, ?, ?> simpleResolver : depResolvers) {
-        String resolvable = simpleResolver.getResolverSpec().targetInput().name();
+        int resolvable = simpleResolver.getResolverSpec().targetInput().id();
         //noinspection unchecked,rawtypes
-        DependencyCommand<?> command =
+        DependencyCommand<Request<Object>> command =
             _resolutionHelper(
                 (List) simpleResolver.getResolverSpec().sourceInputs(),
                 simpleResolver.getResolverSpec().transformer(),
@@ -51,76 +59,60 @@ public final class InputResolverUtil {
                 simpleResolver.getResolverSpec().skipConditions(),
                 facets);
         if (command.shouldSkip()) {
-          //noinspection unchecked
-          skippedDependencies.put(dependencyName, (DependencyCommand<Facets>) command);
+          skippedDependencies.put(dependencyId, command);
           break;
         }
-        collectDepInputs(depInputs, resolvable, command);
+        collectDepInputs(depReqs, resolvable, command);
       }
-      if (!skippedDependencies.containsKey(dependencyName)) {
-        results.putIfAbsent(dependencyName, depInputs);
+      if (!skippedDependencies.containsKey(dependencyId)) {
+        results.putIfAbsent(dependencyId, depReqs);
       }
     }
     return new ResolutionResult(results, skippedDependencies);
   }
 
   public static void collectDepInputs(
-      List<Map<String, @Nullable Object>> depInputs,
-      @Nullable String resolvable,
+      List<RequestBuilder<Object>> depReqs,
+      @Nullable Integer resolvable,
       DependencyCommand<?> command) {
     if (command.shouldSkip()) {
       return;
     }
     if (command instanceof SingleExecute<?> singleExecute) {
-      if (depInputs.isEmpty()) {
-        depInputs.add(new LinkedHashMap<>());
-      }
-      depInputs.forEach(map -> handleResolverReturn(resolvable, singleExecute.input(), map));
+      depReqs.forEach(request -> handleResolverReturn(resolvable, singleExecute.input(), request));
     } else if (command instanceof MultiExecute<?> multiExecute) {
       Collection<?> objects = multiExecute.multiInputs();
-      if (depInputs.isEmpty()) {
-        objects.forEach(
-            o -> {
-              LinkedHashMap<String, @Nullable Object> e = new LinkedHashMap<>();
-              depInputs.add(e);
-              handleResolverReturn(resolvable, o, e);
-            });
-      } else {
-        List<Map<String, @Nullable Object>> more =
-            new ArrayList<>(depInputs.size() * objects.size() - depInputs.size());
-        for (Map<String, @Nullable Object> depInput : depInputs) {
-          boolean first = true;
-          ImmutableMap<String, @Nullable Object> originalDepInput = ImmutableMap.copyOf(depInput);
-          for (Object object : objects) {
-            if (first) {
-              first = false;
-              handleResolverReturn(resolvable, object, depInput);
-            } else {
-              LinkedHashMap<String, @Nullable Object> e = new LinkedHashMap<>(originalDepInput);
-              more.add(e);
-              handleResolverReturn(resolvable, object, e);
-            }
+      List<RequestBuilder<Object>> more =
+          new ArrayList<>(depReqs.size() * objects.size() - depReqs.size());
+      for (RequestBuilder<Object> depReq : depReqs) {
+        boolean first = true;
+        RequestBuilder<Object> copy = depReq._newCopy();
+        for (Object object : objects) {
+          if (first) {
+            first = false;
+            handleResolverReturn(resolvable, object, depReq);
+          } else {
+            RequestBuilder<Object> e = copy._newCopy();
+            more.add(e);
+            handleResolverReturn(resolvable, object, e);
           }
         }
-        depInputs.addAll(more);
       }
+      depReqs.addAll(more);
     }
   }
 
   private static void handleResolverReturn(
-      @Nullable String resolvable, @Nullable Object o, Map<String, @Nullable Object> valuesMap) {
-    if (o instanceof Facets facets) {
-      for (Entry<String, FacetValue<Object>> e : facets.values().entrySet()) {
-        //noinspection unchecked,rawtypes
-        if (valuesMap.put(e.getKey(), ((Errable) e.getValue()).value().orElse(null)) != null) {
-          throw new IllegalStateException("Duplicate key");
-        }
+      @Nullable Integer resolvable, @Nullable Object o, RequestBuilder<?> requestBuilder) {
+    if (o instanceof Request<?> resolvedRequest) {
+      for (Entry<Integer, Errable<Object>> e : resolvedRequest._asMap().entrySet()) {
+        requestBuilder._set(e.getKey(), e.getValue());
       }
     } else if (resolvable != null) {
-      valuesMap.put(resolvable, o);
+      requestBuilder._set(resolvable, Errable.withValue(o));
     } else {
       throw new AssertionError(
-          "Resolvable is null and resolver return is not of Inputs. This should not be possible");
+          "Resolvable is null and resolver return is not of Facets. This should not be possible");
     }
   }
 
@@ -136,17 +128,22 @@ public final class InputResolverUtil {
     for (VajramFacetSpec sourceInput : sourceInputs) {
       final Errable<Object> inputValue;
       if (sourceInput instanceof VajramDepSingleTypeSpec<?, ?, ?>) {
-        inputValue = facets.getDepValue(sourceInput.name()).values().values().iterator().next();
+        inputValue =
+            facets._getResponses(sourceInput.id()).responses().stream()
+                .map(Response::response)
+                .iterator()
+                .next();
       } else if (sourceInput instanceof VajramDepFanoutTypeSpec<?, ?, ?>) {
         inputValue =
             Errable.withValue(
-                facets.getDepValue(sourceInput.name()).values().values().stream()
-                    .map(Errable::value)
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
+                facets._getResponses(sourceInput.id()).responses().stream()
+                    .map(Response::response)
+                    .filter(e -> e instanceof Success<?>)
+                    .map(e -> (Success<?>) e)
+                    .map(Success::value)
                     .toList());
       } else if (sourceInput != null) {
-        inputValue = facets.getInputValue(sourceInput.name());
+        inputValue = facets._getErrable(sourceInput.id());
       } else {
         inputValue = Errable.empty();
       }
@@ -194,15 +191,22 @@ public final class InputResolverUtil {
     }
   }
 
-  public static <T, CV extends VajramRequest<?>, DV extends VajramRequest<?>>
+  public static <T, CV extends ImmutableRequest<?>, DV extends ImmutableRequest<?>>
       InputResolver toResolver(
           VajramDependencySpec<?, ?, CV, DV> dependency, SimpleInputResolverSpec<T, CV, DV> spec) {
     return new SimpleInputResolver<>(dependency, spec);
   }
 
-  public record ResolutionResult(
-      Map<String, List<Map<String, @Nullable Object>>> results,
-      Map<String, DependencyCommand<Facets>> skippedDependencies) {}
-
   private InputResolverUtil() {}
+
+  public static Comparator<QualifiedInputs> getQualifiedInputsComparator() {
+    return comparingInt(QualifiedInputs::dependencyId)
+        .thenComparingInt(q -> q.inputNames().size())
+        .thenComparing(
+            QualifiedInputs::inputNames,
+            // Two resolvers resoving the same dependency cannot have a common inputName
+            // So we can just compare the lexicographically first elements of both
+            // inputNames to get a deterministic comparator
+            comparing(strings -> strings.stream().sorted().findFirst().orElse("")));
+  }
 }

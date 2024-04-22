@@ -4,13 +4,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class DefaultDependantChain extends AbstractDependantChain {
   private final KryonId kryonId;
-  private final String dependencyName;
+  private final int dependencyId;
   private final DependantChain dependantChain;
   private int _hashCodeCache;
 
-  DefaultDependantChain(KryonId kryonId, String dependencyName, DependantChain dependantChain) {
+  DefaultDependantChain(KryonId kryonId, int dependencyId, DependantChain dependantChain) {
     this.kryonId = kryonId;
-    this.dependencyName = dependencyName;
+    this.dependencyId = dependencyId;
     this.dependantChain = dependantChain;
   }
 
@@ -18,8 +18,8 @@ public final class DefaultDependantChain extends AbstractDependantChain {
     return kryonId;
   }
 
-  public String dependencyName() {
-    return dependencyName;
+  public int dependencyId() {
+    return dependencyId;
   }
 
   public DependantChain dependantChain() {
@@ -41,6 +41,6 @@ public final class DefaultDependantChain extends AbstractDependantChain {
 
   @Override
   public String toString() {
-    return "%s:%s[%s]".formatted(dependantChain, kryonId.value(), dependencyName());
+    return "%s:%s[%s]".formatted(dependantChain, kryonId.value(), dependencyId());
   }
 }

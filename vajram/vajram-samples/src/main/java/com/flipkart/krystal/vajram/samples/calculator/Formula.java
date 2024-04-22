@@ -10,9 +10,9 @@ import static com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest.
 import static com.flipkart.krystal.vajram.samples.calculator.divider.DividerRequest.*;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.Dependency;
-import com.flipkart.krystal.vajram.Input;
-import com.flipkart.krystal.vajram.Output;
+import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;

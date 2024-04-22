@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.das;
 
 import java.util.Collection;
 
-public final class GraphQl implements DataAccessSpec {
+public record GraphQl() implements DataAccessSpec {
 
   @Override
   public <T> T adapt(Collection<T> dataObjects) {

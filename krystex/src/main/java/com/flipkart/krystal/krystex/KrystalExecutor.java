@@ -1,6 +1,7 @@
 package com.flipkart.krystal.krystex;
 
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import java.util.concurrent.CompletableFuture;
@@ -9,7 +10,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public interface KrystalExecutor extends AutoCloseable {
 
   <T> CompletableFuture<@Nullable T> executeKryon(
-      KryonId kryonId, Facets facets, KryonExecutionConfig executionConfig);
+      KryonId kryonId, Request<T> facets, KryonExecutionConfig executionConfig);
 
   /**
    * Flushes any pending requests and waits for all those requests to finish before returning. This

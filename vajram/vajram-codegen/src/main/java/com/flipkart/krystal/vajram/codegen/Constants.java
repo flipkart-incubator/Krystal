@@ -41,7 +41,8 @@ public final class Constants {
   public static final String INPUTS_LIST = "facetsList";
   public static final String BATCHABLE_FACETS = "BatchFacets";
   public static final String COMMON_FACETS = "CommonFacets";
-  public static final String INPUTS = "facets";
+  public static final String FACETS = "facets";
+  public static final String DEP_REQ_PARAM = "dependecyRequest";
   public static final String UNMOD_INPUT = "unmodInput";
   public static final String MOD_INPUT = "modInput";
   public static final String IM_MAP = "imMap";
@@ -64,8 +65,8 @@ public final class Constants {
                 $map:T<$facets:T, $comFuture:T<$returnType:T>> returnValue = new $linkHashMap:T<>();
 
                 if (commonFacets != null) {
-                  var results = $outputLogicMethod:L(new $modInput:T<>($imList:T.copyOf(mapping.keySet()), commonFacets));
-                  results.forEach((im, future) -> returnValue.put(
+                  var logicExecResults = $outputLogicMethod:L(new $modInput:T<>($imList:T.copyOf(mapping.keySet()), commonFacets));
+                  logicExecResults.forEach((im, future) -> returnValue.put(
                         $optional:T.ofNullable(mapping.get(im)).orElseThrow(),
                         future.<$returnType:T>thenApply($function:T.identity())));
                 }

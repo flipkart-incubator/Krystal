@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.Input;
-import com.flipkart.krystal.vajram.Output;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloFacetUtil.HelloFacets;
 import java.util.Optional;

@@ -3,13 +3,15 @@ package com.flipkart.krystal.vajram;
 import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetsBuilder;
+import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.data.RequestBuilder;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -59,9 +61,9 @@ public sealed interface Vajram<T> permits AbstractVajram, BatchableVajram {
     return ImmutableList.of();
   }
 
-  default DependencyCommand<Facets> resolveInputOfDependency(
-      String dependency, ImmutableSet<String> resolvableInputs, Facets facets) {
-    return executeFanoutWith(ImmutableList.of());
+  default DependencyCommand<? extends Request<Object>> resolveInputOfDependency(
+      int resolverId, ImmutableList<? extends RequestBuilder<Object>> depRequests, Facets facets) {
+    return executeFanoutWith(depRequests);
   }
 
   VajramID getId();
@@ -69,4 +71,8 @@ public sealed interface Vajram<T> permits AbstractVajram, BatchableVajram {
   ImmutableCollection<VajramFacetDefinition> getFacetDefinitions();
 
   ImmutableMap<Facets, CompletableFuture<@Nullable T>> execute(ImmutableList<Facets> inputs);
+
+  RequestBuilder<T> newRequestBuilder();
+
+  FacetsBuilder facetsFromRequest(Request<?> requestBuilder);
 }

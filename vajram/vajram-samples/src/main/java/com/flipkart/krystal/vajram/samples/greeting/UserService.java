@@ -4,8 +4,8 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.Input;
-import com.flipkart.krystal.vajram.Output;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;

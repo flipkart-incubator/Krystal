@@ -4,7 +4,8 @@ import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.google.common.collect.ImmutableSet;
 
 public record ResolverDefinition(
+    int resolverId,
     KryonLogicId resolverKryonLogicId,
-    ImmutableSet<String> boundFrom,
-    String dependencyName,
-    ImmutableSet<String> resolvedInputNames) {}
+    ImmutableSet<Integer> boundFrom,
+    Integer dependencyId,
+    ImmutableSet<Integer> resolvedInputs) {}

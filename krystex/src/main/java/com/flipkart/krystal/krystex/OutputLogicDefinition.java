@@ -2,6 +2,7 @@ package com.flipkart.krystal.krystex;
 
 import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
@@ -29,14 +30,14 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
 
   protected OutputLogicDefinition(
       KryonLogicId kryonLogicId,
-      Set<String> inputs,
+      Set<Integer> inputs,
       ImmutableMap<Object, Tag> logicTags,
       OutputLogic<T> outputLogic) {
     super(kryonLogicId, inputs, logicTags, outputLogic);
   }
 
   public final ImmutableMap<Facets, CompletableFuture<@Nullable T>> execute(
-      ImmutableList<Facets> inputs) {
+      ImmutableList<? extends Facets> inputs) {
     return logic().execute(inputs);
   }
 
@@ -90,7 +91,6 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
 
   public void registerRequestScopedDecorator(
       Collection<OutputLogicDecoratorConfig> decoratorConfigs) {
-    //noinspection UnstableApiUsage
     requestScopedLogicDecoratorConfigs =
         ImmutableMap.<String, List<OutputLogicDecoratorConfig>>builderWithExpectedSize(
                 requestScopedLogicDecoratorConfigs.size() + decoratorConfigs.size())

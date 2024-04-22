@@ -10,6 +10,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.config.ConfigProvider;
+import com.flipkart.krystal.data.FacetMap;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
@@ -63,7 +64,7 @@ class Resilience4JBulkheadTest {
     OutputLogicDefinition<String> outputLogicDef =
         newAsyncLogic(
             "bulkhead_restrictsConcurrency",
-            Set.of("input"),
+            Set.of(1),
             dependencyValues ->
                 supplyAsync(
                     () -> {
@@ -84,10 +85,10 @@ class Resilience4JBulkheadTest {
           @Override
           public <T> Optional<T> getConfig(String key) {
             return switch (key) {
-              case "bulkhead_restrictsConcurrency.bulkhead.max_concurrency" -> (Optional<T>)
-                  Optional.of(2);
-              case "bulkhead_restrictsConcurrency.bulkhead.enabled" -> (Optional<T>)
-                  Optional.of(true);
+              case "bulkhead_restrictsConcurrency.bulkhead.max_concurrency" ->
+                  (Optional<T>) Optional.of(2);
+              case "bulkhead_restrictsConcurrency.bulkhead.enabled" ->
+                  (Optional<T>) Optional.of(true);
               default -> Optional.empty();
             };
           }
@@ -101,22 +102,22 @@ class Resilience4JBulkheadTest {
                 decoratorContext -> resilience4JBulkhead)));
     KryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newKryonDefinition(
-            "kryon", Set.of("input"), outputLogicDef.kryonLogicId());
+            "kryon", Set.of(1), outputLogicDef.kryonLogicId());
 
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            new Facets(ImmutableMap.of("input", withValue(1))),
+            new FacetMap(ImmutableMap.of(1, withValue(1))),
             KryonExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> call2BeforeBulkheadExhaustion =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            new Facets(ImmutableMap.of("input", withValue(2))),
+            new FacetMap(ImmutableMap.of(1, withValue(2))),
             KryonExecutionConfig.builder().executionId("req_2").build());
     CompletableFuture<Object> callAfterBulkheadExhaustion =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            new Facets(ImmutableMap.of("input", withValue(3))),
+            new FacetMap(ImmutableMap.of(1, withValue(3))),
             KryonExecutionConfig.builder().executionId("req_3").build());
     kryonExecutor.flush();
     assertThat(callAfterBulkheadExhaustion)
@@ -136,7 +137,7 @@ class Resilience4JBulkheadTest {
     OutputLogicDefinition<String> outputLogic =
         newAsyncLogic(
             "threadpoolBulkhead_restrictsConcurrency",
-            Set.of("input"),
+            Set.of(1),
             dependencyValues -> {
               while (countDownLatch.getCount() > 0) {
                 try {
@@ -154,13 +155,12 @@ class Resilience4JBulkheadTest {
           @Override
           public <T> Optional<T> getConfig(String key) {
             return switch (key) {
-              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.max_concurrency" -> (Optional<
-                      T>)
-                  Optional.of(2);
-              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.enabled" -> (Optional<T>)
-                  Optional.of(true);
-              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.type" -> (Optional<T>)
-                  Optional.of("THREADPOOL");
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.max_concurrency" ->
+                  (Optional<T>) Optional.of(2);
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.enabled" ->
+                  (Optional<T>) Optional.of(true);
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.type" ->
+                  (Optional<T>) Optional.of("THREADPOOL");
               default -> Optional.empty();
             };
           }
@@ -173,23 +173,22 @@ class Resilience4JBulkheadTest {
                 logicExecutionContext -> "",
                 decoratorContext -> resilience4JBulkhead)));
     KryonDefinition kryonDefinition =
-        kryonDefinitionRegistry.newKryonDefinition(
-            "kryon", Set.of("input"), outputLogic.kryonLogicId());
+        kryonDefinitionRegistry.newKryonDefinition("kryon", Set.of(1), outputLogic.kryonLogicId());
 
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            new Facets(ImmutableMap.of("input", withValue(1))),
+            new FacetMap(ImmutableMap.of(1, withValue(1))),
             KryonExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> call2BeforeBulkheadExhaustion =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            new Facets(ImmutableMap.of("input", withValue(2))),
+            new FacetMap(ImmutableMap.of(1, withValue(2))),
             KryonExecutionConfig.builder().executionId("req_2").build());
     CompletableFuture<Object> callAfterBulkheadExhaustion =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            new Facets(ImmutableMap.of("input", withValue(3))),
+            new FacetMap(ImmutableMap.of(1, withValue(3))),
             KryonExecutionConfig.builder().executionId("req_3").build());
     kryonExecutor.flush();
     assertThat(callAfterBulkheadExhaustion)
@@ -207,7 +206,7 @@ class Resilience4JBulkheadTest {
   }
 
   private <T> OutputLogicDefinition<T> newAsyncLogic(
-      String kryonId, Set<String> inputs, Function<Facets, CompletableFuture<T>> logic) {
+      String kryonId, Set<Integer> inputs, Function<Facets, CompletableFuture<T>> logic) {
     IOLogicDefinition<T> def =
         new IOLogicDefinition<>(
             new KryonLogicId(new KryonId(kryonId), kryonId + ":asyncLogic"),

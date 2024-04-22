@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.kryon.DefaultDependantChain;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.DependantChainStart;
@@ -8,9 +9,8 @@ import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.DecoratorContext;
 import com.flipkart.krystal.vajram.BatchableVajram;
-import com.flipkart.krystal.vajram.batching.FacetsConverter;
+import com.flipkart.krystal.vajram.batching.BatchableSupplier;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
-import com.flipkart.krystal.vajram.facets.FacetValuesAdaptor;
 import com.flipkart.krystal.vajram.tags.AnnotationTags;
 import com.flipkart.krystal.vajram.tags.VajramTags;
 import com.google.common.collect.ImmutableSet;
@@ -38,7 +38,7 @@ public record InputBatcherConfig(
    *     unique {@link InputBatchingDecorator} instance.
    */
   public static InputBatcherConfig simple(
-      Supplier<InputBatcher<FacetValuesAdaptor, FacetValuesAdaptor>> inputBatcherSupplier) {
+      Supplier<InputBatcher<Facets, Facets>> inputBatcherSupplier) {
     return new InputBatcherConfig(
         logicExecutionContext ->
             generateInstanceId(
@@ -48,8 +48,8 @@ public record InputBatcherConfig(
         batcherContext -> batcherContext.vajram().getBatchFacetsConvertor().isPresent(),
         batcherContext -> {
           @SuppressWarnings("unchecked")
-          Optional<FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>> facetsConvertor =
-              (Optional<FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>>)
+          Optional<BatchableSupplier<Facets, Facets>> facetsConvertor =
+              (Optional<BatchableSupplier<Facets, Facets>>)
                   batcherContext.vajram().getBatchFacetsConvertor();
           if (facetsConvertor.isEmpty()) {
             throw new IllegalStateException(
@@ -69,14 +69,14 @@ public record InputBatcherConfig(
   }
 
   public static InputBatcherConfig sharedBatcher(
-      Supplier<InputBatcher<FacetValuesAdaptor, FacetValuesAdaptor>> inputBatcherSupplier,
+      Supplier<InputBatcher<Facets, Facets>> inputBatcherSupplier,
       String instanceId,
       DependantChain... dependantChains) {
     return sharedBatcher(inputBatcherSupplier, instanceId, ImmutableSet.copyOf(dependantChains));
   }
 
   public static InputBatcherConfig sharedBatcher(
-      Supplier<InputBatcher<FacetValuesAdaptor, FacetValuesAdaptor>> inputBatcherSupplier,
+      Supplier<InputBatcher<Facets, Facets>> inputBatcherSupplier,
       String instanceId,
       ImmutableSet<DependantChain> dependantChains) {
     return new InputBatcherConfig(
@@ -87,8 +87,8 @@ public record InputBatcherConfig(
                     batcherContext.decoratorContext().logicExecutionContext().dependants()),
         batcherContext -> {
           @SuppressWarnings("unchecked")
-          Optional<FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>> facetsConvertor =
-              (Optional<FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>>)
+          Optional<BatchableSupplier<Facets, Facets>> facetsConvertor =
+              (Optional<BatchableSupplier<Facets, Facets>>)
                   batcherContext.vajram().getBatchFacetsConvertor();
           if (facetsConvertor.isEmpty()) {
             throw new IllegalStateException(
@@ -129,11 +129,11 @@ public record InputBatcherConfig(
             .append('>')
             .append(vajramId)
             .append(':')
-            .append(defaultDependantChain.dependencyName());
+            .append(defaultDependantChain.dependencyId());
       } else {
         return generateInstanceId(defaultDependantChain.dependantChain(), kryonDefinitionRegistry)
             .append('>')
-            .append(defaultDependantChain.dependencyName());
+            .append(defaultDependantChain.dependencyId());
       }
     }
     throw new UnsupportedOperationException();

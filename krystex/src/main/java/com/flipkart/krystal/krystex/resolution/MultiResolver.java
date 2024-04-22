@@ -7,6 +7,6 @@ import java.util.List;
 
 @FunctionalInterface
 public non-sealed interface MultiResolver extends Logic {
-  ImmutableMap<String, ResolverCommand> resolve(
+  ImmutableMap<Integer, ResolverCommand> resolve(
       List<DependencyResolutionRequest> resolverRequests, Facets facets);
 }

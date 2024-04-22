@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.facets.resolution.sdk;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.vajram.VajramRequest;
+import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SkipPredicate;
@@ -9,7 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
-public final class AsIsResolverStage<T, CV extends VajramRequest<?>, DV extends VajramRequest<?>> {
+public final class AsIsResolverStage<
+    T, CV extends ImmutableRequest<?>, DV extends ImmutableRequest<?>> {
   private final VajramFacetSpec<T, DV> targetInput;
   private final VajramFacetSpec<T, CV> sourceInput;
   private final List<SkipPredicate<?>> skipConditions = new ArrayList<>();
@@ -32,7 +33,7 @@ public final class AsIsResolverStage<T, CV extends VajramRequest<?>, DV extends 
         targetInput,
         List.of(sourceInput),
         skipConditions,
-        t -> (T) t.get(0).value().orElse(null),
+        t -> (T) t.get(0).valueOpt().orElse(null),
         null);
   }
 }

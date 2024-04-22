@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.samples.calculator.subtractor;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.Input;
-import com.flipkart.krystal.vajram.Output;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.samples.calculator.subtractor.SubtractorFacetUtil.SubtractorFacets;
 import java.util.Optional;
