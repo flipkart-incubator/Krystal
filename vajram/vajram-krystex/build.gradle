@@ -31,7 +31,7 @@ publishing {
 }
 
 afterEvaluate {
-    //The main repo doesn't have any vajrams - so remove this dependency
+    //The main sourceSet doesn't have any vajrams - so remove this dependency
     compileJava.dependsOn -= "codeGenVajramModels"
 }
 
