@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.facets;
 
-import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.vajram.Vajram;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
 

@@ -8,6 +8,10 @@ public final class FacetsMap extends ImmutableFacets {
   private final ImmutableRequest<Object> request;
   private final ImmutableMap<Integer, FacetValue<Object>> data;
 
+  public FacetsMap(Request<Object> request) {
+    this(request, ImmutableMap.of());
+  }
+
   public FacetsMap(Request<Object> request, ImmutableMap<Integer, FacetValue<Object>> otherFacets) {
     this.request = request._build();
     this.data = otherFacets;
@@ -41,7 +45,7 @@ public final class FacetsMap extends ImmutableFacets {
   }
 
   @Override
-  public <R extends Request<V>, V> Responses<R, V> _getResponses(int facetId) {
+  public <R extends Request<V>, V> Responses<R, V> _getDepResponses(int facetId) {
     FacetValue<Object> datum = data.getOrDefault(facetId, Errable.empty());
     if (datum instanceof Responses<?, ?> errable) {
       return (Responses<R, V>) errable;

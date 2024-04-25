@@ -1,6 +1,5 @@
 package com.flipkart.krystal.krystex;
 
-import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonId;

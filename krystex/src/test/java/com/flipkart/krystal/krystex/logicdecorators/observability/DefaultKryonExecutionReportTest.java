@@ -2,14 +2,10 @@ package com.flipkart.krystal.krystex.logicdecorators.observability;
 
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static java.util.function.Function.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flipkart.krystal.data.FacetMap;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.FacetsMap;
-import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.data.SimpleRequestBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
@@ -39,8 +35,8 @@ class DefaultKryonExecutionReportTest {
     KryonLogicId kryonLogicId = new KryonLogicId(kryonId, "kryon_1__logic_1");
     ImmutableList<Facets> facetsList =
         ImmutableList.of(
-            new FacetMap(ImmutableMap.of(1, withValue("v1"))),
-            new FacetMap(ImmutableMap.of(2, withValue("v2"))));
+            new FacetsMap(new SimpleRequestBuilder<>(ImmutableMap.of(1, withValue("v1")))),
+            new FacetsMap(new SimpleRequestBuilder<>(ImmutableMap.of(1, withValue("v2")))));
 
     clock.setInstant(START_TIME);
     kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetsList);
@@ -65,7 +61,7 @@ class DefaultKryonExecutionReportTest {
     assertThat(logicExecInfo.getResult())
         .isEqualTo(ImmutableMap.of(ImmutableMap.of(1, "v1"), "r1", ImmutableMap.of(1, "v2"), "r1"));
     assertThat(logicExecInfo.getInputsList())
-        .isEqualTo(ImmutableList.of(ImmutableMap.of(1, "v1"), ImmutableMap.of(2, "v2")));
+        .isEqualTo(ImmutableList.of(ImmutableMap.of(1, "v1"), ImmutableMap.of(1, "v2")));
   }
 
   @Test
@@ -74,11 +70,8 @@ class DefaultKryonExecutionReportTest {
     KryonLogicId kryonLogicId = new KryonLogicId(kryonId, "kryon_1__logic_1");
     ImmutableList<Facets> facetsList =
         ImmutableList.of(
-            new FacetsMap(
-                new SimpleRequestBuilder<>(ImmutableMap.of(1, withValue("v1"))), ImmutableMap.of()),
-            new FacetsMap(
-                new SimpleRequestBuilder<>(ImmutableMap.of(2, withValue("v2"))),
-                ImmutableMap.of()));
+            new FacetsMap(new SimpleRequestBuilder<>(ImmutableMap.of(1, withValue("v1")))),
+            new FacetsMap(new SimpleRequestBuilder<>(ImmutableMap.of(2, withValue("v2")))));
 
     clock.setInstant(START_TIME);
     kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetsList);
@@ -100,8 +93,8 @@ class DefaultKryonExecutionReportTest {
     KryonLogicId kryonLogicId = new KryonLogicId(kryonId, "kryon_1__logic_1");
     ImmutableList<Facets> facetsList =
         ImmutableList.of(
-            new FacetMap(ImmutableMap.of(1, withValue("v1"))),
-            new FacetMap(ImmutableMap.of(2, withValue("v2"))));
+            new FacetsMap(new SimpleRequestBuilder<>(ImmutableMap.of(1, withValue("v1")))),
+            new FacetsMap(new SimpleRequestBuilder<>(ImmutableMap.of(2, withValue("v2")))));
 
     clock.setInstant(START_TIME);
     kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetsList);
@@ -111,15 +104,19 @@ class DefaultKryonExecutionReportTest {
     kryonExecutionReport.reportMainLogicEnd(
         kryonId,
         kryonLogicId,
-        new Results<>(
-            facetsList.stream().collect(toImmutableMap(identity(), inputs -> withValue(result)))));
+        new LogicExecResults(
+            facetsList.stream()
+                .map(x -> new LogicExecResponse(x, withValue(result)))
+                .collect(toImmutableList())));
 
     clock.setInstant(END_TIME.plusMillis(100));
     kryonExecutionReport.reportMainLogicEnd(
         kryonId,
         kryonLogicId,
-        new Results<>(
-            facetsList.stream().collect(toImmutableMap(identity(), inputs -> withValue(result)))));
+        new LogicExecResults(
+            facetsList.stream()
+                .map(x -> new LogicExecResponse(x, withValue(result)))
+                .collect(toImmutableList())));
 
     LogicExecInfo logicExecInfo =
         kryonExecutionReport.getMainLogicExecInfos().values().stream().findFirst().orElseThrow();
@@ -134,16 +131,18 @@ class DefaultKryonExecutionReportTest {
     KryonLogicId kryonLogicId = new KryonLogicId(kryonId, "kryon_1__logic_1");
     ImmutableList<Facets> facetsList =
         ImmutableList.of(
-            new FacetMap(ImmutableMap.of(1, withValue("v1"))),
-            new FacetMap(ImmutableMap.of(2, withValue("v2"))));
+            new FacetsMap(new SimpleRequestBuilder<>(ImmutableMap.of(1, withValue("v1")))),
+            new FacetsMap(new SimpleRequestBuilder<>(ImmutableMap.of(2, withValue("v2")))));
 
     clock.setInstant(END_TIME);
     String result = "r1";
     kryonExecutionReport.reportMainLogicEnd(
         kryonId,
         kryonLogicId,
-        new Results<>(
-            facetsList.stream().collect(toImmutableMap(identity(), inputs -> withValue(result)))));
+        new LogicExecResults(
+            facetsList.stream()
+                .map(x -> new LogicExecResponse(x, withValue(result)))
+                .collect(toImmutableList())));
     assertThat(kryonExecutionReport.getMainLogicExecInfos().isEmpty()).isTrue();
   }
 }

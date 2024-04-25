@@ -2,7 +2,6 @@ package com.flipkart.krystal.krystex;
 
 import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;

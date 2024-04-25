@@ -12,7 +12,7 @@ public interface FacetContainer extends Model {
 
   <V> Errable<V> _getErrable(int facetId);
 
-  <R extends Request<V>, V> Responses<R, V> _getResponses(int facetId);
+  <R extends Request<V>, V> Responses<R, V> _getDepResponses(int facetId);
 
   Map<Integer, ? extends FacetValue<Object>> _asMap();
 

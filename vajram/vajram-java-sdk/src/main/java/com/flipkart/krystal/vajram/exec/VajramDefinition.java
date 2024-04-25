@@ -8,13 +8,13 @@ import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toMap;
 
 import com.flipkart.krystal.config.Tag;
+import com.flipkart.krystal.data.FacetContainer;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDefinitionException;
 import com.flipkart.krystal.vajram.facets.DefaultInputResolverDefinition;
 import com.flipkart.krystal.vajram.facets.DependencyDef;
-import com.flipkart.krystal.data.FacetContainer;
 import com.flipkart.krystal.vajram.facets.InputDef;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.QualifiedInputs;

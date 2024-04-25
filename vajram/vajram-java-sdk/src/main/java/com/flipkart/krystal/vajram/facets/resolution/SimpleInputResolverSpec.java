@@ -15,7 +15,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <CV> The type of the vajram doing the resolution.
  * @param <DV> The type of the vajram whose input is being resolved.
  */
-public record SimpleInputResolverSpec<T, CV extends ImmutableRequest<?>, DV extends ImmutableRequest<?>>(
+public record SimpleInputResolverSpec<
+    T, CV extends ImmutableRequest<?>, DV extends ImmutableRequest<?>>(
     VajramFacetSpec<T, DV> targetInput,
     List<VajramFacetSpec<?, CV>> sourceInputs,
     List<SkipPredicate<?>> skipConditions,

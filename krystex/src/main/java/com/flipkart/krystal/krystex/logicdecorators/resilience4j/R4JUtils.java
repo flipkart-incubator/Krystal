@@ -4,8 +4,6 @@ import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -20,7 +18,8 @@ final class R4JUtils {
 
   @SuppressWarnings("RedundantTypeArguments") // To avoid nullChecker errors
   static DecorateCompletionStage<ImmutableMap<Facets, CompletableFuture<@Nullable Object>>>
-      decorateAsyncExecute(OutputLogic<Object> logicToDecorate, ImmutableList<? extends Facets> facetsList) {
+      decorateAsyncExecute(
+          OutputLogic<Object> logicToDecorate, ImmutableList<? extends Facets> facetsList) {
     return Decorators.<ImmutableMap<Facets, CompletableFuture<@Nullable Object>>>ofCompletionStage(
         () -> {
           var result = logicToDecorate.execute(facetsList);

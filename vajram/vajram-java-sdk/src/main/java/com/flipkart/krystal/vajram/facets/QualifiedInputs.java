@@ -18,4 +18,4 @@ public record QualifiedInputs(
   public QualifiedInputs(int dependencyId, String inputName) {
     this(dependencyId, null, ImmutableSet.of(inputName));
   }
-  }
+}

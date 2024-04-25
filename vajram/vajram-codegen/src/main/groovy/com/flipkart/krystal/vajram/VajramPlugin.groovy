@@ -61,6 +61,7 @@ class VajramPlugin implements Plugin<Project> {
             options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
             options.generatedSourceOutputDirectory.fileValue(project.file(mainModelsGenDir))
             options.compilerArgs += ['-proc:only', '-A' + COGENGEN_PHASE_KEY + '=' + MODELS]
+            options.compilerArgs += ['-verbose']
         }
 
         project.tasks.named('compileJava', JavaCompile).configure {

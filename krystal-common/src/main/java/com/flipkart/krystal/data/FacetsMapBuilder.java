@@ -48,7 +48,7 @@ public class FacetsMapBuilder extends FacetsBuilder {
   }
 
   @Override
-  public <R extends Request<V>, V> Responses<R, V> _getResponses(int facetId) {
+  public <R extends Request<V>, V> Responses<R, V> _getDepResponses(int facetId) {
     FacetValue<Object> datum = data.getOrDefault(facetId, Errable.empty());
     if (datum instanceof Responses<?, ?> errable) {
       return (Responses<R, V>) errable;

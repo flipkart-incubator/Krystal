@@ -27,8 +27,8 @@ public final class SimpleRequest<T> extends ImmutableRequest<T> {
   }
 
   @Override
-  public <R extends Request<V>, V> Responses<R, V> _getResponses(int facetId) {
-    return data._getResponses(facetId);
+  public <R extends Request<V>, V> Responses<R, V> _getDepResponses(int facetId) {
+    return data._getDepResponses(facetId);
   }
 
   @Override

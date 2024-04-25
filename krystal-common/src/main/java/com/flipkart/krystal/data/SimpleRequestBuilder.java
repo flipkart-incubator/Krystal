@@ -29,7 +29,7 @@ public final class SimpleRequestBuilder<T> extends RequestBuilder<T> {
   }
 
   @Override
-  public <R extends Request<V>, V> Responses<R, V> _getResponses(int facetId) {
+  public <R extends Request<V>, V> Responses<R, V> _getDepResponses(int facetId) {
     return Results.empty();
   }
 

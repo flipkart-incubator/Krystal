@@ -2,9 +2,6 @@ package com.flipkart.krystal.vajram.facets.resolution;
 
 import com.flipkart.krystal.vajram.facets.QualifiedInputs;
 import com.google.common.collect.ImmutableSet;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.experimental.Accessors;
 
 public abstract non-sealed class AbstractInputResolver implements InputResolver {
 

@@ -2,8 +2,8 @@ package com.flipkart.krystal.vajram.facets;
 
 import static lombok.EqualsAndHashCode.CacheStrategy.LAZY;
 
-import com.flipkart.krystal.schema.FacetSpec;
 import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.schema.FacetSpec;
 import lombok.EqualsAndHashCode;
 
 /**

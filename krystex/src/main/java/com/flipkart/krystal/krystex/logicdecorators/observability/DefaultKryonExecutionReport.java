@@ -6,7 +6,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetContainer;
 import com.flipkart.krystal.data.FacetValue;
-import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.krystex.kryon.KryonId;
@@ -48,7 +47,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
 
   @Override
   public void reportMainLogicStart(
-      KryonId kryonId, KryonLogicId kryonLogicId, ImmutableList<? extends Facets> inputs) {
+      KryonId kryonId, KryonLogicId kryonLogicId, ImmutableList<? extends FacetContainer> inputs) {
     KryonExecution kryonExecution =
         new KryonExecution(
             kryonId, inputs.stream().map(this::extractAndConvertInputs).collect(toImmutableList()));
@@ -64,9 +63,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
 
   @Override
   public void reportMainLogicEnd(
-      KryonId kryonId,
-      KryonLogicId kryonLogicId,
-      LogicExecResults logicExecResults) {
+      KryonId kryonId, KryonLogicId kryonLogicId, LogicExecResults logicExecResults) {
     KryonExecution kryonExecution =
         new KryonExecution(
             kryonId,
@@ -112,7 +109,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     return ImmutableMap.copyOf(inputMap);
   }
 
-  private ImmutableMap<Integer, Object> extractAndConvertDependencyResults(Facets facets) {
+  private ImmutableMap<Integer, Object> extractAndConvertDependencyResults(FacetContainer facets) {
     Map<Integer, Object> inputMap = new LinkedHashMap<>();
     for (Entry<Integer, ? extends FacetValue<Object>> e : facets._asMap().entrySet()) {
       FacetValue<Object> value = e.getValue();
@@ -163,7 +160,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     LogicExecInfo(
         DefaultKryonExecutionReport kryonExecutionReport,
         KryonId kryonId,
-        ImmutableCollection<? extends Facets> inputList,
+        ImmutableCollection<? extends FacetContainer> inputList,
         long startTimeMs) {
       this.startTimeMs = startTimeMs;
       ImmutableList<ImmutableMap<Integer, Object>> dependencyResults;

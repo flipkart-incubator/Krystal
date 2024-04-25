@@ -129,14 +129,14 @@ public final class InputResolverUtil {
       final Errable<Object> inputValue;
       if (sourceInput instanceof VajramDepSingleTypeSpec<?, ?, ?>) {
         inputValue =
-            facets._getResponses(sourceInput.id()).responses().stream()
+            facets._getDepResponses(sourceInput.id()).responses().stream()
                 .map(Response::response)
                 .iterator()
                 .next();
       } else if (sourceInput instanceof VajramDepFanoutTypeSpec<?, ?, ?>) {
         inputValue =
             Errable.withValue(
-                facets._getResponses(sourceInput.id()).responses().stream()
+                facets._getDepResponses(sourceInput.id()).responses().stream()
                     .map(Response::response)
                     .filter(e -> e instanceof Success<?>)
                     .map(e -> (Success<?>) e)

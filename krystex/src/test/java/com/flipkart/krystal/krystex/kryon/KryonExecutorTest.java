@@ -17,7 +17,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.FacetsMapBuilder;
-import com.flipkart.krystal.data.RequestBuilder;
 import com.flipkart.krystal.data.Response;
 import com.flipkart.krystal.data.SimpleRequest;
 import com.flipkart.krystal.data.SimpleRequestBuilder;
@@ -42,7 +41,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.units.qual.K;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -179,9 +177,9 @@ class KryonExecutorTest {
                         inputs ->
                             "computed_values: a=%s;b=%s;c=%s"
                                 .formatted(
-                                    inputs._get(1).valueOrThrow(),
-                                    inputs._get(2).valueOrThrow(),
-                                    inputs._get(3).valueOrThrow()))
+                                    inputs._getErrable(1).valueOrThrow(),
+                                    inputs._getErrable(2).valueOrThrow(),
+                                    inputs._getErrable(3).valueOrThrow()))
                     .kryonLogicId(),
                 newCreateNewRequestLogic(kryonName),
                 newFacetsFromRequestLogic(kryonName))
@@ -221,7 +219,7 @@ class KryonExecutorTest {
                     Set.of(1),
                     dependencyValues ->
                         dependencyValues
-                                ._getDepResponse(1)
+                                ._getDepResponses(1)
                                 .responses()
                                 .iterator()
                                 .next()
@@ -263,7 +261,7 @@ class KryonExecutorTest {
                 l2Dep,
                 Set.of(1),
                 dependencyValues ->
-                    dependencyValues._getDepResponse(1).responses().stream()
+                    dependencyValues._getDepResponses(1).responses().stream()
                             .map(Response::response)
                             .iterator()
                             .next()
@@ -282,7 +280,7 @@ class KryonExecutorTest {
                 l3Dep,
                 Set.of(1),
                 dependencyValues -> {
-                  return dependencyValues._getDepResponse(1).responses().stream()
+                  return dependencyValues._getDepResponses(1).responses().stream()
                           .map(Response::response)
                           .iterator()
                           .next()
@@ -302,7 +300,7 @@ class KryonExecutorTest {
                 l4Dep,
                 Set.of(1),
                 dependencyValues ->
-                    dependencyValues._getDepResponse(1).responses().stream()
+                    dependencyValues._getDepResponses(1).responses().stream()
                             .map(Response::response)
                             .iterator()
                             .next()
@@ -323,7 +321,7 @@ class KryonExecutorTest {
                             "requestExecution_multiLevelDependencies_final",
                             Set.of(1),
                             dependencyValues ->
-                                dependencyValues._getDepResponse(1).responses().stream()
+                                dependencyValues._getDepResponses(1).responses().stream()
                                         .map(Response::response)
                                         .iterator()
                                         .next()
@@ -341,9 +339,10 @@ class KryonExecutorTest {
   }
 
   @NonNull
-  private static LogicDefinition<FacetsFromRequest> newFacetsFromRequestLogic(String l1Dep) {
+  private static LogicDefinition<FacetsFromRequest> newFacetsFromRequestLogic(String kryonName) {
     return new LogicDefinition<>(
-        new KryonLogicId(new KryonId(l1Dep), l1Dep + ":facetsFromRequest"), FacetsMapBuilder::new);
+        new KryonLogicId(new KryonId(kryonName), kryonName + ":facetsFromRequest"),
+        FacetsMapBuilder::new);
   }
 
   @NonNull

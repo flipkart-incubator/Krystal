@@ -91,8 +91,8 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
       new LinkedHashMap<>();
   private final Map<RequestId, DependantChain> dependantChainByRequest = new LinkedHashMap<>();
 
-  @MonotonicNonNull private ImmutableRequest<Object> emptyRequest;
-  @MonotonicNonNull private ImmutableFacets emptyFacets;
+  private @MonotonicNonNull ImmutableRequest<Object> emptyRequest;
+  private @MonotonicNonNull ImmutableFacets emptyFacets;
 
   GranularKryon(
       KryonDefinition kryonDefinition,
@@ -692,9 +692,12 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
       RequestId requestId, Set<Integer> inputIds, FacetContainer facets) {
     for (Integer inputId : inputIds) {
       try {
-        inputsValueCollector
-            .computeIfAbsent(requestId, r -> emptyRequest()._asBuilder())
-            ._set(inputId, facets._get(inputId));
+        RequestBuilder<Object> request =
+            inputsValueCollector
+                .computeIfAbsent(requestId, r -> emptyRequest()._asBuilder())
+                ._set(inputId, facets._get(inputId));
+        dependencyValuesCollector.computeIfAbsent(
+            requestId, r -> kryonDefinition.facetsFromRequest().logic().facetsFromRequest(request));
       } catch (IllegalModificationException e) {
         throw new DuplicateRequestException(
             "Duplicate data for inputs %s of kryon %s in request %s"

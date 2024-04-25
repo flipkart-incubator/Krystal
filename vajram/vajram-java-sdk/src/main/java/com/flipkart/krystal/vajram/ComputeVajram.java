@@ -40,6 +40,5 @@ public abstract non-sealed class ComputeVajram<T> extends AbstractVajram<T> {
     return e.getValue().toFuture();
   }
 
-  public abstract ImmutableMap<Facets, Errable<T>> executeCompute(
-      ImmutableList<Facets> facetsList);
+  public abstract ImmutableMap<Facets, Errable<T>> executeCompute(ImmutableList<Facets> facetsList);
 }
