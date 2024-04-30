@@ -5,18 +5,14 @@ import com.google.common.collect.ImmutableMap;
 /**
  * @param <T> The response type of the vajram corresponding to this request
  */
-public abstract non-sealed class ImmutableRequest<T> implements Request<T>, ImmutableModel {
+public non-sealed interface ImmutableRequest<T> extends Request<T>, ImmutableModel {
 
   @Override
-  public final ImmutableRequest<T> _build() {
-    return this;
-  }
+  ImmutableRequest<T> _build();
 
   @Override
-  public final Request<T> _newCopy() {
-    return this;
-  }
+  ImmutableRequest<T> _newCopy();
 
   @Override
-  public abstract ImmutableMap<Integer, Errable<Object>> _asMap();
+  ImmutableMap<Integer, Errable<Object>> _asMap();
 }

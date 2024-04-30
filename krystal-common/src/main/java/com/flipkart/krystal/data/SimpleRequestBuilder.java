@@ -7,7 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @SuppressWarnings("unchecked")
-public final class SimpleRequestBuilder<T> extends RequestBuilder<T> {
+public final class SimpleRequestBuilder<T> implements RequestBuilder<T> {
   private final Map<Integer, Errable<Object>> data;
 
   public SimpleRequestBuilder() {
@@ -19,18 +19,8 @@ public final class SimpleRequestBuilder<T> extends RequestBuilder<T> {
   }
 
   @Override
-  public <V> Errable<V> _get(int facetId) {
-    return (Errable<V>) data.getOrDefault(facetId, empty());
-  }
-
-  @Override
-  public <V> Errable<V> _getErrable(int facetId) {
-    return (Errable<V>) data.getOrDefault(facetId, empty());
-  }
-
-  @Override
-  public <R extends Request<V>, V> Responses<R, V> _getDepResponses(int facetId) {
-    return Results.empty();
+  public Errable<Object> _get(int facetId) {
+    return data.getOrDefault(facetId, empty());
   }
 
   @Override
@@ -38,7 +28,6 @@ public final class SimpleRequestBuilder<T> extends RequestBuilder<T> {
     return data;
   }
 
-  @Override
   public boolean _hasValue(int facetId) {
     return data.containsKey(facetId);
   }
@@ -62,7 +51,12 @@ public final class SimpleRequestBuilder<T> extends RequestBuilder<T> {
   }
 
   @Override
-  public RequestBuilder<T> _newCopy() {
+  public SimpleRequestBuilder<T> _newCopy() {
     return new SimpleRequestBuilder<>(new LinkedHashMap<>(data));
+  }
+
+  @Override
+  public SimpleRequestBuilder<T> _asBuilder() {
+    return this;
   }
 }

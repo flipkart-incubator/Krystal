@@ -1,15 +1,10 @@
 package com.flipkart.krystal.data;
 
-public abstract class ImmutableFacets implements Facets, ImmutableModel {
+public interface ImmutableFacets extends Facets, ImmutableModel {
 
   @Override
-  public ImmutableFacets _build() {
-    return this;
-  }
+  ImmutableFacets _build();
 
-  public final ImmutableFacets _newCopy() {
-    return this;
-  }
-
-  public abstract ImmutableRequest<Object> _asRequest();
+  @Override
+  ImmutableFacets _newCopy();
 }

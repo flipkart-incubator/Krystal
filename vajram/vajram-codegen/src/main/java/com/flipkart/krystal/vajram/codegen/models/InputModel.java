@@ -1,9 +1,10 @@
 package com.flipkart.krystal.vajram.codegen.models;
 
 import com.flipkart.krystal.datatypes.DataType;
+import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.facets.InputSource;
 import com.google.common.collect.ImmutableSet;
-import java.util.Set;
+import java.util.EnumSet;
 import javax.lang.model.element.VariableElement;
 import lombok.Builder;
 
@@ -11,12 +12,12 @@ import lombok.Builder;
 public record InputModel<T>(
     int id,
     String name,
-    DataType<T> type,
+    DataType<T> dataType,
     boolean isMandatory,
     T defaultValue,
     String documentation,
     boolean isBatched,
-    ImmutableSet<InputSource> sources,
+    ImmutableSet<FacetType> facetTypes,
     VariableElement facetField)
     implements FacetGenModel {
 
@@ -24,24 +25,22 @@ public record InputModel<T>(
       ImmutableSet.of(InputSource.CLIENT);
 
   public ImmutableSet<InputSource> sources() {
-    if (sources == null || sources.isEmpty()) {
-      return DEFAULT_INPUT_SOURCES;
+    ImmutableSet.Builder<InputSource> sources = ImmutableSet.builderWithExpectedSize(2);
+    for (FacetType facetType : facetTypes) {
+      switch (facetType) {
+        case INPUT -> sources.add(InputSource.CLIENT);
+        case INJECTION -> sources.add(InputSource.SESSION);
+        default -> throw new IllegalStateException("Unexpected value: " + facetType);
+      }
     }
-    return sources;
+    return sources.build();
   }
 
   public static class InputModelBuilder<T> {
 
-    public InputModelBuilder<T> sources(InputSource... inputSources) {
-      if (inputSources != null) {
-        this.sources = ImmutableSet.copyOf(inputSources);
-      }
-      return this;
-    }
-
-    public InputModelBuilder<T> sources(Set<InputSource> inputSources) {
-      if (inputSources != null) {
-        this.sources = ImmutableSet.copyOf(inputSources);
+    public InputModelBuilder<T> facetTypes(EnumSet<FacetType> facetTypes) {
+      if (facetTypes != null) {
+        this.facetTypes = ImmutableSet.copyOf(facetTypes);
       }
       return this;
     }

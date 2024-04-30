@@ -6,52 +6,54 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @SuppressWarnings("unchecked")
-public class FacetsMapBuilder extends FacetsBuilder {
+public class FacetsMapBuilder implements FacetsBuilder {
 
-  private final RequestBuilder<Object> request;
+  private final SimpleRequestBuilder<Object> request;
   private final Map<Integer, FacetValue<Object>> data;
 
-  public FacetsMapBuilder(Request<Object> request) {
+  public FacetsMapBuilder(SimpleRequestBuilder<Object> request) {
     this(request, request._asMap());
   }
 
-  FacetsMapBuilder(Request<Object> request, Map<Integer, ? extends FacetValue<Object>> data) {
+  FacetsMapBuilder(
+      SimpleRequestBuilder<Object> request, Map<Integer, ? extends FacetValue<Object>> data) {
     this.request = request._asBuilder();
     this.data = new LinkedHashMap<>(data);
   }
 
   @Override
-  public <V> FacetValue<V> _get(int facetId) {
+  public FacetValue<Object> _get(int facetId) {
     if (request._hasValue(facetId)) {
-      Errable<V> v = request._get(facetId);
+      Errable<Object> v = request._get(facetId);
       if (v != null) {
         return v;
       } else {
         throw new AssertionError("This should not be possible sinve _hasValue is true");
       }
     }
-    return (FacetValue<V>) data.getOrDefault(facetId, Errable.empty());
+    return data.getOrDefault(facetId, Errable.empty());
   }
 
   @Override
-  public <V> Errable<V> _getErrable(int facetId) {
+  public Errable<Object> _getErrable(int facetId) {
     if (request._hasValue(facetId)) {
-      return request._getErrable(facetId);
+      return request._get(facetId);
     } else {
       FacetValue<Object> datum = data.getOrDefault(facetId, Errable.empty());
-      if (datum instanceof Errable<?> errable) {
-        return (Errable<V>) errable;
+      if (datum instanceof Errable<Object> errable) {
+        return errable;
       } else {
         throw new IllegalArgumentException("%s is not of type Errable".formatted(facetId));
       }
     }
   }
 
+  @SuppressWarnings("unchecked")
   @Override
-  public <R extends Request<V>, V> Responses<R, V> _getDepResponses(int facetId) {
+  public Responses<Request<Object>, Object> _getDepResponses(int facetId) {
     FacetValue<Object> datum = data.getOrDefault(facetId, Errable.empty());
     if (datum instanceof Responses<?, ?> errable) {
-      return (Responses<R, V>) errable;
+      return (Responses<Request<Object>, Object>) errable;
     } else {
       throw new IllegalArgumentException("%s is not of type Responses".formatted(facetId));
     }
@@ -64,7 +66,6 @@ public class FacetsMapBuilder extends FacetsBuilder {
     return map;
   }
 
-  @Override
   public boolean _hasValue(int facetId) {
     return request._hasValue(facetId) || data.containsKey(facetId);
   }
@@ -76,15 +77,20 @@ public class FacetsMapBuilder extends FacetsBuilder {
 
   @Override
   public FacetsMapBuilder _newCopy() {
-    return new FacetsMapBuilder(request._newCopy(), new LinkedHashMap<>(data));
+    return new FacetsMapBuilder(request, new LinkedHashMap<>(data));
   }
 
   @Override
-  public FacetContainerBuilder _set(int facetId, FacetValue<?> value) {
+  public FacetsMapBuilder _set(int facetId, FacetValue<?> value) {
     if (this._hasValue(facetId)) {
       throw new IllegalModificationException();
     }
     data.put(facetId, (FacetValue<Object>) value);
+    return this;
+  }
+
+  @Override
+  public FacetsMapBuilder _asBuilder() {
     return this;
   }
 

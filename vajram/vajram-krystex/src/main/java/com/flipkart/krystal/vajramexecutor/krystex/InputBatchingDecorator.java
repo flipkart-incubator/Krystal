@@ -34,15 +34,13 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class InputBatchingDecorator<
-        I /*BatchableInputs*/ extends Facets, C /*CommonFacets*/ extends Facets>
-    implements OutputLogicDecorator {
+public final class InputBatchingDecorator implements OutputLogicDecorator {
 
   public static final String DECORATOR_TYPE = InputBatchingDecorator.class.getName();
 
   private final String instanceId;
-  private final InputBatcher<I, C> inputBatcher;
-  private final BatchableSupplier<I, C> batchableSupplier;
+  private final InputBatcher inputBatcher;
+  private final BatchableSupplier<Facets, Facets> batchableSupplier;
   private final Predicate<DependantChain> isApplicableToDependantChain;
   private final Map<ImmutableFacets, CompletableFuture<@Nullable Object>> futureCache =
       new LinkedHashMap<>();
@@ -51,8 +49,8 @@ public final class InputBatchingDecorator<
 
   public InputBatchingDecorator(
       String instanceId,
-      InputBatcher<I, C> inputBatcher,
-      BatchableSupplier<I, C> batchableSupplier,
+      InputBatcher inputBatcher,
+      BatchableSupplier<Facets, Facets> batchableSupplier,
       Predicate<DependantChain> isApplicableToDependantChain) {
     this.instanceId = instanceId;
     this.inputBatcher = inputBatcher;
@@ -66,13 +64,12 @@ public final class InputBatchingDecorator<
     inputBatcher.onBatching(
         requests -> requests.forEach(request -> batchFacetsList(logicToDecorate, request)));
     return facetsList -> {
-      ImmutableList<BatchableImmutableFacets<I, C>> immutableFacetsList =
+      ImmutableList<BatchableFacets> immutableFacetsList =
           facetsList.stream()
               .map(
                   f -> {
                     if (f instanceof BatchableFacets) {
-                      //noinspection unchecked
-                      return (BatchableFacets<I, C>) f;
+                      return (BatchableFacets) f;
                     } else {
                       throw new IllegalStateException(
                           "Expected to recieve instance of BatchableFacets in batcher %s but received %s"
@@ -85,9 +82,9 @@ public final class InputBatchingDecorator<
                   })
               .map(BatchableFacets::_build)
               .collect(toImmutableList());
-      List<BatchedFacets<I, C>> batchedFacetsList =
+      List<BatchedFacets<Facets, Facets>> batchedFacetsList =
           immutableFacetsList.stream()
-              .map(f -> (BatchableFacets<I, C>) f)
+              .map(f -> (BatchableImmutableFacets) f)
               .map(unbatched -> inputBatcher.add(unbatched._batchable(), unbatched._common()))
               .flatMap(Collection::stream)
               .toList();
@@ -95,7 +92,7 @@ public final class InputBatchingDecorator<
           facets ->
               futureCache.computeIfAbsent(
                   facets._build(), e -> new CompletableFuture<@Nullable Object>()));
-      for (BatchedFacets<I, C> batchedFacets : batchedFacetsList) {
+      for (BatchedFacets<Facets, Facets> batchedFacets : batchedFacetsList) {
         batchFacetsList(logicToDecorate, batchedFacets);
       }
       return facetsList.stream()
@@ -129,8 +126,8 @@ public final class InputBatchingDecorator<
   }
 
   private void batchFacetsList(
-      OutputLogic<Object> logicToDecorate, BatchedFacets<I, C> batchedFacets) {
-    ImmutableList<BatchableFacets<I, C>> requests =
+      OutputLogic<Object> logicToDecorate, BatchedFacets<Facets, Facets> batchedFacets) {
+    ImmutableList<BatchableFacets> requests =
         batchedFacets.batch().stream()
             .map(each -> batchableSupplier.createBatchable(each, batchedFacets.common()))
             .collect(toImmutableList());

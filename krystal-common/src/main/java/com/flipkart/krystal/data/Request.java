@@ -9,7 +9,7 @@ import java.util.Map;
 public sealed interface Request<T> extends FacetContainer permits ImmutableRequest, RequestBuilder {
 
   @Override
-  <V> Errable<V> _get(int facetId);
+  Errable<Object> _get(int facetId);
 
   ImmutableRequest<T> _build();
 

@@ -3,8 +3,10 @@ module flipkart.krystal.common {
   requires static lombok;
   requires org.checkerframework.checker.qual;
   requires java.compiler;
+  requires java.xml;
 
   exports com.flipkart.krystal.data;
+  exports com.flipkart.krystal.facets;
   exports com.flipkart.krystal.datatypes;
   exports com.flipkart.krystal.utils;
   exports com.flipkart.krystal.config;

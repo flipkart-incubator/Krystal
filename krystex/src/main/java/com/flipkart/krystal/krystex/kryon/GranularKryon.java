@@ -68,6 +68,8 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
 
   private final Map<RequestId, FacetsBuilder> dependencyValuesCollector = new LinkedHashMap<>();
 
+  private final Map<RequestId, Set<Integer>> availableFacetsByDepChain = new LinkedHashMap<>();
+
   /** A unique Result future for every requestId. */
   private final Map<RequestId, CompletableFuture<GranuleResponse>> resultsByRequest =
       new LinkedHashMap<>();
@@ -161,11 +163,10 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
       RequestId requestId, CompletableFuture<GranuleResponse> resultForRequest) {
     // If all the inputs and dependency values needed by the output logic are available, then
     // prepare to run outputLogic
-    ImmutableSet<Integer> inputNames = kryonDefinition.getOutputLogicDefinition().inputNames();
-    Facets facets =
-        dependencyValuesCollector.computeIfAbsent(requestId, r -> emptyFacets()._asBuilder());
-    if (inputNames.stream()
-        .allMatch(facets::_hasValue)) { // All the inputs of the kryon logic have data present
+    ImmutableSet<Integer> inputIds = kryonDefinition.getOutputLogicDefinition().inputIds();
+    if (availableFacetsByDepChain
+        .getOrDefault(requestId, Set.of())
+        .containsAll(inputIds)) { // All the inputs of the kryon logic have data present
       executeOutputLogic(resultForRequest, requestId);
     }
   }
@@ -221,7 +222,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
 
   private void executeWithDependency(RequestId requestId, CallbackGranule executeWithInput) {
     int dependencyId = executeWithInput.dependencyId();
-    ImmutableSet<Integer> inputNames = ImmutableSet.of(dependencyId);
+    ImmutableSet<Integer> inputIds = ImmutableSet.of(dependencyId);
     try {
       dependencyValuesCollector
           .computeIfAbsent(requestId, k -> emptyFacets()._asBuilder())
@@ -232,7 +233,10 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
               .formatted(dependencyId, kryonId, requestId),
           e);
     }
-    execute(requestId, inputNames);
+    availableFacetsByDepChain
+        .computeIfAbsent(requestId, _k -> new LinkedHashSet<>())
+        .addAll(inputIds);
+    execute(requestId, inputIds);
   }
 
   private void execute(RequestId requestId, ImmutableSet<Integer> newInputNames) {
@@ -366,9 +370,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
             .computeIfAbsent(dependencyId, k -> new DependencyKryonExecutions());
     dependencyKryonExecutions.executedResolvers().addAll(resolverDefinitions);
     if (resolverCommand instanceof SkipDependency) {
-      if (!dependencyValuesCollector
-          .computeIfAbsent(requestId, _k -> emptyFacets()._asBuilder())
-          ._hasValue(dependencyId)) {
+      if (!availableFacetsByDepChain.getOrDefault(requestId, Set.of()).contains(dependencyId)) {
         /* This is for the case where for some resolvers the input has already been resolved, but we
         do need to skip them as well, as our current resolver is skipped.*/
         Set<RequestId> requestIdSet =
@@ -593,9 +595,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
         .dependencyKryons()
         .forEach(
             (depId, depKryonId) -> {
-              if (!dependencyValuesCollector
-                  .computeIfAbsent(requestId, _k -> emptyFacets()._asBuilder())
-                  ._hasValue(depId)) {
+              if (!availableFacetsByDepChain.getOrDefault(requestId, Set.of()).contains(depId)) {
                 RequestId dependencyRequestId =
                     requestIdGenerator.newSubRequest(requestId, () -> "%s".formatted(depId));
                 CompletableFuture<GranuleResponse> kryonResponse =
@@ -705,6 +705,9 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
             e);
       }
     }
+    availableFacetsByDepChain
+        .computeIfAbsent(requestId, _k -> new LinkedHashSet<>())
+        .addAll(inputIds);
   }
 
   private record DependencyKryonExecutions(

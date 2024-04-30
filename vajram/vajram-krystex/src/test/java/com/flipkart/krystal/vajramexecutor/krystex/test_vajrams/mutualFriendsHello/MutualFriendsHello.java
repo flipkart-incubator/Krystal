@@ -54,12 +54,12 @@ public abstract class MutualFriendsHello extends ComputeVajram<String> {
     return String.join("\n", result);
   }
 
-  @Resolve(dep = friendIds_i, depInputs = FriendsServiceRequest.userId_i)
+  @Resolve(depName = friendIds_i, depInputs = FriendsServiceRequest.userId_i)
   public static MultiExecute<String> userIdForFriendService(@Using(userIds_i) Set<String> userIds) {
     return executeFanoutWith(userIds);
   }
 
-  @Resolve(dep = hellos_i, depInputs = HelloFriendsV2Request.userId_i)
+  @Resolve(depName = hellos_i, depInputs = HelloFriendsV2Request.userId_i)
   public static MultiExecute<String> userIDForHelloService(
       @Using(friendIds_i) DependencyResponse<FriendsServiceRequest, Set<String>> friendIdMap,
       @Using(skip_i) Optional<Boolean> skip) {

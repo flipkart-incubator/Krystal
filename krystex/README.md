@@ -192,7 +192,7 @@ The data structures are as follows:
 3. [`Facets`](../krystal-common/src/main/java/com/flipkart/krystal/data/Inputs.java) - A container
    object which can holds input and dependency values of a kryon.
 4. [`Results`](../krystal-common/src/main/java/com/flipkart/krystal/data/Results.java) - A container
-   object which holds the logicExecResults of executing a given dependency of a kryon multiple times in a
+   object which holds the results of executing a given dependency of a kryon multiple times in a
    '[fanout](#dependency-fanouts)' pattern.
 
 ### Example execution
@@ -210,7 +210,7 @@ Following is a logic view of a representative krystex kryon `N`:
     * `r1` resolves the input of `d1` using inputs `i1` and `i2`.
     * `r2` resolves the input of `d2` using inputs `i3` and the result of dependency `d1`.
     * `r3` resolves the input of `d3` using inputs `i3` and `i4` and the result of dependency `d2`.
-* The output logic has access to all the four input values and three dependency logicExecResults.
+* The output logic has access to all the four input values and three dependency results.
 
 For the purpose of this example, let us assume `N1`, and `N2` themselves have no other dependencies.
 When we trigger the kryon `N` with a set of inputs (all inputs need not be provided at the same
@@ -223,11 +223,11 @@ time). This is how the execution proceeds:
 4. `N1` has no resolvers/dependencies. Execute output logic of `N1`
 5. Wait for output logic of `N1` to finish.
 6. Wait for `i3` to be provided.
-7. Execute `r2` with `i3` and logicExecResults of `d1` (`N1`). `r2` finishes immediately.
+7. Execute `r2` with `i3` and results of `d1` (`N1`). `r2` finishes immediately.
 8. Take the output of `r2` and provide it to kryon `N2`
 9. `N2` has no resolvers/dependencies. Execute output logic on `N1`. Wait for this to complete.
 10. Wait for `i4` to be provided.
-11. Execute `r3` with `i3`, `i4` and the logicExecResults of `d2`(`N2`). `r3` finishes immediately.
+11. Execute `r3` with `i3`, `i4` and the results of `d2`(`N2`). `r3` finishes immediately.
 12. Take output of `r3` and provide it to kryon `N1`.
 13. `N1` has no resolvers/dependencies. Execute output logic of `N1` with the provided input. Wait for
     this to complete.

@@ -4,6 +4,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.ImmutableFacets;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,12 +14,11 @@ import java.util.Map;
 import java.util.function.Consumer;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class InputBatcherImpl<B extends Facets, C extends Facets>
-    implements InputBatcher<B, C> {
+public final class InputBatcherImpl implements InputBatcher {
 
   private static final int DEFAULT_BATCH_SIZE = 1;
-  private @Nullable Consumer<ImmutableList<BatchedFacets<B, C>>> batchingListener;
-  private final Map<C, List<B>> unBatchedRequests = new HashMap<>();
+  private @Nullable Consumer<ImmutableList<BatchedFacets<Facets, Facets>>> batchingListener;
+  private final Map<ImmutableFacets, List<Facets>> unBatchedRequests = new HashMap<>();
   private int minBatchSize = DEFAULT_BATCH_SIZE;
 
   public InputBatcherImpl() {}
@@ -28,20 +28,23 @@ public final class InputBatcherImpl<B extends Facets, C extends Facets>
   }
 
   @Override
-  public ImmutableList<BatchedFacets<B, C>> add(B batchableFacets, C commonFacets) {
-    C immutableCommonFacets = makeImmutable(commonFacets);
+  public ImmutableList<BatchedFacets<Facets, Facets>> add(
+      Facets batchableFacets, Facets commonFacets) {
+    ImmutableFacets immutableCommonFacets = commonFacets._build();
     unBatchedRequests
         .computeIfAbsent(immutableCommonFacets, k -> new ArrayList<>())
         .add(batchableFacets);
     return getBatchedInputs(immutableCommonFacets, false);
   }
 
-  private ImmutableList<BatchedFacets<B, C>> getBatchedInputs(C commonFacets, boolean force) {
+  private ImmutableList<BatchedFacets<Facets, Facets>> getBatchedInputs(
+      ImmutableFacets commonFacets, boolean force) {
     if (commonFacets == null) {
       return ImmutableList.of();
     }
-    C immutableFacets = makeImmutable(commonFacets);
-    List<B> batchableInputs = unBatchedRequests.getOrDefault(immutableFacets, ImmutableList.of());
+    ImmutableFacets immutableFacets = ((Facets) commonFacets)._build();
+    List<Facets> batchableInputs =
+        unBatchedRequests.getOrDefault(immutableFacets, ImmutableList.of());
     if (force || batchableInputs.size() >= minBatchSize) {
       unBatchedRequests.put(immutableFacets, new ArrayList<>());
       return ImmutableList.of(
@@ -52,7 +55,7 @@ public final class InputBatcherImpl<B extends Facets, C extends Facets>
 
   @Override
   public void batch() {
-    ImmutableList<BatchedFacets<B, C>> batchedFacets =
+    ImmutableList<BatchedFacets<Facets, Facets>> batchedFacets =
         unBatchedRequests.keySet().stream()
             .map(c -> getBatchedInputs(c, true))
             .flatMap(Collection::stream)
@@ -63,7 +66,7 @@ public final class InputBatcherImpl<B extends Facets, C extends Facets>
   }
 
   @Override
-  public void onBatching(Consumer<ImmutableList<BatchedFacets<B, C>>> listener) {
+  public void onBatching(Consumer<ImmutableList<BatchedFacets<Facets, Facets>>> listener) {
     batchingListener = listener;
   }
 
@@ -71,10 +74,5 @@ public final class InputBatcherImpl<B extends Facets, C extends Facets>
   public void onConfigUpdate(ConfigProvider configProvider) {
     this.minBatchSize =
         configProvider.<Integer>getConfig("min_batch_size").orElse(DEFAULT_BATCH_SIZE);
-  }
-
-  private C makeImmutable(C commonFacets) {
-    //noinspection unchecked
-    return (C) commonFacets._build();
   }
 }

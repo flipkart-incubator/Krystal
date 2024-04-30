@@ -15,7 +15,6 @@ import com.flipkart.krystal.vajram.tags.AnnotationTags;
 import com.flipkart.krystal.vajram.tags.VajramTags;
 import com.google.common.collect.ImmutableSet;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -37,28 +36,22 @@ public record InputBatcherConfig(
    *     InputBatchingDecorator}. This supplier is guaranteed to be called exactly once for every
    *     unique {@link InputBatchingDecorator} instance.
    */
-  public static InputBatcherConfig simple(
-      Supplier<InputBatcher<Facets, Facets>> inputBatcherSupplier) {
+  public static InputBatcherConfig simple(Supplier<InputBatcher> inputBatcherSupplier) {
     return new InputBatcherConfig(
         logicExecutionContext ->
             generateInstanceId(
                     logicExecutionContext.dependants(),
                     logicExecutionContext.kryonDefinitionRegistry())
                 .toString(),
-        batcherContext -> batcherContext.vajram().getBatchFacetsConvertor().isPresent(),
+        batcherContext -> true,
         batcherContext -> {
           @SuppressWarnings("unchecked")
-          Optional<BatchableSupplier<Facets, Facets>> facetsConvertor =
-              (Optional<BatchableSupplier<Facets, Facets>>)
-                  batcherContext.vajram().getBatchFacetsConvertor();
-          if (facetsConvertor.isEmpty()) {
-            throw new IllegalStateException(
-                "Cannot create decorator when vajram doesn't provide facets converter");
-          }
-          return new InputBatchingDecorator<>(
+          BatchableSupplier<Facets, Facets> facetsConvertor =
+              (BatchableSupplier<Facets, Facets>) batcherContext.vajram().getBatchFacetsConvertor();
+          return new InputBatchingDecorator(
               batcherContext.decoratorContext().instanceId(),
               inputBatcherSupplier.get(),
-              facetsConvertor.get(),
+              facetsConvertor,
               dependantChain ->
                   batcherContext
                       .decoratorContext()
@@ -69,36 +62,27 @@ public record InputBatcherConfig(
   }
 
   public static InputBatcherConfig sharedBatcher(
-      Supplier<InputBatcher<Facets, Facets>> inputBatcherSupplier,
+      Supplier<InputBatcher> inputBatcherSupplier,
       String instanceId,
       DependantChain... dependantChains) {
     return sharedBatcher(inputBatcherSupplier, instanceId, ImmutableSet.copyOf(dependantChains));
   }
 
   public static InputBatcherConfig sharedBatcher(
-      Supplier<InputBatcher<Facets, Facets>> inputBatcherSupplier,
+      Supplier<InputBatcher> inputBatcherSupplier,
       String instanceId,
       ImmutableSet<DependantChain> dependantChains) {
     return new InputBatcherConfig(
         logicExecutionContext -> instanceId,
         batcherContext ->
-            batcherContext.vajram().getBatchFacetsConvertor().isPresent()
-                && dependantChains.contains(
-                    batcherContext.decoratorContext().logicExecutionContext().dependants()),
+            dependantChains.contains(
+                batcherContext.decoratorContext().logicExecutionContext().dependants()),
         batcherContext -> {
           @SuppressWarnings("unchecked")
-          Optional<BatchableSupplier<Facets, Facets>> facetsConvertor =
-              (Optional<BatchableSupplier<Facets, Facets>>)
-                  batcherContext.vajram().getBatchFacetsConvertor();
-          if (facetsConvertor.isEmpty()) {
-            throw new IllegalStateException(
-                "Cannot create decorator when vajram doesn't provide facets converter");
-          }
-          return new InputBatchingDecorator<>(
-              instanceId,
-              inputBatcherSupplier.get(),
-              facetsConvertor.get(),
-              dependantChains::contains);
+          BatchableSupplier<Facets, Facets> facetsConvertor =
+              (BatchableSupplier<Facets, Facets>) batcherContext.vajram().getBatchFacetsConvertor();
+          return new InputBatchingDecorator(
+              instanceId, inputBatcherSupplier.get(), facetsConvertor, dependantChains::contains);
         });
   }
 

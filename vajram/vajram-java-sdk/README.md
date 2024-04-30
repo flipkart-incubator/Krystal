@@ -130,7 +130,7 @@ public abstract class GreetingVajram extends ComputeVajram<String> {
   // this Vajram (unresolved inputs are resolved by client Vajrams).
   // In this case the UserServiceVajram needs a user Id to retrieve user info from User Service.
   // So it's GreetingVajram's responsibility to provide that input.
-  @Resolve(dep = userInfo_n, inputs = UserServiceRequest.userId_n)
+  @Resolve(depName = userInfo_n, inputs = UserServiceRequest.userId_n)
   static String userIdForUserService(@Using(userId_n) String userId) {
     return userId;
   }

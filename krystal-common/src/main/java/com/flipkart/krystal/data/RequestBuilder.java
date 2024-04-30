@@ -3,16 +3,14 @@ package com.flipkart.krystal.data;
 /**
  * @param <T> The response type of the vajram corresponding to this request
  */
-public abstract non-sealed class RequestBuilder<T> implements Request<T>, FacetContainerBuilder {
+public non-sealed interface RequestBuilder<T> extends Request<T>, FacetContainerBuilder {
 
   @Override
-  public abstract RequestBuilder<T> _set(int facetId, FacetValue<?> value);
+  RequestBuilder<T> _set(int facetId, FacetValue<?> value);
 
   @Override
-  public final RequestBuilder<T> _asBuilder() {
-    return this;
-  }
+  RequestBuilder<T> _asBuilder();
 
   @Override
-  public abstract RequestBuilder<T> _newCopy();
+  RequestBuilder<T> _newCopy();
 }

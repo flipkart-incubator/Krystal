@@ -1,3 +1,3 @@
 package com.flipkart.krystal.data;
 
-public interface ImmutableModel {}
+public non-sealed interface ImmutableModel extends Model {}

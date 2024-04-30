@@ -9,7 +9,6 @@ public final class Constants {
   public static final String RESOLVABLE_INPUTS = "resolvableInputs";
   public static final String INPUT_SRC = "inputSrc";
   public static final String INPUT_BATCHING = "inputBatching";
-  public static final String FACET_UTIL = "facetUtil";
   public static final String COMMON_INPUT = "commonInput";
   public static final String RETURN_TYPE = "returnType";
   public static final String VAJRAM_LOGIC_METHOD = "outputLogicMethod";
@@ -55,11 +54,9 @@ public final class Constants {
                 $map:T<$inputBatching:T, $facets:T> mapping = new $hashMap:T<>();
                 $commonInput:T commonFacets = null;
                 for ($facets:T facets : facetsList) {
-                  $unmodInput:T<$inputBatching:T, $commonInput:T> allInputs =
-                      new $unmodInput:T($facetUtil:T.BATCH_CONVERTER.getBatched(facets)
-                                        ,$facetUtil:T.BATCH_CONVERTER.getCommon(facets));
-                  commonFacets = allInputs.commonFacets();
-                  $inputBatching:T im = allInputs.batchedInputs();
+                  $unmodInput:T allInputs = ($unmodInput:T) facets;
+                  commonFacets = allInputs._common();
+                  $inputBatching:T im = allInputs._batchable();
                   mapping.put(im, facets);
                 }
                 $map:T<$facets:T, $comFuture:T<$returnType:T>> returnValue = new $linkHashMap:T<>();

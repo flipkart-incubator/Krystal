@@ -35,7 +35,7 @@ public class LogicDefinition<L extends Logic> {
     return kryonLogicId;
   }
 
-  public ImmutableSet<Integer> inputNames() {
+  public ImmutableSet<Integer> inputIds() {
     return inputIds;
   }
 

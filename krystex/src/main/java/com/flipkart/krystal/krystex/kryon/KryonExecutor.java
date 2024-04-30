@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
-import static com.flipkart.krystal.krystex.kryon.FacetType.INPUT;
+import static com.flipkart.krystal.facets.FacetType.INPUT;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.utils.Futures.linkFutures;
 import static com.flipkart.krystal.utils.Futures.propagateCancellation;

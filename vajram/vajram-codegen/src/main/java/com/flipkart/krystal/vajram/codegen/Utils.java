@@ -10,6 +10,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.flipkart.krystal.datatypes.DataType;
+import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.Generated;
@@ -26,7 +27,6 @@ import com.flipkart.krystal.vajram.codegen.models.InputModel;
 import com.flipkart.krystal.vajram.codegen.models.InputModel.InputModelBuilder;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfoLite;
-import com.flipkart.krystal.vajram.facets.InputSource;
 import com.flipkart.krystal.vajram.facets.ReservedFacets;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -49,8 +49,8 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -78,7 +78,6 @@ import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.JavaFileObject;
 import lombok.Getter;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class Utils {
 
@@ -88,8 +87,6 @@ public class Utils {
   public static final String COMMA = ",";
   public static final String REQUEST_SUFFIX = "Request";
   public static final String IMPL = "Impl";
-  public static final String FACET_UTIL = "FacetUtil";
-  public static final String CONVERTER = "BATCH_CONVERTER";
 
   @Getter private final ProcessingEnvironment processingEnv;
   private final Types typeUtils;
@@ -115,7 +112,7 @@ public class Utils {
     for (DependencyModel depModel : vajramInfo.dependencies()) {
       vajramDefs.put(
           depModel.depVajramId(),
-          new VajramInfoLite(depModel.depVajramId().vajramId(), depModel.responseType()));
+          new VajramInfoLite(depModel.depVajramId().vajramId(), depModel.dataType()));
     }
     return new VajramCodeGenerator(vajramInfo, vajramDefs, processingEnv, this);
   }
@@ -229,18 +226,16 @@ public class Utils {
     inputBuilder.isMandatory(!isOptional(inputField.asType(), processingEnv));
     DataType<Object> dataType =
         inputField.asType().accept(new DeclaredTypeVisitor<>(this, true, inputField), null);
-    inputBuilder.type(dataType);
+    inputBuilder.dataType(dataType);
     inputBuilder.isBatched(Optional.ofNullable(inputField.getAnnotation(Batch.class)).isPresent());
-    Optional<Input> inputAnno = Optional.ofNullable(inputField.getAnnotation(Input.class));
-    Set<InputSource> sources = new LinkedHashSet<>();
-    if (inputAnno.isPresent()) {
-      sources.add(InputSource.CLIENT);
+    EnumSet<FacetType> facetTypes = EnumSet.noneOf(FacetType.class);
+    if (inputField.getAnnotation(Input.class) != null) {
+      facetTypes.add(FacetType.INPUT);
     }
     if (inputField.getAnnotation(Inject.class) != null) {
-      sources.add(InputSource.SESSION);
+      facetTypes.add(FacetType.INJECTION);
     }
-    inputBuilder.sources(sources);
-    return inputBuilder.build();
+    return inputBuilder.facetTypes(facetTypes).build();
   }
 
   private static int getNextAvailableFacetId(
@@ -314,7 +309,7 @@ public class Utils {
                 .formatted(declaredDataType, depVajramId.responseType()),
             depField);
       }
-      depBuilder.responseType(declaredDataType);
+      depBuilder.dataType(declaredDataType);
       return depBuilder.build();
     }
     throw errorAndThrow(
@@ -449,10 +444,6 @@ public class Utils {
   private String getTimestamp() {
     return DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(
         Clock.systemDefaultZone().instant().atZone(ZoneId.systemDefault()));
-  }
-
-  public static String getFacetUtilClassName(String vajramName) {
-    return vajramName + FACET_UTIL;
   }
 
   public static String getRequestClassName(String vajramName) {

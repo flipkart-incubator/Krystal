@@ -4,7 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public final class SimpleRequest<T> extends ImmutableRequest<T> {
+public final class SimpleRequest<T> implements ImmutableRequest<T> {
 
   private final SimpleRequestBuilder<T> data;
 
@@ -17,18 +17,18 @@ public final class SimpleRequest<T> extends ImmutableRequest<T> {
   }
 
   @Override
-  public <V> Errable<V> _get(int facetId) {
+  public Errable<Object> _get(int facetId) {
     return data._get(facetId);
   }
 
   @Override
-  public <V> Errable<V> _getErrable(int facetId) {
-    return data._getErrable(facetId);
+  public SimpleRequest<T> _build() {
+    return this;
   }
 
   @Override
-  public <R extends Request<V>, V> Responses<R, V> _getDepResponses(int facetId) {
-    return data._getDepResponses(facetId);
+  public ImmutableRequest<T> _newCopy() {
+    return this;
   }
 
   @Override
@@ -36,13 +36,12 @@ public final class SimpleRequest<T> extends ImmutableRequest<T> {
     return ImmutableMap.copyOf(data._asMap());
   }
 
-  @Override
   public boolean _hasValue(int facetId) {
     return data._hasValue(facetId);
   }
 
   @Override
-  public RequestBuilder<T> _asBuilder() {
+  public SimpleRequestBuilder<T> _asBuilder() {
     return new SimpleRequestBuilder<>(new LinkedHashMap<>(data._asMap()));
   }
 }

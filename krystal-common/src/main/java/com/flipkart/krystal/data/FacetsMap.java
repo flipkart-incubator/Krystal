@@ -2,53 +2,54 @@ package com.flipkart.krystal.data;
 
 import com.google.common.collect.ImmutableMap;
 
-@SuppressWarnings("unchecked")
-public final class FacetsMap extends ImmutableFacets {
+public final class FacetsMap implements ImmutableFacets {
 
-  private final ImmutableRequest<Object> request;
+  private final SimpleRequest<Object> request;
   private final ImmutableMap<Integer, FacetValue<Object>> data;
 
-  public FacetsMap(Request<Object> request) {
+  public FacetsMap(SimpleRequestBuilder<Object> request) {
     this(request, ImmutableMap.of());
   }
 
-  public FacetsMap(Request<Object> request, ImmutableMap<Integer, FacetValue<Object>> otherFacets) {
+  public FacetsMap(
+      SimpleRequestBuilder<Object> request, ImmutableMap<Integer, FacetValue<Object>> otherFacets) {
     this.request = request._build();
     this.data = otherFacets;
   }
 
   @Override
-  public <V> FacetValue<V> _get(int facetId) {
+  public FacetValue<Object> _get(int facetId) {
     if (request._hasValue(facetId)) {
-      Errable<V> v = request._get(facetId);
+      Errable<Object> v = request._get(facetId);
       if (v != null) {
         return v;
       } else {
         throw new AssertionError("This should not be possible sinve _hasValue is true");
       }
     }
-    return (FacetValue<V>) data.getOrDefault(facetId, Errable.empty());
+    return data.getOrDefault(facetId, Errable.empty());
   }
 
   @Override
-  public <V> Errable<V> _getErrable(int facetId) {
+  public Errable<Object> _getErrable(int facetId) {
     if (request._hasValue(facetId)) {
-      return request._getErrable(facetId);
+      return request._get(facetId);
     } else {
       FacetValue<Object> datum = data.getOrDefault(facetId, Errable.empty());
-      if (datum instanceof Errable<?> errable) {
-        return (Errable<V>) errable;
+      if (datum instanceof Errable<Object> errable) {
+        return errable;
       } else {
         throw new IllegalArgumentException("%s is not of type Errable".formatted(facetId));
       }
     }
   }
 
+  @SuppressWarnings("unchecked")
   @Override
-  public <R extends Request<V>, V> Responses<R, V> _getDepResponses(int facetId) {
+  public Responses<Request<Object>, Object> _getDepResponses(int facetId) {
     FacetValue<Object> datum = data.getOrDefault(facetId, Errable.empty());
     if (datum instanceof Responses<?, ?> errable) {
-      return (Responses<R, V>) errable;
+      return (Responses<Request<Object>, Object>) errable;
     } else {
       throw new IllegalArgumentException("%s is not of type Responses".formatted(facetId));
     }
@@ -63,18 +64,22 @@ public final class FacetsMap extends ImmutableFacets {
         .build();
   }
 
-  @Override
   public boolean _hasValue(int facetId) {
     return request._hasValue(facetId) || data.containsKey(facetId);
   }
 
   @Override
   public FacetsBuilder _asBuilder() {
-    return new FacetsMapBuilder(request, data);
+    return new FacetsMapBuilder(request._asBuilder(), data);
   }
 
   @Override
-  public ImmutableRequest<Object> _asRequest() {
-    return request;
+  public FacetsMap _build() {
+    return this;
+  }
+
+  @Override
+  public ImmutableFacets _newCopy() {
+    return this;
   }
 }

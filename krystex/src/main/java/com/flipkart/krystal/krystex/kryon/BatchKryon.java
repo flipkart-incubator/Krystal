@@ -62,7 +62,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
 
-  private final Map<DependantChain, Set<Integer>> availableInputsByDepChain = new LinkedHashMap<>();
+  private final Map<DependantChain, Set<Integer>> availableFacetsByDepChain = new LinkedHashMap<>();
 
   private final Map<DependantChain, Map<RequestId, FacetsBuilder>> facetsCollector =
       new LinkedHashMap<>();
@@ -138,7 +138,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
 
   private Map<Integer, ImmutableList<Integer>> getTriggerableDependencies(
       DependantChain dependantChain, Set<Integer> newInputIds) {
-    Set<Integer> availableInputs = availableInputsByDepChain.getOrDefault(dependantChain, Set.of());
+    Set<Integer> availableInputs = availableFacetsByDepChain.getOrDefault(dependantChain, Set.of());
     Set<Integer> executedDeps = executedDependencies.getOrDefault(dependantChain, Set.of());
 
     return Stream.concat(
@@ -377,10 +377,10 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     ForwardBatch forwardCommand = getForwardCommand(dependantChain);
     // If all the inputs and dependency values needed by the output logic are available, then
     // prepare to run outputLogic
-    ImmutableSet<Integer> inputNames = kryonDefinition.getOutputLogicDefinition().inputNames();
-    if (availableInputsByDepChain
+    ImmutableSet<Integer> facetIds = kryonDefinition.getOutputLogicDefinition().inputIds();
+    if (availableFacetsByDepChain
         .getOrDefault(dependantChain, ImmutableSet.of())
-        .containsAll(inputNames)) { // All the inputs of the kryon logic have data present
+        .containsAll(facetIds)) { // All the inputs of the kryon logic have data present
       if (forwardCommand.shouldSkip()) {
         return Optional.of(
             failedFuture(new SkippedExecutionException(getSkipMessage(forwardCommand))));
@@ -548,7 +548,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
           "Did not receive inputs " + Sets.difference(resolvableInputNames, inputIds));
     }
 
-    availableInputsByDepChain
+    availableFacetsByDepChain
         .computeIfAbsent(forwardBatch.dependantChain(), _k -> new LinkedHashSet<>())
         .addAll(inputIds);
     forwardBatch
@@ -567,7 +567,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
 
   private void collectDependencyValues(CallbackBatch callbackBatch) {
     int dependencyId = callbackBatch.dependencyId();
-    availableInputsByDepChain
+    availableFacetsByDepChain
         .computeIfAbsent(callbackBatch.dependantChain(), _k -> new LinkedHashSet<>())
         .add(dependencyId);
     if (dependencyValuesCollector

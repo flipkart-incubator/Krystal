@@ -1,14 +1,15 @@
 package com.flipkart.krystal.data;
 
-public abstract class FacetsBuilder implements Facets, FacetContainerBuilder {
+public interface FacetsBuilder extends Facets, FacetContainerBuilder {
 
   @Override
-  public FacetsBuilder _asBuilder() {
-    return this;
-  }
+  FacetsBuilder _asBuilder();
 
-  public abstract RequestBuilder<Object> _asRequest();
+  RequestBuilder<Object> _asRequest();
 
   @Override
-  public abstract FacetsBuilder _newCopy();
+  FacetsBuilder _newCopy();
+
+  @Override
+  FacetsBuilder _set(int facetId, FacetValue<?> value);
 }

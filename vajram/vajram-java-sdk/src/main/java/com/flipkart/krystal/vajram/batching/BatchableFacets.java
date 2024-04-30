@@ -1,16 +1,13 @@
 package com.flipkart.krystal.vajram.batching;
 
-import com.flipkart.krystal.data.FacetContainer;
 import com.flipkart.krystal.data.Facets;
 
-@SuppressWarnings("ClassReferencesSubclass") // By design
-public interface BatchableFacets<Batchable extends FacetContainer, Common extends FacetContainer>
-    extends Facets {
+@SuppressWarnings("ClassReferencesSubclass") // By Design
+public interface BatchableFacets extends Facets {
+  Facets _batchable();
 
-  Batchable _batchable();
-
-  Common _common();
+  Facets _common();
 
   @Override
-  BatchableImmutableFacets<Batchable, Common> _build();
+  BatchableImmutableFacets _build();
 }

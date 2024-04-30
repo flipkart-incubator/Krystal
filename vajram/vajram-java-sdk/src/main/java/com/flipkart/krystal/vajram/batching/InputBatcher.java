@@ -20,11 +20,9 @@ import java.util.function.Consumer;
  * @param <CommonFacets> Those inputs which do not vary within a batch request. Meaning, two
  *     requests with differing CommonInputs can never be batched into a single batch request.
  */
-public interface InputBatcher<BatchableInputs extends Facets, CommonFacets extends Facets>
-    extends ConfigListener {
+public interface InputBatcher extends ConfigListener {
 
-  ImmutableList<BatchedFacets<BatchableInputs, CommonFacets>> add(
-      BatchableInputs batchableInputs, CommonFacets commonFacets);
+  ImmutableList<BatchedFacets<Facets, Facets>> add(Facets batchableInputs, Facets commonFacets);
 
   /** Externally trigger batching */
   void batch();
@@ -33,5 +31,5 @@ public interface InputBatcher<BatchableInputs extends Facets, CommonFacets exten
    * When this InputBatcher decides to modulate (due to some internal state like a timer), or when
    * the {@link #batch()} method is called, execute the given callback.
    */
-  void onBatching(Consumer<ImmutableList<BatchedFacets<BatchableInputs, CommonFacets>>> callback);
+  void onBatching(Consumer<ImmutableList<BatchedFacets<Facets, Facets>>> callback);
 }

@@ -7,14 +7,8 @@ import java.util.Map;
  * is intended for use by the krystal platform code generator. Developers must not implement/extend
  * this interface - this can lead to unexpected behaviour.
  */
-public interface FacetContainer extends Model {
-  <V> FacetValue<V> _get(int facetId);
-
-  <V> Errable<V> _getErrable(int facetId);
-
-  <R extends Request<V>, V> Responses<R, V> _getDepResponses(int facetId);
+public sealed interface FacetContainer extends Model permits Facets, Request {
+  FacetValue<Object> _get(int facetId);
 
   Map<Integer, ? extends FacetValue<Object>> _asMap();
-
-  boolean _hasValue(int facetId);
 }
