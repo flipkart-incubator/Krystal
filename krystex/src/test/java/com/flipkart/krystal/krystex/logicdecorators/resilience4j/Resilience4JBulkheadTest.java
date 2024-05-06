@@ -237,7 +237,8 @@ class Resilience4JBulkheadTest {
   @NonNull
   private static LogicDefinition<FacetsFromRequest> newFacetsFromRequestLogic() {
     return new LogicDefinition<>(
-        new KryonLogicId(new KryonId("kryon"), "kryon:facetsFromRequest"), FacetsMapBuilder::new);
+        new KryonLogicId(new KryonId("kryon"), "kryon:facetsFromRequest"),
+        request -> new FacetsMapBuilder((SimpleRequestBuilder<Object>) request._asBuilder()));
   }
 
   @NonNull

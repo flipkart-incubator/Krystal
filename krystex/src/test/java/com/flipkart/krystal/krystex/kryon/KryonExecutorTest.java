@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.FacetsMapBuilder;
-import com.flipkart.krystal.data.Response;
+import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.data.SimpleRequest;
 import com.flipkart.krystal.data.SimpleRequestBuilder;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
@@ -220,7 +220,7 @@ class KryonExecutorTest {
                     dependencyValues ->
                         dependencyValues
                                 ._getDepResponses(1)
-                                .responses()
+                                .requestResponses()
                                 .iterator()
                                 .next()
                                 .response()
@@ -261,8 +261,8 @@ class KryonExecutorTest {
                 l2Dep,
                 Set.of(1),
                 dependencyValues ->
-                    dependencyValues._getDepResponses(1).responses().stream()
-                            .map(Response::response)
+                    dependencyValues._getDepResponses(1).requestResponses().stream()
+                            .map(RequestResponse::response)
                             .iterator()
                             .next()
                             .valueOrThrow()
@@ -280,8 +280,8 @@ class KryonExecutorTest {
                 l3Dep,
                 Set.of(1),
                 dependencyValues -> {
-                  return dependencyValues._getDepResponses(1).responses().stream()
-                          .map(Response::response)
+                  return dependencyValues._getDepResponses(1).requestResponses().stream()
+                          .map(RequestResponse::response)
                           .iterator()
                           .next()
                           .valueOrThrow()
@@ -300,8 +300,8 @@ class KryonExecutorTest {
                 l4Dep,
                 Set.of(1),
                 dependencyValues ->
-                    dependencyValues._getDepResponses(1).responses().stream()
-                            .map(Response::response)
+                    dependencyValues._getDepResponses(1).requestResponses().stream()
+                            .map(RequestResponse::response)
                             .iterator()
                             .next()
                             .valueOrThrow()
@@ -321,8 +321,8 @@ class KryonExecutorTest {
                             "requestExecution_multiLevelDependencies_final",
                             Set.of(1),
                             dependencyValues ->
-                                dependencyValues._getDepResponses(1).responses().stream()
-                                        .map(Response::response)
+                                dependencyValues._getDepResponses(1).requestResponses().stream()
+                                        .map(RequestResponse::response)
                                         .iterator()
                                         .next()
                                         .valueOrThrow()
@@ -342,7 +342,7 @@ class KryonExecutorTest {
   private static LogicDefinition<FacetsFromRequest> newFacetsFromRequestLogic(String kryonName) {
     return new LogicDefinition<>(
         new KryonLogicId(new KryonId(kryonName), kryonName + ":facetsFromRequest"),
-        FacetsMapBuilder::new);
+        request -> new FacetsMapBuilder((SimpleRequestBuilder<Object>) request._asBuilder()));
   }
 
   @NonNull

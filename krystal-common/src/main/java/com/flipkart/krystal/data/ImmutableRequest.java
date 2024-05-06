@@ -5,7 +5,7 @@ import com.google.common.collect.ImmutableMap;
 /**
  * @param <T> The response type of the vajram corresponding to this request
  */
-public non-sealed interface ImmutableRequest<T> extends Request<T>, ImmutableModel {
+public interface ImmutableRequest<T> extends Request<T>, ImmutableModel {
 
   @Override
   ImmutableRequest<T> _build();
@@ -14,5 +14,5 @@ public non-sealed interface ImmutableRequest<T> extends Request<T>, ImmutableMod
   ImmutableRequest<T> _newCopy();
 
   @Override
-  ImmutableMap<Integer, Errable<Object>> _asMap();
+  ImmutableMap<Integer, ? extends Errable<?>> _asMap();
 }

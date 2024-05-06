@@ -1,6 +1,6 @@
 package com.flipkart.krystal.data;
 
-import static com.flipkart.krystal.data.Errable.empty;
+import static com.flipkart.krystal.data.Errable.nil;
 
 import com.flipkart.krystal.except.IllegalModificationException;
 import java.util.LinkedHashMap;
@@ -20,7 +20,7 @@ public final class SimpleRequestBuilder<T> implements RequestBuilder<T> {
 
   @Override
   public Errable<Object> _get(int facetId) {
-    return data.getOrDefault(facetId, empty());
+    return data.getOrDefault(facetId, nil());
   }
 
   @Override

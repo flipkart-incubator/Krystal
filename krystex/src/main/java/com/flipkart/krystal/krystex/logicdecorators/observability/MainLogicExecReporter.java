@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.logicdecorators.observability;
 
-import static com.flipkart.krystal.data.Errable.empty;
+import static com.flipkart.krystal.data.Errable.nil;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.concurrent.CompletableFuture.allOf;
 
@@ -54,7 +54,7 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
                                 e ->
                                     new LogicExecResponse(
                                         e.getKey(),
-                                        e.getValue().handle(Errable::errableFrom).getNow(empty())))
+                                        e.getValue().handle(Errable::errableFrom).getNow(nil())))
                             .collect(toImmutableList())));
               });
       return results;

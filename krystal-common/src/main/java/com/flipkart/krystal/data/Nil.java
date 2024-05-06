@@ -10,7 +10,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 @EqualsAndHashCode
 @ToString
-public final class Nil<T> implements Errable<T> {
+final class Nil<T> implements Errable<T> {
   static final Nil<Object> NIL = new Nil<>();
 
   private final CompletableFuture<@Nullable T> NIL_FUTURE = completedFuture(null);

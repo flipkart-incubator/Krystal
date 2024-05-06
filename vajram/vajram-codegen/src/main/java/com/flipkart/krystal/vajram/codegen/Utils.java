@@ -4,22 +4,19 @@ import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.codegen.Constants.BATCHABLE_FACETS;
 import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_FACETS;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_CLASS_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.Constants.IMMUT_FACETS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
-import static com.flipkart.krystal.vajram.utils.Constants.FACETS_CLASS_NAME;
+import static com.flipkart.krystal.vajram.utils.Constants.FACETS_CLASS_NAME_SUFFIX;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
-import com.flipkart.krystal.vajram.exception.VajramValidationException;
-import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.Generated;
-import com.flipkart.krystal.vajram.facets.FacetId;
-import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramID;
-import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.codegen.models.DependencyModel;
 import com.flipkart.krystal.vajram.codegen.models.DependencyModel.DependencyModelBuilder;
@@ -27,6 +24,10 @@ import com.flipkart.krystal.vajram.codegen.models.InputModel;
 import com.flipkart.krystal.vajram.codegen.models.InputModel.InputModelBuilder;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfoLite;
+import com.flipkart.krystal.vajram.exception.VajramValidationException;
+import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.FacetId;
+import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.ReservedFacets;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -81,12 +82,7 @@ import lombok.Getter;
 
 public class Utils {
 
-  private static final boolean DEBUG = true;
-
-  public static final String DOT = ".";
-  public static final String COMMA = ",";
-  public static final String REQUEST_SUFFIX = "Request";
-  public static final String IMPL = "Impl";
+  private static final boolean DEBUG = false;
 
   @Getter private final ProcessingEnvironment processingEnv;
   private final Types typeUtils;
@@ -137,7 +133,7 @@ public class Utils {
     Optional<Element> facetsClass =
         vajramClass.getEnclosedElements().stream()
             .filter(element -> element.getKind() == ElementKind.CLASS)
-            .filter(element -> element.getSimpleName().contentEquals(FACETS_CLASS_NAME))
+            .filter(element -> element.getSimpleName().contentEquals(FACETS_CLASS_NAME_SUFFIX))
             .findFirst()
             .map(element -> typeUtils.asElement(element.asType()));
     Set<Integer> reservedFacets =
@@ -235,7 +231,9 @@ public class Utils {
     if (inputField.getAnnotation(Inject.class) != null) {
       facetTypes.add(FacetType.INJECTION);
     }
-    return inputBuilder.facetTypes(facetTypes).build();
+    InputModel<Object> inputModel = inputBuilder.facetTypes(facetTypes).build();
+    givenIdsByName.putIfAbsent(facetName, inputModel.id());
+    return inputModel;
   }
 
   private static int getNextAvailableFacetId(
@@ -310,7 +308,9 @@ public class Utils {
             depField);
       }
       depBuilder.dataType(declaredDataType);
-      return depBuilder.build();
+      DependencyModel depModel = depBuilder.build();
+      givenIdsByName.putIfAbsent(facetName, depModel.id());
+      return depModel;
     }
     throw errorAndThrow(
         ("Invalid dependency spec of dependency '%s' of vajram '%s'."
@@ -334,7 +334,7 @@ public class Utils {
       TypeElement responseTypeElement = (TypeElement) typeUtils.asElement(responseType);
       return new VajramInfoLite(
           vajramClassSimpleName.substring(
-              0, vajramClassSimpleName.length() - REQUEST_SUFFIX.length()),
+              0, vajramClassSimpleName.length() - Constants.REQUEST_SUFFIX.length()),
           new DeclaredTypeVisitor<>(this, false, responseTypeElement).visit(responseType));
     } else if (isRawAssignable(vajramOrReqClass.asType(), Vajram.class)) {
       TypeMirror responseType = getResponseType(vajramOrReqClass, Vajram.class);
@@ -357,7 +357,7 @@ public class Utils {
 
   private String getVajramReqClassName(TypeElement vajramClass) {
     if (isRawAssignable(vajramClass.asType(), Vajram.class)) {
-      return vajramClass.getQualifiedName().toString() + REQUEST_SUFFIX;
+      return vajramClass.getQualifiedName().toString() + Constants.REQUEST_SUFFIX;
     } else if (isRawAssignable(vajramClass.asType(), ImmutableRequest.class)) {
       return vajramClass.getQualifiedName().toString();
     } else {
@@ -446,16 +446,24 @@ public class Utils {
         Clock.systemDefaultZone().instant().atZone(ZoneId.systemDefault()));
   }
 
-  public static String getRequestClassName(String vajramName) {
-    return vajramName + REQUEST_SUFFIX;
+  public static String getRequestInterfaceName(String vajramName) {
+    return vajramName + Constants.REQUEST_SUFFIX;
+  }
+
+  public static String getImmutRequestClassName(String vajramName) {
+    return vajramName + Constants.IMMUT_REQUEST_SUFFIX;
   }
 
   public static String getVajramImplClassName(String vajramId) {
-    return vajramId + IMPL;
+    return vajramId + Constants.IMPL_SUFFIX;
   }
 
-  public static String getAllFacetsClassname(String vajramName) {
+  public static String getFacetsInterfaceName(String vajramName) {
     return vajramName + FACETS_CLASS_SUFFIX;
+  }
+
+  public static String getImmutFacetsClassname(String vajramName) {
+    return vajramName + IMMUT_FACETS_CLASS_SUFFIX;
   }
 
   public static String getCommonFacetsClassname(String vajramName) {

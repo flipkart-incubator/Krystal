@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
-import static com.flipkart.krystal.data.Errable.empty;
+import static com.flipkart.krystal.data.Errable.nil;
 import static com.flipkart.krystal.data.Errable.withError;
 import static com.flipkart.krystal.krystex.kryon.KryonUtils.enqueueOrExecuteCommand;
 import static com.flipkart.krystal.krystex.resolution.ResolverCommand.multiExecuteWith;
@@ -21,7 +21,7 @@ import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.FacetsBuilder;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.data.Response;
+import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.OutputLogic;
@@ -342,21 +342,21 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
                             if (throwable != null) {
                               return new Results<>(
                                   ImmutableList.of(
-                                      new Response<>(emptyRequest(), withError(throwable))));
+                                      new RequestResponse<>(emptyRequest(), withError(throwable))));
                             } else {
                               Set<RequestId> depReqIds =
                                   depReqsByIncomingReq.getOrDefault(requestId, Set.of());
-                              ImmutableList<Response<Request<Object>, Object>> collect =
+                              ImmutableList<RequestResponse<Request<Object>, Object>> collect =
                                   depReqIds.stream()
                                       .map(
                                           depReqId -> {
-                                            return new Response<>(
+                                            return new RequestResponse<>(
                                                 (Request<Object>)
                                                     inputsByDepReq.getOrDefault(
                                                         depReqId, emptyRequest()),
                                                 batchResponse
                                                     .responses()
-                                                    .getOrDefault(depReqId, empty()));
+                                                    .getOrDefault(depReqId, nil()));
                                           })
                                       .collect(toImmutableList());
                               return new Results<>(collect);
@@ -418,7 +418,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
                                   requestId ->
                                       results
                                           .getOrDefault(requestId, new CompletableFuture<>())
-                                          .getNow(empty())))));
+                                          .getNow(nil())))));
             });
     outputLogicExecuted.put(dependantChain, true);
     flushDecoratorsIfNeeded(dependantChain);

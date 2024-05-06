@@ -5,7 +5,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetContainer;
-import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.krystex.kryon.KryonId;
@@ -18,7 +17,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.ToString;
@@ -96,29 +94,32 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
 
   private ImmutableMap<Integer, Object> extractAndConvertInputs(FacetContainer facets) {
     Map<Integer, Object> inputMap = new LinkedHashMap<>();
-    for (Entry<Integer, ? extends FacetValue<Object>> e : facets._asMap().entrySet()) {
-      FacetValue<Object> value = e.getValue();
-      if (!(value instanceof Errable<Object>)) {
-        continue;
-      }
-      Object collect = convertErrable((Errable<Object>) value);
-      if (collect != null) {
-        inputMap.put(e.getKey(), collect);
-      }
-    }
+    facets
+        ._asMap()
+        .forEach(
+            (key, value) -> {
+              if (!(value instanceof Errable<?>)) {
+                return;
+              }
+              Object collect = convertErrable((Errable<?>) value);
+              if (collect != null) {
+                inputMap.put(key, collect);
+              }
+            });
     return ImmutableMap.copyOf(inputMap);
   }
 
   private ImmutableMap<Integer, Object> extractAndConvertDependencyResults(FacetContainer facets) {
     Map<Integer, Object> inputMap = new LinkedHashMap<>();
-    for (Entry<Integer, ? extends FacetValue<Object>> e : facets._asMap().entrySet()) {
-      FacetValue<Object> value = e.getValue();
-      if (!(value instanceof Results<?, ?> results)) {
-        continue;
-      }
-      Map<ImmutableMap<Integer, Object>, Object> collect = convertResult(results);
-      inputMap.put(e.getKey(), collect);
-    }
+    facets
+        ._asMap()
+        .forEach(
+            (key, value) -> {
+              if (!(value instanceof Results<?, ?> results)) {
+                return;
+              }
+              inputMap.put(key, convertResult(results));
+            });
     return ImmutableMap.copyOf(inputMap);
   }
 
@@ -132,7 +133,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
   }
 
   private Map<ImmutableMap<Integer, Object>, Object> convertResult(Results<?, ?> results) {
-    return results.responses().stream()
+    return results.requestResponses().stream()
         .collect(
             Collectors.toMap(
                 e -> extractAndConvertInputs(e.request()), e -> convertErrable(e.response())));

@@ -10,8 +10,6 @@ import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
-import com.flipkart.krystal.vajram.samples.calculator.adder.AdderFacetUtil.AdderBatchFacets;
-import com.flipkart.krystal.vajram.samples.calculator.adder.AdderFacetUtil.AdderCommonFacets;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;

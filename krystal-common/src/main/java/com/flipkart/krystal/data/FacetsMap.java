@@ -27,7 +27,7 @@ public final class FacetsMap implements ImmutableFacets {
         throw new AssertionError("This should not be possible sinve _hasValue is true");
       }
     }
-    return data.getOrDefault(facetId, Errable.empty());
+    return data.getOrDefault(facetId, Errable.nil());
   }
 
   @Override
@@ -35,7 +35,7 @@ public final class FacetsMap implements ImmutableFacets {
     if (request._hasValue(facetId)) {
       return request._get(facetId);
     } else {
-      FacetValue<Object> datum = data.getOrDefault(facetId, Errable.empty());
+      FacetValue<Object> datum = data.getOrDefault(facetId, Errable.nil());
       if (datum instanceof Errable<Object> errable) {
         return errable;
       } else {
@@ -47,7 +47,7 @@ public final class FacetsMap implements ImmutableFacets {
   @SuppressWarnings("unchecked")
   @Override
   public Responses<Request<Object>, Object> _getDepResponses(int facetId) {
-    FacetValue<Object> datum = data.getOrDefault(facetId, Errable.empty());
+    FacetValue<Object> datum = data.getOrDefault(facetId, Errable.nil());
     if (datum instanceof Responses<?, ?> errable) {
       return (Responses<Request<Object>, Object>) errable;
     } else {
@@ -57,9 +57,8 @@ public final class FacetsMap implements ImmutableFacets {
 
   @Override
   public ImmutableMap<Integer, FacetValue<Object>> _asMap() {
-    ImmutableMap<Integer, Errable<Object>> requestMap = request._asMap();
     return ImmutableMap.<Integer, FacetValue<Object>>builder()
-        .putAll(requestMap)
+        .putAll(request._asMap())
         .putAll(data)
         .build();
   }
@@ -69,7 +68,7 @@ public final class FacetsMap implements ImmutableFacets {
   }
 
   @Override
-  public FacetsBuilder _asBuilder() {
+  public FacetsMapBuilder _asBuilder() {
     return new FacetsMapBuilder(request._asBuilder(), data);
   }
 
@@ -79,7 +78,7 @@ public final class FacetsMap implements ImmutableFacets {
   }
 
   @Override
-  public ImmutableFacets _newCopy() {
+  public FacetsMap _newCopy() {
     return this;
   }
 }

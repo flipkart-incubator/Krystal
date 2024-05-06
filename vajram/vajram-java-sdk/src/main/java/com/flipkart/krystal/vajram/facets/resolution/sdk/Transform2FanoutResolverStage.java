@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.facets.resolution.sdk;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SkipPredicate;
@@ -19,7 +20,7 @@ import java.util.function.BiPredicate;
  * @param <DV> DependencyVajram: The vajram whose input is being resolved
  */
 public final class Transform2FanoutResolverStage<
-    S1, S2, T, CV extends ImmutableRequest<?>, DV extends ImmutableRequest<?>> {
+    S1, S2, T, CV extends Request<?>, DV extends Request<?>> {
   private final VajramFacetSpec<T, DV> targetInput;
   private final VajramFacetSpec<S1, CV> sourceInput1;
   private final VajramFacetSpec<S2, CV> sourceInput2;

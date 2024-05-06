@@ -17,4 +17,6 @@ public sealed interface FacetGenModel permits InputModel, DependencyModel {
   ImmutableSet<FacetType> facetTypes();
 
   DataType<?> dataType();
+
+  boolean isBatched();
 }

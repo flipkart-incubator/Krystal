@@ -6,7 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @SuppressWarnings("unchecked")
-public class FacetsMapBuilder implements FacetsBuilder {
+public final class FacetsMapBuilder implements FacetsBuilder {
 
   private final SimpleRequestBuilder<Object> request;
   private final Map<Integer, FacetValue<Object>> data;
@@ -31,7 +31,7 @@ public class FacetsMapBuilder implements FacetsBuilder {
         throw new AssertionError("This should not be possible sinve _hasValue is true");
       }
     }
-    return data.getOrDefault(facetId, Errable.empty());
+    return data.getOrDefault(facetId, Errable.nil());
   }
 
   @Override
@@ -39,7 +39,7 @@ public class FacetsMapBuilder implements FacetsBuilder {
     if (request._hasValue(facetId)) {
       return request._get(facetId);
     } else {
-      FacetValue<Object> datum = data.getOrDefault(facetId, Errable.empty());
+      FacetValue<Object> datum = data.getOrDefault(facetId, Errable.nil());
       if (datum instanceof Errable<Object> errable) {
         return errable;
       } else {
@@ -51,7 +51,7 @@ public class FacetsMapBuilder implements FacetsBuilder {
   @SuppressWarnings("unchecked")
   @Override
   public Responses<Request<Object>, Object> _getDepResponses(int facetId) {
-    FacetValue<Object> datum = data.getOrDefault(facetId, Errable.empty());
+    FacetValue<Object> datum = data.getOrDefault(facetId, Errable.nil());
     if (datum instanceof Responses<?, ?> errable) {
       return (Responses<Request<Object>, Object>) errable;
     } else {
@@ -94,8 +94,4 @@ public class FacetsMapBuilder implements FacetsBuilder {
     return this;
   }
 
-  @Override
-  public RequestBuilder<Object> _asRequest() {
-    return request;
-  }
 }

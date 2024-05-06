@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.LongAdder;
 
 /** A resolver which resolves exactly one input of a dependency. */
 public final class SimpleInputResolver<
-        S, T, CV extends ImmutableRequest<?>, DV extends ImmutableRequest<?>>
+        S, T, CV extends Request<?>, DV extends Request<?>>
     extends AbstractInputResolver {
   public static final LongAdder TIME = new LongAdder();
   private final VajramDependencySpec<?, ?, CV, DV> dependency;

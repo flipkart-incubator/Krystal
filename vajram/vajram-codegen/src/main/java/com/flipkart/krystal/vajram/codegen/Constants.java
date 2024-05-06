@@ -37,6 +37,7 @@ public final class Constants {
   public static final String METHOD_EXECUTE_COMPUTE = "executeCompute";
   public static final String GET_FACET_DEFINITIONS = "getFacetDefinitions";
   public static final String FACETS_CLASS_SUFFIX = "Facets";
+  public static final String IMMUT_FACETS_CLASS_SUFFIX = "ImmutableFacets";
   public static final String INPUTS_LIST = "facetsList";
   public static final String BATCHABLE_FACETS = "BatchFacets";
   public static final String COMMON_FACETS = "CommonFacets";
@@ -48,27 +49,30 @@ public final class Constants {
   public static final String IM_LIST = "imList";
   public static final String FUNCTION = "function";
   public static final String OPTIONAL = "optional";
+  public static final String REQUEST_SUFFIX = "Request";
+  public static final String IMMUT_REQUEST_SUFFIX = "ImmutableRequest";
+  public static final String IMPL_SUFFIX = "Impl";
 
   public static final String INPUT_BATCHING_FUTURE_CODE_BLOCK =
       """
-                $map:T<$inputBatching:T, $facets:T> mapping = new $hashMap:T<>();
-                $commonInput:T commonFacets = null;
-                for ($facets:T facets : facetsList) {
-                  $unmodInput:T allInputs = ($unmodInput:T) facets;
-                  commonFacets = allInputs._common();
-                  $inputBatching:T im = allInputs._batchable();
-                  mapping.put(im, facets);
-                }
-                $map:T<$facets:T, $comFuture:T<$returnType:T>> returnValue = new $linkHashMap:T<>();
+          $map:T<$inputBatching:T, $facets:T> mapping = new $hashMap:T<>();
+          $commonInput:T commonFacets = null;
+          for ($facets:T facets : facetsList) {
+            $unmodInput:T allInputs = ($unmodInput:T) facets;
+            commonFacets = allInputs._common();
+            $inputBatching:T im = allInputs._batchable();
+            mapping.put(im, facets);
+          }
+          $map:T<$facets:T, $comFuture:T<$returnType:T>> returnValue = new $linkHashMap:T<>();
 
-                if (commonFacets != null) {
-                  var logicExecResults = $outputLogicMethod:L(new $modInput:T<>($imList:T.copyOf(mapping.keySet()), commonFacets));
-                  logicExecResults.forEach((im, future) -> returnValue.put(
-                        $optional:T.ofNullable(mapping.get(im)).orElseThrow(),
-                        future.<$returnType:T>thenApply($function:T.identity())));
-                }
-                return $imMap:T.copyOf(returnValue);
-            """;
+          if (commonFacets != null) {
+            var logicExecResults = $outputLogicMethod:L(new $modInput:T<>($imList:T.copyOf(mapping.keySet()), commonFacets));
+            logicExecResults.forEach((im, future) -> returnValue.put(
+                  $optional:T.ofNullable(mapping.get(im)).orElseThrow(),
+                  future.<$returnType:T>thenApply($function:T.identity())));
+          }
+          return $imMap:T.copyOf(returnValue);
+      """;
 
   private Constants() {}
 }

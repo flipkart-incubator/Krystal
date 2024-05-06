@@ -9,8 +9,6 @@ import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
-import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacetUtil.UserServiceBatchFacets;
-import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacetUtil.UserServiceCommonFacets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -22,6 +20,7 @@ import java.util.stream.Collectors;
 public abstract class UserService extends IOVajram<UserInfo> {
   static class _Facets {
     @Batch @Input String userId;
+    @Input Optional<String> test;
   }
 
   @Output
@@ -37,7 +36,10 @@ public abstract class UserService extends IOVajram<UserInfo> {
                 userInfos.stream()
                     .collect(
                         Collectors.toMap(
-                            userInfo -> new UserServiceBatchFacets(userInfo.userId()),
+                            userInfo ->
+                                UserServiceBatchFacets._builder()
+                                    .userId(userInfo.userId())
+                                    ._build(),
                             userInfo -> userInfo)));
     return batchedRequest.batch().stream()
         .collect(

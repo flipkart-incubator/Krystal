@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.samples.greeting;
 
-import static com.flipkart.krystal.vajram.samples.greeting.GreetingRequest.userInfo_n;
+import static com.flipkart.krystal.vajram.samples.greeting.GreetingFacets.userInfo_n;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
@@ -8,7 +8,6 @@ import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
-import com.flipkart.krystal.vajram.samples.greeting.GreetingFacetUtil.GreetingFacets;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.lang.System.Logger;
@@ -50,11 +49,11 @@ public abstract class Greeting extends ComputeVajram<String> {
   @Output
   static String createGreetingMessage(GreetingFacets facets) {
     String userId = facets.userId();
-    Optional<UserInfo> userInfo = facets.userInfo();
+    Optional<UserInfo> userInfo = facets.userInfo().valueOpt();
     String greeting =
         "Hello " + userInfo.map(UserInfo::userName).orElse("friend") + "! Hope you are doing well!";
-    facets.log().ifPresent(l -> l.log(Level.INFO, greeting));
-    facets.log().ifPresent(l -> l.log(Level.INFO, "Greeting user " + userId));
+    facets.log().valueOpt().ifPresent(l -> l.log(Level.INFO, greeting));
+    facets.log().valueOpt().ifPresent(l -> l.log(Level.INFO, "Greeting user " + userId));
     facets.analyticsEventSink().pushEvent("event_type", new GreetingEvent(userId, greeting));
     return greeting;
   }

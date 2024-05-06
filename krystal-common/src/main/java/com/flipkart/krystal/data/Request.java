@@ -6,10 +6,10 @@ import java.util.Map;
  * @param <T> The response type of the vajram corresponding to this request
  */
 @SuppressWarnings("ClassReferencesSubclass") // By Design
-public sealed interface Request<T> extends FacetContainer permits ImmutableRequest, RequestBuilder {
+public non-sealed interface Request<T> extends FacetContainer {
 
   @Override
-  Errable<Object> _get(int facetId);
+  Errable<?> _get(int facetId);
 
   ImmutableRequest<T> _build();
 
@@ -19,5 +19,5 @@ public sealed interface Request<T> extends FacetContainer permits ImmutableReque
   @Override
   Request<T> _newCopy();
 
-  Map<Integer, Errable<Object>> _asMap();
+  Map<Integer, ? extends Errable<?>> _asMap();
 }

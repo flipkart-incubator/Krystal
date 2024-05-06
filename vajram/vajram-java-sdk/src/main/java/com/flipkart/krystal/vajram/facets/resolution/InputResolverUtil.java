@@ -8,10 +8,12 @@ import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetsBuilder;
+import com.flipkart.krystal.data.ImmutableFacets;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestBuilder;
-import com.flipkart.krystal.data.Response;
+import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.data.Success;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
@@ -27,7 +29,6 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -105,9 +106,7 @@ public final class InputResolverUtil {
   private static void handleResolverReturn(
       @Nullable Integer resolvable, @Nullable Object o, RequestBuilder<?> requestBuilder) {
     if (o instanceof Request<?> resolvedRequest) {
-      for (Entry<Integer, Errable<Object>> e : resolvedRequest._asMap().entrySet()) {
-        requestBuilder._set(e.getKey(), e.getValue());
-      }
+      resolvedRequest._asMap().forEach(requestBuilder::_set);
     } else if (resolvable != null) {
       requestBuilder._set(resolvable, Errable.withValue(o));
     } else {
@@ -129,15 +128,15 @@ public final class InputResolverUtil {
       final Errable<Object> inputValue;
       if (sourceInput instanceof VajramDepSingleTypeSpec<?, ?, ?>) {
         inputValue =
-            facets._getDepResponses(sourceInput.id()).responses().stream()
-                .map(Response::response)
+            facets._getDepResponses(sourceInput.id()).requestResponses().stream()
+                .map(RequestResponse::response)
                 .iterator()
                 .next();
       } else if (sourceInput instanceof VajramDepFanoutTypeSpec<?, ?, ?>) {
         inputValue =
             Errable.withValue(
-                facets._getDepResponses(sourceInput.id()).responses().stream()
-                    .map(Response::response)
+                facets._getDepResponses(sourceInput.id()).requestResponses().stream()
+                    .map(RequestResponse::response)
                     .filter(e -> e instanceof Success<?>)
                     .map(e -> (Success<?>) e)
                     .map(Success::value)
@@ -145,7 +144,7 @@ public final class InputResolverUtil {
       } else if (sourceInput != null) {
         inputValue = facets._getErrable(sourceInput.id());
       } else {
-        inputValue = Errable.empty();
+        inputValue = Errable.nil();
       }
       inputValues.add(inputValue);
     }
@@ -191,7 +190,7 @@ public final class InputResolverUtil {
     }
   }
 
-  public static <T, CV extends ImmutableRequest<?>, DV extends ImmutableRequest<?>>
+  public static <T, CV extends Request<?>, DV extends Request<?>>
       InputResolver toResolver(
           VajramDependencySpec<?, ?, CV, DV> dependency, SimpleInputResolverSpec<T, CV, DV> spec) {
     return new SimpleInputResolver<>(dependency, spec);

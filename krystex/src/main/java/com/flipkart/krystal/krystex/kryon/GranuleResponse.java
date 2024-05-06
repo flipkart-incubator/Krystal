@@ -8,6 +8,6 @@ public record GranuleResponse(Request<Object> facets, Errable<Object> response)
     implements KryonResponse {
 
   public GranuleResponse() {
-    this(SimpleRequest.empty(), Errable.empty());
+    this(SimpleRequest.empty(), Errable.nil());
   }
 }

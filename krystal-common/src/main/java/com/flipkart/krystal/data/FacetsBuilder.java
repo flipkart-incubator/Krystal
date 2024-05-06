@@ -5,8 +5,6 @@ public interface FacetsBuilder extends Facets, FacetContainerBuilder {
   @Override
   FacetsBuilder _asBuilder();
 
-  RequestBuilder<Object> _asRequest();
-
   @Override
   FacetsBuilder _newCopy();
 

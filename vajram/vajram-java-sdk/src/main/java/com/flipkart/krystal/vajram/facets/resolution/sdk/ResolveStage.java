@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.facets.resolution.sdk;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import java.util.List;
@@ -13,7 +14,7 @@ import java.util.function.Supplier;
  * @param <I> The data type of the input being resolved.
  * @param <DV> The dependency whose input is being resolved.
  */
-public final class ResolveStage<I, DV extends ImmutableRequest<?>> {
+public final class ResolveStage<I, DV extends Request<?>> {
   private final VajramFacetSpec<I, DV> targetInput;
 
   ResolveStage(VajramFacetSpec<I, DV> targetInput) {
@@ -22,13 +23,13 @@ public final class ResolveStage<I, DV extends ImmutableRequest<?>> {
 
   /**
    * Use the value of the source input as-is, without any transformation. If the source input is
-   * {@link Errable#empty()}, then the resolved value will also be {@link Errable#empty()}. This is
+   * {@link Errable#nil()}, then the resolved value will also be {@link Errable#nil()}. This is
    * possible only if the dataType of the sourceInput and the target input are same.
    *
    * @see #using(VajramFacetSpec)
    * @param sourceInput the spec of the source input being used for resolution
    */
-  public <CV extends ImmutableRequest<?>> AsIsResolverStage<I, CV, DV> usingAsIs(
+  public <CV extends Request<?>> AsIsResolverStage<I, CV, DV> usingAsIs(
       VajramFacetSpec<I, CV> sourceInput) {
     return new AsIsResolverStage<>(targetInput, sourceInput);
   }
@@ -41,7 +42,7 @@ public final class ResolveStage<I, DV extends ImmutableRequest<?>> {
    * @return The resultant {@link SimpleInputResolverSpec}
    * @param <CV> The current vajram which is doing the resolution
    */
-  public <CV extends ImmutableRequest<?>> SimpleInputResolverSpec<I, CV, DV> usingValueAsResolver(
+  public <CV extends Request<?>> SimpleInputResolverSpec<I, CV, DV> usingValueAsResolver(
       Supplier<I> with) {
     return new SimpleInputResolverSpec<>(targetInput, List.of(), List.of(), o -> with.get(), null);
   }
@@ -52,7 +53,7 @@ public final class ResolveStage<I, DV extends ImmutableRequest<?>> {
    * @param sourceInput the spec of the source input whose value is used to resolve the dependency
    *     input.
    */
-  public <S, CV extends ImmutableRequest<?>> Transform1ResolverStage<S, I, CV, DV> using(
+  public <S, CV extends Request<?>> Transform1ResolverStage<S, I, CV, DV> using(
       VajramFacetSpec<S, CV> sourceInput) {
     return new Transform1ResolverStage<>(targetInput, sourceInput);
   }
@@ -63,7 +64,7 @@ public final class ResolveStage<I, DV extends ImmutableRequest<?>> {
    * @param sourceInput1 the spec of the source input whose value is used to resolve the dependency
    *     input.
    */
-  public <S1, S2, CV extends ImmutableRequest<?>> Transform2ResolverStage<S1, S2, I, CV, DV> using(
+  public <S1, S2, CV extends Request<?>> Transform2ResolverStage<S1, S2, I, CV, DV> using(
       VajramFacetSpec<S1, CV> sourceInput1, VajramFacetSpec<S2, CV> sourceInput2) {
     return new Transform2ResolverStage<>(targetInput, sourceInput1, sourceInput2);
   }

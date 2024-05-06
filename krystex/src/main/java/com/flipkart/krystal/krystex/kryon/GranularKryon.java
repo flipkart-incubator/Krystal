@@ -19,7 +19,7 @@ import com.flipkart.krystal.data.ImmutableFacets;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestBuilder;
-import com.flipkart.krystal.data.Response;
+import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.except.IllegalModificationException;
 import com.flipkart.krystal.krystex.LogicDefinition;
@@ -488,7 +488,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                         results =
                             new Results<>(
                                 ImmutableList.of(
-                                    new Response<>(
+                                    new RequestResponse<>(
                                         getNewDepRequest(dependencyId), withError(throwable))));
                       } else {
                         results =
@@ -500,7 +500,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                                     .map(cf -> cf.getNow(new GranuleResponse()))
                                     .map(
                                         granuleResponse ->
-                                            new Response<>(
+                                            new RequestResponse<>(
                                                 granuleResponse.facets(),
                                                 granuleResponse.response()))
                                     .collect(toImmutableList()));
@@ -620,7 +620,8 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                                     this.kryonId,
                                     depId,
                                     new Results<>(
-                                        ImmutableList.of(new Response<>(emptyRequest(), errable))),
+                                        ImmutableList.of(
+                                            new RequestResponse<>(emptyRequest(), errable))),
                                     requestId,
                                     getDepChainFor(requestId));
                               },

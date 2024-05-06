@@ -4,6 +4,7 @@ import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.to
 import static java.util.Arrays.stream;
 
 import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.VajramDependencySpec;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
@@ -35,7 +36,7 @@ public final class InputResolvers {
    * @param <DV> The dependency vajram
    */
   @SafeVarargs
-  public static <T, R, CV extends ImmutableRequest<?>, DV extends ImmutableRequest<T>>
+  public static <T, R, CV extends Request<?>, DV extends Request<T>>
       List<InputResolver> dep(
           VajramDependencySpec<T, R, CV, DV> dependency,
           SimpleInputResolverSpec<?, CV, DV>... resolverStages) {
@@ -53,7 +54,7 @@ public final class InputResolvers {
    * @param <T> The data type of the input
    * @param <DV> The dependency whose input is being resolved.
    */
-  public static <T, DV extends ImmutableRequest<?>> ResolveStage<T, DV> depInput(
+  public static <T, DV extends Request<?>> ResolveStage<T, DV> depInput(
       VajramFacetSpec<T, DV> depInput) {
     return new ResolveStage<>(depInput);
   }
@@ -65,7 +66,7 @@ public final class InputResolvers {
    * @param <T> The data type of the input being resolved.
    * @param <DV> The dependency whose input is being resolved.
    */
-  public static <T, DV extends ImmutableRequest<?>> ResolveFanoutStage<T, DV> depInputFanout(
+  public static <T, DV extends Request<?>> ResolveFanoutStage<T, DV> depInputFanout(
       VajramFacetSpec<T, DV> depInput) {
     return new ResolveFanoutStage<>(depInput);
   }

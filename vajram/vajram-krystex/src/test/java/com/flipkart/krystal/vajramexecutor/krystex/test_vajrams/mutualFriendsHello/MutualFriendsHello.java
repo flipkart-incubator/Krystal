@@ -2,10 +2,11 @@ package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHe
 
 import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.friendIds_i;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.hellos_i;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.skip_i;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.userIds_i;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloFacets.friendIds_n;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloFacets.hellos_n;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.skip_n;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.userIds_n;
+import static java.lang.System.lineSeparator;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
@@ -20,7 +21,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.F
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloFacetUtil.MutualFriendsHelloFacets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -44,32 +44,27 @@ public abstract class MutualFriendsHello extends ComputeVajram<String> {
   @Output
   static String sayHelloToMutualFriends(MutualFriendsHelloFacets mutualFriendsHelloFacets) {
     List<String> result = new ArrayList<>();
-    for (String userId : mutualFriendsHelloFacets.friendIds()) {
-      mutualFriendsHelloFacets
-          .hellos()
-          .get(HelloFriendsV2Request.builder().userId(userId).build())
-          .value()
-          .ifPresent(result::add);
+    for (var response : mutualFriendsHelloFacets.hellos().requestResponses()) {
+      response.response().valueOpt().ifPresent(result::add);
     }
-    return String.join("\n", result);
+    return String.join(lineSeparator(), result);
   }
 
-  @Resolve(depName = friendIds_i, depInputs = FriendsServiceRequest.userId_i)
-  public static MultiExecute<String> userIdForFriendService(@Using(userIds_i) Set<String> userIds) {
+  @Resolve(depName = friendIds_n, depInputs = FriendsServiceRequest.userId_n)
+  public static MultiExecute<String> userIdForFriendService(@Using(userIds_n) Set<String> userIds) {
     return executeFanoutWith(userIds);
   }
 
-  @Resolve(depName = hellos_i, depInputs = HelloFriendsV2Request.userId_i)
+  @Resolve(depName = hellos_n, depInputs = HelloFriendsV2Request.userId_n)
   public static MultiExecute<String> userIDForHelloService(
-      @Using(friendIds_i) DependencyResponse<FriendsServiceRequest, Set<String>> friendIdMap,
-      @Using(skip_i) Optional<Boolean> skip) {
+      @Using(friendIds_n) DependencyResponse<FriendsServiceRequest, Set<String>> friendIdMap,
+      @Using(skip_n) Optional<Boolean> skip) {
     if (skip.orElse(false)) {
       return skipFanout("skip requested");
     }
-
     Set<String> friendIds =
         friendIdMap.values().asList().stream()
-            .flatMap(val -> val.value().stream())
+            .flatMap(val -> val.valueOpt().stream())
             .flatMap(Collection::stream)
             .collect(Collectors.toSet());
     return executeFanoutWith(friendIds);

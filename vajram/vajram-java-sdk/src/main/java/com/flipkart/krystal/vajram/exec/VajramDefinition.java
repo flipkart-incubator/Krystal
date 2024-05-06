@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.exec;
 
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.getQualifiedInputsComparator;
-import static com.flipkart.krystal.vajram.utils.Constants.FACETS_CLASS_NAME;
+import static com.flipkart.krystal.vajram.utils.Constants.FACETS_CLASS_NAME_SUFFIX;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Comparator.comparing;
@@ -254,7 +254,7 @@ public final class VajramDefinition {
 
   private static Optional<Class<?>> getFacetsClass(Vajram<?> vajram) {
     return Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredClasses())
-        .filter(aClass -> FACETS_CLASS_NAME.equals(aClass.getSimpleName()))
+        .filter(aClass -> FACETS_CLASS_NAME_SUFFIX.equals(aClass.getSimpleName()))
         .findFirst();
   }
 }

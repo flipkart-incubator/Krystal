@@ -1,7 +1,5 @@
 package com.flipkart.krystal.data;
 
-import static com.flipkart.krystal.data.Nil.nil;
-
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
@@ -9,15 +7,14 @@ import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@SuppressWarnings("ClassReferencesSubclass") // By design
 public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Success, Failure, Nil {
 
-  static <T> Nil<T> empty() {
-    return nil();
+  static <T> Errable<T> nil() {
+    return Nil.nil();
   }
 
   static <T> Errable<T> withValue(@Nullable T t) {
-    return t != null ? new Success<>(t) : empty();
+    return t != null ? new Success<>(t) : nil();
   }
 
   static <T> Errable<T> withError(Throwable t) {
@@ -48,7 +45,7 @@ public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Succes
       } else if (error != null) {
         return withError(error);
       } else {
-        return nil();
+        return Nil.nil();
       }
     } else if (value != null) {
       if (error != null) {
@@ -59,7 +56,7 @@ public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Succes
     } else if (error != null) {
       return withError(error);
     } else {
-      return nil();
+      return Nil.nil();
     }
   }
 

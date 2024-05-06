@@ -4,10 +4,10 @@ import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest.numberOne_n;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest.numberTwo_n;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderFacets.splitSum1_n;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderFacets.splitSum2_n;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderFacets.sum_n;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderRequest.numbers_n;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderRequest.splitSum1_n;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderRequest.splitSum2_n;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderRequest.sum_n;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
@@ -17,7 +17,6 @@ import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.SingleExecute;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
-import com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderFacetUtil.SplitAdderFacets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -80,6 +79,8 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
 
   @Output
   static Integer add(SplitAdderFacets facets) {
-    return facets.splitSum1().orElse(0) + facets.splitSum2().orElse(0) + facets.sum().orElse(0);
+    return facets.splitSum1().valueOpt().orElse(0)
+        + facets.splitSum2().valueOpt().orElse(0)
+        + facets.sum().valueOpt().orElse(0);
   }
 }

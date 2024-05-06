@@ -4,10 +4,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.FacetValue;
-import com.flipkart.krystal.data.FacetsBuilder;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.Nil;
+import com.flipkart.krystal.data.FacetsBuilder;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;

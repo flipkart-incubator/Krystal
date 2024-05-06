@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.codegen.models;
 
-import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.codegen.Utils;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
+import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import java.util.ArrayList;
 import java.util.HashMap;

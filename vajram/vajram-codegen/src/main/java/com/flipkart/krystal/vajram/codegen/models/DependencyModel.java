@@ -21,11 +21,16 @@ public record DependencyModel(
     VariableElement facetField)
     implements FacetGenModel {
 
-  private static final ImmutableSet<FacetType> FACET_TYPES =
+  private static final ImmutableSet<FacetType> DEP_FACET_TYPE =
       ImmutableSet.copyOf(EnumSet.of(FacetType.DEPENDENCY));
 
   @Override
   public ImmutableSet<FacetType> facetTypes() {
-    return FACET_TYPES;
+    return DEP_FACET_TYPE;
+  }
+
+  @Override
+  public boolean isBatched() {
+    return false;
   }
 }
