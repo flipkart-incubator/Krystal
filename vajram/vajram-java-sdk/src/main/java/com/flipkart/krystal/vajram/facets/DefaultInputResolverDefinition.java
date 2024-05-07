@@ -5,4 +5,10 @@ import com.google.common.collect.ImmutableSet;
 
 public record DefaultInputResolverDefinition(
     int resolverId, ImmutableSet<Integer> sources, QualifiedInputs resolutionTarget)
-    implements InputResolverDefinition {}
+    implements InputResolverDefinition {
+
+  @Override
+  public boolean canFanout() {
+    return false;
+  }
+}

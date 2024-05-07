@@ -1,4 +1,4 @@
-package com.flipkart.krystal.krystex.resolution;
+package com.flipkart.krystal.resolution;
 
 import com.flipkart.krystal.data.Request;
 import com.google.common.collect.ImmutableList;
@@ -7,26 +7,26 @@ import com.google.common.collect.ImmutableList;
 @FunctionalInterface
 public interface ResolverCommand {
 
-  ImmutableList<? extends Request<Object>> getInputs();
+  ImmutableList<? extends Request<Object>> getRequests();
 
   static SkipDependency skip(String reason) {
     return new SkipDependency(reason);
   }
 
-  static ExecuteDependency multiExecuteWith(ImmutableList<? extends Request<Object>> inputs) {
+  static ExecuteDependency computedRequests(ImmutableList<? extends Request<Object>> inputs) {
     return new ExecuteDependency(inputs);
   }
 
   record SkipDependency(String reason) implements ResolverCommand {
-    public ImmutableList<Request<Object>> getInputs() {
+    public ImmutableList<Request<Object>> getRequests() {
       return ImmutableList.of();
     }
   }
 
-  record ExecuteDependency(ImmutableList<? extends Request<Object>> inputs)
+  record ExecuteDependency(ImmutableList<? extends Request<Object>> requests)
       implements ResolverCommand {
-    public ImmutableList<? extends Request<Object>> getInputs() {
-      return inputs;
+    public ImmutableList<? extends Request<Object>> getRequests() {
+      return requests;
     }
   }
 }

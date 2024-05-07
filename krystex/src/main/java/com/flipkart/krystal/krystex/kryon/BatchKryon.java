@@ -3,8 +3,8 @@ package com.flipkart.krystal.krystex.kryon;
 import static com.flipkart.krystal.data.Errable.nil;
 import static com.flipkart.krystal.data.Errable.withError;
 import static com.flipkart.krystal.krystex.kryon.KryonUtils.enqueueOrExecuteCommand;
-import static com.flipkart.krystal.krystex.resolution.ResolverCommand.multiExecuteWith;
-import static com.flipkart.krystal.krystex.resolution.ResolverCommand.skip;
+import static com.flipkart.krystal.resolution.ResolverCommand.computedRequests;
+import static com.flipkart.krystal.resolution.ResolverCommand.skip;
 import static com.flipkart.krystal.utils.Futures.linkFutures;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -38,8 +38,8 @@ import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
 import com.flipkart.krystal.krystex.resolution.MultiResolver;
-import com.flipkart.krystal.krystex.resolution.ResolverCommand;
-import com.flipkart.krystal.krystex.resolution.ResolverCommand.SkipDependency;
+import com.flipkart.krystal.resolution.ResolverCommand;
+import com.flipkart.krystal.resolution.ResolverCommand.SkipDependency;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.google.common.collect.ImmutableList;
@@ -212,7 +212,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
             // For such dependencies, trigger them with empty inputs
             commandsByDependency
                 .computeIfAbsent(depName, _k -> new LinkedHashMap<>())
-                .put(Set.of(requestId), multiExecuteWith(ImmutableList.of(emptyRequest())));
+                .put(Set.of(requestId), computedRequests(ImmutableList.of(emptyRequest())));
           });
       Facets facets = getFacetsFor(dependantChain, requestId);
       multiResolverOpt
@@ -295,13 +295,13 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       } else {
         int count = 0;
         for (RequestId incomingReqId : incomingReqIds) {
-          if (resolverCommand.getInputs().isEmpty()) {
+          if (resolverCommand.getRequests().isEmpty()) {
             RequestId depReqId =
                 requestIdGenerator.newSubRequest(incomingReqId, () -> "%s[skip]".formatted(depId));
             skipReasonsByReq.put(
                 depReqId, "Resolvers for dependency %s resolved to empty list".formatted(depId));
           } else {
-            for (Request<Object> request : resolverCommand.getInputs()) {
+            for (Request<Object> request : resolverCommand.getRequests()) {
               int currentCount = count++;
               RequestId depReqId =
                   requestIdGenerator.newSubRequest(

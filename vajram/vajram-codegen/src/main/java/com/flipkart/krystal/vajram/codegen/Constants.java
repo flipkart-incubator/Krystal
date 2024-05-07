@@ -36,6 +36,7 @@ public final class Constants {
   public static final String METHOD_RESOLVE_INPUT_OF_DEPENDENCY = "resolveInputOfDependency";
   public static final String METHOD_EXECUTE_COMPUTE = "executeCompute";
   public static final String GET_FACET_DEFINITIONS = "getFacetDefinitions";
+  public static final String GET_INPUT_RESOLVERS = "getInputResolvers";
   public static final String FACETS_CLASS_SUFFIX = "Facets";
   public static final String IMMUT_FACETS_CLASS_SUFFIX = "ImmutableFacets";
   public static final String INPUTS_LIST = "facetsList";

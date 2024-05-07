@@ -1,11 +1,16 @@
-package com.flipkart.krystal.krystex.resolution;
+package com.flipkart.krystal.vajram.facets.resolution;
 
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.RequestBuilder;
-import com.flipkart.krystal.krystex.Logic;
 import com.flipkart.krystal.resolution.ResolverCommand;
 import com.google.common.collect.ImmutableList;
 
-public non-sealed interface ResolverLogic extends Logic {
+public sealed interface SingleInputResolver extends InputResolver
+    permits AbstractSingleInputResolver, SimpleSingleInputResolver {
   ResolverCommand resolve(ImmutableList<RequestBuilder<Object>> depRequests, Facets facets);
+
+  @Override
+  default boolean canFanout() {
+    return false;
+  }
 }

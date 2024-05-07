@@ -11,6 +11,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.Generated;
@@ -319,7 +320,7 @@ public class Utils {
         depField);
   }
 
-  TypeElement getTypeElement(String name) {
+  public TypeElement getTypeElement(String name) {
     return Optional.ofNullable(elementUtils.getTypeElement(name))
         .orElseThrow(
             () ->
@@ -329,8 +330,8 @@ public class Utils {
 
   private VajramInfoLite getVajramInfoLite(TypeElement vajramOrReqClass) {
     String vajramClassSimpleName = vajramOrReqClass.getSimpleName().toString();
-    if (isRawAssignable(vajramOrReqClass.asType(), ImmutableRequest.class)) {
-      TypeMirror responseType = getResponseType(vajramOrReqClass, ImmutableRequest.class);
+    if (isRawAssignable(vajramOrReqClass.asType(), Request.class)) {
+      TypeMirror responseType = getResponseType(vajramOrReqClass, Request.class);
       TypeElement responseTypeElement = (TypeElement) typeUtils.asElement(responseType);
       return new VajramInfoLite(
           vajramClassSimpleName.substring(
@@ -472,14 +473,6 @@ public class Utils {
 
   public static String getBatchedFacetsClassname(String vajramName) {
     return vajramName + BATCHABLE_FACETS;
-  }
-
-  public static TypeName getMethodReturnType(Method method) {
-    if (method.getGenericReturnType() instanceof ParameterizedType) {
-      return toTypeName(method.getGenericReturnType());
-    } else {
-      return TypeName.get(method.getReturnType());
-    }
   }
 
   public TypeName toTypeName(DataType<?> dataType) {

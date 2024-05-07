@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.exec;
 
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.getQualifiedInputsComparator;
 import static com.flipkart.krystal.vajram.utils.Constants.FACETS_CLASS_NAME_SUFFIX;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -13,24 +12,18 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDefinitionException;
-import com.flipkart.krystal.vajram.facets.DefaultInputResolverDefinition;
-import com.flipkart.krystal.vajram.facets.DependencyDef;
 import com.flipkart.krystal.vajram.facets.InputDef;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.facets.QualifiedInputs;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolverDefinition;
-import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajram.tags.AnnotationTag;
 import com.flipkart.krystal.vajram.tags.AnnotationTagKey;
 import com.flipkart.krystal.vajram.tags.AnnotationTags;
 import com.flipkart.krystal.vajram.tags.NamedValueTag;
 import com.flipkart.krystal.vajram.tags.VajramTags;
 import com.flipkart.krystal.vajram.tags.VajramTags.VajramTypes;
-import com.google.common.collect.ImmutableCollection;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.lang.annotation.Annotation;
@@ -38,14 +31,11 @@ import java.lang.annotation.Repeatable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.TreeSet;
 import java.util.function.Function;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -57,7 +47,7 @@ public final class VajramDefinition {
 
   @Getter private final Vajram<Object> vajram;
 
-  @Getter private final ImmutableCollection<InputResolverDefinition> inputResolverDefinitions;
+  @Getter private final ImmutableMap<Integer, InputResolverDefinition> inputResolverDefinitions;
 
   @Getter private final ImmutableMap<AnnotationTagKey, Tag> outputLogicTags;
 
@@ -78,10 +68,21 @@ public final class VajramDefinition {
     this.facetsById =
         vajram.getFacetDefinitions().stream()
             .collect(toImmutableMap(VajramFacetDefinition::id, Function.identity()));
-    this.inputResolverDefinitions = ImmutableList.copyOf(parseInputResolvers(vajram, facetsByName));
+    this.inputResolverDefinitions = parseInputResolvers(vajram);
+
     this.outputLogicTags = parseOutputLogicTags(vajram);
     this.facetTags = parseFacetTags(vajram);
     this.outputLogicSources = parseOutputLogicSources(vajram, facetsByName);
+  }
+
+  private static ImmutableMap<Integer, InputResolverDefinition> parseInputResolvers(
+      Vajram<Object> vajram) {
+    Map<Integer, InputResolverDefinition> map = new LinkedHashMap<>();
+    int i = 0;
+    for (InputResolver inputResolver : vajram.getInputResolvers()) {
+      map.put(i++, inputResolver);
+    }
+    return ImmutableMap.copyOf(map);
   }
 
   private static ImmutableSet<Integer> parseOutputLogicSources(
@@ -143,54 +144,6 @@ public final class VajramDefinition {
       }
     }
     return ImmutableMap.copyOf(result);
-  }
-
-  private static Collection<InputResolverDefinition> parseInputResolvers(
-      Vajram<?> vajram, ImmutableMap<String, VajramFacetDefinition> facetsByName) {
-    ImmutableSet<Method> resolverMethods =
-        Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
-            .filter(method -> method.isAnnotationPresent(Resolve.class))
-            .collect(toImmutableSet());
-
-    record ResolverDetails(QualifiedInputs qualifiedInputs, Method resolverMethod) {}
-
-    TreeSet<ResolverDetails> resolverDetails =
-        new TreeSet<>(comparing(ResolverDetails::qualifiedInputs, getQualifiedInputsComparator()));
-    for (Method resolverMethod : resolverMethods) {
-      Resolve resolver = resolverMethod.getAnnotation(Resolve.class);
-      if (resolver == null) {
-        throw new AssertionError();
-      }
-      String targetDependencyName = resolver.depName();
-      VajramFacetDefinition facetDef = facetsByName.get(targetDependencyName);
-      if (!(facetDef instanceof DependencyDef<?> dependencyDef)) {
-        throw new IllegalStateException(
-            "Could not find dependency with name %s".formatted(targetDependencyName));
-      }
-      String[] targetInputs = resolver.depInputs();
-      resolverDetails.add(
-          new ResolverDetails(
-              new QualifiedInputs(
-                  dependencyDef.id(),
-                  dependencyDef.dataAccessSpec(),
-                  Arrays.stream(targetInputs).collect(toImmutableSet())),
-              resolverMethod));
-    }
-    int i = 1;
-    List<InputResolverDefinition> inputResolvers = new ArrayList<>();
-    for (ResolverDetails resolverDetail : resolverDetails) {
-      ImmutableSet<Integer> sources =
-          Arrays.stream(resolverDetail.resolverMethod().getParameters())
-              .map((Parameter parameter) -> inferFacetId(parameter, facetsByName))
-              .collect(toImmutableSet());
-      inputResolvers.add(
-          new DefaultInputResolverDefinition(i++, sources, resolverDetail.qualifiedInputs()));
-    }
-    for (InputResolver simpleInputResolver : vajram.getSimpleInputResolvers()) {
-      simpleInputResolver.setResolverId(i++);
-      inputResolvers.add(simpleInputResolver);
-    }
-    return inputResolvers;
   }
 
   private static int inferFacetId(

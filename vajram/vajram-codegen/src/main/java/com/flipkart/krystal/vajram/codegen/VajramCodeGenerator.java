@@ -13,6 +13,7 @@ import static com.flipkart.krystal.vajram.codegen.Constants.FACET_NAME_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACET_SPEC_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants.FUNCTION;
 import static com.flipkart.krystal.vajram.codegen.Constants.GET_FACET_DEFINITIONS;
+import static com.flipkart.krystal.vajram.codegen.Constants.GET_INPUT_RESOLVERS;
 import static com.flipkart.krystal.vajram.codegen.Constants.HASH_MAP;
 import static com.flipkart.krystal.vajram.codegen.Constants.ILLEGAL_ARGUMENT;
 import static com.flipkart.krystal.vajram.codegen.Constants.IM_LIST;
@@ -76,6 +77,7 @@ import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.IOVajram;
+import com.flipkart.krystal.vajram.VajramDefinitionException;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.batching.BatchableFacetsBuilder;
 import com.flipkart.krystal.vajram.batching.BatchableImmutableFacets;
@@ -100,7 +102,9 @@ import com.flipkart.krystal.vajram.facets.VajramDepFanoutTypeSpec;
 import com.flipkart.krystal.vajram.facets.VajramDepSingleTypeSpec;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
+import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -140,15 +144,16 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.Types;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.gradle.internal.impldep.org.fusesource.jansi.AnsiRenderer.Code;
 
 @SuppressWarnings({"OverlyComplexClass", "HardcodedLineSeparator"})
 @Slf4j
@@ -252,7 +257,7 @@ public class VajramCodeGenerator {
         .superclass(ClassName.get(vajramInfo.vajramClass()).box())
         .build();
 
-    // Map of all the resolved variables to the methods resolving them
+    // Map of all the resolved dependencies to the methods resolving them
     Map<Integer, List<ExecutableElement>> resolverMap = new HashMap<>();
     for (ExecutableElement resolver : getParsedVajramData().resolvers()) {
       int dependencyId =
@@ -262,10 +267,7 @@ public class VajramCodeGenerator {
                   .get(checkNotNull(resolver.getAnnotation(Resolve.class)).depName()));
       resolverMap.computeIfAbsent(dependencyId, _k -> new ArrayList<>()).add(resolver);
     }
-    // Iterate all the resolvers and figure fanout
-    // dep inputDef data type and method return type =>
-    // 1. depInput = T, if (resolverReturnType is iterable of T || iterable of vajramRequest ||
-    // multiExecute) => fanout
+
     Map<String, Boolean> depFanoutMap =
         vajramInfo.dependencies().stream()
             .collect(Collectors.toMap(DependencyModel::name, DependencyModel::canFanout));
@@ -278,10 +280,9 @@ public class VajramCodeGenerator {
     final TypeName vajramResponseType =
         util.toTypeName(getParsedVajramData().vajramInfo().responseType());
 
-    MethodSpec facetDefinitionsMethod = createFacetDefinitions();
-    methodSpecs.add(facetDefinitionsMethod);
-    Optional<MethodSpec> inputResolverMethod = createResolvers(resolverMap, depFanoutMap);
-    inputResolverMethod.ifPresent(methodSpecs::add);
+    methodSpecs.add(createFacetDefinitions());
+    methodSpecs.add(createInputResolvers(resolverMap, depFanoutMap));
+    createResolvers(resolverMap, depFanoutMap).ifPresent(methodSpecs::add);
 
     if (util.isRawAssignable(
         getParsedVajramData().vajramInfo().vajramClass().asType(), IOVajram.class)) {
@@ -337,6 +338,71 @@ public class VajramCodeGenerator {
 
     }
     return writer.toString();
+  }
+
+  private MethodSpec createInputResolvers(
+      Map<Integer, List<ExecutableElement>> resolverMap, Map<String, Boolean> depFanoutMap) {
+    Builder getInputResolversMethod =
+        methodBuilder(GET_INPUT_RESOLVERS)
+            .addModifiers(PUBLIC)
+            .returns(ParameterizedTypeName.get(ImmutableCollection.class, InputResolver.class))
+            .addAnnotation(Override.class);
+
+    getInputResolversMethod.addStatement(
+        "$T inputResolvers = new $T<>(getSimpleInputResolvers())",
+        ParameterizedTypeName.get(List.class, InputResolver.class),
+        ArrayList.class);
+
+    resolverMap.forEach(
+        (depId, resolverMethods) -> {
+          DependencyModel dep =
+              vajramInfo.dependencies().stream()
+                  .filter(d -> d.id() == depId)
+                  .findAny()
+                  .orElseThrow();
+          for (ExecutableElement resolverMethod : resolverMethods) {
+            if (canFanout(resolverMethod, dep)) {}
+          }
+        });
+
+    return getInputResolversMethod
+        .addStatement("return $T.copyOf(inputResolvers)", ImmutableList.class)
+        .build();
+  }
+
+  private boolean canFanout(ExecutableElement resolverMethod, DependencyModel dep) {
+    // Iterate all the resolvers and figure fanout
+    // dep inputDef data type and method return type =>
+    // 1. depInput = T, if (resolverReturnType is iterable of T || iterable of vajramRequest ||
+    // multiExecute) => fanout
+    Resolve resolve =
+        checkNotNull(
+            resolverMethod.getAnnotation(Resolve.class),
+            "Resolver method must have 'Resolve' annotation");
+    String[] facets = resolve.depInputs();
+    String depName = resolve.depName();
+    TypeMirror returnType = resolverMethod.getReturnType();
+    Types typeUtils = util.getProcessingEnv().getTypeUtils();
+    if (util.isRawAssignable(returnType, Request.class)) {
+      if (typeUtils.isAssignable(
+          returnType, util.getTypeElement(dep.depReqClassQualifiedName()).asType())) {
+        return false;
+      } else {
+        throw new VajramDefinitionException(
+            """
+             The resolver %s of dep facet %s resolves the vajram named %s
+             but does not return the corresponding request of type %s. "
+             This is an error.
+             """
+                .formatted(
+                    resolverMethod.getSimpleName(),
+                    depName,
+                    dep.depVajramId(),
+                    dep.depReqClassQualifiedName()));
+      }
+    } else if (util.isRawAssignable(returnType, DependencyCommand.class)) {
+      return util.isRawAssignable(returnType, MultiExecute.class);
+    }
   }
 
   private @NonNull ParsedVajramData initParsedVajramData() {
@@ -586,14 +652,14 @@ public class VajramCodeGenerator {
       }
     }
     // merge the code blocks for facets
-//    for (int i = 0; i < inputCodeBlocks.size(); i++) {
-//      // for formatting
-//      returnBuilder.add("\t\t");
-//      returnBuilder.add(inputCodeBlocks.get(i));
-//      if (i != inputCodeBlocks.size() - 1) {
-//        returnBuilder.add(",\n");
-//      }
-//    }
+    //    for (int i = 0; i < inputCodeBlocks.size(); i++) {
+    //      // for formatting
+    //      returnBuilder.add("\t\t");
+    //      returnBuilder.add(inputCodeBlocks.get(i));
+    //      if (i != inputCodeBlocks.size() - 1) {
+    //        returnBuilder.add(",\n");
+    //      }
+    //    }
     returnBuilder.add(methodCallSuffix);
     returnBuilder.add("}));\n");
     executeBuilder.addCode(returnBuilder.build());
@@ -805,8 +871,7 @@ public class VajramCodeGenerator {
     // check if the inputDef is satisfied by inputDef or other resolved variables
     CodeBlock.Builder ifBlockBuilder = CodeBlock.builder();
     // TODO : add validation if fanout, then method should accept dependencyDef response for the
-    // bind
-    // type parameter else error
+    // bind type parameter else error
     // Iterate over the method params and call respective binding methods
     method
         .getParameters()
@@ -999,24 +1064,24 @@ public class VajramCodeGenerator {
     }
   }
 
-//  case 1 -> {
-//    List<Integer> numbers = ((ChainAdderFacets) facets).numbers();
-//    MultiExecute<List<Integer>> resolverResult = numbersForSubChainer(numbers);
-//    if (resolverResult.shouldSkip()) {
-//      return SingleExecute.skipExecution(resolverResult.doc());
-//    } else {
-//      return MultiExecute.executeFanoutWith(
-//          List.copyOf(
-//              resolverResult.inputs().stream()
-//                  .map(
-//                      element ->
-//                          (ChainAdderRequest)
-//                              ((ChainAdderRequest) dependecyRequest)
-//                                  ._asBuilder()
-//                                  .numbers(element.orElse(null)))
-//                  .toList()));
-//    }
-//  }
+  //  case 1 -> {
+  //    List<Integer> numbers = ((ChainAdderFacets) facets).numbers();
+  //    MultiExecute<List<Integer>> resolverResult = numbersForSubChainer(numbers);
+  //    if (resolverResult.shouldSkip()) {
+  //      return SingleExecute.skipExecution(resolverResult.doc());
+  //    } else {
+  //      return MultiExecute.executeFanoutWith(
+  //          List.copyOf(
+  //              resolverResult.inputs().stream()
+  //                  .map(
+  //                      element ->
+  //                          (ChainAdderRequest)
+  //                              ((ChainAdderRequest) dependecyRequest)
+  //                                  ._asBuilder()
+  //                                  .numbers(element.orElse(null)))
+  //                  .toList()));
+  //    }
+  //  }
 
   /**
    * Method to generate resolver code for variables having single resolver. Fanout case - Iterable
@@ -1666,7 +1731,7 @@ public class VajramCodeGenerator {
     return ParameterizedTypeName.get(
         ClassName.get(Responses.class),
         boxPrimitive(requestType).typeName(),
-        boxPrimitive(facetType).typeName());
+          boxPrimitive(facetType).typeName());
   }
 
   private static FieldSpec.Builder createFacetSpecField(
@@ -2178,7 +2243,7 @@ public class VajramCodeGenerator {
   }
 
   private static ClassName toClassName(String depReqClassName) {
-    int lastDotIndex = depReqClassName.lastIndexOf(".");
+    int lastDotIndex = depReqClassName.lastIndexOf('.');
     return ClassName.get(
         depReqClassName.substring(0, lastDotIndex), depReqClassName.substring(lastDotIndex + 1));
   }

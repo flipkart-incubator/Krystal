@@ -18,6 +18,7 @@ import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.QualifiedInputs;
+import com.flipkart.krystal.vajram.facets.resolution.AbstractFanoutInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.AbstractInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService;
@@ -62,7 +63,7 @@ public abstract class HelloFriendsV2 extends ComputeVajram<String> {
      We write the below resolver so that these kind of resolvers are also tested in the unit tests.
     */
     resolvers.add(
-        new AbstractInputResolver(
+        new AbstractFanoutInputResolver(
             ImmutableSet.of(1), new QualifiedInputs(2, FriendsServiceRequest.userId_n)) {
 
           @Override

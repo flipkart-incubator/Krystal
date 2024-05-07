@@ -2,6 +2,7 @@ package com.flipkart.krystal.krystex.resolution;
 
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.Logic;
+import com.flipkart.krystal.resolution.ResolverCommand;
 import com.google.common.collect.ImmutableMap;
 import java.util.List;
 

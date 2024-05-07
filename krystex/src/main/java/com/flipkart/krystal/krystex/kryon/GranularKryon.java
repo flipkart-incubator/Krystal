@@ -38,8 +38,8 @@ import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.request.StringReqGenerator;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
 import com.flipkart.krystal.krystex.resolution.MultiResolver;
-import com.flipkart.krystal.krystex.resolution.ResolverCommand;
-import com.flipkart.krystal.krystex.resolution.ResolverCommand.SkipDependency;
+import com.flipkart.krystal.resolution.ResolverCommand;
+import com.flipkart.krystal.resolution.ResolverCommand.SkipDependency;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.google.common.collect.ImmutableList;
@@ -402,7 +402,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
       // The current resolver  has triggered a fan-out.
       // So we need multiply the total number of requests to the dependency by n where n is
       // the size of the fan-out triggered by this resolver
-      ImmutableList<? extends Request<Object>> inputList = resolverCommand.getInputs();
+      ImmutableList<? extends Request<Object>> inputList = resolverCommand.getRequests();
       long executionsInProgress = dependencyKryonExecutions.executionCounter().longValue();
       Map<RequestId, Request<Object>> oldInputs = new LinkedHashMap<>();
       for (int i = 0; i < executionsInProgress; i++) {

@@ -61,6 +61,10 @@ public sealed interface Vajram<T> permits AbstractVajram, BatchableVajram {
     return ImmutableList.of();
   }
 
+  default ImmutableCollection<InputResolver> getInputResolvers() {
+    return getSimpleInputResolvers();
+  }
+
   default DependencyCommand<? extends Request<Object>> resolveInputOfDependency(
       int resolverId, ImmutableList<? extends RequestBuilder<Object>> depRequests, Facets facets) {
     return executeFanoutWith(depRequests);

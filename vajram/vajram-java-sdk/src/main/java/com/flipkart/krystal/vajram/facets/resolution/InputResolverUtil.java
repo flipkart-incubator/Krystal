@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
+import static com.flipkart.krystal.data.Errable.nil;
+import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Comparator.comparing;
 import static java.util.Comparator.comparingInt;
@@ -8,9 +10,6 @@ import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.FacetsBuilder;
-import com.flipkart.krystal.data.ImmutableFacets;
-import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestBuilder;
 import com.flipkart.krystal.data.RequestResponse;
@@ -45,14 +44,12 @@ public final class InputResolverUtil {
         new LinkedHashMap<>();
     for (ResolutionRequest resolutionRequest : resolutionRequests) {
       int dependencyId = resolutionRequest.dependencyId();
-      List<RequestBuilder<Object>> depReqs = new ArrayList<>();
-      depReqs.add(resolutionRequest.vajramRequest()._asBuilder());
       Collection<? extends SimpleInputResolver<?, ?, ?, ?>> depResolvers =
           resolvers.getOrDefault(dependencyId, List.of());
       for (SimpleInputResolver<?, ?, ?, ?> simpleResolver : depResolvers) {
         int resolvable = simpleResolver.getResolverSpec().targetInput().id();
         //noinspection unchecked,rawtypes
-        DependencyCommand<Request<Object>> command =
+        DependencyCommand<?> command =
             _resolutionHelper(
                 (List) simpleResolver.getResolverSpec().sourceInputs(),
                 simpleResolver.getResolverSpec().transformer(),
@@ -60,13 +57,13 @@ public final class InputResolverUtil {
                 simpleResolver.getResolverSpec().skipConditions(),
                 facets);
         if (command.shouldSkip()) {
-          skippedDependencies.put(dependencyId, command);
+          skippedDependencies.put(dependencyId, skipExecution(command.doc()));
           break;
         }
-        collectDepInputs(depReqs, resolvable, command);
+        collectDepInputs(resolutionRequest.depRequests(), resolvable, command);
       }
       if (!skippedDependencies.containsKey(dependencyId)) {
-        results.putIfAbsent(dependencyId, depReqs);
+        results.putIfAbsent(dependencyId, resolutionRequest.depRequests());
       }
     }
     return new ResolutionResult(results, skippedDependencies);
@@ -83,23 +80,24 @@ public final class InputResolverUtil {
       depReqs.forEach(request -> handleResolverReturn(resolvable, singleExecute.input(), request));
     } else if (command instanceof MultiExecute<?> multiExecute) {
       Collection<?> objects = multiExecute.multiInputs();
-      List<RequestBuilder<Object>> more =
-          new ArrayList<>(depReqs.size() * objects.size() - depReqs.size());
-      for (RequestBuilder<Object> depReq : depReqs) {
-        boolean first = true;
-        RequestBuilder<Object> copy = depReq._newCopy();
-        for (Object object : objects) {
-          if (first) {
-            first = false;
-            handleResolverReturn(resolvable, object, depReq);
-          } else {
-            RequestBuilder<Object> e = copy._newCopy();
-            more.add(e);
-            handleResolverReturn(resolvable, object, e);
-          }
+      if (depReqs.size() > 1) {
+        throw new IllegalArgumentException("A varjam can have at most one fanout resolver.");
+      } else if (depReqs.isEmpty()) {
+        throw new IllegalArgumentException("This should not be possible");
+      }
+      RequestBuilder<Object> depReq = depReqs.get(0);
+      boolean first = true;
+
+      for (Object object : objects) {
+        if (first) {
+          first = false;
+          handleResolverReturn(resolvable, object, depReq);
+        } else {
+          RequestBuilder<Object> newReq = depReq._newCopy();
+          handleResolverReturn(resolvable, object, newReq);
+          depReqs.add(newReq);
         }
       }
-      depReqs.addAll(more);
     }
   }
 
@@ -144,7 +142,7 @@ public final class InputResolverUtil {
       } else if (sourceInput != null) {
         inputValue = facets._getErrable(sourceInput.id());
       } else {
-        inputValue = Errable.nil();
+        inputValue = nil();
       }
       inputValues.add(inputValue);
     }
@@ -159,7 +157,7 @@ public final class InputResolverUtil {
       if (fanout) {
         return MultiExecute.skipFanout(skipPredicate.get().reason());
       } else {
-        return SingleExecute.skipExecution(skipPredicate.get().reason());
+        return skipExecution(skipPredicate.get().reason());
       }
     }
     //noinspection unchecked
@@ -190,10 +188,13 @@ public final class InputResolverUtil {
     }
   }
 
-  public static <T, CV extends Request<?>, DV extends Request<?>>
-      InputResolver toResolver(
-          VajramDependencySpec<?, ?, CV, DV> dependency, SimpleInputResolverSpec<T, CV, DV> spec) {
-    return new SimpleInputResolver<>(dependency, spec);
+  public static <T, CV extends Request<?>, DV extends Request<?>> InputResolver toResolver(
+      VajramDependencySpec<?, ?, CV, DV> dependency, SimpleInputResolverSpec<T, CV, DV> spec) {
+    if (spec.canFanout()) {
+      return new SimpleFanoutInputResolver<>(dependency, spec);
+    } else {
+      return new SimpleSingleInputResolver<>(dependency, spec);
+    }
   }
 
   private InputResolverUtil() {}
