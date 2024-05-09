@@ -18,6 +18,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -34,6 +35,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
   @Getter private final Instant startTime;
   private final boolean verbose;
   private final Clock clock;
+  private static final String SHA_256 = "SHA-256";
 
   @Getter
   private final Map<KryonExecution, LogicExecInfo> mainLogicExecInfos = new LinkedHashMap<>();
@@ -130,13 +132,14 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     String sha256;
     if (voe.error().isPresent()) {
       Throwable throwable = voe.error().get();
-      sha256 =
-          verbose ? hashValues(getStackTraceAsString(throwable)) : hashValues(throwable.toString());
-      dataMap.put(sha256, verbose ? getStackTraceAsString(throwable) : throwable.toString());
+      String stackTraceAsString = getStackTraceAsString(throwable);
+      sha256 = verbose ? hashValues(stackTraceAsString) : hashValues(throwable.toString());
+      dataMap.put(sha256, verbose ? stackTraceAsString : throwable.toString());
       return sha256;
     } else {
-      sha256 = hashValues(voe.value().orElse("null"));
-      dataMap.put(sha256, voe.value().orElse("null"));
+      Object value = voe.value().orElse("null");
+      sha256 = hashValues(value);
+      dataMap.put(sha256, value);
       return sha256;
     }
   }
@@ -158,21 +161,13 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
 
   private static String hashString(String appendedInput) {
     try {
-      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      MessageDigest digest = MessageDigest.getInstance(SHA_256);
       byte[] encodedHash = digest.digest(appendedInput.getBytes(StandardCharsets.UTF_8));
-      StringBuilder hexString = new StringBuilder(2 * encodedHash.length);
+      String encodedString = Base64.getEncoder().encodeToString(encodedHash);
 
-      for (byte b : encodedHash) {
-        String hex = Integer.toHexString(0xff & b);
-        if (hex.length() == 1) {
-          hexString.append('0');
-        }
-        hexString.append(hex);
-      }
-
-      return hexString.toString();
+      return encodedString;
     } catch (NoSuchAlgorithmException e) {
-      log.error("Error came while generating message digest instance.");
+      log.error("Error: could not hash inputs because of exception");
       return "";
     }
   }
