@@ -16,7 +16,7 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true, cacheStrategy = LAZY)
 public final class VajramDepSingleTypeSpec<
         T, CV extends VajramRequest<?>, DV extends VajramRequest<T>>
-    extends VajramDependencySpec<T, CV, DV> {
+    extends VajramDependencySpec<T, T, CV, DV> {
 
   public VajramDepSingleTypeSpec(String name, Class<CV> ofVajram, Class<DV> onVajram) {
     super(name, ofVajram, onVajram);

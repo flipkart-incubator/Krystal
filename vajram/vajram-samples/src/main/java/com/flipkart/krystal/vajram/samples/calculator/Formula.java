@@ -1,9 +1,10 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
-import static com.flipkart.krystal.vajram.samples.calculator.FormulaInputUtil.*;
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInput;
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
+import static com.flipkart.krystal.vajram.samples.calculator.FormulaFacetUtil.quotient_s;
+import static com.flipkart.krystal.vajram.samples.calculator.FormulaFacetUtil.sum_s;
 import static com.flipkart.krystal.vajram.samples.calculator.FormulaRequest.*;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest.*;
 import static com.flipkart.krystal.vajram.samples.calculator.divider.DividerRequest.*;
@@ -14,7 +15,7 @@ import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
-import com.flipkart.krystal.vajram.samples.calculator.FormulaInputUtil.FormulaInputs;
+import com.flipkart.krystal.vajram.samples.calculator.FormulaFacetUtil.FormulaFacets;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
 import com.flipkart.krystal.vajram.samples.calculator.divider.Divider;
 import com.google.common.collect.ImmutableCollection;
@@ -22,16 +23,17 @@ import com.google.common.collect.ImmutableCollection;
 /** a/(p+q) */
 @VajramDef
 public abstract class Formula extends ComputeVajram<Integer> {
+  static class _Facets {
+    @Input int a;
+    @Input int p;
+    @Input int q;
 
-  @Input int a;
-  @Input int p;
-  @Input int q;
+    @Dependency(onVajram = Adder.class)
+    int sum;
 
-  @Dependency(onVajram = Adder.class)
-  int sum;
-
-  @Dependency(onVajram = Divider.class)
-  int quotient;
+    @Dependency(onVajram = Divider.class)
+    int quotient;
+  }
 
   @Override
   public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
@@ -49,8 +51,8 @@ public abstract class Formula extends ComputeVajram<Integer> {
   }
 
   @Output
-  static int result(FormulaInputs allInputs) {
+  static int result(FormulaFacets facets) {
     /* Return quotient */
-    return allInputs.quotient();
+    return facets.quotient();
   }
 }

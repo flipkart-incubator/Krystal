@@ -1,6 +1,3 @@
-import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY
-import static com.flipkart.krystal.vajram.codegen.models.CodegenPhase.IMPLS
-
 plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
 }
@@ -11,16 +8,14 @@ dependencies {
     api project(':vajram')
     api project(':krystex')
 
-    annotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
+    annotationProcessor 'com.flipkart.krystal:vajram-codegen'
+    testAnnotationProcessor 'com.flipkart.krystal:vajram-codegen'
 
-    def jacksonVersion = '2.14.2'
-    testImplementation 'com.fasterxml.jackson.core:jackson-annotations:' + jacksonVersion
-    testImplementation 'com.fasterxml.jackson.core:jackson-databind:' + jacksonVersion
-    testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:' + jacksonVersion
-    testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jacksonVersion
-    testImplementation 'org.assertj:assertj-core:3.23.1'
+    testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
+    testImplementation 'com.fasterxml.jackson.core:jackson-databind'
+    testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
+    testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
-    testAnnotationProcessor 'com.flipkart.krystal:krystal-plugin:' + krystal_version
 }
 
 tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }

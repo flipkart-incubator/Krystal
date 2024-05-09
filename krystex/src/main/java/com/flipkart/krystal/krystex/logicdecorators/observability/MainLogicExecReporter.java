@@ -1,12 +1,12 @@
 package com.flipkart.krystal.krystex.logicdecorators.observability;
 
-import static com.flipkart.krystal.data.ValueOrError.empty;
+import static com.flipkart.krystal.data.Errable.empty;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.allOf;
 
-import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.Results;
-import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonId;
@@ -39,7 +39,7 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
       /*
        Execute logic
       */
-      ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> results =
+      ImmutableMap<Facets, CompletableFuture<@Nullable Object>> results =
           logicToDecorate.execute(inputs);
       /*
        Report logic end
@@ -57,7 +57,7 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
                                     Entry::getKey,
                                     e ->
                                         e.getValue()
-                                            .handle(ValueOrError::valueOrError)
+                                            .handle(Errable::errableFrom)
                                             .getNow(empty())))));
               });
       return results;
