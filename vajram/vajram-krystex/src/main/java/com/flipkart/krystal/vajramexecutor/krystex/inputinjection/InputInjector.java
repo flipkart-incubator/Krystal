@@ -163,9 +163,4 @@ public final class InputInjector implements OutputLogicDecorator {
     }
     return ValueOrError.withValue(resolvedObject);
   }
-
-  @Override
-  public void onComplete() {
-    // do nothing
-  }
 }

@@ -79,9 +79,4 @@ public final class Resilience4JCircuitBreaker implements OutputLogicDecorator {
       init(configProvider);
     }
   }
-
-  @Override
-  public void onComplete() {
-    // do nothing
-  }
 }

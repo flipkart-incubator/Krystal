@@ -140,9 +140,4 @@ public final class InputModulationDecorator<
   public String getId() {
     return instanceId;
   }
-
-  @Override
-  public void onComplete() {
-    // do nothing
-  }
 }

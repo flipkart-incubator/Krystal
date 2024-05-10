@@ -15,7 +15,6 @@ import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.data.ValueOrError;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
-import com.flipkart.krystal.krystex.generator.GenerateHtml;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
@@ -38,19 +37,19 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
 
   private final KryonExecutionReport kryonExecutionReport;
   private String DATE_TIME_PATTERN = "yyyy-MM-dd_HH:mm:ss";
-  private String FILE_PATH = "/Users/ajit.dwivedi/wiwwt/";
+  private String FILE_PATH = "/tmp";
   private final ObjectMapper objectMapper;
-
 
   public MainLogicExecReporter(KryonExecutionReport kryonExecutionReport) {
     this.kryonExecutionReport = kryonExecutionReport;
-    objectMapper = new ObjectMapper()
-        .registerModule(new JavaTimeModule())
-        .registerModule(new Jdk8Module())
-        .setSerializationInclusion(NON_NULL)
-        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-        .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
-        .disable(SerializationFeature.FAIL_ON_SELF_REFERENCES);
+    objectMapper =
+        new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .registerModule(new Jdk8Module())
+            .setSerializationInclusion(NON_NULL)
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
+            .disable(SerializationFeature.FAIL_ON_SELF_REFERENCES);
   }
 
   @Override
@@ -125,7 +124,7 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
       writer.write(content);
       writer.close();
     } catch (IOException e) {
-      System.err.println("Error writing file: " + e.getMessage());
+      log.error("Error writing file: {} with path: {}" + e.getMessage(), filePath);
     }
   }
 
@@ -138,6 +137,4 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
     }
     return "";
   }
-
-
 }

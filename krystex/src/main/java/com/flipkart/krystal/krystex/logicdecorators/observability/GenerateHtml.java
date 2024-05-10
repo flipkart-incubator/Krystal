@@ -1,9 +1,9 @@
-package com.flipkart.krystal.krystex.generator;
+package com.flipkart.krystal.krystex.logicdecorators.observability;
 
 /**
  * @author ajit.dwivedi on 20/02/24
  */
-public class GenerateHtml {
+class GenerateHtml {
   public static String generateHtml(String jsonData) {
 
     String htmlBuilder =
