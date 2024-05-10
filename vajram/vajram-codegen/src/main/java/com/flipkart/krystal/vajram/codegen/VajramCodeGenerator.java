@@ -77,7 +77,6 @@ import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.VajramDefinitionException;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.batching.BatchableFacetsBuilder;
 import com.flipkart.krystal.vajram.batching.BatchableImmutableFacets;
@@ -144,10 +143,8 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
-import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.Types;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -361,7 +358,7 @@ public class VajramCodeGenerator {
                   .findAny()
                   .orElseThrow();
           for (ExecutableElement resolverMethod : resolverMethods) {
-            if (canFanout(resolverMethod, dep)) {}
+            if (canFanout(resolverMethod)) {}
           }
         });
 
@@ -370,39 +367,8 @@ public class VajramCodeGenerator {
         .build();
   }
 
-  private boolean canFanout(ExecutableElement resolverMethod, DependencyModel dep) {
-    // Iterate all the resolvers and figure fanout
-    // dep inputDef data type and method return type =>
-    // 1. depInput = T, if (resolverReturnType is iterable of T || iterable of vajramRequest ||
-    // multiExecute) => fanout
-    Resolve resolve =
-        checkNotNull(
-            resolverMethod.getAnnotation(Resolve.class),
-            "Resolver method must have 'Resolve' annotation");
-    String[] facets = resolve.depInputs();
-    String depName = resolve.depName();
-    TypeMirror returnType = resolverMethod.getReturnType();
-    Types typeUtils = util.getProcessingEnv().getTypeUtils();
-    if (util.isRawAssignable(returnType, Request.class)) {
-      if (typeUtils.isAssignable(
-          returnType, util.getTypeElement(dep.depReqClassQualifiedName()).asType())) {
-        return false;
-      } else {
-        throw new VajramDefinitionException(
-            """
-             The resolver %s of dep facet %s resolves the vajram named %s
-             but does not return the corresponding request of type %s. "
-             This is an error.
-             """
-                .formatted(
-                    resolverMethod.getSimpleName(),
-                    depName,
-                    dep.depVajramId(),
-                    dep.depReqClassQualifiedName()));
-      }
-    } else if (util.isRawAssignable(returnType, DependencyCommand.class)) {
-      return util.isRawAssignable(returnType, MultiExecute.class);
-    }
+  private boolean canFanout(ExecutableElement resolverMethod) {
+    return util.isRawAssignable(resolverMethod.getReturnType(), MultiExecute.class);
   }
 
   private @NonNull ParsedVajramData initParsedVajramData() {
@@ -1731,7 +1697,7 @@ public class VajramCodeGenerator {
     return ParameterizedTypeName.get(
         ClassName.get(Responses.class),
         boxPrimitive(requestType).typeName(),
-          boxPrimitive(facetType).typeName());
+        boxPrimitive(facetType).typeName());
   }
 
   private static FieldSpec.Builder createFacetSpecField(
