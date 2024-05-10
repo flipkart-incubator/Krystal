@@ -1,19 +1,17 @@
 package com.flipkart.krystal.krystex.logicdecorators.observability;
 
-import static com.flipkart.krystal.data.Errable.empty;
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
-import static com.flipkart.krystal.data.ValueOrError.empty;
+import static com.flipkart.krystal.data.Errable.empty;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.allOf;
 
-import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.Facets;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
