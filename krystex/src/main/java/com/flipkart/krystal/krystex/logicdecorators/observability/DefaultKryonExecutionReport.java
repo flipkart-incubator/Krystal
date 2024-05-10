@@ -167,7 +167,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
 
       return encodedString;
     } catch (NoSuchAlgorithmException e) {
-      log.error("Error: could not hash inputs because of exception");
+      log.error("Error could not hash inputs because of exception ", e);
       return "";
     }
   }
