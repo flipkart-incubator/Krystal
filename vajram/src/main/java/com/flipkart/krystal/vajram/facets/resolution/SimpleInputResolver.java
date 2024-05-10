@@ -1,16 +1,15 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
-import static com.flipkart.krystal.data.ValueOrError.withValue;
+import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil._resolutionHelper;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static java.util.Optional.ofNullable;
 
-import com.flipkart.krystal.data.Inputs;
-import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.QualifiedInputs;
@@ -29,54 +28,53 @@ public final class SimpleInputResolver<
         S, T, CV extends VajramRequest<?>, DV extends VajramRequest<?>>
     extends AbstractInputResolver {
   public static final LongAdder TIME = new LongAdder();
-  private final VajramDependencySpec<?, CV, DV> dependency;
-  private final SimpleInputResolverSpec<S, T, CV, DV> resolverSpec;
+  private final VajramDependencySpec<?, ?, CV, DV> dependency;
+  private final SimpleInputResolverSpec<T, CV, DV> resolverSpec;
 
   SimpleInputResolver(
-      VajramDependencySpec<?, CV, DV> dependency,
-      SimpleInputResolverSpec<S, T, CV, DV> resolverSpec) {
+      VajramDependencySpec<?, ?, CV, DV> dependency,
+      SimpleInputResolverSpec<T, CV, DV> resolverSpec) {
     super(
-        ofNullable(resolverSpec.getSourceInput()).stream()
-            .map(VajramFacetSpec::name)
-            .collect(toImmutableSet()),
-        new QualifiedInputs(dependency.name(), resolverSpec.getTargetInput().name()));
+        resolverSpec.sourceInputs().stream().map(VajramFacetSpec::name).collect(toImmutableSet()),
+        new QualifiedInputs(dependency.name(), resolverSpec.targetInput().name()));
     this.dependency = dependency;
     this.resolverSpec = resolverSpec;
   }
 
-  public VajramDependencySpec<?, ?, ?> getDependency() {
+  public VajramDependencySpec<?, ?, ?, ?> getDependency() {
     return dependency;
   }
 
-  public SimpleInputResolverSpec<?, ?, ?, ?> getResolverSpec() {
+  public SimpleInputResolverSpec<?, ?, ?> getResolverSpec() {
     return resolverSpec;
   }
 
   /**
-   * @see InputResolverUtil#multiResolve(List, Map, Inputs)
+   * @see InputResolverUtil#multiResolve(List, Map, Facets)
    */
   @Override
-  public DependencyCommand<Inputs> resolve(
-      String dependencyName, ImmutableSet<String> inputsToResolve, Inputs inputs) {
+  public DependencyCommand<Facets> resolve(
+      String dependencyName, ImmutableSet<String> inputsToResolve, Facets facets) {
     long start = System.nanoTime();
     try {
 
+      //noinspection unchecked,rawtypes
       DependencyCommand<Object> depCommand =
           _resolutionHelper(
-              resolverSpec.getSourceInput(),
-              resolverSpec.getTransformer(),
-              resolverSpec.getFanoutTransformer(),
-              resolverSpec.getSkipConditions(),
-              inputs);
+              (List) resolverSpec.sourceInputs(),
+              resolverSpec.transformer(),
+              resolverSpec.fanoutTransformer(),
+              resolverSpec.skipConditions(),
+              facets);
       boolean shouldSkip = depCommand.shouldSkip();
       if (depCommand instanceof SingleExecute<Object> singleExecute) {
         if (shouldSkip) {
           return skipExecution(singleExecute.doc());
         } else {
           return executeWith(
-              new Inputs(
+              new Facets(
                   ImmutableMap.of(
-                      resolverSpec.getTargetInput().name(), withValue(singleExecute.input()))));
+                      resolverSpec.targetInput().name(), withValue(singleExecute.input()))));
         }
       } else {
         if (shouldSkip) {
@@ -86,10 +84,10 @@ public final class SimpleInputResolver<
               depCommand.inputs().stream()
                   .map(
                       o ->
-                          new Inputs(
+                          new Facets(
                               ImmutableMap.of(
-                                  resolverSpec.getTargetInput().name(),
-                                  new ValueOrError<>(o, Optional.empty()))))
+                                  resolverSpec.targetInput().name(),
+                                  new Errable<>(o, Optional.empty()))))
                   .toList());
       }
     } catch (Exception e) {

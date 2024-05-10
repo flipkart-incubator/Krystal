@@ -1,7 +1,7 @@
 package com.flipkart.krystal.krystex.resolution;
 
 import com.flipkart.krystal.config.Tag;
-import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.google.common.collect.ImmutableMap;
@@ -17,7 +17,7 @@ public final class ResolverLogicDefinition extends LogicDefinition<ResolverLogic
     super(kryonLogicId, inputNames, logicTags, resolverLogic);
   }
 
-  public ResolverCommand resolve(Inputs inputs) {
-    return logic().resolve(inputs);
+  public ResolverCommand resolve(Facets facets) {
+    return logic().resolve(facets);
   }
 }

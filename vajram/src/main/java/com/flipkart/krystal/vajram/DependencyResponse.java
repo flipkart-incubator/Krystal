@@ -1,28 +1,28 @@
 package com.flipkart.krystal.vajram;
 
-import static com.flipkart.krystal.data.ValueOrError.empty;
+import static com.flipkart.krystal.data.Errable.empty;
 
-import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.data.Errable;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import java.util.Optional;
 
 public record DependencyResponse<R extends VajramRequest, V>(
-    ImmutableMap<R, ValueOrError<V>> responses) {
-  public ValueOrError<V> get(R request) {
+    ImmutableMap<R, Errable<V>> responses) {
+  public Errable<V> get(R request) {
     return responses.getOrDefault(request, empty());
   }
 
   public Optional<V> getOnlyValue() {
-    ValueOrError<V> value = getOnlyValueOrError();
+    Errable<V> value = getOnlyErrable();
     if (value.error().isPresent()) {
       throw new IllegalStateException("Received an error.", value.error().get());
     }
     return value.value();
   }
 
-  private ValueOrError<V> getOnlyValueOrError() {
-    ImmutableCollection<ValueOrError<V>> values = values();
+  private Errable<V> getOnlyErrable() {
+    ImmutableCollection<Errable<V>> values = values();
     if (values.size() != 1) {
       throw new IllegalStateException(
           "Expected to find 1 dependency response, found %s".formatted(values.size()));
@@ -30,7 +30,7 @@ public record DependencyResponse<R extends VajramRequest, V>(
     return values.iterator().next();
   }
 
-  public ImmutableCollection<ValueOrError<V>> values() {
+  public ImmutableCollection<Errable<V>> values() {
     return responses.values();
   }
 }

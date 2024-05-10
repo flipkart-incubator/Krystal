@@ -2,8 +2,8 @@ package com.flipkart.krystal.vajramexecutor.krystex.testharness;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-import com.flipkart.krystal.data.Inputs;
-import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardBatch;
 import com.flipkart.krystal.krystex.commands.ForwardGranule;
@@ -35,22 +35,20 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  */
 public class VajramPrimer extends AbstractKryonDecorator {
 
-  private final ImmutableMap<Inputs, ValueOrError<Object>> executionStubs;
+  private final ImmutableMap<Facets, Errable<Object>> executionStubs;
   private final VajramID decoratedVajramId;
   private final boolean failIfMockMissing;
   private @MonotonicNonNull DecoratedKryon decoratedKryon;
 
   public <T> VajramPrimer(
-      VajramID mockedVajramId,
-      Map<VajramRequest<T>, ValueOrError<T>> stubs,
-      boolean failIfMockMissing) {
+      VajramID mockedVajramId, Map<VajramRequest<T>, Errable<T>> stubs, boolean failIfMockMissing) {
     this.decoratedVajramId = mockedVajramId;
     this.failIfMockMissing = failIfMockMissing;
-    Map<Inputs, ValueOrError<Object>> mocks = new LinkedHashMap<>(stubs.size());
+    Map<Facets, Errable<Object>> mocks = new LinkedHashMap<>(stubs.size());
     stubs.forEach(
         (req, resp) -> {
           //noinspection unchecked
-          mocks.put(req.toInputValues(), (ValueOrError<Object>) resp);
+          mocks.put(req.toFacetValues(), (Errable<Object>) resp);
         });
     this.executionStubs = ImmutableMap.copyOf(mocks);
   }
@@ -90,17 +88,17 @@ public class VajramPrimer extends AbstractKryonDecorator {
       } else if (kryonCommand instanceof Flush flush) {
         kryon.executeCommand(flush);
       } else if (kryonCommand instanceof ForwardBatch forwardBatch) {
-        Map<RequestId, ValueOrError<Object>> finalResponses = new LinkedHashMap<>();
+        Map<RequestId, Errable<Object>> finalResponses = new LinkedHashMap<>();
         Set<RequestId> unmockedRequestIds = new LinkedHashSet<>();
-        for (Entry<RequestId, Inputs> entry : forwardBatch.executableRequests().entrySet()) {
+        for (Entry<RequestId, Facets> entry : forwardBatch.executableRequests().entrySet()) {
           RequestId requestId = entry.getKey();
-          Inputs inputs = entry.getValue();
-          ValueOrError<Object> mockedResponse = executionStubs.get(inputs);
+          Facets facets = entry.getValue();
+          Errable<Object> mockedResponse = executionStubs.get(facets);
           if (mockedResponse == null) {
             if (failIfMockMissing) {
               throw new IllegalStateException(
                   "Could not find mocked response for inputs %s of kryon %s"
-                      .formatted(inputs, kryonId));
+                      .formatted(facets, kryonId));
             } else {
               unmockedRequestIds.add(requestId);
             }
@@ -108,7 +106,7 @@ public class VajramPrimer extends AbstractKryonDecorator {
             finalResponses.put(requestId, mockedResponse);
           }
         }
-        LinkedHashMap<RequestId, Inputs> unmockedRequests =
+        LinkedHashMap<RequestId, Facets> unmockedRequests =
             new LinkedHashMap<>(forwardBatch.executableRequests());
         unmockedRequests.keySet().retainAll(unmockedRequestIds);
         try {
@@ -126,10 +124,10 @@ public class VajramPrimer extends AbstractKryonDecorator {
                   if (kryonResponse instanceof BatchResponse batchResponse) {
                     finalResponses.putAll(batchResponse.responses());
                   } else {
-                    ValueOrError<Object> error =
+                    Errable<Object> error =
                         throwable != null
-                            ? ValueOrError.withError(throwable)
-                            : ValueOrError.withError(
+                            ? Errable.withError(throwable)
+                            : Errable.withError(
                                 new AssertionError(
                                     "Unknown KryonResponse type of response %s from kryon %s"
                                         .formatted(kryonResponse, kryonId)));

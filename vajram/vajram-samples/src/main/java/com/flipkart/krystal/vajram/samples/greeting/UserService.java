@@ -7,10 +7,10 @@ import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.modulation.Modulated;
-import com.flipkart.krystal.vajram.modulation.ModulatedInput;
-import com.flipkart.krystal.vajram.samples.greeting.UserServiceInputUtil.UserServiceCommonInputs;
-import com.flipkart.krystal.vajram.samples.greeting.UserServiceInputUtil.UserServiceModInputs;
+import com.flipkart.krystal.vajram.batching.Batch;
+import com.flipkart.krystal.vajram.batching.BatchedFacets;
+import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacetUtil.UserServiceCommonFacets;
+import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacetUtil.UserServiceInputBatch;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -20,26 +20,27 @@ import java.util.stream.Collectors;
 @VajramDef
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class UserService extends IOVajram<UserInfo> {
-
-  @Modulated @Input String userId;
+  static class _Facets {
+    @Batch @Input String userId;
+  }
 
   @Output
-  static Map<UserServiceModInputs, CompletableFuture<UserInfo>> callUserService(
-      ModulatedInput<UserServiceModInputs, UserServiceCommonInputs> modulatedRequest) {
+  static Map<UserServiceInputBatch, CompletableFuture<UserInfo>> callUserService(
+      BatchedFacets<UserServiceInputBatch, UserServiceCommonFacets> batchedRequest) {
 
     // Make a call to user service and get user info
     CompletableFuture<List<UserInfo>> serviceResponse =
-        batchServiceCall(modulatedRequest.modInputs());
+        batchServiceCall(batchedRequest.batchedInputs());
 
-    CompletableFuture<Map<UserServiceModInputs, UserInfo>> resultsFuture =
+    CompletableFuture<Map<UserServiceInputBatch, UserInfo>> resultsFuture =
         serviceResponse.thenApply(
             userInfos ->
                 userInfos.stream()
                     .collect(
                         Collectors.toMap(
-                            userInfo -> new UserServiceModInputs(userInfo.userId()),
+                            userInfo -> new UserServiceInputBatch(userInfo.userId()),
                             userInfo -> userInfo)));
-    return modulatedRequest.modInputs().stream()
+    return batchedRequest.batchedInputs().stream()
         .collect(
             toImmutableMap(
                 im -> im,
@@ -49,10 +50,10 @@ public abstract class UserService extends IOVajram<UserInfo> {
   }
 
   private static CompletableFuture<List<UserInfo>> batchServiceCall(
-      List<UserServiceModInputs> modInputs) {
+      List<UserServiceInputBatch> modInputs) {
     return completedFuture(
         modInputs.stream()
-            .map(UserServiceModInputs::userId)
+            .map(UserServiceInputBatch::userId)
             .map(userId -> new UserInfo(userId, "Firstname Lastname (%s)".formatted(userId)))
             .toList());
   }

@@ -8,7 +8,7 @@ public final class Constants {
   public static final String DEP_RESP = "depResp";
   public static final String RESOLVABLE_INPUTS = "resolvableInputs";
   public static final String INPUT_SRC = "inputSrc";
-  public static final String INPUT_MODULATION = "inputModulation";
+  public static final String INPUT_BATCHING = "inputBatching";
   public static final String COMMON_INPUT = "commonInput";
   public static final String RETURN_TYPE = "returnType";
   public static final String VAJRAM_LOGIC_METHOD = "outputLogicMethod";
@@ -36,32 +36,32 @@ public final class Constants {
   public static final String METHOD_RESOLVE_INPUT_OF_DEPENDENCY = "resolveInputOfDependency";
   public static final String METHOD_EXECUTE_COMPUTE = "executeCompute";
   public static final String GET_FACET_DEFINITIONS = "getFacetDefinitions";
-  public static final String INPUTS_CLASS_SUFFIX = "Inputs";
-  public static final String INPUTS_LIST = "inputsList";
-  public static final String INPUTS_NEEDING_MODULATION = "ModInputs";
-  public static final String COMMON_INPUTS = "CommonInputs";
-  public static final String INPUTS = "inputs";
+  public static final String FACETS_CLASS_SUFFIX = "Facets";
+  public static final String INPUTS_LIST = "facetsList";
+  public static final String BATCHABLE_INPUTS = "InputBatch";
+  public static final String COMMON_FACETS = "CommonFacets";
+  public static final String INPUTS = "facets";
   public static final String UNMOD_INPUT = "unmodInput";
   public static final String MOD_INPUT = "modInput";
   public static final String IM_MAP = "imMap";
   public static final String IM_LIST = "imList";
   public static final String FUNCTION = "function";
   public static final String OPTIONAL = "optional";
-  public static final String INPUT_MODULATION_CODE_BLOCK =
+  public static final String INPUT_BATCHING_CODE_BLOCK =
       """
-                $map:T<$inputModulation:T, $inputs:T> mapping = new $hashMap:T<>();
-                $commonInput:T commonInputs = null;
-                for ($inputs:T inputs : inputsList) {
-                  $unmodInput:T<$inputModulation:T, $commonInput:T> allInputs =
-                      getInputsConvertor().apply(inputs);
-                  commonInputs = allInputs.commonInputs();
-                  $inputModulation:T im = allInputs.inputsNeedingModulation();
-                  mapping.put(im, inputs);
+                $map:T<$inputBatching:T, $facets:T> mapping = new $hashMap:T<>();
+                $commonInput:T commonFacets = null;
+                for ($facets:T facets : facetsList) {
+                  $unmodInput:T<$inputBatching:T, $commonInput:T> allInputs =
+                      getInputsConvertor().apply(facets);
+                  commonFacets = allInputs.commonFacets();
+                  $inputBatching:T im = allInputs.batchedInputs();
+                  mapping.put(im, facets);
                 }
-                $map:T<$inputs:T, $valErr:T<$returnType:T>> returnValue = new $linkHashMap:T<>();
+                $map:T<$facets:T, $valErr:T<$returnType:T>> returnValue = new $linkHashMap:T<>();
 
-                if (commonInputs != null) {
-                  var results = $outputLogicMethod:L(new $modInput:T<>($imList:T.copyOf(mapping.keySet()), commonInputs));
+                if (commonFacets != null) {
+                  var results = $outputLogicMethod:L(new $modInput:T<>($imList:T.copyOf(mapping.keySet()), commonFacets));
                   results.forEach((im, value) -> returnValue.put(
                        $optional:T.ofNullable(mapping.get(im)).orElseThrow(),
                        $valErr:T.withValue(value)));
@@ -69,21 +69,21 @@ public final class Constants {
                 return $imMap:T.copyOf(returnValue);
             """;
 
-  public static final String INPUT_MODULATION_FUTURE_CODE_BLOCK =
+  public static final String INPUT_BATCHING_FUTURE_CODE_BLOCK =
       """
-                $map:T<$inputModulation:T, $inputs:T> mapping = new $hashMap:T<>();
-                $commonInput:T commonInputs = null;
-                for ($inputs:T inputs : inputsList) {
-                  $unmodInput:T<$inputModulation:T, $commonInput:T> allInputs =
-                      getInputsConvertor().apply(inputs);
-                  commonInputs = allInputs.commonInputs();
-                  $inputModulation:T im = allInputs.inputsNeedingModulation();
-                  mapping.put(im, inputs);
+                $map:T<$inputBatching:T, $facets:T> mapping = new $hashMap:T<>();
+                $commonInput:T commonFacets = null;
+                for ($facets:T facets : facetsList) {
+                  $unmodInput:T<$inputBatching:T, $commonInput:T> allInputs =
+                      getInputsConvertor().apply(facets);
+                  commonFacets = allInputs.commonFacets();
+                  $inputBatching:T im = allInputs.batchedInputs();
+                  mapping.put(im, facets);
                 }
-                $map:T<$inputs:T, $comFuture:T<$returnType:T>> returnValue = new $linkHashMap:T<>();
+                $map:T<$facets:T, $comFuture:T<$returnType:T>> returnValue = new $linkHashMap:T<>();
 
-                if (commonInputs != null) {
-                  var results = $outputLogicMethod:L(new $modInput:T<>($imList:T.copyOf(mapping.keySet()), commonInputs));
+                if (commonFacets != null) {
+                  var results = $outputLogicMethod:L(new $modInput:T<>($imList:T.copyOf(mapping.keySet()), commonFacets));
                   results.forEach((im, future) -> returnValue.put(
                         $optional:T.ofNullable(mapping.get(im)).orElseThrow(),
                         future.<$returnType:T>thenApply($function:T.identity())));

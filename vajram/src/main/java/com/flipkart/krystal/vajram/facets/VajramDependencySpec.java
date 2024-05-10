@@ -9,8 +9,8 @@ import com.flipkart.krystal.vajram.VajramRequest;
  * @param <CV> The current vajram which has the dependency
  */
 public abstract sealed class VajramDependencySpec<
-        T, CV extends VajramRequest<?>, DV extends VajramRequest<T>>
-    extends VajramFacetSpec<T, CV> permits VajramDepFanoutTypeSpec, VajramDepSingleTypeSpec {
+        T, R, CV extends VajramRequest<?>, DV extends VajramRequest<T>>
+    extends VajramFacetSpec<R, CV> permits VajramDepFanoutTypeSpec, VajramDepSingleTypeSpec {
 
   VajramDependencySpec(String name, Class<CV> ofVajram, Class<DV> onVajram) {
     super(name, ofVajram);

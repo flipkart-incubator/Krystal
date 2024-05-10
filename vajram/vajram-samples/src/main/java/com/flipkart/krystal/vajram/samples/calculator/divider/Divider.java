@@ -4,18 +4,20 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.samples.calculator.divider.DividerInputUtil.DividerInputs;
+import com.flipkart.krystal.vajram.samples.calculator.divider.DividerFacetUtil.DividerFacets;
 import java.util.Optional;
 
 @VajramDef
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class Divider extends ComputeVajram<Integer> {
-  @Input int numerator;
-  @Input Optional<Integer> denominator;
+  static class _Facets {
+    @Input int numerator;
+    @Input Optional<Integer> denominator;
+  }
 
   @Output
-  static int divide(DividerInputs allInputs) {
-    return divide(allInputs.numerator(), allInputs.denominator().orElse(1));
+  static int divide(DividerFacets facets) {
+    return divide(facets.numerator(), facets.denominator().orElse(1));
   }
 
   public static int divide(int a, int b) {

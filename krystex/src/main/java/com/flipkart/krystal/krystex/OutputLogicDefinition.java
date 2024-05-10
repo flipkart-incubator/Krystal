@@ -1,7 +1,7 @@
 package com.flipkart.krystal.krystex;
 
 import com.flipkart.krystal.config.Tag;
-import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
@@ -35,8 +35,8 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
     super(kryonLogicId, inputs, logicTags, outputLogic);
   }
 
-  public final ImmutableMap<Inputs, CompletableFuture<@Nullable T>> execute(
-      ImmutableList<Inputs> inputs) {
+  public final ImmutableMap<Facets, CompletableFuture<@Nullable T>> execute(
+      ImmutableList<Facets> inputs) {
     return logic().execute(inputs);
   }
 

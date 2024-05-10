@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
-import java.util.Optional;
+import com.flipkart.krystal.data.Errable;
+import java.util.List;
 import java.util.function.Predicate;
 
-record SkipPredicate<T>(String reason, Predicate<Optional<T>> condition) {}
+public record SkipPredicate<T>(String reason, Predicate<List<Errable<?>>> condition) {}

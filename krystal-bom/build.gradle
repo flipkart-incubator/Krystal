@@ -1,0 +1,13 @@
+plugins {
+    id 'java-platform'
+}
+
+dependencies {
+    constraints {
+        api 'com.flipkart.krystal:com.flipkart.krystal.gradle.plugin:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-codegen:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram:' + project.krystal_version
+        api 'com.flipkart.krystal:krystal-common:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-krystex:' + project.krystal_version
+    }
+}

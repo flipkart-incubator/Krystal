@@ -5,7 +5,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.config.ConfigProvider;
-import com.flipkart.krystal.data.Inputs;
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
@@ -153,22 +153,22 @@ public final class Resilience4JBulkhead implements OutputLogicDecorator {
     }
 
     @SuppressWarnings("RedundantTypeArguments") // Avoid nullChecker errors
-    CompletionStage<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>> decorate(
-        OutputLogic<Object> logicToDecorate, ImmutableList<Inputs> inputsList) {
+    CompletionStage<ImmutableMap<Facets, CompletableFuture<@Nullable Object>>> decorate(
+        OutputLogic<Object> logicToDecorate, ImmutableList<Facets> facetsList) {
       ThreadPoolBulkhead threadPoolBulkhead = this.threadPoolBulkhead;
       Bulkhead bulkhead = this.bulkhead;
       if (threadPoolBulkhead != null) {
         return threadPoolBulkhead
-            .<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>>executeCallable(
-                () -> logicToDecorate.execute(inputsList));
+            .<ImmutableMap<Facets, CompletableFuture<@Nullable Object>>>executeCallable(
+                () -> logicToDecorate.execute(facetsList));
       } else if (bulkhead != null) {
         return Decorators
-            .<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>>ofCompletionStage(
+            .<ImmutableMap<Facets, CompletableFuture<@Nullable Object>>>ofCompletionStage(
                 () -> {
-                  ImmutableMap<Inputs, CompletableFuture<@Nullable Object>> result =
-                      logicToDecorate.execute(inputsList);
+                  ImmutableMap<Facets, CompletableFuture<@Nullable Object>> result =
+                      logicToDecorate.execute(facetsList);
                   return allOf(result.values().toArray(CompletableFuture[]::new))
-                      .<ImmutableMap<Inputs, CompletableFuture<@Nullable Object>>>handle(
+                      .<ImmutableMap<Facets, CompletableFuture<@Nullable Object>>>handle(
                           (unused, throwable) -> result);
                 })
             .withBulkhead(bulkhead)

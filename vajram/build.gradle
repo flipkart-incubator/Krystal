@@ -2,7 +2,8 @@ description 'A programming model for writing highly concurrent synchronous workf
 
 dependencies {
     api project(':krystal-common')
-    implementation 'org.reflections:reflections:0.10.2'
+
+    implementation 'org.reflections:reflections'
 }
 
 publishing {

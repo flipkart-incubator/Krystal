@@ -15,12 +15,12 @@ import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.Using;
-import com.flipkart.krystal.vajram.facets.resolution.Resolve;
+import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloInputUtil.MutualFriendsHelloInputs;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloFacetUtil.MutualFriendsHelloFacets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -30,22 +30,22 @@ import java.util.stream.Collectors;
 
 @VajramDef
 public abstract class MutualFriendsHello extends ComputeVajram<String> {
+  static class _Facets {
+    @Input Set<String> userIds;
+    @Input Optional<Boolean> skip;
 
-  @Input Set<String> userIds;
-  @Input Optional<Boolean> skip;
+    @Dependency(onVajram = FriendsService.class)
+    Set<String> friendIds;
 
-  @Dependency(onVajram = FriendsService.class)
-  Set<String> friendIds;
-
-  @Dependency(onVajram = HelloFriendsV2.class, canFanout = true)
-  String hellos;
+    @Dependency(onVajram = HelloFriendsV2.class, canFanout = true)
+    String hellos;
+  }
 
   @Output
-  public static String sayHelloToMutualFriends(
-      MutualFriendsHelloInputs mutualFriendsHelloAllInputs) {
+  static String sayHelloToMutualFriends(MutualFriendsHelloFacets mutualFriendsHelloFacets) {
     List<String> result = new ArrayList<>();
-    for (String userId : mutualFriendsHelloAllInputs.friendIds()) {
-      mutualFriendsHelloAllInputs
+    for (String userId : mutualFriendsHelloFacets.friendIds()) {
+      mutualFriendsHelloFacets
           .hellos()
           .get(HelloFriendsV2Request.builder().userId(userId).build())
           .value()

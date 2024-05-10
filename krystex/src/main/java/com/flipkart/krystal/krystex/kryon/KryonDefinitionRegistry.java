@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class KryonDefinitionRegistry {
@@ -31,17 +32,23 @@ public final class KryonDefinitionRegistry {
     return kryon;
   }
 
-  public KryonDefinition newKryonDefinition(String kryonId, KryonLogicId outputLogicId) {
-    return newKryonDefinition(kryonId, outputLogicId, ImmutableMap.of());
-  }
-
   public KryonDefinition newKryonDefinition(
-      String kryonId, KryonLogicId outputLogicId, ImmutableMap<String, KryonId> dependencyKryons) {
-    return newKryonDefinition(kryonId, outputLogicId, dependencyKryons, ImmutableList.of(), null);
+      String kryonId, Set<String> inputs, KryonLogicId outputLogicId) {
+    return newKryonDefinition(kryonId, inputs, outputLogicId, ImmutableMap.of());
   }
 
   public KryonDefinition newKryonDefinition(
       String kryonId,
+      Set<String> inputs,
+      KryonLogicId outputLogicId,
+      ImmutableMap<String, KryonId> dependencyKryons) {
+    return newKryonDefinition(
+        kryonId, inputs, outputLogicId, dependencyKryons, ImmutableList.of(), null);
+  }
+
+  public KryonDefinition newKryonDefinition(
+      String kryonId,
+      Set<String> inputs,
       KryonLogicId outputLogicId,
       ImmutableMap<String, KryonId> dependencyKryons,
       ImmutableList<ResolverDefinition> resolverDefinitions,
@@ -52,6 +59,7 @@ public final class KryonDefinitionRegistry {
     KryonDefinition kryonDefinition =
         new KryonDefinition(
             new KryonId(kryonId),
+            inputs,
             outputLogicId,
             dependencyKryons,
             resolverDefinitions,

@@ -1,11 +1,11 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import static com.flipkart.krystal.krystex.kryon.FacetType.INPUT;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.utils.Futures.linkFutures;
 import static com.flipkart.krystal.utils.Futures.propagateCancellation;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.union;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -14,8 +14,8 @@ import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.groupingBy;
 
-import com.flipkart.krystal.data.Inputs;
-import com.flipkart.krystal.data.ValueOrError;
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.Flush;
@@ -156,7 +156,7 @@ public final class KryonExecutor implements KrystalExecutor {
 
   @Override
   public <T> CompletableFuture<@Nullable T> executeKryon(
-      KryonId kryonId, Inputs inputs, KryonExecutionConfig executionConfig) {
+      KryonId kryonId, Facets facets, KryonExecutionConfig executionConfig) {
     if (closed) {
       throw new RejectedExecutionException("KryonExecutor is already closed");
     }
@@ -185,7 +185,7 @@ public final class KryonExecutor implements KrystalExecutor {
                   } else {
                     allExecutions.put(
                         requestId,
-                        new KryonExecution(kryonId, requestId, inputs, executionConfig, future));
+                        new KryonExecution(kryonId, requestId, facets, executionConfig, future));
                     unFlushedExecutions.add(requestId);
                   }
                   //noinspection unchecked
@@ -376,14 +376,12 @@ public final class KryonExecutor implements KrystalExecutor {
         this.<GranuleResponse>executeCommand(
                 new ForwardGranule(
                     kryonId,
-                    kryonDefinition.getOutputLogicDefinition().inputNames().stream()
-                        .filter(s -> !kryonDefinition.dependencyKryons().containsKey(s))
-                        .collect(toImmutableSet()),
-                    kryonExecution.inputs(),
+                    kryonDefinition.facetsByType(INPUT),
+                    kryonExecution.facets(),
                     kryonDefinitionRegistry.getDependantChainsStart(),
                     requestId))
             .thenApply(GranuleResponse::response)
-            .<CompletableFuture<@Nullable Object>>thenApply(ValueOrError::toFuture)
+            .<CompletableFuture<@Nullable Object>>thenApply(Errable::toFuture)
             .thenCompose(identity());
     linkFutures(submissionResult, kryonExecution.future());
   }
@@ -399,13 +397,11 @@ public final class KryonExecutor implements KrystalExecutor {
                   this.executeCommand(
                       new ForwardBatch(
                           kryonId,
-                          kryonDefinition.getOutputLogicDefinition().inputNames().stream()
-                              .filter(s -> !kryonDefinition.dependencyKryons().containsKey(s))
-                              .collect(toImmutableSet()),
+                          kryonDefinition.facetsByType(INPUT),
                           kryonResults.stream()
                               .collect(
                                   toImmutableMap(
-                                      KryonExecution::instanceExecutionId, KryonExecution::inputs)),
+                                      KryonExecution::instanceExecutionId, KryonExecution::facets)),
                           kryonDefinitionRegistry.getDependantChainsStart(),
                           ImmutableMap.of()));
               batchResponseFuture
@@ -416,9 +412,9 @@ public final class KryonExecutor implements KrystalExecutor {
                           if (throwable != null) {
                             kryonExecution.future().completeExceptionally(throwable);
                           } else {
-                            ValueOrError<Object> result =
+                            Errable<Object> result =
                                 responses.getOrDefault(
-                                    kryonExecution.instanceExecutionId(), ValueOrError.empty());
+                                    kryonExecution.instanceExecutionId(), Errable.empty());
                             linkFutures(result.toFuture(), kryonExecution.future());
                           }
                         }
@@ -489,7 +485,7 @@ public final class KryonExecutor implements KrystalExecutor {
   private record KryonExecution(
       KryonId kryonId,
       RequestId instanceExecutionId,
-      Inputs inputs,
+      Facets facets,
       KryonExecutionConfig executionConfig,
       CompletableFuture<@Nullable Object> future) {}
 }
