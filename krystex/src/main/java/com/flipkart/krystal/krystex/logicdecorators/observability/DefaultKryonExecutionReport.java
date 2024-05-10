@@ -36,6 +36,15 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
   private final boolean verbose;
   private final Clock clock;
   private static final String SHA_256 = "SHA-256";
+  @Nullable private static MessageDigest digest = null;
+
+  static {
+    try {
+      digest = MessageDigest.getInstance(SHA_256);
+    } catch (NoSuchAlgorithmException e) {
+      log.error("Error could not hash inputs because of exception ", e);
+    }
+  }
 
   @Getter
   private final Map<KryonExecution, LogicExecInfo> mainLogicExecInfos = new LinkedHashMap<>();
@@ -152,24 +161,16 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
   }
 
   public static <T> String hashValues(T input) {
-    StringBuilder concatenatedValues = new StringBuilder();
-    if (input != null) {
-      concatenatedValues.append(input.toString());
-    }
-    return hashString(concatenatedValues.toString());
+    return hashString(input != null ? input.toString() : "");
   }
 
   private static String hashString(String appendedInput) {
-    try {
-      MessageDigest digest = MessageDigest.getInstance(SHA_256);
+    String encodedString = "";
+    if (digest != null) {
       byte[] encodedHash = digest.digest(appendedInput.getBytes(StandardCharsets.UTF_8));
-      String encodedString = Base64.getEncoder().encodeToString(encodedHash);
-
-      return encodedString;
-    } catch (NoSuchAlgorithmException e) {
-      log.error("Error could not hash inputs because of exception ", e);
-      return "";
+      encodedString = Base64.getEncoder().encodeToString(encodedHash);
     }
+    return encodedString;
   }
 
   @ToString
