@@ -245,6 +245,9 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       DependantChain dependantChain,
       Map<Set<RequestId>, ResolverCommand> resolverCommandsByReq,
       Set<ResolverDefinition> resolverDefinitions) {
+    if (executedDependencies.getOrDefault(dependantChain, Set.of()).contains(depName)) {
+      return;
+    }
     KryonId depKryonId = kryonDefinition.dependencyKryons().get(depName);
     if (depKryonId == null) {
       throw new AssertionError("This is a bug.");
