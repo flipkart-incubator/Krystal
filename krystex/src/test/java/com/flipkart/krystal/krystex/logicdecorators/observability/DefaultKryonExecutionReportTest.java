@@ -13,6 +13,10 @@ import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonEx
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -58,9 +62,36 @@ class DefaultKryonExecutionReportTest {
     assertThat(logicExecInfo.getKryonId()).isEqualTo(kryonId.value());
     assertThat(logicExecInfo.getStartTimeMs()).isEqualTo(START_TIME.toEpochMilli());
     assertThat(logicExecInfo.getEndTimeMs()).isEqualTo(END_TIME.toEpochMilli());
-    assertThat(logicExecInfo.getResult())
+    assertThat(logicExecInfo.getResult()).isInstanceOf(Map.class);
+    @SuppressWarnings("unchecked")
+    Map<ImmutableMap<Integer, String>, String> mapResult =
+        (Map<ImmutableMap<Integer, String>, String>) logicExecInfo.getResult();
+    Map<ImmutableMap<Integer, String>, String> derefedMap = new LinkedHashMap<>();
+    mapResult.forEach(
+        (key, resultRef) -> {
+          Map<Integer, String> map = new LinkedHashMap<>();
+          key.forEach(
+              (inputName, valueRef) -> {
+                map.put(inputName, (String) kryonExecutionReport.getDataMap().get(valueRef));
+              });
+          derefedMap.put(
+              ImmutableMap.copyOf(map), (String) kryonExecutionReport.getDataMap().get(resultRef));
+        });
+    assertThat(derefedMap)
         .isEqualTo(ImmutableMap.of(ImmutableMap.of(1, "v1"), "r1", ImmutableMap.of(1, "v2"), "r1"));
-    assertThat(logicExecInfo.getInputsList())
+
+    ImmutableList<ImmutableMap<Integer, String>> inputsList = logicExecInfo.getInputsList();
+
+    List<Map<Integer, String>> dereffedInputList = new ArrayList<>();
+    for (ImmutableMap<Integer, String> inputs : inputsList) {
+      Map<Integer, String> map = new LinkedHashMap<>();
+      inputs.forEach(
+          (inputName, valueRef) -> {
+            map.put(inputName, (String) kryonExecutionReport.getDataMap().get(valueRef));
+          });
+      dereffedInputList.add(map);
+    }
+    assertThat(dereffedInputList)
         .isEqualTo(ImmutableList.of(ImmutableMap.of(1, "v1"), ImmutableMap.of(1, "v2")));
   }
 

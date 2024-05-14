@@ -40,10 +40,10 @@ import static com.flipkart.krystal.vajram.codegen.Constants.UNMOD_INPUT;
 import static com.flipkart.krystal.vajram.codegen.Constants.VAJRAM_LOGIC_METHOD;
 import static com.flipkart.krystal.vajram.codegen.Constants.VAL_ERR;
 import static com.flipkart.krystal.vajram.codegen.Constants.VARIABLE;
-import static com.flipkart.krystal.vajram.codegen.Utils.getImmutFacetsClassname;
-import static com.flipkart.krystal.vajram.codegen.Utils.getFacetsInterfaceName;
 import static com.flipkart.krystal.vajram.codegen.Utils.getBatchedFacetsClassname;
 import static com.flipkart.krystal.vajram.codegen.Utils.getCommonFacetsClassname;
+import static com.flipkart.krystal.vajram.codegen.Utils.getFacetsInterfaceName;
+import static com.flipkart.krystal.vajram.codegen.Utils.getImmutFacetsClassname;
 import static com.flipkart.krystal.vajram.codegen.Utils.getImmutRequestClassName;
 import static com.flipkart.krystal.vajram.codegen.Utils.getRequestInterfaceName;
 import static com.flipkart.krystal.vajram.codegen.Utils.getTypeParameters;
@@ -1617,12 +1617,11 @@ public class VajramCodeGenerator {
               .addModifiers(PUBLIC)
               .returns(
                   switch (returnType) {
-                    case simple ->
-                        unboxPrimitive(facetType)
-                            .typeName()
-                            // Remove @Nullable because getter has null check
-                            // and will never return null.
-                            .withoutAnnotations();
+                    case simple -> unboxPrimitive(facetType)
+                        .typeName()
+                        // Remove @Nullable because getter has null check
+                        // and will never return null.
+                        .withoutAnnotations();
                     case optional -> optional(boxableType);
                     case errable -> errable(boxableType);
                     case responses -> throw new AssertionError();
@@ -1644,9 +1643,8 @@ public class VajramCodeGenerator {
             .addStatement(
                 facetInCurrentClass
                     ? switch (returnType) {
-                      case optional ->
-                          CodeBlock.of(
-                              "return $T.ofNullable(this.$L)", Optional.class, facet.name());
+                      case optional -> CodeBlock.of(
+                          "return $T.ofNullable(this.$L)", Optional.class, facet.name());
                       case simple, errable -> CodeBlock.of("return this.$L", facet.name());
                       case responses -> throw new AssertionError();
                     }
@@ -1896,30 +1894,28 @@ public class VajramCodeGenerator {
                 } else {
                   setMethod.addStatement(
                       switch (returnType) {
-                        case simple, optional ->
-                            CodeBlock.of(
-                                codeGenParams.isUnBatched
-                                    ? facet.isBatched()
-                                        ? "case $L -> this._batchable.$L((($T)$L).valueOpt().orElse(null))"
-                                        : "case $L -> this._common.$L((($T)$L).valueOpt().orElse(null))"
-                                    : "case $L -> this.$L((($T)$L).valueOpt().orElse(null))",
-                                facet.id(),
-                                facet.name(),
-                                errable(getTypeName(facet.dataType())),
-                                facetValueParamName);
-                        case errable, responses ->
-                            CodeBlock.of(
-                                codeGenParams.isUnBatched
-                                    ? facet.isBatched()
-                                        ? "case $L -> this._batchable.$L(($T)$L)"
-                                        : "case $L -> this._common.$L(($T)$L)"
-                                    : "case $L -> this.$L(($T)$L)",
-                                facet.id(),
-                                facet.name(),
-                                ReturnType.errable.equals(returnType)
-                                    ? errable(getTypeName(facet.dataType()))
-                                    : responsesType((DependencyModel) facet),
-                                facetValueParamName);
+                        case simple, optional -> CodeBlock.of(
+                            codeGenParams.isUnBatched
+                                ? facet.isBatched()
+                                    ? "case $L -> this._batchable.$L((($T)$L).valueOpt().orElse(null))"
+                                    : "case $L -> this._common.$L((($T)$L).valueOpt().orElse(null))"
+                                : "case $L -> this.$L((($T)$L).valueOpt().orElse(null))",
+                            facet.id(),
+                            facet.name(),
+                            errable(getTypeName(facet.dataType())),
+                            facetValueParamName);
+                        case errable, responses -> CodeBlock.of(
+                            codeGenParams.isUnBatched
+                                ? facet.isBatched()
+                                    ? "case $L -> this._batchable.$L(($T)$L)"
+                                    : "case $L -> this._common.$L(($T)$L)"
+                                : "case $L -> this.$L(($T)$L)",
+                            facet.id(),
+                            facet.name(),
+                            ReturnType.errable.equals(returnType)
+                                ? errable(getTypeName(facet.dataType()))
+                                : responsesType((DependencyModel) facet),
+                            facetValueParamName);
                       });
                 }
               });
@@ -2027,14 +2023,13 @@ public class VajramCodeGenerator {
             ReturnType returnType = getReturnType(facetDef);
             getMethod.addStatement(
                 switch (returnType) {
-                  case responses, errable ->
-                      CodeBlock.of("case $L -> $L()", facetDef.id(), facetDef.name());
-                  case simple, optional ->
-                      CodeBlock.of(
-                          "case $L -> $T.withValue($L())",
-                          facetDef.id(),
-                          Errable.class,
-                          facetDef.name());
+                  case responses, errable -> CodeBlock.of(
+                      "case $L -> $L()", facetDef.id(), facetDef.name());
+                  case simple, optional -> CodeBlock.of(
+                      "case $L -> $T.withValue($L())",
+                      facetDef.id(),
+                      Errable.class,
+                      facetDef.name());
                 });
           });
       getMethod

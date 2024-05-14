@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.facets;
 
-import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 
 /**

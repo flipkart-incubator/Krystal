@@ -389,9 +389,12 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
               Map<Integer, List<InputResolverDefinition>> resolversByDep = new HashMap<>();
               for (DependencyResolutionRequest resolutionRequest : resolutionRequests) {
                 for (int resolverId : resolutionRequest.resolverIds()) {
-                  resolversByDep
-                      .computeIfAbsent(resolutionRequest.dependencyId(), _k -> new ArrayList<>())
-                      .add(inputResolvers.get(resolverId));
+                  InputResolverDefinition resolverDefinition = inputResolvers.get(resolverId);
+                  if (resolverDefinition != null) {
+                    resolversByDep
+                        .computeIfAbsent(resolutionRequest.dependencyId(), _k -> new ArrayList<>())
+                        .add(resolverDefinition);
+                  }
                 }
               }
               Map<Integer, ResolverCommand> resolverCommandsByDep = new LinkedHashMap<>();

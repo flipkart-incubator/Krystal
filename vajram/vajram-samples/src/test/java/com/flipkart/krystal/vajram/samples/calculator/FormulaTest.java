@@ -31,7 +31,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,7 +44,7 @@ class FormulaTest {
 
   @BeforeEach
   void setUp() {
-    graph = loadFromClasspath(Formula.class.getPackageName());
+    graph = Util.loadFromClasspath(Formula.class.getPackageName());
     Adder.CALL_COUNTER.reset();
   }
 
@@ -241,12 +240,6 @@ class FormulaTest {
 
   private record FormulaRequestContext(int a, int p, int q, String requestId)
       implements ApplicationRequestContext {}
-
-  private static Builder loadFromClasspath(String... packagePrefixes) {
-    Builder builder = VajramKryonGraph.builder();
-    Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
-    return builder;
-  }
 
   @Test
   void formula_success_withAllMockedDependencies() throws Exception {

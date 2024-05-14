@@ -4,7 +4,6 @@ import static com.flipkart.krystal.data.Errable.nil;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Failure;
-import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;

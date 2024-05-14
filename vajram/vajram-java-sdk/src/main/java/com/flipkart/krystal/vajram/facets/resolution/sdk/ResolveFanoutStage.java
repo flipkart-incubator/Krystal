@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.facets.resolution.sdk;
 
-import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
@@ -40,9 +39,8 @@ public final class ResolveFanoutStage<I, DV extends Request<?>> {
     return new Transform1FanoutResolverStage<>(targetInput, sourceInput);
   }
 
-  public <S1, S2, CV extends Request<?>>
-      Transform2FanoutResolverStage<S1, S2, I, CV, DV> using(
-          VajramFacetSpec<S1, CV> sourceInput1, VajramFacetSpec<S2, CV> sourceInput2) {
+  public <S1, S2, CV extends Request<?>> Transform2FanoutResolverStage<S1, S2, I, CV, DV> using(
+      VajramFacetSpec<S1, CV> sourceInput1, VajramFacetSpec<S2, CV> sourceInput2) {
     return new Transform2FanoutResolverStage<>(targetInput, sourceInput1, sourceInput2);
   }
 }

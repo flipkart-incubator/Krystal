@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram.exec;
 import static com.flipkart.krystal.vajram.utils.Constants.FACETS_CLASS_NAME_SUFFIX;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toMap;
 
 import com.flipkart.krystal.config.Tag;

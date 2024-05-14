@@ -7,8 +7,6 @@ import com.flipkart.krystal.vajram.facets.QualifiedInputs;
 import com.flipkart.krystal.vajram.facets.VajramDependencySpec;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import java.util.concurrent.atomic.LongAdder;
-import lombok.AccessLevel;
-import lombok.Getter;
 
 /** A resolver which resolves exactly one input of a dependency. */
 public abstract sealed class SimpleInputResolver<S, T, CV extends Request<?>, DV extends Request<?>>

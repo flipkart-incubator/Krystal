@@ -2,8 +2,6 @@ package com.flipkart.krystal.vajram.facets.resolution;
 
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.resolution.ResolverCommand.skip;
-import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
-import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil._resolutionHelper;
 
 import com.flipkart.krystal.data.Facets;
@@ -11,7 +9,6 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestBuilder;
 import com.flipkart.krystal.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
-import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.SingleExecute;
 import com.flipkart.krystal.vajram.facets.VajramDependencySpec;
 import com.google.common.collect.ImmutableList;

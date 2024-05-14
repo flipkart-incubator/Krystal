@@ -93,5 +93,4 @@ public final class FacetsMapBuilder implements FacetsBuilder {
   public FacetsMapBuilder _asBuilder() {
     return this;
   }
-
 }

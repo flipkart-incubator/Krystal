@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram.facets.resolution.sdk;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.toResolver;
 import static java.util.Arrays.stream;
 
-import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.VajramDependencySpec;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
@@ -36,10 +35,9 @@ public final class InputResolvers {
    * @param <DV> The dependency vajram
    */
   @SafeVarargs
-  public static <T, R, CV extends Request<?>, DV extends Request<T>>
-      List<InputResolver> dep(
-          VajramDependencySpec<T, R, CV, DV> dependency,
-          SimpleInputResolverSpec<?, CV, DV>... resolverStages) {
+  public static <T, R, CV extends Request<?>, DV extends Request<T>> List<InputResolver> dep(
+      VajramDependencySpec<T, R, CV, DV> dependency,
+      SimpleInputResolverSpec<?, CV, DV>... resolverStages) {
     return stream(resolverStages)
         .map(
             spec -> {

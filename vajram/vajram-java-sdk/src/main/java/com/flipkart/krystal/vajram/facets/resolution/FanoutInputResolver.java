@@ -5,8 +5,7 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.resolution.ResolverCommand;
 
 public non-sealed interface FanoutInputResolver extends InputResolver {
-  ResolverCommand resolve(
-      ImmutableRequest<Object> depRequest, Facets facets);
+  ResolverCommand resolve(ImmutableRequest<Object> depRequest, Facets facets);
 
   @Override
   default boolean canFanout() {

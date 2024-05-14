@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.facets.resolution.sdk;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;

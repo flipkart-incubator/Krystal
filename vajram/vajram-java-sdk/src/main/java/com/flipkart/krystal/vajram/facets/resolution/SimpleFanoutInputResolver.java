@@ -3,8 +3,6 @@ package com.flipkart.krystal.vajram.facets.resolution;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.resolution.ResolverCommand.computedRequests;
 import static com.flipkart.krystal.resolution.ResolverCommand.skip;
-import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
-import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil._resolutionHelper;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
