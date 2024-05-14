@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 class Add2And3Test {
 
   private final VajramKryonGraph graph =
-      VajramKryonGraph.builder().loadFromPackage(Formula.class.getPackageName()).build();
+      VajramKryonGraph.builder().loadFromPackage(Add2And3.class.getPackageName()).build();
 
   @Test
   void add2And3_success() {
