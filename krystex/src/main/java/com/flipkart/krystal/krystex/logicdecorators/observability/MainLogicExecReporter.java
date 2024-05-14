@@ -3,6 +3,8 @@ package com.flipkart.krystal.krystex.logicdecorators.observability;
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.flipkart.krystal.data.Errable.empty;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.io.File.pathSeparator;
+import static java.io.File.separator;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -19,6 +21,7 @@ import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.google.common.collect.ImmutableMap;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -36,8 +39,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class MainLogicExecReporter implements OutputLogicDecorator {
 
   private final KryonExecutionReport kryonExecutionReport;
-  private String DATE_TIME_PATTERN = "yyyy-MM-dd_HH:mm:ss";
-  private String FILE_PATH = "/tmp";
+  private static final String DATE_TIME_PATTERN = "yyyy-MM-dd_HH:mm:ss";
+  private static final String FILE_PATH =
+      separator + "tmp" + separator + "krystal_exec_graph_";
   private final ObjectMapper objectMapper;
 
   public MainLogicExecReporter(KryonExecutionReport kryonExecutionReport) {
