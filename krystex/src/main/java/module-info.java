@@ -24,4 +24,7 @@ module flipkart.krystal.krystex {
   requires static lombok;
   requires static org.slf4j;
   requires flipkart.krystal.common;
+  requires com.fasterxml.jackson.databind;
+  requires com.fasterxml.jackson.datatype.jsr310;
+  requires com.fasterxml.jackson.datatype.jdk8;
 }

@@ -12,9 +12,14 @@ import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Base64;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -30,9 +35,21 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
   @Getter private final Instant startTime;
   private final boolean verbose;
   private final Clock clock;
+  private static final String SHA_256 = "SHA-256";
+  @Nullable private static MessageDigest digest = null;
+
+  static {
+    try {
+      digest = MessageDigest.getInstance(SHA_256);
+    } catch (NoSuchAlgorithmException e) {
+      log.error("Error could not hash inputs because of exception ", e);
+    }
+  }
 
   @Getter
   private final Map<KryonExecution, LogicExecInfo> mainLogicExecInfos = new LinkedHashMap<>();
+
+  @Getter private final Map<String, Object> dataMap = new HashMap<>();
 
   public DefaultKryonExecutionReport(Clock clock) {
     this(clock, false);
@@ -85,21 +102,21 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
   }
 
   private record KryonExecution(
-      KryonId kryonId, ImmutableList<ImmutableMap<String, Object>> inputs) {
+      KryonId kryonId, ImmutableList<ImmutableMap<String, String>> inputs) {
     @Override
     public String toString() {
       return "%s(%s)".formatted(kryonId.value(), inputs);
     }
   }
 
-  private ImmutableMap<String, Object> extractAndConvertInputs(Facets facets) {
-    Map<String, Object> inputMap = new LinkedHashMap<>();
+  private ImmutableMap<String, String> extractAndConvertInputs(Facets facets) {
+    Map<String, String> inputMap = new LinkedHashMap<>();
     for (Entry<String, FacetValue<Object>> e : facets.values().entrySet()) {
       FacetValue<Object> value = e.getValue();
       if (!(value instanceof Errable<Object>)) {
         continue;
       }
-      Object collect = convertErrable((Errable<Object>) value);
+      String collect = convertErrable((Errable<Object>) value);
       if (collect != null) {
         inputMap.put(e.getKey(), collect);
       }
@@ -114,26 +131,45 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
       if (!(value instanceof Results<Object>)) {
         continue;
       }
-      Map<ImmutableMap<String, Object>, Object> collect = convertResult((Results<Object>) value);
+      Map<ImmutableMap<String, String>, String> collect = convertResult((Results<Object>) value);
       inputMap.put(e.getKey(), collect);
     }
     return ImmutableMap.copyOf(inputMap);
   }
 
-  private Object convertErrable(Errable<Object> voe) {
+  private String convertErrable(Errable<Object> voe) {
+    String sha256;
     if (voe.error().isPresent()) {
       Throwable throwable = voe.error().get();
-      return verbose ? getStackTraceAsString(throwable) : throwable.toString();
+      String stackTraceAsString = getStackTraceAsString(throwable);
+      sha256 = verbose ? hashValues(stackTraceAsString) : hashValues(throwable.toString());
+      dataMap.put(sha256, verbose ? stackTraceAsString : throwable.toString());
     } else {
-      return voe.value().orElse("null");
+      Object value = voe.value().orElse("null");
+      sha256 = hashValues(value);
+      dataMap.put(sha256, value);
     }
+    return sha256;
   }
 
-  private Map<ImmutableMap<String, Object>, Object> convertResult(Results<Object> results) {
+  private Map<ImmutableMap<String, String>, String> convertResult(Results<Object> results) {
     return results.values().entrySet().stream()
         .collect(
             Collectors.toMap(
                 e -> extractAndConvertInputs(e.getKey()), e -> convertErrable(e.getValue())));
+  }
+
+  public static <T> String hashValues(T input) {
+    return hashString(input != null ? input.toString() : "");
+  }
+
+  private static String hashString(String appendedInput) {
+    String encodedString = "";
+    if (digest != null) {
+      byte[] encodedHash = digest.digest(appendedInput.getBytes(StandardCharsets.UTF_8));
+      encodedString = Base64.getEncoder().encodeToString(encodedHash);
+    }
+    return encodedString;
   }
 
   @ToString
@@ -141,7 +177,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
   static final class LogicExecInfo {
 
     private final String kryonId;
-    private final ImmutableList<ImmutableMap<String, Object>> inputsList;
+    private final ImmutableList<ImmutableMap<String, String>> inputsList;
     private final @Nullable ImmutableList<ImmutableMap<String, Object>> dependencyResults;
     private @Nullable Object result;
     @Getter private final long startTimeMs;
@@ -167,7 +203,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
       this.dependencyResults = dependencyResults.isEmpty() ? null : dependencyResults;
     }
 
-    public void setResult(Map<ImmutableMap<String, Object>, Object> result) {
+    public void setResult(Map<ImmutableMap<String, String>, String> result) {
       if (inputsList.size() <= 1 && result.size() == 1) {
         this.result = result.values().iterator().next();
       } else {
