@@ -11,6 +11,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.failedFuture;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
@@ -45,16 +46,21 @@ import com.google.common.collect.Sets.SetView;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+@Slf4j
 final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
 
   private final Map<DependantChain, Set<String>> availableInputsByDepChain = new LinkedHashMap<>();
@@ -112,8 +118,31 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
         resultsByDepChain.computeIfAbsent(dependantChain, r -> new CompletableFuture<>());
     try {
       if (kryonCommand instanceof ForwardBatch forwardBatch) {
+        forwardBatch
+            .executableRequests()
+            .forEach(
+                (requestId, facets) -> {
+                  log.debug(
+                      "Exec Ids - {}: {} invoked with inputs {}, in call path {}",
+                      requestId,
+                      kryonId,
+                      facets,
+                      forwardBatch.dependantChain());
+                });
         collectInputValues(forwardBatch);
       } else if (kryonCommand instanceof CallbackBatch callbackBatch) {
+        callbackBatch
+            .resultsByRequest()
+            .forEach(
+                (requestId, results) -> {
+                  log.debug(
+                      "Exec Ids - {}: {} received response for dependency {} in call path {}. Response: {}",
+                      requestId,
+                      kryonId,
+                      callbackBatch.dependencyName(),
+                      callbackBatch.dependantChain(),
+                      results);
+                });
         collectDependencyValues(callbackBatch);
       }
       triggerDependencies(
@@ -167,7 +196,12 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
   private void triggerDependencies(
       DependantChain dependantChain, Map<String, Set<ResolverDefinition>> triggerableDependencies) {
     ForwardBatch forwardBatch = getForwardCommand(dependantChain);
-
+    log.debug(
+        "Exec ids: {}. Computed triggerable dependencies: {} of {} in call path {}",
+        forwardBatch.requestIds(),
+        triggerableDependencies.keySet(),
+        kryonId,
+        forwardBatch.dependantChain());
     Optional<MultiResolverDefinition> multiResolverOpt =
         kryonDefinition
             .multiResolverLogicId()
@@ -259,7 +293,12 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     }
     KryonId depKryonId = kryonDefinition.dependencyKryons().get(depName);
     if (depKryonId == null) {
-      throw new AssertionError("This is a bug.");
+      throw new AssertionError(
+          """
+          Could not find kryon mapped to dependency name %s in kryon %s.
+          This should not happen and is mostly a bug in the framework.
+          """
+              .formatted(depName, kryonId));
     }
     Map<RequestId, Facets> inputsByDepReq = new LinkedHashMap<>();
     Map<RequestId, String> skipReasonsByReq = new LinkedHashMap<>();
@@ -302,6 +341,15 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       }
     }
     executedDependencies.computeIfAbsent(dependantChain, _k -> new LinkedHashSet<>()).add(depName);
+    skipReasonsByReq.forEach(
+        (execId, reason) -> {
+          log.debug(
+              "Exec Ids: {}. Dependency {} of {} will be skipped due to reason {}",
+              execId,
+              depName,
+              kryonId,
+              reason);
+        });
     CompletableFuture<BatchResponse> depResponse =
         kryonExecutor.executeCommand(
             new ForwardBatch(
@@ -350,6 +398,24 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
               kryonDefinition,
               kryonExecutor);
         });
+    if (log.isDebugEnabled())
+      for (int timeout : List.of(5, 10, 15)) {
+        depResponse
+            .orTimeout(timeout, SECONDS)
+            .whenComplete(
+                (_r, throwable) -> {
+                  if (throwable instanceof TimeoutException) {
+                    log.debug(
+                        "KryonId: {}, Dependency: {} on: {} with depChain: {}. Status: Waiting since {} {}",
+                        kryonId,
+                        depName,
+                        depKryonId,
+                        dependantChain,
+                        timeout,
+                        SECONDS);
+                  }
+                });
+      }
     flushDependencyIfNeeded(depName, dependantChain);
   }
 
