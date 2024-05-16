@@ -149,7 +149,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
                         "Exec Ids - {}: {} received response for dependency {} in call path {}. Response: {}",
                         requestId,
                         kryonId,
-                        callbackBatch.dependencyName(),
+                        callbackBatch.dependencyId(),
                         callbackBatch.dependantChain(),
                         results);
                   });
@@ -321,7 +321,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
           Could not find kryon mapped to dependency name %s in kryon %s.
           This should not happen and is mostly a bug in the framework.
           """
-              .formatted(depName, kryonId));
+              .formatted(depId, kryonId));
     }
     Map<RequestId, ImmutableRequest<Object>> inputsByDepReq = new LinkedHashMap<>();
     Map<RequestId, String> skipReasonsByReq = new LinkedHashMap<>();
