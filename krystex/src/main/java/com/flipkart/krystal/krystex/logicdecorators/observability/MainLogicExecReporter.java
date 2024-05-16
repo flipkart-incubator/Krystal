@@ -36,8 +36,7 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
 
   private final KryonExecutionReport kryonExecutionReport;
   private static final String DATE_TIME_PATTERN = "yyyy-MM-dd_HH:mm:ss";
-  private static final String FILE_PATH =
-      separator + "tmp" + separator + "krystal_exec_graph_";
+  private static final String FILE_PATH = separator + "tmp" + separator + "krystal_exec_graph_";
   private final ObjectMapper objectMapper;
 
   public MainLogicExecReporter(KryonExecutionReport kryonExecutionReport) {
