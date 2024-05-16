@@ -117,31 +117,35 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
         resultsByDepChain.computeIfAbsent(dependantChain, r -> new CompletableFuture<>());
     try {
       if (kryonCommand instanceof ForwardBatch forwardBatch) {
-        forwardBatch
-            .executableRequests()
-            .forEach(
-                (requestId, facets) -> {
-                  log.debug(
-                      "Exec Ids - {}: {} invoked with inputs {}, in call path {}",
-                      requestId,
-                      kryonId,
-                      facets,
-                      forwardBatch.dependantChain());
-                });
+        if (log.isDebugEnabled()) {
+          forwardBatch
+              .executableRequests()
+              .forEach(
+                  (requestId, facets) -> {
+                    log.debug(
+                        "Exec Ids - {}: {} invoked with inputs {}, in call path {}",
+                        requestId,
+                        kryonId,
+                        facets,
+                        forwardBatch.dependantChain());
+                  });
+        }
         collectInputValues(forwardBatch);
       } else if (kryonCommand instanceof CallbackBatch callbackBatch) {
-        callbackBatch
-            .resultsByRequest()
-            .forEach(
-                (requestId, results) -> {
-                  log.debug(
-                      "Exec Ids - {}: {} received response for dependency {} in call path {}. Response: {}",
-                      requestId,
-                      kryonId,
-                      callbackBatch.dependencyName(),
-                      callbackBatch.dependantChain(),
-                      results);
-                });
+        if (log.isDebugEnabled()) {
+          callbackBatch
+              .resultsByRequest()
+              .forEach(
+                  (requestId, results) -> {
+                    log.debug(
+                        "Exec Ids - {}: {} received response for dependency {} in call path {}. Response: {}",
+                        requestId,
+                        kryonId,
+                        callbackBatch.dependencyName(),
+                        callbackBatch.dependantChain(),
+                        results);
+                  });
+        }
         collectDependencyValues(callbackBatch);
       }
       triggerDependencies(
@@ -195,12 +199,14 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
   private void triggerDependencies(
       DependantChain dependantChain, Map<String, Set<ResolverDefinition>> triggerableDependencies) {
     ForwardBatch forwardBatch = getForwardCommand(dependantChain);
-    log.debug(
-        "Exec ids: {}. Computed triggerable dependencies: {} of {} in call path {}",
-        forwardBatch.requestIds(),
-        triggerableDependencies.keySet(),
-        kryonId,
-        forwardBatch.dependantChain());
+    if (log.isDebugEnabled()) {
+      log.debug(
+          "Exec ids: {}. Computed triggerable dependencies: {} of {} in call path {}",
+          forwardBatch.requestIds(),
+          triggerableDependencies.keySet(),
+          kryonId,
+          forwardBatch.dependantChain());
+    }
     Optional<MultiResolverDefinition> multiResolverOpt =
         kryonDefinition
             .multiResolverLogicId()
@@ -340,15 +346,17 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       }
     }
     executedDependencies.computeIfAbsent(dependantChain, _k -> new LinkedHashSet<>()).add(depName);
-    skipReasonsByReq.forEach(
-        (execId, reason) -> {
-          log.debug(
-              "Exec Ids: {}. Dependency {} of {} will be skipped due to reason {}",
-              execId,
-              depName,
-              kryonId,
-              reason);
-        });
+    if (log.isDebugEnabled()) {
+      skipReasonsByReq.forEach(
+          (execId, reason) -> {
+            log.debug(
+                "Exec Ids: {}. Dependency {} of {} will be skipped due to reason {}",
+                execId,
+                depName,
+                kryonId,
+                reason);
+          });
+    }
     CompletableFuture<BatchResponse> depResponse =
         kryonExecutor.executeCommand(
             new ForwardBatch(
