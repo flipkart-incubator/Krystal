@@ -6,7 +6,7 @@ plugins {
 ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
-    krystal_version = '6.0.7-SNAPSHOT'
+    krystal_version = '6.0.1'
 }
 
 checkerFramework {
@@ -85,6 +85,7 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
         api platform('org.assertj:assertj-bom:3.25.2')
         api platform('io.github.resilience4j:resilience4j-bom:2.2.0')
         api platform('com.google.inject:guice-bom:7.0.0')
+        api platform('org.slf4j:slf4j-bom:2.0.13')
         constraints {
             implementation 'com.google.guava:guava:33.0.0-jre'
             implementation 'org.checkerframework:checker-qual:3.42.0'
