@@ -117,6 +117,7 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
     checkerFramework {
         checkers = [
                 'org.checkerframework.checker.nullness.NullnessChecker',
+                'org.checkerframework.checker.calledmethods.CalledMethodsChecker',
         ]
         extraJavacArgs = [
                 "-Astubs=${rootDir}/config/checker/stubs",
