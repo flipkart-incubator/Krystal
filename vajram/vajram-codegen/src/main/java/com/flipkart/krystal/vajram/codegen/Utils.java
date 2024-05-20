@@ -13,6 +13,7 @@ import com.flipkart.krystal.vajram.Generated;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.VajramDefinitionException;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.batching.Batch;
@@ -159,6 +160,8 @@ public class Utils {
                       InputModelBuilder<Object> inputBuilder =
                           InputModel.builder().facetField(inputField);
                       inputBuilder.name(inputField.getSimpleName().toString());
+                      inputBuilder.documentation(
+                          Optional.ofNullable(elementUtils.getDocComment(inputField)).orElse(""));
                       inputBuilder.isMandatory(!isOptional(inputField.asType(), processingEnv));
                       DataType<Object> dataType =
                           inputField
@@ -216,8 +219,9 @@ public class Utils {
                       "At least one of `onVajram` or `withVajramReq` is needed in dependency declaration '%s' of vajram '%s'"
                           .formatted(depField.getSimpleName(), vajramId),
                       depField);
-                  return new RuntimeException("Invalid Dependency specification");
+                  return new VajramDefinitionException("Invalid Dependency specification");
                 });
+    depBuilder.documentation(Optional.ofNullable(elementUtils.getDocComment(depField)).orElse(""));
     if (vajramReqType.isPresent() && vajramType.isPresent()) {
       error(
           ("Both `withVajramReq` and `onVajram` cannot be set."
@@ -249,7 +253,7 @@ public class Utils {
                 + " Found withVajramReq=%s and onVajram=%s")
             .formatted(depField.getSimpleName(), vajramId, vajramReqType.get(), vajramType.get()),
         depField);
-    throw new RuntimeException("Invalid Dependency specification");
+    throw new VajramDefinitionException("Invalid Dependency specification");
   }
 
   TypeElement getTypeElement(String name) {

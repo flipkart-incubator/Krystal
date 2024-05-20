@@ -4,15 +4,16 @@ import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.vajram.VajramID;
 import javax.lang.model.element.VariableElement;
 import lombok.Builder;
+import lombok.NonNull;
 
 @Builder
 public record DependencyModel(
-    String name,
-    VajramID depVajramId,
-    DataType<?> responseType,
-    String depReqClassQualifiedName,
+    @NonNull String name,
+    @NonNull VajramID depVajramId,
+    @NonNull DataType<?> responseType,
+    @NonNull String depReqClassQualifiedName,
     boolean isMandatory,
     boolean canFanout,
-    String documentation,
-    VariableElement facetField)
+    @NonNull String documentation,
+    @NonNull VariableElement facetField)
     implements FacetGenModel {}
