@@ -369,7 +369,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
             log.debug(
                 "Exec Ids: {}. Dependency {} of {} will be skipped due to reason {}",
                 execId,
-                kryonDefinition.dependencyKryons().get(depId),
+                Optional.ofNullable(kryonDefinition.dependencyKryons().get(depId)),
                 kryonId,
                 reason);
           });
@@ -438,7 +438,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
                     log.debug(
                         "KryonId: {}, Dependency: {} on: {} with depChain: {}. Status: Waiting since {} {}",
                         kryonId,
-                        kryonDefinition.dependencyKryons().get(depId),
+                        Optional.ofNullable(kryonDefinition.dependencyKryons().get(depId)),
                         depKryonId,
                         dependantChain,
                         timeout,

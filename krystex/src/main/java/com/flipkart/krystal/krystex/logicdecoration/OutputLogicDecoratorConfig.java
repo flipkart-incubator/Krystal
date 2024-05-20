@@ -5,6 +5,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
+ * Defines the configuration of an {@link OutputLogicDecorator}
+ *
  * @param decoratorType The id of the decorator
  * @param shouldDecorate A predicate which determines whether the logic decorator should decorate a
  *     logic which has the provided tags applied to it.

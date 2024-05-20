@@ -14,7 +14,6 @@ import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSet.Builder;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -22,6 +21,8 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
+ * A stateless, reusable definition of a Kryon
+ *
  * @param dependencyKryons Map of dependency name to kryonId.
  */
 public record KryonDefinition(
@@ -130,7 +131,7 @@ public record KryonDefinition(
     private static ImmutableMap<Optional<Integer>, ImmutableSet<ResolverDefinition>>
         createResolverDefinitionsBySource(
             ImmutableMap<Integer, ResolverDefinition> resolverDefinitions) {
-      Map<Optional<Integer>, Builder<ResolverDefinition>> resolverDefinitionsByInput =
+      Map<Optional<Integer>, ImmutableSet.Builder<ResolverDefinition>> resolverDefinitionsByInput =
           new LinkedHashMap<>();
       resolverDefinitions
           .values()

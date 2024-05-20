@@ -135,10 +135,9 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
         .execute(requests)
         .forEach(
             (inputs, resultFuture) -> {
-              //noinspection RedundantTypeArguments: To Handle nullChecker errors
               linkFutures(
                   resultFuture,
-                  futureCache.<CompletableFuture<@Nullable Object>>computeIfAbsent(
+                  futureCache.computeIfAbsent(
                       inputs._build(), request -> new CompletableFuture<@Nullable Object>()));
             });
   }
