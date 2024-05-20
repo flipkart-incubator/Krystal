@@ -26,6 +26,8 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @ToString
@@ -35,13 +37,14 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
   private final boolean verbose;
   private final Clock clock;
   private static final String SHA_256 = "SHA-256";
-  private static MessageDigest digest = null;
+  private static final @NonNull MessageDigest digest = initMessageDigest();
 
-  static {
+  static MessageDigest initMessageDigest() {
     try {
-      digest = MessageDigest.getInstance(SHA_256);
+      return MessageDigest.getInstance(SHA_256);
     } catch (NoSuchAlgorithmException e) {
       log.error("Error could not hash inputs because of exception ", e);
+      throw new IllegalStateException(e);
     }
   }
 
@@ -176,12 +179,8 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
   }
 
   private static String hashString(String appendedInput) {
-    String encodedString = "";
-    if (digest != null) {
-      byte[] encodedHash = digest.digest(appendedInput.getBytes(StandardCharsets.UTF_8));
-      encodedString = Base64.getEncoder().encodeToString(encodedHash);
-    }
-    return encodedString;
+    byte[] encodedHash = digest.digest(appendedInput.getBytes(StandardCharsets.UTF_8));
+    return Base64.getEncoder().encodeToString(encodedHash);
   }
 
   @ToString
