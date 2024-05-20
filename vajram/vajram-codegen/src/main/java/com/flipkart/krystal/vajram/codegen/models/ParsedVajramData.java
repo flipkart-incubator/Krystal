@@ -1,16 +1,17 @@
 package com.flipkart.krystal.vajram.codegen.models;
 
-import com.flipkart.krystal.datatypes.DataType;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.codegen.Utils;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
+import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -20,17 +21,14 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public record ParsedVajramData(
-    String vajramName,
     List<ExecutableElement> resolvers,
     ExecutableElement outputLogic,
-    TypeElement vajramClass,
     String packageName,
-    DataType<?> responseType) {
+    VajramInfo vajramInfo) {
 
   public static Optional<ParsedVajramData> fromVajram(VajramInfo vajramInfo, Utils util) {
-    TypeElement vajramClass = vajramInfo.vajramClass();
     String packageName = vajramInfo.packageName();
-    for (ExecutableElement method : iter(getAllMethods(vajramClass))) {
+    for (ExecutableElement method : getAllMethods(vajramInfo.vajramClass())) {
       String errorMessage =
           "Vajram class %s has non-static method %s"
               .formatted(vajramInfo.vajramId(), method.getSimpleName());
@@ -42,15 +40,8 @@ public record ParsedVajramData(
 
     List<ExecutableElement> resolverMethods = new ArrayList<>();
     ExecutableElement outputLogic =
-        getOutputLogicAndResolverMethods(vajramClass, resolverMethods, util);
-    return Optional.of(
-        new ParsedVajramData(
-            vajramInfo.vajramId().vajramId(),
-            resolverMethods,
-            outputLogic,
-            vajramClass,
-            packageName,
-            vajramInfo.responseType()));
+        getOutputLogicAndResolverMethods(vajramInfo.vajramClass(), resolverMethods, util);
+    return Optional.of(new ParsedVajramData(resolverMethods, outputLogic, packageName, vajramInfo));
   }
 
   public static void validateNoDuplicateResolvers(List<ExecutableElement> methods, Utils util) {
@@ -113,19 +104,16 @@ public record ParsedVajramData(
   }
 
   private static List<ExecutableElement> getStaticMethods(TypeElement vajramClass) {
-    return getAllMethods(vajramClass)
+    return getAllMethods(vajramClass).stream()
         .filter(element -> element.getModifiers().contains(Modifier.STATIC))
         .toList();
   }
 
-  private static Stream<ExecutableElement> getAllMethods(TypeElement vajramCalss) {
+  private static ImmutableList<ExecutableElement> getAllMethods(TypeElement vajramCalss) {
     return vajramCalss.getEnclosedElements().stream()
         .filter(element -> element.getKind() == ElementKind.METHOD)
-        .map(element -> (ExecutableElement) element);
-  }
-
-  private static <T> Iterable<T> iter(Stream<T> elementStream) {
-    return elementStream::iterator;
+        .map(element -> (ExecutableElement) element)
+        .collect(toImmutableList());
   }
 
   private static boolean isStatic(Element element) {

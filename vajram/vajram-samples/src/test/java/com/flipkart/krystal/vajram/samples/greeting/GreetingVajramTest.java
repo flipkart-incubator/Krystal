@@ -26,7 +26,6 @@ import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecR
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
@@ -51,7 +50,7 @@ class GreetingVajramTest {
 
   private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
-  private Builder graph;
+  private VajramKryonGraph.Builder graph;
   private ObjectMapper objectMapper;
   private static final String USER_ID = "user@123";
   private static final String USER_NAME = "Ranchhoddas Shyamakdas Chanchhad";
@@ -136,10 +135,12 @@ class GreetingVajramTest {
   private static InputInjectionProvider wrapInjector(Injector injector) {
     return new InputInjectionProvider() {
 
+      @Override
       public Object getInstance(Class<?> clazz) {
         return injector.getInstance(clazz);
       }
 
+      @Override
       public Object getInstance(Class<?> clazz, String injectionName) {
         return injector.getInstance(Key.get(clazz, Names.named(injectionName)));
       }

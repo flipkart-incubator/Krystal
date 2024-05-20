@@ -22,4 +22,10 @@ class Messager {
   void printMessage(Diagnostic.Kind kind, CharSequence msg, @Nullable Element e);
 }
 
+package javax.lang.model.util;
+
+class Elements {
+  @Nullable TypeElement getTypeElement(CharSequence name);
+}
+
 

@@ -6,7 +6,6 @@ import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -102,8 +101,8 @@ public final class Util {
             graph.getExecutorPool().maxPoolSize());
   }
 
-  public static Builder loadFromClasspath(String... packagePrefixes) {
-    Builder builder = VajramKryonGraph.builder();
+  public static VajramKryonGraph.Builder loadFromClasspath(String... packagePrefixes) {
+    VajramKryonGraph.Builder builder = VajramKryonGraph.builder();
     stream(packagePrefixes).forEach(builder::loadFromPackage);
     return builder;
   }

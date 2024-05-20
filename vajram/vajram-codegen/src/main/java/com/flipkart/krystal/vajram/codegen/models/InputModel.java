@@ -11,7 +11,7 @@ import lombok.NonNull;
 @Builder
 public record InputModel<T>(
     @NonNull String name,
-    @NonNull DataType<?> type,
+    @NonNull DataType<T> type,
     boolean isMandatory,
     @NonNull String documentation,
     boolean isBatched,

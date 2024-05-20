@@ -9,6 +9,7 @@ public final class Constants {
   public static final String RESOLVABLE_INPUTS = "resolvableInputs";
   public static final String INPUT_SRC = "inputSrc";
   public static final String INPUT_BATCHING = "inputBatching";
+  public static final String FACET_UTIL = "facetUtil";
   public static final String COMMON_INPUT = "commonInput";
   public static final String RETURN_TYPE = "returnType";
   public static final String VAJRAM_LOGIC_METHOD = "outputLogicMethod";
@@ -31,14 +32,14 @@ public final class Constants {
   public static final String ILLEGAL_ARGUMENT = "illegalArgument";
   public static final String REQUEST = "request";
   public static final String RESPONSES_SUFFIX = "Responses";
-  public static final String METHOD_GET_INPUTS_CONVERTOR = "getInputsConvertor";
+  public static final String METHOD_GET_FACETS_CONVERTOR = "getBatchFacetsConvertor";
   public static final String METHOD_EXECUTE = "execute";
   public static final String METHOD_RESOLVE_INPUT_OF_DEPENDENCY = "resolveInputOfDependency";
   public static final String METHOD_EXECUTE_COMPUTE = "executeCompute";
   public static final String GET_FACET_DEFINITIONS = "getFacetDefinitions";
   public static final String FACETS_CLASS_SUFFIX = "Facets";
   public static final String INPUTS_LIST = "facetsList";
-  public static final String BATCHABLE_INPUTS = "InputBatch";
+  public static final String BATCHABLE_FACETS = "BatchFacets";
   public static final String COMMON_FACETS = "CommonFacets";
   public static final String INPUTS = "facets";
   public static final String UNMOD_INPUT = "unmodInput";
@@ -47,27 +48,6 @@ public final class Constants {
   public static final String IM_LIST = "imList";
   public static final String FUNCTION = "function";
   public static final String OPTIONAL = "optional";
-  public static final String INPUT_BATCHING_CODE_BLOCK =
-      """
-                $map:T<$inputBatching:T, $facets:T> mapping = new $hashMap:T<>();
-                $commonInput:T commonFacets = null;
-                for ($facets:T facets : facetsList) {
-                  $unmodInput:T<$inputBatching:T, $commonInput:T> allInputs =
-                      getInputsConvertor().apply(facets);
-                  commonFacets = allInputs.commonFacets();
-                  $inputBatching:T im = allInputs.batchedInputs();
-                  mapping.put(im, facets);
-                }
-                $map:T<$facets:T, $valErr:T<$returnType:T>> returnValue = new $linkHashMap:T<>();
-
-                if (commonFacets != null) {
-                  var results = $outputLogicMethod:L(new $modInput:T<>($imList:T.copyOf(mapping.keySet()), commonFacets));
-                  results.forEach((im, value) -> returnValue.put(
-                       $optional:T.ofNullable(mapping.get(im)).orElseThrow(),
-                       $valErr:T.withValue(value)));
-                }
-                return $imMap:T.copyOf(returnValue);
-            """;
 
   public static final String INPUT_BATCHING_FUTURE_CODE_BLOCK =
       """
@@ -75,7 +55,8 @@ public final class Constants {
                 $commonInput:T commonFacets = null;
                 for ($facets:T facets : facetsList) {
                   $unmodInput:T<$inputBatching:T, $commonInput:T> allInputs =
-                      getInputsConvertor().apply(facets);
+                      new $unmodInput:T($facetUtil:T.BATCH_CONVERTER.getBatched(facets)
+                                        ,$facetUtil:T.BATCH_CONVERTER.getCommon(facets));
                   commonFacets = allInputs.commonFacets();
                   $inputBatching:T im = allInputs.batchedInputs();
                   mapping.put(im, facets);

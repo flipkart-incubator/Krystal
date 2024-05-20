@@ -64,7 +64,13 @@ public final class InputBatchingDecorator<
     inputBatcher.onBatching(
         requests -> requests.forEach(request -> batchFacetsList(logicToDecorate, request)));
     return facetsList -> {
-      List<UnBatchedFacets<I, C>> requests = facetsList.stream().map(facetsConverter).toList();
+      List<UnBatchedFacets<I, C>> requests =
+          facetsList.stream()
+              .map(
+                  facets ->
+                      new UnBatchedFacets<>(
+                          facetsConverter.getBatched(facets), facetsConverter.getCommon(facets)))
+              .toList();
       List<BatchedFacets<I, C>> batchedFacetsList =
           requests.stream()
               .map(
@@ -114,17 +120,16 @@ public final class InputBatchingDecorator<
   private void batchFacetsList(
       OutputLogic<Object> logicToDecorate, BatchedFacets<I, C> batchedFacets) {
     ImmutableList<UnBatchedFacets<I, C>> requests =
-        batchedFacets.batchedInputs().stream()
+        batchedFacets.batch().stream()
             .map(each -> new UnBatchedFacets<>(each, batchedFacets.commonFacets()))
             .collect(toImmutableList());
     logicToDecorate
         .execute(requests.stream().map(UnBatchedFacets::toFacetValues).collect(toImmutableList()))
         .forEach(
             (inputs, resultFuture) -> {
-              //noinspection RedundantTypeArguments: To Handle nullChecker errors
               linkFutures(
                   resultFuture,
-                  futureCache.<CompletableFuture<@Nullable Object>>computeIfAbsent(
+                  futureCache.computeIfAbsent(
                       inputs, request -> new CompletableFuture<@Nullable Object>()));
             });
   }

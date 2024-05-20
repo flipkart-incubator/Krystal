@@ -15,7 +15,6 @@ import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
-import com.flipkart.krystal.vajram.samples.calculator.FormulaFacetUtil.FormulaFacets;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
 import com.flipkart.krystal.vajram.samples.calculator.divider.Divider;
 import com.google.common.collect.ImmutableCollection;
@@ -51,8 +50,7 @@ public abstract class Formula extends ComputeVajram<Integer> {
   }
 
   @Output
-  static int result(FormulaFacets facets) {
-    /* Return quotient */
-    return facets.quotient();
+  static int result(int quotient) {
+    return quotient;
   }
 }

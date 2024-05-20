@@ -23,13 +23,13 @@ import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.AbstractTypeVisitor14;
 import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
 
-class DeclaredTypeVisitor extends AbstractTypeVisitor14<DataType<?>, Void> {
+class DeclaredTypeVisitor<T> extends AbstractTypeVisitor14<DataType<T>, Void> {
   private final ProcessingEnvironment processingEnv;
   private final Utils util;
   private final boolean ignoreFirstOptional;
   private final Element element;
 
-  @NotOnlyInitialized private final DeclaredTypeVisitor subVisitor;
+  @NotOnlyInitialized private final DeclaredTypeVisitor<T> subVisitor;
 
   DeclaredTypeVisitor(Utils util, boolean ignoreFirstOptional, Element element) {
     this.util = util;
@@ -37,14 +37,14 @@ class DeclaredTypeVisitor extends AbstractTypeVisitor14<DataType<?>, Void> {
     this.ignoreFirstOptional = ignoreFirstOptional;
     this.element = element;
     if (ignoreFirstOptional) {
-      this.subVisitor = new DeclaredTypeVisitor(util, false, element);
+      this.subVisitor = new DeclaredTypeVisitor<>(util, false, element);
     } else {
       this.subVisitor = this;
     }
   }
 
   @Override
-  public DataType<?> visitDeclared(DeclaredType t, Void inputDef) {
+  public DataType<T> visitDeclared(DeclaredType t, Void inputDef) {
     boolean optional = isOptional(t, processingEnv);
     if (optional) {
       TypeMirror optionalOf = t.getTypeArguments().get(0);
@@ -60,52 +60,52 @@ class DeclaredTypeVisitor extends AbstractTypeVisitor14<DataType<?>, Void> {
   }
 
   @Override
-  public DataType<?> visitPrimitive(PrimitiveType t, Void unused) {
+  public DataType<T> visitPrimitive(PrimitiveType t, Void unused) {
     return JavaType.create(t.toString(), List.of());
   }
 
   @Override
-  public DataType<?> visitArray(ArrayType t, Void unused) {
+  public DataType<T> visitArray(ArrayType t, Void unused) {
     throw uoe();
   }
 
   @Override
-  public DataType<?> visitTypeVariable(TypeVariable t, Void unused) {
+  public DataType<T> visitTypeVariable(TypeVariable t, Void unused) {
     throw uoe();
   }
 
   @Override
-  public DataType<?> visitNull(NullType t, Void unused) {
+  public DataType<T> visitNull(NullType t, Void unused) {
     throw uoe();
   }
 
   @Override
-  public DataType<?> visitIntersection(IntersectionType t, Void unused) {
+  public DataType<T> visitIntersection(IntersectionType t, Void unused) {
     throw uoe();
   }
 
   @Override
-  public DataType<?> visitError(ErrorType t, Void unused) {
+  public DataType<T> visitError(ErrorType t, Void unused) {
     throw uoe();
   }
 
   @Override
-  public DataType<?> visitWildcard(WildcardType t, Void unused) {
+  public DataType<T> visitWildcard(WildcardType t, Void unused) {
     throw uoe();
   }
 
   @Override
-  public DataType<?> visitExecutable(ExecutableType t, Void unused) {
+  public DataType<T> visitExecutable(ExecutableType t, Void unused) {
     throw uoe();
   }
 
   @Override
-  public DataType<?> visitNoType(NoType t, Void unused) {
+  public DataType<T> visitNoType(NoType t, Void unused) {
     throw uoe();
   }
 
   @Override
-  public DataType<?> visitUnion(UnionType t, Void unused) {
+  public DataType<T> visitUnion(UnionType t, Void unused) {
     throw uoe();
   }
 
