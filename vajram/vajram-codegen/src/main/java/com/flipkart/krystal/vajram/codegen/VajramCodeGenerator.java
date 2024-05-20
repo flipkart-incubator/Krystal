@@ -277,7 +277,7 @@ public class VajramCodeGenerator {
         util.toTypeName(getParsedVajramData().vajramInfo().responseType());
 
     methodSpecs.add(createFacetDefinitions());
-    methodSpecs.add(createInputResolvers(resolverMap, depFanoutMap));
+    methodSpecs.add(createInputResolvers(resolverMap));
     createResolvers(resolverMap, depFanoutMap).ifPresent(methodSpecs::add);
 
     if (util.isRawAssignable(
@@ -336,8 +336,7 @@ public class VajramCodeGenerator {
     return writer.toString();
   }
 
-  private MethodSpec createInputResolvers(
-      Map<Integer, List<ExecutableElement>> resolverMap, Map<String, Boolean> depFanoutMap) {
+  private MethodSpec createInputResolvers(Map<Integer, List<ExecutableElement>> resolverMap) {
     MethodSpec.Builder getInputResolversMethod =
         methodBuilder(GET_INPUT_RESOLVERS)
             .addModifiers(PUBLIC)
@@ -351,7 +350,7 @@ public class VajramCodeGenerator {
 
     resolverMap.forEach(
         (depId, resolverMethods) -> {
-          DependencyModel dep =
+          DependencyModel unused =
               vajramInfo.dependencies().stream()
                   .filter(d -> d.id() == depId)
                   .findAny()
@@ -787,7 +786,7 @@ public class VajramCodeGenerator {
                   }
                   // validating if the bind parameter has a resolver binding or defined as
                   // inputDef
-                  if (!(facetModels.containsKey(facetName))) {
+                  if (!facetModels.containsKey(facetName)) {
                     throw util.errorAndThrow(
                         "Parameter binding incorrect for inputDef - " + facetName, parameter);
                   }
@@ -1385,8 +1384,8 @@ public class VajramCodeGenerator {
           getPackageName() + '.' + getRequestInterfaceName(vajramName),
           writer.toString(),
           vajramInfo.vajramClass());
-    } catch (IOException ignored) {
-
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
     try {
       StringWriter writer = new StringWriter();
@@ -1414,8 +1413,8 @@ public class VajramCodeGenerator {
           getPackageName() + '.' + getImmutRequestClassName(vajramName),
           writer.toString(),
           vajramInfo.vajramClass());
-    } catch (IOException ignored) {
-
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -2007,7 +2006,8 @@ public class VajramCodeGenerator {
                 .toArray());
   }
 
-  private MethodSpec.Builder _getMethod(List<? extends FacetGenModel> eligibleFacets, boolean isRequest) {
+  private MethodSpec.Builder _getMethod(
+      List<? extends FacetGenModel> eligibleFacets, boolean isRequest) {
     String facetIdParamName = "facetId";
     MethodSpec.Builder getMethod =
         methodBuilder("_get")

@@ -8,6 +8,7 @@ import java.util.EnumSet;
 import javax.lang.model.element.VariableElement;
 import lombok.Builder;
 import lombok.NonNull;
+import org.checkerframework.common.returnsreceiver.qual.This;
 
 @Builder
 public record InputModel<T>(
@@ -20,9 +21,6 @@ public record InputModel<T>(
     ImmutableSet<FacetType> facetTypes,
     @NonNull VariableElement facetField)
     implements FacetGenModel {
-
-  private static final ImmutableSet<InputSource> DEFAULT_INPUT_SOURCES =
-      ImmutableSet.of(InputSource.CLIENT);
 
   public ImmutableSet<InputSource> sources() {
     ImmutableSet.Builder<InputSource> sources = ImmutableSet.builderWithExpectedSize(2);
@@ -38,7 +36,7 @@ public record InputModel<T>(
 
   public static class InputModelBuilder<T> {
 
-    public InputModelBuilder<T> facetTypes(EnumSet<FacetType> facetTypes) {
+    public @This InputModelBuilder<T> facetTypes(EnumSet<FacetType> facetTypes) {
       if (facetTypes != null) {
         this.facetTypes = ImmutableSet.copyOf(facetTypes);
       }

@@ -220,6 +220,8 @@ public class Utils {
         Optional.ofNullable(givenIdsByName.get(facetName))
             .orElseGet(() -> getNextAvailableFacetId(takenFacetIds, nextFacetId)));
     inputBuilder.name(facetName);
+    inputBuilder.documentation(
+        Optional.ofNullable(elementUtils.getDocComment(inputField)).orElse(""));
     inputBuilder.isMandatory(!isOptional(inputField.asType(), processingEnv));
     DataType<Object> dataType =
         inputField.asType().accept(new DeclaredTypeVisitor<>(this, true, inputField), null);
