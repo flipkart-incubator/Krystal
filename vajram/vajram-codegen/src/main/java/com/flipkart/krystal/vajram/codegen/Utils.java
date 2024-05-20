@@ -17,6 +17,7 @@ import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.Generated;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.VajramDefinitionException;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.codegen.models.DependencyModel;
@@ -282,8 +283,9 @@ public class Utils {
                       "At least one of `onVajram` or `withVajramReq` is needed in dependency declaration '%s' of vajram '%s'"
                           .formatted(depField.getSimpleName(), vajramId),
                       depField);
-                  return new RuntimeException("Invalid Dependency specification");
+                  return new VajramDefinitionException("Invalid Dependency specification");
                 });
+    depBuilder.documentation(Optional.ofNullable(elementUtils.getDocComment(depField)).orElse(""));
     if (vajramReqType.isPresent() && vajramType.isPresent()) {
       error(
           ("Both `withVajramReq` and `onVajram` cannot be set."

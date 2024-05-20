@@ -7,18 +7,19 @@ import com.google.common.collect.ImmutableSet;
 import java.util.EnumSet;
 import javax.lang.model.element.VariableElement;
 import lombok.Builder;
+import lombok.NonNull;
 
 @Builder
 public record DependencyModel(
     int id,
-    String name,
-    VajramID depVajramId,
-    DataType<?> dataType,
-    String depReqClassQualifiedName,
+    @NonNull String name,
+    @NonNull VajramID depVajramId,
+    @NonNull DataType<?> dataType,
+    @NonNull String depReqClassQualifiedName,
     boolean isMandatory,
     boolean canFanout,
-    String documentation,
-    VariableElement facetField)
+    @NonNull String documentation,
+    @NonNull VariableElement facetField)
     implements FacetGenModel {
 
   private static final ImmutableSet<FacetType> DEP_FACET_TYPE =

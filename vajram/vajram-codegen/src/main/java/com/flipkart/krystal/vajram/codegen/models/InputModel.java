@@ -7,18 +7,18 @@ import com.google.common.collect.ImmutableSet;
 import java.util.EnumSet;
 import javax.lang.model.element.VariableElement;
 import lombok.Builder;
+import lombok.NonNull;
 
 @Builder
 public record InputModel<T>(
     int id,
-    String name,
-    DataType<T> dataType,
+    @NonNull String name,
+    @NonNull DataType<T> dataType,
     boolean isMandatory,
-    T defaultValue,
-    String documentation,
+    @NonNull String documentation,
     boolean isBatched,
     ImmutableSet<FacetType> facetTypes,
-    VariableElement facetField)
+    @NonNull VariableElement facetField)
     implements FacetGenModel {
 
   private static final ImmutableSet<InputSource> DEFAULT_INPUT_SOURCES =
