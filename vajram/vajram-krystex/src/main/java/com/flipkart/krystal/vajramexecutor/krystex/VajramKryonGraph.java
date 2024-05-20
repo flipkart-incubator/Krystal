@@ -517,6 +517,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
 
   private void validateMandatory(
       VajramID vajramID, Facets facets, ImmutableCollection<VajramFacetDefinition> requiredInputs) {
+    @SuppressWarnings("StreamToIterable")
     Iterable<VajramFacetDefinition> mandatoryInputs =
         requiredInputs.stream()
                 .filter(facetDefinition -> facetDefinition instanceof InputDef<?>)

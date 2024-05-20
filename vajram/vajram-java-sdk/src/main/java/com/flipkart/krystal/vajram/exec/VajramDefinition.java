@@ -113,7 +113,7 @@ public final class VajramDefinition {
       }
       Annotation[] annotations = declaredField.getAnnotations();
       for (Annotation annotation : annotations) {
-        boolean isRepeatable = annotation.getClass().getAnnotation(Repeatable.class) != null;
+        boolean isRepeatable = annotation.annotationType().getAnnotation(Repeatable.class) != null;
         if (isRepeatable) {
           log.warn("Repeatable annotations are not supported as tags. Ignoring {}", annotation);
         } else {

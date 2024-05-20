@@ -26,6 +26,6 @@ public final class AnnotationTag<T extends Annotation> implements Tag {
 
   public static <A extends Annotation> AnnotationTag<A> from(A annotation) {
     //noinspection unchecked
-    return new AnnotationTag<>((Class<A>) annotation.getClass(), annotation);
+    return new AnnotationTag<>((Class<A>) annotation.annotationType(), annotation);
   }
 }

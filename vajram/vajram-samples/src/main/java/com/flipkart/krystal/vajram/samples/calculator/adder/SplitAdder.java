@@ -35,7 +35,7 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
   }
 
   @Resolve(depName = splitSum1_n, depInputs = numbers_n)
-  public static SingleExecute<ArrayList<Integer>> numbersForSubSplitter1(
+  public static SingleExecute<List<Integer>> numbersForSubSplitter1(
       @Using(numbers_n) List<Integer> numbers) {
     if (numbers.size() < 2) {
       return skipExecution(
@@ -47,7 +47,7 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
   }
 
   @Resolve(depName = splitSum2_n, depInputs = numbers_n)
-  public static SingleExecute<ArrayList<Integer>> numbersForSubSplitter2(
+  public static SingleExecute<List<Integer>> numbersForSubSplitter2(
       @Using(numbers_n) List<Integer> numbers) {
     if (numbers.size() < 2) {
       return skipExecution(

@@ -100,7 +100,6 @@ import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.MethodSpec.Builder;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
@@ -257,8 +256,8 @@ public class VajramCodeGenerator {
           .indent("  ")
           .build()
           .writeTo(writer);
-    } catch (IOException ignored) {
-
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
     return writer.toString();
   }
@@ -299,7 +298,7 @@ public class VajramCodeGenerator {
    */
   private MethodSpec createComputeVajramExecuteMethod(TypeName vajramResponseType) {
 
-    Builder executeBuilder =
+    MethodSpec.Builder executeBuilder =
         methodBuilder(METHOD_EXECUTE_COMPUTE)
             .addModifiers(PUBLIC)
             .addParameter(ParameterizedTypeName.get(ImmutableList.class, Facets.class), INPUTS_LIST)
@@ -326,7 +325,8 @@ public class VajramCodeGenerator {
     return executeBuilder.build();
   }
 
-  private void nonBatchedExecuteMethodBuilder(Builder executeBuilder, boolean isIOVajram) {
+  private void nonBatchedExecuteMethodBuilder(
+      MethodSpec.Builder executeBuilder, boolean isIOVajram) {
     CodeBlock.Builder returnBuilder =
         CodeBlock.builder()
             .add(
@@ -536,7 +536,7 @@ public class VajramCodeGenerator {
    */
   private MethodSpec createBatchFacetConvertersMethod(
       ClassName batchableInputs, ClassName commonInputs) {
-    Builder inputConvertersBuilder =
+    MethodSpec.Builder inputConvertersBuilder =
         methodBuilder(METHOD_GET_FACETS_CONVERTOR)
             .addModifiers(PUBLIC)
             .returns(
@@ -566,7 +566,7 @@ public class VajramCodeGenerator {
   private MethodSpec createIOVajramExecuteMethod(
       ClassName batchableInputs, ClassName commonFacets, TypeName vajramResponseType) {
 
-    Builder executeMethodBuilder =
+    MethodSpec.Builder executeMethodBuilder =
         methodBuilder(METHOD_EXECUTE)
             .addModifiers(PUBLIC)
             .addParameter(ParameterizedTypeName.get(ImmutableList.class, Facets.class), INPUTS_LIST)
@@ -639,7 +639,7 @@ public class VajramCodeGenerator {
       Map<String, ? extends List<ExecutableElement>> resolverMap,
       Map<String, Boolean> depFanoutMap) {
     String dependencyDef = "dependencyDef";
-    Builder resolveInputsBuilder =
+    MethodSpec.Builder resolveInputsBuilder =
         methodBuilder(METHOD_RESOLVE_INPUT_OF_DEPENDENCY)
             .addModifiers(PUBLIC)
             .addParameter(String.class, dependencyDef)
@@ -1066,7 +1066,7 @@ public class VajramCodeGenerator {
    */
   private MethodSpec createFacetDefinitions() {
     // Method : getFacetDefinitions
-    Builder facetDefinitionsBuilder =
+    MethodSpec.Builder facetDefinitionsBuilder =
         methodBuilder(GET_FACET_DEFINITIONS)
             .addModifiers(PUBLIC)
             .returns(ParameterizedTypeName.get(ImmutableList.class, VajramFacetDefinition.class))
@@ -1192,7 +1192,7 @@ public class VajramCodeGenerator {
 
   public String codeGenVajramRequest() {
     ImmutableList<InputModel<?>> inputDefs = vajramInfo.inputs();
-    Builder requestConstructor = constructorBuilder().addModifiers(PRIVATE);
+    MethodSpec.Builder requestConstructor = constructorBuilder().addModifiers(PRIVATE);
     ClassName builderClassType =
         ClassName.get(packageName + Constants.DOT_SEPARATOR + requestClassName, "Builder");
     TypeSpec.Builder requestClass =
@@ -1318,8 +1318,8 @@ public class VajramCodeGenerator {
               .build());
     }
 
-    requestClass.addFields(inputNameFields.stream().map(FieldSpec.Builder::build)::iterator);
-    requestClass.addFields(inputSpecFields.stream().map(FieldSpec.Builder::build)::iterator);
+    requestClass.addFields(inputNameFields.stream().map(FieldSpec.Builder::build).toList());
+    requestClass.addFields(inputSpecFields.stream().map(FieldSpec.Builder::build).toList());
 
     builderClass.addMethod(
         // public Request build(){
@@ -1349,8 +1349,8 @@ public class VajramCodeGenerator {
                   .build())
           .build()
           .writeTo(writer);
-    } catch (IOException ignored) {
-
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
     return writer.toString();
   }
@@ -1383,8 +1383,9 @@ public class VajramCodeGenerator {
       PrimitiveType primitiveType;
       try {
         primitiveType = processingEnv.getTypeUtils().unboxedType(javaType.type().get());
-      } catch (IllegalArgumentException ignored) {
+      } catch (IllegalArgumentException e) {
         // This means the type is not a boxed type
+        log.info("", e);
         return javaType;
       }
       return new TypeAndName(
@@ -1395,7 +1396,7 @@ public class VajramCodeGenerator {
 
   private FromAndTo fromAndToMethods(
       List<? extends FacetGenModel> facetDefs, ClassName enclosingClass) {
-    Builder toFacetValues =
+    MethodSpec.Builder toFacetValues =
         methodBuilder("toFacetValues")
             .returns(Facets.class)
             .addModifiers(PUBLIC)
@@ -1416,7 +1417,7 @@ public class VajramCodeGenerator {
                     .flatMap(Function.identity())
                     .toArray());
 
-    Builder fromFacetValues =
+    MethodSpec.Builder fromFacetValues =
         methodBuilder("from")
             .returns(enclosingClass)
             .addModifiers(PUBLIC, STATIC)
@@ -1549,8 +1550,8 @@ public class VajramCodeGenerator {
       JavaFile.builder(packageName, inputUtilClass.addType(allInputsClass.build()).build())
           .build()
           .writeTo(writer);
-    } catch (IOException ignored) {
-
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
     return writer.toString();
   }
@@ -1704,8 +1705,8 @@ public class VajramCodeGenerator {
                   .build())
           .build()
           .writeTo(writer);
-    } catch (IOException ignored) {
-
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
     return writer.toString();
   }
@@ -1756,7 +1757,7 @@ public class VajramCodeGenerator {
         depSpecFields.add(inputSpecField.addModifiers(STATIC, FINAL));
       }
     }
-    return classBuilder.addFields(depSpecFields.stream().map(FieldSpec.Builder::build)::iterator);
+    return classBuilder.addFields(depSpecFields.stream().map(FieldSpec.Builder::build).toList());
   }
 
   public String getRequestClassName() {

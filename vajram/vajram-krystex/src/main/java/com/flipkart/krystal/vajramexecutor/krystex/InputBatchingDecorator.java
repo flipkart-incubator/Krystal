@@ -127,10 +127,9 @@ public final class InputBatchingDecorator<
         .execute(requests.stream().map(UnBatchedFacets::toFacetValues).collect(toImmutableList()))
         .forEach(
             (inputs, resultFuture) -> {
-              //noinspection RedundantTypeArguments: To Handle nullChecker errors
               linkFutures(
                   resultFuture,
-                  futureCache.<CompletableFuture<@Nullable Object>>computeIfAbsent(
+                  futureCache.computeIfAbsent(
                       inputs, request -> new CompletableFuture<@Nullable Object>()));
             });
   }

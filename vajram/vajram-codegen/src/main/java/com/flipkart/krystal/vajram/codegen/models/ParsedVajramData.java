@@ -1,15 +1,17 @@
 package com.flipkart.krystal.vajram.codegen.models;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.codegen.Utils;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
+import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -26,7 +28,7 @@ public record ParsedVajramData(
 
   public static Optional<ParsedVajramData> fromVajram(VajramInfo vajramInfo, Utils util) {
     String packageName = vajramInfo.packageName();
-    for (ExecutableElement method : iter(getAllMethods(vajramInfo.vajramClass()))) {
+    for (ExecutableElement method : getAllMethods(vajramInfo.vajramClass())) {
       String errorMessage =
           "Vajram class %s has non-static method %s"
               .formatted(vajramInfo.vajramId(), method.getSimpleName());
@@ -102,19 +104,16 @@ public record ParsedVajramData(
   }
 
   private static List<ExecutableElement> getStaticMethods(TypeElement vajramClass) {
-    return getAllMethods(vajramClass)
+    return getAllMethods(vajramClass).stream()
         .filter(element -> element.getModifiers().contains(Modifier.STATIC))
         .toList();
   }
 
-  private static Stream<ExecutableElement> getAllMethods(TypeElement vajramCalss) {
+  private static ImmutableList<ExecutableElement> getAllMethods(TypeElement vajramCalss) {
     return vajramCalss.getEnclosedElements().stream()
         .filter(element -> element.getKind() == ElementKind.METHOD)
-        .map(element -> (ExecutableElement) element);
-  }
-
-  private static <T> Iterable<T> iter(Stream<T> elementStream) {
-    return elementStream::iterator;
+        .map(element -> (ExecutableElement) element)
+        .collect(toImmutableList());
   }
 
   private static boolean isStatic(Element element) {

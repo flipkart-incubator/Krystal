@@ -17,7 +17,7 @@ import java.util.Set;
 
 public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
 
-  public <T> ResolverLogicDefinition newResolverLogic(
+  public ResolverLogicDefinition newResolverLogic(
       String kryonId, String kryonLogicId, Set<String> inputs, ResolverLogic logic) {
     ResolverLogicDefinition def =
         new ResolverLogicDefinition(
@@ -26,7 +26,7 @@ public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
     return def;
   }
 
-  public <T> MultiResolverDefinition newMultiResolver(
+  public MultiResolverDefinition newMultiResolver(
       String kryonId, String kryonLogicId, Set<String> inputs, MultiResolver logic) {
     MultiResolverDefinition def =
         new MultiResolverDefinition(

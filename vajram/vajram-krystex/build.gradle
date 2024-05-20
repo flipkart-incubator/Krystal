@@ -1,3 +1,6 @@
+import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY
+import static com.flipkart.krystal.vajram.codegen.models.CodegenPhase.IMPLS
+
 plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
 }
@@ -61,6 +64,7 @@ compileTestJava {
         options.compilerArgs += [
                 '--module-path', classpath.asPath,
                 '--patch-module', "$moduleName=" + files(sourceSets.test.java.srcDirs).asPath,
+                '-A' + COGENGEN_PHASE_KEY + '=' + IMPLS,
         ]
     }
 }
