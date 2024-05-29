@@ -40,8 +40,11 @@ public final class Constants {
   public static final String FACETS_CLASS_SUFFIX = "Facets";
   public static final String IMMUT_FACETS_CLASS_SUFFIX = "ImmutableFacets";
   public static final String INPUTS_LIST = "facetsList";
-  public static final String BATCHABLE_FACETS = "BatchFacets";
+  public static final String BATCH_FACETS = "BatchFacets";
+  public static final String BATCH_IMMUT_FACETS_CLASS_SUFFIX = "Batch" + IMMUT_FACETS_CLASS_SUFFIX;
   public static final String COMMON_FACETS = "CommonFacets";
+  public static final String COMMON_IMMUT_FACETS_CLASS_SUFFIX =
+      "Common" + IMMUT_FACETS_CLASS_SUFFIX;
   public static final String FACETS = "facets";
   public static final String DEP_REQ_PARAM = "dependecyRequest";
   public static final String UNMOD_INPUT = "unmodInput";

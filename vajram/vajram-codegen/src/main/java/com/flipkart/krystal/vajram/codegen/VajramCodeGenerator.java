@@ -40,8 +40,10 @@ import static com.flipkart.krystal.vajram.codegen.Constants.UNMOD_INPUT;
 import static com.flipkart.krystal.vajram.codegen.Constants.VAJRAM_LOGIC_METHOD;
 import static com.flipkart.krystal.vajram.codegen.Constants.VAL_ERR;
 import static com.flipkart.krystal.vajram.codegen.Constants.VARIABLE;
-import static com.flipkart.krystal.vajram.codegen.Utils.getBatchedFacetsClassname;
-import static com.flipkart.krystal.vajram.codegen.Utils.getCommonFacetsClassname;
+import static com.flipkart.krystal.vajram.codegen.Utils.getBatchFacetsInterfaceName;
+import static com.flipkart.krystal.vajram.codegen.Utils.getBatchImmutFacetsClassname;
+import static com.flipkart.krystal.vajram.codegen.Utils.getCommonFacetsInterfaceName;
+import static com.flipkart.krystal.vajram.codegen.Utils.getCommonImmutFacetsClassname;
 import static com.flipkart.krystal.vajram.codegen.Utils.getFacetsInterfaceName;
 import static com.flipkart.krystal.vajram.codegen.Utils.getImmutFacetsClassname;
 import static com.flipkart.krystal.vajram.codegen.Utils.getImmutRequestClassName;
@@ -271,9 +273,11 @@ public class VajramCodeGenerator {
 
     // Initialize few common attributes and data structures
     final ClassName inputBatch =
-        ClassName.get(getParsedVajramData().packageName(), getBatchedFacetsClassname(vajramName));
+        ClassName.get(
+            getParsedVajramData().packageName(), getBatchImmutFacetsClassname(vajramName));
     final ClassName commonInputs =
-        ClassName.get(getParsedVajramData().packageName(), getCommonFacetsClassname(vajramName));
+        ClassName.get(
+            getParsedVajramData().packageName(), getCommonImmutFacetsClassname(vajramName));
     final TypeName vajramResponseType =
         util.toTypeName(getParsedVajramData().vajramInfo().responseType());
 
@@ -1440,8 +1444,10 @@ public class VajramCodeGenerator {
     ClassName requestInterfacetType =
         ClassName.get(packageName, getRequestInterfaceName(vajramName));
     ClassName immutRequestType = ClassName.get(packageName, getImmutRequestClassName(vajramName));
-    ClassName batchFacetsType = ClassName.get(packageName, getBatchedFacetsClassname(vajramName));
-    ClassName commonFacetsType = ClassName.get(packageName, getCommonFacetsClassname(vajramName));
+    ClassName batchFacetsType =
+        ClassName.get(packageName, getBatchImmutFacetsClassname(vajramName));
+    ClassName commonFacetsType =
+        ClassName.get(packageName, getCommonImmutFacetsClassname(vajramName));
     if (codeGenParams.wrapsRequest) {
       ClassName requestOrBuilderType =
           codeGenParams.isBuilder ? immutRequestType.nestedClass("Builder") : immutRequestType;
@@ -2210,52 +2216,92 @@ public class VajramCodeGenerator {
   }
 
   private void batchFacetsClasses() {
-    StringWriter batchCode = new StringWriter();
-    StringWriter commonCode = new StringWriter();
-    StringWriter allFacetsCode = new StringWriter();
+    StringWriter interfaceBatchCode = new StringWriter();
+    StringWriter immutBatchCode = new StringWriter();
+    StringWriter interfaceCommonCode = new StringWriter();
+    StringWriter immutCommonCode = new StringWriter();
+    StringWriter interfaceAllCode = new StringWriter();
+    StringWriter immutAllFacetsCode = new StringWriter();
 
-    String batchClassName = getBatchedFacetsClassname(vajramName);
-    String commonClassName = getCommonFacetsClassname(vajramName);
+    String batchInterfaceClassName = getBatchFacetsInterfaceName(vajramName);
+    String batchImmutClassName = getBatchImmutFacetsClassname(vajramName);
 
-    ClassName batchFacetsType = ClassName.get(packageName, batchClassName);
-    ClassName batchBuilderType = batchFacetsType.nestedClass("Builder");
+    String commonInterfaceClassName = getCommonFacetsInterfaceName(vajramName);
+    String commonImmutClassName = getCommonImmutFacetsClassname(vajramName);
 
-    ClassName commonFacetsType = ClassName.get(packageName, commonClassName);
-    ClassName commonBuilderType = commonFacetsType.nestedClass("Builder");
+    ClassName batchFacetsType = ClassName.get(packageName, batchInterfaceClassName);
+    ClassName batchImmutFacetsType = ClassName.get(packageName, batchImmutClassName);
+    ClassName batchBuilderType = batchImmutFacetsType.nestedClass("Builder");
 
-    ClassName allFacetsType = ClassName.get(packageName, getImmutFacetsClassname(vajramName));
-    ClassName allFacetsBuilderType = allFacetsType.nestedClass("Builder");
+    ClassName commonFacetsType = ClassName.get(packageName, commonInterfaceClassName);
+    ClassName commonImmutFacetsType = ClassName.get(packageName, commonImmutClassName);
+    ClassName commonBuilderType = commonImmutFacetsType.nestedClass("Builder");
+
+    ClassName allFacetsType = ClassName.get(packageName, getFacetsInterfaceName(vajramName));
+    ClassName allImmutFacetsType = ClassName.get(packageName, getImmutFacetsClassname(vajramName));
+    ClassName allFacetsBuilderType = allImmutFacetsType.nestedClass("Builder");
 
     List<InputModel<?>> batchedFacets =
         vajramInfo.inputs().stream().filter(InputModel::isBatched).toList();
     List<FacetGenModel> commonFacets =
         vajramInfo.facetStream().filter(t -> !t.isBatched()).toList();
-    TypeSpec.Builder batchFacetsClass =
-        util.classBuilder(batchClassName)
+
+    TypeSpec.Builder batchFacetsInterface =
+        interfaceBuilder(batchInterfaceClassName)
+            .addModifiers(PUBLIC)
+            .addSuperinterface(Facets.class)
+            .addAnnotation(
+                AnnotationSpec.builder(SuppressWarnings.class)
+                    .addMember("value", "$S", "ClassReferencesSubclass")
+                    .build());
+
+    for (var input : batchedFacets) {
+      createFacetGetter(batchFacetsInterface, input, CodeGenParams.builder().isRequest(false).build());
+    }
+
+    TypeSpec.Builder batchImmutFacetsClass =
+        util.classBuilder(batchImmutClassName)
             .addModifiers(FINAL)
             .addSuperinterface(ImmutableFacets.class)
+            .addSuperinterface(batchFacetsType)
             .addMethod(
                 methodBuilder("_builder")
                     .addModifiers(PUBLIC, STATIC)
                     .returns(batchBuilderType)
                     .addStatement("return new Builder()")
                     .build());
-    createFacetMembers(batchFacetsClass, batchFacetsType, batchedFacets, CodeGenParams.DEFAULT);
+    createFacetMembers(
+        batchImmutFacetsClass, batchImmutFacetsType, batchedFacets, CodeGenParams.DEFAULT);
 
     TypeSpec.Builder batchFacetsBuilderClass =
         util.classBuilder("Builder")
             .addModifiers(STATIC, FINAL)
+            .addSuperinterface(batchFacetsType)
             .addSuperinterface(FacetsBuilder.class);
     createFacetMembers(
         batchFacetsBuilderClass,
-        batchFacetsType,
+        batchImmutFacetsType,
         batchedFacets,
         CodeGenParams.builder().isBuilder(true).build());
 
-    TypeSpec.Builder commonFacetsClass =
-        util.classBuilder(commonClassName)
+    TypeSpec.Builder commonFacetsInterface =
+        interfaceBuilder(commonInterfaceClassName)
+            .addModifiers(PUBLIC)
+            .addSuperinterface(Facets.class)
+            .addAnnotation(
+                AnnotationSpec.builder(SuppressWarnings.class)
+                    .addMember("value", "$S", "ClassReferencesSubclass")
+                    .build());
+
+    for (var input : commonFacets) {
+      createFacetGetter(commonFacetsInterface, input, CodeGenParams.builder().isRequest(false).build());
+    }
+
+    TypeSpec.Builder commonImmutFacetsClass =
+        util.classBuilder(commonImmutClassName)
             .addModifiers(FINAL)
             .addSuperinterface(ImmutableFacets.class)
+            .addSuperinterface(commonFacetsType)
             .addMethod(
                 methodBuilder("_builder")
                     .addModifiers(PUBLIC, STATIC)
@@ -2264,28 +2310,39 @@ public class VajramCodeGenerator {
                     .build());
 
     createFacetMembers(
-        commonFacetsClass,
-        commonFacetsType,
+        commonImmutFacetsClass,
+        commonImmutFacetsType,
         vajramInfo.facetStream().filter(facetGenModel -> !facetGenModel.isBatched()).toList(),
         CodeGenParams.DEFAULT);
 
     TypeSpec.Builder commonFacetsBuilderClass =
         util.classBuilder("Builder")
             .addModifiers(STATIC, FINAL)
+            .addSuperinterface(commonFacetsType)
             .addSuperinterface(FacetsBuilder.class);
 
     createFacetMembers(
         commonFacetsBuilderClass,
-        commonFacetsType,
+        commonImmutFacetsType,
         vajramInfo.facetStream().filter(facetGenModel -> !facetGenModel.isBatched()).toList(),
         CodeGenParams.builder().isBuilder(true).build());
 
-    TypeSpec.Builder allFacetsClass =
+    TypeSpec.Builder allFacetsInterface =
+        interfaceBuilder(getFacetsInterfaceName(vajramName))
+            .addModifiers(PUBLIC)
+            .addSuperinterface(Facets.class)
+            .addAnnotation(
+                AnnotationSpec.builder(SuppressWarnings.class)
+                    .addMember("value", "$S", "ClassReferencesSubclass")
+                    .build());
+
+    TypeSpec.Builder allImmutFacetsClass =
         codegenBatchableFacets(
                 TypeSpec.classBuilder(getImmutFacetsClassname(vajramName))
-                    .addSuperinterface(ClassName.get(BatchableImmutableFacets.class)),
-                batchFacetsType,
-                commonFacetsType)
+                    .addSuperinterface(ClassName.get(BatchableImmutableFacets.class))
+                    .addSuperinterface(allFacetsType),
+                batchImmutFacetsType,
+                commonImmutFacetsType)
             .addMethod(
                 methodBuilder("_builder")
                     .addModifiers(PUBLIC, STATIC)
@@ -2293,76 +2350,146 @@ public class VajramCodeGenerator {
                     .addStatement("return new Builder()")
                     .build());
     addFacetConstants(
-        allFacetsClass,
+        allImmutFacetsClass,
         vajramInfo.facetStream().filter(f -> !f.facetTypes().contains(INPUT)).toList());
     createFacetMembers(
-        allFacetsClass,
-        allFacetsType,
+        allImmutFacetsClass,
+        allImmutFacetsType,
         vajramInfo.facetStream().toList(),
         CodeGenParams.builder().isUnBatched(true).build());
 
     TypeSpec.Builder allFacetsBuilderClass =
         codegenBatchableFacets(
             TypeSpec.classBuilder("Builder")
+                .addSuperinterface(allFacetsType)
                 .addSuperinterface(ClassName.get(BatchableFacetsBuilder.class))
                 .addModifiers(STATIC),
             batchBuilderType,
             commonBuilderType);
     createFacetMembers(
         allFacetsBuilderClass,
-        allFacetsType,
+        allImmutFacetsType,
         vajramInfo.facetStream().toList(),
         CodeGenParams.builder().isUnBatched(true).isBuilder(true).build());
 
     try {
       JavaFile.builder(
               packageName,
-              batchFacetsClass
+              batchFacetsInterface
+                  .addMethod(
+                      methodBuilder("_build")
+                          .addModifiers(PUBLIC, ABSTRACT)
+                          .returns(batchImmutFacetsType)
+                          .build())
+                  .addMethod(
+                      methodBuilder("_asBuilder")
+                          .addModifiers(PUBLIC, ABSTRACT)
+                          .returns(batchImmutFacetsType.nestedClass("Builder"))
+                          .build())
+                  .addMethod(
+                      methodBuilder("_builder")
+                          .addModifiers(PUBLIC, STATIC)
+                          .returns(batchBuilderType)
+                          .addStatement(
+                              "return new $T()", batchImmutFacetsType.nestedClass("Builder"))
+                          .build())
+                  .build())
+          .build()
+          .writeTo(interfaceBatchCode);
+      JavaFile.builder(
+              packageName,
+              batchImmutFacetsClass
                   .addMethods(
                       createFacetContainerMethods(
-                          batchedFacets, batchFacetsType, CodeGenParams.DEFAULT))
+                          batchedFacets, batchImmutFacetsType, CodeGenParams.DEFAULT))
                   .addType(
                       batchFacetsBuilderClass
                           .addMethods(
                               createFacetContainerMethods(
                                   batchedFacets,
-                                  batchFacetsType,
+                                  batchImmutFacetsType,
                                   CodeGenParams.builder().isBuilder(true).build()))
                           .build())
                   .build())
           .build()
-          .writeTo(batchCode);
+          .writeTo(immutBatchCode);
       JavaFile.builder(
               packageName,
-              commonFacetsClass
+              commonFacetsInterface
+                  .addMethod(
+                      methodBuilder("_build")
+                          .addModifiers(PUBLIC, ABSTRACT)
+                          .returns(commonImmutFacetsType)
+                          .build())
+                  .addMethod(
+                      methodBuilder("_asBuilder")
+                          .addModifiers(PUBLIC, ABSTRACT)
+                          .returns(commonImmutFacetsType.nestedClass("Builder"))
+                          .build())
+                  .addMethod(
+                      methodBuilder("_builder")
+                          .addModifiers(PUBLIC, STATIC)
+                          .returns(commonBuilderType)
+                          .addStatement(
+                              "return new $T()", commonImmutFacetsType.nestedClass("Builder"))
+                          .build())
+                  .build())
+          .build()
+          .writeTo(interfaceCommonCode);
+      JavaFile.builder(
+              packageName,
+              commonImmutFacetsClass
                   .addMethods(
                       createFacetContainerMethods(
-                          commonFacets, commonFacetsType, CodeGenParams.DEFAULT))
+                          commonFacets, commonImmutFacetsType, CodeGenParams.DEFAULT))
                   .addType(
                       commonFacetsBuilderClass
                           .addMethods(
                               createFacetContainerMethods(
                                   commonFacets,
-                                  commonFacetsType,
+                                  commonImmutFacetsType,
                                   CodeGenParams.builder().isBuilder(true).build()))
                           .build())
                   .build())
           .build()
-          .writeTo(commonCode);
+          .writeTo(immutCommonCode);
       JavaFile.builder(
               packageName,
-              allFacetsClass
+              allFacetsInterface
+                  .addMethod(
+                      methodBuilder("_build")
+                          .addModifiers(PUBLIC, ABSTRACT)
+                          .returns(allImmutFacetsType)
+                          .build())
+                  .addMethod(
+                      methodBuilder("_asBuilder")
+                          .addModifiers(PUBLIC, ABSTRACT)
+                          .returns(allImmutFacetsType.nestedClass("Builder"))
+                          .build())
+                  .addMethod(
+                      methodBuilder("_builder")
+                          .addModifiers(PUBLIC, STATIC)
+                          .returns(allFacetsBuilderType)
+                          .addStatement(
+                              "return new $T()", allImmutFacetsType.nestedClass("Builder"))
+                          .build())
+                  .build())
+          .build()
+          .writeTo(interfaceAllCode);
+      JavaFile.builder(
+              packageName,
+              allImmutFacetsClass
                   .addMethods(
                       createFacetContainerMethods(
                           vajramInfo.facetStream().toList(),
-                          allFacetsType,
+                          allImmutFacetsType,
                           CodeGenParams.builder().isUnBatched(true).build()))
                   .addType(
                       allFacetsBuilderClass
                           .addMethods(
                               createFacetContainerMethods(
                                   vajramInfo.facetStream().toList(),
-                                  allFacetsType,
+                                  allImmutFacetsType,
                                   CodeGenParams.builder()
                                       .isUnBatched(true)
                                       .isBuilder(true)
@@ -2370,17 +2497,33 @@ public class VajramCodeGenerator {
                           .build())
                   .build())
           .build()
-          .writeTo(allFacetsCode);
+          .writeTo(immutAllFacetsCode);
     } catch (IOException e) {
       util.error(String.valueOf(e.getMessage()), vajramInfo.vajramClass());
     }
     util.generateSourceFile(
-        packageName + '.' + batchClassName, batchCode.toString(), vajramInfo.vajramClass());
+        packageName + '.' + batchInterfaceClassName,
+        interfaceBatchCode.toString(),
+        vajramInfo.vajramClass());
     util.generateSourceFile(
-        packageName + '.' + commonClassName, commonCode.toString(), vajramInfo.vajramClass());
+        packageName + '.' + batchImmutClassName,
+        immutBatchCode.toString(),
+        vajramInfo.vajramClass());
+    util.generateSourceFile(
+        packageName + '.' + commonInterfaceClassName,
+        interfaceCommonCode.toString(),
+        vajramInfo.vajramClass());
+    util.generateSourceFile(
+        packageName + '.' + commonImmutClassName,
+        immutCommonCode.toString(),
+        vajramInfo.vajramClass());
+    util.generateSourceFile(
+        packageName + '.' + getFacetsInterfaceName(vajramName),
+        interfaceAllCode.toString(),
+        vajramInfo.vajramClass());
     util.generateSourceFile(
         packageName + '.' + getImmutFacetsClassname(vajramName),
-        allFacetsCode.toString(),
+        immutAllFacetsCode.toString(),
         vajramInfo.vajramClass());
   }
 
