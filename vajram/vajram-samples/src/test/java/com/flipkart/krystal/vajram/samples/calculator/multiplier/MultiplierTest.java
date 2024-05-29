@@ -23,7 +23,7 @@ class MultiplierTest {
       future =
           krystexVajramExecutor.execute(
               ofVajram(Multiplier.class),
-              c -> MultiplierRequest.builder().numberOne(3).numberTwo(9).build());
+              c -> MultiplierRequest._builder().numberOne(3).numberTwo(9)._build());
     }
     Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(27);
   }

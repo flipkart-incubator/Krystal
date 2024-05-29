@@ -8,6 +8,8 @@ import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.add;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderFacets.splitSum1_s;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderFacets.splitSum2_s;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderRequest.*;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.allOf;
@@ -96,7 +98,7 @@ class SplitAdderTest {
       future =
           krystexVajramExecutor.execute(
               ofVajram(SplitAdder.class),
-              rc -> SplitAdderRequest.builder().numbers(List.of()).build(),
+              rc -> SplitAdderRequest._builder().numbers(List.of())._build(),
               KryonExecutionConfig.builder()
                   .disabledDependantChains(disabledDepChains(graph))
                   .build());
@@ -248,13 +250,13 @@ class SplitAdderTest {
     return krystexVajramExecutor.execute(
         vajramID(getVajramIdString(SplitAdder.class)),
         rc ->
-            SplitAdderRequest.builder()
+            SplitAdderRequest._builder()
                 .numbers(
                     new ArrayList<>(
                         Stream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
                             .map(integer -> integer + multiplier * 10)
                             .toList()))
-                .build(),
+                ._build(),
         KryonExecutionConfig.builder().executionId(String.valueOf(multiplier)).build());
   }
 
@@ -312,68 +314,68 @@ class SplitAdderTest {
     String splitAdderId = getVajramIdString(SplitAdder.class);
     return ImmutableSet.of(
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum1_n, splitSum1_n, splitSum1_n, splitSum1_n),
+            splitAdderId, splitSum1_s.id(), splitSum1_s.id(), splitSum1_s.id(), splitSum1_s.id(), splitSum1_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum1_n, splitSum1_n, splitSum1_n, splitSum2_n),
+            splitAdderId, splitSum1_s.id(), splitSum1_s.id(), splitSum1_s.id(), splitSum1_s.id(), splitSum2_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum1_n, splitSum1_n, splitSum2_n, splitSum1_n),
+            splitAdderId, splitSum1_s.id(), splitSum1_s.id(), splitSum1_s.id(), splitSum2_s.id(), splitSum1_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum1_n, splitSum1_n, splitSum2_n, splitSum2_n),
+            splitAdderId, splitSum1_s.id(), splitSum1_s.id(), splitSum1_s.id(), splitSum2_s.id(), splitSum2_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum1_n, splitSum2_n, splitSum1_n, splitSum1_n),
+            splitAdderId, splitSum1_s.id(), splitSum1_s.id(), splitSum2_s.id(), splitSum1_s.id(), splitSum1_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum1_n, splitSum2_n, splitSum1_n, splitSum2_n),
+            splitAdderId, splitSum1_s.id(), splitSum1_s.id(), splitSum2_s.id(), splitSum1_s.id(), splitSum2_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum1_n, splitSum2_n, splitSum2_n, splitSum1_n),
+            splitAdderId, splitSum1_s.id(), splitSum1_s.id(), splitSum2_s.id(), splitSum2_s.id(), splitSum1_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum1_n, splitSum2_n, splitSum2_n, splitSum2_n),
+            splitAdderId, splitSum1_s.id(), splitSum1_s.id(), splitSum2_s.id(), splitSum2_s.id(), splitSum2_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum2_n, splitSum1_n, splitSum1_n, splitSum1_n),
+            splitAdderId, splitSum1_s.id(), splitSum2_s.id(), splitSum1_s.id(), splitSum1_s.id(), splitSum1_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum2_n, splitSum1_n, splitSum1_n, splitSum2_n),
+            splitAdderId, splitSum1_s.id(), splitSum2_s.id(), splitSum1_s.id(), splitSum1_s.id(), splitSum2_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum2_n, splitSum1_n, splitSum2_n, splitSum1_n),
+            splitAdderId, splitSum1_s.id(), splitSum2_s.id(), splitSum1_s.id(), splitSum2_s.id(), splitSum1_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum2_n, splitSum1_n, splitSum2_n, splitSum2_n),
+            splitAdderId, splitSum1_s.id(), splitSum2_s.id(), splitSum1_s.id(), splitSum2_s.id(), splitSum2_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum2_n, splitSum2_n, splitSum1_n, splitSum1_n),
+            splitAdderId, splitSum1_s.id(), splitSum2_s.id(), splitSum2_s.id(), splitSum1_s.id(), splitSum1_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum2_n, splitSum2_n, splitSum1_n, splitSum2_n),
+            splitAdderId, splitSum1_s.id(), splitSum2_s.id(), splitSum2_s.id(), splitSum1_s.id(), splitSum2_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum2_n, splitSum2_n, splitSum2_n, splitSum1_n),
+            splitAdderId, splitSum1_s.id(), splitSum2_s.id(), splitSum2_s.id(), splitSum2_s.id(), splitSum1_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum1_n, splitSum2_n, splitSum2_n, splitSum2_n, splitSum2_n),
+            splitAdderId, splitSum1_s.id(), splitSum2_s.id(), splitSum2_s.id(), splitSum2_s.id(), splitSum2_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum1_n, splitSum1_n, splitSum1_n, splitSum1_n),
+            splitAdderId, splitSum2_s.id(), splitSum1_s.id(), splitSum1_s.id(), splitSum1_s.id(), splitSum1_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum1_n, splitSum1_n, splitSum1_n, splitSum2_n),
+            splitAdderId, splitSum2_s.id(), splitSum1_s.id(), splitSum1_s.id(), splitSum1_s.id(), splitSum2_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum1_n, splitSum1_n, splitSum2_n, splitSum1_n),
+            splitAdderId, splitSum2_s.id(), splitSum1_s.id(), splitSum1_s.id(), splitSum2_s.id(), splitSum1_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum1_n, splitSum1_n, splitSum2_n, splitSum2_n),
+            splitAdderId, splitSum2_s.id(), splitSum1_s.id(), splitSum1_s.id(), splitSum2_s.id(), splitSum2_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum1_n, splitSum2_n, splitSum1_n, splitSum1_n),
+            splitAdderId, splitSum2_s.id(), splitSum1_s.id(), splitSum2_s.id(), splitSum1_s.id(), splitSum1_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum1_n, splitSum2_n, splitSum1_n, splitSum2_n),
+            splitAdderId, splitSum2_s.id(), splitSum1_s.id(), splitSum2_s.id(), splitSum1_s.id(), splitSum2_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum1_n, splitSum2_n, splitSum2_n, splitSum1_n),
+            splitAdderId, splitSum2_s.id(), splitSum1_s.id(), splitSum2_s.id(), splitSum2_s.id(), splitSum1_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum1_n, splitSum2_n, splitSum2_n, splitSum2_n),
+            splitAdderId, splitSum2_s.id(), splitSum1_s.id(), splitSum2_s.id(), splitSum2_s.id(), splitSum2_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum2_n, splitSum1_n, splitSum1_n, splitSum1_n),
+            splitAdderId, splitSum2_s.id(), splitSum2_s.id(), splitSum1_s.id(), splitSum1_s.id(), splitSum1_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum2_n, splitSum1_n, splitSum1_n, splitSum2_n),
+            splitAdderId, splitSum2_s.id(), splitSum2_s.id(), splitSum1_s.id(), splitSum1_s.id(), splitSum2_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum2_n, splitSum1_n, splitSum2_n, splitSum1_n),
+            splitAdderId, splitSum2_s.id(), splitSum2_s.id(), splitSum1_s.id(), splitSum2_s.id(), splitSum1_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum2_n, splitSum1_n, splitSum2_n, splitSum2_n),
+            splitAdderId, splitSum2_s.id(), splitSum2_s.id(), splitSum1_s.id(), splitSum2_s.id(), splitSum2_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum2_n, splitSum2_n, splitSum1_n, splitSum1_n),
+            splitAdderId, splitSum2_s.id(), splitSum2_s.id(), splitSum2_s.id(), splitSum1_s.id(), splitSum1_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum2_n, splitSum2_n, splitSum1_n, splitSum2_n),
+            splitAdderId, splitSum2_s.id(), splitSum2_s.id(), splitSum2_s.id(), splitSum1_s.id(), splitSum2_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum2_n, splitSum2_n, splitSum2_n, splitSum1_n),
+            splitAdderId, splitSum2_s.id(), splitSum2_s.id(), splitSum2_s.id(), splitSum2_s.id(), splitSum1_s.id()),
         graph.computeDependantChain(
-            splitAdderId, splitSum2_n, splitSum2_n, splitSum2_n, splitSum2_n, splitSum2_n));
+            splitAdderId, splitSum2_s.id(), splitSum2_s.id(), splitSum2_s.id(), splitSum2_s.id(), splitSum2_s.id()));
   }
 }

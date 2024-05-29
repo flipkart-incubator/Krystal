@@ -10,6 +10,8 @@ import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.flipkart.krystal.vajram.tags.AnnotationTags.getAnnotationByType;
 import static com.flipkart.krystal.vajram.tags.AnnotationTags.getNamedValueTag;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsFacets.friendInfos_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsFacets.userInfo_s;
 import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -47,6 +49,7 @@ import com.flipkart.krystal.vajram.tags.VajramTags.VajramTypes;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.Hello;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloImmutableRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest;
@@ -59,6 +62,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.Mul
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceImmutableRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -149,7 +153,7 @@ class KrystexVajramExecutorTest {
           krystexVajramExecutor.execute(
               ofVajram(Hello.class),
               applicationRequestContext ->
-                  helloRequestBuilder(applicationRequestContext).greeting("Namaste")._build());
+                  helloRequestBuilder(applicationRequestContext)._asBuilder().greeting("Namaste")._build());
     }
     assertThat(result).succeedsWithin(TIMEOUT).isEqualTo("Namaste! user_id_1");
   }
@@ -194,8 +198,8 @@ class KrystexVajramExecutorTest {
         InputBatcherConfig.sharedBatcher(
             () -> new InputBatcherImpl(3),
             getVajramIdString(TestUserService.class) + "Batcher",
-            graph.computeDependantChain(getVajramIdString(HelloFriends.class), "userInfo"),
-            graph.computeDependantChain(getVajramIdString(HelloFriends.class), "friendInfos")));
+            graph.computeDependantChain(getVajramIdString(HelloFriends.class), userInfo_s.id()),
+            graph.computeDependantChain(getVajramIdString(HelloFriends.class), friendInfos_s.id())));
 
     CompletableFuture<String> helloString;
     requestContext.requestId("ioVajramWithBatcherMultipleRequests");
@@ -855,11 +859,11 @@ class KrystexVajramExecutorTest {
     assertThat(multiHellos).succeedsWithin(TIMEOUT).isEqualTo("");
   }
 
-  private HelloRequest helloRequest(TestRequestContext applicationRequestContext) {
+  private HelloImmutableRequest helloRequest(TestRequestContext applicationRequestContext) {
     return helloRequestBuilder(applicationRequestContext)._build();
   }
 
-  private HelloRequest.Builder helloRequestBuilder(TestRequestContext applicationRequestContext) {
+  private HelloRequest helloRequestBuilder(TestRequestContext applicationRequestContext) {
     return HelloRequest._builder().name(applicationRequestContext.loggedInUserId().orElseThrow());
   }
 
@@ -867,7 +871,7 @@ class KrystexVajramExecutorTest {
     return HelloRequest._builder()._build();
   }
 
-  private TestUserServiceRequest testUserServiceRequest(TestRequestContext testRequestContext) {
+  private TestUserServiceImmutableRequest testUserServiceRequest(TestRequestContext testRequestContext) {
     return TestUserServiceRequest._builder()
         .userId(testRequestContext.loggedInUserId().orElse(null))
         ._build();

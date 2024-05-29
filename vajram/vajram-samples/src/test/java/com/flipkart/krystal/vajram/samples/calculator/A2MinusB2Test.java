@@ -30,7 +30,7 @@ class A2MinusB2Test {
     VajramKryonGraph graph = this.graph.build();
     try (KrystexVajramExecutor<ApplicationRequestContext> krystexVajramExecutor =
         graph.createExecutor(() -> REQUEST_ID)) {
-      future = executeVajram(krystexVajramExecutor, A2MinusB2Request.builder().a(3).b(2).build());
+      future = executeVajram(krystexVajramExecutor, A2MinusB2Request._builder().a(3).b(2)._build());
     }
     //noinspection AssertBetweenInconvertibleTypes https://youtrack.jetbrains.com/issue/IDEA-342354
     assertThat(future).succeedsWithin(1, HOURS).isEqualTo(2);
@@ -41,7 +41,7 @@ class A2MinusB2Test {
       A2MinusB2Request req) {
     return krystexVajramExecutor.execute(
         vajramID(getVajramIdString(A2MinusB2.class)),
-        rc -> req,
+        rc -> req._build(),
         KryonExecutionConfig.builder().executionId("1").build());
   }
 }
