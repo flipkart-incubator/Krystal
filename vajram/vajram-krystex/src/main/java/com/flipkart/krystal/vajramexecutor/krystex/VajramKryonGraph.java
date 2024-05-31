@@ -30,6 +30,7 @@ import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
+import com.flipkart.krystal.krystex.kryon.VajramExecutorConfig;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
@@ -156,6 +157,22 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
           krystexConfig.toBuilder().logicDecorationOrdering(logicDecorationOrdering).build();
     }
     return new KrystexVajramExecutor<>(this, requestContext, executorPool, krystexConfig);
+  }
+
+  public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
+      C requestContext, VajramExecutorConfig vajramConfig) {
+    if (logicDecorationOrdering != null
+        && LogicDecorationOrdering.none()
+            .equals(vajramConfig.kryonExecutorConfig().logicDecorationOrdering())) {
+
+      KryonExecutorConfig kryonExecutorConfig =
+          vajramConfig.kryonExecutorConfig().toBuilder()
+              .logicDecorationOrdering(logicDecorationOrdering)
+              .build();
+
+      vajramConfig.toBuilder().kryonExecutorConfig(kryonExecutorConfig).build();
+    }
+    return new KrystexVajramExecutor<>(this, requestContext, executorPool, vajramConfig);
   }
 
   public void registerInputBatchers(VajramID vajramID, InputBatcherConfig... inputBatcherConfigs) {
