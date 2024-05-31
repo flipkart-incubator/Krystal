@@ -54,4 +54,7 @@ out/
 # SonarLint plugin
 .idea/sonarlint/
 
+# CodeStyles
+.idea/codeStyles/
+
 lib/
