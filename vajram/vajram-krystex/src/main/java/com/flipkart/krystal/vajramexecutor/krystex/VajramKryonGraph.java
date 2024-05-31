@@ -64,6 +64,8 @@ import com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.Resolutio
 import com.flipkart.krystal.vajram.facets.resolution.ResolutionRequest;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig.BatcherContext;
+import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
+import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjector;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -84,6 +86,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
 import lombok.Getter;
+import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
 import org.checkerframework.checker.initialization.qual.UnderInitialization;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -106,12 +109,14 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
 
   private final LogicDecorationOrdering logicDecorationOrdering;
   private final MultiLeasePool<? extends ExecutorService> executorPool;
+  @NotOnlyInitialized private final InputInjector inputInjector;
   private final Map<String, VajramMetadata> vajramMetadataMap;
 
   private VajramKryonGraph(
       String[] packagePrefixes,
       ImmutableMap<String, OutputLogicDecoratorConfig> sessionScopedDecorators,
       LogicDecorationOrdering logicDecorationOrdering,
+      @Nullable InputInjectionProvider inputInjectionProvider,
       double maxParallelismPerCore) {
     this.sessionScopedDecoratorConfigs = sessionScopedDecorators;
     this.logicDecorationOrdering = logicDecorationOrdering;
@@ -123,6 +128,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
       List<? extends Vajram> vajrams = loadVajramsFromClassPath(packagePrefix);
       vajrams.forEach(this::registerVajram);
     }
+    this.inputInjector = new InputInjector(this, inputInjectionProvider);
     this.vajramMetadataMap = new HashMap<>();
   }
 
@@ -143,18 +149,15 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     return createExecutor(requestContext, KryonExecutorConfig.builder().debug(false).build());
   }
 
+  @Deprecated
   public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
       C requestContext, KryonExecutorConfig krystexConfig) {
-    if (logicDecorationOrdering != null
-        && LogicDecorationOrdering.none().equals(krystexConfig.logicDecorationOrdering())) {
-      krystexConfig =
-          krystexConfig.toBuilder().logicDecorationOrdering(logicDecorationOrdering).build();
-    }
-    return new KrystexVajramExecutor<>(this, requestContext, executorPool, krystexConfig);
+    return createExecutor(requestContext, VajramExecutorConfig.builder().kryonExecutorConfig(krystexConfig).build());
   }
 
   public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
       C requestContext, VajramExecutorConfig vajramConfig) {
+
     if (logicDecorationOrdering != null
         && LogicDecorationOrdering.none()
             .equals(vajramConfig.kryonExecutorConfig().logicDecorationOrdering())) {
@@ -164,7 +167,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
               .logicDecorationOrdering(logicDecorationOrdering)
               .build();
 
-      vajramConfig.toBuilder().kryonExecutorConfig(kryonExecutorConfig).build();
+      vajramConfig.toBuilder().
+          kryonExecutorConfig(kryonExecutorConfig).
+          inputInjector(inputInjector).build();
     }
     return new KrystexVajramExecutor<>(this, requestContext, executorPool, vajramConfig);
   }
@@ -689,6 +694,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
         new HashMap<>();
     private LogicDecorationOrdering logicDecorationOrdering =
         new LogicDecorationOrdering(ImmutableSet.of());
+    private @Nullable InputInjectionProvider inputInjectionProvider;
     private double maxParallelismPerCore = 1;
 
     public Builder loadFromPackage(String packagePrefix) {
@@ -717,11 +723,17 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
       return this;
     }
 
+    public Builder injectInputsWith(InputInjectionProvider inputInjectionProvider) {
+      this.inputInjectionProvider = inputInjectionProvider;
+      return this;
+    }
+
     public VajramKryonGraph build() {
       return new VajramKryonGraph(
           packagePrefixes.toArray(String[]::new),
           ImmutableMap.copyOf(sessionScopedDecoratorConfigs),
           logicDecorationOrdering,
+          inputInjectionProvider,
           maxParallelismPerCore);
     }
   }
