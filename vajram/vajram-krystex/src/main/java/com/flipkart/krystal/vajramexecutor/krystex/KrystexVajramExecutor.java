@@ -47,14 +47,14 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
       VajramKryonGraph vajramKryonGraph,
       C applicationRequestContext,
       MultiLeasePool<? extends ExecutorService> executorServicePool,
-      VajramExecutorConfig config) {
+      VajramExecutorConfig vajramExecutorConfig) {
     this.vajramKryonGraph = vajramKryonGraph;
     this.applicationRequestContext = applicationRequestContext;
 
-    InputInjector inputInjector = (InputInjector) config.inputInjector();
+    InputInjector inputInjector = (InputInjector) vajramExecutorConfig.inputInjector();
 
     Map<String, List<OutputLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs =
-        config.kryonExecutorConfig().requestScopedLogicDecoratorConfigs();
+        vajramExecutorConfig.kryonExecutorConfig().requestScopedLogicDecoratorConfigs();
 
     requestScopedLogicDecoratorConfigs.putIfAbsent(
         inputInjector.decoratorType(),
@@ -66,7 +66,7 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
                 decoratorContext -> inputInjector)));
 
     KryonExecutorConfig kryonExecutorConfig =
-        config.kryonExecutorConfig().toBuilder()
+        vajramExecutorConfig.kryonExecutorConfig().toBuilder()
             .requestScopedLogicDecoratorConfigs(requestScopedLogicDecoratorConfigs)
             .build();
 
