@@ -1,6 +1,5 @@
 package com.flipkart.krystal.executors;
 
-import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinWorkerThread;
 import java.util.concurrent.TimeUnit;
@@ -26,14 +25,9 @@ public class SingleTheadedForkJoinPool extends ForkJoinPool {
         /* unit= */ TimeUnit.MINUTES /* Same as default */);
   }
 
-  public Optional<ForkJoinWorkerThread> getThread() {
-    return ((SingleThreadFactory) getFactory()).getThread();
-  }
-
   private static final class SingleThreadFactory implements ForkJoinWorkerThreadFactory {
 
     private final String poolName;
-    private ForkJoinWorkerThread thread;
 
     private SingleThreadFactory(String poolName) {
       this.poolName = poolName;
@@ -41,16 +35,9 @@ public class SingleTheadedForkJoinPool extends ForkJoinPool {
 
     @Override
     public ForkJoinWorkerThread newThread(ForkJoinPool pool) {
-      if (thread == null) {
-        ForkJoinWorkerThread thread = defaultForkJoinWorkerThreadFactory.newThread(pool);
-        thread.setName(poolName + '-' + thread.getName());
-        this.thread = thread;
-      }
+      ForkJoinWorkerThread thread = defaultForkJoinWorkerThreadFactory.newThread(pool);
+      thread.setName(poolName + '-' + thread.getName());
       return thread;
-    }
-
-    public Optional<ForkJoinWorkerThread> getThread() {
-      return Optional.ofNullable(thread);
     }
   }
 }
