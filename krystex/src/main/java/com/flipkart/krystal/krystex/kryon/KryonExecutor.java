@@ -40,6 +40,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -66,8 +67,10 @@ public final class KryonExecutor implements KrystalExecutor {
 
   private final KryonDefinitionRegistry kryonDefinitionRegistry;
   private final KryonExecutorConfig executorConfig;
-  private final Lease<? extends ExecutorService> commandQueueLease;
+  private final ExecutorService commandQueue;
+  private final Optional<Lease<? extends ExecutorService>> commandQueueLease;
   private final String instanceId;
+
   /**
    * We need to have a list of request scope global decorators corresponding to each type, in case
    * we want to have a decorator of one type but based on some config in request, we want to choose
@@ -102,7 +105,14 @@ public final class KryonExecutor implements KrystalExecutor {
       String instanceId) {
     this.kryonDefinitionRegistry = kryonDefinitionRegistry;
     this.executorConfig = executorConfig;
-    this.commandQueueLease = commandQueuePool.lease();
+    if (executorConfig.customExecutorService().isPresent()) {
+      this.commandQueue = executorConfig.customExecutorService().get();
+      this.commandQueueLease = Optional.empty();
+    } else {
+      var commandQueueLease = commandQueuePool.lease();
+      this.commandQueue = commandQueueLease.get();
+      this.commandQueueLease = Optional.of(commandQueueLease);
+    }
     this.instanceId = instanceId;
     this.requestScopedLogicDecoratorConfigs =
         ImmutableMap.copyOf(executorConfig.requestScopedLogicDecoratorConfigs());
@@ -457,7 +467,7 @@ public final class KryonExecutor implements KrystalExecutor {
                           decorator.getValue().onComplete();
                         }
                       }
-                      commandQueueLease.close();
+                      commandQueueLease.ifPresent(Lease::close);
                     }));
   }
 
@@ -479,7 +489,7 @@ public final class KryonExecutor implements KrystalExecutor {
           kryonMetrics.commandQueued();
           return command.get();
         },
-        commandQueueLease.get());
+        commandQueue);
   }
 
   private record KryonExecution(

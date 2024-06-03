@@ -10,4 +10,5 @@ module flipkart.krystal.common {
   exports com.flipkart.krystal.config;
   exports com.flipkart.krystal.schema;
   exports com.flipkart.krystal.except;
+  exports com.flipkart.krystal.executors;
 }

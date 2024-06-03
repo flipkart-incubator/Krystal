@@ -120,6 +120,7 @@ public class MultiLeasePool<T> implements AutoCloseable {
   }
 
   private synchronized void giveBack(PooledObject<T> pooledObject) {
+    leaseCloser.accept(pooledObject.ref());
     if (shouldDelete(pooledObject) && pooledObject.activeLeases() == 0) {
       destroyer.accept(pooledObject.ref());
     }
