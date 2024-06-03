@@ -1,0 +1,6 @@
+@stream int publishNumbers(int request){
+
+  @stream @Schedule(1, SECONDS){
+
+  }
+}

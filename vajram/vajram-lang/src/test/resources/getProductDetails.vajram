@@ -1,0 +1,19 @@
+package com.flipkart.krystal.vajram.lang.samples.products;
+
+ProductDetails? getProductDetails(
+  #batch string productId,
+  @inject ProductDB productDB){
+
+  ~{
+    List<String> productIds =
+        #batch.batches()
+        .map{_.productId()}
+        .toList();
+    Map<#batch, ProductDetails>~ productDetails =
+      productDB.getProductDetails(productIds)
+        ~.stream()
+        ~.toMap(new #batch(_.productId()), _ );
+
+    productDetails
+  }
+}

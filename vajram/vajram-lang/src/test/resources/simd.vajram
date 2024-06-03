@@ -1,0 +1,44 @@
+package com.flipkart.krystal.vajram.lang.samples.simd;
+
+float computeValue(float a, float b){{
+    a*a + b*b * (-1.0)
+}}
+
+float[] computeForArray(float[] a, float[] b){
+  computeValue(a,b =* {
+    for(_(int i, float v) : a.withIndices()){
+      yield v, b[i]
+    }
+  }).values();
+}
+
+float computeValue(float a, float b){
+  @output
+  float result = a*a + b*b * (-1.0);
+}
+
+// Invoked by the language runtime when to numbers are multiplied
+T binaryMultiply<T>(#batch T operand1, #batch T operand2){
+  {
+    list<#batch> = #batch.batches();
+    // language native implementation of
+    // a SIMD-optimized multiplication logic
+  }
+}
+
+#stream int streamNumbers(){{ [1,2,3,4,5,6,7,8] }}
+
+int addOne(int input){{ input+1 }}
+
+void printNumbers(@inject ConsoleWriter writer){
+  #stream int? number = streamNumbers();
+  #stream int? plusOne = addOne(number);
+
+  {
+    switch(plusOne){
+      _ -> writer.Out.println(_);
+      err _ -> writer.Err.println("Ouch!");
+      nil -> writer.Out.println("Done!");
+    }
+  }
+}
