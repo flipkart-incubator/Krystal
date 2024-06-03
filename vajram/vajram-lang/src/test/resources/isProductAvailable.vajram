@@ -1,0 +1,10 @@
+package com.flipkart.krystal.vajram.lang.samples.products;
+
+bool? isProductAvailable(
+  string productId,
+  @inject AvailabilityDB availabilityDB){
+
+  ~{
+    availabilityDB.isAvailable(productId)
+  }
+}
