@@ -4,9 +4,9 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinWorkerThread;
 import java.util.concurrent.TimeUnit;
 
-public class SingleTheadedForkJoinPool extends ForkJoinPool {
+public class ThreadPerRequestExecutor extends ForkJoinPool {
 
-  public SingleTheadedForkJoinPool(String poolName) {
+  public ThreadPerRequestExecutor(String poolName) {
     // Default values picked from Executors.newWorkStealingPool(parallelism)
     super(
         /* parallelism= */ 1, // Set to 1 because maximumPoolSize is 1 anyway.
@@ -25,18 +25,12 @@ public class SingleTheadedForkJoinPool extends ForkJoinPool {
         /* unit= */ TimeUnit.MINUTES /* Same as default */);
   }
 
-  private static final class SingleThreadFactory implements ForkJoinWorkerThreadFactory {
-
-    private final String poolName;
-
-    private SingleThreadFactory(String poolName) {
-      this.poolName = poolName;
-    }
+  private record SingleThreadFactory(String poolName) implements ForkJoinWorkerThreadFactory {
 
     @Override
     public ForkJoinWorkerThread newThread(ForkJoinPool pool) {
       ForkJoinWorkerThread thread = defaultForkJoinWorkerThreadFactory.newThread(pool);
-      thread.setName(poolName + '-' + thread.getName());
+      thread.setName(poolName() + '-' + thread.getName());
       return thread;
     }
   }

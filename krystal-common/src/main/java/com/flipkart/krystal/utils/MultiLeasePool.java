@@ -9,9 +9,9 @@ import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public class MultiLeasePool<T> implements AutoCloseable {
+public class MultiLeasePool<T extends @NonNull Object> implements AutoCloseable {
 
-  private final Supplier<T> creator;
+  private final Supplier<@NonNull T> creator;
   private final MultiLeasePolicy leasePolicy;
 
   private final Consumer<T> destroyer;
@@ -22,7 +22,8 @@ public class MultiLeasePool<T> implements AutoCloseable {
   private volatile boolean closed;
   private volatile int maxActiveLeasesPerObject;
 
-  public MultiLeasePool(Supplier<T> creator, MultiLeasePolicy leasePolicy, Consumer<T> destroyer) {
+  public MultiLeasePool(
+      Supplier<@NonNull T> creator, MultiLeasePolicy leasePolicy, Consumer<T> destroyer) {
     this.creator = creator;
     this.leasePolicy = leasePolicy;
     this.destroyer = destroyer;
@@ -154,7 +155,7 @@ public class MultiLeasePool<T> implements AutoCloseable {
     }
   }
 
-  public static final class Lease<T> implements AutoCloseable {
+  public static final class Lease<T extends @NonNull Object> implements AutoCloseable {
 
     private @Nullable PooledObject<T> pooledObject;
     private final Consumer<PooledObject<T>> giveback;
@@ -184,12 +185,12 @@ public class MultiLeasePool<T> implements AutoCloseable {
 
   private static final class PooledObject<T> {
 
-    private final T ref;
+    private final @NonNull T ref;
     private final int deletionThreshold;
     private int activeLeases = 0;
     private int markForDeletion;
 
-    private PooledObject(T ref, int deletionThreshold) {
+    private PooledObject(@NonNull T ref, int deletionThreshold) {
       this.ref = ref;
       this.deletionThreshold = deletionThreshold;
     }
