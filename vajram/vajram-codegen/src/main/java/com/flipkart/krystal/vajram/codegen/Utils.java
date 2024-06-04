@@ -467,6 +467,7 @@ public class Utils {
   public static String getImmutFacetsClassname(String vajramName) {
     return vajramName + IMMUT_FACETS_CLASS_SUFFIX;
   }
+
   public static String getCommonFacetsInterfaceName(String vajramName) {
     return vajramName + COMMON_FACETS;
   }
@@ -474,9 +475,11 @@ public class Utils {
   public static String getCommonImmutFacetsClassname(String vajramName) {
     return vajramName + COMMON_IMMUT_FACETS_CLASS_SUFFIX;
   }
+
   public static String getBatchFacetsInterfaceName(String vajramName) {
     return vajramName + BATCH_FACETS;
   }
+
   public static String getBatchImmutFacetsClassname(String vajramName) {
     return vajramName + BATCH_IMMUT_FACETS_CLASS_SUFFIX;
   }

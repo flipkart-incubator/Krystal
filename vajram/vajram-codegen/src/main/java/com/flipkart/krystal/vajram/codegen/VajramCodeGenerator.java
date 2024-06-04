@@ -2256,7 +2256,8 @@ public class VajramCodeGenerator {
                     .build());
 
     for (var input : batchedFacets) {
-      createFacetGetter(batchFacetsInterface, input, CodeGenParams.builder().isRequest(false).build());
+      createFacetGetter(
+          batchFacetsInterface, input, CodeGenParams.builder().isRequest(false).build());
     }
 
     TypeSpec.Builder batchImmutFacetsClass =
@@ -2294,7 +2295,8 @@ public class VajramCodeGenerator {
                     .build());
 
     for (var input : commonFacets) {
-      createFacetGetter(commonFacetsInterface, input, CodeGenParams.builder().isRequest(false).build());
+      createFacetGetter(
+          commonFacetsInterface, input, CodeGenParams.builder().isRequest(false).build());
     }
 
     TypeSpec.Builder commonImmutFacetsClass =
