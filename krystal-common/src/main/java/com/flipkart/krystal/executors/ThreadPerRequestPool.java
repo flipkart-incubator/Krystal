@@ -15,11 +15,11 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  */
 public class ThreadPerRequestPool extends MultiLeasePool<@NonNull ThreadPerRequestExecutor> {
 
-  public ThreadPerRequestPool(String name) {
+  public ThreadPerRequestPool(String name, int maxThreads) {
     super(
         () -> new ThreadPerRequestExecutor(name),
         new PreferObjectReuse(
-            /* maxActiveLeasesPerObject= */ 1, /* maxActiveObjects= */ Optional.empty()),
+            /* maxActiveLeasesPerObject= */ 1, /* maxActiveObjects= */ Optional.of(maxThreads)),
         ExecutorService::shutdown);
   }
 }

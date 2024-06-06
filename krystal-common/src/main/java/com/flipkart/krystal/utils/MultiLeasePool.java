@@ -29,7 +29,7 @@ public class MultiLeasePool<T extends @NonNull Object> implements AutoCloseable 
     this.destroyer = destroyer;
   }
 
-  public final Lease<T> lease() {
+  public final Lease<T> lease() throws LeaseUnavailableException {
     synchronized (this) {
       if (closed) {
         throw new IllegalStateException("MultiLeasePool already closed");
@@ -126,7 +126,18 @@ public class MultiLeasePool<T extends @NonNull Object> implements AutoCloseable 
     }
   }
 
-  private PooledObject<T> createNewForLeasing() {
+  private PooledObject<T> createNewForLeasing() throws LeaseUnavailableException {
+    int limit = Integer.MAX_VALUE;
+    if (leasePolicy instanceof PreferObjectReuse preferObjectReuse
+        && preferObjectReuse.maxActiveObjects().isPresent()) {
+      limit = preferObjectReuse.maxActiveObjects().get();
+    } else if (leasePolicy instanceof DistributeLeases distributeLeases) {
+      limit = distributeLeases.maxActiveObjects();
+    }
+    if (queue.size() >= limit) {
+      throw new LeaseUnavailableException(
+          "Reached max object limit : " + limit + " in MultiLeasePool");
+    }
     PooledObject<T> pooledObject = new PooledObject<>(creator.get(), maxActiveLeasesPerObject());
     pooledObject.incrementActiveLeases();
     addLeasedToQueue(pooledObject);
