@@ -31,6 +31,7 @@ import com.flipkart.krystal.krystex.request.IntReqGenerator;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.flipkart.krystal.krystex.request.StringReqGenerator;
+import com.flipkart.krystal.utils.LeaseUnavailableException;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.utils.MultiLeasePool.Lease;
 import com.google.common.collect.ImmutableMap;
@@ -49,6 +50,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Default implementation of Krystal executor which */
@@ -100,7 +102,7 @@ public final class KryonExecutor implements KrystalExecutor {
 
   public KryonExecutor(
       KryonDefinitionRegistry kryonDefinitionRegistry,
-      MultiLeasePool<? extends ExecutorService> commandQueuePool,
+      MultiLeasePool<@NonNull ? extends ExecutorService> commandQueuePool,
       KryonExecutorConfig executorConfig,
       String instanceId) {
     this.kryonDefinitionRegistry = kryonDefinitionRegistry;
@@ -109,7 +111,12 @@ public final class KryonExecutor implements KrystalExecutor {
       this.commandQueue = executorConfig.customExecutorService().get();
       this.commandQueueLease = Optional.empty();
     } else {
-      var commandQueueLease = commandQueuePool.lease();
+      Lease<@NonNull ? extends ExecutorService> commandQueueLease;
+      try {
+        commandQueueLease = commandQueuePool.lease();
+      } catch (LeaseUnavailableException e) {
+        throw new RuntimeException(e);
+      }
       this.commandQueue = commandQueueLease.get();
       this.commandQueueLease = Optional.of(commandQueueLease);
     }
