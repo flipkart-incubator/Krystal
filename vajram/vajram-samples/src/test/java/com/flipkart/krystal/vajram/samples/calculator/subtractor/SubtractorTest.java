@@ -23,7 +23,7 @@ class SubtractorTest {
       future =
           krystexVajramExecutor.execute(
               ofVajram(Subtractor.class),
-              c -> SubtractorRequest.builder().numberOne(5).numberTwo(7).build());
+              SubtractorRequest.builder().numberOne(5).numberTwo(7).build());
     }
     Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(-2);
   }

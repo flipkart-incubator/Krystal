@@ -2,12 +2,14 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import java.util.Optional;
+import lombok.Data;
+import lombok.Setter;
 
-// @Builder
+@Data
 public class TestRequestContext implements ApplicationRequestContext {
-  String requestId;
-  Optional<String> loggedInUserId;
-  int numberOfFriends;
+  private String requestId;
+  @Setter private Optional<String> loggedInUserId;
+  @Setter private int numberOfFriends;
 
   public TestRequestContext(Optional<String> loggedInUserId, int numberOfFriends) {
     this.loggedInUserId = loggedInUserId;
@@ -22,16 +24,8 @@ public class TestRequestContext implements ApplicationRequestContext {
     return loggedInUserId;
   }
 
-  public void setLoggedInUserId(Optional<String> loggedInUserId) {
-    this.loggedInUserId = loggedInUserId;
-  }
-
   public int numberOfFriends() {
     return numberOfFriends;
-  }
-
-  public void setNumberOfFriends(int numberOfFriends) {
-    this.numberOfFriends = numberOfFriends;
   }
 
   @Override

@@ -82,67 +82,11 @@ public class VajramPrimer extends AbstractKryonDecorator {
     public CompletableFuture<KryonResponse> executeCommand(KryonCommand kryonCommand) {
       KryonId kryonId = kryonCommand.kryonId();
       validate(kryonId);
-      if (kryonCommand instanceof ForwardGranule) {
+      if (kryonCommand instanceof ForwardBatch forwardBatch) {
+        return getPrimedResponse(kryon, forwardBatch, kryonId, kryonExecutor);
+      } else if (kryonCommand instanceof ForwardGranule) {
         throw new UnsupportedOperationException(
             "VajramPrimer does not support KryonExecStrategy GRANULAR. Please use BATCH instead");
-      } else if (kryonCommand instanceof Flush flush) {
-        kryon.executeCommand(flush);
-      } else if (kryonCommand instanceof ForwardBatch forwardBatch) {
-        Map<RequestId, Errable<Object>> finalResponses = new LinkedHashMap<>();
-        Set<RequestId> unmockedRequestIds = new LinkedHashSet<>();
-        for (Entry<RequestId, Facets> entry : forwardBatch.executableRequests().entrySet()) {
-          RequestId requestId = entry.getKey();
-          Facets facets = entry.getValue();
-          Errable<Object> mockedResponse = executionStubs.get(facets);
-          if (mockedResponse == null) {
-            if (failIfMockMissing) {
-              throw new IllegalStateException(
-                  "Could not find mocked response for inputs %s of kryon %s"
-                      .formatted(facets, kryonId));
-            } else {
-              unmockedRequestIds.add(requestId);
-            }
-          } else {
-            finalResponses.put(requestId, mockedResponse);
-          }
-        }
-        LinkedHashMap<RequestId, Facets> unmockedRequests =
-            new LinkedHashMap<>(forwardBatch.executableRequests());
-        unmockedRequests.keySet().retainAll(unmockedRequestIds);
-        try {
-          if (!unmockedRequests.isEmpty()) {
-            CompletableFuture<KryonResponse> forwardedRequestsResult =
-                kryon.executeCommand(
-                    new ForwardBatch(
-                        forwardBatch.kryonId(),
-                        forwardBatch.inputNames(),
-                        ImmutableMap.copyOf(unmockedRequests),
-                        forwardBatch.dependantChain(),
-                        forwardBatch.skippedRequests()));
-            return forwardedRequestsResult.handle(
-                (kryonResponse, throwable) -> {
-                  if (kryonResponse instanceof BatchResponse batchResponse) {
-                    finalResponses.putAll(batchResponse.responses());
-                  } else {
-                    Errable<Object> error =
-                        throwable != null
-                            ? Errable.withError(throwable)
-                            : Errable.withError(
-                                new AssertionError(
-                                    "Unknown KryonResponse type of response %s from kryon %s"
-                                        .formatted(kryonResponse, kryonId)));
-                    for (RequestId unmockedRequestId : unmockedRequestIds) {
-                      finalResponses.put(unmockedRequestId, error);
-                    }
-                  }
-                  return new BatchResponse(ImmutableMap.copyOf(finalResponses));
-                });
-          } else {
-            return completedFuture(new BatchResponse(ImmutableMap.copyOf(finalResponses)));
-          }
-        } finally {
-          flushDependencies(kryon, forwardBatch, kryonExecutor);
-        }
       }
       return kryon.executeCommand(kryonCommand);
     }
@@ -159,6 +103,68 @@ public class VajramPrimer extends AbstractKryonDecorator {
         throw new AssertionError(
             "Vajram mocker for %s received command for %s".formatted(vajramId, kryondId));
       }
+    }
+  }
+
+  private CompletableFuture<KryonResponse> getPrimedResponse(
+      Kryon<KryonCommand, KryonResponse> kryon,
+      ForwardBatch forwardBatch,
+      KryonId kryonId,
+      KryonExecutor kryonExecutor) {
+    Map<RequestId, Errable<Object>> finalResponses = new LinkedHashMap<>();
+    Set<RequestId> unmockedRequestIds = new LinkedHashSet<>();
+    for (Entry<RequestId, Facets> entry : forwardBatch.executableRequests().entrySet()) {
+      RequestId requestId = entry.getKey();
+      Facets facets = entry.getValue();
+      Errable<Object> mockedResponse = executionStubs.get(facets);
+      if (mockedResponse == null) {
+        if (failIfMockMissing) {
+          throw new IllegalStateException(
+              "Could not find mocked response for inputs %s of kryon %s"
+                  .formatted(facets, kryonId));
+        } else {
+          unmockedRequestIds.add(requestId);
+        }
+      } else {
+        finalResponses.put(requestId, mockedResponse);
+      }
+    }
+    LinkedHashMap<RequestId, Facets> unmockedRequests =
+        new LinkedHashMap<>(forwardBatch.executableRequests());
+    unmockedRequests.keySet().retainAll(unmockedRequestIds);
+    try {
+      if (!unmockedRequests.isEmpty()) {
+        CompletableFuture<KryonResponse> forwardedRequestsResult =
+            kryon.executeCommand(
+                new ForwardBatch(
+                    forwardBatch.kryonId(),
+                    forwardBatch.inputNames(),
+                    ImmutableMap.copyOf(unmockedRequests),
+                    forwardBatch.dependantChain(),
+                    forwardBatch.skippedRequests()));
+        return forwardedRequestsResult.handle(
+            (kryonResponse, throwable) -> {
+              if (kryonResponse instanceof BatchResponse batchResponse) {
+                finalResponses.putAll(batchResponse.responses());
+              } else {
+                Errable<Object> error =
+                    throwable != null
+                        ? Errable.withError(throwable)
+                        : Errable.withError(
+                            new AssertionError(
+                                "Unknown KryonResponse type of response %s from kryon %s"
+                                    .formatted(kryonResponse, kryonId)));
+                for (RequestId unmockedRequestId : unmockedRequestIds) {
+                  finalResponses.put(unmockedRequestId, error);
+                }
+              }
+              return new BatchResponse(ImmutableMap.copyOf(finalResponses));
+            });
+      } else {
+        return completedFuture(new BatchResponse(ImmutableMap.copyOf(finalResponses)));
+      }
+    } finally {
+      flushDependencies(kryon, forwardBatch, kryonExecutor);
     }
   }
 

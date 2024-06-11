@@ -20,6 +20,10 @@ public class LogicDecorationOrdering {
 
   private final ImmutableMap<String, Integer> decoratorTypeIndices;
 
+  /**
+   * @param orderedDecoratorIds The first id in this list will process the command first and the
+   *     command response last in relation to later decorator ids.
+   */
   public LogicDecorationOrdering(ImmutableSet<String> orderedDecoratorIds) {
     List<String> strings = orderedDecoratorIds.stream().toList();
     Map<String, Integer> indices = new HashMap<>();
@@ -29,9 +33,14 @@ public class LogicDecorationOrdering {
     this.decoratorTypeIndices = ImmutableMap.copyOf(indices);
   }
 
-  public Comparator<LogicDecorator<?, ?>> decorationOrder() {
-    return comparingInt(
-        key -> ofNullable(decoratorTypeIndices.get(key.decoratorType())).orElse(Integer.MIN_VALUE));
+  public <T extends Decorator> Comparator<T> decorationOrder() {
+    Comparator<T> naturalOrder =
+        comparingInt(
+            key ->
+                ofNullable(decoratorTypeIndices.get(key.decoratorType()))
+                    .orElse(Integer.MIN_VALUE));
+    // Reverse the ordering so that the ones with the highest index are applied first.
+    return naturalOrder.reversed();
   }
 
   public static LogicDecorationOrdering none() {

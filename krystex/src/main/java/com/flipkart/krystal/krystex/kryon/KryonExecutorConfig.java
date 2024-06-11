@@ -11,8 +11,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import lombok.Builder;
+import lombok.Singular;
 
 public record KryonExecutorConfig(
     LogicDecorationOrdering logicDecorationOrdering,
@@ -20,7 +20,7 @@ public record KryonExecutorConfig(
     ImmutableSet<DependantChain> disabledDependantChains,
     KryonExecStrategy kryonExecStrategy,
     GraphTraversalStrategy graphTraversalStrategy,
-    Function<KryonId, List<KryonDecorator>> kryonDecoratorsProvider,
+    @Singular Map<String, KryonDecoratorConfig> requestScopedKryonDecoratorConfigs,
     boolean debug) {
 
   @Builder(toBuilder = true)
@@ -31,8 +31,8 @@ public record KryonExecutorConfig(
     if (graphTraversalStrategy == null) {
       graphTraversalStrategy = DEPTH;
     }
-    if (kryonDecoratorsProvider == null) {
-      kryonDecoratorsProvider = kryonId -> List.of();
+    if (requestScopedKryonDecoratorConfigs == null) {
+      requestScopedKryonDecoratorConfigs = Map.of();
     }
   }
 

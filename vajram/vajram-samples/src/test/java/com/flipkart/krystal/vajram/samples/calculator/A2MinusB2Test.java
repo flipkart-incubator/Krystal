@@ -41,7 +41,7 @@ class A2MinusB2Test {
       A2MinusB2Request req) {
     return krystexVajramExecutor.execute(
         vajramID(getVajramIdString(A2MinusB2.class)),
-        rc -> req,
+        req,
         KryonExecutionConfig.builder().executionId("1").build());
   }
 }

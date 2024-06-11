@@ -89,9 +89,16 @@ class KrystexVajramExecutorTest {
   private TestRequestContext requestContext;
   private ObjectMapper objectMapper;
   private VajramKryonGraph graph;
+  private LogicDecorationOrdering logicDecorationOrdering;
 
   @BeforeEach
   void setUp() {
+    logicDecorationOrdering =
+        new LogicDecorationOrdering(
+            ImmutableSet.of(
+                Resilience4JCircuitBreaker.DECORATOR_TYPE,
+                Resilience4JBulkhead.DECORATOR_TYPE,
+                InputBatchingDecorator.DECORATOR_TYPE));
     requestContext = new TestRequestContext(Optional.of("user_id_1"), 2);
     objectMapper =
         new ObjectMapper()
@@ -120,12 +127,9 @@ class KrystexVajramExecutorTest {
     requestContext.requestId("vajramWithNoDependencies");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            requestContext,
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .build())) {
-      result = krystexVajramExecutor.execute(ofVajram(Hello.class), this::helloRequest);
+            requestContext, getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
+      result =
+          krystexVajramExecutor.execute(ofVajram(Hello.class), this.helloRequest(requestContext));
     }
     assertThat(result).succeedsWithin(TIMEOUT).isEqualTo("Hello! user_id_1");
   }
@@ -140,16 +144,11 @@ class KrystexVajramExecutorTest {
     requestContext.requestId("vajramWithNoDependencies");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            requestContext,
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .build())) {
+            requestContext, getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
       result =
           krystexVajramExecutor.execute(
               ofVajram(Hello.class),
-              applicationRequestContext ->
-                  helloRequestBuilder(applicationRequestContext).greeting("Namaste").build());
+              helloRequestBuilder(requestContext).greeting("Namaste").build());
     }
     assertThat(result).succeedsWithin(TIMEOUT).isEqualTo("Namaste! user_id_1");
   }
@@ -165,14 +164,10 @@ class KrystexVajramExecutorTest {
     requestContext.requestId("ioVajramSingleRequestNoBatcher");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            requestContext,
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .build())) {
+            requestContext, getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
       userInfo123 =
           krystexVajramExecutor.execute(
-              ofVajram(TestUserService.class), this::testUserServiceRequest);
+              ofVajram(TestUserService.class), this.testUserServiceRequest(requestContext));
     }
     assertThat(userInfo123)
         .succeedsWithin(TIMEOUT)
@@ -201,13 +196,10 @@ class KrystexVajramExecutorTest {
     requestContext.requestId("ioVajramWithBatcherMultipleRequests");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            requestContext,
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .build())) {
+            requestContext, getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
       helloString =
-          krystexVajramExecutor.execute(ofVajram(HelloFriends.class), this::helloFriendsRequest);
+          krystexVajramExecutor.execute(
+              ofVajram(HelloFriends.class), this.helloFriendsRequest(requestContext));
     }
     assertThat(helloString)
         .succeedsWithin(TIMEOUT)
@@ -235,14 +227,10 @@ class KrystexVajramExecutorTest {
     requestContext.requestId("sequentialDependency");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            requestContext,
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .build())) {
+            requestContext, getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
       helloString =
           krystexVajramExecutor.execute(
-              ofVajram(HelloFriendsV2.class), this::helloFriendsV2Request);
+              ofVajram(HelloFriendsV2.class), this.helloFriendsV2Request(requestContext));
     }
     assertThat(helloString)
         .succeedsWithin(TIMEOUT)
@@ -268,15 +256,11 @@ class KrystexVajramExecutorTest {
     requestContext.requestId("sequentialDependency");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            requestContext,
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .build())) {
+            requestContext, getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
       helloString =
           krystexVajramExecutor.executeWithFacets(
               ofVajram(HelloFriendsV2.class),
-              testRequestContext -> helloFriendsV2Request(testRequestContext).toFacetValues(),
+              helloFriendsV2Request(requestContext).toFacetValues(),
               KryonExecutionConfig.builder().executionId("execution").build());
     }
     assertThat(helloString)
@@ -296,12 +280,10 @@ class KrystexVajramExecutorTest {
     requestContext.requestId("vajramWithNoDependencies");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            requestContext,
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .build())) {
-      result = krystexVajramExecutor.execute(ofVajram(Hello.class), this::incompleteHelloRequest);
+            requestContext, getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
+      result =
+          krystexVajramExecutor.execute(
+              ofVajram(Hello.class), this.incompleteHelloRequest(requestContext));
     }
     assertThat(result)
         .failsWithin(TIMEOUT)
@@ -327,21 +309,16 @@ class KrystexVajramExecutorTest {
     requestContext.requestId("multiRequestNoInputBatcher_cacheHitSuccess");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            requestContext,
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .build())) {
+            requestContext, getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
       userInfo =
           krystexVajramExecutor.execute(
               ofVajram(TestUserService.class),
-              testRequestContext -> TestUserServiceRequest.builder().userId("user_id_1").build(),
+              TestUserServiceRequest.builder().userId("user_id_1").build(),
               KryonExecutionConfig.builder().executionId("req_1").build());
       helloFriends =
           krystexVajramExecutor.execute(
               ofVajram(HelloFriends.class),
-              testRequestContext ->
-                  HelloFriendsRequest.builder().userId("user_id_1").numberOfFriends(0).build(),
+              HelloFriendsRequest.builder().userId("user_id_1").numberOfFriends(0).build(),
               KryonExecutionConfig.builder().executionId("req_2").build());
     }
     assertThat(userInfo)
@@ -368,22 +345,16 @@ class KrystexVajramExecutorTest {
     requestContext.requestId("ioVajramSingleRequestNoBatcher");
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            requestContext,
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .build())) {
+            requestContext, getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
       userInfo =
           krystexVajramExecutor.execute(
               ofVajram(TestUserService.class),
-              testRequestContext ->
-                  TestUserServiceRequest.builder().userId("user_id_1:friend_1").build(),
+              TestUserServiceRequest.builder().userId("user_id_1:friend_1").build(),
               KryonExecutionConfig.builder().executionId("req_1").build());
       helloFriends =
           krystexVajramExecutor.execute(
               ofVajram(HelloFriends.class),
-              testRequestContext ->
-                  HelloFriendsRequest.builder().userId("user_id_1").numberOfFriends(1).build(),
+              HelloFriendsRequest.builder().userId("user_id_1").numberOfFriends(1).build(),
               KryonExecutionConfig.builder().executionId("req_2").build());
     }
     assertThat(userInfo)
@@ -423,26 +394,28 @@ class KrystexVajramExecutorTest {
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
             requestContext,
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .requestScopedLogicDecoratorConfigs(
-                    ImmutableMap.of(
-                        mainLogicExecReporter.decoratorType(),
-                        List.of(
-                            new OutputLogicDecoratorConfig(
+            KrystexVajramExecutorConfig.builder()
+                .kryonExecutorConfigBuilder(
+                    KryonExecutorConfig.builder()
+                        .kryonExecStrategy(kryonExecStrategy)
+                        .graphTraversalStrategy(graphTraversalStrategy)
+                        .requestScopedLogicDecoratorConfigs(
+                            ImmutableMap.of(
                                 mainLogicExecReporter.decoratorType(),
-                                (logicExecutionContext) -> true,
-                                logicExecutionContext -> mainLogicExecReporter.decoratorType(),
-                                decoratorContext -> mainLogicExecReporter))))
+                                List.of(
+                                    new OutputLogicDecoratorConfig(
+                                        mainLogicExecReporter.decoratorType(),
+                                        (logicExecutionContext) -> true,
+                                        logicExecutionContext ->
+                                            mainLogicExecReporter.decoratorType(),
+                                        decoratorContext -> mainLogicExecReporter)))))
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
               ofVajram(MultiHelloFriends.class),
-              testRequestContext ->
-                  MultiHelloFriendsRequest.builder()
-                      .userIds(new ArrayList<>(List.of("user_id_1", "user_id_2")))
-                      .build());
+              MultiHelloFriendsRequest.builder()
+                  .userIds(new ArrayList<>(List.of("user_id_1", "user_id_2")))
+                  .build());
     }
     assertThat(multiHellos)
         .succeedsWithin(TIMEOUT)
@@ -475,18 +448,13 @@ class KrystexVajramExecutorTest {
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            requestContext,
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .build())) {
+            requestContext, getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
       multiHellos =
           krystexVajramExecutor.execute(
               ofVajram(MultiHelloFriends.class),
-              testRequestContext ->
-                  MultiHelloFriendsRequest.builder()
-                      .userIds(new ArrayList<>(List.of("user_id_1", "user_id_2")))
-                      .build());
+              MultiHelloFriendsRequest.builder()
+                  .userIds(new ArrayList<>(List.of("user_id_1", "user_id_2")))
+                  .build());
     }
     assertThat(multiHellos)
         .succeedsWithin(TIMEOUT)
@@ -530,19 +498,14 @@ class KrystexVajramExecutorTest {
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            requestContext,
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .build())) {
+            requestContext, getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
       multiHellos =
           krystexVajramExecutor.execute(
               ofVajram(MultiHelloFriends.class),
-              testRequestContext ->
-                  MultiHelloFriendsRequest.builder()
-                      .userIds(new ArrayList<>(List.of("user_id_1", "user_id_2")))
-                      .skip(false)
-                      .build());
+              MultiHelloFriendsRequest.builder()
+                  .userIds(new ArrayList<>(List.of("user_id_1", "user_id_2")))
+                  .skip(false)
+                  .build());
     }
     assertThat(multiHellos)
         .succeedsWithin(TIMEOUT)
@@ -562,6 +525,17 @@ class KrystexVajramExecutorTest {
              made
             */
             1);
+  }
+
+  private KrystexVajramExecutorConfig getExecutorConfig(
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
+    return KrystexVajramExecutorConfig.builder()
+        .kryonExecutorConfigBuilder(
+            KryonExecutorConfig.builder()
+                .kryonExecStrategy(kryonExecStrategy)
+                .graphTraversalStrategy(graphTraversalStrategy)
+                .logicDecorationOrdering(logicDecorationOrdering))
+        .build();
   }
 
   @ParameterizedTest
@@ -590,19 +564,14 @@ class KrystexVajramExecutorTest {
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            requestContext,
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .build())) {
+            requestContext, getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
       multiHellos =
           krystexVajramExecutor.execute(
               ofVajram(MultiHelloFriends.class),
-              testRequestContext ->
-                  MultiHelloFriendsRequest.builder()
-                      .userIds(new ArrayList<>(Set.of("user_id_1", "user_id_2")))
-                      .skip(true)
-                      .build());
+              MultiHelloFriendsRequest.builder()
+                  .userIds(new ArrayList<>(Set.of("user_id_1", "user_id_2")))
+                  .skip(true)
+                  .build());
     }
     assertThat(multiHellos).succeedsWithin(TIMEOUT).isEqualTo("");
     assertThat(TestUserService.CALL_COUNTER.sum())
@@ -640,18 +609,13 @@ class KrystexVajramExecutorTest {
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            requestContext,
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .build())) {
+            requestContext, getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
       multiHellos =
           krystexVajramExecutor.execute(
               ofVajram(MultiHelloFriendsV2.class),
-              testRequestContext ->
-                  MultiHelloFriendsV2Request.builder()
-                      .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
-                      .build());
+              MultiHelloFriendsV2Request.builder()
+                  .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
+                  .build());
     }
     assertThat(multiHellos)
         .succeedsWithin(TIMEOUT)
@@ -693,18 +657,13 @@ class KrystexVajramExecutorTest {
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            requestContext,
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .build())) {
+            requestContext, getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
       multiHellos =
           krystexVajramExecutor.execute(
               vajramID("MutualFriendsHello"),
-              testRequestContext ->
-                  MultiHelloFriendsV2Request.builder()
-                      .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
-                      .build());
+              MultiHelloFriendsV2Request.builder()
+                  .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
+                  .build());
     }
     assertThat(multiHellos)
         .succeedsWithin(TIMEOUT)
@@ -748,19 +707,14 @@ class KrystexVajramExecutorTest {
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            requestContext,
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .build())) {
+            requestContext, getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
       multiHellos =
           krystexVajramExecutor.execute(
               vajramID("MutualFriendsHello"),
-              testRequestContext ->
-                  MultiHelloFriendsV2Request.builder()
-                      .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
-                      .skip(true)
-                      .build());
+              MultiHelloFriendsV2Request.builder()
+                  .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
+                  .skip(true)
+                  .build());
     }
     assertThat(multiHellos).succeedsWithin(1, TimeUnit.SECONDS);
     assertTrue(multiHellos.get().isEmpty());
@@ -838,19 +792,14 @@ class KrystexVajramExecutorTest {
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
         graph.createExecutor(
-            requestContext,
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .build())) {
+            requestContext, getExecutorConfig(kryonExecStrategy, graphTraversalStrategy))) {
       multiHellos =
           krystexVajramExecutor.execute(
               ofVajram(MultiHelloFriendsV2.class),
-              testRequestContext ->
-                  MultiHelloFriendsV2Request.builder()
-                      .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
-                      .skip(true)
-                      .build());
+              MultiHelloFriendsV2Request.builder()
+                  .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
+                  .skip(true)
+                  .build());
     }
     assertThat(friendServiceFlushCommand).succeedsWithin(TIMEOUT);
     assertThat(userServiceFlushCommand).succeedsWithin(TIMEOUT);
@@ -936,13 +885,7 @@ class KrystexVajramExecutorTest {
                 instanceIdCreator,
                 decoratorContext ->
                     new Resilience4JCircuitBreaker(
-                        instanceIdCreator.apply(decoratorContext.logicExecutionContext()))))
-        .logicDecorationOrdering(
-            new LogicDecorationOrdering(
-                ImmutableSet.of(
-                    Resilience4JCircuitBreaker.DECORATOR_TYPE,
-                    Resilience4JBulkhead.DECORATOR_TYPE,
-                    InputBatchingDecorator.DECORATOR_TYPE)));
+                        instanceIdCreator.apply(decoratorContext.logicExecutionContext()))));
   }
 
   public static Stream<Arguments> executorConfigsToTest() {

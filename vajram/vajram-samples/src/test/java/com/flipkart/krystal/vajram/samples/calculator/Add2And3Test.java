@@ -22,8 +22,7 @@ class Add2And3Test {
         graph.createExecutor(() -> "add2and3")) {
       future =
           krystexVajramExecutor.execute(
-              ofVajram(Add2And3.class),
-              applicationRequestContext -> Add2And3Request.builder().build());
+              ofVajram(Add2And3.class), Add2And3Request.builder().build());
     }
     Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(5);
   }

@@ -8,7 +8,8 @@ import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.add;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderRequest.*;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderRequest.chainSum_n;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderRequest.sum_n;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -33,6 +34,7 @@ import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.samples.calculator.Formula;
 import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import com.google.common.collect.ImmutableMap;
@@ -75,17 +77,21 @@ class ChainAdderTest {
     try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
         graph.createExecutor(
             new RequestContext("chainAdderTest"),
-            KryonExecutorConfig.builder()
-                .requestScopedLogicDecoratorConfigs(
-                    ImmutableMap.of(
-                        mainLogicExecReporter.decoratorType(),
-                        List.of(
-                            new OutputLogicDecoratorConfig(
+            KrystexVajramExecutorConfig.builder()
+                .kryonExecutorConfigBuilder(
+                    KryonExecutorConfig.builder()
+                        .requestScopedLogicDecoratorConfigs(
+                            ImmutableMap.of(
                                 mainLogicExecReporter.decoratorType(),
-                                logicExecutionContext -> true,
-                                logicExecutionContext -> mainLogicExecReporter.decoratorType(),
-                                decoratorContext -> mainLogicExecReporter))))
+                                List.of(
+                                    new OutputLogicDecoratorConfig(
+                                        mainLogicExecReporter.decoratorType(),
+                                        logicExecutionContext -> true,
+                                        logicExecutionContext ->
+                                            mainLogicExecReporter.decoratorType(),
+                                        decoratorContext -> mainLogicExecReporter)))))
                 .build())) {
+
       future = executeVajram(krystexVajramExecutor, 0);
     }
     assertThat(future).succeedsWithin(ofSeconds(1000)).isEqualTo(55);
@@ -102,7 +108,7 @@ class ChainAdderTest {
       future =
           krystexVajramExecutor.execute(
               ofVajram(ChainAdder.class),
-              rc -> ChainAdderRequest.builder().numbers(List.of()).build(),
+              ChainAdderRequest.builder().numbers(List.of()).build(),
               KryonExecutionConfig.builder()
                   .disabledDependantChains(getDisabledDependantChains(graph))
                   .build());
@@ -253,14 +259,13 @@ class ChainAdderTest {
       KrystexVajramExecutor<RequestContext> krystexVajramExecutor, int multiplier) {
     return krystexVajramExecutor.execute(
         vajramID(getVajramIdString(ChainAdder.class)),
-        rc ->
-            builder()
-                .numbers(
-                    new ArrayList<>(
-                        Stream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-                            .map(integer -> integer + multiplier * 10)
-                            .toList()))
-                .build(),
+        ChainAdderRequest.builder()
+            .numbers(
+                new ArrayList<>(
+                    Stream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+                        .map(integer -> integer + multiplier * 10)
+                        .toList()))
+            .build(),
         KryonExecutionConfig.builder()
             .executionId(String.valueOf(multiplier))
             // Tests whether request level disabled dependant chains is working

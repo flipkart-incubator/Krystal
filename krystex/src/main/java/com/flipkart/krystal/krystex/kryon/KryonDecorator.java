@@ -1,6 +1,7 @@
 package com.flipkart.krystal.krystex.kryon;
 
 import com.flipkart.krystal.krystex.commands.KryonCommand;
+import com.flipkart.krystal.krystex.logicdecoration.Decorator;
 
 /**
  * Kryon Decorator is a functional interface which provides capability to define custom decorators
@@ -8,7 +9,7 @@ import com.flipkart.krystal.krystex.commands.KryonCommand;
  * kryon and apply a custom execution logic according to the requirement.
  */
 @FunctionalInterface
-public interface KryonDecorator {
+public interface KryonDecorator extends Decorator {
   Kryon<KryonCommand, KryonResponse> decorateKryon(
       Kryon<KryonCommand, KryonResponse> kryon, KryonExecutor kryonExecutor);
 }

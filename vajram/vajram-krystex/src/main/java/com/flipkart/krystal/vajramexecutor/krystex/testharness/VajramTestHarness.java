@@ -3,17 +3,13 @@ package com.flipkart.krystal.vajramexecutor.krystex.testharness;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.krystex.kryon.KryonDecorator;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
-import com.flipkart.krystal.krystex.kryon.KryonId;
+import com.flipkart.krystal.krystex.kryon.KryonDecoratorConfig;
 import com.flipkart.krystal.vajram.VajramRequest;
-import java.util.ArrayList;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
+import java.util.Optional;
 
 /**
  * Test harness is a collection of software/test data used by developers for unit testing. It is
@@ -24,14 +20,14 @@ import java.util.function.Function;
 public class VajramTestHarness {
 
   private Map<String, Map<VajramRequest<Object>, Errable<Object>>> vajramIdMockData;
-  private KryonExecutorConfigBuilder kryonExecutorConfigBuilder;
+  private KrystexVajramExecutorConfig kryonExecutorConfigBuilder;
 
-  private VajramTestHarness(KryonExecutorConfigBuilder kryonExecutorBuilder) {
+  private VajramTestHarness(KrystexVajramExecutorConfig kryonExecutorBuilder) {
     this.kryonExecutorConfigBuilder = kryonExecutorBuilder;
     this.vajramIdMockData = new HashMap<>();
   }
 
-  public static VajramTestHarness prepareForTest(KryonExecutorConfigBuilder kryonExecutorBuilder) {
+  public static VajramTestHarness prepareForTest(KrystexVajramExecutorConfig kryonExecutorBuilder) {
     return new VajramTestHarness(kryonExecutorBuilder);
   }
 
@@ -53,23 +49,24 @@ public class VajramTestHarness {
     return this;
   }
 
-  private List<KryonDecorator> getVajramMocker(String kryonId) {
-    Map<VajramRequest<Object>, Errable<Object>> mockDataMap = this.vajramIdMockData.get(kryonId);
-    return Objects.isNull(mockDataMap)
-        ? List.of()
-        : List.of(new VajramPrimer(vajramID(kryonId), mockDataMap, true));
-  }
-
-  public KryonExecutorConfig buildConfig() {
-    Function<KryonId, List<KryonDecorator>> kryonIdListFunction =
-        kryonExecutorConfigBuilder.build().kryonDecoratorsProvider();
-    return kryonExecutorConfigBuilder
-        .kryonDecoratorsProvider(
-            kryonId -> {
-              List<KryonDecorator> list = new ArrayList<>(kryonIdListFunction.apply(kryonId));
-              list.addAll(getVajramMocker(kryonId.value()));
-              return list;
-            })
-        .build();
+  public KrystexVajramExecutorConfig buildConfig() {
+    kryonExecutorConfigBuilder
+        .kryonExecutorConfigBuilder()
+        .requestScopedKryonDecoratorConfig(
+            VajramPrimer.class.getName(),
+            new KryonDecoratorConfig(
+                VajramPrimer.class.getName(),
+                kryonExecutionContext -> {
+                  if (!vajramIdMockData.containsKey(kryonExecutionContext.kryonId().value())) {
+                    return Optional.empty();
+                  }
+                  String kryonId = kryonExecutionContext.kryonId().value();
+                  return Optional.of(
+                      new VajramPrimer(
+                          vajramID(kryonId),
+                          this.vajramIdMockData.getOrDefault(kryonId, Map.of()),
+                          true));
+                }));
+    return kryonExecutorConfigBuilder;
   }
 }
