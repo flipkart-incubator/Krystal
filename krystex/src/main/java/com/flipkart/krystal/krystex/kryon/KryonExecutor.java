@@ -22,6 +22,8 @@ import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardBatch;
 import com.flipkart.krystal.krystex.commands.ForwardGranule;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
+import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationContext;
+import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
@@ -272,7 +274,7 @@ public final class KryonExecutor implements KrystalExecutor {
    * command is originating from the same main thread inside the command queue,thus avoiding the
    * pontentially unnecessary contention in the thread-safe structures inside the command queue.
    */
-  <T extends KryonResponse> CompletableFuture<T> executeCommand(KryonCommand kryonCommand) {
+  public <T extends KryonResponse> CompletableFuture<T> executeCommand(KryonCommand kryonCommand) {
     if (BREADTH.equals(executorConfig.graphTraversalStrategy())) {
       return enqueueKryonCommand(() -> kryonCommand);
     } else {
@@ -295,7 +297,8 @@ public final class KryonExecutor implements KrystalExecutor {
       //noinspection unchecked
       kryon =
           (Kryon<KryonCommand, R>)
-              kryonDecorator.decorateKryon((Kryon<KryonCommand, KryonResponse>) kryon, this);
+              kryonDecorator.decorateKryon(
+                  new KryonDecorationContext((Kryon<KryonCommand, KryonResponse>) kryon, this));
     }
     if (kryonCommand instanceof Flush flush) {
       kryon.executeCommand(flush);

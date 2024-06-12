@@ -1,6 +1,7 @@
 package com.flipkart.krystal.krystex.logicdecoration;
 
 import com.flipkart.krystal.config.ConfigListener;
+import com.flipkart.krystal.krystex.Decorator;
 import com.flipkart.krystal.krystex.Logic;
 import com.flipkart.krystal.krystex.LogicDefinition;
 

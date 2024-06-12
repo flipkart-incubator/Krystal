@@ -8,13 +8,14 @@ import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardBatch;
 import com.flipkart.krystal.krystex.commands.ForwardGranule;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
-import com.flipkart.krystal.krystex.kryon.AbstractKryonDecorator;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonResponse;
+import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationContext;
+import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
@@ -26,48 +27,52 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /**
- * VajramPrimer is a custom Kryon Decorator which enables mocking the request and response of a
- * vajram at runtime. When a kryon is decorated with vajram primer, it overrides the actual
+ * VajramPrimer is a custom Kryon Decorator which enables priming a response for a given request of
+ * a vajram at runtime. When a kryon is decorated with vajram primer, it overrides the actual
  * execution logic of the vajram and replaces it with the provided execution stubs.
  */
-public class VajramPrimer extends AbstractKryonDecorator {
+@Slf4j
+public class VajramPrimer implements KryonDecorator {
 
-  private final ImmutableMap<Facets, Errable<Object>> executionStubs;
+  private final ImmutableMap<Facets, Errable<Object>> responsesByFacets;
   private final VajramID decoratedVajramId;
-  private final boolean failIfMockMissing;
-  private @MonotonicNonNull DecoratedKryon decoratedKryon;
+  private final boolean failIfNotPrimed;
+  private VajramPrimer.@MonotonicNonNull PrimingDecoratedKryon primingDecoratedKryon;
 
   public <T> VajramPrimer(
-      VajramID mockedVajramId, Map<VajramRequest<T>, Errable<T>> stubs, boolean failIfMockMissing) {
-    this.decoratedVajramId = mockedVajramId;
-    this.failIfMockMissing = failIfMockMissing;
-    Map<Facets, Errable<Object>> mocks = new LinkedHashMap<>(stubs.size());
-    stubs.forEach(
+      VajramID primedVajramId,
+      Map<VajramRequest<T>, Errable<T>> primedResponses,
+      boolean failIfNotPrimed) {
+    this.decoratedVajramId = primedVajramId;
+    this.failIfNotPrimed = failIfNotPrimed;
+    Map<Facets, Errable<Object>> responsesByFacets = new LinkedHashMap<>(primedResponses.size());
+    primedResponses.forEach(
         (req, resp) -> {
           //noinspection unchecked
-          mocks.put(req.toFacetValues(), (Errable<Object>) resp);
+          responsesByFacets.put(req.toFacetValues(), (Errable<Object>) resp);
         });
-    this.executionStubs = ImmutableMap.copyOf(mocks);
+    this.responsesByFacets = ImmutableMap.copyOf(responsesByFacets);
   }
 
   @Override
-  public Kryon<KryonCommand, KryonResponse> decorateKryon(
-      Kryon<KryonCommand, KryonResponse> kryon, KryonExecutor kryonExecutor) {
-    if (decoratedKryon == null) {
-      decoratedKryon = new DecoratedKryon(kryon, kryonExecutor);
+  public Kryon<KryonCommand, KryonResponse> decorateKryon(KryonDecorationContext context) {
+    if (primingDecoratedKryon == null) {
+      primingDecoratedKryon = new PrimingDecoratedKryon(context.kryon(), context.kryonExecutor());
     }
-    return decoratedKryon;
+    return primingDecoratedKryon;
   }
 
-  private class DecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
+  private class PrimingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
 
     private final Kryon<KryonCommand, KryonResponse> kryon;
     private final KryonExecutor kryonExecutor;
 
-    private DecoratedKryon(Kryon<KryonCommand, KryonResponse> kryon, KryonExecutor kryonExecutor) {
+    private PrimingDecoratedKryon(
+        Kryon<KryonCommand, KryonResponse> kryon, KryonExecutor kryonExecutor) {
       this.kryon = kryon;
       this.kryonExecutor = kryonExecutor;
     }
@@ -100,8 +105,11 @@ public class VajramPrimer extends AbstractKryonDecorator {
       String vajramId = decoratedVajramId.vajramId();
       String kryondId = kryonId.value();
       if (!Objects.equals(kryondId, vajramId)) {
-        throw new AssertionError(
-            "Vajram mocker for %s received command for %s".formatted(vajramId, kryondId));
+        AssertionError e =
+            new AssertionError(
+                "VajramPrimer for %s received command for %s".formatted(vajramId, kryondId));
+        log.error("", e);
+        throw e;
       }
     }
   }
@@ -112,34 +120,34 @@ public class VajramPrimer extends AbstractKryonDecorator {
       KryonId kryonId,
       KryonExecutor kryonExecutor) {
     Map<RequestId, Errable<Object>> finalResponses = new LinkedHashMap<>();
-    Set<RequestId> unmockedRequestIds = new LinkedHashSet<>();
+    Set<RequestId> nonPrimedRequestIds = new LinkedHashSet<>();
     for (Entry<RequestId, Facets> entry : forwardBatch.executableRequests().entrySet()) {
       RequestId requestId = entry.getKey();
       Facets facets = entry.getValue();
-      Errable<Object> mockedResponse = executionStubs.get(facets);
-      if (mockedResponse == null) {
-        if (failIfMockMissing) {
+      Errable<Object> primedResponse = responsesByFacets.get(facets);
+      if (primedResponse == null) {
+        if (failIfNotPrimed) {
           throw new IllegalStateException(
-              "Could not find mocked response for inputs %s of kryon %s"
+              "Could not find primed response for inputs %s of kryon %s"
                   .formatted(facets, kryonId));
         } else {
-          unmockedRequestIds.add(requestId);
+          nonPrimedRequestIds.add(requestId);
         }
       } else {
-        finalResponses.put(requestId, mockedResponse);
+        finalResponses.put(requestId, primedResponse);
       }
     }
-    LinkedHashMap<RequestId, Facets> unmockedRequests =
+    LinkedHashMap<RequestId, Facets> unprimedRequests =
         new LinkedHashMap<>(forwardBatch.executableRequests());
-    unmockedRequests.keySet().retainAll(unmockedRequestIds);
+    unprimedRequests.keySet().retainAll(nonPrimedRequestIds);
     try {
-      if (!unmockedRequests.isEmpty()) {
+      if (!unprimedRequests.isEmpty()) {
         CompletableFuture<KryonResponse> forwardedRequestsResult =
             kryon.executeCommand(
                 new ForwardBatch(
                     forwardBatch.kryonId(),
                     forwardBatch.inputNames(),
-                    ImmutableMap.copyOf(unmockedRequests),
+                    ImmutableMap.copyOf(unprimedRequests),
                     forwardBatch.dependantChain(),
                     forwardBatch.skippedRequests()));
         return forwardedRequestsResult.handle(
@@ -154,8 +162,8 @@ public class VajramPrimer extends AbstractKryonDecorator {
                             new AssertionError(
                                 "Unknown KryonResponse type of response %s from kryon %s"
                                     .formatted(kryonResponse, kryonId)));
-                for (RequestId unmockedRequestId : unmockedRequestIds) {
-                  finalResponses.put(unmockedRequestId, error);
+                for (RequestId unprimedRequestId : nonPrimedRequestIds) {
+                  finalResponses.put(unprimedRequestId, error);
                 }
               }
               return new BatchResponse(ImmutableMap.copyOf(finalResponses));
@@ -179,9 +187,9 @@ public class VajramPrimer extends AbstractKryonDecorator {
         .dependencyKryons()
         .forEach(
             (depName, depKryon) -> {
-              executeCommand(
-                  new Flush(depKryon, forwardBatch.dependantChain().extend(kryonId, depName)),
-                  kryonExecutor);
+              KryonCommand kryonCommand =
+                  new Flush(depKryon, forwardBatch.dependantChain().extend(kryonId, depName));
+              kryonExecutor.executeCommand(kryonCommand);
             });
   }
 }
