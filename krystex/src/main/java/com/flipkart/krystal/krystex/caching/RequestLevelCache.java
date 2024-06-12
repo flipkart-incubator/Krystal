@@ -32,15 +32,11 @@ public class RequestLevelCache implements KryonDecorator {
   private static final Errable<Object> UNKNOWN_ERROR =
       Errable.withError(new StackTracelessException("Unknown error in request cache"));
 
-  private CachingDecoratedKryon kryon;
-  private Map<Facets, CompletableFuture<Object>> cache = new LinkedHashMap<>();
+  private final Map<CacheKey, CompletableFuture<Object>> cache = new LinkedHashMap<>();
 
   @Override
   public Kryon<KryonCommand, KryonResponse> decorateKryon(KryonDecorationContext context) {
-    if (kryon == null) {
-      kryon = new CachingDecoratedKryon(kryon);
-    }
-    return kryon;
+    return new CachingDecoratedKryon(context.kryon());
   }
 
   private class CachingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
@@ -82,7 +78,8 @@ public class RequestLevelCache implements KryonDecorator {
       Map<RequestId, CompletableFuture<Object>> cacheHits = new LinkedHashMap<>();
       executableRequests.forEach(
           (requestId, facets) -> {
-            CompletableFuture<Object> cachedFuture = cache.get(facets);
+            CompletableFuture<Object> cachedFuture =
+                cache.get(new CacheKey(kryon.getKryonDefinition().kryonId(), facets));
             if (cachedFuture == null) {
               cacheMisses.put(requestId, facets);
             } else {
@@ -105,7 +102,7 @@ public class RequestLevelCache implements KryonDecorator {
             (requestId, cacheInsert) -> {
               Facets facets = cacheMisses.get(requestId);
               if (facets != null) {
-                cache.put(facets, cacheInsert);
+                cache.put(new CacheKey(kryon.getKryonDefinition().kryonId(), facets), cacheInsert);
               } else {
                 var e =
                     new AssertionError(
