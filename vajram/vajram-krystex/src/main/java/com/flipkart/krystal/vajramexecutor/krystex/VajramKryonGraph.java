@@ -30,6 +30,7 @@ import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
+import com.flipkart.krystal.krystex.kryon.VajramExecutorConfig;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
@@ -106,7 +107,6 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
 
   private final LogicDecorationOrdering logicDecorationOrdering;
   private final MultiLeasePool<? extends ExecutorService> executorPool;
-  @NotOnlyInitialized private final InputInjector inputInjector;
   private final Map<String, VajramMetadata> vajramMetadataMap;
 
   private VajramKryonGraph(
@@ -125,7 +125,6 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
       List<? extends Vajram> vajrams = loadVajramsFromClassPath(packagePrefix);
       vajrams.forEach(this::registerVajram);
     }
-    this.inputInjector = new InputInjector(this, inputInjectionProvider);
     this.vajramMetadataMap = new HashMap<>();
   }
 
@@ -139,14 +138,28 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     return createExecutor(requestContext, KryonExecutorConfig.builder().debug(false).build());
   }
 
+  @Deprecated
   public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
       C requestContext, KryonExecutorConfig krystexConfig) {
+    return createExecutor(requestContext, VajramExecutorConfig.builder().kryonExecutorConfig(krystexConfig).build());
+  }
+
+  public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
+      C requestContext, VajramExecutorConfig vajramConfig) {
+
     if (logicDecorationOrdering != null
-        && LogicDecorationOrdering.none().equals(krystexConfig.logicDecorationOrdering())) {
-      krystexConfig =
-          krystexConfig.toBuilder().logicDecorationOrdering(logicDecorationOrdering).build();
+        && LogicDecorationOrdering.none()
+            .equals(vajramConfig.kryonExecutorConfig().logicDecorationOrdering())) {
+
+      KryonExecutorConfig kryonExecutorConfig =
+          vajramConfig.kryonExecutorConfig().toBuilder()
+              .logicDecorationOrdering(logicDecorationOrdering)
+              .build();
+
+      vajramConfig.toBuilder().
+          kryonExecutorConfig(kryonExecutorConfig).build();
     }
-    return new KrystexVajramExecutor<>(this, requestContext, executorPool, krystexConfig);
+    return new KrystexVajramExecutor<>(this, requestContext, executorPool, vajramConfig);
   }
 
   public void registerInputBatchers(VajramID vajramID, InputBatcherConfig... inputBatcherConfigs) {
@@ -563,7 +576,6 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                   .build();
             },
             ImmutableMap.copyOf(vajramDefinition.getOutputLogicTags()));
-    registerInputInjector(outputLogic, vajramDefinition.getVajram());
     sessionScopedDecoratorConfigs
         .values()
         .forEach(outputLogic::registerSessionScopedLogicDecorator);
@@ -575,20 +587,6 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
       return inputDef.sources().contains(CLIENT);
     }
     return true;
-  }
-
-  private <T> void registerInputInjector(
-      OutputLogicDefinition<T> logicDefinition, Vajram<?> vajram) {
-    VajramMetadata metadata = vajramMetadataMap.get(vajram.getId().vajramId());
-    if (metadata == null || !metadata.isInputInjectionNeeded()) {
-      return;
-    }
-    logicDefinition.registerSessionScopedLogicDecorator(
-        new OutputLogicDecoratorConfig(
-            InputInjector.DECORATOR_TYPE,
-            logicExecutionContext -> true,
-            logicExecutionContext -> logicExecutionContext.kryonId().value(),
-            decoratorContext -> inputInjector));
   }
 
   private static DependencyCommand<Facets> toDependencyCommand(

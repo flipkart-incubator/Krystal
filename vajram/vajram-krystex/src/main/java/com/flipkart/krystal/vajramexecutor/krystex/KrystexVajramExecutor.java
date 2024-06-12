@@ -5,12 +5,17 @@ import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
+import com.flipkart.krystal.krystex.kryon.VajramExecutorConfig;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.exec.VajramExecutor;
 import com.flipkart.krystal.vajram.facets.FacetValuesAdaptor;
+import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjector;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
@@ -35,6 +40,41 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
             vajramKryonGraph.getKryonDefinitionRegistry(),
             executorServicePool,
             config,
+            applicationRequestContext.requestId());
+  }
+
+  public KrystexVajramExecutor(
+      VajramKryonGraph vajramKryonGraph,
+      C applicationRequestContext,
+      MultiLeasePool<? extends ExecutorService> executorServicePool,
+      VajramExecutorConfig vajramExecutorConfig) {
+    this.vajramKryonGraph = vajramKryonGraph;
+    this.applicationRequestContext = applicationRequestContext;
+
+    InputInjector inputInjector = (InputInjector) vajramExecutorConfig.inputInjector();
+
+    Map<String, List<OutputLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs =
+        vajramExecutorConfig.kryonExecutorConfig().requestScopedLogicDecoratorConfigs();
+
+    requestScopedLogicDecoratorConfigs.putIfAbsent(
+        inputInjector.decoratorType(),
+        List.of(
+            new OutputLogicDecoratorConfig(
+                inputInjector.decoratorType(),
+                logicExecutionContext -> true,
+                logicExecutionContext -> inputInjector.decoratorType(),
+                decoratorContext -> inputInjector)));
+
+    KryonExecutorConfig kryonExecutorConfig =
+        vajramExecutorConfig.kryonExecutorConfig().toBuilder()
+            .requestScopedLogicDecoratorConfigs(requestScopedLogicDecoratorConfigs)
+            .build();
+
+    this.krystalExecutor =
+        new KryonExecutor(
+            vajramKryonGraph.getKryonDefinitionRegistry(),
+            executorServicePool,
+            kryonExecutorConfig,
             applicationRequestContext.requestId());
   }
 
