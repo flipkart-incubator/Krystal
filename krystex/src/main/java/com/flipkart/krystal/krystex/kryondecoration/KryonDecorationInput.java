@@ -5,5 +5,5 @@ import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonResponse;
 
-public record KryonDecorationContext(
+public record KryonDecorationInput(
     Kryon<KryonCommand, KryonResponse> kryon, KryonExecutor kryonExecutor) {}

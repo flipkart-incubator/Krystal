@@ -159,7 +159,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                     .filter(facetDefinition -> facetDefinition instanceof InputDef<?>)
                     .map(facetDefinition -> (InputDef<?>) facetDefinition)
                     .anyMatch(InputDef::isBatched)
-                && inputBatcherConfig.shouldModulate().test(logicExecutionContext);
+                && inputBatcherConfig.shouldBatch().test(logicExecutionContext);
           };
       outputLogicDecoratorConfigList.add(
           new OutputLogicDecoratorConfig(
@@ -626,7 +626,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
 
     VajramMetadata(Vajram<?> vajram) {
       this(
-          vajram.getFacetDefinitions().stream()
+          /* isInputInjectionNeeded= */ vajram.getFacetDefinitions().stream()
               .filter(facetDefinition -> facetDefinition instanceof InputDef<?>)
               .map(facetDefinition -> ((InputDef<?>) facetDefinition))
               .anyMatch(

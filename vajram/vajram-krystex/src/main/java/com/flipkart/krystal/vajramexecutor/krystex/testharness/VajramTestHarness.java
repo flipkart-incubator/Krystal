@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajramexecutor.krystex.testharness;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.krystex.kryon.KryonDecoratorConfig;
+import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import java.util.HashMap;
@@ -56,16 +56,11 @@ public class VajramTestHarness {
             VajramPrimer.class.getName(),
             new KryonDecoratorConfig(
                 VajramPrimer.class.getName(),
+                executionContext ->
+                    vajramIdMockData.containsKey(executionContext.kryonId().value()),
+                executionContext -> VajramPrimer.class.getName(),
                 kryonExecutionContext -> {
-                  if (!vajramIdMockData.containsKey(kryonExecutionContext.kryonId().value())) {
-                    return Optional.empty();
-                  }
-                  String kryonId = kryonExecutionContext.kryonId().value();
-                  return Optional.of(
-                      new VajramPrimer(
-                          vajramID(kryonId),
-                          this.vajramIdMockData.getOrDefault(kryonId, Map.of()),
-                          true));
+                  return new VajramPrimer(this.vajramIdMockData, true);
                 }));
     return kryonExecutorConfigBuilder;
   }

@@ -34,14 +34,9 @@ public class LogicDecorationOrdering {
     this.decoratorTypeIndices = ImmutableMap.copyOf(indices);
   }
 
-  public <T extends Decorator> Comparator<T> decorationOrder() {
-    Comparator<T> naturalOrder =
-        comparingInt(
-            key ->
-                ofNullable(decoratorTypeIndices.get(key.decoratorType()))
-                    .orElse(Integer.MIN_VALUE));
-    // Reverse the ordering so that the ones with the highest index are applied first.
-    return naturalOrder.reversed();
+  public <T extends Decorator> Comparator<T> encounterOrder() {
+    return comparingInt(
+        key -> ofNullable(decoratorTypeIndices.get(key.decoratorType())).orElse(Integer.MIN_VALUE));
   }
 
   public static LogicDecorationOrdering none() {

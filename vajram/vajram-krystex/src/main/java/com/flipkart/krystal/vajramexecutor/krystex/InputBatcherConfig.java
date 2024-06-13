@@ -6,7 +6,7 @@ import com.flipkart.krystal.krystex.kryon.DependantChainStart;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
-import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.DecoratorContext;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.LogicDecoratorContext;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.FacetsConverter;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
@@ -21,7 +21,7 @@ import java.util.function.Supplier;
 
 public record InputBatcherConfig(
     Function<LogicExecutionContext, String> instanceIdGenerator,
-    Predicate<LogicExecutionContext> shouldModulate,
+    Predicate<LogicExecutionContext> shouldBatch,
     Function<BatcherContext, OutputLogicDecorator> decoratorFactory) {
 
   /**
@@ -51,12 +51,12 @@ public record InputBatcherConfig(
               (FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>)
                   batcherContext.vajram().getInputsConvertor();
           return new InputBatchingDecorator<>(
-              batcherContext.decoratorContext().instanceId(),
+              batcherContext.logicDecoratorContext().instanceId(),
               inputBatcherSupplier.get(),
               inputsConvertor,
               dependantChain ->
                   batcherContext
-                      .decoratorContext()
+                      .logicDecoratorContext()
                       .logicExecutionContext()
                       .dependants()
                       .equals(dependantChain));
@@ -124,5 +124,5 @@ public record InputBatcherConfig(
     throw new UnsupportedOperationException();
   }
 
-  public record BatcherContext(Vajram<?> vajram, DecoratorContext decoratorContext) {}
+  public record BatcherContext(Vajram<?> vajram, LogicDecoratorContext logicDecoratorContext) {}
 }

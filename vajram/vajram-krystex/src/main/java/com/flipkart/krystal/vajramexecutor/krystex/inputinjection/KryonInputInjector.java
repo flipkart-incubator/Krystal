@@ -4,7 +4,7 @@ import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonResponse;
-import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationContext;
+import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationInput;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import java.util.LinkedHashMap;
@@ -21,7 +21,8 @@ public final class KryonInputInjector implements KryonDecorator {
 
   private final @Nullable InputInjectionProvider inputInjectionProvider;
 
-  private final Map<KryonId, InjectingDecoratedKryon> decoratedKryons = new LinkedHashMap<>();
+  private final Map<Kryon<KryonCommand, KryonResponse>, InjectingDecoratedKryon> decoratedKryons =
+      new LinkedHashMap<>();
 
   public KryonInputInjector(
       @UnknownInitialization VajramKryonGraph vajramKryonGraph,
@@ -36,10 +37,8 @@ public final class KryonInputInjector implements KryonDecorator {
   }
 
   @Override
-  public Kryon<KryonCommand, KryonResponse> decorateKryon(KryonDecorationContext context) {
-    Kryon<KryonCommand, KryonResponse> kryon = context.kryon();
-    return decoratedKryons.computeIfAbsent(
-        kryon.getKryonDefinition().kryonId(),
-        _k -> new InjectingDecoratedKryon(kryon, vajramKryonGraph, inputInjectionProvider));
+  public Kryon<KryonCommand, KryonResponse> decorateKryon(KryonDecorationInput decorationInput) {
+    return new InjectingDecoratedKryon(
+        decorationInput.kryon(), vajramKryonGraph, inputInjectionProvider);
   }
 }

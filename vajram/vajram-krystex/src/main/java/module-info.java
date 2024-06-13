@@ -7,4 +7,5 @@ module flipkart.krystal.vajramexecutor.krystex {
   requires flipkart.krystal.common;
   requires jakarta.inject;
   requires jdk.compiler;
+  requires org.slf4j;
 }

@@ -2,9 +2,11 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.KrystalExecutor;
-import com.flipkart.krystal.krystex.kryon.KryonDecoratorConfig;
+import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
+import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorContext;
+import com.flipkart.krystal.krystex.kryondecoration.KryonExecutionContext;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.VajramID;
@@ -41,17 +43,11 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
               KryonInputInjector.DECORATOR_TYPE,
               new KryonDecoratorConfig(
                   KryonInputInjector.DECORATOR_TYPE,
-                  kryonExecutionContext -> {
-                    VajramMetadata vajramMetadata =
-                        vajramKryonGraph
-                            .getVajramMetadataMap()
-                            .get(kryonExecutionContext.kryonId().value());
-                    if (vajramMetadata != null && vajramMetadata.isInputInjectionNeeded()) {
-                      return Optional.of(
-                          new KryonInputInjector(vajramKryonGraph, inputInjectionProvider));
-                    }
-                    return Optional.empty();
-                  }));
+                  /* shouldDecorate= */ executorContext ->
+                      isInjectionNeeded(vajramKryonGraph, executorContext),
+                  /* instanceIdGenerator= */ executionContext -> KryonInputInjector.DECORATOR_TYPE,
+                  /* factory= */ decoratorContext ->
+                      new KryonInputInjector(vajramKryonGraph, inputInjectionProvider)));
     }
     this.krystalExecutor =
         new KryonExecutor(
@@ -59,6 +55,13 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
             executorServicePool,
             executorConfig.kryonExecutorConfigBuilder().build(),
             applicationRequestContext.requestId());
+  }
+
+  private static boolean isInjectionNeeded(
+      VajramKryonGraph vajramKryonGraph, KryonExecutionContext executionContext) {
+    VajramMetadata vajramMetadata =
+        vajramKryonGraph.getVajramMetadataMap().get(executionContext.kryonId().value());
+    return vajramMetadata != null && vajramMetadata.isInputInjectionNeeded();
   }
 
   @Override

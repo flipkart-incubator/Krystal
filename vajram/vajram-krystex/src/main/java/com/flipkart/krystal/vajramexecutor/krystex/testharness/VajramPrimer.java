@@ -14,21 +14,18 @@ import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonResponse;
-import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationContext;
+import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationInput;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.krystex.request.RequestId;
-import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /**
  * VajramPrimer is a custom Kryon Decorator which enables priming a response for a given request of
@@ -38,32 +35,30 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 @Slf4j
 public class VajramPrimer implements KryonDecorator {
 
-  private final ImmutableMap<Facets, Errable<Object>> responsesByFacets;
-  private final VajramID decoratedVajramId;
+  private final Map<String, Map<Facets, Errable<Object>>> responsesByFacets;
   private final boolean failIfNotPrimed;
-  private VajramPrimer.@MonotonicNonNull PrimingDecoratedKryon primingDecoratedKryon;
 
   public <T> VajramPrimer(
-      VajramID primedVajramId,
-      Map<VajramRequest<T>, Errable<T>> primedResponses,
-      boolean failIfNotPrimed) {
-    this.decoratedVajramId = primedVajramId;
+      Map<String, Map<VajramRequest<T>, Errable<T>>> primedResponses, boolean failIfNotPrimed) {
+
     this.failIfNotPrimed = failIfNotPrimed;
-    Map<Facets, Errable<Object>> responsesByFacets = new LinkedHashMap<>(primedResponses.size());
+    this.responsesByFacets = new LinkedHashMap<>();
     primedResponses.forEach(
-        (req, resp) -> {
-          //noinspection unchecked
-          responsesByFacets.put(req.toFacetValues(), (Errable<Object>) resp);
+        (s, vajramRequestErrableMap) -> {
+          vajramRequestErrableMap.forEach(
+              (tVajramRequest, tErrable) -> {
+                //noinspection unchecked
+                responsesByFacets
+                    .computeIfAbsent(s, _s -> new LinkedHashMap<>())
+                    .computeIfAbsent(
+                        tVajramRequest.toFacetValues(), _f -> (Errable<Object>) tErrable);
+              });
         });
-    this.responsesByFacets = ImmutableMap.copyOf(responsesByFacets);
   }
 
   @Override
-  public Kryon<KryonCommand, KryonResponse> decorateKryon(KryonDecorationContext context) {
-    if (primingDecoratedKryon == null) {
-      primingDecoratedKryon = new PrimingDecoratedKryon(context.kryon(), context.kryonExecutor());
-    }
-    return primingDecoratedKryon;
+  public Kryon<KryonCommand, KryonResponse> decorateKryon(KryonDecorationInput decorationInput) {
+    return new PrimingDecoratedKryon(decorationInput.kryon(), decorationInput.kryonExecutor());
   }
 
   private class PrimingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
@@ -79,14 +74,12 @@ public class VajramPrimer implements KryonDecorator {
 
     @Override
     public void executeCommand(Flush flushCommand) {
-      validate(flushCommand.kryonId());
       kryon.executeCommand(flushCommand);
     }
 
     @Override
     public CompletableFuture<KryonResponse> executeCommand(KryonCommand kryonCommand) {
       KryonId kryonId = kryonCommand.kryonId();
-      validate(kryonId);
       if (kryonCommand instanceof ForwardBatch forwardBatch) {
         return getPrimedResponse(kryon, forwardBatch, kryonId, kryonExecutor);
       } else if (kryonCommand instanceof ForwardGranule) {
@@ -100,18 +93,6 @@ public class VajramPrimer implements KryonDecorator {
     public KryonDefinition getKryonDefinition() {
       return kryon.getKryonDefinition();
     }
-
-    private void validate(KryonId kryonId) {
-      String vajramId = decoratedVajramId.vajramId();
-      String kryondId = kryonId.value();
-      if (!Objects.equals(kryondId, vajramId)) {
-        AssertionError e =
-            new AssertionError(
-                "VajramPrimer for %s received command for %s".formatted(vajramId, kryondId));
-        log.error("", e);
-        throw e;
-      }
-    }
   }
 
   private CompletableFuture<KryonResponse> getPrimedResponse(
@@ -124,7 +105,8 @@ public class VajramPrimer implements KryonDecorator {
     for (Entry<RequestId, Facets> entry : forwardBatch.executableRequests().entrySet()) {
       RequestId requestId = entry.getKey();
       Facets facets = entry.getValue();
-      Errable<Object> primedResponse = responsesByFacets.get(facets);
+      Errable<Object> primedResponse =
+          responsesByFacets.getOrDefault(kryonId.value(), Map.of()).get(facets);
       if (primedResponse == null) {
         if (failIfNotPrimed) {
           throw new IllegalStateException(

@@ -22,10 +22,13 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
+import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecoration.FlushCommand;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecoratorCommand;
@@ -529,12 +532,25 @@ class KrystexVajramExecutorTest {
 
   private KrystexVajramExecutorConfig getExecutorConfig(
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
+    KryonExecutorConfigBuilder kryonExecutorConfigBuilder =
+        KryonExecutorConfig.builder()
+            .kryonExecStrategy(kryonExecStrategy)
+            .graphTraversalStrategy(graphTraversalStrategy)
+            .logicDecorationOrdering(logicDecorationOrdering);
+    if (BATCH.equals(kryonExecStrategy)) {
+      RequestLevelCache requestLevelCache = new RequestLevelCache();
+      kryonExecutorConfigBuilder.requestScopedKryonDecoratorConfig(
+          RequestLevelCache.DECORATOR_TYPE,
+          new KryonDecoratorConfig(
+              RequestLevelCache.DECORATOR_TYPE,
+              executionContext -> true,
+              executionContext -> RequestLevelCache.DECORATOR_TYPE,
+              kryonDecoratorContext -> {
+                return requestLevelCache;
+              }));
+    }
     return KrystexVajramExecutorConfig.builder()
-        .kryonExecutorConfigBuilder(
-            KryonExecutorConfig.builder()
-                .kryonExecStrategy(kryonExecStrategy)
-                .graphTraversalStrategy(graphTraversalStrategy)
-                .logicDecorationOrdering(logicDecorationOrdering))
+        .kryonExecutorConfigBuilder(kryonExecutorConfigBuilder)
         .build();
   }
 

@@ -77,8 +77,8 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
    * A unique {@link CompletableFuture} for every new set of Inputs. This acts as a cache so that
    * the same computation is not repeated multiple times .
    */
-  private final Map<Facets, CompletableFuture<@Nullable Object>> resultsCache =
-      new LinkedHashMap<>();
+//  private final Map<Facets, CompletableFuture<@Nullable Object>> resultsCache =
+//      new LinkedHashMap<>();
 
   private final Map<DependantChain, Set<String>> executedDependencies = new LinkedHashMap<>();
 
@@ -496,7 +496,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
           // Retrieve existing result from cache if result for this set of inputs has already been
           // calculated
           CompletableFuture<@Nullable Object> cachedResult =
-              resultsCache.get(outputLogicFacets.providedFacets());
+              null;//resultsCache.get(outputLogicFacets.providedFacets());
           if (cachedResult == null) {
             try {
               cachedResult =
@@ -508,7 +508,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
             } catch (Exception e) {
               cachedResult = failedFuture(e);
             }
-            resultsCache.put(outputLogicFacets.providedFacets(), cachedResult);
+//            resultsCache.put(outputLogicFacets.providedFacets(), cachedResult);
           }
           resultsByRequest.put(requestId, cachedResult.handle(Errable::errableFrom));
         });

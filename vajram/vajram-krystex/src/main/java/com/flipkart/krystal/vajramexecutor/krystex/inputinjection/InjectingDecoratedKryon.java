@@ -40,7 +40,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
 
   private final Kryon<KryonCommand, KryonResponse> kryon;
   private final VajramKryonGraph vajramKryonGraph;
-  private final InputInjectionProvider inputInjectionProvider;
+  private final @Nullable InputInjectionProvider inputInjectionProvider;
 
   InjectingDecoratedKryon(
       Kryon<KryonCommand, KryonResponse> kryon,

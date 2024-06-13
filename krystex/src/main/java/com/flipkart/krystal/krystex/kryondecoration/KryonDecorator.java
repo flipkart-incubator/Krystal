@@ -12,5 +12,5 @@ import com.flipkart.krystal.krystex.kryon.KryonResponse;
  */
 @FunctionalInterface
 public non-sealed interface KryonDecorator extends Decorator {
-  Kryon<KryonCommand, KryonResponse> decorateKryon(KryonDecorationContext decorationContext);
+  Kryon<KryonCommand, KryonResponse> decorateKryon(KryonDecorationInput decorationInput);
 }

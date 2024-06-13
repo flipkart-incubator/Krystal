@@ -16,6 +16,7 @@ module flipkart.krystal.krystex {
   exports com.flipkart.krystal.krystex.commands to
       flipkart.krystal.vajramexecutor.krystex;
   exports com.flipkart.krystal.krystex.kryondecoration;
+  exports com.flipkart.krystal.krystex.caching;
 
   requires com.google.common;
   requires org.checkerframework.checker.qual;

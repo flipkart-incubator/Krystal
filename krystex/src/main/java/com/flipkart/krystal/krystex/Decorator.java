@@ -2,6 +2,7 @@ package com.flipkart.krystal.krystex;
 
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorator;
+import com.flipkart.krystal.krystex.logicdecoration.LogicDecoratorCommand;
 
 public sealed interface Decorator permits KryonDecorator, LogicDecorator {
 
@@ -18,4 +19,6 @@ public sealed interface Decorator permits KryonDecorator, LogicDecorator {
   default String decoratorType() {
     return this.getClass().getName();
   }
+
+  default void executeCommand(LogicDecoratorCommand logicDecoratorCommand) {}
 }
