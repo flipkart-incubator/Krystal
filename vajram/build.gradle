@@ -11,7 +11,7 @@ publishing {
         maven(MavenPublication) {
             groupId = 'com.flipkart.krystal'
             artifactId = project.name
-            version = '7.0-SNAPSHOT'
+            version = project.krystal_version
             from components.java
         }
     }
