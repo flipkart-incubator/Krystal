@@ -82,7 +82,8 @@ public class RequestLevelCache implements KryonDecorator {
       Map<RequestId, CompletableFuture<@Nullable Object>> cacheHits = new LinkedHashMap<>();
       executableRequests.forEach(
           (requestId, facets) -> {
-            var cachedFuture = cache.get(new CacheKey(kryon, facets));
+            var cachedFuture =
+                cache.get(new CacheKey(kryon.getKryonDefinition().kryonId(), facets));
             if (cachedFuture == null) {
               cacheMisses.put(requestId, facets);
             } else {
@@ -107,7 +108,7 @@ public class RequestLevelCache implements KryonDecorator {
           (requestId, cacheInsert) -> {
             Facets facets = cacheMisses.get(requestId);
             if (facets != null) {
-              cache.put(new CacheKey(kryon, facets), cacheInsert);
+              cache.put(new CacheKey(kryon.getKryonDefinition().kryonId(), facets), cacheInsert);
             } else {
               var e =
                   new AssertionError(
