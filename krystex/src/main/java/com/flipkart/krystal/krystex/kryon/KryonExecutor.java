@@ -36,6 +36,7 @@ import com.flipkart.krystal.krystex.request.IntReqGenerator;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.flipkart.krystal.krystex.request.StringReqGenerator;
+import com.flipkart.krystal.utils.LeaseUnavailableException;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.utils.MultiLeasePool.Lease;
 import com.google.common.collect.ImmutableMap;
@@ -46,6 +47,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
@@ -55,6 +57,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Default implementation of Krystal executor which */
@@ -73,7 +76,8 @@ public final class KryonExecutor implements KrystalExecutor {
 
   private final KryonDefinitionRegistry kryonDefinitionRegistry;
   private final KryonExecutorConfig executorConfig;
-  private final Lease<? extends ExecutorService> commandQueueLease;
+  private final ExecutorService commandQueue;
+  private final Optional<Lease<? extends ExecutorService>> commandQueueLease;
   private final String instanceId;
 
   /**
@@ -112,12 +116,24 @@ public final class KryonExecutor implements KrystalExecutor {
 
   public KryonExecutor(
       KryonDefinitionRegistry kryonDefinitionRegistry,
-      MultiLeasePool<? extends ExecutorService> commandQueuePool,
+      MultiLeasePool<@NonNull ? extends ExecutorService> commandQueuePool,
       KryonExecutorConfig executorConfig,
       String instanceId) {
     this.kryonDefinitionRegistry = kryonDefinitionRegistry;
     this.executorConfig = executorConfig;
-    this.commandQueueLease = commandQueuePool.lease();
+    if (executorConfig.customExecutorService().isPresent()) {
+      this.commandQueue = executorConfig.customExecutorService().get();
+      this.commandQueueLease = Optional.empty();
+    } else {
+      Lease<@NonNull ? extends ExecutorService> commandQueueLease;
+      try {
+        commandQueueLease = commandQueuePool.lease();
+      } catch (LeaseUnavailableException e) {
+        throw new RuntimeException(e);
+      }
+      this.commandQueue = commandQueueLease.get();
+      this.commandQueueLease = Optional.of(commandQueueLease);
+    }
     this.instanceId = instanceId;
     this.requestScopedLogicDecoratorConfigs =
         ImmutableMap.copyOf(executorConfig.requestScopedLogicDecoratorConfigs());
@@ -502,7 +518,7 @@ public final class KryonExecutor implements KrystalExecutor {
                           decorator.getValue().onComplete();
                         }
                       }
-                      commandQueueLease.close();
+                      commandQueueLease.ifPresent(Lease::close);
                     }));
   }
 
@@ -524,7 +540,7 @@ public final class KryonExecutor implements KrystalExecutor {
           kryonMetrics.commandQueued();
           return command.get();
         },
-        commandQueueLease.get());
+        commandQueue);
   }
 
   private record KryonExecution(
