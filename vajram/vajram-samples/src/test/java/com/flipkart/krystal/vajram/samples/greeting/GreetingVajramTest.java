@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
@@ -34,7 +35,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
-import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramPrimer;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -67,18 +67,20 @@ class GreetingVajramTest {
 
   private InputInjectionProvider inputInjectionProvider;
   private LogicDecorationOrdering logicDecorationOrdering;
+  private RequestLevelCache requestLevelCache;
 
   @BeforeEach
   public void setUp() {
     inputInjectionProvider = wrapInjector(createInjector(new GuiceModule()));
+    requestLevelCache = new RequestLevelCache();
     logicDecorationOrdering =
         new LogicDecorationOrdering(
             ImmutableSet.<String>builder()
                 // Output logic decorators
                 .add(MainLogicExecReporter.class.getName())
                 // KryonDecorators
-                .add(VajramPrimer.class.getName())
-                .add(KryonInputInjector.class.getName())
+                .add(RequestLevelCache.DECORATOR_TYPE)
+                .add(KryonInputInjector.DECORATOR_TYPE)
                 .build());
     graph = new VajramKryonGraph.Builder().loadFromPackage(PACKAGE_PATH);
 
@@ -191,7 +193,7 @@ class GreetingVajramTest {
         KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
             vajramKryonGraph.createExecutor(
                 requestContext,
-                VajramTestHarness.prepareForTest(executorConfig)
+                VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
                     .withMock(
                         UserServiceRequest.builder().userId(USER_ID).build(),
                         withValue(new UserInfo(USER_ID, USER_NAME)))
@@ -217,7 +219,7 @@ class GreetingVajramTest {
         KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
             vajramKryonGraph.createExecutor(
                 requestContext,
-                VajramTestHarness.prepareForTest(executorConfig)
+                VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
                     .withMock(
                         UserServiceRequest.builder().userId(USER_ID).build(),
                         Errable.withError(new IOException("Request Timeout")))

@@ -12,6 +12,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
@@ -41,6 +42,7 @@ class FormulaTest {
 
   private Builder graph;
   private static final String REQUEST_ID = "formulaTest";
+  private RequestLevelCache requestLevelCache = new RequestLevelCache();
 
   @BeforeEach
   void setUp() {
@@ -265,7 +267,7 @@ class FormulaTest {
     try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
         graph.createExecutor(
             requestContext,
-            VajramTestHarness.prepareForTest(executorConfigBuilder)
+            VajramTestHarness.prepareForTest(executorConfigBuilder, requestLevelCache)
                 .withMock(
                     AdderRequest.builder().numberOne(20).numberTwo(5).build(),
                     Errable.withValue(25))
@@ -297,7 +299,7 @@ class FormulaTest {
     try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
         graph.createExecutor(
             requestContext,
-            VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder)
+            VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder, requestLevelCache)
                 .withMock(
                     AdderRequest.builder().numberOne(20).numberTwo(5).build(),
                     Errable.withValue(25))
@@ -326,7 +328,7 @@ class FormulaTest {
     try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
         graph.createExecutor(
             requestContext,
-            VajramTestHarness.prepareForTest(executorConfig)
+            VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
                 .withMock(
                     DividerRequest.builder().numerator(100).denominator(25).build(),
                     Errable.withValue(4))
@@ -355,7 +357,7 @@ class FormulaTest {
     try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
         graph.createExecutor(
             requestContext,
-            VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder)
+            VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder, requestLevelCache)
                 .withMock(
                     AdderRequest.builder().numberOne(0).numberTwo(0).build(), Errable.withValue(0))
                 .buildConfig())) {

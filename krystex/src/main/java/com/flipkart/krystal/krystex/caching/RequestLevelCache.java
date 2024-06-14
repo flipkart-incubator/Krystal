@@ -13,6 +13,7 @@ import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
+import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonResponse;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationInput;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
@@ -41,6 +42,10 @@ public class RequestLevelCache implements KryonDecorator {
   @Override
   public Kryon<KryonCommand, KryonResponse> decorateKryon(KryonDecorationInput decorationInput) {
     return new CachingDecoratedKryon(decorationInput.kryon());
+  }
+
+  public void primeCache(String kryonId, Facets request, CompletableFuture<@Nullable Object> data) {
+    cache.put(new CacheKey(new KryonId(kryonId), request), data);
   }
 
   private class CachingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
