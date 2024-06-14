@@ -73,13 +73,6 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
   private final Map<DependantChain, CompletableFuture<BatchResponse>> resultsByDepChain =
       new LinkedHashMap<>();
 
-  /**
-   * A unique {@link CompletableFuture} for every new set of Inputs. This acts as a cache so that
-   * the same computation is not repeated multiple times .
-   */
-//  private final Map<Facets, CompletableFuture<@Nullable Object>> resultsCache =
-//      new LinkedHashMap<>();
-
   private final Map<DependantChain, Set<String>> executedDependencies = new LinkedHashMap<>();
 
   private final Map<DependantChain, Set<RequestId>> requestsByDependantChain =
@@ -493,24 +486,18 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     Map<RequestId, CompletableFuture<Errable<Object>>> resultsByRequest = new LinkedHashMap<>();
     inputs.forEach(
         (requestId, outputLogicFacets) -> {
-          // Retrieve existing result from cache if result for this set of inputs has already been
-          // calculated
-          CompletableFuture<@Nullable Object> cachedResult =
-              null;//resultsCache.get(outputLogicFacets.providedFacets());
-          if (cachedResult == null) {
-            try {
-              cachedResult =
-                  finalLogic
-                      .execute(ImmutableList.of(outputLogicFacets.allFacets()))
-                      .values()
-                      .iterator()
-                      .next();
-            } catch (Exception e) {
-              cachedResult = failedFuture(e);
-            }
-//            resultsCache.put(outputLogicFacets.providedFacets(), cachedResult);
+          CompletableFuture<@Nullable Object> result;
+          try {
+            result =
+                finalLogic
+                    .execute(ImmutableList.of(outputLogicFacets.allFacets()))
+                    .values()
+                    .iterator()
+                    .next();
+          } catch (Throwable e) {
+            result = failedFuture(e);
           }
-          resultsByRequest.put(requestId, cachedResult.handle(Errable::errableFrom));
+          resultsByRequest.put(requestId, result.handle(Errable::errableFrom));
         });
     return resultsByRequest;
   }
