@@ -19,10 +19,12 @@ import com.flipkart.krystal.vajram.samples.calculator.FormulaFacetUtil.FormulaFa
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
 import com.flipkart.krystal.vajram.samples.calculator.divider.Divider;
 import com.google.common.collect.ImmutableCollection;
+import java.util.Optional;
 
 /** a/(p+q) */
 @VajramDef
 public abstract class Formula extends ComputeVajram<Integer> {
+  @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
     @Input int a;
     @Input int p;
@@ -32,7 +34,7 @@ public abstract class Formula extends ComputeVajram<Integer> {
     int sum;
 
     @Dependency(onVajram = Divider.class)
-    int quotient;
+    Optional<Integer> quotient;
   }
 
   @Override
@@ -53,6 +55,13 @@ public abstract class Formula extends ComputeVajram<Integer> {
   @Output
   static int result(FormulaFacets facets) {
     /* Return quotient */
-    return facets.quotient();
+    return facets
+        .quotient()
+        .orElseThrow(
+            () -> {
+              return facets.sum() == 0
+                  ? new ArithmeticException("/ by zero")
+                  : new IllegalStateException("Did not receive division result");
+            });
   }
 }

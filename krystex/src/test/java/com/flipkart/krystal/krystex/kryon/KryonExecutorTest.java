@@ -352,7 +352,7 @@ class KryonExecutorTest {
             inputs,
             inputsList ->
                 inputsList.stream()
-                    .collect(toImmutableMap(identity(), Errable.errableFrom(logic)))
+                    .collect(toImmutableMap(identity(), Errable.computeErrableFrom(logic)))
                     .entrySet()
                     .stream()
                     .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture())),

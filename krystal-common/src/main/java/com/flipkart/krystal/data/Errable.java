@@ -47,7 +47,7 @@ public record Errable<T>(Optional<T> value, Optional<Throwable> error) implement
     return errableFrom(null, t);
   }
 
-  public static <T> Errable<T> errableFrom(Callable<T> valueProvider) {
+  public static <T> Errable<T> errableFrom(Callable<@Nullable T> valueProvider) {
     try {
       return withValue(valueProvider.call());
     } catch (Throwable e) {
@@ -55,7 +55,8 @@ public record Errable<T>(Optional<T> value, Optional<Throwable> error) implement
     }
   }
 
-  public static <S, T> Function<S, Errable<T>> errableFrom(Function<S, T> valueComputer) {
+  public static <S, T> Function<S, Errable<T>> computeErrableFrom(
+      Function<S, @Nullable T> valueComputer) {
     return s -> errableFrom(() -> valueComputer.apply(s));
   }
 

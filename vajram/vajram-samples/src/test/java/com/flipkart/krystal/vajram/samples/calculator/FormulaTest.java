@@ -6,6 +6,7 @@ import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.add;
 import static com.flipkart.krystal.vajram.samples.calculator.divider.Divider.divide;
+import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -104,7 +105,7 @@ class FormulaTest {
                         assertThat(future.getNow(0)).isEqualTo((100 + i) / (20 + i + 5 + i));
                       }
                     }))
-        .succeedsWithin(Duration.ofSeconds(1));
+        .succeedsWithin(ofSeconds(1));
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(loopCount);
 
     /*
@@ -178,7 +179,7 @@ class FormulaTest {
                         assertThat(future.getNow(0)).isEqualTo((100 + i) / (20 + i + 5 + i));
                       }
                     }))
-        .succeedsWithin(Duration.ofSeconds(1));
+        .succeedsWithin(ofSeconds(1));
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(outerLoopCount);
     /*
        Old code performance:
@@ -364,7 +365,7 @@ class FormulaTest {
       future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future)
-        .failsWithin(Duration.ofSeconds(1))
+        .failsWithin(ofSeconds(1))
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(ArithmeticException.class)
         .withMessage("java.lang.ArithmeticException: / by zero");
