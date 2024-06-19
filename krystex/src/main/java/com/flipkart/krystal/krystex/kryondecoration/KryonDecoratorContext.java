@@ -1,4 +1,3 @@
 package com.flipkart.krystal.krystex.kryondecoration;
 
-public record KryonDecoratorContext(
-    String instanceId, KryonExecutionContext executionContext) {}
+public record KryonDecoratorContext(String instanceId, KryonExecutionContext executionContext) {}

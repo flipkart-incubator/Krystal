@@ -75,7 +75,9 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
                           k ->
                               decoratorConfig
                                   .factory()
-                                  .apply(new LogicDecoratorContext(instanceId, logicExecutionContext))));
+                                  .apply(
+                                      new LogicDecoratorContext(
+                                          instanceId, logicExecutionContext))));
             }
           } catch (Exception e) {
             log.error(

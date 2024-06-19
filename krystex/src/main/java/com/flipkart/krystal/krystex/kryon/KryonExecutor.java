@@ -370,7 +370,7 @@ public final class KryonExecutor implements KrystalExecutor {
     }
   }
 
-  public void flush() {
+  private void flush() {
     enqueueRunnable(
         () -> {
           computeDisabledDependantChains();
@@ -509,11 +509,11 @@ public final class KryonExecutor implements KrystalExecutor {
                         .toArray(CompletableFuture[]::new))
                 .whenComplete(
                     (unused, throwable) -> {
-                      for (Map.Entry<String, Map<String, OutputLogicDecorator>> decoratorsDetails :
+                      for (Entry<String, Map<String, OutputLogicDecorator>> decoratorsDetails :
                           requestScopedOutputLogicDecorators.entrySet()) {
                         Map<String, OutputLogicDecorator> decoratorsDetailsValue =
                             decoratorsDetails.getValue();
-                        for (Map.Entry<String, OutputLogicDecorator> decorator :
+                        for (Entry<String, OutputLogicDecorator> decorator :
                             decoratorsDetailsValue.entrySet()) {
                           decorator.getValue().onComplete();
                         }

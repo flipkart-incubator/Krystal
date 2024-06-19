@@ -11,10 +11,8 @@ public interface VajramExecutor<C extends ApplicationRequestContext> extends Aut
   <T> CompletableFuture<@Nullable T> execute(
       VajramID vajramId, VajramRequest<T> vajramInputProviders);
 
-  /** Flushes any pending requests */
-  void flush();
-
   // Override to suppress "throws Exception"
+  /** Flushes any pending requests and prevents this executor from accepting any new requests. */
   @Override
   void close();
 }

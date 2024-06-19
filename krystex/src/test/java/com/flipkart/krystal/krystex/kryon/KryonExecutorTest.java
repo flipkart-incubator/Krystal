@@ -89,7 +89,7 @@ class KryonExecutorTest {
             Facets.empty(),
             KryonExecutionConfig.builder().executionId("req_2").build());
 
-    kryonExecutor.flush();
+    kryonExecutor.close();
     assertEquals("computed_value", timedGet(future1));
     assertEquals("computed_value", timedGet(future2));
   }
@@ -115,7 +115,7 @@ class KryonExecutorTest {
             () -> kryonExecutor.executeKryon(kryonDefinition.kryonId(), Facets.empty(), null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("executionConfig can not be null");
-    kryonExecutor.flush();
+    kryonExecutor.close();
     assertThat(future1).succeedsWithin(1, SECONDS).isEqualTo("computed_value");
   }
 
@@ -137,7 +137,7 @@ class KryonExecutorTest {
             kryonDefinition.kryonId(),
             Facets.empty(),
             KryonExecutionConfig.builder().executionId("req_1").build());
-    kryonExecutor.flush();
+    kryonExecutor.close();
     assertEquals("computed_value", timedGet(future));
   }
 
@@ -169,7 +169,7 @@ class KryonExecutorTest {
             kryonId,
             new Facets(ImmutableMap.of("a", withValue(1), "b", withValue(2), "c", withValue("3"))),
             KryonExecutionConfig.builder().executionId("r").build());
-    kryonExecutor.flush();
+    kryonExecutor.close();
     assertEquals("computed_values: a=1;b=2;c=3", timedGet(future));
   }
 
@@ -209,7 +209,7 @@ class KryonExecutorTest {
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
             n2.kryonId(), Facets.empty(), KryonExecutionConfig.builder().executionId("r1").build());
-    kryonExecutor.flush();
+    kryonExecutor.close();
     assertEquals("dependency_value:computed_value", timedGet(future));
   }
 
@@ -310,7 +310,7 @@ class KryonExecutorTest {
                 .kryonId(),
             facets,
             KryonExecutionConfig.builder().executionId("r").build());
-    kryonExecutor.flush();
+    kryonExecutor.close();
     assertThat(future).succeedsWithin(TIMEOUT).isEqualTo("l1:l2:l3:l4:final");
   }
 

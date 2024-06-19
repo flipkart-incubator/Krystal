@@ -2,10 +2,9 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.KrystalExecutor;
-import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
-import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorContext;
+import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.kryondecoration.KryonExecutionContext;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajram.ApplicationRequestContext;
@@ -15,7 +14,6 @@ import com.flipkart.krystal.vajram.exec.VajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramMetadata;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import lombok.Builder;
@@ -86,11 +84,6 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
 
   public KrystalExecutor getKrystalExecutor() {
     return krystalExecutor;
-  }
-
-  @Override
-  public void flush() {
-    krystalExecutor.flush();
   }
 
   @Override

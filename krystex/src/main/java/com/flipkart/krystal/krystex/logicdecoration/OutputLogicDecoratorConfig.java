@@ -21,5 +21,6 @@ public record OutputLogicDecoratorConfig(
     Predicate<LogicExecutionContext> shouldDecorate,
     Function<LogicExecutionContext, String> instanceIdGenerator,
     Function<LogicDecoratorContext, OutputLogicDecorator> factory) {
-  public record LogicDecoratorContext(String instanceId, LogicExecutionContext logicExecutionContext) {}
+  public record LogicDecoratorContext(
+      String instanceId, LogicExecutionContext logicExecutionContext) {}
 }
