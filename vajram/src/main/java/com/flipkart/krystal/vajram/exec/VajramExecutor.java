@@ -1,12 +1,11 @@
 package com.flipkart.krystal.vajram.exec;
 
-import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public interface VajramExecutor<C extends ApplicationRequestContext> extends AutoCloseable {
+public interface VajramExecutor extends AutoCloseable {
 
   <T> CompletableFuture<@Nullable T> execute(
       VajramID vajramId, VajramRequest<T> vajramInputProviders);

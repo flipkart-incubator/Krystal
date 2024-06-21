@@ -30,7 +30,6 @@ import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonEx
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.vajram.samples.calculator.Formula;
-import com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderTest.RequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
@@ -67,10 +66,10 @@ class SplitAdderTest {
     CompletableFuture<Integer> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
     MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(kryonExecutionReport);
-    try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
+    try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
-            new RequestContext("chainAdderTest"),
             KrystexVajramExecutorConfig.builder()
+                .requestId("chainAdderTest")
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .requestScopedLogicDecoratorConfigs(
@@ -96,8 +95,9 @@ class SplitAdderTest {
   @Test
   void emptyNumbers_returnsZero_success() {
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-        graph.createExecutor(new RequestContext("splitAdderTest"))) {
+    try (KrystexVajramExecutor krystexVajramExecutor =
+        graph.createExecutor(
+            KrystexVajramExecutorConfig.builder().requestId("splitAdderTest").build())) {
       future =
           krystexVajramExecutor.execute(
               ofVajram(SplitAdder.class),
@@ -123,10 +123,10 @@ class SplitAdderTest {
     long timeToEnqueueVajram = 0;
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
-      try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
+      try (KrystexVajramExecutor krystexVajramExecutor =
           graph.createExecutor(
-              new RequestContext("splitAdderTest"),
               KrystexVajramExecutorConfig.builder()
+                  .requestId("splitAdderTest")
                   .kryonExecutorConfigBuilder(
                       KryonExecutorConfig.builder()
                           .disabledDependantChains(disabledDepChains(graph)))
@@ -194,10 +194,10 @@ class SplitAdderTest {
     long timeToEnqueueVajram = 0;
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
       long iterStartTime = System.nanoTime();
-      try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
+      try (KrystexVajramExecutor krystexVajramExecutor =
           graph.createExecutor(
-              new RequestContext("splitAdderTest"),
               KrystexVajramExecutorConfig.builder()
+                  .requestId("splitAdderTest")
                   .kryonExecutorConfigBuilder(
                       KryonExecutorConfig.builder()
                           .disabledDependantChains(disabledDepChains(graph)))
@@ -253,7 +253,7 @@ class SplitAdderTest {
   }
 
   private static CompletableFuture<Integer> executeVajram(
-      KrystexVajramExecutor<RequestContext> krystexVajramExecutor, int multiplier) {
+      KrystexVajramExecutor krystexVajramExecutor, int multiplier) {
     return krystexVajramExecutor.execute(
         vajramID(getVajramIdString(SplitAdder.class)),
         SplitAdderRequest.builder()

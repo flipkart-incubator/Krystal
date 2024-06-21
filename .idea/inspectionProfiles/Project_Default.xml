@@ -570,6 +570,7 @@
           <option value="ZeroLengthArrayAllocation" />
           <option value="initialization.field.uninitialized" />
           <option value="AssertBetweenInconvertibleTypes" />
+          <option value="ProhibitedExceptionThrown" />
         </list>
       </option>
     </inspection_tool>

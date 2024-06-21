@@ -1,8 +1,11 @@
 package com.flipkart.krystal.vajramexecutor.krystex.inputinjection;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
+
 public interface InputInjectionProvider {
 
-  Object getInstance(Class<?> clazz);
+  Object getInstance(Type type);
 
-  Object getInstance(Class<?> clazz, String injectionName);
+  Object getInstance(Type type, Annotation annotation);
 }

@@ -2,8 +2,8 @@ package com.flipkart.krystal.vajram.samples.calculator;
 
 import static com.flipkart.krystal.vajram.VajramID.ofVajram;
 
-import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -18,8 +18,8 @@ class Add2And3Test {
   @Test
   void add2And3_success() {
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor<ApplicationRequestContext> krystexVajramExecutor =
-        graph.createExecutor(() -> "add2and3")) {
+    try (KrystexVajramExecutor krystexVajramExecutor =
+        graph.createExecutor(KrystexVajramExecutorConfig.builder().requestId("add2and3").build())) {
       future =
           krystexVajramExecutor.execute(
               ofVajram(Add2And3.class), Add2And3Request.builder().build());

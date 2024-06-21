@@ -28,7 +28,6 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
-import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
@@ -44,9 +43,10 @@ import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
-import com.google.inject.name.Names;
 import java.io.IOException;
 import java.lang.System.Logger;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
@@ -111,10 +111,10 @@ class GreetingVajramTest {
     MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(kryonExecutionReport);
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
     try (VajramKryonGraph vajramKryonGraph = graph.build();
-        KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
+        KrystexVajramExecutor krystexVajramExecutor =
             vajramKryonGraph.createExecutor(
-                requestContext,
                 KrystexVajramExecutorConfig.builder()
+                    .requestId(REQUEST_ID)
                     .inputInjectionProvider(inputInjectionProvider)
                     .kryonExecutorConfigBuilder(
                         KryonExecutorConfig.builder()
@@ -153,11 +153,10 @@ class GreetingVajramTest {
     }
   }
 
-  public record RequestContext(String requestId, String userId)
-      implements ApplicationRequestContext {}
+  public record RequestContext(String requestId, String userId) {}
 
   private static CompletableFuture<String> executeVajram(
-      KrystexVajramExecutor<RequestContext> krystexVajramExecutor, RequestContext rc) {
+      KrystexVajramExecutor krystexVajramExecutor, RequestContext rc) {
     return krystexVajramExecutor.execute(
         vajramID(getVajramIdString(Greeting.class)),
         GreetingRequest.builder().userId(rc.userId).build(),
@@ -167,12 +166,14 @@ class GreetingVajramTest {
   private static InputInjectionProvider wrapInjector(Injector injector) {
     return new InputInjectionProvider() {
 
-      public Object getInstance(Class<?> clazz) {
-        return injector.getInstance(clazz);
+      public Object getInstance(Type type) {
+        return type instanceof Class<?> c
+            ? injector.getInstance(c)
+            : injector.getInstance(Key.get(type));
       }
 
-      public Object getInstance(Class<?> clazz, String injectionName) {
-        return injector.getInstance(Key.get(clazz, Names.named(injectionName)));
+      public Object getInstance(Type type, Annotation annotation) {
+        return injector.getInstance(Key.get(type, annotation));
       }
     };
   }
@@ -182,6 +183,7 @@ class GreetingVajramTest {
     CompletableFuture<String> future;
     KrystexVajramExecutorConfig executorConfig =
         KrystexVajramExecutorConfig.builder()
+            .requestId(REQUEST_ID)
             .inputInjectionProvider(inputInjectionProvider)
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
@@ -190,9 +192,8 @@ class GreetingVajramTest {
             .build();
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
     try (VajramKryonGraph vajramKryonGraph = graph.build();
-        KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
+        KrystexVajramExecutor krystexVajramExecutor =
             vajramKryonGraph.createExecutor(
-                requestContext,
                 VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
                     .withMock(
                         UserServiceRequest.builder().userId(USER_ID).build(),
@@ -208,6 +209,7 @@ class GreetingVajramTest {
     CompletableFuture<String> future;
     KrystexVajramExecutorConfig executorConfig =
         KrystexVajramExecutorConfig.builder()
+            .requestId(REQUEST_ID)
             .inputInjectionProvider(inputInjectionProvider)
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
@@ -216,9 +218,8 @@ class GreetingVajramTest {
             .build();
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
     try (VajramKryonGraph vajramKryonGraph = graph.build();
-        KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
+        KrystexVajramExecutor krystexVajramExecutor =
             vajramKryonGraph.createExecutor(
-                requestContext,
                 VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
                     .withMock(
                         UserServiceRequest.builder().userId(USER_ID).build(),

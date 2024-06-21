@@ -7,6 +7,7 @@ import lombok.Builder;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record KrystexVajramExecutorConfig(
+    String requestId,
     KryonExecutorConfigBuilder kryonExecutorConfigBuilder,
     @Nullable InputInjectionProvider inputInjectionProvider) {
 

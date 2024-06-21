@@ -29,7 +29,6 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
-import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.samples.calculator.Formula;
 import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig;
@@ -74,10 +73,10 @@ class ChainAdderTest {
         vajramID(getVajramIdString(Adder.class)),
         InputBatcherConfig.sharedBatcher(
             () -> new InputBatcherImpl<>(100), "adderBatcher", getBatchedDepChains()));
-    try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
+    try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
-            new RequestContext("chainAdderTest"),
             KrystexVajramExecutorConfig.builder()
+                .requestId("chainAdderTest")
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .requestScopedLogicDecoratorConfigs(
@@ -103,8 +102,9 @@ class ChainAdderTest {
   @Test
   void emptyNumbers_returnsZero_success() {
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-        graph.createExecutor(new RequestContext("chainAdderTest"))) {
+    try (KrystexVajramExecutor krystexVajramExecutor =
+        graph.createExecutor(
+            KrystexVajramExecutorConfig.builder().requestId("chainAdderTest").build())) {
       future =
           krystexVajramExecutor.execute(
               ofVajram(ChainAdder.class),
@@ -134,8 +134,9 @@ class ChainAdderTest {
             () -> new InputBatcherImpl<>(100), "adderBatcher", getBatchedDepChains()));
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
-      try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-          graph.createExecutor(new RequestContext("chainAdderTest"))) {
+      try (KrystexVajramExecutor krystexVajramExecutor =
+          graph.createExecutor(
+              KrystexVajramExecutorConfig.builder().requestId("chainAdderTest").build())) {
         metrics[value] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
@@ -203,8 +204,9 @@ class ChainAdderTest {
             () -> new InputBatcherImpl<>(100), "adderBatcher", getBatchedDepChains()));
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
       long iterStartTime = System.nanoTime();
-      try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-          graph.createExecutor(new RequestContext("chainAdderTest"))) {
+      try (KrystexVajramExecutor krystexVajramExecutor =
+          graph.createExecutor(
+              KrystexVajramExecutorConfig.builder().requestId("chainAdderTest").build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[outer_i] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
@@ -256,7 +258,7 @@ class ChainAdderTest {
   }
 
   private CompletableFuture<Integer> executeVajram(
-      KrystexVajramExecutor<RequestContext> krystexVajramExecutor, int multiplier) {
+      KrystexVajramExecutor krystexVajramExecutor, int multiplier) {
     return krystexVajramExecutor.execute(
         vajramID(getVajramIdString(ChainAdder.class)),
         ChainAdderRequest.builder()
@@ -318,8 +320,6 @@ class ChainAdderTest {
   private CompletableFuture<Integer> addAsync(int a, int b) {
     return completedFuture(a + b);
   }
-
-  record RequestContext(String requestId) implements ApplicationRequestContext {}
 
   private static Builder loadFromClasspath(String... packagePrefixes) {
     Builder builder = VajramKryonGraph.builder();

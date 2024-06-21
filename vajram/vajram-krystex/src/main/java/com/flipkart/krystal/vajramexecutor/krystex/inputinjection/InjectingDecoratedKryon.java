@@ -1,10 +1,12 @@
 package com.flipkart.krystal.vajramexecutor.krystex.inputinjection;
 
+import static com.flipkart.krystal.data.Errable.errableFrom;
+
 import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.datatypes.DataType;
+import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardBatch;
 import com.flipkart.krystal.krystex.commands.ForwardGranule;
@@ -24,6 +26,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import jakarta.inject.Named;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -103,7 +106,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
             forwardBatch.skippedRequests()));
   }
 
-  private static Facets injectFacetsOfVajram(
+  private Facets injectFacetsOfVajram(
       @Nullable VajramDefinition vajramDefinition,
       Facets facets,
       @Nullable InputInjectionProvider inputInjectionProvider,
@@ -132,13 +135,13 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
                         facetTags.getOrDefault(inputName, ImmutableMap.of());
                     Errable<Object> value =
                         getFromInjectionAdaptor(
-                            inputDef.type(),
+                            inputDef,
                             Optional.ofNullable(inputTags.get(Named.class))
                                 .map(
                                     tag -> {
                                       if (tag instanceof AnnotationTag<?> annoTag
                                           && annoTag.tagValue() instanceof Named named) {
-                                        return named.value();
+                                        return named;
                                       }
                                       return null;
                                     })
@@ -158,36 +161,41 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
     }
   }
 
-  private static Errable<Object> getFromInjectionAdaptor(
-      DataType<?> dataType,
-      @Nullable String injectionName,
+  private Errable<Object> getFromInjectionAdaptor(
+      InputDef<?> inputDef,
+      @Nullable Annotation annotation,
       @Nullable InputInjectionProvider inputInjectionProvider) {
     if (inputInjectionProvider == null) {
-      var exception =
-          new RuntimeException("Dependency injector is null, cannot resolve SESSION input");
-      log.error("", exception);
+      String errorMessage =
+          "Dependency injector is null, cannot inject input %s of vajram %s"
+              .formatted(inputDef, kryon.getKryonDefinition().kryonId().value());
+      var exception = new RuntimeException(errorMessage);
+      log.error(errorMessage, exception);
       return Errable.withError(exception);
     }
 
-    if (dataType == null) {
-      var exception = new RuntimeException("Data type not found");
-      log.error("", exception);
+    if (inputDef == null) {
+      String message =
+          "Data type not found for input %s of vajram %s"
+              .formatted(inputDef, kryon.getKryonDefinition().kryonId().value());
+      var exception = new RuntimeException(message);
+      log.error(message, exception);
       return Errable.withError(exception);
     }
-    Type type;
-    try {
-      type = dataType.javaReflectType();
-    } catch (ClassNotFoundException e) {
-      log.error("", e);
-      return Errable.withError(e);
-    }
-    @Nullable Object resolvedObject = null;
-    if (injectionName != null) {
-      resolvedObject = inputInjectionProvider.getInstance((Class<?>) type, injectionName);
-    }
-    if (resolvedObject == null) {
-      resolvedObject = inputInjectionProvider.getInstance(((Class<?>) type));
-    }
-    return Errable.withValue(resolvedObject);
+    return errableFrom(
+        () -> {
+          try {
+            Type type = inputDef.type().javaReflectType();
+            return annotation != null
+                ? inputInjectionProvider.getInstance(type, annotation)
+                : inputInjectionProvider.getInstance(type);
+          } catch (Exception e) {
+            String message =
+                "Could not inject input %s of vajram %s"
+                    .formatted(inputDef, kryon.getKryonDefinition().kryonId().value());
+            log.error(message, e);
+            throw new StackTracelessException(message, e);
+          }
+        });
   }
 }

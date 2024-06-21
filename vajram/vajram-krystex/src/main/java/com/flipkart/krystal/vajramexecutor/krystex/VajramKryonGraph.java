@@ -37,7 +37,6 @@ import com.flipkart.krystal.krystex.resolution.ResolverCommand;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.flipkart.krystal.krystex.resolution.ResolverLogicDefinition;
 import com.flipkart.krystal.utils.MultiLeasePool;
-import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.Vajram;
@@ -123,20 +122,16 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
   }
 
   @Override
-  public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
-      C requestContext) {
+  public KrystexVajramExecutor createExecutor() {
     return createExecutor(
-        requestContext,
         KrystexVajramExecutorConfig.builder()
             .kryonExecutorConfigBuilder(KryonExecutorConfig.builder().debug(false))
             .build());
   }
 
-  public <C extends ApplicationRequestContext> KrystexVajramExecutor<C> createExecutor(
-      C requestContext, KrystexVajramExecutorConfig vajramExecConfig) {
-    return KrystexVajramExecutor.<C>builder()
+  public KrystexVajramExecutor createExecutor(KrystexVajramExecutorConfig vajramExecConfig) {
+    return KrystexVajramExecutor.builder()
         .vajramKryonGraph(this)
-        .applicationRequestContext(requestContext)
         .executorServicePool(executorPool)
         .executorConfig(vajramExecConfig)
         .build();
