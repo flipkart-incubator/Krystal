@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
+import static com.flipkart.krystal.vajram.VajramID.vajramID;
+
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
@@ -10,9 +12,8 @@ import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.exec.VajramExecutor;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramMetadata;
-import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
+import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.VajramInjectionProvider;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import lombok.Builder;
@@ -30,7 +31,7 @@ public class KrystexVajramExecutor implements VajramExecutor {
       MultiLeasePool<? extends ExecutorService> executorServicePool,
       @NonNull KrystexVajramExecutorConfig executorConfig) {
     this.vajramKryonGraph = vajramKryonGraph;
-    InputInjectionProvider inputInjectionProvider = executorConfig.inputInjectionProvider();
+    VajramInjectionProvider inputInjectionProvider = executorConfig.inputInjectionProvider();
     if (inputInjectionProvider != null) {
       executorConfig
           .kryonExecutorConfigBuilder()
@@ -54,9 +55,10 @@ public class KrystexVajramExecutor implements VajramExecutor {
 
   private static boolean isInjectionNeeded(
       VajramKryonGraph vajramKryonGraph, KryonExecutionContext executionContext) {
-    VajramMetadata vajramMetadata =
-        vajramKryonGraph.getVajramMetadataMap().get(executionContext.kryonId().value());
-    return vajramMetadata != null && vajramMetadata.isInputInjectionNeeded();
+    return vajramKryonGraph
+        .getVajramDefinition(vajramID(executionContext.kryonId().value()))
+        .map(v -> v.vajramMetadata().isInputInjectionNeeded())
+        .orElse(false);
   }
 
   @Override

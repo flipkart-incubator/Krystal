@@ -24,8 +24,12 @@ public final class AnnotationTag<T extends Annotation> implements Tag {
     this.tagValue = tagValue;
   }
 
+  @SuppressWarnings("unchecked")
   public static <A extends Annotation> AnnotationTag<A> from(A annotation) {
-    //noinspection unchecked
-    return new AnnotationTag<>((Class<A>) annotation.getClass(), annotation);
+    if (annotation instanceof NamedValueTag namedValueTag) {
+      return (AnnotationTag<A>) AnnotationTags.newNamedTag(namedValueTag);
+    } else {
+      return new AnnotationTag<>((Class<A>) annotation.getClass(), annotation);
+    }
   }
 }

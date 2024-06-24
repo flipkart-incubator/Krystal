@@ -28,25 +28,23 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
+import com.flipkart.krystal.vajram.guice.VajramGuiceInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
-import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.InputInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
-import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 import java.io.IOException;
 import java.lang.System.Logger;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Type;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
@@ -65,13 +63,13 @@ class GreetingVajramTest {
   private static final String REQUEST_ID = "greetingRequest1";
   private static final String PACKAGE_PATH = "com.flipkart.krystal.vajram.samples.greeting";
 
-  private InputInjectionProvider inputInjectionProvider;
   private LogicDecorationOrdering logicDecorationOrdering;
   private RequestLevelCache requestLevelCache;
+  private Injector injector;
 
   @BeforeEach
   public void setUp() {
-    inputInjectionProvider = wrapInjector(createInjector(new GuiceModule()));
+    injector = createInjector(new GuiceModule());
     requestLevelCache = new RequestLevelCache();
     logicDecorationOrdering =
         new LogicDecorationOrdering(
@@ -115,7 +113,7 @@ class GreetingVajramTest {
             vajramKryonGraph.createExecutor(
                 KrystexVajramExecutorConfig.builder()
                     .requestId(REQUEST_ID)
-                    .inputInjectionProvider(inputInjectionProvider)
+                    .inputInjectionProvider(new VajramGuiceInjector(vajramKryonGraph, injector))
                     .kryonExecutorConfigBuilder(
                         KryonExecutorConfig.builder()
                             .logicDecorationOrdering(logicDecorationOrdering)
@@ -163,38 +161,26 @@ class GreetingVajramTest {
         KryonExecutionConfig.builder().executionId("req_1").build());
   }
 
-  private static InputInjectionProvider wrapInjector(Injector injector) {
-    return new InputInjectionProvider() {
-
-      public Object getInstance(Type type) {
-        return type instanceof Class<?> c
-            ? injector.getInstance(c)
-            : injector.getInstance(Key.get(type));
-      }
-
-      public Object getInstance(Type type, Annotation annotation) {
-        return injector.getInstance(Key.get(type, annotation));
-      }
-    };
-  }
-
   @Test
   void greeting_success_when_user_service_call_is_success() {
     CompletableFuture<String> future;
-    KrystexVajramExecutorConfig executorConfig =
+    KrystexVajramExecutorConfigBuilder executorConfig =
         KrystexVajramExecutorConfig.builder()
             .requestId(REQUEST_ID)
-            .inputInjectionProvider(inputInjectionProvider)
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
                     .kryonExecStrategy(KryonExecStrategy.BATCH)
-                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
-            .build();
+                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH));
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
     try (VajramKryonGraph vajramKryonGraph = graph.build();
         KrystexVajramExecutor krystexVajramExecutor =
             vajramKryonGraph.createExecutor(
-                VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
+                VajramTestHarness.prepareForTest(
+                        executorConfig
+                            .inputInjectionProvider(
+                                new VajramGuiceInjector(vajramKryonGraph, injector))
+                            .build(),
+                        requestLevelCache)
                     .withMock(
                         UserServiceRequest.builder().userId(USER_ID).build(),
                         withValue(new UserInfo(USER_ID, USER_NAME)))
@@ -207,20 +193,23 @@ class GreetingVajramTest {
   @Test
   void greeting_success_when_user_service_fails_with_request_timeout() {
     CompletableFuture<String> future;
-    KrystexVajramExecutorConfig executorConfig =
+    KrystexVajramExecutorConfigBuilder executorConfig =
         KrystexVajramExecutorConfig.builder()
             .requestId(REQUEST_ID)
-            .inputInjectionProvider(inputInjectionProvider)
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
                     .kryonExecStrategy(KryonExecStrategy.BATCH)
-                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
-            .build();
+                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH));
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
     try (VajramKryonGraph vajramKryonGraph = graph.build();
         KrystexVajramExecutor krystexVajramExecutor =
             vajramKryonGraph.createExecutor(
-                VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
+                VajramTestHarness.prepareForTest(
+                        executorConfig
+                            .inputInjectionProvider(
+                                new VajramGuiceInjector(vajramKryonGraph, injector))
+                            .build(),
+                        requestLevelCache)
                     .withMock(
                         UserServiceRequest.builder().userId(USER_ID).build(),
                         Errable.withError(new IOException("Request Timeout")))

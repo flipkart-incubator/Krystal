@@ -7,6 +7,10 @@ import java.util.Optional;
 
 public final class AnnotationTags {
 
+  static AnnotationTag<NamedValueTag> newNamedTag(NamedValueTag namedValueTag) {
+    return newNamedTag(namedValueTag.name(), namedValueTag.value());
+  }
+
   public static AnnotationTag<NamedValueTag> newNamedTag(String name, String value) {
     return new AnnotationTag<>(
         new AnnotationTagKey(name, NamedValueTag.class),

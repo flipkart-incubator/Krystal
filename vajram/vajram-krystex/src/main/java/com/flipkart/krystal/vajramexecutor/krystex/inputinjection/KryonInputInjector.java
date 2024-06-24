@@ -18,16 +18,16 @@ public final class KryonInputInjector implements KryonDecorator {
 
   @NotOnlyInitialized private final VajramKryonGraph vajramKryonGraph;
 
-  private final @Nullable InputInjectionProvider inputInjectionProvider;
+  private final @Nullable VajramInjectionProvider inputInjector;
 
   private final Map<Kryon<KryonCommand, KryonResponse>, InjectingDecoratedKryon> decoratedKryons =
       new LinkedHashMap<>();
 
   public KryonInputInjector(
       @UnknownInitialization VajramKryonGraph vajramKryonGraph,
-      @Nullable InputInjectionProvider inputInjectionProvider) {
+      @Nullable VajramInjectionProvider inputInjector) {
     this.vajramKryonGraph = vajramKryonGraph;
-    this.inputInjectionProvider = inputInjectionProvider;
+    this.inputInjector = inputInjector;
   }
 
   @Override
@@ -37,7 +37,6 @@ public final class KryonInputInjector implements KryonDecorator {
 
   @Override
   public Kryon<KryonCommand, KryonResponse> decorateKryon(KryonDecorationInput decorationInput) {
-    return new InjectingDecoratedKryon(
-        decorationInput.kryon(), vajramKryonGraph, inputInjectionProvider);
+    return new InjectingDecoratedKryon(decorationInput.kryon(), vajramKryonGraph, inputInjector);
   }
 }

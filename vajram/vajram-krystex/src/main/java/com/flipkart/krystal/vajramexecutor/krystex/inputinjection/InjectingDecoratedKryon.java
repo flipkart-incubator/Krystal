@@ -1,8 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex.inputinjection;
 
-import static com.flipkart.krystal.data.Errable.errableFrom;
+import static com.flipkart.krystal.vajram.VajramID.vajramID;
 
-import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
@@ -21,13 +20,10 @@ import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.facets.InputDef;
 import com.flipkart.krystal.vajram.facets.InputSource;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
-import com.flipkart.krystal.vajram.tags.AnnotationTag;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import jakarta.inject.Named;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -43,15 +39,15 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
 
   private final Kryon<KryonCommand, KryonResponse> kryon;
   private final VajramKryonGraph vajramKryonGraph;
-  private final @Nullable InputInjectionProvider inputInjectionProvider;
+  private final @Nullable VajramInjectionProvider injectionProvider;
 
   InjectingDecoratedKryon(
       Kryon<KryonCommand, KryonResponse> kryon,
       VajramKryonGraph vajramKryonGraph,
-      @Nullable InputInjectionProvider inputInjectionProvider) {
+      @Nullable VajramInjectionProvider injectionProvider) {
     this.kryon = kryon;
     this.vajramKryonGraph = vajramKryonGraph;
-    this.inputInjectionProvider = inputInjectionProvider;
+    this.injectionProvider = injectionProvider;
   }
 
   @Override
@@ -66,20 +62,25 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
 
   @Override
   public CompletableFuture<KryonResponse> executeCommand(KryonCommand kryonCommand) {
-    if (kryonCommand instanceof ForwardBatch forwardBatch) {
-      return injectFacets(kryon, forwardBatch);
-    } else if (kryonCommand instanceof ForwardGranule) {
-      var e =
-          new UnsupportedOperationException(
-              "KryonInputInjector does not support KryonExecStrategy GRANULAR. Please use BATCH instead");
-      log.error("", e);
-      throw e;
+    Optional<VajramDefinition> vajramDefinition =
+        vajramKryonGraph.getVajramDefinition(vajramID(kryonCommand.kryonId().value()));
+    if (vajramDefinition.isPresent()
+        && vajramDefinition.get().vajramMetadata().isInputInjectionNeeded()) {
+      if (kryonCommand instanceof ForwardBatch forwardBatch) {
+        return injectFacets(forwardBatch, vajramDefinition.get());
+      } else if (kryonCommand instanceof ForwardGranule) {
+        var e =
+            new UnsupportedOperationException(
+                "KryonInputInjector does not support KryonExecStrategy GRANULAR. Please use BATCH instead");
+        log.error("", e);
+        throw e;
+      }
     }
     return kryon.executeCommand(kryonCommand);
   }
 
   private CompletableFuture<KryonResponse> injectFacets(
-      Kryon<KryonCommand, KryonResponse> kryon, ForwardBatch forwardBatch) {
+      ForwardBatch forwardBatch, VajramDefinition vajramDefinition) {
     ImmutableMap<RequestId, Facets> requestIdToFacets = forwardBatch.executableRequests();
 
     Set<String> newInputsNames = new LinkedHashSet<>(forwardBatch.inputNames());
@@ -87,14 +88,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
     for (Entry<RequestId, Facets> entry : requestIdToFacets.entrySet()) {
       RequestId requestId = entry.getKey();
       Facets facets = entry.getValue();
-      Facets newFacets =
-          injectFacetsOfVajram(
-              vajramKryonGraph
-                  .getVajramDefinition(VajramID.vajramID(forwardBatch.kryonId().value()))
-                  .orElse(null),
-              facets,
-              inputInjectionProvider,
-              newInputsNames);
+      Facets newFacets = injectFacetsOfVajram(vajramDefinition, facets, newInputsNames);
       newRequests.put(requestId, newFacets);
     }
     return kryon.executeCommand(
@@ -107,52 +101,27 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
   }
 
   private Facets injectFacetsOfVajram(
-      @Nullable VajramDefinition vajramDefinition,
-      Facets facets,
-      @Nullable InputInjectionProvider inputInjectionProvider,
-      Set<String> newInputNames) {
+      VajramDefinition vajramDefinition, Facets facets, Set<String> newInputNames) {
     Map<String, FacetValue<Object>> newValues = new HashMap<>();
-    ImmutableMap<String, ImmutableMap<Object, Tag>> facetTags =
-        vajramDefinition == null ? ImmutableMap.of() : vajramDefinition.getFacetTags();
-    Optional.ofNullable(vajramDefinition)
-        .map(VajramDefinition::getVajram)
-        .map(Vajram::getFacetDefinitions)
-        .ifPresent(
-            facetDefinitions -> {
-              for (VajramFacetDefinition facetDefinition : facetDefinitions) {
-                String inputName = facetDefinition.name();
-                if (facetDefinition instanceof InputDef<?> inputDef) {
-                  if (inputDef.sources().contains(InputSource.CLIENT)) {
-                    Errable<Object> value = facets.getInputValue(inputName);
-                    if (!Errable.empty().equals(value)) {
-                      continue;
-                    }
-                  }
-                  // Input was not resolved by calling vajram.
-                  // Check if it is resolvable by SESSION
-                  if (inputDef.sources().contains(InputSource.SESSION)) {
-                    ImmutableMap<Object, Tag> inputTags =
-                        facetTags.getOrDefault(inputName, ImmutableMap.of());
-                    Errable<Object> value =
-                        getFromInjectionAdaptor(
-                            inputDef,
-                            Optional.ofNullable(inputTags.get(Named.class))
-                                .map(
-                                    tag -> {
-                                      if (tag instanceof AnnotationTag<?> annoTag
-                                          && annoTag.tagValue() instanceof Named named) {
-                                        return named;
-                                      }
-                                      return null;
-                                    })
-                                .orElse(null),
-                            inputInjectionProvider);
-                    newValues.put(inputName, value);
-                    newInputNames.add(inputName);
-                  }
-                }
-              }
-            });
+    // Input was not resolved by calling vajram.
+    // Check if it is resolvable by SESSION
+    Vajram<?> vajram = vajramDefinition.getVajram();
+    ImmutableCollection<VajramFacetDefinition> facetDefinitions = vajram.getFacetDefinitions();
+    for (VajramFacetDefinition facetDefinition : facetDefinitions) {
+      String inputName = facetDefinition.name();
+      if (facetDefinition instanceof InputDef<?> inputDef) {
+        if (facets.getInputValue(inputName).value().isPresent()) {
+          continue;
+        }
+        // Input was not resolved by calling vajram.
+        // Check if it is resolvable by SESSION
+        if (inputDef.sources().contains(InputSource.SESSION)) {
+          Errable<Object> value = getInjectedValue(vajramDefinition.getVajram().getId(), inputDef);
+          newValues.put(inputName, value);
+          newInputNames.add(inputName);
+        }
+      }
+    }
     if (!newValues.isEmpty()) {
       facets.values().forEach(newValues::putIfAbsent);
       return new Facets(newValues);
@@ -161,41 +130,26 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
     }
   }
 
-  private Errable<Object> getFromInjectionAdaptor(
-      InputDef<?> inputDef,
-      @Nullable Annotation annotation,
-      @Nullable InputInjectionProvider inputInjectionProvider) {
-    if (inputInjectionProvider == null) {
-      String errorMessage =
-          "Dependency injector is null, cannot inject input %s of vajram %s"
-              .formatted(inputDef, kryon.getKryonDefinition().kryonId().value());
-      var exception = new RuntimeException(errorMessage);
-      log.error(errorMessage, exception);
+  private Errable<Object> getInjectedValue(VajramID vajramId, InputDef<?> inputDef) {
+    VajramInjectionProvider inputInjector = this.injectionProvider;
+    if (inputInjector == null) {
+      var exception = new StackTracelessException("Dependency injector is null");
+      log.error(
+          "Cannot inject input {} of vajram {}",
+          inputDef,
+          kryon.getKryonDefinition().kryonId().value(),
+          exception);
       return Errable.withError(exception);
     }
-
-    if (inputDef == null) {
+    try {
+      //noinspection unchecked
+      return inputInjector.get(vajramId, (InputDef<Object>) inputDef);
+    } catch (Throwable e) {
       String message =
-          "Data type not found for input %s of vajram %s"
+          "Could not inject input %s of vajram %s"
               .formatted(inputDef, kryon.getKryonDefinition().kryonId().value());
-      var exception = new RuntimeException(message);
-      log.error(message, exception);
-      return Errable.withError(exception);
+      log.error(message, e);
+      return Errable.withError(e);
     }
-    return errableFrom(
-        () -> {
-          try {
-            Type type = inputDef.type().javaReflectType();
-            return annotation != null
-                ? inputInjectionProvider.getInstance(type, annotation)
-                : inputInjectionProvider.getInstance(type);
-          } catch (Exception e) {
-            String message =
-                "Could not inject input %s of vajram %s"
-                    .formatted(inputDef, kryon.getKryonDefinition().kryonId().value());
-            log.error(message, e);
-            throw new StackTracelessException(message, e);
-          }
-        });
   }
 }

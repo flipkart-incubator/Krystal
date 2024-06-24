@@ -50,7 +50,6 @@ import com.flipkart.krystal.vajram.exec.VajramExecutableGraph;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.DependencyDef;
 import com.flipkart.krystal.vajram.facets.InputDef;
-import com.flipkart.krystal.vajram.facets.InputSource;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolverDefinition;
@@ -78,7 +77,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
 import lombok.Getter;
-import org.checkerframework.checker.initialization.qual.UnderInitialization;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** The execution graph encompassing all registered vajrams. */
@@ -99,7 +97,6 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
   private final ImmutableMap<String, OutputLogicDecoratorConfig> sessionScopedDecoratorConfigs;
 
   private final MultiLeasePool<? extends ExecutorService> executorPool;
-  private final Map<String, VajramMetadata> vajramMetadataMap;
 
   private VajramKryonGraph(
       String[] packagePrefixes,
@@ -111,10 +108,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
     this.logicRegistryDecorator = new LogicDefRegistryDecorator(logicDefinitionRegistry);
     for (String packagePrefix : packagePrefixes) {
-      List<? extends Vajram> vajrams = loadVajramsFromClassPath(packagePrefix);
-      vajrams.forEach(this::registerVajram);
+      loadVajramsFromClassPath(packagePrefix).forEach(this::registerVajram);
     }
-    this.vajramMetadataMap = new HashMap<>();
   }
 
   public MultiLeasePool<? extends ExecutorService> getExecutorPool() {
@@ -210,7 +205,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
    *
    * @param vajram The vajram to be registered for future execution.
    */
-  private void registerVajram(@UnderInitialization VajramKryonGraph this, Vajram vajram) {
+  private void registerVajram(Vajram vajram) {
     if (vajramDefinitions.containsKey(vajram.getId())) {
       return;
     }
@@ -233,10 +228,6 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     return _getVajramExecutionGraph(vajramId);
   }
 
-  public ImmutableMap<String, VajramMetadata> getVajramMetadataMap() {
-    return ImmutableMap.copyOf(vajramMetadataMap);
-  }
-
   private KryonId _getVajramExecutionGraph(VajramID vajramId) {
     KryonId kryonId = vajramExecutables.get(vajramId);
     if (kryonId != null) {
@@ -252,7 +243,6 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                 () ->
                     new NoSuchElementException(
                         "Could not find vajram with id: %s".formatted(vajramId)));
-    vajramMetadataMap.put(vajramId.vajramId(), new VajramMetadata(vajramDefinition.getVajram()));
 
     InputResolverCreationResult inputResolverCreationResult =
         createKryonLogicsForInputResolvers(vajramDefinition);
@@ -616,19 +606,6 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
 
   private record InputResolverCreationResult(
       ImmutableList<ResolverDefinition> resolverDefinitions, KryonLogicId multiResolver) {}
-
-  record VajramMetadata(boolean isInputInjectionNeeded) {
-
-    VajramMetadata(Vajram<?> vajram) {
-      this(
-          /* isInputInjectionNeeded= */ vajram.getFacetDefinitions().stream()
-              .filter(facetDefinition -> facetDefinition instanceof InputDef<?>)
-              .map(facetDefinition -> ((InputDef<?>) facetDefinition))
-              .anyMatch(
-                  input ->
-                      input.sources() != null && input.sources().contains(InputSource.SESSION)));
-    }
-  }
 
   public Optional<VajramDefinition> getVajramDefinition(VajramID vajramId) {
     return Optional.ofNullable(vajramDefinitions.get(vajramId));

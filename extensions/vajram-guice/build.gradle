@@ -1,0 +1,5 @@
+dependencies {
+    api project(':vajram')
+    api project(':vajram-krystex')
+    api 'com.google.inject:guice'
+}
