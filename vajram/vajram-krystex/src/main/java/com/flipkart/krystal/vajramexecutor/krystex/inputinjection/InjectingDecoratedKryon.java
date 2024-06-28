@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -85,10 +86,24 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
 
     Set<String> newInputsNames = new LinkedHashSet<>(forwardBatch.inputNames());
     ImmutableMap.Builder<RequestId, Facets> newRequests = ImmutableMap.builder();
+    Set<InputDef<?>> injectableFacetDefs = new LinkedHashSet<>();
+    for (VajramFacetDefinition facetDefinition :
+        vajramDefinition.getVajram().getFacetDefinitions()) {
+      if (facetDefinition instanceof InputDef<?> inputDef
+          && inputDef.sources().contains(InputSource.SESSION)) {
+        injectableFacetDefs.add(inputDef);
+      }
+    }
+    for (InputDef<?> injectableFacet : injectableFacetDefs) {
+      newInputsNames.add(injectableFacet.name());
+    }
+
+    Map<String, Errable<Object>> newInputsValues = new LinkedHashMap<>();
     for (Entry<RequestId, Facets> entry : requestIdToFacets.entrySet()) {
       RequestId requestId = entry.getKey();
       Facets facets = entry.getValue();
-      Facets newFacets = injectFacetsOfVajram(vajramDefinition, facets, newInputsNames);
+      Facets newFacets =
+          injectFacetsOfVajram(vajramDefinition, injectableFacetDefs, facets, newInputsValues);
       newRequests.put(requestId, newFacets);
     }
     return kryon.executeCommand(
@@ -101,25 +116,22 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
   }
 
   private Facets injectFacetsOfVajram(
-      VajramDefinition vajramDefinition, Facets facets, Set<String> newInputNames) {
+      VajramDefinition vajramDefinition,
+      Set<InputDef<?>> injectableFacetDefs,
+      Facets facets,
+      Map<String, Errable<Object>> injectedValues) {
     Map<String, FacetValue<Object>> newValues = new HashMap<>();
-    // Input was not resolved by calling vajram.
-    // Check if it is resolvable by SESSION
-    Vajram<?> vajram = vajramDefinition.getVajram();
-    ImmutableCollection<VajramFacetDefinition> facetDefinitions = vajram.getFacetDefinitions();
-    for (VajramFacetDefinition facetDefinition : facetDefinitions) {
+    for (VajramFacetDefinition facetDefinition : injectableFacetDefs) {
       String inputName = facetDefinition.name();
       if (facetDefinition instanceof InputDef<?> inputDef) {
         if (facets.getInputValue(inputName).value().isPresent()) {
           continue;
         }
         // Input was not resolved by calling vajram.
-        // Check if it is resolvable by SESSION
-        if (inputDef.sources().contains(InputSource.SESSION)) {
-          Errable<Object> value = getInjectedValue(vajramDefinition.getVajram().getId(), inputDef);
-          newValues.put(inputName, value);
-          newInputNames.add(inputName);
-        }
+        Errable<Object> value =
+            injectedValues.computeIfAbsent(
+                inputName, _i -> getInjectedValue(vajramDefinition.getVajram().getId(), inputDef));
+        newValues.put(inputName, value);
       }
     }
     if (!newValues.isEmpty()) {
