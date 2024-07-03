@@ -1,7 +1,5 @@
 plugins {
-    id 'com.diffplug.spotless' version '6.16.0'
-    id 'org.checkerframework' version '0.6.30'
-    id 'net.ltgt.errorprone' version '3.1.0'
+    id 'com.flipkart.java.code.standard' version '0.1.2-SNAPSHOT'
 }
 
 ext {
@@ -11,9 +9,6 @@ ext {
 }
 
 checkerFramework {
-    checkers = [
-            'org.checkerframework.checker.nullness.NullnessChecker',
-    ]
     extraJavacArgs = [
             "-Astubs=${rootDir}/config/checker/stubs",
     ]
@@ -51,19 +46,8 @@ subprojects {
 
 configure(subprojects.findAll { it.name != 'krystal-bom' }) {
     apply plugin: 'java-library'
-    apply plugin: 'com.diffplug.spotless'
-    apply plugin: 'org.checkerframework'
+    apply plugin: 'com.flipkart.java.code.standard'
     apply plugin: 'jacoco'
-    apply plugin: 'net.ltgt.errorprone'
-
-    spotless {
-        java {
-            target 'src/*/java/**/*.java', 'build/generated/sources/annotationProcessor/**/*.java'
-            googleJavaFormat()
-        }
-    }
-    tasks.named('spotlessJava').configure { mustRunAfter('compileJava') }
-    tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
 
     dependencies {
         implementation 'com.google.guava:guava'
@@ -119,20 +103,8 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
         }
     }
 
-    afterEvaluate {
-        tasks.named('spotlessCheck') {
-            dependsOn('spotlessApply')
-        }
-    }
-
     checkerFramework {
-        checkers = [
-                'org.checkerframework.checker.nullness.NullnessChecker',
-                'org.checkerframework.checker.calledmethods.CalledMethodsChecker',
-        ]
-        extraJavacArgs = [
-                "-Astubs=${rootDir}/config/checker/stubs",
-        ]
+        extraJavacArgs = ["-Astubs=${rootDir}/config/checker/stubs",]
         excludeTests = true
     }
 
@@ -145,7 +117,4 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
     }
     tasks.named('sourcesJar').configure { mustRunAfter('compileJava') }
 
-    test {
-        useJUnitPlatform()
-    }
 }

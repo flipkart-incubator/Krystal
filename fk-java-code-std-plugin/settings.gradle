@@ -1,0 +1,19 @@
+pluginManagement {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven {url 'https://clojars.org/repo'}
+    }
+}
+
+
+dependencyResolutionManagement {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven {url 'https://clojars.org/repo'}
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'fk-java-code-std-plugin'
