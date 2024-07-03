@@ -54,7 +54,6 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
         implementation 'org.checkerframework:checker-qual'
         implementation 'org.slf4j:slf4j-api'
         implementation 'jakarta.inject:jakarta.inject-api'
-        errorprone 'com.google.errorprone:error_prone_core'
 
         compileOnly 'org.projectlombok:lombok'
         annotationProcessor 'org.projectlombok:lombok'
@@ -90,8 +89,6 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
 
             implementation 'com.google.auto.service:auto-service:1.1.1'
             annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
-
-            errorprone 'com.google.errorprone:error_prone_core:2.27.1'
 
             annotationProcessor 'com.flipkart.krystal:vajram-codegen:' + krystal_version
             testAnnotationProcessor 'com.flipkart.krystal:vajram-codegen:' + krystal_version
