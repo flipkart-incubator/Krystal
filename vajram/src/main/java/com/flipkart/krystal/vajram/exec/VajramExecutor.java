@@ -11,7 +11,13 @@ public interface VajramExecutor extends AutoCloseable {
       VajramID vajramId, VajramRequest<T> vajramInputProviders);
 
   // Override to suppress "throws Exception"
-  /** Flushes any pending requests and prevents this executor from accepting any new requests. */
+  /**
+   * Flushes and executes any pending requests and prevents this executor from accepting any new
+   * requests.
+   */
   @Override
   void close();
+
+  /** Abandons all pending execution requests. Any inflight requests will be terminated abruptly. */
+  void shutdownNow();
 }

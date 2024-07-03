@@ -66,12 +66,12 @@ public final class KryonExecutor implements KrystalExecutor {
 
   public enum KryonExecStrategy {
     GRANULAR,
-    BATCH
+    BATCH,
   }
 
   public enum GraphTraversalStrategy {
     DEPTH,
-    BREADTH
+    BREADTH,
   }
 
   private final KryonDefinitionRegistry kryonDefinitionRegistry;
@@ -107,12 +107,14 @@ public final class KryonExecutor implements KrystalExecutor {
 
   private final KryonRegistry<?> kryonRegistry = new KryonRegistry<>();
   private final KryonExecutorMetrics kryonMetrics;
-  private volatile boolean closed;
   private final Map<RequestId, KryonExecution> allExecutions = new LinkedHashMap<>();
   private final Set<RequestId> unFlushedExecutions = new LinkedHashSet<>();
   private final Map<KryonId, Set<DependantChain>> dependantChainsPerKryon = new LinkedHashMap<>();
   private final RequestIdGenerator preferredReqGenerator;
   private final Set<DependantChain> depChainsDisabledInAllExecutions = new LinkedHashSet<>();
+
+  private volatile boolean closed;
+  private boolean shutdownRequested;
 
   public KryonExecutor(
       KryonDefinitionRegistry kryonDefinitionRegistry,
@@ -364,6 +366,9 @@ public final class KryonExecutor implements KrystalExecutor {
   }
 
   private void validate(KryonCommand kryonCommand) {
+    if (shutdownRequested) {
+      throw new RejectedExecutionException("Kryon Executor shutdown requested.");
+    }
     DependantChain dependantChain = kryonCommand.dependantChain();
     if (depChainsDisabledInAllExecutions.contains(dependantChain)) {
       throw new DisabledDependantChainException(dependantChain);
@@ -499,7 +504,7 @@ public final class KryonExecutor implements KrystalExecutor {
     if (closed) {
       return;
     }
-    this.closed = true;
+    _close0();
     flush();
     enqueueCommand(
         () ->
@@ -520,6 +525,16 @@ public final class KryonExecutor implements KrystalExecutor {
                       }
                       commandQueueLease.ifPresent(Lease::close);
                     }));
+  }
+
+  @Override
+  public void shutdownNow() {
+    _close0();
+    this.shutdownRequested = true;
+  }
+
+  private void _close0() {
+    this.closed = true;
   }
 
   private static Function<KryonExecution, CompletableFuture<@Nullable Object>> getFuture() {

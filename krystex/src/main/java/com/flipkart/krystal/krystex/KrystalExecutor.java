@@ -12,9 +12,13 @@ public interface KrystalExecutor extends AutoCloseable {
       KryonId kryonId, Facets facets, KryonExecutionConfig executionConfig);
 
   /**
-   * No new executions will be accepted after this method is called. This method starts execution of
-   * all requests.
+   * This method starts execution of all submitted requests. No new kryon execution requests will be
+   * accepted after this method is called. All requests submitted before calling this method will
+   * continue execution indefinitely without interruption unless {@link #shutdownNow()} is called.
    */
   @Override // to suppress "throws Exception"
   void close();
+
+  /** Abandons all pending execution requests. Any inflight requests will be terminated abruptly. */
+  void shutdownNow();
 }

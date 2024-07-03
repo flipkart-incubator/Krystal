@@ -89,4 +89,9 @@ public class KrystexVajramExecutor implements VajramExecutor {
   public void close() {
     krystalExecutor.close();
   }
+
+  @Override
+  public void shutdownNow() {
+    krystalExecutor.shutdownNow();
+  }
 }
