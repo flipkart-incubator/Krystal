@@ -37,7 +37,9 @@ class FkJavaCodeStandard implements Plugin<Project> {
 
         checkerFramework.checkers = ["org.checkerframework.checker.nullness.NullnessChecker",
                                      "org.checkerframework.checker.calledmethods.CalledMethodsChecker",
-                                     "org.checkerframework.checker.optional.OptionalChecker"]
+                                     "org.checkerframework.checker.optional.OptionalChecker",
+                                     "org.checkerframework.checker.resourceleak.ResourceLeakChecker",
+                                     "org.checkerframework.checker.fenum.FenumChecker"]
         checkerFramework.extraJavacArgs.add("-Astubs=${project.rootDir}/config/checker/stubs")
     }
 
