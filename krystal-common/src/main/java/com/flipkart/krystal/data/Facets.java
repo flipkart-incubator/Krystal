@@ -10,6 +10,7 @@ import org.checkerframework.checker.nullness.qual.PolyNull;
 
 @EqualsAndHashCode(callSuper = false, cacheStrategy = CacheStrategy.LAZY)
 public final class Facets {
+
   private final ImmutableMap<String, FacetValue<Object>> values;
 
   public Facets(Map<String, FacetValue<Object>> values) {
