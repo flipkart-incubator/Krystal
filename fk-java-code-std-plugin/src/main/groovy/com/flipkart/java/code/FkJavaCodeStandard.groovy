@@ -4,6 +4,7 @@ import com.diffplug.gradle.spotless.SpotlessExtension
 import org.checkerframework.gradle.plugin.CheckerFrameworkExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.testing.jacoco.plugins.JacocoPluginExtension
 
 class FkJavaCodeStandard implements Plugin<Project> {
     @Override
@@ -13,26 +14,34 @@ class FkJavaCodeStandard implements Plugin<Project> {
         checkerFramework(project)
         spotless(project)
         errorProne(project)
+
         tests(project)
     }
 
-    static java(Project project) {
+    private static tests(Project project) {
+        junitPlatform(project)
+        jacoco(project)
+    }
+
+    private static java(Project project) {
         project.pluginManager.apply('java')
     }
 
-    static idea(Project project) {
+    private static idea(Project project) {
         project.pluginManager.apply('idea')
     }
 
-    static checkerFramework(Project project) {
+    private static checkerFramework(Project project) {
         project.pluginManager.apply('org.checkerframework')
-        CheckerFrameworkExtension extension = project.extensions.findByType(CheckerFrameworkExtension)
+        CheckerFrameworkExtension checkerFramework = project.extensions.findByType(CheckerFrameworkExtension)
 
-        extension.checkers = ["org.checkerframework.checker.nullness.NullnessChecker",
-                              "org.checkerframework.checker.calledmethods.CalledMethodsChecker"]
+        checkerFramework.checkers = ["org.checkerframework.checker.nullness.NullnessChecker",
+                                     "org.checkerframework.checker.calledmethods.CalledMethodsChecker",
+                                     "org.checkerframework.checker.optional.OptionalChecker"]
+        checkerFramework.extraJavacArgs.add("-Astubs=${project.rootDir}/config/checker/stubs")
     }
 
-    static spotless(Project project) {
+    private static spotless(Project project) {
         project.pluginManager.apply('com.diffplug.spotless')
 
         project.extensions.findByType(SpotlessExtension)
@@ -51,18 +60,23 @@ class FkJavaCodeStandard implements Plugin<Project> {
 
         project.tasks.named('spotlessJava').configure { mustRunAfter('compileJava') }
         project.tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
-
     }
 
-    static errorProne(Project project) {
+    private static errorProne(Project project) {
         project.pluginManager.apply('net.ltgt.errorprone')
 
         project.dependencies.add('errorprone', 'com.google.errorprone:error_prone_core:2.27.1')
     }
 
-    static tests(Project project) {
+    private static void junitPlatform(Project project) {
         project.test {
             useJUnitPlatform()
         }
+    }
+
+    private static jacoco(Project project) {
+        project.pluginManager.apply('jacoco')
+
+        project.extensions.findByType(JacocoPluginExtension).setToolVersion("0.8.12")
     }
 }
