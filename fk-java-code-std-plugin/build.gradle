@@ -15,7 +15,7 @@ plugins {
 }
 
 group 'com.flipkart.java.code.standard'
-version '1.0'
+version '3.0'
 
 gradlePlugin {
     plugins {
@@ -27,7 +27,7 @@ gradlePlugin {
 }
 
 dependencies {
-    implementation 'org.checkerframework:checkerframework-gradle-plugin:0.6.30'
+    implementation 'org.checkerframework:checkerframework-gradle-plugin:0.6.42'
     implementation 'com.diffplug.spotless:spotless-plugin-gradle:6.16.0'
     implementation 'net.ltgt.gradle:gradle-errorprone-plugin:4.0.0'
 
