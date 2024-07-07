@@ -1,0 +1,47 @@
+package com.flipkart.krystal.vajram.samples.anandtest;
+
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.vajram.samples.anandtest.DependencyTestImmutableFacets.BatchImmutableFacets;
+import com.flipkart.krystal.vajram.samples.anandtest.DependencyTestImmutableFacets.CommonImmutableFacets;
+import java.lang.SuppressWarnings;
+import java.util.Optional;
+
+@SuppressWarnings("ClassReferencesSubclass")
+public interface DependencyTestFacets extends Facets {
+  DependencyTestImmutableFacets _build();
+
+  DependencyTestImmutableFacets.Builder _asBuilder();
+
+  static DependencyTestImmutableFacets.Builder _builder() {
+    return new DependencyTestImmutableFacets.Builder();
+  }
+
+  interface BatchFacets extends Facets {
+    Optional<Integer> fieldOne();
+
+    BatchImmutableFacets _build();
+
+    BatchImmutableFacets.Builder _asBuilder();
+
+    static BatchImmutableFacets.Builder _builder() {
+      return new BatchImmutableFacets.Builder();
+    }
+  }
+
+  public interface CommonFacets extends Facets {
+    Optional<String> fieldTwo();
+
+    Errable<Integer> testField();
+
+    CommonImmutableFacets _build();
+
+    CommonImmutableFacets.Builder _asBuilder();
+
+    static CommonImmutableFacets.Builder _builder() {
+      return new CommonImmutableFacets.Builder();
+    }
+  }
+
+}
+

@@ -1,0 +1,32 @@
+package com.flipkart.krystal.vajram.samples.anandtest;
+
+import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
+import java.lang.Integer;
+import java.lang.String;
+import java.lang.SuppressWarnings;
+import java.util.Optional;
+
+@SuppressWarnings("ClassReferencesSubclass")
+public interface DependencyTestRequest extends Request<Integer> {
+  VajramFacetSpec<Integer, DependencyTestRequest> fieldOne_s = new VajramFacetSpec<>(1, "fieldOne", DependencyTestRequest.class);
+
+  VajramFacetSpec<String, DependencyTestRequest> fieldTwo_s = new VajramFacetSpec<>(2, "fieldTwo", DependencyTestRequest.class);
+
+  String fieldOne_n = "fieldOne";
+
+  String fieldTwo_n = "fieldTwo";
+
+  Optional<Integer> fieldOne();
+
+  Optional<String> fieldTwo();
+
+  DependencyTestImmutableRequest _build();
+
+  DependencyTestImmutableRequest.Builder _asBuilder();
+
+  static DependencyTestImmutableRequest.Builder _builder() {
+    return new DependencyTestImmutableRequest.Builder();
+  }
+}
+
