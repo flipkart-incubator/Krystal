@@ -9,6 +9,8 @@ import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
+import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacets.BatchFacets;
+import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacets.CommonFacets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -24,20 +26,20 @@ public abstract class UserService extends IOVajram<UserInfo> {
   }
 
   @Output
-  static Map<UserServiceBatchFacets, CompletableFuture<UserInfo>> callUserService(
-      BatchedFacets<UserServiceBatchFacets, UserServiceCommonFacets> batchedRequest) {
+  static Map<BatchFacets, CompletableFuture<UserInfo>> callUserService(
+      BatchedFacets<BatchFacets, CommonFacets> batchedRequest) {
 
     // Make a call to user service and get user info
     CompletableFuture<List<UserInfo>> serviceResponse = batchServiceCall(batchedRequest.batch());
 
-    CompletableFuture<Map<UserServiceBatchFacets, UserInfo>> resultsFuture =
+    CompletableFuture<Map<BatchFacets, UserInfo>> resultsFuture =
         serviceResponse.thenApply(
             userInfos ->
                 userInfos.stream()
                     .collect(
                         Collectors.toMap(
                             userInfo ->
-                                UserServiceBatchFacets._builder()
+                                BatchFacets._builder()
                                     .userId(userInfo.userId())
                                     ._build(),
                             userInfo -> userInfo)));
@@ -51,10 +53,10 @@ public abstract class UserService extends IOVajram<UserInfo> {
   }
 
   private static CompletableFuture<List<UserInfo>> batchServiceCall(
-      List<UserServiceBatchFacets> modInputs) {
+      List<BatchFacets> modInputs) {
     return completedFuture(
         modInputs.stream()
-            .map(UserServiceBatchFacets::userId)
+            .map(BatchFacets::userId)
             .map(userId -> new UserInfo(userId, "Firstname Lastname (%s)".formatted(userId)))
             .toList());
   }

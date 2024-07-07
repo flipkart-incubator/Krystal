@@ -10,6 +10,8 @@ import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
+import com.flipkart.krystal.vajram.samples.calculator.adder.AdderFacets.BatchFacets;
+import com.flipkart.krystal.vajram.samples.calculator.adder.AdderFacets.CommonFacets;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -26,8 +28,8 @@ public abstract class Adder extends IOVajram<Integer> {
   }
 
   @Output
-  static Map<AdderBatchFacets, CompletableFuture<Integer>> add(
-      BatchedFacets<AdderBatchFacets, AdderCommonFacets> batchedFacets) {
+  static Map<BatchFacets, CompletableFuture<Integer>> add(
+      BatchedFacets<BatchFacets, CommonFacets> batchedFacets) {
     CALL_COUNTER.increment();
     return batchedFacets.batch().stream()
         .collect(

@@ -52,8 +52,10 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.Hello;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloImmutableRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsImmutableRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2ImmutableRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest;
@@ -867,7 +869,7 @@ class KrystexVajramExecutorTest {
     return HelloRequest._builder().name(applicationRequestContext.loggedInUserId().orElseThrow());
   }
 
-  private HelloRequest incompleteHelloRequest(TestRequestContext applicationRequestContext) {
+  private HelloImmutableRequest incompleteHelloRequest(TestRequestContext applicationRequestContext) {
     return HelloRequest._builder()._build();
   }
 
@@ -877,14 +879,14 @@ class KrystexVajramExecutorTest {
         ._build();
   }
 
-  private HelloFriendsRequest helloFriendsRequest(TestRequestContext testRequestContext) {
+  private HelloFriendsImmutableRequest helloFriendsRequest(TestRequestContext testRequestContext) {
     return HelloFriendsRequest._builder()
         .userId(testRequestContext.loggedInUserId().orElse(null))
         .numberOfFriends(testRequestContext.numberOfFriends())
         ._build();
   }
 
-  private HelloFriendsV2Request helloFriendsV2Request(TestRequestContext testRequestContext) {
+  private HelloFriendsV2ImmutableRequest helloFriendsV2Request(TestRequestContext testRequestContext) {
     return HelloFriendsV2Request._builder()
         .userId(testRequestContext.loggedInUserId().orElse(null))
         ._build();
