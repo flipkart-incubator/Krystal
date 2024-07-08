@@ -2,6 +2,7 @@ package com.flipkart.krystal.krystex.caching;
 
 import static com.flipkart.krystal.utils.Futures.linkFutures;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
@@ -155,24 +156,20 @@ public class RequestLevelCache implements KryonDecorator {
       for (int i = 0; i < allFutures.size(); i++) {
         array[i] = allFutures.get(i).getValue();
       }
-      CompletableFuture.allOf(array)
+      allOf(array)
           .whenComplete(
               (unused, throwable) -> {
-                if (throwable != null) {
-                  finalResponse.completeExceptionally(throwable);
-                } else {
-                  finalResponse.complete(
-                      new BatchResponse(
-                          allFutures.stream()
-                              .collect(
-                                  toImmutableMap(
-                                      Entry::getKey,
-                                      entry ->
-                                          entry
-                                              .getValue()
-                                              .handle(Errable::errableFrom)
-                                              .getNow(UNKNOWN_ERROR)))));
-                }
+                finalResponse.complete(
+                    new BatchResponse(
+                        allFutures.stream()
+                            .collect(
+                                toImmutableMap(
+                                    Entry::getKey,
+                                    entry ->
+                                        entry
+                                            .getValue()
+                                            .handle(Errable::errableFrom)
+                                            .getNow(UNKNOWN_ERROR)))));
               });
       return finalResponse;
     }
