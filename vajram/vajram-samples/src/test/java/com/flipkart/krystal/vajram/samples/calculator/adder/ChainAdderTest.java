@@ -1,6 +1,9 @@
 package com.flipkart.krystal.vajram.samples.calculator.adder;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+import static com.flipkart.krystal.vajram.VajramID.ofVajram;
+import static com.flipkart.krystal.vajram.VajramID.vajramID;
+import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
