@@ -1,6 +1,7 @@
 package com.flipkart.krystal.utils;
 
 import java.util.concurrent.CompletableFuture;
+import org.checkerframework.checker.nullness.qual.PolyNull;
 
 public final class Futures {
 
@@ -14,7 +15,7 @@ public final class Futures {
   }
 
   public static <T> void propagateCompletion(
-      CompletableFuture<? extends T> from, CompletableFuture<T> to) {
+      CompletableFuture<? extends @PolyNull T> from, CompletableFuture<@PolyNull T> to) {
     from.whenComplete(
         (result, error) -> {
           if (error != null) {
@@ -43,7 +44,8 @@ public final class Futures {
    * propagateCancellation(destinationFuture, sourceFuture)}
    */
   public static <T> void linkFutures(
-      CompletableFuture<? extends T> sourceFuture, CompletableFuture<T> destinationFuture) {
+      CompletableFuture<? extends @PolyNull T> sourceFuture,
+      CompletableFuture<@PolyNull T> destinationFuture) {
     propagateCompletion(sourceFuture, destinationFuture);
     propagateCancellation(destinationFuture, sourceFuture);
   }

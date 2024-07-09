@@ -4,6 +4,7 @@ import static java.util.Comparator.comparingInt;
 import static java.util.Optional.ofNullable;
 import static lombok.EqualsAndHashCode.CacheStrategy.LAZY;
 
+import com.flipkart.krystal.krystex.Decorator;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Comparator;
@@ -20,6 +21,10 @@ public class LogicDecorationOrdering {
 
   private final ImmutableMap<String, Integer> decoratorTypeIndices;
 
+  /**
+   * @param orderedDecoratorIds The first id in this list will process the command first and the
+   *     command response last in relation to later decorator ids.
+   */
   public LogicDecorationOrdering(ImmutableSet<String> orderedDecoratorIds) {
     List<String> strings = orderedDecoratorIds.stream().toList();
     Map<String, Integer> indices = new HashMap<>();
@@ -29,7 +34,7 @@ public class LogicDecorationOrdering {
     this.decoratorTypeIndices = ImmutableMap.copyOf(indices);
   }
 
-  public Comparator<LogicDecorator<?, ?>> decorationOrder() {
+  public <T extends Decorator> Comparator<T> encounterOrder() {
     return comparingInt(
         key -> ofNullable(decoratorTypeIndices.get(key.decoratorType())).orElse(Integer.MIN_VALUE));
   }

@@ -9,9 +9,9 @@ import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public class MultiLeasePool<T> implements AutoCloseable {
+public class MultiLeasePool<T extends @NonNull Object> implements AutoCloseable {
 
-  private final Supplier<T> creator;
+  private final Supplier<@NonNull T> creator;
   private final MultiLeasePolicy leasePolicy;
 
   private final Consumer<T> destroyer;
@@ -22,13 +22,14 @@ public class MultiLeasePool<T> implements AutoCloseable {
   private volatile boolean closed;
   private volatile int maxActiveLeasesPerObject;
 
-  public MultiLeasePool(Supplier<T> creator, MultiLeasePolicy leasePolicy, Consumer<T> destroyer) {
+  public MultiLeasePool(
+      Supplier<@NonNull T> creator, MultiLeasePolicy leasePolicy, Consumer<T> destroyer) {
     this.creator = creator;
     this.leasePolicy = leasePolicy;
     this.destroyer = destroyer;
   }
 
-  public final Lease<T> lease() {
+  public final Lease<T> lease() throws LeaseUnavailableException {
     synchronized (this) {
       if (closed) {
         throw new IllegalStateException("MultiLeasePool already closed");
@@ -125,7 +126,18 @@ public class MultiLeasePool<T> implements AutoCloseable {
     }
   }
 
-  private PooledObject<T> createNewForLeasing() {
+  private PooledObject<T> createNewForLeasing() throws LeaseUnavailableException {
+    int limit = Integer.MAX_VALUE;
+    if (leasePolicy instanceof PreferObjectReuse preferObjectReuse
+        && preferObjectReuse.maxActiveObjects().isPresent()) {
+      limit = preferObjectReuse.maxActiveObjects().get();
+    } else if (leasePolicy instanceof DistributeLeases distributeLeases) {
+      limit = distributeLeases.maxActiveObjects();
+    }
+    if (queue.size() >= limit) {
+      throw new LeaseUnavailableException(
+          "Reached max object limit : " + limit + " in MultiLeasePool");
+    }
     PooledObject<T> pooledObject = new PooledObject<>(creator.get(), maxActiveLeasesPerObject());
     pooledObject.incrementActiveLeases();
     addLeasedToQueue(pooledObject);
@@ -154,7 +166,7 @@ public class MultiLeasePool<T> implements AutoCloseable {
     }
   }
 
-  public static final class Lease<T> implements AutoCloseable {
+  public static final class Lease<T extends @NonNull Object> implements AutoCloseable {
 
     private @Nullable PooledObject<T> pooledObject;
     private final Consumer<PooledObject<T>> giveback;
@@ -184,12 +196,12 @@ public class MultiLeasePool<T> implements AutoCloseable {
 
   private static final class PooledObject<T> {
 
-    private final T ref;
+    private final @NonNull T ref;
     private final int deletionThreshold;
     private int activeLeases = 0;
     private int markForDeletion;
 
-    private PooledObject(T ref, int deletionThreshold) {
+    private PooledObject(@NonNull T ref, int deletionThreshold) {
       this.ref = ref;
       this.deletionThreshold = deletionThreshold;
     }

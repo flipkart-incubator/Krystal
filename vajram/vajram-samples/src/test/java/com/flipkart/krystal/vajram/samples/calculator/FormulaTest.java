@@ -6,20 +6,20 @@ import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.add;
 import static com.flipkart.krystal.vajram.samples.calculator.divider.Divider.divide;
+import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
-import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
@@ -27,9 +27,9 @@ import com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest;
 import com.flipkart.krystal.vajram.samples.calculator.divider.DividerRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
-import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +40,7 @@ class FormulaTest {
 
   private VajramKryonGraph.Builder graph;
   private static final String REQUEST_ID = "formulaTest";
+  private final RequestLevelCache requestLevelCache = new RequestLevelCache();
 
   @BeforeEach
   void setUp() {
@@ -54,9 +55,10 @@ class FormulaTest {
     graph.registerInputBatchers(
         vajramID(getVajramIdString(Adder.class)),
         InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
-    try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
-        graph.createExecutor(new FormulaRequestContext(100, 20, 5, REQUEST_ID))) {
-      future = executeVajram(krystexVajramExecutor, 0);
+    FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
+    try (KrystexVajramExecutor krystexVajramExecutor =
+        graph.createExecutor(KrystexVajramExecutorConfig.builder().requestId(REQUEST_ID).build())) {
+      future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
     //noinspection AssertBetweenInconvertibleTypes https://youtrack.jetbrains.com/issue/IDEA-342354
     assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(4);
@@ -78,13 +80,15 @@ class FormulaTest {
     long startTime = System.nanoTime();
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
-      try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
-          graph.createExecutor(new FormulaRequestContext(100, 20, 5, "formulaTest"))) {
+      FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, "formulaTest");
+      try (KrystexVajramExecutor krystexVajramExecutor =
+          graph.createExecutor(
+              KrystexVajramExecutorConfig.builder().requestId("formulaTest").build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[value] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         long enqueueStart = System.nanoTime();
-        futures[value] = executeVajram(krystexVajramExecutor, value);
+        futures[value] = executeVajram(krystexVajramExecutor, value, requestContext);
         timeToEnqueueVajram += System.nanoTime() - enqueueStart;
       }
     }
@@ -99,7 +103,7 @@ class FormulaTest {
                         assertThat(future.getNow(0)).isEqualTo((100 + i) / (20 + i + 5 + i));
                       }
                     }))
-        .succeedsWithin(Duration.ofSeconds(1));
+        .succeedsWithin(ofSeconds(1));
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(loopCount);
 
     /*
@@ -147,15 +151,18 @@ class FormulaTest {
     long startTime = System.nanoTime();
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
       long iterStartTime = System.nanoTime();
-      try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
-          graph.createExecutor(new FormulaRequestContext(100, 20, 5, "formulaTest"))) {
+      FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, "formulaTest");
+      try (KrystexVajramExecutor krystexVajramExecutor =
+          graph.createExecutor(
+              KrystexVajramExecutorConfig.builder().requestId("formulaTest").build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[outer_i] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         for (int inner_i = 0; inner_i < innerLoopCount; inner_i++) {
           int iterationNum = outer_i * innerLoopCount + inner_i;
           long enqueueStart = System.nanoTime();
-          futures[iterationNum] = executeVajram(krystexVajramExecutor, iterationNum);
+          futures[iterationNum] =
+              executeVajram(krystexVajramExecutor, iterationNum, requestContext);
           timeToEnqueueVajram += System.nanoTime() - enqueueStart;
         }
       }
@@ -171,7 +178,7 @@ class FormulaTest {
                         assertThat(future.getNow(0)).isEqualTo((100 + i) / (20 + i + 5 + i));
                       }
                     }))
-        .succeedsWithin(Duration.ofSeconds(1));
+        .succeedsWithin(ofSeconds(1));
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(outerLoopCount);
     /*
        Old code performance:
@@ -215,10 +222,10 @@ class FormulaTest {
   }
 
   private static CompletableFuture<Integer> executeVajram(
-      KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor, int value) {
+      KrystexVajramExecutor krystexVajramExecutor, int value, FormulaRequestContext rc) {
     return krystexVajramExecutor.execute(
         vajramID(getVajramIdString(Formula.class)),
-        rc -> FormulaRequest.builder().a(rc.a + value).p(rc.p + value).q(rc.q + value).build(),
+        FormulaRequest.builder().a(rc.a + value).p(rc.p + value).q(rc.q + value).build(),
         KryonExecutionConfig.builder().executionId("formulaTest" + value).build());
   }
 
@@ -237,8 +244,7 @@ class FormulaTest {
         .thenApply(unused -> divide(numerator.getNow(null), sum.getNow(null)));
   }
 
-  private record FormulaRequestContext(int a, int p, int q, String requestId)
-      implements ApplicationRequestContext {}
+  private record FormulaRequestContext(int a, int p, int q, String requestId) {}
 
   @Test
   void formula_success_withAllMockedDependencies() throws Exception {
@@ -247,14 +253,18 @@ class FormulaTest {
     graph.registerInputBatchers(
         vajramID(getVajramIdString(Adder.class)),
         InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
-    KryonExecutorConfigBuilder kryonExecutorConfigBuilder =
-        KryonExecutorConfig.builder()
-            .kryonExecStrategy(KryonExecStrategy.BATCH)
-            .graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
-    try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
+    KrystexVajramExecutorConfig executorConfigBuilder =
+        KrystexVajramExecutorConfig.builder()
+            .requestId(REQUEST_ID)
+            .kryonExecutorConfigBuilder(
+                KryonExecutorConfig.builder()
+                    .kryonExecStrategy(KryonExecStrategy.BATCH)
+                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
+            .build();
+    FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
+    try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
-            new FormulaRequestContext(100, 20, 5, REQUEST_ID),
-            VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder)
+            VajramTestHarness.prepareForTest(executorConfigBuilder, requestLevelCache)
                 .withMock(
                     AdderRequest.builder().numberOne(20).numberTwo(5).build(),
                     Errable.withValue(25))
@@ -262,7 +272,7 @@ class FormulaTest {
                     DividerRequest.builder().numerator(100).denominator(25).build(),
                     Errable.withValue(4))
                 .buildConfig())) {
-      future = executeVajram(krystexVajramExecutor, 0);
+      future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future.get()).isEqualTo(4);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(0);
@@ -275,19 +285,23 @@ class FormulaTest {
     graph.registerInputBatchers(
         vajramID(getVajramIdString(Adder.class)),
         InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
-    KryonExecutorConfigBuilder kryonExecutorConfigBuilder =
-        KryonExecutorConfig.builder()
-            .kryonExecStrategy(KryonExecStrategy.BATCH)
-            .graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
-    try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
+    KrystexVajramExecutorConfig kryonExecutorConfigBuilder =
+        KrystexVajramExecutorConfig.builder()
+            .requestId(REQUEST_ID)
+            .kryonExecutorConfigBuilder(
+                KryonExecutorConfig.builder()
+                    .kryonExecStrategy(KryonExecStrategy.BATCH)
+                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
+            .build();
+    FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
+    try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
-            new FormulaRequestContext(100, 20, 5, REQUEST_ID),
-            VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder)
+            VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder, requestLevelCache)
                 .withMock(
                     AdderRequest.builder().numberOne(20).numberTwo(5).build(),
                     Errable.withValue(25))
                 .buildConfig())) {
-      future = executeVajram(krystexVajramExecutor, 0);
+      future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future.get()).isEqualTo(4);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(0);
@@ -300,46 +314,54 @@ class FormulaTest {
     graph.registerInputBatchers(
         vajramID(getVajramIdString(Adder.class)),
         InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
-    KryonExecutorConfigBuilder kryonExecutorConfigBuilder =
-        KryonExecutorConfig.builder()
-            .kryonExecStrategy(KryonExecStrategy.BATCH)
-            .graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
-    try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
+    KrystexVajramExecutorConfig executorConfig =
+        KrystexVajramExecutorConfig.builder()
+            .requestId(REQUEST_ID)
+            .kryonExecutorConfigBuilder(
+                KryonExecutorConfig.builder()
+                    .kryonExecStrategy(KryonExecStrategy.BATCH)
+                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
+            .build();
+    FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
+    try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
-            new FormulaRequestContext(100, 20, 5, REQUEST_ID),
-            VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder)
+            VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
                 .withMock(
                     DividerRequest.builder().numerator(100).denominator(25).build(),
                     Errable.withValue(4))
                 .buildConfig())) {
-      future = executeVajram(krystexVajramExecutor, 0);
+      future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future.get()).isEqualTo(4);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
   }
 
   @Test
-  void formula_failure() throws Exception {
+  void formula_failure() {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
         vajramID(getVajramIdString(Adder.class)),
         InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
-    KryonExecutorConfigBuilder kryonExecutorConfigBuilder =
-        KryonExecutorConfig.builder()
-            .kryonExecStrategy(KryonExecStrategy.BATCH)
-            .graphTraversalStrategy(GraphTraversalStrategy.DEPTH);
-    try (KrystexVajramExecutor<FormulaRequestContext> krystexVajramExecutor =
+    KrystexVajramExecutorConfig kryonExecutorConfigBuilder =
+        KrystexVajramExecutorConfig.builder()
+            .requestId(REQUEST_ID)
+            .kryonExecutorConfigBuilder(
+                KryonExecutorConfig.builder()
+                    .kryonExecStrategy(KryonExecStrategy.BATCH)
+                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
+            .build();
+    FormulaRequestContext requestContext = new FormulaRequestContext(100, 0, 0, REQUEST_ID);
+    try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
-            new FormulaRequestContext(100, 0, 0, REQUEST_ID),
-            VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder)
+            VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder, requestLevelCache)
                 .withMock(
                     AdderRequest.builder().numberOne(0).numberTwo(0).build(), Errable.withValue(0))
                 .buildConfig())) {
-      future = executeVajram(krystexVajramExecutor, 0);
+      future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future)
-        .failsWithin(Duration.ofSeconds(1))
+        .failsWithin(ofSeconds(1))
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(ArithmeticException.class)
         .withMessage("java.lang.ArithmeticException: / by zero");

@@ -8,7 +8,8 @@ import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.add;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderRequest.*;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderRequest.chainSum_n;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderRequest.sum_n;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -28,11 +29,11 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
-import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.samples.calculator.Formula;
 import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -71,20 +72,24 @@ class ChainAdderTest {
         vajramID(getVajramIdString(Adder.class)),
         InputBatcherConfig.sharedBatcher(
             () -> new InputBatcherImpl<>(100), "adderBatcher", getBatchedDepChains()));
-    try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
+    try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
-            new RequestContext("chainAdderTest"),
-            KryonExecutorConfig.builder()
-                .requestScopedLogicDecoratorConfigs(
-                    ImmutableMap.of(
-                        mainLogicExecReporter.decoratorType(),
-                        List.of(
-                            new OutputLogicDecoratorConfig(
+            KrystexVajramExecutorConfig.builder()
+                .requestId("chainAdderTest")
+                .kryonExecutorConfigBuilder(
+                    KryonExecutorConfig.builder()
+                        .requestScopedLogicDecoratorConfigs(
+                            ImmutableMap.of(
                                 mainLogicExecReporter.decoratorType(),
-                                logicExecutionContext -> true,
-                                logicExecutionContext -> mainLogicExecReporter.decoratorType(),
-                                decoratorContext -> mainLogicExecReporter))))
+                                List.of(
+                                    new OutputLogicDecoratorConfig(
+                                        mainLogicExecReporter.decoratorType(),
+                                        logicExecutionContext -> true,
+                                        logicExecutionContext ->
+                                            mainLogicExecReporter.decoratorType(),
+                                        decoratorContext -> mainLogicExecReporter)))))
                 .build())) {
+
       future = executeVajram(krystexVajramExecutor, 0);
     }
     assertThat(future).succeedsWithin(ofSeconds(1000)).isEqualTo(55);
@@ -96,12 +101,13 @@ class ChainAdderTest {
   @Test
   void emptyNumbers_returnsZero_success() {
     CompletableFuture<Integer> future;
-    try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-        graph.createExecutor(new RequestContext("chainAdderTest"))) {
+    try (KrystexVajramExecutor krystexVajramExecutor =
+        graph.createExecutor(
+            KrystexVajramExecutorConfig.builder().requestId("chainAdderTest").build())) {
       future =
           krystexVajramExecutor.execute(
               ofVajram(ChainAdder.class),
-              rc -> ChainAdderRequest.builder().numbers(List.of()).build(),
+              ChainAdderRequest.builder().numbers(List.of()).build(),
               KryonExecutionConfig.builder()
                   .disabledDependantChains(getDisabledDependantChains(graph))
                   .build());
@@ -127,8 +133,9 @@ class ChainAdderTest {
             () -> new InputBatcherImpl<>(100), "adderBatcher", getBatchedDepChains()));
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
-      try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-          graph.createExecutor(new RequestContext("chainAdderTest"))) {
+      try (KrystexVajramExecutor krystexVajramExecutor =
+          graph.createExecutor(
+              KrystexVajramExecutorConfig.builder().requestId("chainAdderTest").build())) {
         metrics[value] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
@@ -196,8 +203,9 @@ class ChainAdderTest {
             () -> new InputBatcherImpl<>(100), "adderBatcher", getBatchedDepChains()));
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
       long iterStartTime = System.nanoTime();
-      try (KrystexVajramExecutor<RequestContext> krystexVajramExecutor =
-          graph.createExecutor(new RequestContext("chainAdderTest"))) {
+      try (KrystexVajramExecutor krystexVajramExecutor =
+          graph.createExecutor(
+              KrystexVajramExecutorConfig.builder().requestId("chainAdderTest").build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[outer_i] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
@@ -249,17 +257,16 @@ class ChainAdderTest {
   }
 
   private CompletableFuture<Integer> executeVajram(
-      KrystexVajramExecutor<RequestContext> krystexVajramExecutor, int multiplier) {
+      KrystexVajramExecutor krystexVajramExecutor, int multiplier) {
     return krystexVajramExecutor.execute(
         vajramID(getVajramIdString(ChainAdder.class)),
-        rc ->
-            builder()
-                .numbers(
-                    new ArrayList<>(
-                        Stream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-                            .map(integer -> integer + multiplier * 10)
-                            .toList()))
-                .build(),
+        ChainAdderRequest.builder()
+            .numbers(
+                new ArrayList<>(
+                    Stream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+                        .map(integer -> integer + multiplier * 10)
+                        .toList()))
+            .build(),
         KryonExecutionConfig.builder()
             .executionId(String.valueOf(multiplier))
             // Tests whether request level disabled dependant chains is working
@@ -312,8 +319,6 @@ class ChainAdderTest {
   private CompletableFuture<Integer> addAsync(int a, int b) {
     return completedFuture(a + b);
   }
-
-  record RequestContext(String requestId) implements ApplicationRequestContext {}
 
   private static VajramKryonGraph.Builder loadFromClasspath(String... packagePrefixes) {
     VajramKryonGraph.Builder builder = VajramKryonGraph.builder();

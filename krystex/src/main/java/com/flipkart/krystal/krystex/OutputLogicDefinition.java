@@ -8,7 +8,7 @@ import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
-import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.DecoratorContext;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.LogicDecoratorContext;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
@@ -75,7 +75,9 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
                           k ->
                               decoratorConfig
                                   .factory()
-                                  .apply(new DecoratorContext(instanceId, logicExecutionContext))));
+                                  .apply(
+                                      new LogicDecoratorContext(
+                                          instanceId, logicExecutionContext))));
             }
           } catch (Exception e) {
             log.error(

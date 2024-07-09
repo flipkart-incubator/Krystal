@@ -12,12 +12,13 @@ public interface KrystalExecutor extends AutoCloseable {
       KryonId kryonId, Facets facets, KryonExecutionConfig executionConfig);
 
   /**
-   * Flushes any pending requests and waits for all those requests to finish before returning. This
-   * is done so that any subsequent calls to this executor should happen only after the completion
-   * of the pending futures. If this is not done, it will result in unexpected behaviour.
+   * This method starts execution of all submitted requests. No new kryon execution requests will be
+   * accepted after this method is called. All requests submitted before calling this method will
+   * continue execution indefinitely without interruption unless {@link #shutdownNow()} is called.
    */
-  void flush();
-
   @Override // to suppress "throws Exception"
   void close();
+
+  /** Abandons all pending execution requests. Any inflight requests will be terminated abruptly. */
+  void shutdownNow();
 }

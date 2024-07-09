@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import static com.flipkart.krystal.data.Errable.computeErrableFrom;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
@@ -7,6 +8,8 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.GRANULAR;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Collections.emptySet;
+import static java.util.concurrent.CompletableFuture.runAsync;
+import static java.util.concurrent.Executors.newSingleThreadExecutor;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -14,10 +17,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
+import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
@@ -29,7 +32,9 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -89,7 +94,7 @@ class KryonExecutorTest {
             Facets.empty(),
             KryonExecutionConfig.builder().executionId("req_2").build());
 
-    kryonExecutor.flush();
+    kryonExecutor.close();
     assertEquals("computed_value", timedGet(future1));
     assertEquals("computed_value", timedGet(future2));
   }
@@ -115,7 +120,7 @@ class KryonExecutorTest {
             () -> kryonExecutor.executeKryon(kryonDefinition.kryonId(), Facets.empty(), null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("executionConfig can not be null");
-    kryonExecutor.flush();
+    kryonExecutor.close();
     assertThat(future1).succeedsWithin(1, SECONDS).isEqualTo("computed_value");
   }
 
@@ -137,7 +142,7 @@ class KryonExecutorTest {
             kryonDefinition.kryonId(),
             Facets.empty(),
             KryonExecutionConfig.builder().executionId("req_1").build());
-    kryonExecutor.flush();
+    kryonExecutor.close();
     assertEquals("computed_value", timedGet(future));
   }
 
@@ -169,7 +174,7 @@ class KryonExecutorTest {
             kryonId,
             new Facets(ImmutableMap.of("a", withValue(1), "b", withValue(2), "c", withValue("3"))),
             KryonExecutionConfig.builder().executionId("r").build());
-    kryonExecutor.flush();
+    kryonExecutor.close();
     assertEquals("computed_values: a=1;b=2;c=3", timedGet(future));
   }
 
@@ -209,7 +214,7 @@ class KryonExecutorTest {
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
             n2.kryonId(), Facets.empty(), KryonExecutionConfig.builder().executionId("r1").build());
-    kryonExecutor.flush();
+    kryonExecutor.close();
     assertEquals("dependency_value:computed_value", timedGet(future));
   }
 
@@ -310,7 +315,7 @@ class KryonExecutorTest {
                 .kryonId(),
             facets,
             KryonExecutionConfig.builder().executionId("r").build());
-    kryonExecutor.flush();
+    kryonExecutor.close();
     assertThat(future).succeedsWithin(TIMEOUT).isEqualTo("l1:l2:l3:l4:final");
   }
 
@@ -338,6 +343,67 @@ class KryonExecutorTest {
                 KryonExecutionConfig.builder().executionId("req_1").build()));
   }
 
+  @ParameterizedTest
+  @MethodSource("executorConfigsToTest")
+  void shutdownNow_terminatesPendingWork(
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
+    KryonDefinition n1 =
+        kryonDefinitionRegistry.newKryonDefinition(
+            "n1",
+            emptySet(),
+            newComputeLogic("n1_logic", emptySet(), dependencyValues -> "dependency_value")
+                .kryonLogicId());
+
+    CountDownLatch countDownLatch = new CountDownLatch(1);
+    KryonDefinition n2 =
+        kryonDefinitionRegistry.newKryonDefinition(
+            "n2",
+            emptySet(),
+            newIoLogic(
+                    "n2_logic",
+                    Set.of("dep"),
+                    dependencyValues -> {
+                      return runAsync(
+                              () -> {
+                                while (countDownLatch.getCount() > 0) {
+                                  try {
+                                    countDownLatch.await();
+                                  } catch (Exception ignored) {
+                                  }
+                                }
+                              },
+                              newSingleThreadExecutor())
+                          .handle(
+                              (unused, throwable) -> {
+                                return dependencyValues
+                                        .getDepValue("dep")
+                                        .values()
+                                        .values()
+                                        .iterator()
+                                        .next()
+                                        .value()
+                                        .orElseThrow()
+                                    + ":computed_value";
+                              });
+                    })
+                .kryonLogicId(),
+            ImmutableMap.of("dep", n1.kryonId()));
+
+    CompletableFuture<Object> future =
+        kryonExecutor.executeKryon(
+            n2.kryonId(), Facets.empty(), KryonExecutionConfig.builder().executionId("r1").build());
+    kryonExecutor.close();
+    kryonExecutor.shutdownNow();
+    countDownLatch.countDown();
+    assertThat(future)
+        .failsWithin(1, SECONDS)
+        .withThrowableOfType(ExecutionException.class)
+        .withCauseExactlyInstanceOf(RejectedExecutionException.class)
+        .withMessage(
+            "java.util.concurrent.RejectedExecutionException: Kryon Executor shutdown requested.");
+  }
+
   /* So that bad testcases do not hang indefinitely.*/
   private static <T> T timedGet(CompletableFuture<T> future)
       throws InterruptedException, ExecutionException, TimeoutException {
@@ -352,10 +418,25 @@ class KryonExecutorTest {
             inputs,
             inputsList ->
                 inputsList.stream()
-                    .collect(toImmutableMap(identity(), Errable.errableFrom(logic)))
+                    .collect(toImmutableMap(identity(), computeErrableFrom(logic)))
                     .entrySet()
                     .stream()
                     .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture())),
+            ImmutableMap.of());
+
+    logicDefinitionRegistry.addOutputLogic(def);
+    return def;
+  }
+
+  private <T> OutputLogicDefinition<T> newIoLogic(
+      String kryonId, Set<String> inputs, Function<Facets, CompletableFuture<T>> logic) {
+    IOLogicDefinition<T> def =
+        new IOLogicDefinition<>(
+            new KryonLogicId(new KryonId(kryonId), kryonId),
+            inputs,
+            inputsList ->
+                inputsList.stream().collect(toImmutableMap(identity(), logic)).entrySet().stream()
+                    .collect(toImmutableMap(Entry::getKey, Entry::getValue)),
             ImmutableMap.of());
 
     logicDefinitionRegistry.addOutputLogic(def);
