@@ -5,7 +5,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
- * @param decoratorType The id of the decorator
+ * @param decoratorType The type of the decorator
  * @param shouldDecorate A predicate which determines whether the logic decorator should decorate a
  *     logic which has the provided tags applied to it.
  * @param instanceIdGenerator A function which returns the instance id of the logic decorator. The
@@ -20,6 +20,7 @@ public record OutputLogicDecoratorConfig(
     String decoratorType,
     Predicate<LogicExecutionContext> shouldDecorate,
     Function<LogicExecutionContext, String> instanceIdGenerator,
-    Function<DecoratorContext, OutputLogicDecorator> factory) {
-  public record DecoratorContext(String instanceId, LogicExecutionContext logicExecutionContext) {}
+    Function<LogicDecoratorContext, OutputLogicDecorator> factory) {
+  public record LogicDecoratorContext(
+      String instanceId, LogicExecutionContext logicExecutionContext) {}
 }

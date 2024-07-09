@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import lombok.Getter;
+import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -58,11 +59,16 @@ public final class VajramDefinition {
   @Getter
   private final ImmutableMap</*FacetName*/ String, ImmutableMap</*TagKey*/ Object, Tag>> facetTags;
 
+  @Getter
+  @Accessors(fluent = true)
+  private final VajramMetadata vajramMetadata;
+
   public VajramDefinition(Vajram<?> vajram) {
     this.vajram = vajram;
     this.inputResolverDefinitions = ImmutableList.copyOf(parseInputResolvers(vajram));
     this.outputLogicTags = parseOutputLogicTags(vajram);
     this.facetTags = parseFacetTags(vajram);
+    this.vajramMetadata = new VajramMetadata(vajram);
     this.outputLogicSources = parseOutputLogicSources(vajram);
   }
 

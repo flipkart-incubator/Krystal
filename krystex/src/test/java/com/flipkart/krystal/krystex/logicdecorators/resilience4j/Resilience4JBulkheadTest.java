@@ -118,7 +118,7 @@ class Resilience4JBulkheadTest {
             kryonDefinition.kryonId(),
             new Facets(ImmutableMap.of("input", withValue(3))),
             KryonExecutionConfig.builder().executionId("req_3").build());
-    kryonExecutor.flush();
+    kryonExecutor.close();
     assertThat(callAfterBulkheadExhaustion)
         .failsWithin(TIMEOUT)
         .withThrowableOfType(Exception.class)
@@ -191,7 +191,7 @@ class Resilience4JBulkheadTest {
             kryonDefinition.kryonId(),
             new Facets(ImmutableMap.of("input", withValue(3))),
             KryonExecutionConfig.builder().executionId("req_3").build());
-    kryonExecutor.flush();
+    kryonExecutor.close();
     assertThat(callAfterBulkheadExhaustion)
         .failsWithin(1, HOURS)
         .withThrowableOfType(Exception.class)

@@ -1,0 +1,16 @@
+dependencies {
+    api project(':vajram-java-sdk')
+    api project(':vajram-krystex')
+    api 'com.google.inject:guice'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.flipkart.krystal'
+            artifactId = project.name
+            version = project.krystal_version
+            from components.java
+        }
+    }
+}

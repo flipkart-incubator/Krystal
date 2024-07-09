@@ -13,6 +13,10 @@ public class StackTracelessException extends RuntimeException {
     super(message);
   }
 
+  public StackTracelessException(String message, Exception cause) {
+    super(message, cause);
+  }
+
   @SuppressWarnings("NonSynchronizedMethodOverridesSynchronizedMethod")
   @Override
   public final Throwable fillInStackTrace() {

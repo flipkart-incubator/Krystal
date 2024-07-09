@@ -6,9 +6,9 @@ import static java.util.concurrent.TimeUnit.HOURS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
-import com.flipkart.krystal.vajram.ApplicationRequestContext;
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,8 +27,8 @@ class A2MinusB2Test {
   void success() {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
-    try (KrystexVajramExecutor<ApplicationRequestContext> krystexVajramExecutor =
-        graph.createExecutor(() -> REQUEST_ID)) {
+    try (KrystexVajramExecutor krystexVajramExecutor =
+        graph.createExecutor(KrystexVajramExecutorConfig.builder().requestId(REQUEST_ID).build())) {
       future = executeVajram(krystexVajramExecutor, A2MinusB2Request.builder().a(3).b(2).build());
     }
     //noinspection AssertBetweenInconvertibleTypes https://youtrack.jetbrains.com/issue/IDEA-342354
@@ -36,11 +36,10 @@ class A2MinusB2Test {
   }
 
   private static CompletableFuture<Integer> executeVajram(
-      KrystexVajramExecutor<ApplicationRequestContext> krystexVajramExecutor,
-      A2MinusB2Request req) {
+      KrystexVajramExecutor krystexVajramExecutor, A2MinusB2Request req) {
     return krystexVajramExecutor.execute(
         vajramID(getVajramIdString(A2MinusB2.class)),
-        rc -> req,
+        req,
         KryonExecutionConfig.builder().executionId("1").build());
   }
 }

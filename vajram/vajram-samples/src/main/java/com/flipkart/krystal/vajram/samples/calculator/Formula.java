@@ -18,10 +18,12 @@ import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
 import com.flipkart.krystal.vajram.samples.calculator.divider.Divider;
 import com.google.common.collect.ImmutableCollection;
+import java.util.Optional;
 
 /** a/(p+q) */
 @VajramDef
 public abstract class Formula extends ComputeVajram<Integer> {
+  @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
     @Input int a;
     @Input int p;
@@ -50,7 +52,8 @@ public abstract class Formula extends ComputeVajram<Integer> {
   }
 
   @Output
-  static int result(int quotient) {
+  static int result(int sum, int quotient) {
+    /* Return quotient */
     return quotient;
   }
 }
