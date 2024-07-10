@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
+import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
+import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Optional.ofNullable;
 import static java.util.function.Function.identity;
@@ -7,6 +9,7 @@ import static java.util.function.Function.identity;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
@@ -24,6 +27,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputResolverUtil {
@@ -42,14 +46,21 @@ public final class InputResolverUtil {
           resolvers.getOrDefault(dependencyName, List.of());
       for (SimpleInputResolver<?, ?, ?, ?> simpleResolver : depResolvers) {
         String resolvable = simpleResolver.getResolverSpec().targetInput().name();
-        //noinspection unchecked,rawtypes
-        DependencyCommand<?> command =
-            _resolutionHelper(
-                (List) simpleResolver.getResolverSpec().sourceInputs(),
-                simpleResolver.getResolverSpec().transformer(),
-                simpleResolver.getResolverSpec().fanoutTransformer(),
-                simpleResolver.getResolverSpec().skipConditions(),
-                facets);
+        DependencyCommand<?> command;
+        var fanoutTransformer = simpleResolver.getResolverSpec().fanoutTransformer();
+        boolean fanout = fanoutTransformer != null;
+        try {
+          //noinspection unchecked,rawtypes
+          command =
+              _resolutionHelper(
+                  (List) simpleResolver.getResolverSpec().sourceInputs(),
+                  simpleResolver.getResolverSpec().transformer(),
+                  fanoutTransformer,
+                  simpleResolver.getResolverSpec().skipConditions(),
+                  facets);
+        } catch (Throwable e) {
+          command = handleResolverException(e, fanout);
+        }
         if (command.shouldSkip()) {
           //noinspection unchecked
           skippedDependencies.put(dependencyName, (DependencyCommand<Facets>) command);
@@ -62,6 +73,29 @@ public final class InputResolverUtil {
       }
     }
     return new ResolutionResult(results, skippedDependencies);
+  }
+
+  public static <T> @NonNull DependencyCommand<T> handleResolverException(
+      Throwable e, boolean fanout) {
+    return handleResolverException(e, fanout, "Resolver threw exception.");
+  }
+
+  public static <T> @NonNull DependencyCommand<T> handleResolverException(
+      Throwable e, boolean fanout, String messagePrefix) {
+    DependencyCommand<T> command;
+    String exceptionMessage = e.getMessage();
+    if (e instanceof SkippedExecutionException skippedExecutionException) {
+      exceptionMessage = skippedExecutionException.getMessage();
+    }
+    if (exceptionMessage == null) {
+      exceptionMessage = messagePrefix + ' ' + e;
+    }
+    if (fanout) {
+      command = skipFanout(exceptionMessage);
+    } else {
+      command = skipExecution(exceptionMessage);
+    }
+    return command;
   }
 
   public static void collectDepInputs(
@@ -161,9 +195,9 @@ public final class InputResolverUtil {
             .findFirst();
     if (skipPredicate.isPresent()) {
       if (fanout) {
-        return MultiExecute.skipFanout(skipPredicate.get().reason());
+        return skipFanout(skipPredicate.get().reason());
       } else {
-        return SingleExecute.skipExecution(skipPredicate.get().reason());
+        return skipExecution(skipPredicate.get().reason());
       }
     }
     //noinspection unchecked
