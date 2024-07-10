@@ -7,6 +7,7 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihell
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Request.skip_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Request.userIds_s;
 
+import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
@@ -39,8 +40,13 @@ public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
             hellos_s,
             depInputFanout(HelloFriendsV2Request.userId_s)
                 .using(userIds_s, skip_s)
-                .skipIf((userIds, skip) -> skip.value().orElse(false), "skip requested")
-                .asResolver((userIds, skip) -> userIds.value().orElse(Set.of()))));
+                .asResolver(
+                    (userIds, skip) -> {
+                      if (skip.value().orElse(false)) {
+                        throw new SkippedExecutionException("skip requested");
+                      }
+                      return userIds.value().orElse(Set.of());
+                    })));
   }
 
   @Output
