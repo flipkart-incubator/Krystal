@@ -8,6 +8,7 @@ import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.collectDepInputs;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.handleResolverException;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.multiResolve;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -53,6 +54,7 @@ import com.flipkart.krystal.vajram.facets.InputDef;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolverDefinition;
+import com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.ResolutionResult;
 import com.flipkart.krystal.vajram.facets.resolution.ResolutionRequest;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
@@ -345,10 +347,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                                             dependencyName, resolvedInputNames, inputValues);
                                   }
                                 } catch (Throwable t) {
-                                  dependencyCommand =
-                                      skipExecution(
-                                          "Resolver threw exception: %s"
-                                              .formatted(getStackTraceAsString(t)));
+                                  dependencyCommand = handleResolverException(t, false);
                                 }
                                 return toResolverCommand(dependencyCommand);
                               });
@@ -434,10 +433,11 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
                   }
                 } catch (Throwable e) {
                   command =
-                      skipExecution(
-                          String.format(
-                              "Got exception %s while executing the resolver of the dependency %s",
-                              e, dependencyName));
+                      handleResolverException(
+                          e,
+                          false,
+                          "Got exception while executing the resolver of the dependency "
+                              + dependencyName);
                 }
                 if (command.shouldSkip()) {
                   skippedDependencies.put(dependencyName, command);
