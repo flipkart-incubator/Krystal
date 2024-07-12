@@ -72,12 +72,14 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
         api platform('com.google.inject:guice-bom:7.0.0')
         api platform('org.slf4j:slf4j-bom:2.0.13')
         constraints {
-            def jackson_version = '2.14.2'
+            def jackson_version = '2.14.3'
             implementation 'com.fasterxml.jackson.core:jackson-annotations:' + jackson_version
             implementation 'com.fasterxml.jackson.core:jackson-databind:' + jackson_version
             implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:' + jackson_version
             implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:' + jackson_version
             implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jackson_version
+
+            implementation 'org.yaml:snakeyaml:2.2'
 
             implementation 'com.google.guava:guava:33.0.0-jre'
             implementation 'org.checkerframework:checker-qual:3.42.0'
