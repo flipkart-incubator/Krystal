@@ -13,6 +13,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.executors.ThreadPerRequestExecutor;
+import com.flipkart.krystal.executors.ThreadPerRequestPool;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
@@ -20,6 +22,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
+import com.flipkart.krystal.utils.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
@@ -31,22 +34,31 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class FormulaTest {
 
+  public static final int MAX_POOL_SIZE = Runtime.getRuntime().availableProcessors();
   private Builder graph;
   private static final String REQUEST_ID = "formulaTest";
   private final RequestLevelCache requestLevelCache = new RequestLevelCache();
+  private final ThreadPerRequestPool pool = new ThreadPerRequestPool("FormulaTest", MAX_POOL_SIZE);
 
   @BeforeEach
-  void setUp() {
-    graph = Util.loadFromClasspath(Formula.class.getPackageName());
+  void setUp() throws LeaseUnavailableException {
+    this.graph = Util.loadFromClasspath(Formula.class.getPackageName());
     Adder.CALL_COUNTER.reset();
+  }
+
+  @AfterEach
+  void tearDown() {
+    pool.close();
   }
 
   @Test
@@ -66,11 +78,15 @@ class FormulaTest {
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
   }
 
-  @Disabled("Long running benchmark (~16s)")
+  @Disabled("Long running benchmark (~40s)")
   @Test
-  void vajram_benchmark() throws Exception {
+  void millionExecutors_oneCallEach_singleCore_benchmark() throws Exception {
     int loopCount = 1_000_000;
-    VajramKryonGraph graph = this.graph.maxParallelismPerCore(5).build();
+    ThreadPerRequestExecutor executor = getExecutors(1)[0];
+    VajramKryonGraph graph =
+        this.graph
+            //        .maxParallelismPerCore(10)
+            .build();
     long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
     long javaFuturesTimeNs = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
     //noinspection unchecked
@@ -84,7 +100,11 @@ class FormulaTest {
       FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, "formulaTest");
       try (KrystexVajramExecutor krystexVajramExecutor =
           graph.createExecutor(
-              KrystexVajramExecutorConfig.builder().requestId("formulaTest").build())) {
+              KrystexVajramExecutorConfig.builder()
+                  .kryonExecutorConfigBuilder(
+                      KryonExecutorConfig.builder().customExecutorService(Optional.of(executor)))
+                  .requestId("formulaTest")
+                  .build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[value] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
@@ -108,7 +128,7 @@ class FormulaTest {
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(loopCount);
 
     /*
-     * Benchmark config:
+     * Old Benchmark results (Unable to reproduce :( ) :
      *    loopCount = 1_000_000
      *    maxParallelismPerCore = 10
      *    Processor: 2.6 GHz 6-Core Intel Core i7 (with hyperthreading - 12 virtual cores)
@@ -121,24 +141,47 @@ class FormulaTest {
      *    Avg. time to execute vajrams : 14,965 ns
      *    Throughput executions/sec: 71000
      */
+    /*
+     * Processor: Apple M1 Pro
+     *
+     * Benchmark results;
+     *    Total java method time: 6,814,167
+     *    Total java futures time: 80,636,209
+     *    Outer Loop Count: 1,000,000
+     *    Inner Loop Count: 1
+     *    Avg. time to Create Executors:444 ns
+     *    Avg. time to Enqueue vajrams:1,147 ns
+     *    Avg. time to execute vajrams:35,673 ns
+     *    Throughput executions/s: 28031
+     *    CommandsQueuedCount: 3,000,000
+     *    CommandQueueBypassedCount: 8,000,000
+     *    Platform overhead over native code: 35,667 ns per request
+     *    Platform overhead over reactive code: 35,593 ns per request
+     *    maxActiveLeasesPerObject: 1, peakAvgActiveLeasesPerObject: 1.0, maxPoolSize: 1
+     */
     printStats(
         loopCount,
-        graph,
+        1,
         javaNativeTimeNs,
         javaFuturesTimeNs,
         metrics,
         timeToCreateExecutors,
         timeToEnqueueVajram,
-        vajramTimeNs);
+        vajramTimeNs,
+        pool);
   }
 
   @Disabled("Long running benchmark (~16s)")
   @Test
-  void vajram_benchmark_2() throws Exception {
+  void thousandExecutors_1000CallsEach_singleCore_benchmark() throws Exception {
+    ThreadPerRequestExecutor executor = getExecutors(1)[0];
     int outerLoopCount = 1000;
     int innerLoopCount = 1000;
     int loopCount = outerLoopCount * innerLoopCount;
-    VajramKryonGraph graph = this.graph.maxParallelismPerCore(1).build();
+    VajramKryonGraph graph =
+        this.graph
+            //    .maxParallelismPerCore(1)
+            .build();
     graph.registerInputBatchers(
         vajramID(getVajramIdString(Adder.class)),
         InputBatcherConfig.simple(() -> new InputBatcherImpl<>(innerLoopCount)));
@@ -155,7 +198,11 @@ class FormulaTest {
       FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, "formulaTest");
       try (KrystexVajramExecutor krystexVajramExecutor =
           graph.createExecutor(
-              KrystexVajramExecutorConfig.builder().requestId("formulaTest").build())) {
+              KrystexVajramExecutorConfig.builder()
+                  .kryonExecutorConfigBuilder(
+                      KryonExecutorConfig.builder().customExecutorService(Optional.of(executor)))
+                  .requestId("formulaTest")
+                  .build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[outer_i] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
@@ -197,29 +244,33 @@ class FormulaTest {
        maxActiveLeasesPerObject: 165, peakAvgActiveLeasesPerObject: 164.66666666666666, maxPoolSize: 12
     */
     /*
-      Total java method time: 6,624,273
-      Total java futures time: 65,579,807
-      Loop Count: 1,000,000
-      Avg. time to Create Executors:16,842 ns
-      Avg. time to Enqueue vajrams:4,125 ns
-      Avg. time to execute vajrams:24,266 ns
-      Throughput executions/s: 41666
-      CommandsQueuedCount: 1,002,000
-      CommandQueueBypassedCount: 6,003,000
-      Platform overhead over native code: 24,260 ns per request
-      Platform overhead over reactive code: 24,201 ns per request
-      maxActiveLeasesPerObject: 72, peakAvgActiveLeasesPerObject: 71.33333333333333, maxPoolSize: 12
+      Processor: Apple M1 Pro
+
+      Benchmark Results:
+        Total java method time: 16,879,000
+        Total java futures time: 77,778,625
+        Outer Loop Count: 1,000
+        Inner Loop Count: 1,000
+        Avg. time to Create Executors:12,875 ns
+        Avg. time to Enqueue vajrams:1,298 ns
+        Avg. time to execute vajrams:19,205 ns
+        Throughput executions/s: 52068
+        CommandsQueuedCount: 1,002,000
+        CommandQueueBypassedCount: 8,000
+        Platform overhead over native code: 19,189 ns per request
+        Platform overhead over reactive code: 19,128 ns per request
+        maxActiveLeasesPerObject: 1, peakAvgActiveLeasesPerObject: 1.0, maxPoolSize: 1
     */
     printStats(
         outerLoopCount,
         innerLoopCount,
-        graph,
         javaNativeTimeNs,
         javaFuturesTimeNs,
         metrics,
         timeToCreateExecutors,
         timeToEnqueueVajram,
-        vajramTimeNs);
+        vajramTimeNs,
+        pool);
   }
 
   private static CompletableFuture<Integer> executeVajram(
@@ -366,5 +417,13 @@ class FormulaTest {
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(ArithmeticException.class)
         .withMessage("java.lang.ArithmeticException: / by zero");
+  }
+
+  private ThreadPerRequestExecutor[] getExecutors(int count) throws LeaseUnavailableException {
+    ThreadPerRequestExecutor[] singleThreadedExecutors = new ThreadPerRequestExecutor[count];
+    for (int i = 0; i < count; i++) {
+      singleThreadedExecutors[i] = pool.lease().get();
+    }
+    return singleThreadedExecutors;
   }
 }
