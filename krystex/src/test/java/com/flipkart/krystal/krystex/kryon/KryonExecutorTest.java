@@ -23,8 +23,10 @@ import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
+import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
+import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.time.Duration;
@@ -51,9 +53,11 @@ class KryonExecutorTest {
   private KryonExecutor kryonExecutor;
   private KryonDefinitionRegistry kryonDefinitionRegistry;
   private LogicDefinitionRegistry logicDefinitionRegistry;
+  private RequestLevelCache requestLevelCache;
 
   @BeforeEach
   void setUp() {
+    this.requestLevelCache = new RequestLevelCache();
     this.logicDefinitionRegistry = new LogicDefinitionRegistry();
     this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
   }
@@ -82,7 +86,6 @@ class KryonExecutorTest {
             emptySet(),
             newComputeLogic("kryonLogic", emptySet(), dependencyValues -> "computed_value")
                 .kryonLogicId());
-
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
@@ -445,14 +448,19 @@ class KryonExecutorTest {
 
   private KryonExecutor getKryonExecutor(
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
-    return new KryonExecutor(
-        kryonDefinitionRegistry,
-        new ForkJoinExecutorPool(1),
+    var config =
         KryonExecutorConfig.builder()
             .kryonExecStrategy(kryonExecStrategy)
             .graphTraversalStrategy(graphTraversalStrategy)
-            .build(),
-        "test");
+            .requestScopedKryonDecoratorConfig(
+                RequestLevelCache.DECORATOR_TYPE,
+                new KryonDecoratorConfig(
+                    RequestLevelCache.DECORATOR_TYPE,
+                    _c -> true,
+                    _c -> RequestLevelCache.DECORATOR_TYPE,
+                    _c -> requestLevelCache))
+            .build();
+    return new KryonExecutor(kryonDefinitionRegistry, new ForkJoinExecutorPool(1), config, "test");
   }
 
   public static Stream<Arguments> executorConfigsToTest() {

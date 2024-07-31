@@ -51,7 +51,7 @@ class FormulaTest {
   private final ThreadPerRequestPool pool = new ThreadPerRequestPool("FormulaTest", MAX_POOL_SIZE);
 
   @BeforeEach
-  void setUp() throws LeaseUnavailableException {
+  void setUp() {
     this.graph = Util.loadFromClasspath(Formula.class.getPackageName());
     Adder.CALL_COUNTER.reset();
   }
