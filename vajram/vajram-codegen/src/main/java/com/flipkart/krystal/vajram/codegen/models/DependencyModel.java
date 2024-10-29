@@ -18,6 +18,7 @@ public record DependencyModel(
     boolean isMandatory,
     boolean canFanout,
     String documentation,
+    boolean isBatched,
     VariableElement facetField)
     implements FacetGenModel {
 
@@ -27,10 +28,5 @@ public record DependencyModel(
   @Override
   public ImmutableSet<FacetType> facetTypes() {
     return DEP_FACET_TYPE;
-  }
-
-  @Override
-  public boolean isBatched() {
-    return false;
   }
 }

@@ -52,16 +52,19 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.Hello;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloImmutableRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.HelloRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsFacets;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsImmutableRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2ImmutableRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsFacets;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Request;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloFacets;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceImmutableRequest;
@@ -527,9 +530,9 @@ class KrystexVajramExecutorTest {
             () -> new InputBatcherImpl(100),
             getVajramIdString(TestUserService.class) + "Batcher",
             graph.computeDependantChain(
-                getVajramIdString(MultiHelloFriends.class), "hellos", "userInfo"),
+                getVajramIdString(MultiHelloFriends.class), MultiHelloFriendsFacets.hellos_s.id(), userInfo_s.id()),
             graph.computeDependantChain(
-                getVajramIdString(MultiHelloFriends.class), "hellos", "friendInfos")));
+                getVajramIdString(MultiHelloFriends.class), MultiHelloFriendsFacets.hellos_s.id(), friendInfos_s.id())));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
@@ -587,9 +590,10 @@ class KrystexVajramExecutorTest {
             () -> new InputBatcherImpl(100),
             getVajramIdString(TestUserService.class) + "Batcher",
             graph.computeDependantChain(
-                getVajramIdString(MultiHelloFriends.class), "hellos", "user_infos"),
+                getVajramIdString(MultiHelloFriends.class), MultiHelloFriendsFacets.hellos_s.id(),
+                userInfo_s.id()),
             graph.computeDependantChain(
-                getVajramIdString(MultiHelloFriends.class), "hellos", "friend_infos")));
+                getVajramIdString(MultiHelloFriends.class), MultiHelloFriendsFacets.hellos_s.id(), friendInfos_s.id())));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
@@ -688,11 +692,11 @@ class KrystexVajramExecutorTest {
             () -> new InputBatcherImpl(100),
             getVajramIdString(FriendsService.class) + "_1",
             graph.computeDependantChain(
-                getVajramIdString(MutualFriendsHello.class), "hellos", "friendIds")),
+                getVajramIdString(MutualFriendsHello.class), MutualFriendsHelloFacets.hellos_s.id(), MutualFriendsHelloFacets.friendIds_s.id())),
         InputBatcherConfig.sharedBatcher(
             () -> new InputBatcherImpl(100),
             getVajramIdString(FriendsService.class) + "_2",
-            graph.computeDependantChain(getVajramIdString(MutualFriendsHello.class), "friendIds")));
+            graph.computeDependantChain(getVajramIdString(MutualFriendsHello.class), MutualFriendsHelloFacets.friendIds_s.id())));
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor<TestRequestContext> krystexVajramExecutor =
@@ -742,11 +746,14 @@ class KrystexVajramExecutorTest {
             () -> new InputBatcherImpl(100),
             getVajramIdString(FriendsService.class) + "_1",
             graph.computeDependantChain(
-                getVajramIdString(MutualFriendsHello.class), "hellos", "friendIds")),
+                getVajramIdString(MutualFriendsHello.class),
+                MutualFriendsHelloFacets.hellos_s.id(),
+                MutualFriendsHelloFacets.friendIds_s.id())),
         InputBatcherConfig.sharedBatcher(
             () -> new InputBatcherImpl(100),
             getVajramIdString(FriendsService.class) + "_2",
-            graph.computeDependantChain(getVajramIdString(MutualFriendsHello.class), "friendIds")));
+            graph.computeDependantChain(getVajramIdString(MutualFriendsHello.class),
+                MutualFriendsHelloFacets.friendIds_s.id())));
 
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());

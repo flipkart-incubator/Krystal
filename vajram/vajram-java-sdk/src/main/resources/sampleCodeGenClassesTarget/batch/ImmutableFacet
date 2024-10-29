@@ -9,7 +9,6 @@ import com.flipkart.krystal.data.Responses;
 import com.flipkart.krystal.vajram.Generated;
 import com.flipkart.krystal.vajram.batching.BatchableFacetsBuilder;
 import com.flipkart.krystal.vajram.batching.BatchableImmutableFacets;
-import com.flipkart.krystal.vajram.facets.VajramDepSingleTypeSpec;
 import com.google.common.collect.ImmutableMap;
 import java.lang.IllegalArgumentException;
 import java.lang.Integer;
@@ -27,16 +26,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @EqualsAndHashCode
 @ToString
 final class DependencyTestImmutableFacets implements BatchableImmutableFacets, DependencyTestFacets {
-  public static final VajramDepSingleTypeSpec<Integer, DependencyTestRequest, TestRequest> testField_s = new VajramDepSingleTypeSpec<>(0, "testField", DependencyTestRequest.class, TestRequest.class);
-
-  public static final String testField_n = "testField";
-
   private final BatchImmutableFacets _batchable;
 
   private final CommonImmutableFacets _common;
 
-  DependencyTestImmutableFacets(BatchImmutableFacets _batchable,
-      CommonImmutableFacets _common) {
+  DependencyTestImmutableFacets(BatchImmutableFacets _batchable, CommonImmutableFacets _common) {
     this._batchable = _batchable;
     this._common = _common;
   }
@@ -118,8 +112,7 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
 
     private CommonImmutableFacets.Builder _common;
 
-    Builder(BatchImmutableFacets.Builder _batchable,
-        CommonImmutableFacets.Builder _common) {
+    Builder(BatchImmutableFacets.Builder _batchable, CommonImmutableFacets.Builder _common) {
       this._batchable = _batchable;
       this._common = _common;
     }
@@ -127,6 +120,11 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
     Builder() {
       this._batchable = BatchImmutableFacets._builder();
       this._common = CommonImmutableFacets._builder();
+    }
+
+    Builder(DependencyTestRequest request) {
+      this._batchable = new BatchImmutableFacets.Builder(request._asBuilder());;
+      this._common = new CommonImmutableFacets.Builder(request._asBuilder());;
     }
 
     @Override
@@ -229,19 +227,19 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
   )
   @EqualsAndHashCode
   @ToString
-  static final class BatchImmutableFacets implements ImmutableFacets, BatchFacets {
-    private final @Nullable Integer fieldOne;
+  static final class BatchImmutableFacets implements ImmutableFacets, DependencyTestFacets.BatchFacets {
+    private final DependencyTestImmutableRequest _request;
 
-    BatchImmutableFacets(@Nullable Integer fieldOne) {
-      this.fieldOne = fieldOne;
+    BatchImmutableFacets(DependencyTestImmutableRequest _request) {
+      this._request = _request;
     }
 
-    public static BatchImmutableFacets.Builder _builder() {
-      return new BatchImmutableFacets.Builder();
+    public static Builder _builder() {
+      return new Builder();
     }
 
     public Optional<Integer> fieldOne() {
-      return Optional.ofNullable(this.fieldOne);
+      return this._request.fieldOne();
     }
 
     @Override
@@ -250,7 +248,7 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
         case 1 -> Errable.withValue(fieldOne());
         default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
       }
-          ;
+      ;
     }
 
     @Override
@@ -266,8 +264,8 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
     }
 
     @Override
-    public BatchImmutableFacets.Builder _asBuilder() {
-      return new BatchImmutableFacets.Builder(fieldOne);
+    public Builder _asBuilder() {
+      return new Builder(_request._asBuilder());
     }
 
     @Override
@@ -289,22 +287,27 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
         by = "com.flipkart.krystal.vajram.codegen.VajramModelGenProcessor"
     )
     @ToString
-    static final class Builder implements BatchFacets, FacetsBuilder {
-      private @Nullable Integer fieldOne;
+    static final class Builder implements DependencyTestFacets.BatchFacets, FacetsBuilder {
+      private final DependencyTestImmutableRequest.Builder _request;
 
-      Builder(@Nullable Integer fieldOne) {
-        this.fieldOne = fieldOne;
+      Builder(DependencyTestImmutableRequest.Builder _request) {
+        this._request = _request;
       }
 
       Builder() {
+        this._request = DependencyTestRequest._builder();
+      }
+
+      Builder(DependencyTestRequest request) {
+        this._request = request._asBuilder();
       }
 
       public Optional<Integer> fieldOne() {
-        return Optional.ofNullable(this.fieldOne);
+        return this._request.fieldOne();
       }
 
-      public BatchImmutableFacets.Builder fieldOne(@Nullable Integer fieldOne) {
-        this.fieldOne = fieldOne;
+      public Builder fieldOne(@Nullable Integer fieldOne) {
+        this._request.fieldOne(fieldOne);
         return this;
       }
 
@@ -314,7 +317,7 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
           case 1 -> Errable.withValue(fieldOne());
           default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
         }
-            ;
+        ;
       }
 
       @Override
@@ -326,17 +329,17 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
 
       @Override
       public BatchImmutableFacets _build() {
-        return new BatchImmutableFacets(fieldOne);
+        return new BatchImmutableFacets(_request._build());
       }
 
       @Override
-      public BatchImmutableFacets.Builder _asBuilder() {
+      public Builder _asBuilder() {
         return this;
       }
 
       @Override
-      public BatchImmutableFacets.Builder _newCopy() {
-        return new BatchImmutableFacets.Builder(fieldOne);
+      public Builder _newCopy() {
+        return new Builder(_request._newCopy());
       }
 
       @Override
@@ -351,9 +354,9 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
 
       @SuppressWarnings("unchecked")
       @Override
-      public BatchImmutableFacets.Builder _set(int facetId, FacetValue<?> facetValue) {
+      public Builder _set(int facetId, FacetValue<?> facetValue) {
         switch (facetId) {
-          case 1 -> this.fieldOne(((Errable<Integer>)facetValue).valueOpt().orElse(null));
+          case 1 -> this._request.fieldOne(((Errable<Integer>)facetValue).valueOpt().orElse(null));
           default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
         }
         return this;
@@ -366,23 +369,23 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
   )
   @EqualsAndHashCode
   @ToString
-  static final class CommonImmutableFacets implements ImmutableFacets, CommonFacets {
-    private final @Nullable String fieldTwo;
+  static final class CommonImmutableFacets implements ImmutableFacets, DependencyTestFacets.CommonFacets {
+    private final DependencyTestImmutableRequest _request;
 
     private final @NonNull Errable<Integer> testField;
 
-    CommonImmutableFacets(@Nullable String fieldTwo,
+    CommonImmutableFacets(DependencyTestImmutableRequest _request,
         @NonNull Errable<Integer> testField) {
-      this.fieldTwo = fieldTwo;
+      this._request = _request;
       this.testField = testField;
     }
 
-    public static CommonImmutableFacets.Builder _builder() {
-      return new CommonImmutableFacets.Builder();
+    public static Builder _builder() {
+      return new Builder();
     }
 
     public Optional<String> fieldTwo() {
-      return Optional.ofNullable(this.fieldTwo);
+      return this._request.fieldTwo();
     }
 
     public Errable<Integer> testField() {
@@ -396,7 +399,7 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
         case 3 -> testField();
         default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
       }
-          ;
+      ;
     }
 
     @Override
@@ -413,8 +416,8 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
     }
 
     @Override
-    public CommonImmutableFacets.Builder _asBuilder() {
-      return new CommonImmutableFacets.Builder(fieldTwo, testField);
+    public Builder _asBuilder() {
+      return new Builder(_request._asBuilder(), testField);
     }
 
     @Override
@@ -436,25 +439,31 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
         by = "com.flipkart.krystal.vajram.codegen.VajramModelGenProcessor"
     )
     @ToString
-    static final class Builder implements CommonFacets, FacetsBuilder {
-      private @Nullable String fieldTwo;
+    static final class Builder implements DependencyTestFacets.CommonFacets, FacetsBuilder {
+      private final DependencyTestImmutableRequest.Builder _request;
 
       private @NonNull Errable<Integer> testField = Errable.nil();
 
-      Builder(@Nullable String fieldTwo, @NonNull Errable<Integer> testField) {
-        this.fieldTwo = fieldTwo;
+      Builder(DependencyTestImmutableRequest.Builder _request,
+          @NonNull Errable<Integer> testField) {
+        this._request = _request;
         this.testField = testField;
       }
 
       Builder() {
+        this._request = DependencyTestRequest._builder();
+      }
+
+      Builder(DependencyTestRequest request) {
+        this._request = request._asBuilder();
       }
 
       public Optional<String> fieldTwo() {
-        return Optional.ofNullable(this.fieldTwo);
+        return this._request.fieldTwo();
       }
 
-      public CommonImmutableFacets.Builder fieldTwo(@Nullable String fieldTwo) {
-        this.fieldTwo = fieldTwo;
+      public Builder fieldTwo(@Nullable String fieldTwo) {
+        this._request.fieldTwo(fieldTwo);
         return this;
       }
 
@@ -462,7 +471,7 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
         return this.testField;
       }
 
-      public CommonImmutableFacets.Builder testField(@NonNull Errable<Integer> testField) {
+      public Builder testField(@NonNull Errable<Integer> testField) {
         this.testField = testField;
         return this;
       }
@@ -474,7 +483,7 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
           case 3 -> testField();
           default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
         }
-            ;
+        ;
       }
 
       @Override
@@ -487,17 +496,17 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
 
       @Override
       public CommonImmutableFacets _build() {
-        return new CommonImmutableFacets(fieldTwo, testField);
+        return new CommonImmutableFacets(_request._build(), testField);
       }
 
       @Override
-      public CommonImmutableFacets.Builder _asBuilder() {
+      public Builder _asBuilder() {
         return this;
       }
 
       @Override
-      public CommonImmutableFacets.Builder _newCopy() {
-        return new CommonImmutableFacets.Builder(fieldTwo, testField);
+      public Builder _newCopy() {
+        return new Builder(_request._newCopy(), testField);
       }
 
       @Override
@@ -512,9 +521,9 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
 
       @SuppressWarnings("unchecked")
       @Override
-      public CommonImmutableFacets.Builder _set(int facetId, FacetValue<?> facetValue) {
+      public Builder _set(int facetId, FacetValue<?> facetValue) {
         switch (facetId) {
-          case 2 -> this.fieldTwo(((Errable<String>)facetValue).valueOpt().orElse(null));
+          case 2 -> this._request.fieldTwo(((Errable<String>)facetValue).valueOpt().orElse(null));
           case 3 -> this.testField((Errable<Integer>)facetValue);
           default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
         }

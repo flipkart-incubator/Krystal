@@ -17,8 +17,8 @@ public abstract class Hello extends ComputeVajram<String> {
   public static final LongAdder CALL_COUNTER = new LongAdder();
 
   @Output
-  static String greet(HelloFacets facets) {
+  static String greet(HelloFacets _allFacets) {
     CALL_COUNTER.increment();
-    return "%s! %s".formatted(facets.greeting().orElse("Hello"), facets.name());
+    return "%s! %s".formatted(_allFacets.greeting().orElse("Hello"), _allFacets.name());
   }
 }

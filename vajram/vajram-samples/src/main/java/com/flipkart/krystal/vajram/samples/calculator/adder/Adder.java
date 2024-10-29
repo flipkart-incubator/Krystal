@@ -29,9 +29,9 @@ public abstract class Adder extends IOVajram<Integer> {
 
   @Output
   static Map<BatchFacets, CompletableFuture<Integer>> add(
-      BatchedFacets<BatchFacets, CommonFacets> batchedFacets) {
+      BatchedFacets<BatchFacets, CommonFacets> _batchedFacets) {
     CALL_COUNTER.increment();
-    return batchedFacets.batch().stream()
+    return _batchedFacets.batch().stream()
         .collect(
             toImmutableMap(
                 identity(),

@@ -47,14 +47,14 @@ public abstract class Greeting extends ComputeVajram<String> {
   // This is the core business logic of this Vajram
   // Sync vajrams can return any object. AsyncVajrams need to return {CompletableFuture}s
   @Output
-  static String createGreetingMessage(GreetingFacets facets) {
-    String userId = facets.userId();
-    Optional<UserInfo> userInfo = facets.userInfo().valueOpt();
+  static String createGreetingMessage(GreetingFacets _allFacets) {
+    String userId = _allFacets.userId();
+    Optional<UserInfo> userInfo = _allFacets.userInfo().valueOpt();
     String greeting =
         "Hello " + userInfo.map(UserInfo::userName).orElse("friend") + "! Hope you are doing well!";
-    facets.log().valueOpt().ifPresent(l -> l.log(Level.INFO, greeting));
-    facets.log().valueOpt().ifPresent(l -> l.log(Level.INFO, "Greeting user " + userId));
-    facets.analyticsEventSink().pushEvent("event_type", new GreetingEvent(userId, greeting));
+    _allFacets.log().valueOpt().ifPresent(l -> l.log(Level.INFO, greeting));
+    _allFacets.log().valueOpt().ifPresent(l -> l.log(Level.INFO, "Greeting user " + userId));
+    _allFacets.analyticsEventSink().pushEvent("event_type", new GreetingEvent(userId, greeting));
     return greeting;
   }
 }

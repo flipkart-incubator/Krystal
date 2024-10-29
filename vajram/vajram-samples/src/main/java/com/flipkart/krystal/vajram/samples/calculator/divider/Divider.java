@@ -15,8 +15,8 @@ public abstract class Divider extends ComputeVajram<Integer> {
   }
 
   @Output
-  static int divide(DividerFacets facets) {
-    return divide(facets.numerator(), facets.denominator().orElse(1));
+  static int divide(DividerFacets _allFacets) {
+    return divide(_allFacets.numerator(), _allFacets.denominator().orElse(1));
   }
 
   public static int divide(int a, int b) {

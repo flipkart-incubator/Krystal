@@ -1,0 +1,81 @@
+DependencyTestFacets
+  BatchFacets
+    fieldOne()
+    _build()
+    _asBuilder()
+    _builder()
+  CommonFacets
+    fieldTwo()
+    testField()
+    testField2()
+    _build()
+    _asBuilder()
+    _builder
+  fieldOne()
+  fieldTwo()
+  testField()
+  testField2()
+  _build()
+  _asBuilder()
+  _builder()
+  _batchable()
+  _common()
+  testField_s
+  testField2_s
+  testField_n
+  testField2_n
+
+DependencyTestImmutableFacets
+  _batchable
+  _common
+  _builder
+  fieldOne
+  fieldTwo
+  testField
+  testField2
+  _get
+  _asMap
+  _build
+  _asBuilder
+  _newCopy
+  _getErrable
+  _getDepResponses
+
+
+DependencyTestRequest
+  fieldOne()
+  fieldTwo()
+  _build()
+  _asBuilder()
+  _builder()
+  fieldOne_s
+  fieldTwo_s
+  fieldOne_n
+  fieldTwo_n
+
+
+
+DependencyTestImpl (Batchable Vajram)
+
+getFacetDefinitions
+getInputResolvers //merge with resolveInputOfDependency
+resolveInputOfDependency
+execute
+getBatchFacetsConvertor
+newRequestBuilder
+facetsFromRequest
+getSimpleInputResolvers
+
+
+
+public ImmutableCollection<InputResolver> getInputResolvers() {
+    List<InputResolver> inputResolvers = List.copyOf(super.getInputResolvers());
+
+    resolve(
+        dep(testField_s,
+            depInput(TestRequest.fieldOne_s).using(fieldOne_s).asResolver(DependencyTest::resolveFieldOneForTest),
+            depInput(TestRequest.fieldTwo_s).using(fieldTwo_s).asResolver(DependencyTest::resolveFieldTwoForTest)
+            ));
+
+    return ImmutableList.copyOf(inputResolvers);
+  }

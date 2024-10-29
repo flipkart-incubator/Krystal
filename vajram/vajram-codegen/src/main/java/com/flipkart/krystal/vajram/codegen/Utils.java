@@ -1,10 +1,6 @@
 package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
-import static com.flipkart.krystal.vajram.codegen.Constants.BATCH_FACETS;
-import static com.flipkart.krystal.vajram.codegen.Constants.BATCH_IMMUT_FACETS_CLASS_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_FACETS;
-import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_IMMUT_FACETS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants.IMMUT_FACETS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
@@ -310,6 +306,7 @@ public class Utils {
             depField);
       }
       depBuilder.dataType(declaredDataType);
+      depBuilder.isBatched(Optional.ofNullable(depField.getAnnotation(Batch.class)).isPresent());
       DependencyModel depModel = depBuilder.build();
       givenIdsByName.putIfAbsent(facetName, depModel.id());
       return depModel;
@@ -468,21 +465,21 @@ public class Utils {
     return vajramName + IMMUT_FACETS_CLASS_SUFFIX;
   }
 
-//  public static String getCommonFacetsInterfaceName(String vajramName) {
-//    return vajramName + COMMON_FACETS;
-//  }
-//
-//  public static String getCommonImmutFacetsClassname(String vajramName) {
-//    return vajramName + COMMON_IMMUT_FACETS_CLASS_SUFFIX;
-//  }
-//
-//  public static String getBatchFacetsInterfaceName(String vajramName) {
-//    return vajramName + BATCH_FACETS;
-//  }
-//
-//  public static String getBatchImmutFacetsClassname(String vajramName) {
-//    return vajramName + BATCH_IMMUT_FACETS_CLASS_SUFFIX;
-//  }
+  //  public static String getCommonFacetsInterfaceName(String vajramName) {
+  //    return vajramName + COMMON_FACETS;
+  //  }
+  //
+  //  public static String getCommonImmutFacetsClassname(String vajramName) {
+  //    return vajramName + COMMON_IMMUT_FACETS_CLASS_SUFFIX;
+  //  }
+  //
+  //  public static String getBatchFacetsInterfaceName(String vajramName) {
+  //    return vajramName + BATCH_FACETS;
+  //  }
+  //
+  //  public static String getBatchImmutFacetsClassname(String vajramName) {
+  //    return vajramName + BATCH_IMMUT_FACETS_CLASS_SUFFIX;
+  //  }
 
   public TypeName toTypeName(DataType<?> dataType) {
     return TypeName.get(toTypeMirror(dataType));

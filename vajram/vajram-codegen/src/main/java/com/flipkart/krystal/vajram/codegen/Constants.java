@@ -12,6 +12,7 @@ public final class Constants {
   public static final String COMMON_INPUT = "commonInput";
   public static final String RETURN_TYPE = "returnType";
   public static final String VAJRAM_LOGIC_METHOD = "outputLogicMethod";
+  public static final String VAJRAM_LOGIC_INPUT_ARGS = "outputLogicInputArguments";
   public static final String HASH_MAP = "hashMap";
   public static final String ARRAY_LIST = "arrayList";
   public static final String COM_FUTURE = "comFuture";
@@ -70,7 +71,7 @@ public final class Constants {
           $map:T<$facets:T, $comFuture:T<$returnType:T>> returnValue = new $linkHashMap:T<>();
 
           if (commonFacets != null) {
-            var logicExecResults = $outputLogicMethod:L(new $modInput:T<>($imList:T.copyOf(mapping.keySet()), commonFacets));
+            var logicExecResults = $outputLogicMethod:L(%s);
             logicExecResults.forEach((im, future) -> returnValue.put(
                   $optional:T.ofNullable(mapping.get(im)).orElseThrow(),
                   future.<$returnType:T>thenApply($function:T.identity())));

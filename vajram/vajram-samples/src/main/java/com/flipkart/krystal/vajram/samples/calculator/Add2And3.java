@@ -32,7 +32,7 @@ abstract class Add2And3 extends ComputeVajram<Integer> {
   }
 
   @Output
-  static int sum(Add2And3Facets facets) {
-    return facets.sumOf2And3();
+  static int sum(Add2And3Facets _allFacets) {
+    return _allFacets.sumOf2And3();
   }
 }

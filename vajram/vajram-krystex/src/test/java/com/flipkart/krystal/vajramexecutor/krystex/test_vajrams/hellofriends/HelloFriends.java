@@ -63,11 +63,11 @@ public abstract class HelloFriends extends ComputeVajram<String> {
   }
 
   @Output
-  static String sayHellos(HelloFriendsFacets facets) {
+  static String sayHellos(HelloFriendsFacets _allFacets) {
     return "Hello Friends of %s! %s"
         .formatted(
-            facets.userInfo().userName(),
-            facets.friendInfos().requestResponses().stream()
+            _allFacets.userInfo().userName(),
+            _allFacets.friendInfos().requestResponses().stream()
                 .map(errable -> errable.response().valueOpt())
                 .filter(Optional::isPresent)
                 .map(Optional::get)

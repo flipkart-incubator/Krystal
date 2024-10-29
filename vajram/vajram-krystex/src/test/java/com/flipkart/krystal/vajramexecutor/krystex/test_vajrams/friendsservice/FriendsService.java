@@ -28,10 +28,10 @@ public abstract class FriendsService extends IOVajram<Set<String>> {
 
   @Output
   static ImmutableMap<BatchFacets, CompletableFuture<Set<String>>> call(
-      BatchedFacets<BatchFacets, CommonFacets> batchedFacets) {
+      BatchedFacets<BatchFacets, CommonFacets> _batchedFacets) {
     CALL_COUNTER.increment();
     Map<BatchFacets, CompletableFuture<Set<String>>> result = new LinkedHashMap<>();
-    for (BatchFacets inputsBatch : batchedFacets.batch()) {
+    for (BatchFacets inputsBatch : _batchedFacets.batch()) {
       String userId = inputsBatch.userId();
       result.put(inputsBatch, completedFuture(getFriends(userId)));
     }

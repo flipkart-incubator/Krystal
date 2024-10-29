@@ -57,7 +57,7 @@ public abstract class A2MinusB2 extends ComputeVajram<Integer> {
   }
 
   @Output
-  static int result(A2MinusB2Facets facets) {
-    return facets.diff();
+  static int result(A2MinusB2Facets _allFacets) {
+    return _allFacets.diff();
   }
 }

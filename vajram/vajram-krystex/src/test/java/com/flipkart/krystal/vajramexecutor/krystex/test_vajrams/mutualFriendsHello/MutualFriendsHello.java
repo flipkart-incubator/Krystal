@@ -42,9 +42,9 @@ public abstract class MutualFriendsHello extends ComputeVajram<String> {
   }
 
   @Output
-  static String sayHelloToMutualFriends(MutualFriendsHelloFacets mutualFriendsHelloFacets) {
+  static String sayHelloToMutualFriends(MutualFriendsHelloFacets _allFacets) {
     List<String> result = new ArrayList<>();
-    for (var response : mutualFriendsHelloFacets.hellos().requestResponses()) {
+    for (var response : _allFacets.hellos().requestResponses()) {
       response.response().valueOpt().ifPresent(result::add);
     }
     return String.join(lineSeparator(), result);

@@ -49,11 +49,11 @@ public abstract class MultiHelloFriends extends ComputeVajram<String> {
   }
 
   @Output
-  static String sayHellos(MultiHelloFriendsFacets facets) {
+  static String sayHellos(MultiHelloFriendsFacets _allFacets) {
     List<String> result = new ArrayList<>();
-    for (String userId : facets.userIds()) {
+    for (String userId : _allFacets.userIds()) {
       for (Integer numberOfFriend : NUMBER_OF_FRIENDS) {
-        facets
+        _allFacets
             .hellos()
             .asMap()
             .getOrDefault(

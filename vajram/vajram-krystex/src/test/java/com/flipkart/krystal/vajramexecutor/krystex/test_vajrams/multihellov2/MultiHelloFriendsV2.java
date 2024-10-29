@@ -44,12 +44,12 @@ public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
   }
 
   @Output
-  static String sayHellos(MultiHelloFriendsV2Facets facets) {
-    if (facets.skip().orElse(false)) {
+  static String sayHellos(MultiHelloFriendsV2Facets _allFacets) {
+    if (_allFacets.skip().orElse(false)) {
       return "";
     }
     List<String> result = new ArrayList<>();
-    for (var rr : facets.hellos().requestResponses()) {
+    for (var rr : _allFacets.hellos().requestResponses()) {
       rr.response().valueOpt().ifPresent(result::add);
     }
     return String.join(System.lineSeparator(), result);

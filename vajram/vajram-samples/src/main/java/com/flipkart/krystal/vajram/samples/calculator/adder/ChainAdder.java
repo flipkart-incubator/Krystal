@@ -70,9 +70,9 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
   }
 
   @Output
-  static Integer add(ChainAdderFacets facets) {
-    return facets.sum().valueOpt().orElse(0)
-        + facets.chainSum().requestResponses().stream()
+  static Integer add(ChainAdderFacets _allFacets) {
+    return _allFacets.sum().valueOpt().orElse(0)
+        + _allFacets.chainSum().requestResponses().stream()
             .mapToInt(response -> response.response().valueOpt().orElse(0))
             .sum();
   }
