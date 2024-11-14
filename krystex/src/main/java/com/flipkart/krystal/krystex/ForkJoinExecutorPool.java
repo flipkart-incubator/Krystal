@@ -5,13 +5,13 @@ import static java.lang.Runtime.getRuntime;
 import static java.util.concurrent.ForkJoinPool.defaultForkJoinWorkerThreadFactory;
 
 import com.flipkart.krystal.utils.DistributeLeases;
-import com.flipkart.krystal.utils.MultiLeasePool;
+import com.flipkart.krystal.utils.FairMultiLeasePool;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinWorkerThread;
 import java.util.concurrent.TimeUnit;
 
-public final class ForkJoinExecutorPool extends MultiLeasePool<ExecutorService> {
+public final class ForkJoinExecutorPool extends FairMultiLeasePool<ExecutorService> {
 
   public ForkJoinExecutorPool(double maxParallelismPerCore) {
     //noinspection NumericCastThatLosesPrecision

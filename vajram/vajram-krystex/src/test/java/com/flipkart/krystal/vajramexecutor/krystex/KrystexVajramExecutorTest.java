@@ -20,6 +20,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.config.Tag;
+import com.flipkart.krystal.executors.SingleThreadExecutor;
+import com.flipkart.krystal.executors.ThreadPerRequestPool;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
@@ -40,6 +42,8 @@ import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecution
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.logicdecorators.resilience4j.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.logicdecorators.resilience4j.Resilience4JCircuitBreaker;
+import com.flipkart.krystal.utils.Lease;
+import com.flipkart.krystal.utils.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.tags.NamedValueTag;
@@ -81,6 +85,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -90,13 +95,22 @@ import org.junit.jupiter.params.provider.MethodSource;
 class KrystexVajramExecutorTest {
 
   private static final Duration TIMEOUT = ofSeconds(1);
+  private static ThreadPerRequestPool EXEC_POOL;
+
+  @BeforeAll
+  static void beforeAll() {
+    EXEC_POOL = new ThreadPerRequestPool("RequestLevelCacheTest", 4);
+  }
+
+  private Lease<SingleThreadExecutor> executorLease;
   private TestRequestContext requestContext;
   private ObjectMapper objectMapper;
   private VajramKryonGraph graph;
   private LogicDecorationOrdering logicDecorationOrdering;
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws LeaseUnavailableException {
+    executorLease = EXEC_POOL.lease();
     logicDecorationOrdering =
         new LogicDecorationOrdering(
             ImmutableSet.of(
@@ -119,6 +133,7 @@ class KrystexVajramExecutorTest {
     TestUserService.REQUESTS.clear();
     Hello.CALL_COUNTER.reset();
     Optional.ofNullable(graph).ifPresent(VajramKryonGraph::close);
+    executorLease.close();
   }
 
   @ParameterizedTest
@@ -417,6 +432,7 @@ class KrystexVajramExecutorTest {
                 .requestId(requestContext.requestId())
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
+                        .singleThreadExecutor(executorLease.get())
                         .kryonExecStrategy(kryonExecStrategy)
                         .graphTraversalStrategy(graphTraversalStrategy)
                         .requestScopedLogicDecoratorConfigs(
@@ -571,7 +587,8 @@ class KrystexVajramExecutorTest {
               }));
     }
     return KrystexVajramExecutorConfig.builder()
-        .kryonExecutorConfigBuilder(kryonExecutorConfigBuilder);
+        .kryonExecutorConfigBuilder(
+            kryonExecutorConfigBuilder.singleThreadExecutor(executorLease.get()));
   }
 
   @ParameterizedTest

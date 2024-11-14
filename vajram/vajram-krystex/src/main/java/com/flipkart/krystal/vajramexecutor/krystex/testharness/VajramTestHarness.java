@@ -1,7 +1,9 @@
 package com.flipkart.krystal.vajramexecutor.krystex.testharness;
 
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.executors.SingleThreadExecutor;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
@@ -63,9 +65,12 @@ public class VajramTestHarness {
                     s, objectVajramRequest.toFacetValues(), objectErrable.toFuture());
               });
         });
-    KryonDecoratorConfig kryonDecoratorConfig =
+    KryonExecutorConfigBuilder configBuilder =
         kryonExecutorConfigBuilder
             .kryonExecutorConfigBuilder()
+            .singleThreadExecutor(new SingleThreadExecutor("VajramTestHarness"));
+    KryonDecoratorConfig kryonDecoratorConfig =
+        configBuilder
             .build()
             .requestScopedKryonDecoratorConfigs()
             .get(RequestLevelCache.DECORATOR_TYPE);

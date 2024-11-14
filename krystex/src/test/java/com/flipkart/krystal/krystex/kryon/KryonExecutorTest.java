@@ -18,8 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.executors.SingleThreadExecutor;
+import com.flipkart.krystal.executors.ThreadPerRequestPool;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
-import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
@@ -27,6 +28,8 @@ import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
+import com.flipkart.krystal.utils.Lease;
+import com.flipkart.krystal.utils.LeaseUnavailableException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.time.Duration;
@@ -41,6 +44,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -49,14 +53,22 @@ import org.junit.jupiter.params.provider.MethodSource;
 class KryonExecutorTest {
 
   private static final Duration TIMEOUT = Duration.ofSeconds(1);
+  private static ThreadPerRequestPool EXEC_POOL;
 
+  @BeforeAll
+  static void beforeAll() {
+    EXEC_POOL = new ThreadPerRequestPool("RequestLevelCacheTest", 4);
+  }
+
+  private Lease<SingleThreadExecutor> executorLease;
   private KryonExecutor kryonExecutor;
   private KryonDefinitionRegistry kryonDefinitionRegistry;
   private LogicDefinitionRegistry logicDefinitionRegistry;
   private RequestLevelCache requestLevelCache;
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws LeaseUnavailableException {
+    this.executorLease = EXEC_POOL.lease();
     this.requestLevelCache = new RequestLevelCache();
     this.logicDefinitionRegistry = new LogicDefinitionRegistry();
     this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
@@ -65,6 +77,7 @@ class KryonExecutorTest {
   @AfterEach
   void tearDown() {
     Optional.ofNullable(kryonExecutor).ifPresent(KryonExecutor::close);
+    executorLease.close();
   }
 
   /** Executing same kryon multiple times in a single execution */
@@ -450,6 +463,7 @@ class KryonExecutorTest {
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     var config =
         KryonExecutorConfig.builder()
+            .singleThreadExecutor(executorLease.get())
             .kryonExecStrategy(kryonExecStrategy)
             .graphTraversalStrategy(graphTraversalStrategy)
             .requestScopedKryonDecoratorConfig(
@@ -460,7 +474,7 @@ class KryonExecutorTest {
                     _c -> RequestLevelCache.DECORATOR_TYPE,
                     _c -> requestLevelCache))
             .build();
-    return new KryonExecutor(kryonDefinitionRegistry, new ForkJoinExecutorPool(1), config, "test");
+    return new KryonExecutor(kryonDefinitionRegistry, config, "test");
   }
 
   public static Stream<Arguments> executorConfigsToTest() {

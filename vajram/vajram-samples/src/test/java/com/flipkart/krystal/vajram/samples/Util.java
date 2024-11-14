@@ -5,6 +5,7 @@ import static java.util.Arrays.stream;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
+import com.flipkart.krystal.pooling.MultiLeasePoolStats;
 import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
@@ -46,45 +47,23 @@ public final class Util {
 
   public static void printStats(
       int loopCount,
-      VajramKryonGraph graph,
       long javaNativeTimeNs,
       long javaFuturesTimeNs,
       KryonExecutorMetrics[] metrics,
       long timeToCreateExecutors,
       long timeToEnqueueVajram,
-      long vajramTimeNs) {
+      long vajramTimeNs,
+      MultiLeasePool<?> pool) {
     printStats(
         loopCount,
         1,
-        graph,
-        javaNativeTimeNs,
-        javaFuturesTimeNs,
-        metrics,
-        timeToCreateExecutors,
-        timeToEnqueueVajram,
-        vajramTimeNs);
-  }
-
-  public static void printStats(
-      int outerLoopCount,
-      int innerLoopCount,
-      VajramKryonGraph graph,
-      long javaNativeTimeNs,
-      long javaFuturesTimeNs,
-      KryonExecutorMetrics[] metrics,
-      long timeToCreateExecutors,
-      long timeToEnqueueVajram,
-      long vajramTimeNs) {
-    printStats(
-        outerLoopCount,
-        innerLoopCount,
         javaNativeTimeNs,
         javaFuturesTimeNs,
         metrics,
         timeToCreateExecutors,
         timeToEnqueueVajram,
         vajramTimeNs,
-        graph.getExecutorPool());
+        pool);
   }
 
   public static void printStats(
@@ -98,6 +77,7 @@ public final class Util {
       long vajramTimeNs,
       MultiLeasePool<?> multiLeasePool) {
     int loopCount = outerLoopCount * innerLoopCount;
+    MultiLeasePoolStats multiLeasePoolStats = multiLeasePool.stats();
     System.out
         .printf("Outer Loop Count: %,d%n", outerLoopCount)
         .printf("Inner Loop Count: %,d%n", innerLoopCount)
@@ -121,9 +101,9 @@ public final class Util {
             (1.0 * vajramTimeNs - javaFuturesTimeNs) / loopCount)
         .printf(
             "maxActiveLeasesPerObject: %s, peakAvgActiveLeasesPerObject: %s, maxPoolSize: %s%n",
-            multiLeasePool.maxActiveLeasesPerObject(),
-            multiLeasePool.peakAvgActiveLeasesPerObject(),
-            multiLeasePool.maxPoolSize());
+            multiLeasePoolStats.peakLeasesOfAnObject(),
+            multiLeasePoolStats.peakAvgActiveLeasesPerObject(),
+            multiLeasePoolStats.peakPoolSize());
   }
 
   public static Builder loadFromClasspath(String... packagePrefixes) {

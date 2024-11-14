@@ -20,6 +20,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.flipkart.krystal.executors.SingleThreadExecutor;
+import com.flipkart.krystal.executors.ThreadPerRequestPool;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
@@ -29,11 +31,14 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
+import com.flipkart.krystal.utils.Lease;
+import com.flipkart.krystal.utils.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.samples.calculator.Formula;
 import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
+import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import com.google.common.collect.ImmutableMap;
@@ -44,24 +49,42 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class ChainAdderTest {
+
+  private static ThreadPerRequestPool EXEC_POOL;
+
+  @BeforeAll
+  static void beforeAll() {
+    EXEC_POOL = new ThreadPerRequestPool("RequestLevelCacheTest", 4);
+  }
+
   private VajramKryonGraph graph;
   private ObjectMapper objectMapper;
 
+  private Lease<SingleThreadExecutor> executorLease;
+
   @BeforeEach
-  void setUp() {
+  void setUp() throws LeaseUnavailableException {
     Adder.CALL_COUNTER.reset();
-    graph = loadFromClasspath(Formula.class.getPackageName()).maxParallelismPerCore(1).build();
-    objectMapper =
+    this.graph = loadFromClasspath(Formula.class.getPackageName()).build();
+    this.executorLease = EXEC_POOL.lease();
+    this.objectMapper =
         new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .registerModule(new Jdk8Module())
             .setSerializationInclusion(NON_NULL)
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+  }
+
+  @AfterEach
+  void tearDown() {
+    executorLease.close();
   }
 
   @Test
@@ -79,6 +102,7 @@ class ChainAdderTest {
                 .requestId("chainAdderTest")
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
+                        .singleThreadExecutor(executorLease.get())
                         .requestScopedLogicDecoratorConfigs(
                             ImmutableMap.of(
                                 mainLogicExecReporter.decoratorType(),
@@ -103,8 +127,7 @@ class ChainAdderTest {
   void emptyNumbers_returnsZero_success() {
     CompletableFuture<Integer> future;
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(
-            KrystexVajramExecutorConfig.builder().requestId("chainAdderTest").build())) {
+        graph.createExecutor(configBuilder().build())) {
       future =
           krystexVajramExecutor.execute(
               ofVajram(ChainAdder.class),
@@ -135,8 +158,7 @@ class ChainAdderTest {
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor krystexVajramExecutor =
-          graph.createExecutor(
-              KrystexVajramExecutorConfig.builder().requestId("chainAdderTest").build())) {
+          graph.createExecutor(configBuilder().build())) {
         metrics[value] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
@@ -174,13 +196,13 @@ class ChainAdderTest {
         .get();
     printStats(
         loopCount,
-        graph,
         javaNativeTimeNs,
         javaFuturesTimeNs,
         metrics,
         timeToCreateExecutors,
         timeToEnqueueVajram,
-        vajramTimeNs);
+        vajramTimeNs,
+        EXEC_POOL);
   }
 
   @Disabled("Long running benchmark")
@@ -205,8 +227,7 @@ class ChainAdderTest {
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor krystexVajramExecutor =
-          graph.createExecutor(
-              KrystexVajramExecutorConfig.builder().requestId("chainAdderTest").build())) {
+          graph.createExecutor(configBuilder().build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[outer_i] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
@@ -248,13 +269,20 @@ class ChainAdderTest {
     printStats(
         outerLoopCount,
         innerLoopCount,
-        graph,
         javaNativeTimeNs,
         javaFuturesTimeNs,
         metrics,
         timeToCreateExecutors,
         timeToEnqueueVajram,
-        vajramTimeNs);
+        vajramTimeNs,
+        EXEC_POOL);
+  }
+
+  private KrystexVajramExecutorConfigBuilder configBuilder() {
+    return KrystexVajramExecutorConfig.builder()
+        .requestId("chainAdderTest")
+        .kryonExecutorConfigBuilder(
+            KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()));
   }
 
   private CompletableFuture<Integer> executeVajram(
