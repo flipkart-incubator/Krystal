@@ -421,6 +421,12 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
 
   private Optional<CompletableFuture<BatchResponse>> executeOutputLogicIfPossible(
       DependantChain dependantChain) {
+
+    if (outputLogicExecuted.getOrDefault(dependantChain, false)) {
+      // Output logic aleady executed
+      return Optional.empty();
+    }
+
     ForwardBatch forwardCommand = getForwardCommand(dependantChain);
     // If all the inputs and dependency values needed by the output logic are available, then
     // prepare to run outputLogic
