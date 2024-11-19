@@ -167,7 +167,8 @@ class RequestLevelCacheTest {
                   _c -> requestLevelCache))
           .build();
     }
-    return new KryonExecutor(kryonDefinitionRegistry, new ForkJoinExecutorPool(1), configBuilder.build(), "test");
+    return new KryonExecutor(
+        kryonDefinitionRegistry, new ForkJoinExecutorPool(1), configBuilder.build(), "test");
   }
 
   private <T> OutputLogicDefinition<T> newComputeLogic(

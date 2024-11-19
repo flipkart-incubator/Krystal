@@ -38,10 +38,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -320,6 +322,66 @@ class KryonExecutorTest {
             KryonExecutionConfig.builder().executionId("r").build());
     kryonExecutor.close();
     assertThat(future).succeedsWithin(TIMEOUT).isEqualTo("l1:l2:l3:l4:final");
+  }
+
+  @ParameterizedTest
+  @MethodSource("executorConfigsToTest")
+  void executeKryon_dependenciesWithReturnInstantly_executeComputeExecutedExactlyOnce(
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
+    this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
+    String dep1 =
+        "executeKryon_dependenciesWithReturnInstantly_executeComputeExecutedExactlyOnce_dep1";
+    kryonDefinitionRegistry.newKryonDefinition(
+        dep1,
+        emptySet(),
+        newComputeLogic(dep1, emptySet(), dependencyValues -> "l1").kryonLogicId());
+
+    String dep2 =
+        "executeKryon_dependenciesWithReturnInstantly_executeComputeExecutedExactlyOnce_dep2";
+    kryonDefinitionRegistry.newKryonDefinition(
+        dep2,
+        emptySet(),
+        newComputeLogic(dep2, emptySet(), dependencyValues -> "l2").kryonLogicId());
+
+    LongAdder numberOfExecutions = new LongAdder();
+    CompletableFuture<Object> future =
+        kryonExecutor.executeKryon(
+            kryonDefinitionRegistry
+                .newKryonDefinition(
+                    "executeKryon_dependenciesWithReturnInstantly_executeComputeExecutedExactlyOnce_final",
+                    emptySet(),
+                    newComputeLogic(
+                            "executeKryon_dependenciesWithReturnInstantly_executeComputeExecutedExactlyOnce_final",
+                            Set.of("dep1", "dep2"),
+                            dependencyValues -> {
+                              numberOfExecutions.increment();
+                              return dependencyValues
+                                      .getDepValue("dep1")
+                                      .values()
+                                      .values()
+                                      .iterator()
+                                      .next()
+                                      .value()
+                                      .orElseThrow()
+                                  + ":"
+                                  + dependencyValues
+                                      .getDepValue("dep2")
+                                      .values()
+                                      .values()
+                                      .iterator()
+                                      .next()
+                                      .value()
+                                      .orElseThrow()
+                                  + ":final";
+                            })
+                        .kryonLogicId(),
+                    ImmutableMap.of("dep1", new KryonId(dep1), "dep2", new KryonId(dep2)))
+                .kryonId(),
+            Facets.empty(),
+            KryonExecutionConfig.builder().executionId("r").build());
+    kryonExecutor.close();
+    assertThat(future).succeedsWithin(TIMEOUT).isEqualTo("l1:l2:final");
+    assertThat(numberOfExecutions.sum()).isEqualTo(1);
   }
 
   @ParameterizedTest
