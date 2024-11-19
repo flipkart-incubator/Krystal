@@ -24,7 +24,6 @@ import com.flipkart.krystal.vajram.samples.calculator.subtractor.Subtractor;
 import com.flipkart.krystal.vajram.samples.calculator.subtractor.SubtractorRequest;
 import com.google.common.collect.ImmutableCollection;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 /**
