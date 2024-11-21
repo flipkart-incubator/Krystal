@@ -6,10 +6,10 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFri
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.hellos_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.skip_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.userIds_n;
+import static java.lang.System.lineSeparator;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
-import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -22,11 +22,9 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.H
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloFacetUtil.MutualFriendsHelloFacets;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @VajramDef
 public abstract class MutualFriendsHello extends ComputeVajram<String> {
@@ -41,6 +39,20 @@ public abstract class MutualFriendsHello extends ComputeVajram<String> {
     String hellos;
   }
 
+  @Resolve(depName = friendIds_n, depInputs = FriendsServiceRequest.userId_n)
+  public static MultiExecute<String> userIdForFriendService(@Using(userIds_n) Set<String> userIds) {
+    return executeFanoutWith(userIds);
+  }
+
+  @Resolve(depName = hellos_n, depInputs = HelloFriendsV2Request.userId_n)
+  public static MultiExecute<String> userIDForHelloService(
+      @Using(friendIds_n) Set<String> friendIds, @Using(skip_n) Optional<Boolean> skip) {
+    if (skip.orElse(false)) {
+      return skipFanout("skip requested");
+    }
+    return executeFanoutWith(friendIds);
+  }
+
   @Output
   static String sayHelloToMutualFriends(MutualFriendsHelloFacets mutualFriendsHelloFacets) {
     List<String> result = new ArrayList<>();
@@ -51,27 +63,6 @@ public abstract class MutualFriendsHello extends ComputeVajram<String> {
           .value()
           .ifPresent(result::add);
     }
-    return String.join("\n", result);
-  }
-
-  @Resolve(depName = friendIds_n, depInputs = FriendsServiceRequest.userId_n)
-  public static MultiExecute<String> userIdForFriendService(@Using(userIds_n) Set<String> userIds) {
-    return executeFanoutWith(userIds);
-  }
-
-  @Resolve(depName = hellos_n, depInputs = HelloFriendsV2Request.userId_n)
-  public static MultiExecute<String> userIDForHelloService(
-      @Using(friendIds_n) DependencyResponse<FriendsServiceRequest, Set<String>> friendIdMap,
-      @Using(skip_n) Optional<Boolean> skip) {
-    if (skip.orElse(false)) {
-      return skipFanout("skip requested");
-    }
-
-    Set<String> friendIds =
-        friendIdMap.values().asList().stream()
-            .flatMap(val -> val.value().stream())
-            .flatMap(Collection::stream)
-            .collect(Collectors.toSet());
-    return executeFanoutWith(friendIds);
+    return String.join(lineSeparator(), result);
   }
 }

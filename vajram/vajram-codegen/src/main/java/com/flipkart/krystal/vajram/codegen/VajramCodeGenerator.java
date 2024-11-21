@@ -752,7 +752,7 @@ public class VajramCodeGenerator {
                 throw new VajramValidationException(message);
               }
             });
-    boolean isFanOut = isParamFanoutDependency || depFanoutMap.getOrDefault(depName, false);
+    boolean isFanOut = depFanoutMap.getOrDefault(depName, false);
     buildFinalResolvers(method, facets, ifBlockBuilder, isFanOut);
     ifBlockBuilder.endControlFlow();
     return ifBlockBuilder;
@@ -778,17 +778,8 @@ public class VajramCodeGenerator {
     Resolve resolve =
         checkNotNull(method.getAnnotation(Resolve.class), "Resolver method cannot be null");
     String resolvedDep = resolve.depName();
-    // fanout case
-    if (depFanoutMap.containsKey(usingInputName)
-        && depFanoutMap.get(usingInputName)
-        && util.isRawAssignable(parameter.asType(), DependencyResponse.class)) {
-      // the parameter data type must be DependencyResponse
-      String message =
-          "Dependency resolution of %s is fanout but the resolver method is not of type DependencyResponse"
-              .formatted(resolvedDep);
-      util.error(message, method);
-      throw new VajramValidationException(message);
-    }
+
+    TypeMirror parameterType = parameter.asType();
     //    ReturnType returnType
     if (facetDef instanceof DependencyModel dependencyModel) {
       String variableName = toJavaName(usingInputName);
@@ -802,7 +793,24 @@ public class VajramCodeGenerator {
       TypeName unboxedDepType =
           boxedDepType.isBoxedPrimitive() ? boxedDepType.unbox() : boxedDepType;
       String resolverName = method.getSimpleName().toString();
-      if (util.isRawAssignable(parameter.asType(), DependencyResponse.class)) {
+      if (depFanoutMap.getOrDefault(usingInputName, false)) {
+        // fanout case
+        boolean typeMismatch = false;
+        if (!util.isRawAssignable(parameterType, DependencyResponse.class)) {
+          typeMismatch = true;
+        } else if (getTypeParameters(parameterType).size() != 2) {
+          typeMismatch = true;
+        }
+        if (typeMismatch) {
+          // the parameter data type must be DependencyResponse<Req, Resp>
+          String message =
+              """
+                  A fanout dependency ('%s') can be consumed only via the DependencyResponse<ReqType,RespType> class. \
+                  Found '%s' instead"""
+                  .formatted(resolvedDep, parameterType);
+          util.error(message, parameter);
+          throw new VajramValidationException(message);
+        }
         String depValueAccessorCode =
             """
             $1T $2L =
@@ -822,6 +830,7 @@ public class VajramCodeGenerator {
             toClassName(requestClass),
             ClassName.get(Map.Entry.class));
       } else {
+        // This means the dependency being consumed used is not a fanout dependency
         String depValueAccessorCode =
             """
             $1T $2L =
@@ -832,12 +841,10 @@ public class VajramCodeGenerator {
                  .next()
                  .getValue()""";
         if (facetDef.isMandatory()) {
-          if (unboxedDepType.equals(TypeName.get(parameter.asType()))) {
-            // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
-            // requested the value directly. So we extract the only value from dependencyDef
-            // response
-            // and
-            // provide it.
+          if (unboxedDepType.equals(TypeName.get(parameterType))) {
+            // This means this dependencyDef being consumed is a non fanout mandatory dependency and
+            // the dev has requested the value directly. So we extract the only value from
+            // dependencyDef response and provide it.
             String code =
                 depValueAccessorCode
                     + """
@@ -853,16 +860,17 @@ public class VajramCodeGenerator {
                 usingInputName,
                 vajramName);
           } else {
+            // This means the dependency being consumed is mandatory, but the type of the parameter
+            // is not matching the type of the facet
             String message =
-                ("A resolver ('%s') must not access an optional dependencyDef ('%s') directly."
-                        + "Use Optional<>, Errable<>, or DependencyResponse<> instead")
-                    .formatted(resolverName, usingInputName);
+                "A resolver must consume a mandatory dependency directly using its type (%s). Found '%s' instead"
+                    .formatted(unboxedDepType, parameterType);
             util.error(message, parameter);
             throw new VajramValidationException(message);
           }
         } else {
           // dependency is optional then accept only errable and optional in resolver
-          if (util.isRawAssignable(parameter.asType(), Errable.class)) {
+          if (util.isRawAssignable(parameterType, Errable.class)) {
             // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
             // requested the 'Errable'. So we extract the only Errable from dependencyDef
             // response and provide it.
@@ -872,7 +880,7 @@ public class VajramCodeGenerator {
                 variableName,
                 boxedDepType,
                 usingInputName);
-          } else if (util.isRawAssignable(parameter.asType(), Optional.class)) {
+          } else if (util.isRawAssignable(parameterType, Optional.class)) {
             // This means this dependencyDef in "Using" annotation is not a fanout and the dev has
             // requested an 'Optional'. So we retrieve the only Errable from the dependencyDef
             // response, extract the optional and provide it.
@@ -885,8 +893,9 @@ public class VajramCodeGenerator {
                 usingInputName);
           } else {
             String message =
-                "Unrecognized parameter type %s in resolver %s of vajram %s"
-                    .formatted(parameter.asType(), resolverName, this.vajramName);
+                ("A resolver ('%s') must not access an optional dependencyDef ('%s') directly."
+                        + "Use Optional<>, Errable<>, or DependencyResponse<> instead")
+                    .formatted(resolverName, usingInputName);
             util.error(message, parameter);
             throw new VajramValidationException(message);
           }
@@ -901,13 +910,13 @@ public class VajramCodeGenerator {
    * DependencyCommand.MultiExecute<NormalType> Non- fanout - Normal datatype - Vajram Request =>
    * toInputValues() - DependencyCommand.executeWith
    *
-   * @param method Resolve method
+   * @param resolverMethod Resolve method
    * @param facets Resolve facets
    * @param ifBlockBuilder {@link CodeBlock.Builder}
    * @param isFanOut Variable mentioning if the resolved variable uses a fanout dependencyDef
    */
   private void buildFinalResolvers(
-      ExecutableElement method,
+      ExecutableElement resolverMethod,
       String[] facets,
       CodeBlock.Builder ifBlockBuilder,
       boolean isFanOut) {
@@ -915,21 +924,22 @@ public class VajramCodeGenerator {
     String variableName = "resolverResult";
     boolean controlFLowStarted = false;
     // Identify resolve method return type
-    final TypeName methodReturnType = TypeName.get(method.getReturnType());
+    final TypeName methodReturnType = TypeName.get(resolverMethod.getReturnType());
 
     // call the resolve method
-    ifBlockBuilder.add("$T $L = $L(", methodReturnType, variableName, method.getSimpleName());
-    ImmutableList<String> resolverSources = getResolverSources(method).asList();
+    ifBlockBuilder.add(
+        "$T $L = $L(", methodReturnType, variableName, resolverMethod.getSimpleName());
+    ImmutableList<String> resolverSources = getResolverSources(resolverMethod).asList();
     for (int i = 0; i < resolverSources.size(); i++) {
       String bindName = resolverSources.get(i);
       ifBlockBuilder.add("$L", toJavaName(bindName));
-      if (i != method.getParameters().size() - 1) {
+      if (i != resolverMethod.getParameters().size() - 1) {
         ifBlockBuilder.add(", ");
       }
     }
     ifBlockBuilder.add(");\n");
 
-    if (util.isRawAssignable(method.getReturnType(), DependencyCommand.class)) {
+    if (util.isRawAssignable(resolverMethod.getReturnType(), DependencyCommand.class)) {
       ifBlockBuilder.beginControlFlow("if($L.shouldSkip())", variableName);
       ifBlockBuilder.addStatement(
           "\t return $T.skipExecution($L.doc())", SingleExecute.class, variableName);
@@ -937,7 +947,7 @@ public class VajramCodeGenerator {
       controlFLowStarted = true;
     }
     // TODO : add missing validations if any (??)
-    TypeMirror returnType = util.box(method.getReturnType());
+    TypeMirror returnType = util.box(resolverMethod.getReturnType());
     if (util.isRawAssignable(returnType, MultiExecute.class)) {
       String code =
           """
@@ -989,10 +999,8 @@ public class VajramCodeGenerator {
         }
       } else {
         String message =
-            "Incorrect vajram resolver "
-                + vajramName
-                + ": Fanout resolvers must return an iterable";
-        util.error(message, method);
+            "Incorrect fanout dependency resolver. Fanout resolvers must return an iterable";
+        util.error(message, resolverMethod);
         throw new VajramValidationException(message);
       }
     } else {
