@@ -5,11 +5,13 @@ import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.friendIds_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.hellos_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.skip_n;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.userIds_n;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.userId_n;
 import static java.lang.System.lineSeparator;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
+import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -29,7 +31,8 @@ import java.util.Set;
 @VajramDef
 public abstract class MutualFriendsHello extends ComputeVajram<String> {
   static class _Facets {
-    @Input Set<String> userIds;
+    @Input String userId;
+
     @Input Optional<Boolean> skip;
 
     @Dependency(onVajram = FriendsService.class)
@@ -40,8 +43,8 @@ public abstract class MutualFriendsHello extends ComputeVajram<String> {
   }
 
   @Resolve(depName = friendIds_n, depInputs = FriendsServiceRequest.userId_n)
-  public static MultiExecute<String> userIdForFriendService(@Using(userIds_n) Set<String> userIds) {
-    return executeFanoutWith(userIds);
+  public static String userIdForFriendService(String userId) {
+    return userId;
   }
 
   @Resolve(depName = hellos_n, depInputs = HelloFriendsV2Request.userId_n)

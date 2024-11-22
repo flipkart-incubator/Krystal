@@ -214,7 +214,7 @@ public class VajramCodeGenerator {
     // dep inputDef data type and method return type =>
     // 1. depInput = T, if (resolverReturnType is iterable of T || iterable of vajramRequest ||
     // multiExecute) => fanout
-    Map<String, Boolean> depFanoutMap =
+    final Map<String, Boolean> depFanoutMap =
         vajramInfo.dependencies().stream()
             .collect(Collectors.toMap(DependencyModel::name, DependencyModel::canFanout));
 
@@ -706,14 +706,27 @@ public class VajramCodeGenerator {
             parameter -> {
               String usingInputName = util.inferFacetName(parameter);
               // check if the bind param has multiple resolvers
-              if (facetModels.get(usingInputName) instanceof DependencyModel) {
+              FacetGenModel facetGenModel = facetModels.get(usingInputName);
+              if (facetGenModel instanceof DependencyModel) {
                 generateDependencyResolutions(
                     method, usingInputName, ifBlockBuilder, depFanoutMap, parameter);
-              } else if (facetModels.containsKey(usingInputName)) {
-                FacetGenModel facetGenModel = facetModels.get(usingInputName);
+              } else if (facetGenModel instanceof InputModel<?> inputModel) {
+                TypeMirror facetType = util.toTypeMirror(inputModel.type());
                 String variable = toJavaName(usingInputName);
-                final TypeName parameterType = TypeName.get(parameter.asType());
-                if (facetGenModel.isMandatory()) {
+                TypeMirror parameterTypeMirror = parameter.asType();
+                final TypeName parameterType = TypeName.get(parameterTypeMirror);
+                if (inputModel.isMandatory()) {
+                  if (!util.getProcessingEnv()
+                      .getTypeUtils()
+                      .isAssignable(facetType, parameterTypeMirror)) {
+                    String message =
+                        String.format(
+                            "Incorrect facet type being consumed. Expected '%s', found '%s'"
+                                .formatted(facetType, parameterType),
+                            usingInputName);
+                    util.error(message, parameter);
+                    throw new VajramValidationException(message);
+                  }
                   ifBlockBuilder.add(
                       CodeBlock.builder()
                           .addStatement(
@@ -723,25 +736,23 @@ public class VajramCodeGenerator {
                               INPUTS,
                               usingInputName)
                           .build());
+                } else if (util.isRawAssignable(parameterTypeMirror, Optional.class)) {
+                  ifBlockBuilder.add(
+                      CodeBlock.builder()
+                          .addStatement(
+                              "$T $L = $L.getInputValueOpt($S)",
+                              parameterType,
+                              variable,
+                              INPUTS,
+                              usingInputName)
+                          .build());
                 } else {
-                  if (util.isRawAssignable(parameter.asType(), Optional.class)) {
-                    ifBlockBuilder.add(
-                        CodeBlock.builder()
-                            .addStatement(
-                                "$T $L = $L.getInputValueOpt($S)",
-                                parameterType,
-                                variable,
-                                INPUTS,
-                                usingInputName)
-                            .build());
-                  } else {
-                    String message =
-                        String.format(
-                            "Optional inputDef dependencyDef %s must have type as Optional",
-                            usingInputName);
-                    util.error(message, parameter);
-                    throw new VajramValidationException(message);
-                  }
+                  String message =
+                      String.format(
+                          "Optional inputDef dependencyDef %s must have type as Optional",
+                          usingInputName);
+                  util.error(message, parameter);
+                  throw new VajramValidationException(message);
                 }
               } else {
                 String message = "No inputDef resolver found for " + usingInputName;
@@ -926,6 +937,13 @@ public class VajramCodeGenerator {
     final TypeName methodReturnType = TypeName.get(resolverMethod.getReturnType());
 
     // call the resolve method
+    /*
+    TODO In the following code, we are assuming that if the
+     resolver method is returning SingleExecute<T>, MultiExecute<T>, or just T,
+     the T is exactly matching the resolved inputs data type. If the developer makes an error,
+     then the generated code will fail at runtime with ClassCastException. We need to add a validation
+     here which proactively fails if the data type mismatches.
+    */
     ifBlockBuilder.add(
         "$T $L = $L(", methodReturnType, variableName, resolverMethod.getSimpleName());
     ImmutableList<String> resolverSources = getResolverSources(resolverMethod).asList();
@@ -1011,20 +1029,18 @@ public class VajramCodeGenerator {
               Errable.class);
         }
       }
+    } else if (util.isRawAssignable(returnType, VajramRequest.class)) {
+      ifBlockBuilder.addStatement(
+          "return $T.executeWith($L.toFacetValues())", SingleExecute.class, variableName);
     } else {
-      if (util.isRawAssignable(returnType, VajramRequest.class)) {
-        ifBlockBuilder.addStatement(
-            "return $T.executeWith($L.toFacetValues())", SingleExecute.class, variableName);
-      } else {
-        ifBlockBuilder.addStatement(
-            "return $T.executeWith(new $T(\n " + "$T.of($S, $T.withValue($L))))",
-            SingleExecute.class,
-            Facets.class,
-            ImmutableMap.class,
-            facets[0],
-            Errable.class,
-            variableName);
-      }
+      ifBlockBuilder.addStatement(
+          "return $T.executeWith(new $T(\n " + "$T.of($S, $T.withValue($L))))",
+          SingleExecute.class,
+          Facets.class,
+          ImmutableMap.class,
+          facets[0],
+          Errable.class,
+          variableName);
     }
     if (controlFLowStarted) {
       ifBlockBuilder.endControlFlow();
