@@ -13,8 +13,8 @@ public record SingleExecute<T>(@Nullable T input, boolean shouldSkip, String doc
     return ImmutableList.of(Optional.ofNullable(input));
   }
 
-  public static <T> SingleExecute<T> executeWith(@Nullable T value) {
-    return new SingleExecute<>(value, false, EMPTY_STRING);
+  public static <T> SingleExecute<T> executeWith(@Nullable T input) {
+    return new SingleExecute<>(input, false, EMPTY_STRING);
   }
 
   public static <T> SingleExecute<T> skipExecution(String reason) {
