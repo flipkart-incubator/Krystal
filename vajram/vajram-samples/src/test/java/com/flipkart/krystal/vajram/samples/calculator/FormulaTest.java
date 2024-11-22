@@ -5,7 +5,6 @@ import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.add;
-import static com.flipkart.krystal.vajram.samples.calculator.divider.Divider.divide;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -283,7 +282,6 @@ class FormulaTest {
 
   private static void syncFormula(Integer value) {
     //noinspection ResultOfMethodCallIgnored
-    divide(value, add(20, 5));
   }
 
   private static CompletableFuture<Integer> asyncFormula(int value) {
@@ -293,7 +291,12 @@ class FormulaTest {
     CompletableFuture<Integer> sum =
         allOf(add1, add2).thenApply(unused -> add(add1.getNow(null), add2.getNow(null)));
     return allOf(numerator, sum)
-        .thenApply(unused -> divide(numerator.getNow(null), sum.getNow(null)));
+        .thenApply(
+            unused -> {
+              int a = numerator.getNow(null);
+              int b = sum.getNow(null);
+              return a / b;
+            });
   }
 
   private record FormulaRequestContext(int a, int p, int q, String requestId) {}

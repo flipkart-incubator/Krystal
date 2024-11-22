@@ -29,6 +29,7 @@ public final class Constants {
   public static final String DEP_RESPONSE = "depResponse";
   public static final String SKIPPED_EXCEPTION = "skippedException";
   public static final String ILLEGAL_ARGUMENT = "illegalArgument";
+  public static final String STACKTRACELESS_ARGUMENT = "stacktracelessArgument";
   public static final String REQUEST = "request";
   public static final String RESPONSES_SUFFIX = "Responses";
   public static final String METHOD_GET_INPUTS_CONVERTOR = "getInputsConvertor";

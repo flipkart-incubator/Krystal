@@ -76,6 +76,8 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
 
   @Output
   static Integer add(SplitAdderFacets facets) {
-    return facets.splitSum1().orElse(0) + facets.splitSum2().orElse(0) + facets.sum().orElse(0);
+    return facets.splitSum1().value().orElse(0)
+        + facets.splitSum2().value().orElse(0)
+        + facets.sum().value().orElse(0);
   }
 }
