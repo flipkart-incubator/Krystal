@@ -447,7 +447,7 @@ public class Utils {
   }
 
   /**
-   * @return true of the raw type (without generics) of {@code from} can be assigned to the raw type
+   * @return true if the raw type (without generics) of {@code from} can be assigned to the raw type
    *     of {@code to}
    */
   public boolean isRawAssignable(TypeMirror from, Class<?> to) {

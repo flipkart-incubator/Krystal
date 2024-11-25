@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
+import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
@@ -15,6 +16,7 @@ import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOneFacetUtil.DoubleMinusOneFacets;
@@ -52,8 +54,8 @@ public abstract class DoubleMinusOne extends ComputeVajram<Integer> {
   }
 
   @Resolve(depName = doubledNumbers_n, depInputs = MultiplierRequest.numberOne_n)
-  static List<Integer> numbersToDouble(List<Integer> numbers) {
-    return numbers;
+  static MultiExecute<Integer> numbersToDouble(List<Integer> numbers) {
+    return executeFanoutWith(numbers);
   }
 
   @Resolve(depName = result_n, depInputs = SubtractorRequest.numberOne_n)
