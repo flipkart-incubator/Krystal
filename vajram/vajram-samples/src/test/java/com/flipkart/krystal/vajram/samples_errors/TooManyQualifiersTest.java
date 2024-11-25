@@ -53,7 +53,6 @@ class TooManyQualifiersTest {
         KrystexVajramExecutorConfig.builder()
             .inputInjectionProvider(
                 new VajramGuiceInjector(
-                    vajramKryonGraph,
                     createInjector(
                         binder -> {
                           binder
