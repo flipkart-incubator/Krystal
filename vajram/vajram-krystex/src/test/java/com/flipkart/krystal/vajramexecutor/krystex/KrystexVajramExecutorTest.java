@@ -6,7 +6,6 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStr
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.GRANULAR;
 import static com.flipkart.krystal.vajram.VajramID.ofVajram;
-import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.flipkart.krystal.vajram.tags.AnnotationTags.getAnnotationByType;
 import static com.flipkart.krystal.vajram.tags.AnnotationTags.getNamedValueTag;

@@ -29,7 +29,7 @@ public final class AnnotationTag<T extends Annotation> implements Tag {
     if (annotation instanceof NamedValueTag namedValueTag) {
       return (AnnotationTag<A>) AnnotationTags.newNamedTag(namedValueTag);
     } else {
-      return new AnnotationTag<>((Class<A>) annotation.getClass(), annotation);
+      return new AnnotationTag<>((Class<A>) annotation.annotationType(), annotation);
     }
   }
 }

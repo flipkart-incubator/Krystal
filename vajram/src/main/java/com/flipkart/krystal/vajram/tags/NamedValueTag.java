@@ -7,6 +7,7 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
+@Deprecated(forRemoval = true)
 public @interface NamedValueTag {
   String name();
 

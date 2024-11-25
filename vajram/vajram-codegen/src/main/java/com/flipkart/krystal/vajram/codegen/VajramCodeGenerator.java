@@ -5,6 +5,7 @@ import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_INPUT;
 import static com.flipkart.krystal.vajram.codegen.Constants.COM_FUTURE;
 import static com.flipkart.krystal.vajram.codegen.Constants.DEP_RESP;
 import static com.flipkart.krystal.vajram.codegen.Constants.DEP_RESPONSE;
+import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_FIELDS_VAR;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACET_DEFINITIONS_VAR;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACET_NAME_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACET_SPEC_SUFFIX;
@@ -39,6 +40,7 @@ import static com.flipkart.krystal.vajram.codegen.Constants.UNMOD_INPUT;
 import static com.flipkart.krystal.vajram.codegen.Constants.VAJRAM_LOGIC_METHOD;
 import static com.flipkart.krystal.vajram.codegen.Constants.VAL_ERR;
 import static com.flipkart.krystal.vajram.codegen.Constants.VARIABLE;
+import static com.flipkart.krystal.vajram.codegen.Constants._FACETS_CLASS;
 import static com.flipkart.krystal.vajram.codegen.Utils.COMMA;
 import static com.flipkart.krystal.vajram.codegen.Utils.CONVERTER;
 import static com.flipkart.krystal.vajram.codegen.Utils.DOT;
@@ -70,6 +72,7 @@ import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
+import com.flipkart.krystal.vajram.Vajrams;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajram.batching.FacetsConverter;
 import com.flipkart.krystal.vajram.batching.UnBatchedFacets;
@@ -108,7 +111,9 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -139,6 +144,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings({"HardcodedLineSeparator", "OverlyComplexClass"})
 @Slf4j
 public class VajramCodeGenerator {
+
   private final String packageName;
   private final ProcessingEnvironment processingEnv;
   private final String requestClassName;
@@ -1059,6 +1065,19 @@ public class VajramCodeGenerator {
             .addModifiers(PUBLIC)
             .returns(ParameterizedTypeName.get(ImmutableList.class, VajramFacetDefinition.class))
             .addAnnotation(Override.class);
+    facetDefinitionsBuilder.beginControlFlow("if(this.$L == null)", FACET_DEFINITIONS_VAR);
+    facetDefinitionsBuilder.addStatement(
+        """
+            var $L =
+                    $T.stream($L.$L.class.getDeclaredFields())
+                        .collect($T.toMap($T::getName, $T.identity()));""",
+        FACETS_FIELDS_VAR,
+        Arrays.class,
+        getVajramName(),
+        _FACETS_CLASS,
+        Collectors.class,
+        Field.class,
+        Function.class);
     List<FacetGenModel> facetGenModels = vajramInfo.facetStream().toList();
     Collection<CodeBlock> codeBlocks = new ArrayList<>(facetGenModels.size());
     // Input and Dependency code block
@@ -1070,10 +1089,14 @@ public class VajramCodeGenerator {
           } else if (facetGenModel instanceof DependencyModel dependencyDef) {
             buildVajramDependency(inputDefBuilder, dependencyDef);
           }
+          inputDefBuilder.add(
+              ".tags($T.parseFacetTags($L.get($S)))",
+              Vajrams.class,
+              FACETS_FIELDS_VAR,
+              facetGenModel.name());
+          inputDefBuilder.add(".build()");
           codeBlocks.add(inputDefBuilder.build());
         });
-
-    facetDefinitionsBuilder.beginControlFlow("if(this.$L == null)", FACET_DEFINITIONS_VAR);
     facetDefinitionsBuilder.addCode(
         CodeBlock.builder()
             .add("this.$L = $T.of(\n", FACET_DEFINITIONS_VAR, ImmutableList.class)
@@ -1100,8 +1123,6 @@ public class VajramCodeGenerator {
     inputDefBuilder.add(
         code, ClassName.get(VajramID.class), dependencyDef.depVajramId().vajramId());
     inputDefBuilder.add(".isMandatory($L)", dependencyDef.isMandatory());
-    // build() as last step
-    inputDefBuilder.add(".build()");
   }
 
   /**
@@ -1148,8 +1169,6 @@ public class VajramCodeGenerator {
     inputDefBuilder.add(")");
     inputDefBuilder.add(".isMandatory($L)", inputDef.isMandatory());
     inputDefBuilder.add(".isBatched($L)", inputDef.isBatched());
-    // last line
-    inputDefBuilder.add(".build()");
   }
 
   private String getJavaTypeCreationCode(
