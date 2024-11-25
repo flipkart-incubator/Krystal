@@ -117,7 +117,7 @@ class GreetingVajramTest {
             vajramKryonGraph.createExecutor(
                 KrystexVajramExecutorConfig.builder()
                     .requestId(REQUEST_ID)
-                    .inputInjectionProvider(new VajramGuiceInjector(vajramKryonGraph, injector))
+                    .inputInjectionProvider(new VajramGuiceInjector(injector))
                     .kryonExecutorConfigBuilder(
                         KryonExecutorConfig.builder()
                             .logicDecorationOrdering(logicDecorationOrdering)
@@ -183,7 +183,7 @@ class GreetingVajramTest {
                 VajramTestHarness.prepareForTest(
                         executorConfig
                             .inputInjectionProvider(
-                                new VajramGuiceInjector(vajramKryonGraph, injector))
+                                new VajramGuiceInjector(injector))
                             .build(),
                         requestLevelCache)
                     .withMock(
@@ -212,7 +212,7 @@ class GreetingVajramTest {
                 VajramTestHarness.prepareForTest(
                         executorConfig
                             .inputInjectionProvider(
-                                new VajramGuiceInjector(vajramKryonGraph, injector))
+                                new VajramGuiceInjector(injector))
                             .build(),
                         requestLevelCache)
                     .withMock(

@@ -8,12 +8,9 @@ import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.facets.InputDef;
 import com.flipkart.krystal.vajram.facets.InputSource;
 import com.flipkart.krystal.vajram.tags.AnnotationTag;
-import com.flipkart.krystal.vajram.tags.AnnotationTagKey;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.VajramInjectionProvider;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import jakarta.inject.Named;
 import jakarta.inject.Provider;
 import jakarta.inject.Qualifier;
 import java.lang.annotation.Annotation;
@@ -27,14 +24,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class VajramGuiceInjector implements VajramInjectionProvider {
 
-  private static final AnnotationTagKey NAMED_ANNO_TAG = AnnotationTagKey.from(Named.class);
-
-  private final VajramKryonGraph vajramKryonGraph;
   private final Injector injector;
   private final Map<VajramID, Map<String, Provider<?>>> providerCache = new LinkedHashMap<>();
 
-  public VajramGuiceInjector(VajramKryonGraph vajramKryonGraph, Injector injector) {
-    this.vajramKryonGraph = vajramKryonGraph;
+  public VajramGuiceInjector(Injector injector) {
     this.injector = injector;
   }
 
