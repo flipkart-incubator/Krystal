@@ -6,6 +6,7 @@ import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.google.inject.Guice.createInjector;
 import static java.lang.System.*;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
@@ -53,7 +54,7 @@ import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class GreetingVajramTest {
+class GreetingTest {
 
   private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
@@ -134,7 +135,9 @@ class GreetingVajramTest {
                     .build())) {
       future = executeVajram(krystexVajramExecutor, requestContext);
     }
-    assertThat(future.get()).contains(USER_ID);
+    assertThat(future)
+        .succeedsWithin(1, SECONDS)
+        .isEqualTo("Hello Firstname Lastname (user@123)! Hope you are doing well!");
     assertThat(analyticsEventSink.events).hasSize(1);
     out.println(
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
@@ -182,8 +185,7 @@ class GreetingVajramTest {
             vajramKryonGraph.createExecutor(
                 VajramTestHarness.prepareForTest(
                         executorConfig
-                            .inputInjectionProvider(
-                                new VajramGuiceInjector(injector))
+                            .inputInjectionProvider(new VajramGuiceInjector(injector))
                             .build(),
                         requestLevelCache)
                     .withMock(
@@ -211,8 +213,7 @@ class GreetingVajramTest {
             vajramKryonGraph.createExecutor(
                 VajramTestHarness.prepareForTest(
                         executorConfig
-                            .inputInjectionProvider(
-                                new VajramGuiceInjector(injector))
+                            .inputInjectionProvider(new VajramGuiceInjector(injector))
                             .build(),
                         requestLevelCache)
                     .withMock(
