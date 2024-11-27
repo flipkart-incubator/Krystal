@@ -548,8 +548,8 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
           log.error(
               """
                   Error while flushing decorator: {}. \
-                  This is most probably a bug, and \
-                  can cause unpredictable behaviour in the krystal graph execution. \
+                  This is most probably a bug since decorator methods are not supposed to throw exceptions. \
+                  This can cause unpredictable behaviour in the krystal graph execution. \
                   Please fix!""",
               decorator,
               e);
