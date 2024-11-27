@@ -2,6 +2,9 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.utils.Futures.linkFutures;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.concurrent.CompletableFuture.failedFuture;
+import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.config.NestedConfig;
@@ -29,7 +32,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -84,7 +86,7 @@ public final class InputBatchingDecorator<
           .map(UnBatchedFacets::toFacetValues)
           .collect(
               ImmutableMap.<Facets, Facets, CompletableFuture<@Nullable Object>>toImmutableMap(
-                  Function.identity(),
+                  identity(),
                   key ->
                       Optional.ofNullable(futureCache.get(key))
                           .orElseThrow(
@@ -117,16 +119,23 @@ public final class InputBatchingDecorator<
         batchedFacets.batchedInputs().stream()
             .map(each -> new UnBatchedFacets<>(each, batchedFacets.commonFacets()))
             .collect(toImmutableList());
-    logicToDecorate
-        .execute(requests.stream().map(UnBatchedFacets::toFacetValues).collect(toImmutableList()))
-        .forEach(
-            (inputs, resultFuture) -> {
-              //noinspection RedundantTypeArguments: To Handle nullChecker errors
-              linkFutures(
-                  resultFuture,
-                  futureCache.<CompletableFuture<@Nullable Object>>computeIfAbsent(
-                      inputs, request -> new CompletableFuture<@Nullable Object>()));
-            });
+    ImmutableMap<Facets, CompletableFuture<@Nullable Object>> result;
+    ImmutableList<Facets> facetsList =
+        requests.stream().map(UnBatchedFacets::toFacetValues).collect(toImmutableList());
+    try {
+      result = logicToDecorate.execute(facetsList);
+    } catch (Throwable e) {
+      result = facetsList.stream().collect(toImmutableMap(identity(), i -> failedFuture(e)));
+    }
+
+    result.forEach(
+        (inputs, resultFuture) -> {
+          //noinspection RedundantTypeArguments: To Handle nullChecker errors
+          linkFutures(
+              resultFuture,
+              futureCache.<CompletableFuture<@Nullable Object>>computeIfAbsent(
+                  inputs, request -> new CompletableFuture<@Nullable Object>()));
+        });
   }
 
   @Override

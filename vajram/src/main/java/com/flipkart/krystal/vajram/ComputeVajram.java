@@ -1,8 +1,6 @@
 package com.flipkart.krystal.vajram;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static java.util.concurrent.CompletableFuture.failedFuture;
-import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
@@ -28,12 +26,8 @@ public abstract non-sealed class ComputeVajram<T> extends AbstractVajram<T> {
   @Override
   public final ImmutableMap<Facets, CompletableFuture<@Nullable T>> execute(
       ImmutableList<Facets> facetsList) {
-    try {
-      return executeCompute(facetsList).entrySet().stream()
-          .collect(toImmutableMap(Entry::getKey, ComputeVajram::toFuture));
-    } catch (Throwable e) {
-      return facetsList.stream().collect(toImmutableMap(identity(), i -> failedFuture(e)));
-    }
+    return executeCompute(facetsList).entrySet().stream()
+        .collect(toImmutableMap(Entry::getKey, ComputeVajram::toFuture));
   }
 
   private static <T> CompletableFuture<@Nullable T> toFuture(Entry<Facets, Errable<T>> e) {

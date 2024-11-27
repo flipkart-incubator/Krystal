@@ -308,7 +308,7 @@ class KrystexVajramExecutorTest {
         .withMessageContaining(
             "Vajram v<"
                 + getVajramIdString(Hello.class)
-                + "> did not receive these mandatory inputs: [ name");
+                + "> did not receive these mandatory inputs: [ 'name'");
   }
 
   @ParameterizedTest
