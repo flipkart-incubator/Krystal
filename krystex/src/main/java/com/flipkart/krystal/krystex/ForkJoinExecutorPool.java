@@ -4,8 +4,8 @@ import static java.lang.Math.max;
 import static java.lang.Runtime.getRuntime;
 import static java.util.concurrent.ForkJoinPool.defaultForkJoinWorkerThreadFactory;
 
-import com.flipkart.krystal.utils.DistributeLeases;
-import com.flipkart.krystal.utils.FairMultiLeasePool;
+import com.flipkart.krystal.pooling.DistributeLeases;
+import com.flipkart.krystal.pooling.FairMultiLeasePool;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinWorkerThread;

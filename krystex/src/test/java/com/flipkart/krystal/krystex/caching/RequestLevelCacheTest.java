@@ -27,8 +27,8 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfi
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
-import com.flipkart.krystal.utils.Lease;
-import com.flipkart.krystal.utils.LeaseUnavailableException;
+import com.flipkart.krystal.pooling.Lease;
+import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.google.common.collect.ImmutableMap;
 import java.time.Duration;
 import java.util.Map.Entry;

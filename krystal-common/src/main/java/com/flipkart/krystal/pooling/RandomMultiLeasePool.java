@@ -1,9 +1,6 @@
 package com.flipkart.krystal.pooling;
 
 import com.flipkart.krystal.pooling.MultiLeasePoolStatsImpl.MultiLeasePoolStatsImplBuilder;
-import com.flipkart.krystal.utils.Lease;
-import com.flipkart.krystal.utils.LeaseUnavailableException;
-import com.flipkart.krystal.utils.MultiLeasePool;
 import java.util.Random;
 import java.util.function.Consumer;
 import java.util.function.Supplier;

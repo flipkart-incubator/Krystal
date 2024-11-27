@@ -1,4 +1,4 @@
-package com.flipkart.krystal.utils;
+package com.flipkart.krystal.pooling;
 
 /**
  * @param maxActiveObjects Prefer to distribute leases equally among this many active objects if

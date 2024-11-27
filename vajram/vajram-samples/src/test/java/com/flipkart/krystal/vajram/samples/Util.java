@@ -5,8 +5,8 @@ import static java.util.Arrays.stream;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
+import com.flipkart.krystal.pooling.MultiLeasePool;
 import com.flipkart.krystal.pooling.MultiLeasePoolStats;
-import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import java.time.Duration;

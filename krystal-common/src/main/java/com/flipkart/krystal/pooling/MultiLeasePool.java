@@ -1,6 +1,5 @@
-package com.flipkart.krystal.utils;
+package com.flipkart.krystal.pooling;
 
-import com.flipkart.krystal.pooling.MultiLeasePoolStats;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 public interface MultiLeasePool<T extends @NonNull Object> extends AutoCloseable {

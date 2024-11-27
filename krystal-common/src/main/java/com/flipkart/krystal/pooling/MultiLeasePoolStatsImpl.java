@@ -14,8 +14,6 @@ public record MultiLeasePoolStatsImpl(
     implements MultiLeasePoolStats {
 
   public static class MultiLeasePoolStatsImplBuilder {
-    @Deprecated(forRemoval = true)
-    public int peakLeasesOfAnObject;
 
     public void reportNewLease(int numberOfLeasesOfObject) {
       currentActiveLeases++;
@@ -35,6 +33,10 @@ public record MultiLeasePoolStatsImpl(
 
     public void reportObjectDeleted() {
       currentPoolSize--;
+    }
+
+    public int getPeakAvgActiveLeasesPerObject() {
+      return peakLeasesOfAnObject;
     }
   }
 }

@@ -42,8 +42,8 @@ import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecution
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.krystex.logicdecorators.resilience4j.Resilience4JBulkhead;
 import com.flipkart.krystal.krystex.logicdecorators.resilience4j.Resilience4JCircuitBreaker;
-import com.flipkart.krystal.utils.Lease;
-import com.flipkart.krystal.utils.LeaseUnavailableException;
+import com.flipkart.krystal.pooling.Lease;
+import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.tags.NamedValueTag;

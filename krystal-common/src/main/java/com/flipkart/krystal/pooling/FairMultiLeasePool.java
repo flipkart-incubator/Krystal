@@ -1,7 +1,5 @@
-package com.flipkart.krystal.utils;
+package com.flipkart.krystal.pooling;
 
-import com.flipkart.krystal.pooling.MultiLeasePoolStats;
-import com.flipkart.krystal.pooling.MultiLeasePoolStatsImpl;
 import com.flipkart.krystal.pooling.MultiLeasePoolStatsImpl.MultiLeasePoolStatsImplBuilder;
 import java.util.Deque;
 import java.util.LinkedList;
@@ -137,7 +135,8 @@ public class FairMultiLeasePool<T extends @NonNull Object> implements MultiLease
       throw new LeaseUnavailableException(
           "Reached max object limit : " + limit + " in MultiLeasePool");
     }
-    PooledObject<T> pooledObject = new PooledObject<>(creator.get(), stats.peakLeasesOfAnObject);
+    PooledObject<T> pooledObject =
+        new PooledObject<>(creator.get(), stats.getPeakAvgActiveLeasesPerObject());
     pooledObject.incrementActiveLeases();
     addLeasedToQueue(pooledObject);
     stats.reportNewObject();
