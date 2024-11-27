@@ -2,8 +2,8 @@ package com.flipkart.krystal.vajram.samples.calculator;
 
 import static com.flipkart.krystal.vajram.VajramID.ofVajram;
 
-import com.flipkart.krystal.executors.SingleThreadExecutor;
-import com.flipkart.krystal.executors.ThreadPerRequestPool;
+import com.flipkart.krystal.concurrent.SingleThreadExecutor;
+import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
@@ -19,11 +19,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class Add2And3Test {
-  private static ThreadPerRequestPool EXEC_POOL;
+  private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new ThreadPerRequestPool("RequestLevelCacheTest", 4);
+    EXEC_POOL = new SingleThreadExecutorsPool("RequestLevelCacheTest", 4);
   }
 
   private final VajramKryonGraph graph =

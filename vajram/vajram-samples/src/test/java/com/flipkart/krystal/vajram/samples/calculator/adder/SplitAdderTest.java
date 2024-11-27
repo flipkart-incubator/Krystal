@@ -20,8 +20,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.flipkart.krystal.executors.SingleThreadExecutor;
-import com.flipkart.krystal.executors.ThreadPerRequestPool;
+import com.flipkart.krystal.concurrent.SingleThreadExecutor;
+import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
@@ -54,11 +54,11 @@ import org.junit.jupiter.api.Test;
 
 class SplitAdderTest {
 
-  private static ThreadPerRequestPool EXEC_POOL;
+  private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new ThreadPerRequestPool("RequestLevelCacheTest", 4);
+    EXEC_POOL = new SingleThreadExecutorsPool("RequestLevelCacheTest", 4);
   }
 
   private VajramKryonGraph graph;

@@ -1,4 +1,4 @@
-package com.flipkart.krystal.executors;
+package com.flipkart.krystal.concurrent;
 
 import static java.lang.Thread.currentThread;
 import static java.util.concurrent.TimeUnit.DAYS;
@@ -13,6 +13,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+/**
+ * A {@link ForkJoinPool} which is guaranteed to have one and exactly one thread. This is useful
+ * when there is a need for an eventloop where the event loop thread never blocks.
+ *
+ * <p>Krystal's default synchronous executor {@code KryonExecutor} uses this class to pass messages
+ * for kryon orchestration.
+ */
 @Slf4j
 public class SingleThreadExecutor extends ForkJoinPool {
 

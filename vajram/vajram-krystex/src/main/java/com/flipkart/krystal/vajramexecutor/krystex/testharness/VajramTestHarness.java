@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex.testharness;
 
+import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.executors.SingleThreadExecutor;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;

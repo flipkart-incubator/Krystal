@@ -3,7 +3,7 @@ package com.flipkart.krystal.krystex.kryon;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 
-import com.flipkart.krystal.executors.SingleThreadExecutor;
+import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;

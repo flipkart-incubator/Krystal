@@ -1,9 +1,9 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import static com.flipkart.krystal.concurrent.Futures.linkFutures;
+import static com.flipkart.krystal.concurrent.Futures.propagateCancellation;
 import static com.flipkart.krystal.krystex.kryon.FacetType.INPUT;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
-import static com.flipkart.krystal.utils.Futures.linkFutures;
-import static com.flipkart.krystal.utils.Futures.propagateCancellation;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Sets.union;

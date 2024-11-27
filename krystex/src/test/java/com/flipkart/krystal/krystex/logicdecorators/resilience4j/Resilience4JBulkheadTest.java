@@ -9,10 +9,10 @@ import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.concurrent.SingleThreadExecutor;
+import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.executors.SingleThreadExecutor;
-import com.flipkart.krystal.executors.ThreadPerRequestPool;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
@@ -45,11 +45,11 @@ import org.junit.jupiter.api.Test;
 class Resilience4JBulkheadTest {
 
   private static final Duration TIMEOUT = ofSeconds(1);
-  private static ThreadPerRequestPool EXEC_POOL;
+  private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new ThreadPerRequestPool("RequestLevelCacheTest", 4);
+    EXEC_POOL = new SingleThreadExecutorsPool("RequestLevelCacheTest", 4);
   }
 
   private Lease<SingleThreadExecutor> executorLease;

@@ -7,10 +7,9 @@ module flipkart.krystal.common {
 
   exports com.flipkart.krystal.data;
   exports com.flipkart.krystal.datatypes;
-  exports com.flipkart.krystal.utils;
   exports com.flipkart.krystal.config;
   exports com.flipkart.krystal.schema;
   exports com.flipkart.krystal.except;
-  exports com.flipkart.krystal.executors;
+  exports com.flipkart.krystal.concurrent;
   exports com.flipkart.krystal.pooling;
 }

@@ -14,9 +14,9 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.concurrent.SingleThreadExecutor;
+import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.executors.SingleThreadExecutor;
-import com.flipkart.krystal.executors.ThreadPerRequestPool;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
@@ -50,12 +50,13 @@ import org.junit.jupiter.api.Test;
 
 class FormulaTest {
 
-  public static final int MAX_POOL_SIZE = Runtime.getRuntime().availableProcessors();
-  private static ThreadPerRequestPool EXEC_POOL;
+  private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new ThreadPerRequestPool("RequestLevelCacheTest", MAX_POOL_SIZE);
+    EXEC_POOL =
+        new SingleThreadExecutorsPool(
+            "RequestLevelCacheTest", Runtime.getRuntime().availableProcessors());
   }
 
   private Builder graph;
@@ -141,6 +142,8 @@ class FormulaTest {
             KrystexVajramExecutorConfig.builder()
                 .requestId(REQUEST_ID)
                 .inputInjectionProvider(injectAdderFailure())
+                .kryonExecutorConfigBuilder(
+                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
                 .build())) {
       future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }

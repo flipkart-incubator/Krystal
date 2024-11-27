@@ -1,4 +1,4 @@
-package com.flipkart.krystal.executors;
+package com.flipkart.krystal.concurrent;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;

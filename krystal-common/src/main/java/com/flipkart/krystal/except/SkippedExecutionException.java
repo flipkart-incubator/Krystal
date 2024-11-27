@@ -1,6 +1,4 @@
-package com.flipkart.krystal.utils;
-
-import com.flipkart.krystal.except.StackTracelessException;
+package com.flipkart.krystal.except;
 
 public class SkippedExecutionException extends StackTracelessException {
 

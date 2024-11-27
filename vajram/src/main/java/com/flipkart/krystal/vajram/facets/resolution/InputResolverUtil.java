@@ -9,7 +9,7 @@ import static java.util.function.Function.identity;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.utils.SkippedExecutionException;
+import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
