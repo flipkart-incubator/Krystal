@@ -58,7 +58,6 @@ class A2MinusB2Test {
                 .build())) {
       future = executeVajram(krystexVajramExecutor, A2MinusB2Request.builder().a(3).b(2).build());
     }
-    //noinspection AssertBetweenInconvertibleTypes https://youtrack.jetbrains.com/issue/IDEA-342354
     assertThat(future).succeedsWithin(1, HOURS).isEqualTo(2);
   }
 

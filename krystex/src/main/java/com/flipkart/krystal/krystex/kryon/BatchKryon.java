@@ -421,6 +421,12 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
 
   private Optional<CompletableFuture<BatchResponse>> executeOutputLogicIfPossible(
       DependantChain dependantChain) {
+
+    if (outputLogicExecuted.getOrDefault(dependantChain, false)) {
+      // Output logic aleady executed
+      return Optional.empty();
+    }
+
     ForwardBatch forwardCommand = getForwardCommand(dependantChain);
     // If all the inputs and dependency values needed by the output logic are available, then
     // prepare to run outputLogic
@@ -536,7 +542,18 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       Iterable<OutputLogicDecorator> reverseSortedDecorators =
           getSortedDecorators(dependantChain)::descendingIterator;
       for (OutputLogicDecorator decorator : reverseSortedDecorators) {
-        decorator.executeCommand(new FlushCommand(dependantChain));
+        try {
+          decorator.executeCommand(new FlushCommand(dependantChain));
+        } catch (Throwable e) {
+          log.error(
+              """
+                  Error while flushing decorator: {}. \
+                  This is most probably a bug since decorator methods are not supposed to throw exceptions. \
+                  This can cause unpredictable behaviour in the krystal graph execution. \
+                  Please fix!""",
+              decorator,
+              e);
+        }
       }
     }
   }
@@ -595,21 +612,29 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
           "Duplicate batch request received for dependant chain %s"
               .formatted(forwardBatch.dependantChain()));
     }
-    ImmutableSet<String> inputNames = forwardBatch.inputNames();
+    ImmutableSet<String> providedInputNames = forwardBatch.inputNames();
     if (inputsValueCollector.putIfAbsent(forwardBatch.dependantChain(), forwardBatch) != null) {
       throw new DuplicateRequestException(
           "Duplicate data for inputs %s of kryon %s in dependant chain %s"
-              .formatted(inputNames, kryonId, forwardBatch.dependantChain()));
+              .formatted(providedInputNames, kryonId, forwardBatch.dependantChain()));
     }
-    SetView<String> resolvableInputNames =
+    SetView<String> allInputNames =
         Sets.difference(kryonDefinition.facetNames(), kryonDefinition.dependencyKryons().keySet());
-    if (!inputNames.containsAll(resolvableInputNames)) {
-      throw new IllegalArgumentException(
-          "Did not receive inputs " + Sets.difference(resolvableInputNames, inputNames));
+    if (!providedInputNames.containsAll(allInputNames)) {
+      if (log.isInfoEnabled()) {
+        log.info(
+            """
+                Kryon '{}' invoked via depChain '{}' did not receive these inputs: {}. \
+                Proceeding with kryon execution. \
+                If any of this inputs in manadatory, the kryon is expected to through relevant exceptions.""",
+            kryonId,
+            forwardBatch.dependantChain(),
+            Sets.difference(allInputNames, providedInputNames));
+      }
     }
     availableInputsByDepChain
         .computeIfAbsent(forwardBatch.dependantChain(), _k -> new LinkedHashSet<>())
-        .addAll(inputNames);
+        .addAll(allInputNames);
   }
 
   private static String getSkipMessage(ForwardBatch forwardBatch) {

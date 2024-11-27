@@ -6,6 +6,7 @@ import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.google.inject.Guice.createInjector;
 import static java.lang.System.*;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
@@ -51,6 +52,7 @@ import java.io.IOException;
 import java.lang.System.Logger;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterEach;
@@ -58,7 +60,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class GreetingVajramTest {
+class GreetingTest {
 
   private static final Duration TIMEOUT = Duration.ofSeconds(10);
   private static ThreadPerRequestPool EXEC_POOL;
@@ -74,6 +76,8 @@ class GreetingVajramTest {
   private static final String USER_NAME = "Ranchhoddas Shyamakdas Chanchhad";
   private static final String REQUEST_ID = "greetingRequest1";
   private static final String PACKAGE_PATH = "com.flipkart.krystal.vajram.samples.greeting";
+
+  private final MyAnalyticsEventSinkImpl analyticsEventSink = new MyAnalyticsEventSinkImpl();
 
   private LogicDecorationOrdering logicDecorationOrdering;
   private RequestLevelCache requestLevelCache;
@@ -128,12 +132,13 @@ class GreetingVajramTest {
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
     MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(kryonExecutionReport);
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
+    assertThat(analyticsEventSink.events).isEmpty();
     try (VajramKryonGraph vajramKryonGraph = graph.build();
         KrystexVajramExecutor krystexVajramExecutor =
             vajramKryonGraph.createExecutor(
                 KrystexVajramExecutorConfig.builder()
                     .requestId(REQUEST_ID)
-                    .inputInjectionProvider(new VajramGuiceInjector(vajramKryonGraph, injector))
+                    .inputInjectionProvider(new VajramGuiceInjector(injector))
                     .kryonExecutorConfigBuilder(
                         KryonExecutorConfig.builder()
                             .singleThreadExecutor(executorLease.get())
@@ -151,18 +156,21 @@ class GreetingVajramTest {
                     .build())) {
       future = executeVajram(krystexVajramExecutor, requestContext);
     }
-    assertThat(future.get()).contains(USER_ID);
+    assertThat(future)
+        .succeedsWithin(1, SECONDS)
+        .isEqualTo("Hello Firstname Lastname (user@123)! Hope you are doing well!");
+    assertThat(analyticsEventSink.events).hasSize(1);
     out.println(
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
   }
 
-  private static class GuiceModule extends AbstractModule {
+  private class GuiceModule extends AbstractModule {
 
     @Provides
     @Singleton
     @Named("analytics_sink")
     public AnalyticsEventSink provideAnalyticsEventSink() {
-      return new AnalyticsEventSink();
+      return analyticsEventSink;
     }
 
     @Provides
@@ -198,8 +206,7 @@ class GreetingVajramTest {
             vajramKryonGraph.createExecutor(
                 VajramTestHarness.prepareForTest(
                         executorConfig
-                            .inputInjectionProvider(
-                                new VajramGuiceInjector(vajramKryonGraph, injector))
+                            .inputInjectionProvider(new VajramGuiceInjector(injector))
                             .build(),
                         requestLevelCache)
                     .withMock(
@@ -227,8 +234,7 @@ class GreetingVajramTest {
             vajramKryonGraph.createExecutor(
                 VajramTestHarness.prepareForTest(
                         executorConfig
-                            .inputInjectionProvider(
-                                new VajramGuiceInjector(vajramKryonGraph, injector))
+                            .inputInjectionProvider(new VajramGuiceInjector(injector))
                             .build(),
                         requestLevelCache)
                     .withMock(
@@ -238,5 +244,15 @@ class GreetingVajramTest {
       future = executeVajram(krystexVajramExecutor, requestContext);
     }
     assertThat(future).succeedsWithin(TIMEOUT).asInstanceOf(STRING).doesNotContain(USER_NAME);
+  }
+
+  private static class MyAnalyticsEventSinkImpl implements AnalyticsEventSink {
+
+    private final List<GreetingEvent> events = new ArrayList<>();
+
+    @Override
+    public void pushEvent(String eventType, GreetingEvent greetingEvent) {
+      events.add(greetingEvent);
+    }
   }
 }

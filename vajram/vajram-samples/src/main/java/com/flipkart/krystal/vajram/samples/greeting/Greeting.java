@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.samples.greeting;
 
 import static com.flipkart.krystal.vajram.samples.greeting.GreetingRequest.userInfo_n;
 
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
@@ -50,9 +51,11 @@ public abstract class Greeting extends ComputeVajram<String> {
   @Output
   static String createGreetingMessage(GreetingFacets facets) {
     String userId = facets.userId();
-    Optional<UserInfo> userInfo = facets.userInfo();
+    Errable<UserInfo> userInfo = facets.userInfo();
     String greeting =
-        "Hello " + userInfo.map(UserInfo::userName).orElse("friend") + "! Hope you are doing well!";
+        "Hello "
+            + userInfo.value().map(UserInfo::userName).orElse("friend")
+            + "! Hope you are doing well!";
     facets.log().ifPresent(l -> l.log(Level.INFO, greeting));
     facets.log().ifPresent(l -> l.log(Level.INFO, "Greeting user " + userId));
     facets.analyticsEventSink().pushEvent("event_type", new GreetingEvent(userId, greeting));

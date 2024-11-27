@@ -26,15 +26,16 @@ public class VajramTestHarness {
 
   @Inject
   public VajramTestHarness(
-      KrystexVajramExecutorConfig kryonExecutorBuilder, RequestLevelCache requestLevelCache) {
-    this.kryonExecutorConfigBuilder = kryonExecutorBuilder;
+      KrystexVajramExecutorConfig krystexVajramExecutorConfig,
+      RequestLevelCache requestLevelCache) {
+    this.kryonExecutorConfigBuilder = krystexVajramExecutorConfig;
     this.requestLevelCache = requestLevelCache;
     this.vajramIdMockData = new HashMap<>();
   }
 
   public static VajramTestHarness prepareForTest(
-      KrystexVajramExecutorConfig kryonExecutorBuilder, RequestLevelCache requestLevelCache) {
-    return new VajramTestHarness(kryonExecutorBuilder, requestLevelCache);
+      KrystexVajramExecutorConfig executorConfig, RequestLevelCache requestLevelCache) {
+    return new VajramTestHarness(executorConfig, requestLevelCache);
   }
 
   @SuppressWarnings("unchecked")

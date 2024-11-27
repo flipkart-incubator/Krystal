@@ -468,7 +468,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                 .error()
                 .orElse(
                     new NoSuchElementException(
-                        "No value present for input %s".formatted(mandatoryInput.name()))));
+                        "No value present for input '%s'".formatted(mandatoryInput.name()))));
       }
     }
     if (missingMandatoryValues.isEmpty()) {
@@ -507,8 +507,13 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                   });
               @SuppressWarnings("unchecked")
               Vajram<Object> vajram = (Vajram<Object>) vajramDefinition.getVajram();
-              ImmutableMap<Facets, CompletableFuture<@Nullable Object>> validResults =
-                  vajram.execute(ImmutableList.copyOf(validInputs));
+              ImmutableMap<Facets, CompletableFuture<@Nullable Object>> validResults;
+              try {
+                validResults = vajram.execute(ImmutableList.copyOf(validInputs));
+              } catch (Throwable e) {
+                return validInputs.stream()
+                    .collect(toImmutableMap(identity(), i -> failedFuture(e)));
+              }
 
               return ImmutableMap.<Facets, CompletableFuture<@Nullable Object>>builder()
                   .putAll(validResults)

@@ -1,7 +1,7 @@
 package com.flipkart.krystal.data;
 
+import com.flipkart.krystal.except.ThrowingCallable;
 import java.util.Optional;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -47,7 +47,7 @@ public record Errable<T>(Optional<T> value, Optional<Throwable> error) implement
     return errableFrom(null, t);
   }
 
-  public static <T> Errable<T> errableFrom(Callable<@Nullable T> valueProvider) {
+  public static <T> Errable<T> errableFrom(ThrowingCallable<@Nullable T> valueProvider) {
     try {
       return withValue(valueProvider.call());
     } catch (Throwable e) {

@@ -27,13 +27,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.lang.annotation.Annotation;
-import java.lang.annotation.Repeatable;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -52,9 +49,6 @@ public final class VajramDefinition {
   @Getter private final ImmutableMap<AnnotationTagKey, Tag> outputLogicTags;
 
   @Getter
-  private final ImmutableMap</*FacetName*/ String, ImmutableMap</*TagKey*/ Object, Tag>> facetTags;
-
-  @Getter
   @Accessors(fluent = true)
   private final VajramMetadata vajramMetadata;
 
@@ -62,35 +56,7 @@ public final class VajramDefinition {
     this.vajram = vajram;
     this.inputResolverDefinitions = ImmutableList.copyOf(parseInputResolvers(vajram));
     this.outputLogicTags = parseOutputLogicTags(vajram);
-    this.facetTags = parseFacetTags(vajram);
     this.vajramMetadata = new VajramMetadata(vajram);
-  }
-
-  private static ImmutableMap<String, ImmutableMap<Object, Tag>> parseFacetTags(Vajram<?> vajram) {
-    ImmutableMap<String, VajramFacetDefinition> facetDefs =
-        vajram.getFacetDefinitions().stream()
-            .collect(toImmutableMap(VajramFacetDefinition::name, Function.identity()));
-    Map<String, ImmutableMap<Object, Tag>> result = new LinkedHashMap<>();
-    for (Field declaredField : vajram.getClass().getDeclaredFields()) {
-      Map<Object, Tag> tags = new LinkedHashMap<>();
-      String facetName = declaredField.getName();
-      VajramFacetDefinition facetDef = facetDefs.get(facetName);
-      if (facetDef != null) {
-        tags.putAll(facetDef.tags());
-      }
-      Annotation[] annotations = declaredField.getAnnotations();
-      for (Annotation annotation : annotations) {
-        boolean isRepeatable = annotation.getClass().getAnnotation(Repeatable.class) != null;
-        if (isRepeatable) {
-          log.warn("Repeatable annotations are not supported as tags. Ignoring {}", annotation);
-        } else {
-          AnnotationTag<Annotation> annotationTag = AnnotationTag.from(annotation);
-          tags.put(annotationTag.tagKey(), annotationTag);
-        }
-      }
-      result.put(facetName, ImmutableMap.copyOf(tags));
-    }
-    return ImmutableMap.copyOf(result);
   }
 
   private static Collection<InputResolverDefinition> parseInputResolvers(Vajram<?> vajram) {

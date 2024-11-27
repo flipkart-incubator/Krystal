@@ -69,9 +69,10 @@ public class RequestLevelCache implements KryonDecorator {
       if (kryonCommand instanceof ForwardBatch forwardBatch) {
         return readFromCache(kryon, forwardBatch);
       } else {
-        log.warn("Request Level cache only supports ForwardBatch command. Found {}", kryonCommand);
+        // Let all other commands just pass through. Request level cache is supposed to intercept
+        // ForwardBatch only.
+        return kryon.executeCommand(kryonCommand);
       }
-      return kryon.executeCommand(kryonCommand);
     }
 
     private CompletableFuture<KryonResponse> readFromCache(

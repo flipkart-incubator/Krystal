@@ -6,7 +6,6 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStr
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.GRANULAR;
 import static com.flipkart.krystal.vajram.VajramID.ofVajram;
-import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.flipkart.krystal.vajram.tags.AnnotationTags.getAnnotationByType;
 import static com.flipkart.krystal.vajram.tags.AnnotationTags.getNamedValueTag;
@@ -65,6 +64,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.Multi
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Request;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
@@ -323,7 +323,7 @@ class KrystexVajramExecutorTest {
         .withMessageContaining(
             "Vajram v<"
                 + getVajramIdString(Hello.class)
-                + "> did not receive these mandatory inputs: [ name");
+                + "> did not receive these mandatory inputs: [ 'name'");
   }
 
   @ParameterizedTest
@@ -719,10 +719,8 @@ class KrystexVajramExecutorTest {
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
-              vajramID("MutualFriendsHello"),
-              MultiHelloFriendsV2Request.builder()
-                  .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
-                  .build());
+              ofVajram(MutualFriendsHello.class),
+              MutualFriendsHelloRequest.builder().userId("user_id_1").build());
     }
     assertThat(multiHellos)
         .succeedsWithin(TIMEOUT)
@@ -771,11 +769,8 @@ class KrystexVajramExecutorTest {
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
-              vajramID("MutualFriendsHello"),
-              MultiHelloFriendsV2Request.builder()
-                  .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
-                  .skip(true)
-                  .build());
+              ofVajram(MutualFriendsHello.class),
+              MutualFriendsHelloRequest.builder().userId("user_id_1").skip(true).build());
     }
     assertThat(multiHellos).succeedsWithin(1, TimeUnit.SECONDS);
     assertTrue(multiHellos.get().isEmpty());
