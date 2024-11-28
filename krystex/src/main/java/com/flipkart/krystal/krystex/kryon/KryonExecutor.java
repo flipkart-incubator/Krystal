@@ -204,8 +204,10 @@ public final class KryonExecutor implements KrystalExecutor {
                         new KryonExecution(kryonId, requestId, facets, executionConfig, future));
                     unFlushedExecutions.add(requestId);
                   }
-                  //noinspection unchecked
-                  return (CompletableFuture<@Nullable T>) future;
+
+                  @SuppressWarnings("unchecked")
+                  CompletableFuture<@Nullable T> f = (CompletableFuture<@Nullable T>) future;
+                  return f;
                 }))
         .thenCompose(identity());
   }
@@ -301,19 +303,21 @@ public final class KryonExecutor implements KrystalExecutor {
       return failedFuture(e);
     }
     KryonId kryonId = kryonCommand.kryonId();
-    //noinspection unchecked
+    @SuppressWarnings("unchecked")
     Kryon<KryonCommand, R> kryon = (Kryon<KryonCommand, R>) kryonRegistry.get(kryonId);
     for (KryonDecorator kryonDecorator : getSortedKryonDecorators(kryonId, kryonCommand)) {
-      //noinspection unchecked
-      kryon =
+      @SuppressWarnings("unchecked")
+      Kryon<KryonCommand, R> decoratedKryon =
           (Kryon<KryonCommand, R>)
               kryonDecorator.decorateKryon(
                   new KryonDecorationInput((Kryon<KryonCommand, KryonResponse>) kryon, this));
+      kryon = decoratedKryon;
     }
     if (kryonCommand instanceof Flush flush) {
       kryon.executeCommand(flush);
-      //noinspection unchecked
-      return completedFuture((R) FlushResponse.getInstance());
+      @SuppressWarnings("unchecked")
+      CompletableFuture<R> f = completedFuture((R) FlushResponse.getInstance());
+      return f;
     } else {
       return kryon.executeCommand(kryonCommand);
     }

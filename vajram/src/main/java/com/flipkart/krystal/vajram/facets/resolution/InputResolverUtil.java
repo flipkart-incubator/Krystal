@@ -50,10 +50,9 @@ public final class InputResolverUtil {
         var fanoutTransformer = simpleResolver.getResolverSpec().fanoutTransformer();
         boolean fanout = fanoutTransformer != null;
         try {
-          //noinspection unchecked,rawtypes
           command =
               _resolutionHelper(
-                  (List) simpleResolver.getResolverSpec().sourceInputs(),
+                  simpleResolver.getResolverSpec().sourceInputs(),
                   simpleResolver.getResolverSpec().transformer(),
                   fanoutTransformer,
                   simpleResolver.getResolverSpec().skipConditions(),
@@ -62,8 +61,9 @@ public final class InputResolverUtil {
           command = handleResolverException(e, fanout);
         }
         if (command.shouldSkip()) {
-          //noinspection unchecked
-          skippedDependencies.put(dependencyName, (DependencyCommand<Facets>) command);
+          @SuppressWarnings("unchecked")
+          DependencyCommand<Facets> dependencyCommand = (DependencyCommand<Facets>) command;
+          skippedDependencies.put(dependencyName, dependencyCommand);
           break;
         }
         collectDepInputs(depInputs, resolvable, command);
@@ -145,8 +145,9 @@ public final class InputResolverUtil {
       @Nullable String resolvable, @Nullable Object o, Map<String, @Nullable Object> valuesMap) {
     if (o instanceof Facets facets) {
       for (Entry<String, FacetValue<Object>> e : facets.values().entrySet()) {
-        //noinspection unchecked,rawtypes
-        if (valuesMap.put(e.getKey(), ((Errable) e.getValue()).value().orElse(null)) != null) {
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        Object value = ((Errable) e.getValue()).value().orElse(null);
+        if (valuesMap.put(e.getKey(), value) != null) {
           throw new IllegalStateException("Duplicate key");
         }
       }
@@ -160,7 +161,7 @@ public final class InputResolverUtil {
 
   @SuppressWarnings("rawtypes")
   static <T> DependencyCommand<T> _resolutionHelper(
-      List<VajramFacetSpec> sourceInputs,
+      List<? extends VajramFacetSpec<?, ?>> sourceInputs,
       @Nullable Function<List<Errable<?>>, ?> oneToOneTransformer,
       @Nullable Function<List<Errable<?>>, ? extends Collection<?>> fanoutTransformer,
       List<? extends SkipPredicate<?>> skipPredicates,
@@ -187,7 +188,7 @@ public final class InputResolverUtil {
       inputValues.add(inputValue);
     }
 
-    //noinspection unchecked
+    @SuppressWarnings("unchecked")
     Optional<SkipPredicate<Object>> skipPredicate =
         skipPredicates.stream()
             .map(p -> (SkipPredicate<Object>) p)
@@ -200,7 +201,7 @@ public final class InputResolverUtil {
         return skipExecution(skipPredicate.get().reason());
       }
     }
-    //noinspection unchecked
+    @SuppressWarnings("unchecked")
     Function<List<Errable<?>>, Object> transformer =
         ofNullable((Function<List<Errable<?>>, Object>) oneToOneTransformer)
             .or(
@@ -217,14 +218,18 @@ public final class InputResolverUtil {
                 });
     Optional<Object> transformedInput = ofNullable(transformer.apply(inputValues));
     if (fanout) {
-      //noinspection unchecked
-      return MultiExecute.executeFanoutWith(
-          transformedInput.map(ts -> ((Collection<T>) ts).stream()).stream()
-              .flatMap(identity())
-              .collect(toImmutableList()));
+      @SuppressWarnings("unchecked")
+      MultiExecute<T> multiExecute =
+          MultiExecute.executeFanoutWith(
+              transformedInput.map(ts -> ((Collection<T>) ts).stream()).stream()
+                  .flatMap(identity())
+                  .collect(toImmutableList()));
+      return multiExecute;
     } else {
-      //noinspection unchecked
-      return SingleExecute.executeWith((T) transformedInput.orElse(null));
+      @SuppressWarnings("unchecked")
+      SingleExecute<T> tSingleExecute =
+          SingleExecute.executeWith((T) transformedInput.orElse(null));
+      return tSingleExecute;
     }
   }
 

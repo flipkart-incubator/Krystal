@@ -145,7 +145,7 @@ class ChainAdderTest {
     int loopCount = 50_000;
     long javaNativeTimeNs = javaMethodBenchmark(this::chainAdd, loopCount);
     long javaFuturesTimeNs = javaFuturesBenchmark(this::chainAddAsync, loopCount);
-    //noinspection unchecked
+    @SuppressWarnings("unchecked")
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
     KryonExecutorMetrics[] metrics = new KryonExecutorMetrics[loopCount];
     long startTime = System.nanoTime();
@@ -214,7 +214,7 @@ class ChainAdderTest {
 
     long javaNativeTimeNs = javaMethodBenchmark(this::chainAdd, loopCount);
     long javaFuturesTimeNs = javaFuturesBenchmark(this::chainAddAsync, loopCount);
-    //noinspection unchecked
+    @SuppressWarnings("unchecked")
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
     KryonExecutorMetrics[] metrics = new KryonExecutorMetrics[outerLoopCount];
     long startTime = System.nanoTime();

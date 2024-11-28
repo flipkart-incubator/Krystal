@@ -141,7 +141,7 @@ class SplitAdderTest {
     int loopCount = 50_000;
     long javaNativeTimeNs = javaMethodBenchmark(this::splitAdd, loopCount);
     long javaFuturesTimeNs = javaFuturesBenchmark(this::splitAddAsync, loopCount);
-    //noinspection unchecked
+    @SuppressWarnings("unchecked")
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
     KryonExecutorMetrics[] metrics = new KryonExecutorMetrics[loopCount];
     long startTime = System.nanoTime();
@@ -212,7 +212,7 @@ class SplitAdderTest {
 
     long javaNativeTimeNs = javaMethodBenchmark(this::splitAdd, loopCount);
     long javaFuturesTimeNs = javaFuturesBenchmark(this::splitAddAsync, loopCount);
-    //noinspection unchecked
+    @SuppressWarnings("unchecked")
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
     KryonExecutorMetrics[] metrics = new KryonExecutorMetrics[outerLoopCount];
     long startTime = System.nanoTime();

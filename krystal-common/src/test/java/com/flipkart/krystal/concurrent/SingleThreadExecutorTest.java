@@ -25,12 +25,17 @@ class SingleThreadExecutorTest {
     SingleThreadExecutor executor = new SingleThreadExecutor("poolName");
     ForkJoinWorkerThreadFactory factory = executor.getFactory();
     Thread originalThread = factory.newThread(executor);
-    originalThread.stop();
+    stopThread(originalThread);
     while (originalThread.isAlive()) {
       sleepUninterruptibly(Duration.ofMillis(10));
     }
     Thread newThread = factory.newThread(executor);
     assertThat(originalThread).isNotEqualTo(newThread);
+  }
+
+  @SuppressWarnings("deprecation")
+  private static void stopThread(Thread originalThread) {
+    originalThread.stop();
   }
 
   @Test

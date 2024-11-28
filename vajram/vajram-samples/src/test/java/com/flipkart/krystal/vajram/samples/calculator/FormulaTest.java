@@ -6,6 +6,7 @@ import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.FAIL_ADDER_FLAG;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.add;
+import static com.flipkart.krystal.vajram.samples.calculator.divider.Divider.divide;
 import static com.google.inject.Guice.createInjector;
 import static com.google.inject.name.Names.named;
 import static java.time.Duration.ofSeconds;
@@ -166,7 +167,7 @@ class FormulaTest {
             .build();
     long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
     long javaFuturesTimeNs = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
-    //noinspection unchecked
+    @SuppressWarnings("unchecked")
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
     KryonExecutorMetrics[] metrics = new KryonExecutorMetrics[loopCount];
     long timeToCreateExecutors = 0;
@@ -264,7 +265,7 @@ class FormulaTest {
         InputBatcherConfig.simple(() -> new InputBatcherImpl<>(innerLoopCount)));
     long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
     long javaFuturesTimeNs = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
-    //noinspection unchecked
+    @SuppressWarnings("unchecked")
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
     KryonExecutorMetrics[] metrics = new KryonExecutorMetrics[outerLoopCount];
     long timeToCreateExecutors = 0;
@@ -360,6 +361,7 @@ class FormulaTest {
 
   private static void syncFormula(Integer value) {
     //noinspection ResultOfMethodCallIgnored
+    divide(value, add(20, 5));
   }
 
   private static CompletableFuture<Integer> asyncFormula(int value) {

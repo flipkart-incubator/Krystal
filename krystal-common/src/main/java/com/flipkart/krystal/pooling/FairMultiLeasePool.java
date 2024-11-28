@@ -135,8 +135,9 @@ public class FairMultiLeasePool<T extends @NonNull Object> implements MultiLease
       throw new LeaseUnavailableException(
           "Reached max object limit : " + limit + " in MultiLeasePool");
     }
+    //noinspection NumericCastThatLosesPrecision
     PooledObject<T> pooledObject =
-        new PooledObject<>(creator.get(), stats.getPeakAvgActiveLeasesPerObject());
+        new PooledObject<>(creator.get(), (int) stats.getPeakAvgActiveLeasesPerObject());
     pooledObject.incrementActiveLeases();
     addLeasedToQueue(pooledObject);
     stats.reportNewObject();

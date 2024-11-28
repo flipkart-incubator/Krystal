@@ -35,8 +35,8 @@ public record MultiLeasePoolStatsImpl(
       currentPoolSize--;
     }
 
-    public int getPeakAvgActiveLeasesPerObject() {
-      return peakLeasesOfAnObject;
+    public double getPeakAvgActiveLeasesPerObject() {
+      return peakAvgActiveLeasesPerObject;
     }
   }
 }

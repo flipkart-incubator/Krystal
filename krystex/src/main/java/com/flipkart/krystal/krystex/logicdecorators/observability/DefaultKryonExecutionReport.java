@@ -36,7 +36,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
   private final boolean verbose;
   private final Clock clock;
   private static final String SHA_256 = "SHA-256";
-  @Nullable private static MessageDigest digest = null;
+  private static @Nullable MessageDigest digest = null;
 
   static {
     try {

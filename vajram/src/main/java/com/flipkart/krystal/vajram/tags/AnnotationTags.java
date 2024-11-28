@@ -44,8 +44,9 @@ public final class AnnotationTags {
   private static <A> Optional<A> getAnnotationByKey(
       AnnotationTagKey tagKey, Map<Object, Tag> tagMap) {
     if (tagMap.get(tagKey) instanceof AnnotationTag<?> anno) {
-      //noinspection unchecked
-      return Optional.of((A) anno.tagValue());
+      @SuppressWarnings("unchecked")
+      A tagValue = (A) anno.tagValue();
+      return Optional.of(tagValue);
     }
     return Optional.empty();
   }

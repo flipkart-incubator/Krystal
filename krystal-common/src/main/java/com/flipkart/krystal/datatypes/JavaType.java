@@ -76,10 +76,10 @@ public final class JavaType<T> implements DataType<T> {
     return create(clazz, ImmutableList.of());
   }
 
+  @SuppressWarnings("unchecked")
   public static <T> JavaType<T> create(Class<T> clazz, List<DataType<?>> typeParams) {
     String canonicalClassName = clazz.getCanonicalName();
     if (canonicalClassName != null && dataTypeMappings.containsKey(canonicalClassName)) {
-      //noinspection unchecked
       return (JavaType<T>) dataTypeMappings.get(canonicalClassName).apply(typeParams);
     } else {
       return new JavaType<>(clazz, typeParams);
@@ -118,7 +118,7 @@ public final class JavaType<T> implements DataType<T> {
         throw new UnsupportedOperationException(
             "Cannot load java type of an enclosed class - only top level classes supported");
       }
-      //noinspection unchecked
+      @SuppressWarnings("unchecked")
       Class<T> type =
           (Class<T>)
               Optional.ofNullable(this.getClass().getClassLoader())

@@ -64,7 +64,7 @@ public class SingleThreadExecutor extends ForkJoinPool {
       throw new AssertionError(
           """
           ThreadPerRequestExecutor thread not created yet.\
-           This should not happen since we executed a task a waited for its completion in the constructor""");
+           This should not happen since we executed a task and waited for its completion in the constructor""");
     }
   }
 

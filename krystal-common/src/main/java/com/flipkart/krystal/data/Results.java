@@ -6,8 +6,8 @@ public record Results<T>(ImmutableMap<Facets, Errable<T>> values) implements Fac
 
   private static final Results<?> EMPTY = new Results<>(ImmutableMap.of());
 
+  @SuppressWarnings("unchecked")
   public static <T> Results<T> empty() {
-    //noinspection unchecked
     return (Results<T>) EMPTY;
   }
 }

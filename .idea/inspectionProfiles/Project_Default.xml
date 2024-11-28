@@ -343,6 +343,7 @@
     <inspection_tool class="CyclicClassDependency" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="CyclicPackageDependency" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="CyclomaticComplexity" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="CyclomaticComplexityInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="DangerousCatchAll" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="DanglingJavadoc" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="DataFlowIssue" enabled="true" level="WARNING" enabled_by_default="true">
@@ -785,6 +786,7 @@
     <inspection_tool class="InconsistentLineSeparators" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="InconsistentResourceBundle" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="InconsistentTextBlockIndent" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="IncorrectCancellationExceptionHandling" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="IncorrectDateTimeFormat" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="IncorrectFormatting" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
     <inspection_tool class="IncorrectMessageFormat" enabled="true" level="WARNING" enabled_by_default="true" />
@@ -845,6 +847,7 @@
     <inspection_tool class="IteratorHasNextCallsIteratorNext" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="IteratorNextDoesNotThrowNoSuchElementException" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="JCenterRepository" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="JComponentDataProvider" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="JDBCExecuteWithNonConstantString" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="JDBCPrepareStatementWithNonConstantString" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="JDBCResource" enabled="true" level="ERROR" enabled_by_default="true">
@@ -907,6 +910,7 @@
     <inspection_tool class="Junit4Converter" enabled="true" level="INFORMATION" enabled_by_default="true" />
     <inspection_tool class="Junit4RunWithInspection" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="JvmCoverageInspection" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="JvmLinesOfCodeInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="KeySetIterationMayUseEntrySet" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="KindProjectorSimplifyTypeProjection" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="KindProjectorUseCorrectLambdaKeyword" enabled="true" level="WARNING" enabled_by_default="true" />
@@ -1314,6 +1318,7 @@
     <inspection_tool class="PluginXmlDynamicPlugin" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="PluginXmlExtensionRegistration" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="PluginXmlI18n" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="PluginXmlPluginLogo" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
     <inspection_tool class="PluginXmlValidity" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="PoetryPackageVersionsInspection" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="PointlessArithmeticExpression" enabled="true" level="WARNING" enabled_by_default="true">
@@ -1330,6 +1335,7 @@
     <inspection_tool class="PostfixMethodCall" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="PostfixTemplateDescriptionNotFound" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="PostfixUnaryOperation" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="PotentialDeadlockInServiceInitialization" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="PresentationAnnotation" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="PreviewFeature" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="PrimitiveArrayArgumentToVariableArgMethod" enabled="true" level="WARNING" enabled_by_default="true" />
@@ -1490,6 +1496,7 @@
     <inspection_tool class="RedundantFinalOnToplevelObject" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="RedundantHeadOrLastOption" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="RedundantImplements" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="RedundantJavaTimeOperations" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="RedundantLabeledSwitchRuleCodeBlock" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="RedundantLambdaParameterType" enabled="true" level="INFORMATION" enabled_by_default="true" />
     <inspection_tool class="RedundantLengthCheck" enabled="true" level="WARNING" enabled_by_default="true" />
@@ -1753,6 +1760,8 @@
           <option value="ProhibitedExceptionThrown" />
           <option value="initialization.fields.uninitialized" />
           <option value="method.invocation" />
+          <option value="deprecation" />
+          <option value="LimitedScopeInnerClass" />
         </list>
       </option>
     </inspection_tool>
@@ -1984,6 +1993,7 @@
     <inspection_tool class="UnspecifiedActionsPlace" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="UnstableApiUsage" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="UnstableTypeUsedInSignature" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="UnsupportedCharacter" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="UnsupportedChronoFieldUnitCall" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="UnusedAssignment" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="REPORT_PREFIX_EXPRESSIONS" value="false" />

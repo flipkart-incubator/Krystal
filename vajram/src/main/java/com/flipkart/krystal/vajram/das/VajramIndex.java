@@ -31,8 +31,10 @@ public final class VajramIndex {
   }
 
   public <T extends DataAccessSpec> AccessSpecMatchingResult<T> getVajrams(T accessSpec) {
-    //noinspection unchecked
-    return Optional.ofNullable((AccessSpecIndex<T>) accessSpecIndices.get(accessSpec.getClass()))
+    @SuppressWarnings("unchecked")
+    AccessSpecIndex<T> accessSpecIndex =
+        (AccessSpecIndex<T>) accessSpecIndices.get(accessSpec.getClass());
+    return Optional.ofNullable(accessSpecIndex)
         .map(index -> index.getVajrams(accessSpec))
         .orElse(
             new AccessSpecMatchingResult<>(
