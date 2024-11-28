@@ -10,12 +10,9 @@ ext {
 }
 
 checkerFramework {
-    checkers = [
-            'org.checkerframework.checker.nullness.NullnessChecker',
-    ]
-    extraJavacArgs = [
-            "-Astubs=${rootDir}/config/checker/stubs",
-    ]
+    checkers = ['org.checkerframework.checker.nullness.NullnessChecker',
+                'org.checkerframework.checker.calledmethods.CalledMethodsChecker',]
+    extraJavacArgs = ["-Astubs=${rootDir}/config/checker/stubs",]
 }
 
 subprojects {
@@ -123,12 +120,9 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
     }
 
     checkerFramework {
-        checkers = [
-                'org.checkerframework.checker.nullness.NullnessChecker',
-        ]
-        extraJavacArgs = [
-                "-Astubs=${rootDir}/config/checker/stubs",
-        ]
+        checkers = ['org.checkerframework.checker.nullness.NullnessChecker',
+                    'org.checkerframework.checker.calledmethods.CalledMethodsChecker',]
+        extraJavacArgs = ["-Astubs=${rootDir}/config/checker/stubs",]
         excludeTests = true
     }
 
@@ -138,6 +132,11 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
 
     java {
         withSourcesJar()
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs += '-Xlint:unchecked'
+        options.deprecation = true
     }
     tasks.named('sourcesJar').configure { mustRunAfter('compileJava') }
 

@@ -3,6 +3,7 @@ package com.flipkart.krystal.krystex.kryon;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 
+import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
@@ -12,9 +13,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ExecutorService;
 import lombok.Builder;
+import lombok.NonNull;
 import lombok.Singular;
 
 public record KryonExecutorConfig(
@@ -24,7 +24,7 @@ public record KryonExecutorConfig(
     KryonExecStrategy kryonExecStrategy,
     GraphTraversalStrategy graphTraversalStrategy,
     @Singular Map<String, KryonDecoratorConfig> requestScopedKryonDecoratorConfigs,
-    Optional<ExecutorService> customExecutorService,
+    @NonNull SingleThreadExecutor singleThreadExecutor,
     boolean debug) {
 
   @Builder(toBuilder = true)
@@ -37,9 +37,6 @@ public record KryonExecutorConfig(
     }
     if (requestScopedKryonDecoratorConfigs == null) {
       requestScopedKryonDecoratorConfigs = Map.of();
-    }
-    if (customExecutorService == null) {
-      customExecutorService = Optional.empty();
     }
     if (disabledDependantChains == null) {
       disabledDependantChains = ImmutableSet.of();

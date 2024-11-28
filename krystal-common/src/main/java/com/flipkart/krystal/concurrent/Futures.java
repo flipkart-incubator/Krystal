@@ -1,4 +1,4 @@
-package com.flipkart.krystal.utils;
+package com.flipkart.krystal.concurrent;
 
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.PolyNull;

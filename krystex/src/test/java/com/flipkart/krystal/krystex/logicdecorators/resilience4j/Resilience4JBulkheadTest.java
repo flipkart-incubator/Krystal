@@ -9,9 +9,10 @@ import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.concurrent.SingleThreadExecutor;
+import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
@@ -23,6 +24,8 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
+import com.flipkart.krystal.pooling.Lease;
+import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.google.common.collect.ImmutableMap;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
 import java.time.Duration;
@@ -34,26 +37,44 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class Resilience4JBulkheadTest {
 
   private static final Duration TIMEOUT = ofSeconds(1);
+  private static SingleThreadExecutorsPool EXEC_POOL;
+
+  @BeforeAll
+  static void beforeAll() {
+    EXEC_POOL = new SingleThreadExecutorsPool("RequestLevelCacheTest", 4);
+  }
+
+  private Lease<SingleThreadExecutor> executorLease;
   private KryonExecutor kryonExecutor;
   private KryonDefinitionRegistry kryonDefinitionRegistry;
   private LogicDefinitionRegistry logicDefinitionRegistry;
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws LeaseUnavailableException {
+    this.executorLease = EXEC_POOL.lease();
     this.logicDefinitionRegistry = new LogicDefinitionRegistry();
     this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
     this.kryonExecutor =
         new KryonExecutor(
             kryonDefinitionRegistry,
-            new ForkJoinExecutorPool(1),
-            KryonExecutorConfig.builder().kryonExecStrategy(GRANULAR).build(),
+            KryonExecutorConfig.builder()
+                .singleThreadExecutor(executorLease.get())
+                .kryonExecStrategy(GRANULAR)
+                .build(),
             "test");
+  }
+
+  @AfterEach
+  void tearDown() {
+    executorLease.close();
   }
 
   @Test

@@ -6,6 +6,7 @@ import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.FAIL_ADDER_FLAG;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.add;
+import static com.flipkart.krystal.vajram.samples.calculator.divider.Divider.divide;
 import static com.google.inject.Guice.createInjector;
 import static com.google.inject.name.Names.named;
 import static java.time.Duration.ofSeconds;
@@ -14,9 +15,9 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.concurrent.SingleThreadExecutor;
+import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.executors.ThreadPerRequestExecutor;
-import com.flipkart.krystal.executors.ThreadPerRequestPool;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
@@ -24,7 +25,8 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
-import com.flipkart.krystal.utils.LeaseUnavailableException;
+import com.flipkart.krystal.pooling.Lease;
+import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.guice.VajramGuiceInjector;
 import com.flipkart.krystal.vajram.samples.Util;
@@ -38,32 +40,42 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
 import com.google.inject.AbstractModule;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class FormulaTest {
 
-  public static final int MAX_POOL_SIZE = Runtime.getRuntime().availableProcessors();
+  private static SingleThreadExecutorsPool EXEC_POOL;
+
+  @BeforeAll
+  static void beforeAll() {
+    EXEC_POOL =
+        new SingleThreadExecutorsPool(
+            "RequestLevelCacheTest", Runtime.getRuntime().availableProcessors());
+  }
+
   private Builder graph;
   private static final String REQUEST_ID = "formulaTest";
   private final RequestLevelCache requestLevelCache = new RequestLevelCache();
-  private final ThreadPerRequestPool pool = new ThreadPerRequestPool("FormulaTest", MAX_POOL_SIZE);
+
+  private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws LeaseUnavailableException {
+    this.executorLease = EXEC_POOL.lease();
     this.graph = Util.loadFromClasspath(Formula.class.getPackageName());
     Adder.CALL_COUNTER.reset();
   }
 
   @AfterEach
   void tearDown() {
-    pool.close();
+    executorLease.close();
   }
 
   @Test
@@ -75,7 +87,12 @@ class FormulaTest {
         InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
     try (KrystexVajramExecutor krystexVajramExecutor =
-        graph.createExecutor(KrystexVajramExecutorConfig.builder().requestId(REQUEST_ID).build())) {
+        graph.createExecutor(
+            KrystexVajramExecutorConfig.builder()
+                .requestId(REQUEST_ID)
+                .kryonExecutorConfigBuilder(
+                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                .build())) {
       future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(4);
@@ -126,6 +143,8 @@ class FormulaTest {
             KrystexVajramExecutorConfig.builder()
                 .requestId(REQUEST_ID)
                 .inputInjectionProvider(injectAdderFailure())
+                .kryonExecutorConfigBuilder(
+                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
                 .build())) {
       future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
@@ -141,14 +160,14 @@ class FormulaTest {
   @Test
   void millionExecutors_oneCallEach_singleCore_benchmark() throws Exception {
     int loopCount = 1_000_000;
-    ThreadPerRequestExecutor executor = getExecutors(1)[0];
+    SingleThreadExecutor executor = getExecutors(1)[0];
     VajramKryonGraph graph =
         this.graph
             //        .maxParallelismPerCore(10)
             .build();
     long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
     long javaFuturesTimeNs = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
-    //noinspection unchecked
+    @SuppressWarnings("unchecked")
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
     KryonExecutorMetrics[] metrics = new KryonExecutorMetrics[loopCount];
     long timeToCreateExecutors = 0;
@@ -161,7 +180,7 @@ class FormulaTest {
           graph.createExecutor(
               KrystexVajramExecutorConfig.builder()
                   .kryonExecutorConfigBuilder(
-                      KryonExecutorConfig.builder().customExecutorService(Optional.of(executor)))
+                      KryonExecutorConfig.builder().singleThreadExecutor(executor))
                   .requestId("formulaTest")
                   .build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
@@ -227,13 +246,13 @@ class FormulaTest {
         timeToCreateExecutors,
         timeToEnqueueVajram,
         vajramTimeNs,
-        pool);
+        EXEC_POOL);
   }
 
   @Disabled("Long running benchmark (~16s)")
   @Test
   void thousandExecutors_1000CallsEach_singleCore_benchmark() throws Exception {
-    ThreadPerRequestExecutor executor = getExecutors(1)[0];
+    SingleThreadExecutor executor = getExecutors(1)[0];
     int outerLoopCount = 1000;
     int innerLoopCount = 1000;
     int loopCount = outerLoopCount * innerLoopCount;
@@ -246,7 +265,7 @@ class FormulaTest {
         InputBatcherConfig.simple(() -> new InputBatcherImpl<>(innerLoopCount)));
     long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
     long javaFuturesTimeNs = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
-    //noinspection unchecked
+    @SuppressWarnings("unchecked")
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
     KryonExecutorMetrics[] metrics = new KryonExecutorMetrics[outerLoopCount];
     long timeToCreateExecutors = 0;
@@ -259,7 +278,7 @@ class FormulaTest {
           graph.createExecutor(
               KrystexVajramExecutorConfig.builder()
                   .kryonExecutorConfigBuilder(
-                      KryonExecutorConfig.builder().customExecutorService(Optional.of(executor)))
+                      KryonExecutorConfig.builder().singleThreadExecutor(executor))
                   .requestId("formulaTest")
                   .build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
@@ -329,7 +348,7 @@ class FormulaTest {
         timeToCreateExecutors,
         timeToEnqueueVajram,
         vajramTimeNs,
-        pool);
+        EXEC_POOL);
   }
 
   private static CompletableFuture<Integer> executeVajram(
@@ -342,6 +361,7 @@ class FormulaTest {
 
   private static void syncFormula(Integer value) {
     //noinspection ResultOfMethodCallIgnored
+    divide(value, add(20, 5));
   }
 
   private static CompletableFuture<Integer> asyncFormula(int value) {
@@ -372,9 +392,7 @@ class FormulaTest {
         KrystexVajramExecutorConfig.builder()
             .requestId(REQUEST_ID)
             .kryonExecutorConfigBuilder(
-                KryonExecutorConfig.builder()
-                    .kryonExecStrategy(KryonExecStrategy.BATCH)
-                    .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
+                KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
             .build();
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
     try (KrystexVajramExecutor krystexVajramExecutor =
@@ -405,6 +423,7 @@ class FormulaTest {
             .requestId(REQUEST_ID)
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
+                    .singleThreadExecutor(executorLease.get())
                     .kryonExecStrategy(KryonExecStrategy.BATCH)
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
             .build();
@@ -434,6 +453,7 @@ class FormulaTest {
             .requestId(REQUEST_ID)
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
+                    .singleThreadExecutor(executorLease.get())
                     .kryonExecStrategy(KryonExecStrategy.BATCH)
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
             .build();
@@ -451,10 +471,10 @@ class FormulaTest {
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
   }
 
-  private ThreadPerRequestExecutor[] getExecutors(int count) throws LeaseUnavailableException {
-    ThreadPerRequestExecutor[] singleThreadedExecutors = new ThreadPerRequestExecutor[count];
+  private SingleThreadExecutor[] getExecutors(int count) throws LeaseUnavailableException {
+    SingleThreadExecutor[] singleThreadedExecutors = new SingleThreadExecutor[count];
     for (int i = 0; i < count; i++) {
-      singleThreadedExecutors[i] = pool.lease().get();
+      singleThreadedExecutors[i] = EXEC_POOL.lease().get();
     }
     return singleThreadedExecutors;
   }

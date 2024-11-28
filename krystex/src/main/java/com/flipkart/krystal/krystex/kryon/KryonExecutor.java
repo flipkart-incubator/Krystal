@@ -1,9 +1,9 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import static com.flipkart.krystal.concurrent.Futures.linkFutures;
+import static com.flipkart.krystal.concurrent.Futures.propagateCancellation;
 import static com.flipkart.krystal.krystex.kryon.FacetType.INPUT;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
-import static com.flipkart.krystal.utils.Futures.linkFutures;
-import static com.flipkart.krystal.utils.Futures.propagateCancellation;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Sets.union;
@@ -36,9 +36,6 @@ import com.flipkart.krystal.krystex.request.IntReqGenerator;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.flipkart.krystal.krystex.request.StringReqGenerator;
-import com.flipkart.krystal.utils.LeaseUnavailableException;
-import com.flipkart.krystal.utils.MultiLeasePool;
-import com.flipkart.krystal.utils.MultiLeasePool.Lease;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
@@ -47,7 +44,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
@@ -57,7 +53,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Default implementation of Krystal executor which */
@@ -77,7 +72,6 @@ public final class KryonExecutor implements KrystalExecutor {
   private final KryonDefinitionRegistry kryonDefinitionRegistry;
   private final KryonExecutorConfig executorConfig;
   private final ExecutorService commandQueue;
-  private final Optional<Lease<? extends ExecutorService>> commandQueueLease;
   private final String instanceId;
 
   /**
@@ -118,24 +112,11 @@ public final class KryonExecutor implements KrystalExecutor {
 
   public KryonExecutor(
       KryonDefinitionRegistry kryonDefinitionRegistry,
-      MultiLeasePool<@NonNull ? extends ExecutorService> commandQueuePool,
       KryonExecutorConfig executorConfig,
       String instanceId) {
     this.kryonDefinitionRegistry = kryonDefinitionRegistry;
     this.executorConfig = executorConfig;
-    if (executorConfig.customExecutorService().isPresent()) {
-      this.commandQueue = executorConfig.customExecutorService().get();
-      this.commandQueueLease = Optional.empty();
-    } else {
-      Lease<@NonNull ? extends ExecutorService> commandQueueLease;
-      try {
-        commandQueueLease = commandQueuePool.lease();
-      } catch (LeaseUnavailableException e) {
-        throw new RuntimeException(e);
-      }
-      this.commandQueue = commandQueueLease.get();
-      this.commandQueueLease = Optional.of(commandQueueLease);
-    }
+    this.commandQueue = executorConfig.singleThreadExecutor();
     this.instanceId = instanceId;
     this.requestScopedLogicDecoratorConfigs =
         ImmutableMap.copyOf(executorConfig.requestScopedLogicDecoratorConfigs());
@@ -223,8 +204,10 @@ public final class KryonExecutor implements KrystalExecutor {
                         new KryonExecution(kryonId, requestId, facets, executionConfig, future));
                     unFlushedExecutions.add(requestId);
                   }
-                  //noinspection unchecked
-                  return (CompletableFuture<@Nullable T>) future;
+
+                  @SuppressWarnings("unchecked")
+                  CompletableFuture<@Nullable T> f = (CompletableFuture<@Nullable T>) future;
+                  return f;
                 }))
         .thenCompose(identity());
   }
@@ -320,19 +303,21 @@ public final class KryonExecutor implements KrystalExecutor {
       return failedFuture(e);
     }
     KryonId kryonId = kryonCommand.kryonId();
-    //noinspection unchecked
+    @SuppressWarnings("unchecked")
     Kryon<KryonCommand, R> kryon = (Kryon<KryonCommand, R>) kryonRegistry.get(kryonId);
     for (KryonDecorator kryonDecorator : getSortedKryonDecorators(kryonId, kryonCommand)) {
-      //noinspection unchecked
-      kryon =
+      @SuppressWarnings("unchecked")
+      Kryon<KryonCommand, R> decoratedKryon =
           (Kryon<KryonCommand, R>)
               kryonDecorator.decorateKryon(
                   new KryonDecorationInput((Kryon<KryonCommand, KryonResponse>) kryon, this));
+      kryon = decoratedKryon;
     }
     if (kryonCommand instanceof Flush flush) {
       kryon.executeCommand(flush);
-      //noinspection unchecked
-      return completedFuture((R) FlushResponse.getInstance());
+      @SuppressWarnings("unchecked")
+      CompletableFuture<R> f = completedFuture((R) FlushResponse.getInstance());
+      return f;
     } else {
       return kryon.executeCommand(kryonCommand);
     }
@@ -523,7 +508,6 @@ public final class KryonExecutor implements KrystalExecutor {
                           decorator.getValue().onComplete();
                         }
                       }
-                      commandQueueLease.ifPresent(Lease::close);
                     }));
   }
 

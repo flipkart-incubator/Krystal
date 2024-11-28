@@ -1,4 +1,4 @@
-package com.flipkart.krystal.utils;
+package com.flipkart.krystal.pooling;
 
 public class LeaseUnavailableException extends Exception {
 

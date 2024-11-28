@@ -152,8 +152,9 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
       return Errable.withError(exception);
     }
     try {
-      //noinspection unchecked
-      return inputInjector.get(vajramId, (InputDef<Object>) inputDef);
+      @SuppressWarnings("unchecked")
+      InputDef<Object> casted = (InputDef<Object>) inputDef;
+      return inputInjector.get(vajramId, casted);
     } catch (Throwable e) {
       String message =
           "Could not inject input %s of vajram %s"

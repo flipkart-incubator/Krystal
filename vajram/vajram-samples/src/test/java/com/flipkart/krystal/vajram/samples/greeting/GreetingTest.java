@@ -18,6 +18,8 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.flipkart.krystal.concurrent.SingleThreadExecutor;
+import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
@@ -29,6 +31,8 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
+import com.flipkart.krystal.pooling.Lease;
+import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.guice.VajramGuiceInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
@@ -51,12 +55,20 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class GreetingTest {
 
   private static final Duration TIMEOUT = Duration.ofSeconds(10);
+  private static SingleThreadExecutorsPool EXEC_POOL;
+
+  @BeforeAll
+  static void beforeAll() {
+    EXEC_POOL = new SingleThreadExecutorsPool("RequestLevelCacheTest", 4);
+  }
 
   private Builder graph;
   private ObjectMapper objectMapper;
@@ -71,8 +83,11 @@ class GreetingTest {
   private RequestLevelCache requestLevelCache;
   private Injector injector;
 
+  private Lease<SingleThreadExecutor> executorLease;
+
   @BeforeEach
-  public void setUp() {
+  void setUp() throws LeaseUnavailableException {
+    this.executorLease = EXEC_POOL.lease();
     injector = createInjector(new GuiceModule());
     requestLevelCache = new RequestLevelCache();
     logicDecorationOrdering =
@@ -106,6 +121,11 @@ class GreetingTest {
                         }));
   }
 
+  @AfterEach
+  void tearDown() {
+    executorLease.close();
+  }
+
   @Test
   void greetingVajram_success() throws Exception {
     CompletableFuture<String> future;
@@ -121,6 +141,7 @@ class GreetingTest {
                     .inputInjectionProvider(new VajramGuiceInjector(injector))
                     .kryonExecutorConfigBuilder(
                         KryonExecutorConfig.builder()
+                            .singleThreadExecutor(executorLease.get())
                             .logicDecorationOrdering(logicDecorationOrdering)
                             .requestScopedLogicDecoratorConfigs(
                                 ImmutableMap.of(

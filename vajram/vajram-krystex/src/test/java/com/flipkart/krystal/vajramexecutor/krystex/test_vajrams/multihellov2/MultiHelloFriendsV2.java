@@ -7,7 +7,7 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihell
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Request.skip_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Request.userIds_s;
 
-import com.flipkart.krystal.utils.SkippedExecutionException;
+import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;

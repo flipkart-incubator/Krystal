@@ -20,6 +20,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.flipkart.krystal.concurrent.SingleThreadExecutor;
+import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
@@ -29,6 +31,8 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
+import com.flipkart.krystal.pooling.Lease;
+import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.samples.calculator.Formula;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
@@ -42,23 +46,40 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class SplitAdderTest {
+
+  private static SingleThreadExecutorsPool EXEC_POOL;
+
+  @BeforeAll
+  static void beforeAll() {
+    EXEC_POOL = new SingleThreadExecutorsPool("RequestLevelCacheTest", 4);
+  }
+
   private VajramKryonGraph graph;
   private ObjectMapper objectMapper;
+  private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach
-  void setUp() {
-    graph = loadFromClasspath(Formula.class.getPackageName()).maxParallelismPerCore(1).build();
+  void setUp() throws LeaseUnavailableException {
+    this.executorLease = EXEC_POOL.lease();
+    graph = loadFromClasspath(Formula.class.getPackageName()).build();
     objectMapper =
         new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .registerModule(new Jdk8Module())
             .setSerializationInclusion(NON_NULL)
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+  }
+
+  @AfterEach
+  void tearDown() {
+    executorLease.close();
   }
 
   @Test
@@ -72,6 +93,7 @@ class SplitAdderTest {
                 .requestId("chainAdderTest")
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
+                        .singleThreadExecutor(executorLease.get())
                         .requestScopedLogicDecoratorConfigs(
                             ImmutableMap.of(
                                 mainLogicExecReporter.decoratorType(),
@@ -97,7 +119,11 @@ class SplitAdderTest {
     CompletableFuture<Integer> future;
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
-            KrystexVajramExecutorConfig.builder().requestId("splitAdderTest").build())) {
+            KrystexVajramExecutorConfig.builder()
+                .requestId("splitAdderTest")
+                .kryonExecutorConfigBuilder(
+                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                .build())) {
       future =
           krystexVajramExecutor.execute(
               ofVajram(SplitAdder.class),
@@ -115,7 +141,7 @@ class SplitAdderTest {
     int loopCount = 50_000;
     long javaNativeTimeNs = javaMethodBenchmark(this::splitAdd, loopCount);
     long javaFuturesTimeNs = javaFuturesBenchmark(this::splitAddAsync, loopCount);
-    //noinspection unchecked
+    @SuppressWarnings("unchecked")
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
     KryonExecutorMetrics[] metrics = new KryonExecutorMetrics[loopCount];
     long startTime = System.nanoTime();
@@ -168,13 +194,13 @@ class SplitAdderTest {
      */
     printStats(
         loopCount,
-        graph,
         javaNativeTimeNs,
         javaFuturesTimeNs,
         metrics,
         timeToCreateExecutors,
         timeToEnqueueVajram,
-        vajramTimeNs);
+        vajramTimeNs,
+        EXEC_POOL);
   }
 
   @Disabled("Long running benchmark")
@@ -186,7 +212,7 @@ class SplitAdderTest {
 
     long javaNativeTimeNs = javaMethodBenchmark(this::splitAdd, loopCount);
     long javaFuturesTimeNs = javaFuturesBenchmark(this::splitAddAsync, loopCount);
-    //noinspection unchecked
+    @SuppressWarnings("unchecked")
     CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
     KryonExecutorMetrics[] metrics = new KryonExecutorMetrics[outerLoopCount];
     long startTime = System.nanoTime();
@@ -243,13 +269,13 @@ class SplitAdderTest {
     printStats(
         outerLoopCount,
         innerLoopCount,
-        graph,
         javaNativeTimeNs,
         javaFuturesTimeNs,
         metrics,
         timeToCreateExecutors,
         timeToEnqueueVajram,
-        vajramTimeNs);
+        vajramTimeNs,
+        EXEC_POOL);
   }
 
   private static CompletableFuture<Integer> executeVajram(

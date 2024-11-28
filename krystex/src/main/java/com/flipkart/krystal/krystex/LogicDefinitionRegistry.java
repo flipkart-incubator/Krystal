@@ -15,12 +15,12 @@ public final class LogicDefinitionRegistry {
   private final Map<KryonLogicId, MultiResolverDefinition> multiResolverDefinitions =
       new HashMap<>();
 
+  @SuppressWarnings("unchecked")
   public <T> OutputLogicDefinition<T> getOutputLogic(KryonLogicId kryonLogicId) {
     OutputLogicDefinition<?> outputLogicDefinition = outputLogicDefinitions.get(kryonLogicId);
     if (outputLogicDefinition == null) {
       throw new NoSuchElementException("Could not find outputLogicDefinition for " + kryonLogicId);
     }
-    //noinspection unchecked
     return (OutputLogicDefinition<T>) outputLogicDefinition;
   }
 

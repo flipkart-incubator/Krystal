@@ -34,8 +34,8 @@ public record Errable<T>(Optional<T> value, Optional<Throwable> error) implement
     }
   }
 
+  @SuppressWarnings("unchecked")
   public static <T> Errable<T> empty() {
-    //noinspection unchecked
     return (Errable<T>) EMPTY;
   }
 
@@ -60,10 +60,12 @@ public record Errable<T>(Optional<T> value, Optional<Throwable> error) implement
     return s -> errableFrom(() -> valueComputer.apply(s));
   }
 
+  @SuppressWarnings("unchecked")
   public static <T> Errable<T> errableFrom(@Nullable Object value, @Nullable Throwable error) {
-    //noinspection unchecked,rawtypes
-    return new Errable<T>(
-        (value instanceof Optional o) ? o : (Optional<T>) Optional.ofNullable(value),
+    return new Errable<>(
+        (value instanceof Optional<?> o)
+            ? (Optional<T>) o
+            : (Optional<T>) Optional.ofNullable(value),
         Optional.ofNullable(error));
   }
 

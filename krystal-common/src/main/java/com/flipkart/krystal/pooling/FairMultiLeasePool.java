@@ -1,7 +1,6 @@
-package com.flipkart.krystal.utils;
+package com.flipkart.krystal.pooling;
 
-import static java.lang.Math.max;
-
+import com.flipkart.krystal.pooling.MultiLeasePoolStatsImpl.MultiLeasePoolStatsImplBuilder;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.function.Consumer;
@@ -9,26 +8,26 @@ import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public class MultiLeasePool<T extends @NonNull Object> implements AutoCloseable {
+public class FairMultiLeasePool<T extends @NonNull Object> implements MultiLeasePool<T> {
 
   private final Supplier<@NonNull T> creator;
   private final MultiLeasePolicy leasePolicy;
 
   private final Consumer<T> destroyer;
-  private volatile double peakAvgActiveLeasesPerObject;
-  private volatile int maxPoolSize;
 
   private final Deque<PooledObject<T>> queue = new LinkedList<>();
   private volatile boolean closed;
-  private volatile int maxActiveLeasesPerObject;
 
-  public MultiLeasePool(
+  private final MultiLeasePoolStatsImplBuilder stats = MultiLeasePoolStatsImpl.builder();
+
+  public FairMultiLeasePool(
       Supplier<@NonNull T> creator, MultiLeasePolicy leasePolicy, Consumer<T> destroyer) {
     this.creator = creator;
     this.leasePolicy = leasePolicy;
     this.destroyer = destroyer;
   }
 
+  @Override
   public final Lease<T> lease() throws LeaseUnavailableException {
     synchronized (this) {
       if (closed) {
@@ -50,12 +49,8 @@ public class MultiLeasePool<T extends @NonNull Object> implements AutoCloseable 
         leasable = head;
         leasable.incrementActiveLeases();
       }
-      maxActiveLeasesPerObject = max(maxActiveLeasesPerObject, leasable.activeLeases());
-      peakAvgActiveLeasesPerObject =
-          max(
-              peakAvgActiveLeasesPerObject,
-              queue.stream().mapToInt(PooledObject::activeLeases).average().orElse(0));
-      return new Lease<>(leasable, this::giveBack);
+      stats.reportNewLease(leasable.activeLeases());
+      return new LeaseImpl<>(leasable, this::giveBack);
     }
   }
 
@@ -121,8 +116,10 @@ public class MultiLeasePool<T extends @NonNull Object> implements AutoCloseable 
   }
 
   private synchronized void giveBack(PooledObject<T> pooledObject) {
+    stats.reportLeaseClosed();
     if (shouldDelete(pooledObject) && pooledObject.activeLeases() == 0) {
       destroyer.accept(pooledObject.ref());
+      stats.reportObjectDeleted();
     }
   }
 
@@ -138,23 +135,13 @@ public class MultiLeasePool<T extends @NonNull Object> implements AutoCloseable 
       throw new LeaseUnavailableException(
           "Reached max object limit : " + limit + " in MultiLeasePool");
     }
-    PooledObject<T> pooledObject = new PooledObject<>(creator.get(), maxActiveLeasesPerObject());
+    //noinspection NumericCastThatLosesPrecision
+    PooledObject<T> pooledObject =
+        new PooledObject<>(creator.get(), (int) stats.getPeakAvgActiveLeasesPerObject());
     pooledObject.incrementActiveLeases();
     addLeasedToQueue(pooledObject);
-    maxPoolSize = max(maxPoolSize, queue.size());
+    stats.reportNewObject();
     return pooledObject;
-  }
-
-  public final int maxActiveLeasesPerObject() {
-    return maxActiveLeasesPerObject;
-  }
-
-  public final double peakAvgActiveLeasesPerObject() {
-    return peakAvgActiveLeasesPerObject;
-  }
-
-  public final int maxPoolSize() {
-    return maxPoolSize;
   }
 
   @Override
@@ -166,16 +153,17 @@ public class MultiLeasePool<T extends @NonNull Object> implements AutoCloseable 
     }
   }
 
-  public static final class Lease<T extends @NonNull Object> implements AutoCloseable {
+  public static final class LeaseImpl<T extends @NonNull Object> implements Lease<T> {
 
     private @Nullable PooledObject<T> pooledObject;
     private final Consumer<PooledObject<T>> giveback;
 
-    private Lease(@NonNull PooledObject<T> pooledObject, Consumer<PooledObject<T>> giveback) {
+    private LeaseImpl(@NonNull PooledObject<T> pooledObject, Consumer<PooledObject<T>> giveback) {
       this.pooledObject = pooledObject;
       this.giveback = giveback;
     }
 
+    @Override
     public T get() {
       if (pooledObject == null) {
         throw new IllegalStateException("Lease already released");
@@ -192,6 +180,11 @@ public class MultiLeasePool<T extends @NonNull Object> implements AutoCloseable 
         this.pooledObject = null;
       }
     }
+  }
+
+  @Override
+  public MultiLeasePoolStats stats() {
+    return stats.build();
   }
 
   private static final class PooledObject<T> {
