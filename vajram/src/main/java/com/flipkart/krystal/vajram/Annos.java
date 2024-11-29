@@ -10,7 +10,7 @@ public class Annos {
       ComputeDelegationType inferredComputeDelegationType) {
     return new VajramDef() {
       @Override
-      public String vajramId() {
+      public String id() {
         return inferredVajramId;
       }
 

@@ -127,7 +127,7 @@ public final class VajramDefinition {
 
   private static Annotation enrich(Annotation annotation, Vajram<?> vajram) {
     if (annotation instanceof VajramDef vajramDef) {
-      if (!vajramDef.vajramId().isEmpty()) {
+      if (!vajramDef.id().isEmpty()) {
         throw new IllegalArgumentException(
             ("""
                 Custom vajramIds are not supported. \

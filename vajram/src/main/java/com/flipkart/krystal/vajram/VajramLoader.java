@@ -7,18 +7,11 @@ import org.reflections.Reflections;
 
 public final class VajramLoader {
 
-  public static List<? extends Vajram> loadVajramsFromClassPath(String packagePrefix) {
+  public static List<? extends Vajram<?>> loadVajramsFromClassPath(String packagePrefix) {
     return new Reflections(packagePrefix)
         .getSubTypesOf(Vajram.class).stream()
             .filter(aClass -> isFinal(aClass.getModifiers()))
-            .map(
-                aClass -> {
-                  try {
-                    return aClass.getConstructor().newInstance();
-                  } catch (Throwable e) {
-                    throw new RuntimeException(e);
-                  }
-                })
+            .map(Vajrams::newInstance)
             .toList();
   }
 

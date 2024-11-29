@@ -28,7 +28,7 @@ public @interface VajramDef {
    *
    * @return the id of this vajram
    */
-  String vajramId() default "";
+  String id() default "";
 
   /**
    * Default is {@link ComputeDelegationType#DEFAULT} which means this is inferred from the class

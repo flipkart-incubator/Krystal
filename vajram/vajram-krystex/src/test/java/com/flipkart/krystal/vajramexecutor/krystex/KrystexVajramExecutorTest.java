@@ -910,7 +910,7 @@ class KrystexVajramExecutorTest {
               .get(context.kryonId())
               .tags()
               .getAnnotationByType(VajramDef.class)
-              .map(VajramDef::vajramId)
+              .map(VajramDef::id)
               .orElseThrow(() -> new IllegalStateException("Missing VajramDef annotation"));
         };
     return builder

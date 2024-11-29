@@ -5,16 +5,24 @@ import com.flipkart.krystal.tags.Tag;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 @Slf4j
 public final class Vajrams {
 
-  public static String getVajramIdString(
-      @SuppressWarnings("rawtypes") Class<? extends Vajram> aClass) {
-    return getVajramSourceClass(aClass).getSimpleName();
+  private static final ConcurrentHashMap<Class<? extends Vajram<?>>, Vajram<?>> VAJRAM_CACHE =
+      new ConcurrentHashMap<>();
+
+  public static String getVajramIdString(Class<? extends Vajram<?>> aClass) {
+    return getVajram(aClass).getId().vajramId();
+  }
+
+  public static Vajram<?> getVajram(Class<? extends Vajram<?>> aClass) {
+    return VAJRAM_CACHE.computeIfAbsent(aClass, Vajrams::newInstance);
   }
 
   public static ElementTags parseFacetTags(Field facetField) {
@@ -37,4 +45,12 @@ public final class Vajrams {
   }
 
   private Vajrams() {}
+
+  static Vajram<?> newInstance(@SuppressWarnings("rawtypes") Class<? extends Vajram> aClass) {
+    try {
+      return aClass.getConstructor().newInstance();
+    } catch (Throwable e) {
+      throw new RuntimeException(e);
+    }
+  }
 }
