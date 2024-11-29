@@ -1,7 +1,10 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import static com.flipkart.krystal.tags.ElementTags.emptyTags;
+
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
+import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashMap;
@@ -43,7 +46,7 @@ public final class KryonDefinitionRegistry {
       KryonLogicId outputLogicId,
       ImmutableMap<String, KryonId> dependencyKryons) {
     return newKryonDefinition(
-        kryonId, inputs, outputLogicId, dependencyKryons, ImmutableList.of(), null);
+        kryonId, inputs, outputLogicId, dependencyKryons, ImmutableList.of(), null, emptyTags());
   }
 
   public KryonDefinition newKryonDefinition(
@@ -52,7 +55,8 @@ public final class KryonDefinitionRegistry {
       KryonLogicId outputLogicId,
       ImmutableMap<String, KryonId> dependencyKryons,
       ImmutableList<ResolverDefinition> resolverDefinitions,
-      @Nullable KryonLogicId mulitResolverId) {
+      @Nullable KryonLogicId mulitResolverId,
+      ElementTags tags) {
     if (!resolverDefinitions.isEmpty() && mulitResolverId == null) {
       throw new IllegalArgumentException("missing multi resolver logic");
     }
@@ -64,7 +68,8 @@ public final class KryonDefinitionRegistry {
             dependencyKryons,
             resolverDefinitions,
             Optional.ofNullable(mulitResolverId),
-            this);
+            this,
+            tags);
     kryonDefinitions.put(kryonDefinition.kryonId(), kryonDefinition);
     return kryonDefinition;
   }

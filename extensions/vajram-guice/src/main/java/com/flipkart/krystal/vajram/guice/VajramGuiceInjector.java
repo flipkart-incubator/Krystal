@@ -7,7 +7,6 @@ import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.facets.InputDef;
 import com.flipkart.krystal.vajram.facets.InputSource;
-import com.flipkart.krystal.vajram.tags.AnnotationTag;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.VajramInjectionProvider;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -65,16 +64,14 @@ public class VajramGuiceInjector implements VajramInjectionProvider {
 
   private Optional<Annotation> getQualifier(VajramID vajramID, InputDef<?> inputDef) {
     List<Annotation> qualifierAnnotations =
-        inputDef.tags().values().stream()
+        inputDef.tags().asCollection().stream()
             .<Annotation>mapMulti(
                 (tag, consumer) -> {
-                  if (tag instanceof AnnotationTag<?> annoTag) {
-                    Annotation annotation = annoTag.tagValue();
-                    boolean isQualifierAnno =
-                        annotation.annotationType().getAnnotation(Qualifier.class) != null;
-                    if (isQualifierAnno) {
-                      consumer.accept(annoTag.tagValue());
-                    }
+                  Annotation annotation = tag.tagValue();
+                  boolean isQualifierAnno =
+                      annotation.annotationType().getAnnotation(Qualifier.class) != null;
+                  if (isQualifierAnno) {
+                    consumer.accept(tag.tagValue());
                   }
                 })
             .toList();

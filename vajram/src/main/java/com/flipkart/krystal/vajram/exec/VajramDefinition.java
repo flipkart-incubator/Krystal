@@ -4,11 +4,16 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.toMap;
 
-import com.flipkart.krystal.config.Tag;
+import com.flipkart.krystal.tags.ElementTags;
+import com.flipkart.krystal.tags.Tag;
+import com.flipkart.krystal.vajram.Annos;
+import com.flipkart.krystal.vajram.ComputeDelegationType;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.Vajrams;
 import com.flipkart.krystal.vajram.facets.DefaultInputResolverDefinition;
 import com.flipkart.krystal.vajram.facets.DependencyDef;
 import com.flipkart.krystal.vajram.facets.QualifiedInputs;
@@ -16,12 +21,6 @@ import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolverDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
-import com.flipkart.krystal.vajram.tags.AnnotationTag;
-import com.flipkart.krystal.vajram.tags.AnnotationTagKey;
-import com.flipkart.krystal.vajram.tags.AnnotationTags;
-import com.flipkart.krystal.vajram.tags.NamedValueTag;
-import com.flipkart.krystal.vajram.tags.VajramTags;
-import com.flipkart.krystal.vajram.tags.VajramTags.VajramTypes;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -32,8 +31,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -46,7 +43,8 @@ public final class VajramDefinition {
 
   @Getter private final ImmutableCollection<InputResolverDefinition> inputResolverDefinitions;
 
-  @Getter private final ImmutableMap<AnnotationTagKey, Tag> outputLogicTags;
+  @Getter private final ElementTags outputLogicTags;
+  @Getter private final ElementTags vajramTags;
 
   @Getter
   @Accessors(fluent = true)
@@ -56,14 +54,23 @@ public final class VajramDefinition {
     this.vajram = vajram;
     this.inputResolverDefinitions = ImmutableList.copyOf(parseInputResolvers(vajram));
     this.outputLogicTags = parseOutputLogicTags(vajram);
+    this.vajramTags = parseVajramTags(vajram);
     this.vajramMetadata = new VajramMetadata(vajram);
+  }
+
+  private static ElementTags parseVajramTags(Vajram<?> vajram) {
+    return ElementTags.of(
+        Arrays.stream(Vajrams.getVajramSourceClass(vajram.getClass()).getAnnotations())
+            .map(a -> enrich(a, vajram))
+            .map(Tag::from)
+            .collect(toMap(Tag::tagKey, Function.identity())));
   }
 
   private static Collection<InputResolverDefinition> parseInputResolvers(Vajram<?> vajram) {
     List<InputResolverDefinition> inputResolvers =
         new ArrayList<>(vajram.getSimpleInputResolvers());
     ImmutableSet<Method> resolverMethods =
-        Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
+        Arrays.stream(Vajrams.getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
             .filter(method -> method.isAnnotationPresent(Resolve.class))
             .collect(toImmutableSet());
 
@@ -107,41 +114,49 @@ public final class VajramDefinition {
     return inputResolvers;
   }
 
-  private static ImmutableMap<AnnotationTagKey, Tag> parseOutputLogicTags(Vajram<?> vajram) {
-    Optional<Method> outputLogicMethod =
-        Arrays.stream(getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
+  private static ElementTags parseOutputLogicTags(Vajram<?> vajram) {
+    return ElementTags.of(
+        Arrays.stream(Vajrams.getVajramSourceClass(vajram.getClass()).getDeclaredMethods())
             .filter(method -> method.getAnnotation(Output.class) != null)
-            .findFirst();
-    List<AnnotationTag<Annotation>> tagWithArray =
-        outputLogicMethod
-            .map(method -> Arrays.stream(method.getAnnotations()).map(AnnotationTag::from).toList())
-            .orElse(List.of());
-    Map<AnnotationTagKey, Tag> collect =
-        tagWithArray.stream().collect(toMap(AnnotationTag::tagKey, Function.identity()));
-    outputLogicMethod.ifPresent(
-        method -> {
-          AnnotationTag<NamedValueTag> vajramTypeTag =
-              AnnotationTags.newNamedTag(
-                  VajramTags.VAJRAM_TYPE,
-                  vajram instanceof IOVajram<?>
-                      ? VajramTypes.IO_VAJRAM
-                      : VajramTypes.COMPUTE_VAJRAM);
-          collect.put(vajramTypeTag.tagKey(), vajramTypeTag);
-        });
-    AnnotationTag<NamedValueTag> vajramIdTag =
-        AnnotationTags.newNamedTag(VajramTags.VAJRAM_ID, vajram.getId().vajramId());
-    collect.put(vajramIdTag.tagKey(), vajramIdTag);
-    return ImmutableMap.copyOf(collect);
+            .findFirst()
+            .stream()
+            .flatMap(method -> Arrays.stream(method.getAnnotations()))
+            .map(Tag::from)
+            .collect(toMap(Tag::tagKey, Function.identity())));
   }
 
-  private static Class<?> getVajramSourceClass(Class<?> vajramClass) {
-    Class<?> superclass = vajramClass.getSuperclass();
-    if (Object.class.equals(superclass) || superclass == null) {
-      throw new IllegalArgumentException();
+  private static Annotation enrich(Annotation annotation, Vajram<?> vajram) {
+    if (annotation instanceof VajramDef vajramDef) {
+      if (!vajramDef.vajramId().isEmpty()) {
+        throw new IllegalArgumentException(
+            ("""
+                Custom vajramIds are not supported. \
+                Please remove the vajramId field from the VajramDef annotation on class %s. \
+                It will be auto-inferred from the class name.""")
+                .formatted(vajram.getClass()));
+      }
+      if (!vajramDef.computeDelegationType().equals(ComputeDelegationType.DEFAULT)) {
+        throw new IllegalArgumentException(
+            ("""
+                Please remove the 'computeDelegationType' field from the VajramDef annotation on class %s. \
+                It will be auto-inferred from the class hierarchy.""")
+                .formatted(vajram.getClass()));
+      }
+      annotation =
+          Annos.vajramDef(vajramDef, vajram.getId().vajramId(), getComputeDelegationType(vajram));
     }
-    if (IOVajram.class.equals(superclass) || ComputeVajram.class.equals(superclass)) {
-      return vajramClass;
+
+    return annotation;
+  }
+
+  private static ComputeDelegationType getComputeDelegationType(Vajram<?> vajram) {
+    if (vajram instanceof ComputeVajram<?>) {
+      return ComputeDelegationType.NO_DELEGATION;
+    } else if (vajram instanceof IOVajram<?>) {
+      return ComputeDelegationType.SYNC_DELEGATION;
+    } else {
+      throw new IllegalStateException(
+          "Unable infer compute delegation type of vajram %s".formatted(vajram.getClass()));
     }
-    return getVajramSourceClass(superclass);
   }
 }

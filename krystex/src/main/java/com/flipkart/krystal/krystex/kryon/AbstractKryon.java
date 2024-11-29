@@ -55,7 +55,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
         requestScopedDecoratorsSupplier.apply(
             new LogicExecutionContext(
                 kryonId,
-                outputLogicDefinition.logicTags(),
+                outputLogicDefinition.tags(),
                 dependantChain,
                 kryonDefinition.kryonDefinitionRegistry())));
     TreeSet<OutputLogicDecorator> sortedDecorators =

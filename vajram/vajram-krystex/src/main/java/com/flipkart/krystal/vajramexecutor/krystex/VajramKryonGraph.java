@@ -243,7 +243,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
             outputLogicDefinition.kryonLogicId(),
             depNameToProviderKryon,
             inputResolverCreationResult.resolverDefinitions(),
-            inputResolverCreationResult.multiResolver());
+            inputResolverCreationResult.multiResolver(),
+            vajramDefinition.getVajramTags());
     return kryonDefinition.kryonId();
   }
 
@@ -520,7 +521,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                   .putAll(failedValidations)
                   .build();
             },
-            ImmutableMap.copyOf(vajramDefinition.getOutputLogicTags()));
+            vajramDefinition.getOutputLogicTags());
     sessionScopedDecoratorConfigs
         .values()
         .forEach(outputLogic::registerSessionScopedLogicDecorator);
