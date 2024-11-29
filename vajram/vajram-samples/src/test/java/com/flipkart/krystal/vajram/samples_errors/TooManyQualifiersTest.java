@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.samples_errors;
 
-import static com.flipkart.krystal.vajram.VajramID.ofVajram;
 import static com.google.inject.Guice.createInjector;
 import static com.google.inject.name.Names.named;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -57,17 +56,18 @@ class TooManyQualifiersTest {
         KrystexVajramExecutor executor = createExecutor(vajramKryonGraph)) {
       result =
           executor.execute(
-              ofVajram(TooManyQualifiers.class),
+              vajramKryonGraph.getVajramId(TooManyQualifiers.class),
               TooManyQualifiersRequest.builder().input("i1").build());
     }
     assertThat(result)
         .failsWithin(1, SECONDS)
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(MandatoryFacetsMissingException.class)
-        .withMessageContaining(
-            "Cause: More than one @jakarta.inject.Qualifier annotations ([@jakarta.inject.Named(\"toInject\"),"
-                + " @com.flipkart.krystal.vajram.samples_errors.TooManyQualifiers$InjectionQualifier()]) found on input "
-                + "'inject' of vajram 'TooManyQualifiers'. This is not allowed");
+        .withMessageContainingAll(
+            "Cause: More than one @jakarta.inject.Qualifier annotations ([",
+            "@jakarta.inject.Named(\"toInject\")",
+            "@com.flipkart.krystal.vajram.samples_errors.TooManyQualifiers$InjectionQualifier()",
+            "]) found on input 'inject' of vajram 'TooManyQualifiers'. This is not allowed");
   }
 
   private KrystexVajramExecutor createExecutor(VajramKryonGraph vajramKryonGraph) {

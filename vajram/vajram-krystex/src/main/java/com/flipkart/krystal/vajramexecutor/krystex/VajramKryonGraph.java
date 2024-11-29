@@ -70,6 +70,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -82,6 +83,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
   private final LogicDefRegistryDecorator logicRegistryDecorator;
 
   private final Map<VajramID, VajramDefinition> vajramDefinitions = new LinkedHashMap<>();
+  private final ConcurrentHashMap<Class<? extends Vajram<?>>, VajramDefinition> vajramDataByClass =
+      new ConcurrentHashMap<>();
 
   /** These are those call graphs of a vajram where no other vajram depends on this. */
   private final Map<VajramID, KryonId> vajramExecutables = new LinkedHashMap<>();
@@ -119,7 +122,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     if (kryonId == null || vajramDefinition == null) {
       throw new IllegalArgumentException("Unable to find vajram with id %s".formatted(vajramID));
     }
-    Vajram<?> vajram = vajramDefinition.getVajram();
+    Vajram<?> vajram = vajramDefinition.vajram();
     List<OutputLogicDecoratorConfig> outputLogicDecoratorConfigList = new ArrayList<>();
     for (InputBatcherConfig inputBatcherConfig : inputBatcherConfigs) {
       Predicate<LogicExecutionContext> biFunction =
@@ -183,11 +186,14 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
    * @param vajram The vajram to be registered for future execution.
    */
   private void registerVajram(Vajram vajram) {
-    if (vajramDefinitions.containsKey(vajram.getId())) {
+    VajramDefinition vajramDefinition = new VajramDefinition(vajram);
+    VajramID vajramID = vajramDefinition.vajramId();
+    if (vajramDefinitions.containsKey(vajramID)) {
       return;
     }
-    vajramDefinitions.put(vajram.getId(), new VajramDefinition(vajram));
-    vajramIndex.add(vajram);
+    vajramDefinitions.put(vajramID, vajramDefinition);
+    vajramIndex.add(vajramDefinition);
+    vajramDataByClass.putIfAbsent(vajramDefinition.vajramDefClass(), vajramDefinition);
   }
 
   /**
@@ -231,7 +237,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
         createKryonOutputLogic(kryonId, vajramDefinition);
 
     ImmutableSet<String> inputNames =
-        vajramDefinition.getVajram().getFacetDefinitions().stream()
+        vajramDefinition.vajram().getFacetDefinitions().stream()
             .filter(vajramFacetDefinition -> vajramFacetDefinition instanceof InputDef<?>)
             .map(VajramFacetDefinition::name)
             .collect(toImmutableSet());
@@ -244,19 +250,19 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
             depNameToProviderKryon,
             inputResolverCreationResult.resolverDefinitions(),
             inputResolverCreationResult.multiResolver(),
-            vajramDefinition.getVajramTags());
+            vajramDefinition.vajramTags());
     return kryonDefinition.kryonId();
   }
 
   private InputResolverCreationResult createKryonLogicsForInputResolvers(
       VajramDefinition vajramDefinition) {
-    Vajram<?> vajram = vajramDefinition.getVajram();
-    VajramID vajramId = vajram.getId();
+    Vajram<?> vajram = vajramDefinition.vajram();
+    VajramID vajramId = vajramDefinition.vajramId();
     ImmutableCollection<VajramFacetDefinition> facetDefinitions = vajram.getFacetDefinitions();
 
     // Create kryon definitions for all input resolvers defined in this vajram
     List<InputResolverDefinition> inputResolvers =
-        new ArrayList<>(vajramDefinition.getInputResolverDefinitions());
+        new ArrayList<>(vajramDefinition.inputResolverDefinitions());
 
     ImmutableMap<ResolverDefinition, InputResolverDefinition> resolversByResolverDefs =
         inputResolvers.stream()
@@ -480,9 +486,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
 
   private OutputLogicDefinition<?> createKryonOutputLogic(
       KryonId kryonId, VajramDefinition vajramDefinition) {
-    VajramID vajramId = vajramDefinition.getVajram().getId();
+    VajramID vajramId = vajramDefinition.vajramId();
     ImmutableCollection<VajramFacetDefinition> facetDefinitions =
-        vajramDefinition.getVajram().getFacetDefinitions();
+        vajramDefinition.vajram().getFacetDefinitions();
     ImmutableSet<String> inputNames =
         facetDefinitions.stream().map(VajramFacetDefinition::name).collect(toImmutableSet());
     KryonLogicId outputLogicName = new KryonLogicId(kryonId, "%s:outputLogic".formatted(vajramId));
@@ -490,7 +496,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
 
     OutputLogicDefinition<?> outputLogic =
         logicRegistryDecorator.newOutputLogic(
-            vajramDefinition.getVajram() instanceof IOVajram<?>,
+            vajramDefinition.vajram() instanceof IOVajram<?>,
             outputLogicName,
             inputNames,
             inputsList -> {
@@ -507,7 +513,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                     }
                   });
               @SuppressWarnings("unchecked")
-              Vajram<Object> vajram = (Vajram<Object>) vajramDefinition.getVajram();
+              Vajram<Object> vajram = (Vajram<Object>) vajramDefinition.vajram();
               ImmutableMap<Facets, CompletableFuture<@Nullable Object>> validResults;
               try {
                 validResults = vajram.execute(ImmutableList.copyOf(validInputs));
@@ -521,7 +527,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                   .putAll(failedValidations)
                   .build();
             },
-            vajramDefinition.getOutputLogicTags());
+            vajramDefinition.outputLogicTags());
     sessionScopedDecoratorConfigs
         .values()
         .forEach(outputLogic::registerSessionScopedLogicDecorator);
@@ -555,7 +561,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       VajramDefinition vajramDefinition) {
     List<DependencyDef<?>> dependencies = new ArrayList<>();
     for (VajramFacetDefinition vajramFacetDefinition :
-        vajramDefinition.getVajram().getFacetDefinitions()) {
+        vajramDefinition.vajram().getFacetDefinitions()) {
       if (vajramFacetDefinition instanceof DependencyDef<?> definition) {
         dependencies.add(definition);
       }
@@ -572,15 +578,15 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
             "Unable to find vajrams for accessSpecs %s"
                 .formatted(accessSpecMatchingResult.unsuccessfulMatches()));
       }
-      ImmutableMap<DataAccessSpec, Vajram> dependencyVajrams =
+      ImmutableMap<DataAccessSpec, VajramDefinition> dependencyVajrams =
           accessSpecMatchingResult.successfulMatches();
       if (dependencyVajrams.size() > 1) {
         throw new UnsupportedOperationException("");
       }
-      Vajram dependencyVajram = dependencyVajrams.values().iterator().next();
+      VajramDefinition dependencyVajram = dependencyVajrams.values().iterator().next();
 
       depNameToProviderKryon.put(
-          dependencyName, _getVajramExecutionGraph(dependencyVajram.getId()));
+          dependencyName, _getVajramExecutionGraph(dependencyVajram.vajramId()));
     }
     return ImmutableMap.copyOf(depNameToProviderKryon);
   }
@@ -590,6 +596,15 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
 
   public Optional<VajramDefinition> getVajramDefinition(VajramID vajramId) {
     return Optional.ofNullable(vajramDefinitions.get(vajramId));
+  }
+
+  public VajramID getVajramId(Class<? extends Vajram<?>> vajramDefClass) {
+    VajramDefinition vajramDefinition = vajramDataByClass.get(vajramDefClass);
+    if (vajramDefinition == null) {
+      throw new IllegalArgumentException(
+          "Could not find vajram definition for class %s".formatted(vajramDefClass));
+    }
+    return vajramDefinition.vajramId();
   }
 
   public static Builder builder() {

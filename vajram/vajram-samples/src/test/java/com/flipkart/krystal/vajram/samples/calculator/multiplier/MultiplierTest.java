@@ -1,7 +1,5 @@
 package com.flipkart.krystal.vajram.samples.calculator.multiplier;
 
-import static com.flipkart.krystal.vajram.VajramID.ofVajram;
-
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
@@ -53,7 +51,7 @@ class MultiplierTest {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              ofVajram(Multiplier.class),
+              graph.getVajramId(Multiplier.class),
               MultiplierRequest.builder().numberOne(3).numberTwo(9).build());
     }
     Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(27);

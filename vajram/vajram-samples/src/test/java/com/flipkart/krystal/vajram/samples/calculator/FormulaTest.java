@@ -1,7 +1,5 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
-import static com.flipkart.krystal.vajram.VajramID.vajramID;
-import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.FAIL_ADDER_FLAG;
@@ -83,7 +81,7 @@ class FormulaTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
-        vajramID(getVajramIdString(Adder.class)),
+        graph.getVajramId(Adder.class),
         InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
     try (KrystexVajramExecutor krystexVajramExecutor =
@@ -93,7 +91,7 @@ class FormulaTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
                 .build())) {
-      future = executeVajram(krystexVajramExecutor, 0, requestContext);
+      future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(4);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
@@ -104,7 +102,7 @@ class FormulaTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
-        vajramID(getVajramIdString(Adder.class)),
+        graph.getVajramId(Adder.class),
         InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
     KrystexVajramExecutorConfig vajramExecutorConfig =
         KrystexVajramExecutorConfig.builder()
@@ -121,7 +119,7 @@ class FormulaTest {
                 .withMock(
                     AdderRequest.builder().numberOne(0).numberTwo(0).build(), Errable.withValue(0))
                 .buildConfig())) {
-      future = executeVajram(krystexVajramExecutor, 0, requestContext);
+      future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future)
         .failsWithin(ofSeconds(1))
@@ -135,7 +133,7 @@ class FormulaTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
-        vajramID(getVajramIdString(Adder.class)),
+        graph.getVajramId(Adder.class),
         InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
     try (KrystexVajramExecutor krystexVajramExecutor =
@@ -146,7 +144,7 @@ class FormulaTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
                 .build())) {
-      future = executeVajram(krystexVajramExecutor, 0, requestContext);
+      future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future)
         .failsWithin(1, SECONDS)
@@ -187,7 +185,7 @@ class FormulaTest {
         metrics[value] =
             ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor()).getKryonMetrics();
         long enqueueStart = System.nanoTime();
-        futures[value] = executeVajram(krystexVajramExecutor, value, requestContext);
+        futures[value] = executeVajram(graph, krystexVajramExecutor, value, requestContext);
         timeToEnqueueVajram += System.nanoTime() - enqueueStart;
       }
     }
@@ -261,7 +259,7 @@ class FormulaTest {
             //    .maxParallelismPerCore(1)
             .build();
     graph.registerInputBatchers(
-        vajramID(getVajramIdString(Adder.class)),
+        graph.getVajramId((Adder.class)),
         InputBatcherConfig.simple(() -> new InputBatcherImpl<>(innerLoopCount)));
     long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
     long javaFuturesTimeNs = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
@@ -288,7 +286,7 @@ class FormulaTest {
           int iterationNum = outer_i * innerLoopCount + inner_i;
           long enqueueStart = System.nanoTime();
           futures[iterationNum] =
-              executeVajram(krystexVajramExecutor, iterationNum, requestContext);
+              executeVajram(graph, krystexVajramExecutor, iterationNum, requestContext);
           timeToEnqueueVajram += System.nanoTime() - enqueueStart;
         }
       }
@@ -352,9 +350,12 @@ class FormulaTest {
   }
 
   private static CompletableFuture<Integer> executeVajram(
-      KrystexVajramExecutor krystexVajramExecutor, int value, FormulaRequestContext rc) {
+      VajramKryonGraph graph,
+      KrystexVajramExecutor krystexVajramExecutor,
+      int value,
+      FormulaRequestContext rc) {
     return krystexVajramExecutor.execute(
-        vajramID(getVajramIdString(Formula.class)),
+        graph.getVajramId((Formula.class)),
         FormulaRequest.builder().a(rc.a + value).p(rc.p + value).q(rc.q + value).build(),
         KryonExecutionConfig.builder().executionId("formulaTest" + value).build());
   }
@@ -386,7 +387,7 @@ class FormulaTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
-        vajramID(getVajramIdString(Adder.class)),
+        graph.getVajramId(Adder.class),
         InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
     KrystexVajramExecutorConfig executorConfigBuilder =
         KrystexVajramExecutorConfig.builder()
@@ -405,7 +406,7 @@ class FormulaTest {
                     DividerRequest.builder().numerator(100).denominator(25).build(),
                     Errable.withValue(4))
                 .buildConfig())) {
-      future = executeVajram(krystexVajramExecutor, 0, requestContext);
+      future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future.get()).isEqualTo(4);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(0);
@@ -416,7 +417,7 @@ class FormulaTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
-        vajramID(getVajramIdString(Adder.class)),
+        graph.getVajramId(Adder.class),
         InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
     KrystexVajramExecutorConfig kryonExecutorConfigBuilder =
         KrystexVajramExecutorConfig.builder()
@@ -435,7 +436,7 @@ class FormulaTest {
                     AdderRequest.builder().numberOne(20).numberTwo(5).build(),
                     Errable.withValue(25))
                 .buildConfig())) {
-      future = executeVajram(krystexVajramExecutor, 0, requestContext);
+      future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future.get()).isEqualTo(4);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(0);
@@ -446,7 +447,7 @@ class FormulaTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
-        vajramID(getVajramIdString(Adder.class)),
+        graph.getVajramId((Adder.class)),
         InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
     KrystexVajramExecutorConfig executorConfig =
         KrystexVajramExecutorConfig.builder()
@@ -465,7 +466,7 @@ class FormulaTest {
                     DividerRequest.builder().numerator(100).denominator(25).build(),
                     Errable.withValue(4))
                 .buildConfig())) {
-      future = executeVajram(krystexVajramExecutor, 0, requestContext);
+      future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future.get()).isEqualTo(4);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);

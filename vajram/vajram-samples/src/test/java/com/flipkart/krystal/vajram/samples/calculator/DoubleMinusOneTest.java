@@ -1,7 +1,5 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
-import static com.flipkart.krystal.vajram.VajramID.ofVajram;
-
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
@@ -55,7 +53,7 @@ class DoubleMinusOneTest {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              ofVajram(DoubleMinusOne.class),
+              graph.getVajramId(DoubleMinusOne.class),
               DoubleMinusOneRequest.builder().numbers(List.of(1, 2, 3)).build());
     }
     Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(11);

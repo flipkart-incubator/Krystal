@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.das;
 
-import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.exec.VajramDefinition;
 
 public final class GraphQlIndex implements AccessSpecIndex<GraphQl> {
 
@@ -11,7 +11,7 @@ public final class GraphQlIndex implements AccessSpecIndex<GraphQl> {
   }
 
   @Override
-  public void add(Vajram vajram) {
+  public void add(VajramDefinition vajram) {
     // TODO Implement vajram addition
   }
 }

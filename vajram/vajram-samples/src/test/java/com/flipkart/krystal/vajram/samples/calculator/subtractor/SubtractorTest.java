@@ -1,7 +1,5 @@
 package com.flipkart.krystal.vajram.samples.calculator.subtractor;
 
-import static com.flipkart.krystal.vajram.VajramID.ofVajram;
-
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
@@ -53,7 +51,7 @@ class SubtractorTest {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              ofVajram(Subtractor.class),
+              graph.getVajramId(Subtractor.class),
               SubtractorRequest.builder().numberOne(5).numberTwo(7).build());
     }
     Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(-2);
