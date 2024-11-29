@@ -105,7 +105,7 @@ public record InputBatcherConfig(
         if (vajramDef.isPresent()) {
           return generateInstanceId(defaultDependantChain.dependantChain(), kryonDefinitionRegistry)
               .append('>')
-              .append(vajramDef.get().vajramId())
+              .append(vajramDef.get().id())
               .append(':')
               .append(defaultDependantChain.dependencyName());
         } else {

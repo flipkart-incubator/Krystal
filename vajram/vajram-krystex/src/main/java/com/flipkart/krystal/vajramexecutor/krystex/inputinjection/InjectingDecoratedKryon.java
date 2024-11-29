@@ -85,8 +85,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
     Set<String> newInputsNames = new LinkedHashSet<>(forwardBatch.inputNames());
     ImmutableMap.Builder<RequestId, Facets> newRequests = ImmutableMap.builder();
     Set<InputDef<?>> injectableFacetDefs = new LinkedHashSet<>();
-    for (VajramFacetDefinition facetDefinition :
-        vajramDefinition.getVajram().getFacetDefinitions()) {
+    for (VajramFacetDefinition facetDefinition : vajramDefinition.vajram().getFacetDefinitions()) {
       if (facetDefinition instanceof InputDef<?> inputDef
           && inputDef.sources().contains(InputSource.SESSION)) {
         injectableFacetDefs.add(inputDef);
@@ -128,7 +127,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
         // Input was not resolved by calling vajram.
         Errable<Object> value =
             injectedValues.computeIfAbsent(
-                inputName, _i -> getInjectedValue(vajramDefinition.getVajram().getId(), inputDef));
+                inputName, _i -> getInjectedValue(vajramDefinition.vajramId(), inputDef));
         newValues.put(inputName, value);
       }
     }

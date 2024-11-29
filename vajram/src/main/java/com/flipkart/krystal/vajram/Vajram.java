@@ -66,8 +66,6 @@ public sealed interface Vajram<T> permits AbstractVajram {
     return executeFanoutWith(ImmutableList.of());
   }
 
-  VajramID getId();
-
   ImmutableCollection<VajramFacetDefinition> getFacetDefinitions();
 
   ImmutableMap<Facets, CompletableFuture<@Nullable T>> execute(ImmutableList<Facets> inputs);

@@ -2,8 +2,6 @@ package com.flipkart.krystal.vajram.samples.greeting;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.flipkart.krystal.data.Errable.withValue;
-import static com.flipkart.krystal.vajram.VajramID.vajramID;
-import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.google.inject.Guice.createInjector;
 import static java.lang.System.*;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -154,7 +152,7 @@ class GreetingTest {
                                                 mainLogicExecReporter.decoratorType(),
                                             decoratorContext -> mainLogicExecReporter)))))
                     .build())) {
-      future = executeVajram(krystexVajramExecutor, requestContext);
+      future = executeVajram(vajramKryonGraph, krystexVajramExecutor, requestContext);
     }
     assertThat(future)
         .succeedsWithin(1, SECONDS)
@@ -183,9 +181,9 @@ class GreetingTest {
   public record RequestContext(String requestId, String userId) {}
 
   private static CompletableFuture<String> executeVajram(
-      KrystexVajramExecutor krystexVajramExecutor, RequestContext rc) {
+      VajramKryonGraph graph, KrystexVajramExecutor krystexVajramExecutor, RequestContext rc) {
     return krystexVajramExecutor.execute(
-        vajramID(getVajramIdString(Greeting.class)),
+        graph.getVajramId((Greeting.class)),
         GreetingRequest.builder().userId(rc.userId).build(),
         KryonExecutionConfig.builder().executionId("req_1").build());
   }
@@ -213,7 +211,7 @@ class GreetingTest {
                         UserServiceRequest.builder().userId(USER_ID).build(),
                         withValue(new UserInfo(USER_ID, USER_NAME)))
                     .buildConfig())) {
-      future = executeVajram(krystexVajramExecutor, requestContext);
+      future = executeVajram(vajramKryonGraph, krystexVajramExecutor, requestContext);
     }
     assertThat(future).succeedsWithin(TIMEOUT).asInstanceOf(STRING).contains(USER_NAME);
   }
@@ -241,7 +239,7 @@ class GreetingTest {
                         UserServiceRequest.builder().userId(USER_ID).build(),
                         Errable.withError(new IOException("Request Timeout")))
                     .buildConfig())) {
-      future = executeVajram(krystexVajramExecutor, requestContext);
+      future = executeVajram(vajramKryonGraph, krystexVajramExecutor, requestContext);
     }
     assertThat(future).succeedsWithin(TIMEOUT).asInstanceOf(STRING).doesNotContain(USER_NAME);
   }

@@ -1,18 +1,18 @@
 package com.flipkart.krystal.vajram.das;
 
-import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.HashMap;
 import java.util.Map;
 
 public final class VajramIDIndex implements AccessSpecIndex<VajramID> {
-  private final Map<VajramID, Vajram> vajrams = new HashMap<>();
+  private final Map<VajramID, VajramDefinition> vajrams = new HashMap<>();
 
   @Override
   public AccessSpecMatchingResult<VajramID> getVajrams(VajramID vajramID) {
-    Vajram matchingVajram = vajrams.get(vajramID);
+    VajramDefinition matchingVajram = vajrams.get(vajramID);
     if (matchingVajram == null) {
       return new AccessSpecMatchingResult<>(
           ImmutableMap.of(), ImmutableMap.of(), ImmutableSet.of(vajramID));
@@ -23,7 +23,7 @@ public final class VajramIDIndex implements AccessSpecIndex<VajramID> {
   }
 
   @Override
-  public void add(Vajram vajram) {
-    vajrams.put(vajram.getId(), vajram);
+  public void add(VajramDefinition vajramDefinition) {
+    vajrams.put(vajramDefinition.vajramId(), vajramDefinition);
   }
 }

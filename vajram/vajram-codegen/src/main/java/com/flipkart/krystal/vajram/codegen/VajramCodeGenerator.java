@@ -72,7 +72,6 @@ import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
-import com.flipkart.krystal.vajram.Vajrams;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajram.batching.FacetsConverter;
 import com.flipkart.krystal.vajram.batching.UnBatchedFacets;
@@ -1091,7 +1090,7 @@ public class VajramCodeGenerator {
           }
           inputDefBuilder.add(
               ".tags($T.parseFacetTags($L.get($S)))",
-              Vajrams.class,
+              VajramFacetDefinition.class,
               FACETS_FIELDS_VAR,
               facetGenModel.name());
           inputDefBuilder.add(".build()");

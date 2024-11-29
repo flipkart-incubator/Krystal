@@ -1,9 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator.adder;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
-import static com.flipkart.krystal.vajram.VajramID.ofVajram;
-import static com.flipkart.krystal.vajram.VajramID.vajramID;
-import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
@@ -93,7 +90,7 @@ class ChainAdderTest {
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
     MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(kryonExecutionReport);
     graph.registerInputBatchers(
-        vajramID(getVajramIdString(Adder.class)),
+        graph.getVajramId(Adder.class),
         InputBatcherConfig.sharedBatcher(
             () -> new InputBatcherImpl<>(100), "adderBatcher", getBatchedDepChains()));
     try (KrystexVajramExecutor krystexVajramExecutor =
@@ -130,7 +127,7 @@ class ChainAdderTest {
         graph.createExecutor(configBuilder().build())) {
       future =
           krystexVajramExecutor.execute(
-              ofVajram(ChainAdder.class),
+              graph.getVajramId(ChainAdder.class),
               ChainAdderRequest.builder().numbers(List.of()).build(),
               KryonExecutionConfig.builder()
                   .disabledDependantChains(getDisabledDependantChains(graph))
@@ -152,7 +149,7 @@ class ChainAdderTest {
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
     graph.registerInputBatchers(
-        vajramID(getVajramIdString(Adder.class)),
+        graph.getVajramId(Adder.class),
         InputBatcherConfig.sharedBatcher(
             () -> new InputBatcherImpl<>(100), "adderBatcher", getBatchedDepChains()));
     for (int value = 0; value < loopCount; value++) {
@@ -221,7 +218,7 @@ class ChainAdderTest {
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
     graph.registerInputBatchers(
-        vajramID(getVajramIdString(Adder.class)),
+        graph.getVajramId(Adder.class),
         InputBatcherConfig.sharedBatcher(
             () -> new InputBatcherImpl<>(100), "adderBatcher", getBatchedDepChains()));
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
@@ -288,7 +285,7 @@ class ChainAdderTest {
   private CompletableFuture<Integer> executeVajram(
       KrystexVajramExecutor krystexVajramExecutor, int multiplier) {
     return krystexVajramExecutor.execute(
-        vajramID(getVajramIdString(ChainAdder.class)),
+        graph.getVajramId(ChainAdder.class),
         ChainAdderRequest.builder()
             .numbers(
                 new ArrayList<>(
@@ -358,7 +355,7 @@ class ChainAdderTest {
   private static ImmutableSet<DependantChain> getDisabledDependantChains(VajramKryonGraph graph) {
     return ImmutableSet.of(
         graph.computeDependantChain(
-            getVajramIdString(ChainAdder.class),
+            graph.getVajramId(ChainAdder.class).vajramId(),
             chainSum_n,
             chainSum_n,
             chainSum_n,
@@ -371,7 +368,7 @@ class ChainAdderTest {
   }
 
   private DependantChain[] getBatchedDepChains() {
-    String chainAdderId = getVajramIdString(ChainAdder.class);
+    String chainAdderId = graph.getVajramId(ChainAdder.class).vajramId();
     return new DependantChain[] {
       graph.computeDependantChain(chainAdderId, sum_n),
       graph.computeDependantChain(chainAdderId, chainSum_n, sum_n),

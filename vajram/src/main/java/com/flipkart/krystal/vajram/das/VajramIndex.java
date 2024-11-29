@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.das;
 
-import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.HashMap;
@@ -41,7 +41,7 @@ public final class VajramIndex {
                 ImmutableMap.of(), ImmutableMap.of(), ImmutableList.of(accessSpec)));
   }
 
-  public void add(Vajram vajram) {
-    accessSpecIndices.values().forEach(accessSpecIndex -> accessSpecIndex.add(vajram));
+  public void add(VajramDefinition vajramDefinition) {
+    accessSpecIndices.values().forEach(accessSpecIndex -> accessSpecIndex.add(vajramDefinition));
   }
 }

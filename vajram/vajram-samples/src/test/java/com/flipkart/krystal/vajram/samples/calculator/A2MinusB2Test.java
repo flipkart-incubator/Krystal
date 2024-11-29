@@ -1,7 +1,5 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
-import static com.flipkart.krystal.vajram.VajramID.vajramID;
-import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -56,15 +54,16 @@ class A2MinusB2Test {
                     KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
                 .requestId(REQUEST_ID)
                 .build())) {
-      future = executeVajram(krystexVajramExecutor, A2MinusB2Request.builder().a(3).b(2).build());
+      future =
+          executeVajram(graph, krystexVajramExecutor, A2MinusB2Request.builder().a(3).b(2).build());
     }
     assertThat(future).succeedsWithin(1, HOURS).isEqualTo(2);
   }
 
   private static CompletableFuture<Integer> executeVajram(
-      KrystexVajramExecutor krystexVajramExecutor, A2MinusB2Request req) {
+      VajramKryonGraph graph, KrystexVajramExecutor krystexVajramExecutor, A2MinusB2Request req) {
     return krystexVajramExecutor.execute(
-        vajramID(getVajramIdString(A2MinusB2.class)),
+        graph.getVajramId(A2MinusB2.class),
         req,
         KryonExecutionConfig.builder().executionId("1").build());
   }
