@@ -6,6 +6,7 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStr
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.GRANULAR;
+import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Collections.emptySet;
 import static java.util.concurrent.CompletableFuture.runAsync;
@@ -499,7 +500,7 @@ class KryonExecutorTest {
                     .entrySet()
                     .stream()
                     .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture())),
-            ImmutableMap.of());
+            emptyTags());
 
     logicDefinitionRegistry.addOutputLogic(def);
     return def;
@@ -514,7 +515,7 @@ class KryonExecutorTest {
             inputsList ->
                 inputsList.stream().collect(toImmutableMap(identity(), logic)).entrySet().stream()
                     .collect(toImmutableMap(Entry::getKey, Entry::getValue)),
-            ImmutableMap.of());
+            emptyTags());
 
     logicDefinitionRegistry.addOutputLogic(def);
     return def;

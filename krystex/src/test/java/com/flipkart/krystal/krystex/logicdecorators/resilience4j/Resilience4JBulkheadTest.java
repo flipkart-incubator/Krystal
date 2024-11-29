@@ -2,6 +2,7 @@ package com.flipkart.krystal.krystex.logicdecorators.resilience4j;
 
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.GRANULAR;
+import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
@@ -236,7 +237,7 @@ class Resilience4JBulkheadTest {
             inputsList ->
                 inputsList.stream()
                     .collect(ImmutableMap.toImmutableMap(Function.identity(), logic)),
-            ImmutableMap.of());
+            emptyTags());
     logicDefinitionRegistry.addOutputLogic(def);
     return def;
   }

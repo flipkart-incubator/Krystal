@@ -8,7 +8,6 @@ import com.flipkart.krystal.pooling.PartitionedPool.PooledObject;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.UnmodifiableIterator;
 import java.util.ArrayList;
-import java.util.Iterator;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;

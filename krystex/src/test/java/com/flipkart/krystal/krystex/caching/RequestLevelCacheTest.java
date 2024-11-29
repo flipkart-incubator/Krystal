@@ -5,6 +5,7 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStr
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.GRANULAR;
+import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Collections.emptySet;
 import static java.util.function.Function.identity;
@@ -29,7 +30,6 @@ import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.google.common.collect.ImmutableMap;
 import java.time.Duration;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -200,7 +200,7 @@ class RequestLevelCacheTest {
                     .entrySet()
                     .stream()
                     .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture())),
-            ImmutableMap.of());
+            emptyTags());
 
     logicDefinitionRegistry.addOutputLogic(def);
     return def;

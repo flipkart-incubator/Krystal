@@ -5,10 +5,9 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStr
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.GRANULAR;
+import static com.flipkart.krystal.vajram.ComputeDelegationType.SYNC_DELEGATION;
 import static com.flipkart.krystal.vajram.VajramID.ofVajram;
 import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
-import static com.flipkart.krystal.vajram.tags.AnnotationTags.getAnnotationByType;
-import static com.flipkart.krystal.vajram.tags.AnnotationTags.getNamedValueTag;
 import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,7 +19,6 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
@@ -44,12 +42,8 @@ import com.flipkart.krystal.krystex.logicdecorators.resilience4j.Resilience4JCir
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.MandatoryFacetsMissingException;
+import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
-import com.flipkart.krystal.vajram.tags.NamedValueTag;
-import com.flipkart.krystal.vajram.tags.Service;
-import com.flipkart.krystal.vajram.tags.ServiceApi;
-import com.flipkart.krystal.vajram.tags.VajramTags;
-import com.flipkart.krystal.vajram.tags.VajramTags.VajramTypes;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService;
@@ -901,31 +895,23 @@ class KrystexVajramExecutorTest {
 
     Predicate<LogicExecutionContext> isIOVajram =
         (context) -> {
-          return getNamedValueTag(VajramTags.VAJRAM_TYPE, context.logicTags())
-              .map(namedValueTag -> VajramTypes.IO_VAJRAM.equals(namedValueTag.value()))
+          return context
+              .kryonDefinitionRegistry()
+              .get(context.kryonId())
+              .tags()
+              .getAnnotationByType(VajramDef.class)
+              .map(v -> v.computeDelegationType() == SYNC_DELEGATION)
               .orElse(false);
         };
     Function<LogicExecutionContext, String> instanceIdCreator =
         context -> {
-          ImmutableMap<Object, Tag> logicTags = context.logicTags();
-          Optional<Service> service = getAnnotationByType(Service.class, logicTags);
-          String instanceId;
-          if (service.isEmpty()) {
-            Optional<NamedValueTag> namedValueTag =
-                getNamedValueTag(VajramTags.VAJRAM_ID, logicTags);
-            if (namedValueTag.isEmpty()) {
-              throw new IllegalStateException("Missing vajramId tag");
-            }
-            instanceId = namedValueTag.get().value();
-          } else {
-            String serviceApi =
-                getAnnotationByType(ServiceApi.class, logicTags)
-                    .map(ServiceApi::service)
-                    .map(s -> "." + s)
-                    .orElse("");
-            instanceId = service.get().value() + serviceApi;
-          }
-          return instanceId;
+          return context
+              .kryonDefinitionRegistry()
+              .get(context.kryonId())
+              .tags()
+              .getAnnotationByType(VajramDef.class)
+              .map(VajramDef::vajramId)
+              .orElseThrow(() -> new IllegalStateException("Missing VajramDef annotation"));
         };
     return builder
         .decorateOutputLogicForSession(
