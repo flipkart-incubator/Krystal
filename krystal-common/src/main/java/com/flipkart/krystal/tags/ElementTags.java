@@ -6,6 +6,7 @@ import java.lang.annotation.Annotation;
 import java.lang.annotation.Repeatable;
 import java.lang.reflect.AnnotatedElement;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,10 +45,16 @@ public final class ElementTags {
   }
 
   public static ElementTags of(Annotation... tags) {
+    if (tags.length == 0) {
+      return emptyTags();
+    }
     return new ElementTags(Arrays.asList(tags));
   }
 
-  public static ElementTags of(Iterable<Annotation> tags) {
+  public static ElementTags of(Collection<Annotation> tags) {
+    if (tags.isEmpty()) {
+      return emptyTags();
+    }
     return new ElementTags(tags);
   }
 

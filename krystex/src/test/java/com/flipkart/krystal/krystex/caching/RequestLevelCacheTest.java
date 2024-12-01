@@ -12,7 +12,6 @@ import static java.util.Collections.emptySet;
 import static java.util.function.Function.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flipkart.krystal.annos.ExternalInvocation.ExternalInvocations;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.data.Facets;

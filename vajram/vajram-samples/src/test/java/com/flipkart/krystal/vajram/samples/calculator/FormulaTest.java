@@ -53,9 +53,7 @@ class FormulaTest {
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL =
-        new SingleThreadExecutorsPool(
-            "Test", Runtime.getRuntime().availableProcessors());
+    EXEC_POOL = new SingleThreadExecutorsPool("Test", Runtime.getRuntime().availableProcessors());
   }
 
   private VajramKryonGraphBuilder graph;

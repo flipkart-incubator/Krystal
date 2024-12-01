@@ -1,7 +1,5 @@
 package com.flipkart.krystal.krystex.kryon;
 
-import static com.flipkart.krystal.tags.ElementTags.emptyTags;
-
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.flipkart.krystal.tags.ElementTags;
@@ -33,20 +31,6 @@ public final class KryonDefinitionRegistry {
       throw new IllegalArgumentException("No Kryon with id %s found".formatted(kryonId));
     }
     return kryon;
-  }
-
-  public KryonDefinition newKryonDefinition(
-      String kryonId, Set<String> inputs, KryonLogicId outputLogicId) {
-    return newKryonDefinition(kryonId, inputs, outputLogicId, ImmutableMap.of());
-  }
-
-  public KryonDefinition newKryonDefinition(
-      String kryonId,
-      Set<String> inputs,
-      KryonLogicId outputLogicId,
-      ImmutableMap<String, KryonId> dependencyKryons) {
-    return newKryonDefinition(
-        kryonId, inputs, outputLogicId, dependencyKryons, ImmutableList.of(), null, emptyTags());
   }
 
   public KryonDefinition newKryonDefinition(
