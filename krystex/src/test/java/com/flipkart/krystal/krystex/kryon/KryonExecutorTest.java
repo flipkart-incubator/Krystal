@@ -231,7 +231,7 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             ImmutableList.of(),
             null,
-            ElementTags.of(externalInvocation(true)));
+            emptyTags());
 
     KryonDefinition n2 =
         kryonDefinitionRegistry.newKryonDefinition(
