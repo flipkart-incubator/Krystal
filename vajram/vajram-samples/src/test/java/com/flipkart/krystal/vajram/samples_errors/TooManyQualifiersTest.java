@@ -15,7 +15,7 @@ import com.flipkart.krystal.vajram.guice.VajramGuiceInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -31,17 +31,16 @@ class TooManyQualifiersTest {
   static void beforeAll() {
     EXEC_POOL =
         new SingleThreadExecutorsPool(
-            "RequestLevelCacheTest", Runtime.getRuntime().availableProcessors());
+            "Test", Runtime.getRuntime().availableProcessors());
   }
 
-  private Builder graph;
+  private VajramKryonGraphBuilder graph;
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
     this.executorLease = EXEC_POOL.lease();
-    graph =
-        new VajramKryonGraph.Builder().loadFromPackage(TooManyQualifiers.class.getPackageName());
+    graph = VajramKryonGraph.builder().loadFromPackage(TooManyQualifiers.class.getPackageName());
   }
 
   @AfterEach

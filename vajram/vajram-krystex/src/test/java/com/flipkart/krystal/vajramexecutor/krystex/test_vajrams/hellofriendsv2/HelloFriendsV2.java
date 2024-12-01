@@ -10,6 +10,7 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofrie
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.userId_n;
 import static java.util.stream.Collectors.joining;
 
+import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.vajram.ComputeVajram;
@@ -36,6 +37,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+@ExternalInvocation(allow = true)
 @VajramDef
 public abstract class HelloFriendsV2 extends ComputeVajram<String> {
   static class _Facets {

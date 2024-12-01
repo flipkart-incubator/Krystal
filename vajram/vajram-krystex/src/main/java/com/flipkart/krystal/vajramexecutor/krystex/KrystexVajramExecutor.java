@@ -44,7 +44,7 @@ public class KrystexVajramExecutor implements VajramExecutor {
     }
     this.krystalExecutor =
         new KryonExecutor(
-            vajramKryonGraph.getKryonDefinitionRegistry(),
+            vajramKryonGraph.kryonDefinitionRegistry(),
             executorConfig.kryonExecutorConfigBuilder().build(),
             executorConfig.requestId());
   }

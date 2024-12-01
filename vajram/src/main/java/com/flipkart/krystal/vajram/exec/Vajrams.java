@@ -3,10 +3,8 @@ package com.flipkart.krystal.vajram.exec;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static java.util.stream.Collectors.toMap;
 
 import com.flipkart.krystal.tags.ElementTags;
-import com.flipkart.krystal.tags.Tag;
 import com.flipkart.krystal.vajram.Annos;
 import com.flipkart.krystal.vajram.ComputeDelegationType;
 import com.flipkart.krystal.vajram.ComputeVajram;
@@ -61,8 +59,7 @@ final class Vajrams {
     return ElementTags.of(
         Arrays.stream(getVajramDefClass(vajram.getClass()).getAnnotations())
             .map(a -> enrich(a, inferredVajramId, vajram))
-            .map(Tag::from)
-            .collect(toMap(Tag::tagKey, Function.identity())));
+            .toList());
   }
 
   static Collection<InputResolverDefinition> parseInputResolvers(Vajram<?> vajram) {
@@ -122,8 +119,7 @@ final class Vajrams {
             .findFirst()
             .stream()
             .flatMap(method -> Arrays.stream(method.getAnnotations()))
-            .map(Tag::from)
-            .collect(toMap(Tag::tagKey, Function.identity())));
+            .toList());
   }
 
   private static Annotation enrich(

@@ -36,7 +36,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
 import com.google.common.collect.ImmutableMap;
@@ -65,10 +65,10 @@ class GreetingTest {
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new SingleThreadExecutorsPool("RequestLevelCacheTest", 4);
+    EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
-  private Builder graph;
+  private VajramKryonGraphBuilder graph;
   private ObjectMapper objectMapper;
   private static final String USER_ID = "user@123";
   private static final String USER_NAME = "Ranchhoddas Shyamakdas Chanchhad";
@@ -97,7 +97,7 @@ class GreetingTest {
                 .add(RequestLevelCache.DECORATOR_TYPE)
                 .add(KryonInputInjector.DECORATOR_TYPE)
                 .build());
-    graph = new VajramKryonGraph.Builder().loadFromPackage(PACKAGE_PATH);
+    graph = VajramKryonGraph.builder().loadFromPackage(PACKAGE_PATH);
 
     objectMapper =
         new ObjectMapper()

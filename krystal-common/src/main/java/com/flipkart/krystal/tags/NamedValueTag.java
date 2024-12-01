@@ -17,8 +17,6 @@ import java.lang.annotation.Target;
  *
  * <p>An instance of this annotation can be created using the {@link
  * ElementTags#namedValueTag(String, String)} method.
- *
- * @see Tag
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({}) // Not supported in source code. Use custom annotations instead

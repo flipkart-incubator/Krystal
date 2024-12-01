@@ -72,10 +72,13 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.experimental.Accessors;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** The execution graph encompassing all registered vajrams. */
+@Accessors(fluent = true)
 public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajramExecutorConfig> {
 
   @Getter private final KryonDefinitionRegistry kryonDefinitionRegistry;
@@ -94,10 +97,11 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
   /** LogicDecorator Id -> LogicDecoratorConfig */
   private final ImmutableMap<String, OutputLogicDecoratorConfig> sessionScopedDecoratorConfigs;
 
+  @Builder
   private VajramKryonGraph(
-      String[] packagePrefixes,
-      ImmutableMap<String, OutputLogicDecoratorConfig> sessionScopedDecorators) {
-    this.sessionScopedDecoratorConfigs = sessionScopedDecorators;
+      LinkedHashSet<String> packagePrefixes,
+      Map<String, OutputLogicDecoratorConfig> sessionScopedDecoratorConfigs) {
+    this.sessionScopedDecoratorConfigs = ImmutableMap.copyOf(sessionScopedDecoratorConfigs);
     LogicDefinitionRegistry logicDefinitionRegistry = new LogicDefinitionRegistry();
     this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
     this.logicRegistryDecorator = new LogicDefRegistryDecorator(logicDefinitionRegistry);
@@ -607,21 +611,18 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     return vajramDefinition.vajramId();
   }
 
-  public static Builder builder() {
-    return new Builder();
-  }
-
-  public static final class Builder {
-    private final Set<String> packagePrefixes = new LinkedHashSet<>();
+  public static final class VajramKryonGraphBuilder {
+    private final LinkedHashSet<String> packagePrefixes = new LinkedHashSet<>();
     private final Map<String, OutputLogicDecoratorConfig> sessionScopedDecoratorConfigs =
         new HashMap<>();
 
-    public Builder loadFromPackage(String packagePrefix) {
+    public VajramKryonGraphBuilder loadFromPackage(String packagePrefix) {
       packagePrefixes.add(packagePrefix);
       return this;
     }
 
-    public Builder decorateOutputLogicForSession(OutputLogicDecoratorConfig logicDecoratorConfig) {
+    public VajramKryonGraphBuilder decorateOutputLogicForSession(
+        OutputLogicDecoratorConfig logicDecoratorConfig) {
       if (sessionScopedDecoratorConfigs.putIfAbsent(
               logicDecoratorConfig.decoratorType(), logicDecoratorConfig)
           != null) {
@@ -632,10 +633,17 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       return this;
     }
 
-    public VajramKryonGraph build() {
-      return new VajramKryonGraph(
-          packagePrefixes.toArray(String[]::new),
-          ImmutableMap.copyOf(sessionScopedDecoratorConfigs));
+    /**********************************    MAKE PRIVATE   *****************************************/
+
+    // Make this private so that client use loadFromPackage instead.
+    private VajramKryonGraphBuilder packagePrefixes(LinkedHashSet<String> packagePrefixes) {
+      return this;
+    }
+
+    // Make this private so that client use decorateOutputLogicForSession instead.
+    private VajramKryonGraphBuilder sessionScopedDecoratorConfigs(
+        ImmutableMap<String, OutputLogicDecoratorConfig> sessionScopedDecoratorConfigs) {
+      return this;
     }
   }
 }

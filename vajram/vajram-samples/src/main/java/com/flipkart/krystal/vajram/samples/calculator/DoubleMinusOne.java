@@ -9,6 +9,7 @@ import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOneFacet
 import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOneRequest.doubledNumbers_n;
 import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOneRequest.result_n;
 
+import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
@@ -31,6 +32,7 @@ import java.util.Optional;
 /**
  * Takes a list of numbers, doubles each of them, adds them up and then subtracts 1 from the sum.
  */
+@ExternalInvocation(allow = true)
 @VajramDef
 public abstract class DoubleMinusOne extends ComputeVajram<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")

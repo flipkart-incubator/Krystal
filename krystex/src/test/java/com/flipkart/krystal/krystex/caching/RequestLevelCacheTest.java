@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.caching;
 
+import static com.flipkart.krystal.annos.ExternalInvocation.ExternalInvocations.externalInvocation;
 import static com.flipkart.krystal.data.Errable.computeErrableFrom;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
@@ -11,6 +12,7 @@ import static java.util.Collections.emptySet;
 import static java.util.function.Function.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.annos.ExternalInvocation.ExternalInvocations;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.data.Facets;
@@ -30,7 +32,11 @@ import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.tags.ElementTags;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
@@ -100,7 +106,11 @@ class RequestLevelCacheTest {
                       adder.increment();
                       return "computed_value";
                     })
-                .kryonLogicId());
+                .kryonLogicId(),
+            ImmutableMap.of(),
+            ImmutableList.of(),
+            null,
+            ElementTags.of(List.of(externalInvocation(true))));
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
@@ -142,7 +152,12 @@ class RequestLevelCacheTest {
                       adder.increment();
                       return "computed_value";
                     })
-                .kryonLogicId());
+                .kryonLogicId(),
+            ImmutableMap.of(),
+            ImmutableList.of(),
+            null,
+            ElementTags.of(List.of(externalInvocation(true))));
+
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),

@@ -11,6 +11,7 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofrie
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 
+import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
@@ -27,6 +28,7 @@ import java.util.Collections;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
+@ExternalInvocation(allow = true)
 @VajramDef
 public abstract class HelloFriends extends ComputeVajram<String> {
   static class _Facets {

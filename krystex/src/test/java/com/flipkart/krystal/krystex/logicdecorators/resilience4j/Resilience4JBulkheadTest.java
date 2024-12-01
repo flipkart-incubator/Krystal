@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.logicdecorators.resilience4j;
 
+import static com.flipkart.krystal.annos.ExternalInvocation.ExternalInvocations.externalInvocation;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.GRANULAR;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
@@ -27,6 +28,8 @@ import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.tags.ElementTags;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
 import java.time.Duration;
@@ -50,7 +53,7 @@ class Resilience4JBulkheadTest {
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new SingleThreadExecutorsPool("RequestLevelCacheTest", 4);
+    EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
   private Lease<SingleThreadExecutor> executorLease;
@@ -106,10 +109,10 @@ class Resilience4JBulkheadTest {
           @Override
           public <T> Optional<T> getConfig(String key) {
             return switch (key) {
-              case "bulkhead_restrictsConcurrency.bulkhead.max_concurrency" -> (Optional<T>)
-                  Optional.of(2);
-              case "bulkhead_restrictsConcurrency.bulkhead.enabled" -> (Optional<T>)
-                  Optional.of(true);
+              case "bulkhead_restrictsConcurrency.bulkhead.max_concurrency" ->
+                  (Optional<T>) Optional.of(2);
+              case "bulkhead_restrictsConcurrency.bulkhead.enabled" ->
+                  (Optional<T>) Optional.of(true);
               default -> Optional.empty();
             };
           }
@@ -123,7 +126,13 @@ class Resilience4JBulkheadTest {
                 decoratorContext -> resilience4JBulkhead)));
     KryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newKryonDefinition(
-            "kryon", Set.of("input"), outputLogicDef.kryonLogicId());
+            "kryon",
+            Set.of("input"),
+            outputLogicDef.kryonLogicId(),
+            ImmutableMap.of(),
+            ImmutableList.of(),
+            null,
+            ElementTags.of(externalInvocation(true)));
 
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         kryonExecutor.executeKryon(
@@ -176,13 +185,12 @@ class Resilience4JBulkheadTest {
           @Override
           public <T> Optional<T> getConfig(String key) {
             return switch (key) {
-              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.max_concurrency" -> (Optional<
-                      T>)
-                  Optional.of(2);
-              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.enabled" -> (Optional<T>)
-                  Optional.of(true);
-              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.type" -> (Optional<T>)
-                  Optional.of("THREADPOOL");
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.max_concurrency" ->
+                  (Optional<T>) Optional.of(2);
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.enabled" ->
+                  (Optional<T>) Optional.of(true);
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.type" ->
+                  (Optional<T>) Optional.of("THREADPOOL");
               default -> Optional.empty();
             };
           }
@@ -196,7 +204,13 @@ class Resilience4JBulkheadTest {
                 decoratorContext -> resilience4JBulkhead)));
     KryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newKryonDefinition(
-            "kryon", Set.of("input"), outputLogic.kryonLogicId());
+            "kryon",
+            Set.of("input"),
+            outputLogic.kryonLogicId(),
+            ImmutableMap.of(),
+            ImmutableList.of(),
+            null,
+            ElementTags.of(externalInvocation(true)));
 
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         kryonExecutor.executeKryon(
