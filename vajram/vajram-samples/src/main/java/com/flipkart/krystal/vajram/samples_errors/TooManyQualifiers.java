@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.samples_errors;
 
+import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.Output;
@@ -11,6 +12,7 @@ import jakarta.inject.Qualifier;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
+@ExternalInvocation(allow = true)
 @VajramDef
 public abstract class TooManyQualifiers extends ComputeVajram<String> {
   @Retention(RetentionPolicy.RUNTIME)

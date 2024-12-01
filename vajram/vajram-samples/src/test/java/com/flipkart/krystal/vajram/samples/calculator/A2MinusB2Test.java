@@ -13,7 +13,7 @@ import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -26,10 +26,10 @@ class A2MinusB2Test {
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new SingleThreadExecutorsPool("RequestLevelCacheTest", 4);
+    EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
-  private Builder graph;
+  private VajramKryonGraphBuilder graph;
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach

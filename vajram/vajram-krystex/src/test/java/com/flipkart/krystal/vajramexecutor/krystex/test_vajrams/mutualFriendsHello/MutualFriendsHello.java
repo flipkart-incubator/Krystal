@@ -7,6 +7,7 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFri
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.skip_n;
 import static java.lang.System.lineSeparator;
 
+import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+@ExternalInvocation(allow = true)
 @VajramDef
 public abstract class MutualFriendsHello extends ComputeVajram<String> {
   static class _Facets {

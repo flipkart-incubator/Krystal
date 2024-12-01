@@ -64,14 +64,13 @@ public class VajramGuiceInjector implements VajramInjectionProvider {
 
   private Optional<Annotation> getQualifier(VajramID vajramID, InputDef<?> inputDef) {
     List<Annotation> qualifierAnnotations =
-        inputDef.tags().asCollection().stream()
+        inputDef.tags().annotations().stream()
             .<Annotation>mapMulti(
                 (tag, consumer) -> {
-                  Annotation annotation = tag.tagValue();
                   boolean isQualifierAnno =
-                      annotation.annotationType().getAnnotation(Qualifier.class) != null;
+                      tag.annotationType().getAnnotation(Qualifier.class) != null;
                   if (isQualifierAnno) {
-                    consumer.accept(tag.tagValue());
+                    consumer.accept(tag);
                   }
                 })
             .toList();

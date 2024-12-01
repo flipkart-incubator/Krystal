@@ -13,4 +13,5 @@ module flipkart.krystal.common {
   exports com.flipkart.krystal.concurrent;
   exports com.flipkart.krystal.pooling;
   exports com.flipkart.krystal.tags;
+  exports com.flipkart.krystal.annos;
 }

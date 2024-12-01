@@ -34,7 +34,7 @@ import com.flipkart.krystal.vajram.samples.calculator.Formula;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.time.Clock;
@@ -55,7 +55,7 @@ class SplitAdderTest {
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new SingleThreadExecutorsPool("RequestLevelCacheTest", 4);
+    EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
   private VajramKryonGraph graph;
@@ -333,8 +333,8 @@ class SplitAdderTest {
     return completedFuture(a + b);
   }
 
-  private static Builder loadFromClasspath(String... packagePrefixes) {
-    Builder builder = VajramKryonGraph.builder();
+  private static VajramKryonGraphBuilder loadFromClasspath(String... packagePrefixes) {
+    VajramKryonGraphBuilder builder = VajramKryonGraph.builder();
     Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
     return builder;
   }

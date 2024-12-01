@@ -35,7 +35,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
 import com.google.inject.AbstractModule;
 import java.util.concurrent.CompletableFuture;
@@ -55,10 +55,10 @@ class FormulaTest {
   static void beforeAll() {
     EXEC_POOL =
         new SingleThreadExecutorsPool(
-            "RequestLevelCacheTest", Runtime.getRuntime().availableProcessors());
+            "Test", Runtime.getRuntime().availableProcessors());
   }
 
-  private Builder graph;
+  private VajramKryonGraphBuilder graph;
   private static final String REQUEST_ID = "formulaTest";
   private final RequestLevelCache requestLevelCache = new RequestLevelCache();
 

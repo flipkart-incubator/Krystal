@@ -9,6 +9,7 @@ import static com.flipkart.krystal.vajram.samples.calculator.FormulaRequest.*;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest.*;
 import static com.flipkart.krystal.vajram.samples.calculator.divider.DividerRequest.*;
 
+import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
@@ -23,6 +24,7 @@ import com.google.common.collect.ImmutableCollection;
 import java.util.Optional;
 
 /** a/(p+q) */
+@ExternalInvocation(allow = true)
 @VajramDef
 public abstract class Formula extends ComputeVajram<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")

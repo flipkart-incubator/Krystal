@@ -14,6 +14,7 @@ import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.groupingBy;
 
+import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.KrystalExecutor;
@@ -176,8 +177,16 @@ public final class KryonExecutor implements KrystalExecutor {
     if (closed) {
       throw new RejectedExecutionException("KryonExecutor is already closed");
     }
-
     checkArgument(executionConfig != null, "executionConfig can not be null");
+    if (!kryonDefinitionRegistry
+        .get(kryonId)
+        .tags()
+        .getAnnotationByType(ExternalInvocation.class)
+        .map(ExternalInvocation::allow)
+        .orElse(false)) {
+      throw new RejectedExecutionException(
+          "External invocation is not allowed for kryonId: " + kryonId);
+    }
 
     String executionId = executionConfig.executionId();
     checkArgument(executionId != null, "executionConfig.executionId can not be null");

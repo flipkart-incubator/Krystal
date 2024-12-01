@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import static com.flipkart.krystal.annos.ExternalInvocation.ExternalInvocations.externalInvocation;
 import static com.flipkart.krystal.data.Errable.computeErrableFrom;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
@@ -31,9 +32,12 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.tags.ElementTags;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
@@ -59,7 +63,7 @@ class KryonExecutorTest {
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new SingleThreadExecutorsPool("RequestLevelCacheTest", 4);
+    EXEC_POOL = new SingleThreadExecutorsPool("KryonExecutorTest", 4);
   }
 
   private Lease<SingleThreadExecutor> executorLease;
@@ -100,7 +104,11 @@ class KryonExecutorTest {
             "kryon",
             emptySet(),
             newComputeLogic("kryonLogic", emptySet(), dependencyValues -> "computed_value")
-                .kryonLogicId());
+                .kryonLogicId(),
+            ImmutableMap.of(),
+            ImmutableList.of(),
+            null,
+            ElementTags.of(externalInvocation(true)));
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
@@ -127,7 +135,11 @@ class KryonExecutorTest {
             "kryon",
             emptySet(),
             newComputeLogic("kryonLogic", emptySet(), dependencyValues -> "computed_value")
-                .kryonLogicId());
+                .kryonLogicId(),
+            ImmutableMap.of(),
+            ImmutableList.of(),
+            null,
+            ElementTags.of(List.of(externalInvocation(true))));
 
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
@@ -153,7 +165,11 @@ class KryonExecutorTest {
             "kryon",
             emptySet(),
             newComputeLogic("kryonLogic", emptySet(), dependencyValues -> "computed_value")
-                .kryonLogicId());
+                .kryonLogicId(),
+            ImmutableMap.of(),
+            ImmutableList.of(),
+            null,
+            ElementTags.of(externalInvocation(true)));
 
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
@@ -185,7 +201,11 @@ class KryonExecutorTest {
                                     inputs.getInputValue("a").value().orElseThrow(),
                                     inputs.getInputValue("b").value().orElseThrow(),
                                     inputs.getInputValue("c").value().orElseThrow()))
-                    .kryonLogicId())
+                    .kryonLogicId(),
+                ImmutableMap.of(),
+                ImmutableList.of(),
+                null,
+                ElementTags.of(externalInvocation(true)))
             .kryonId();
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
@@ -227,7 +247,10 @@ class KryonExecutorTest {
                                 .orElseThrow()
                             + ":computed_value")
                 .kryonLogicId(),
-            ImmutableMap.of("dep", n1.kryonId()));
+            ImmutableMap.of("dep", n1.kryonId()),
+            ImmutableList.of(),
+            null,
+            ElementTags.of(externalInvocation(true)));
 
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
@@ -306,7 +329,10 @@ class KryonExecutorTest {
                             .orElseThrow()
                         + ":l4")
             .kryonLogicId(),
-        ImmutableMap.of("dep", new KryonId(l3Dep)));
+        ImmutableMap.of("dep", new KryonId(l3Dep)),
+        ImmutableList.of(),
+        null,
+        ElementTags.of(List.of(externalInvocation(true))));
 
     Facets facets = Facets.empty();
     CompletableFuture<Object> future =
@@ -329,7 +355,10 @@ class KryonExecutorTest {
                                         .orElseThrow()
                                     + ":final")
                         .kryonLogicId(),
-                    ImmutableMap.of("dep", new KryonId(l4Dep)))
+                    ImmutableMap.of("dep", new KryonId(l4Dep)),
+                    ImmutableList.of(),
+                    null,
+                    ElementTags.of(externalInvocation(true)))
                 .kryonId(),
             facets,
             KryonExecutionConfig.builder().executionId("r").build());
@@ -388,7 +417,10 @@ class KryonExecutorTest {
                                   + ":final";
                             })
                         .kryonLogicId(),
-                    ImmutableMap.of("dep1", new KryonId(dep1), "dep2", new KryonId(dep2)))
+                    ImmutableMap.of("dep1", new KryonId(dep1), "dep2", new KryonId(dep2)),
+                    ImmutableList.of(),
+                    null,
+                    ElementTags.of(externalInvocation(true)))
                 .kryonId(),
             Facets.empty(),
             KryonExecutionConfig.builder().executionId("r").build());
@@ -466,7 +498,10 @@ class KryonExecutorTest {
                               });
                     })
                 .kryonLogicId(),
-            ImmutableMap.of("dep", n1.kryonId()));
+            ImmutableMap.of("dep", n1.kryonId()),
+            ImmutableList.of(),
+            null,
+            ElementTags.of(List.of(externalInvocation(true))));
 
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(

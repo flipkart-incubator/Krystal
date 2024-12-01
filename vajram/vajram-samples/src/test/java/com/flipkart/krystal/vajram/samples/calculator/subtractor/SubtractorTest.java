@@ -22,7 +22,7 @@ class SubtractorTest {
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new SingleThreadExecutorsPool("RequestLevelCacheTest", 4);
+    EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
   private final VajramKryonGraph graph =

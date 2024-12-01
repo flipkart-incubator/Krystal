@@ -7,6 +7,7 @@ import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest.*;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderRequest.*;
 
+import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
@@ -22,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+@ExternalInvocation(allow = true)
 @VajramDef
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class ChainAdder extends ComputeVajram<Integer> {
