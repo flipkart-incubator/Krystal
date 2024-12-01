@@ -227,7 +227,11 @@ class KryonExecutorTest {
             "n1",
             emptySet(),
             newComputeLogic("n1_logic", emptySet(), dependencyValues -> "dependency_value")
-                .kryonLogicId());
+                .kryonLogicId(),
+            ImmutableMap.of(),
+            ImmutableList.of(),
+            null,
+            emptyTags());
 
     KryonDefinition n2 =
         kryonDefinitionRegistry.newKryonDefinition(
@@ -268,7 +272,11 @@ class KryonExecutorTest {
     kryonDefinitionRegistry.newKryonDefinition(
         l1Dep,
         emptySet(),
-        newComputeLogic(l1Dep, emptySet(), dependencyValues -> "l1").kryonLogicId());
+        newComputeLogic(l1Dep, emptySet(), dependencyValues -> "l1").kryonLogicId(),
+        ImmutableMap.of(),
+        ImmutableList.of(),
+        null,
+        emptyTags());
 
     String l2Dep = "requestExecution_multiLevelDependencies_level2";
     kryonDefinitionRegistry.newKryonDefinition(
@@ -288,7 +296,10 @@ class KryonExecutorTest {
                             .orElseThrow()
                         + ":l2")
             .kryonLogicId(),
-        ImmutableMap.of("dep", new KryonId(l1Dep)));
+        ImmutableMap.of("dep", new KryonId(l1Dep)),
+        ImmutableList.of(),
+        null,
+        emptyTags());
 
     String l3Dep = "requestExecution_multiLevelDependencies_level3";
     kryonDefinitionRegistry.newKryonDefinition(
@@ -309,7 +320,10 @@ class KryonExecutorTest {
                       + ":l3";
                 })
             .kryonLogicId(),
-        ImmutableMap.of("dep", new KryonId(l2Dep)));
+        ImmutableMap.of("dep", new KryonId(l2Dep)),
+        ImmutableList.of(),
+        null,
+        emptyTags());
 
     String l4Dep = "requestExecution_multiLevelDependencies_level4";
     kryonDefinitionRegistry.newKryonDefinition(
@@ -376,14 +390,22 @@ class KryonExecutorTest {
     kryonDefinitionRegistry.newKryonDefinition(
         dep1,
         emptySet(),
-        newComputeLogic(dep1, emptySet(), dependencyValues -> "l1").kryonLogicId());
+        newComputeLogic(dep1, emptySet(), dependencyValues -> "l1").kryonLogicId(),
+        ImmutableMap.of(),
+        ImmutableList.of(),
+        null,
+        emptyTags());
 
     String dep2 =
         "executeKryon_dependenciesWithReturnInstantly_executeComputeExecutedExactlyOnce_dep2";
     kryonDefinitionRegistry.newKryonDefinition(
         dep2,
         emptySet(),
-        newComputeLogic(dep2, emptySet(), dependencyValues -> "l2").kryonLogicId());
+        newComputeLogic(dep2, emptySet(), dependencyValues -> "l2").kryonLogicId(),
+        ImmutableMap.of(),
+        ImmutableList.of(),
+        null,
+        emptyTags());
 
     LongAdder numberOfExecutions = new LongAdder();
     CompletableFuture<Object> future =
@@ -447,7 +469,11 @@ class KryonExecutorTest {
                                 "shutdown_preventsNewExecutionRequests",
                                 ImmutableSet.of(),
                                 dependencyValues -> "")
-                            .kryonLogicId())
+                            .kryonLogicId(),
+                        ImmutableMap.of(),
+                        ImmutableList.of(),
+                        null,
+                        emptyTags())
                     .kryonId(),
                 Facets.empty(),
                 KryonExecutionConfig.builder().executionId("req_1").build()));
@@ -463,7 +489,11 @@ class KryonExecutorTest {
             "n1",
             emptySet(),
             newComputeLogic("n1_logic", emptySet(), dependencyValues -> "dependency_value")
-                .kryonLogicId());
+                .kryonLogicId(),
+            ImmutableMap.of(),
+            ImmutableList.of(),
+            null,
+            emptyTags());
 
     CountDownLatch countDownLatch = new CountDownLatch(1);
     KryonDefinition n2 =
