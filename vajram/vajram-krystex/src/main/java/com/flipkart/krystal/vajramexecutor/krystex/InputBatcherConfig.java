@@ -205,15 +205,15 @@ public record InputBatcherConfig(
   }
 
   private static Iterable<VajramDefinition> externallyInvocableVajrams(VajramKryonGraph graph) {
-    return graph.kryonDefinitionRegistry().kryonDefinitions().values().stream()
+    return graph.vajramDefinitions().values().stream()
         .filter(
-            k -> {
-              return k.tags()
+            v -> {
+              return v.vajramTags()
                   .getAnnotationByType(ExternalInvocation.class)
                   .map(ExternalInvocation::allow)
                   .orElse(false);
             })
-        .map(k -> graph.getVajramDefinition(vajramID(k.kryonId().value())))
+        .map(v -> graph.getVajramDefinition(v.vajramId()))
         .filter(Optional::isPresent)
         .map(Optional::get)
         .toList();
