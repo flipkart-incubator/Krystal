@@ -401,6 +401,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     if (log.isDebugEnabled())
       for (int timeout : List.of(5, 10, 15)) {
         depResponse
+            .copy()
             .orTimeout(timeout, SECONDS)
             .whenComplete(
                 (_r, throwable) -> {
