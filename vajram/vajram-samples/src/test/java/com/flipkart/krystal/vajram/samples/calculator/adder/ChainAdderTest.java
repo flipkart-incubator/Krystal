@@ -6,8 +6,9 @@ import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.add;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderRequest.chainSum_n;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderRequest.sum_n;
-import static java.time.Duration.ofSeconds;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderRequest.splitSum1_n;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderRequest.splitSum2_n;
+import static com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig.autoRegisterSharedBatchers;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -30,9 +31,7 @@ import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecution
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.samples.calculator.Formula;
-import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
@@ -89,10 +88,7 @@ class ChainAdderTest {
     CompletableFuture<Integer> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
     MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(kryonExecutionReport);
-    graph.registerInputBatchers(
-        graph.getVajramId(Adder.class),
-        InputBatcherConfig.sharedBatcher(
-            () -> new InputBatcherImpl<>(100), "adderBatcher", getBatchedDepChains()));
+    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependantChains(graph));
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
@@ -114,7 +110,7 @@ class ChainAdderTest {
 
       future = executeVajram(krystexVajramExecutor, 0);
     }
-    assertThat(future).succeedsWithin(ofSeconds(1000)).isEqualTo(55);
+    assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(55);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
     System.out.println(
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
@@ -148,10 +144,7 @@ class ChainAdderTest {
     long startTime = System.nanoTime();
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
-    graph.registerInputBatchers(
-        graph.getVajramId(Adder.class),
-        InputBatcherConfig.sharedBatcher(
-            () -> new InputBatcherImpl<>(100), "adderBatcher", getBatchedDepChains()));
+    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependantChains(graph));
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor krystexVajramExecutor =
@@ -217,10 +210,7 @@ class ChainAdderTest {
     long startTime = System.nanoTime();
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
-    graph.registerInputBatchers(
-        graph.getVajramId(Adder.class),
-        InputBatcherConfig.sharedBatcher(
-            () -> new InputBatcherImpl<>(100), "adderBatcher", getBatchedDepChains()));
+    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependantChains(graph));
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor krystexVajramExecutor =
@@ -295,7 +285,7 @@ class ChainAdderTest {
             .build(),
         KryonExecutionConfig.builder()
             .executionId(String.valueOf(multiplier))
-            // Tests whether request level disabled dependant chains is working
+            // Tests whether execution level disabled dependant chains is working
             .disabledDependantChains(getDisabledDependantChains(graph))
             .build());
   }
@@ -364,50 +354,8 @@ class ChainAdderTest {
             chainSum_n,
             chainSum_n,
             chainSum_n,
-            chainSum_n));
-  }
-
-  private DependantChain[] getBatchedDepChains() {
-    String chainAdderId = graph.getVajramId(ChainAdder.class).vajramId();
-    return new DependantChain[] {
-      graph.computeDependantChain(chainAdderId, sum_n),
-      graph.computeDependantChain(chainAdderId, chainSum_n, sum_n),
-      graph.computeDependantChain(chainAdderId, chainSum_n, chainSum_n, sum_n),
-      graph.computeDependantChain(chainAdderId, chainSum_n, chainSum_n, chainSum_n, sum_n),
-      graph.computeDependantChain(
-          chainAdderId, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
-      graph.computeDependantChain(
-          chainAdderId, chainSum_n, chainSum_n, chainSum_n, chainSum_n, chainSum_n, sum_n),
-      graph.computeDependantChain(
-          chainAdderId,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          sum_n),
-      graph.computeDependantChain(
-          chainAdderId,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          sum_n),
-      graph.computeDependantChain(
-          chainAdderId,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          chainSum_n,
-          sum_n)
-    };
+            chainSum_n),
+        graph.computeDependantChain(graph.getVajramId(SplitAdder.class).vajramId(), splitSum1_n),
+        graph.computeDependantChain(graph.getVajramId(SplitAdder.class).vajramId(), splitSum2_n));
   }
 }
