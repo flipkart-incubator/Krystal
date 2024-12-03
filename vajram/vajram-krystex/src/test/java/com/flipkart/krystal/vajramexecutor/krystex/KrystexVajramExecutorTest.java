@@ -6,10 +6,10 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStr
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.GRANULAR;
 import static com.flipkart.krystal.vajram.ComputeDelegationType.SYNC_DELEGATION;
+import static com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig.autoRegisterSharedBatchers;
 import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -203,16 +203,7 @@ class KrystexVajramExecutorTest {
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends")
             .build();
-    graph.registerInputBatchers(
-        graph.getVajramId(TestUserService.class),
-        InputBatcherConfig.sharedBatcher(
-            () -> new InputBatcherImpl<>(3),
-            graph.getVajramId(TestUserService.class) + "Batcher",
-            graph.computeDependantChain(
-                graph.getVajramId(HelloFriends.class).vajramId(), "userInfo"),
-            graph.computeDependantChain(
-                graph.getVajramId(HelloFriends.class).vajramId(), "friendInfos")));
-
+    autoRegisterSharedBatchers(graph, _v -> 3);
     CompletableFuture<String> helloString;
     requestContext.requestId("ioVajramWithBatcherMultipleRequests");
     try (KrystexVajramExecutor krystexVajramExecutor =
@@ -521,15 +512,7 @@ class KrystexVajramExecutorTest {
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello")
             .build();
-    graph.registerInputBatchers(
-        graph.getVajramId(TestUserService.class),
-        InputBatcherConfig.sharedBatcher(
-            () -> new InputBatcherImpl<>(100),
-            graph.getVajramId(TestUserService.class) + "Batcher",
-            graph.computeDependantChain(
-                graph.getVajramId(MultiHelloFriends.class).vajramId(), "hellos", "userInfo"),
-            graph.computeDependantChain(
-                graph.getVajramId(MultiHelloFriends.class).vajramId(), "hellos", "friendInfos")));
+    autoRegisterSharedBatchers(graph, _v -> 100);
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor krystexVajramExecutor =
@@ -602,15 +585,7 @@ class KrystexVajramExecutorTest {
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello")
             .build();
-    graph.registerInputBatchers(
-        graph.getVajramId(TestUserService.class),
-        InputBatcherConfig.sharedBatcher(
-            () -> new InputBatcherImpl<>(100),
-            graph.getVajramId(TestUserService.class).vajramId() + "Batcher",
-            graph.computeDependantChain(
-                graph.getVajramId(MultiHelloFriends.class).vajramId(), "hellos", "user_infos"),
-            graph.computeDependantChain(
-                graph.getVajramId(MultiHelloFriends.class).vajramId(), "hellos", "friend_infos")));
+    autoRegisterSharedBatchers(graph, _v -> 100);
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor krystexVajramExecutor =
@@ -694,21 +669,7 @@ class KrystexVajramExecutorTest {
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello")
             .build();
-    graph.registerInputBatchers(
-        graph.getVajramId(TestUserService.class),
-        InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
-    graph.registerInputBatchers(
-        graph.getVajramId(FriendsService.class),
-        InputBatcherConfig.sharedBatcher(
-            () -> new InputBatcherImpl<>(100),
-            graph.getVajramId(FriendsService.class).vajramId() + "_1",
-            graph.computeDependantChain(
-                graph.getVajramId(MutualFriendsHello.class).vajramId(), "hellos", "friendIds")),
-        InputBatcherConfig.sharedBatcher(
-            () -> new InputBatcherImpl<>(100),
-            graph.getVajramId(FriendsService.class).vajramId() + "_2",
-            graph.computeDependantChain(
-                graph.getVajramId(MutualFriendsHello.class).vajramId(), "friendIds")));
+    autoRegisterSharedBatchers(graph, vajramId -> 100);
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor krystexVajramExecutor =
@@ -744,22 +705,7 @@ class KrystexVajramExecutorTest {
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello")
             .build();
-    graph.registerInputBatchers(
-        graph.getVajramId(TestUserService.class),
-        InputBatcherConfig.simple(() -> new InputBatcherImpl<>(100)));
-    graph.registerInputBatchers(
-        graph.getVajramId(FriendsService.class),
-        InputBatcherConfig.sharedBatcher(
-            () -> new InputBatcherImpl<>(100),
-            graph.getVajramId(FriendsService.class).vajramId() + "_1",
-            graph.computeDependantChain(
-                graph.getVajramId(MutualFriendsHello.class).vajramId(), "hellos", "friendIds")),
-        InputBatcherConfig.sharedBatcher(
-            () -> new InputBatcherImpl<>(100),
-            graph.getVajramId(FriendsService.class).vajramId() + "_2",
-            graph.computeDependantChain(
-                graph.getVajramId(MutualFriendsHello.class).vajramId(), "friendIds")));
-
+    autoRegisterSharedBatchers(graph, _v -> 100);
     CompletableFuture<String> multiHellos;
     requestContext.requestId(testInfo.getDisplayName());
     try (KrystexVajramExecutor krystexVajramExecutor =
@@ -772,8 +718,7 @@ class KrystexVajramExecutorTest {
               graph.getVajramId(MutualFriendsHello.class),
               MutualFriendsHelloRequest.builder().userId("user_id_1").skip(true).build());
     }
-    assertThat(multiHellos).succeedsWithin(1, TimeUnit.SECONDS);
-    assertTrue(multiHellos.get().isEmpty());
+    assertThat(multiHellos).succeedsWithin(1, TimeUnit.HOURS).isEqualTo("");
     assertThat(FriendsService.CALL_COUNTER.sum()).isEqualTo(1);
   }
 

@@ -61,8 +61,4 @@ public final class KryonDefinitionRegistry {
   public DependantChain getDependantChainsStart() {
     return dependantChainStart;
   }
-
-  public ImmutableMap<KryonId, KryonDefinition> kryonDefinitions() {
-    return ImmutableMap.copyOf(kryonDefinitions);
-  }
 }

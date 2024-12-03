@@ -118,6 +118,10 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
         .build();
   }
 
+  public ImmutableMap<VajramID, VajramDefinition> vajramDefinitions() {
+    return ImmutableMap.copyOf(vajramDefinitions);
+  }
+
   public void registerInputBatchers(VajramID vajramID, InputBatcherConfig... inputBatcherConfigs) {
     KryonId kryonId = getKryonId(vajramID);
     VajramDefinition vajramDefinition = vajramDefinitions.get(vajramID);

@@ -101,7 +101,7 @@ class SplitAdderTest {
                                         logicExecutionContext ->
                                             mainLogicExecReporter.decoratorType(),
                                         decoratorContext -> mainLogicExecReporter))))
-                        // Tests whether instasnce level disabled dependant chains is working
+                        // Tests whether executor level disabled dependant chains is working
                         .disabledDependantChains(disabledDepChains(graph)))
                 .build())) {
       future = executeVajram(graph, krystexVajramExecutor, 0);
