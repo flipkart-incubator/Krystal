@@ -38,9 +38,9 @@ public final class Transform2ResolverStage<
    * @param whenToSkip The condition when the dependency needs to be skipped
    * @param reason The reason for skipping the dependency
    */
+  @SuppressWarnings("unchecked")
   public Transform2ResolverStage<S1, S2, T, CV, DV> skipIf(
       BiPredicate<Errable<S1>, Errable<S2>> whenToSkip, String reason) {
-    //noinspection unchecked
     this.skipConditions.add(
         new SkipPredicate<>(
             reason,
@@ -54,6 +54,7 @@ public final class Transform2ResolverStage<
    *     value of target data type {@code T} (no fanout)
    * @return The resultant {@link SimpleInputResolverSpec}
    */
+  @SuppressWarnings("unchecked")
   public SimpleInputResolverSpec<T, CV, DV> asResolver(
       BiFunction<Errable<S1>, Errable<S2>, @Nullable T> transformer) {
     return new SimpleInputResolverSpec<>(
@@ -61,7 +62,6 @@ public final class Transform2ResolverStage<
         List.of(sourceInput1, sourceInput2),
         skipConditions,
         list -> {
-          //noinspection unchecked
           return transformer.apply((Errable<S1>) list.get(0), (Errable<S2>) list.get(1));
         },
         null);

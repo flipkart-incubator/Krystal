@@ -30,6 +30,7 @@ public final class Constants {
   public static final String DEP_RESPONSE = "depResponse";
   public static final String SKIPPED_EXCEPTION = "skippedException";
   public static final String ILLEGAL_ARGUMENT = "illegalArgument";
+  public static final String STACKTRACELESS_ARGUMENT = "stacktracelessArgument";
   public static final String REQUEST = "request";
   public static final String RESPONSES_SUFFIX = "Responses";
   public static final String METHOD_GET_FACETS_CONVERTOR = "getBatchFacetsConvertor";
@@ -48,6 +49,8 @@ public final class Constants {
   public static final String IM_LIST = "imList";
   public static final String FUNCTION = "function";
   public static final String OPTIONAL = "optional";
+  public static final String _FACETS_CLASS = "_Facets";
+  public static final String FACETS_FIELDS_VAR = "facetsFields";
 
   public static final String INPUT_BATCHING_FUTURE_CODE_BLOCK =
       """

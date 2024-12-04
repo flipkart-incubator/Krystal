@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.das;
 
-import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.HashMap;
@@ -31,15 +31,17 @@ public final class VajramIndex {
   }
 
   public <T extends DataAccessSpec> AccessSpecMatchingResult<T> getVajrams(T accessSpec) {
-    //noinspection unchecked
-    return Optional.ofNullable((AccessSpecIndex<T>) accessSpecIndices.get(accessSpec.getClass()))
+    @SuppressWarnings("unchecked")
+    AccessSpecIndex<T> accessSpecIndex =
+        (AccessSpecIndex<T>) accessSpecIndices.get(accessSpec.getClass());
+    return Optional.ofNullable(accessSpecIndex)
         .map(index -> index.getVajrams(accessSpec))
         .orElse(
             new AccessSpecMatchingResult<>(
                 ImmutableMap.of(), ImmutableMap.of(), ImmutableList.of(accessSpec)));
   }
 
-  public void add(Vajram vajram) {
-    accessSpecIndices.values().forEach(accessSpecIndex -> accessSpecIndex.add(vajram));
+  public void add(VajramDefinition vajramDefinition) {
+    accessSpecIndices.values().forEach(accessSpecIndex -> accessSpecIndex.add(vajramDefinition));
   }
 }

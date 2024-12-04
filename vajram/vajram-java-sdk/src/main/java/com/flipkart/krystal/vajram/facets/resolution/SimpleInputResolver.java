@@ -58,10 +58,9 @@ public final class SimpleInputResolver<
     long start = System.nanoTime();
     try {
 
-      //noinspection unchecked,rawtypes
       DependencyCommand<Object> depCommand =
           _resolutionHelper(
-              (List) resolverSpec.sourceInputs(),
+              resolverSpec.sourceInputs(),
               resolverSpec.transformer(),
               resolverSpec.fanoutTransformer(),
               resolverSpec.skipConditions(),

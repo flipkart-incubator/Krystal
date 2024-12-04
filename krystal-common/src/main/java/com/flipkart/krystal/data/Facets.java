@@ -19,10 +19,10 @@ public final class Facets {
 
   private static final Facets EMPTY = new Facets(ImmutableMap.of());
 
+  @SuppressWarnings("unchecked")
   public <T> Errable<T> getInputValue(String inputName) {
     FacetValue<?> facetValue = values.getOrDefault(inputName, Errable.empty());
     if (facetValue instanceof Errable<?> voe) {
-      //noinspection unchecked
       return (Errable<T>) voe;
     }
     throw new IllegalArgumentException("%s is not of type Errable".formatted(inputName));
@@ -32,6 +32,7 @@ public final class Facets {
     return this.<T>getInputValue(inputName).value();
   }
 
+  @SuppressWarnings("TypeParameterUnusedInFormals")
   public <T> @NonNull T getInputValueOrThrow(String inputName) {
     return this.<@NonNull T>getInputValue(inputName)
         .getValueOrThrow()
@@ -43,10 +44,10 @@ public final class Facets {
     return this.<T>getInputValueOpt(inputName).orElse(defaultValue);
   }
 
+  @SuppressWarnings("unchecked")
   public <T> Results<T> getDepValue(String inputName) {
     FacetValue<?> facetValue = values.getOrDefault(inputName, Results.empty());
     if (facetValue instanceof Results<?> voe) {
-      //noinspection unchecked
       return (Results<T>) voe;
     }
     throw new IllegalArgumentException("%s is not of type Results".formatted(inputName));

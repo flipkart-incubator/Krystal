@@ -4,6 +4,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
+import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Input;
 import com.flipkart.krystal.vajram.Output;
@@ -20,6 +21,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.LongAdder;
 
+@ExternalInvocation(allow = true)
 @VajramDef
 public abstract class TestUserService extends IOVajram<TestUserInfo> {
   static class _Facets {

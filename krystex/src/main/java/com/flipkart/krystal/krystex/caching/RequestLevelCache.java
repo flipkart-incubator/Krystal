@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.caching;
 
-import static com.flipkart.krystal.utils.Futures.linkFutures;
+import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.allOf;
 
@@ -9,7 +9,6 @@ import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardBatch;
-import com.flipkart.krystal.krystex.commands.ForwardGranule;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.Kryon;
@@ -69,14 +68,11 @@ public class RequestLevelCache implements KryonDecorator {
     public CompletableFuture<KryonResponse> executeCommand(KryonCommand kryonCommand) {
       if (kryonCommand instanceof ForwardBatch forwardBatch) {
         return readFromCache(kryon, forwardBatch);
-      } else if (kryonCommand instanceof ForwardGranule) {
-        var e =
-            new UnsupportedOperationException(
-                "KryonInputInjector does not support KryonExecStrategy GRANULAR. Please use BATCH instead");
-        log.error("", e);
-        throw e;
+      } else {
+        // Let all other commands just pass through. Request level cache is supposed to intercept
+        // ForwardBatch only.
+        return kryon.executeCommand(kryonCommand);
       }
-      return kryon.executeCommand(kryonCommand);
     }
 
     private CompletableFuture<KryonResponse> readFromCache(
@@ -84,17 +80,20 @@ public class RequestLevelCache implements KryonDecorator {
       ImmutableMap<RequestId, Facets> executableRequests = forwardBatch.executableRequests();
       Map<RequestId, Facets> cacheMisses = new LinkedHashMap<>();
       Map<RequestId, CompletableFuture<@Nullable Object>> cacheHits = new LinkedHashMap<>();
+      Map<RequestId, CompletableFuture<@Nullable Object>> newCacheEntries = new LinkedHashMap<>();
       executableRequests.forEach(
           (requestId, facets) -> {
-            var cachedFuture =
-                cache.get(new CacheKey(kryon.getKryonDefinition().kryonId(), facets));
+            var cacheKey = new CacheKey(kryon.getKryonDefinition().kryonId(), facets);
+            var cachedFuture = cache.get(cacheKey);
             if (cachedFuture == null) {
+              var placeHolderFuture = new CompletableFuture<@Nullable Object>();
+              newCacheEntries.put(requestId, placeHolderFuture);
+              cache.put(cacheKey, placeHolderFuture);
               cacheMisses.put(requestId, facets);
             } else {
               cacheHits.put(requestId, cachedFuture);
             }
           });
-      Map<RequestId, CompletableFuture<@Nullable Object>> newCacheEntries = new LinkedHashMap<>();
       Map<RequestId, String> skippedRequests = new LinkedHashMap<>(forwardBatch.skippedRequests());
       cacheHits.forEach(
           (requestId, _f) -> skippedRequests.put(requestId, "Skipping due to cache hit!"));
@@ -106,21 +105,6 @@ public class RequestLevelCache implements KryonDecorator {
                   ImmutableMap.copyOf(cacheMisses),
                   forwardBatch.dependantChain(),
                   ImmutableMap.copyOf(skippedRequests)));
-      cacheMisses.forEach(
-          (requestId, facets) -> newCacheEntries.put(requestId, new CompletableFuture<>()));
-      newCacheEntries.forEach(
-          (requestId, cacheInsert) -> {
-            Facets facets = cacheMisses.get(requestId);
-            if (facets != null) {
-              cache.put(new CacheKey(kryon.getKryonDefinition().kryonId(), facets), cacheInsert);
-            } else {
-              var e =
-                  new AssertionError(
-                      "This should not happen since requestId will definitely be there in the cacheMisses map");
-              log.error("", e);
-              throw e;
-            }
-          });
 
       cacheMissesResponse.whenComplete(
           (kryonResponse, throwable) -> {
@@ -152,11 +136,11 @@ public class RequestLevelCache implements KryonDecorator {
       var allFutures =
           Stream.concat(cacheHits.entrySet().stream(), newCacheEntries.entrySet().stream())
               .toList();
-      var array = new CompletableFuture[allFutures.size()];
+      var allFuturesArray = new CompletableFuture[allFutures.size()];
       for (int i = 0; i < allFutures.size(); i++) {
-        array[i] = allFutures.get(i).getValue();
+        allFuturesArray[i] = allFutures.get(i).getValue();
       }
-      allOf(array)
+      allOf(allFuturesArray)
           .whenComplete(
               (unused, throwable) -> {
                 finalResponse.complete(

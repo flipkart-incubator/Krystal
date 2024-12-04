@@ -7,6 +7,7 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihell
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.skip_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.userIds_s;
 
+import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+@ExternalInvocation(allow = true)
 @VajramDef
 public abstract class MultiHelloFriends extends ComputeVajram<String> {
   static class _Facets {

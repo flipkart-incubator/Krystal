@@ -51,7 +51,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *       process to complete.
  * </ul>
  *
- * @param <T>
+ * @param <T> The return type of the vajram
  */
 public sealed interface Vajram<T> permits AbstractVajram, BatchableVajram {
 
@@ -63,8 +63,6 @@ public sealed interface Vajram<T> permits AbstractVajram, BatchableVajram {
       String dependency, ImmutableSet<String> resolvableInputs, Facets facets) {
     return executeFanoutWith(ImmutableList.of());
   }
-
-  VajramID getId();
 
   ImmutableCollection<VajramFacetDefinition> getFacetDefinitions();
 

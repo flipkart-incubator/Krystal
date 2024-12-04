@@ -1,8 +1,0 @@
-output:
-  dataType: string
-inputs:
-  - name: name
-    dataType: string
-    mandatory: true
-  - name: greeting
-    dataType: string
