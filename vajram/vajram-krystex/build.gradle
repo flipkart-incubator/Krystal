@@ -1,3 +1,6 @@
+import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY
+import static com.flipkart.krystal.vajram.codegen.models.CodegenPhase.IMPLS
+
 plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
 }
@@ -14,7 +17,8 @@ dependencies {
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
     testImplementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
-
+    testImplementation 'org.slf4j:slf4j-api'
+    testImplementation 'org.slf4j:slf4j-log4j12'
 }
 
 tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
@@ -64,6 +68,7 @@ compileTestJava {
         options.compilerArgs += [
                 '--module-path', classpath.asPath,
                 '--patch-module', "$moduleName=" + files(sourceSets.test.java.srcDirs).asPath,
+                '-A' + COGENGEN_PHASE_KEY + '=' + IMPLS,
         ]
     }
 }

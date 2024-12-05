@@ -9,23 +9,7 @@ public final class AnnotationTags {
 
   public static AnnotationTag<NamedValueTag> newNamedTag(String name, String value) {
     return new AnnotationTag<>(
-        new AnnotationTagKey(name, NamedValueTag.class),
-        new NamedValueTag() {
-          @Override
-          public String name() {
-            return name;
-          }
-
-          @Override
-          public String value() {
-            return value;
-          }
-
-          @Override
-          public Class<? extends Annotation> annotationType() {
-            return NamedValueTag.class;
-          }
-        });
+        new AnnotationTagKey(name, NamedValueTag.class), new NamedValueTagImpl(name, value));
   }
 
   public static <A extends Annotation> Optional<A> getAnnotationByType(

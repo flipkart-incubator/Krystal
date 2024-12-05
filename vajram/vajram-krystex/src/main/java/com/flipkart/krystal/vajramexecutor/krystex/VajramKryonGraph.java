@@ -447,6 +447,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
 
   private void validateMandatory(
       VajramID vajramID, Facets facets, ImmutableCollection<VajramFacetDefinition> requiredInputs) {
+    @SuppressWarnings("StreamToIterable")
     Iterable<VajramFacetDefinition> mandatoryFacets =
         requiredInputs.stream().filter(VajramFacetDefinition::isMandatory)::iterator;
     Map<String, Throwable> missingMandatoryValues = new HashMap<>();

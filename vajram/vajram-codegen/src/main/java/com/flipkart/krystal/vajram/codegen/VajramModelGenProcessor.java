@@ -65,6 +65,6 @@ public class VajramModelGenProcessor extends AbstractProcessor {
       vajramCodeGenerator.codeGenVajramRequest();
       vajramCodeGenerator.codeGenFacets();
     }
-    return true;
+    return false;
   }
 }

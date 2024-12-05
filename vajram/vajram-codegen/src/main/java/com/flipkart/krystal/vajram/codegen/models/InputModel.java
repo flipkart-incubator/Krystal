@@ -7,22 +7,20 @@ import com.google.common.collect.ImmutableSet;
 import java.util.EnumSet;
 import javax.lang.model.element.VariableElement;
 import lombok.Builder;
+import lombok.NonNull;
+import org.checkerframework.common.returnsreceiver.qual.This;
 
 @Builder
 public record InputModel<T>(
     int id,
-    String name,
-    DataType<T> dataType,
+    @NonNull String name,
+    @NonNull DataType<T> dataType,
     boolean isMandatory,
-    T defaultValue,
-    String documentation,
+    @NonNull String documentation,
     boolean isBatched,
     ImmutableSet<FacetType> facetTypes,
-    VariableElement facetField)
+    @NonNull VariableElement facetField)
     implements FacetGenModel {
-
-  private static final ImmutableSet<InputSource> DEFAULT_INPUT_SOURCES =
-      ImmutableSet.of(InputSource.CLIENT);
 
   public ImmutableSet<InputSource> sources() {
     ImmutableSet.Builder<InputSource> sources = ImmutableSet.builderWithExpectedSize(2);
@@ -38,7 +36,7 @@ public record InputModel<T>(
 
   public static class InputModelBuilder<T> {
 
-    public InputModelBuilder<T> facetTypes(EnumSet<FacetType> facetTypes) {
+    public @This InputModelBuilder<T> facetTypes(EnumSet<FacetType> facetTypes) {
       if (facetTypes != null) {
         this.facetTypes = ImmutableSet.copyOf(facetTypes);
       }

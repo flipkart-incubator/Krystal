@@ -99,10 +99,6 @@ class VajramPlugin implements Plugin<Project> {
             options.compilerArgs += ['-A' + COGENGEN_PHASE_KEY + '=' + MODELS]
         }
 
-        project.tasks.named('compileTestJava', JavaCompile).configure {
-            options.compilerArgs += ['-A' + COGENGEN_PHASE_KEY + '=' + IMPLS]
-        }
-
         project.tasks.named("jar").configure { it.dependsOn("compileJava") }
     }
 
