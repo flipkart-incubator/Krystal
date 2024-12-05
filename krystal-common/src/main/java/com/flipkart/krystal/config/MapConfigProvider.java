@@ -7,7 +7,8 @@ public record MapConfigProvider(Map<String, Object> configs) implements ConfigPr
 
   @Override
   public <T> Optional<T> getConfig(String key) {
-    //noinspection unchecked
-    return Optional.ofNullable((T) configs.get(key));
+    @SuppressWarnings("unchecked")
+    Optional<T> t = Optional.ofNullable((T) configs.get(key));
+    return t;
   }
 }

@@ -1,7 +1,9 @@
 package com.flipkart.krystal.vajramexecutor.krystex.testharness;
 
+import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
@@ -24,15 +26,16 @@ public class VajramTestHarness {
 
   @Inject
   public VajramTestHarness(
-      KrystexVajramExecutorConfig kryonExecutorBuilder, RequestLevelCache requestLevelCache) {
-    this.kryonExecutorConfigBuilder = kryonExecutorBuilder;
+      KrystexVajramExecutorConfig krystexVajramExecutorConfig,
+      RequestLevelCache requestLevelCache) {
+    this.kryonExecutorConfigBuilder = krystexVajramExecutorConfig;
     this.requestLevelCache = requestLevelCache;
     this.vajramIdMockData = new HashMap<>();
   }
 
   public static VajramTestHarness prepareForTest(
-      KrystexVajramExecutorConfig kryonExecutorBuilder, RequestLevelCache requestLevelCache) {
-    return new VajramTestHarness(kryonExecutorBuilder, requestLevelCache);
+      KrystexVajramExecutorConfig executorConfig, RequestLevelCache requestLevelCache) {
+    return new VajramTestHarness(executorConfig, requestLevelCache);
   }
 
   @SuppressWarnings("unchecked")
@@ -63,9 +66,12 @@ public class VajramTestHarness {
                     s, objectVajramRequest.toFacetValues(), objectErrable.toFuture());
               });
         });
-    KryonDecoratorConfig kryonDecoratorConfig =
+    KryonExecutorConfigBuilder configBuilder =
         kryonExecutorConfigBuilder
             .kryonExecutorConfigBuilder()
+            .singleThreadExecutor(new SingleThreadExecutor("VajramTestHarness"));
+    KryonDecoratorConfig kryonDecoratorConfig =
+        configBuilder
             .build()
             .requestScopedKryonDecoratorConfigs()
             .get(RequestLevelCache.DECORATOR_TYPE);

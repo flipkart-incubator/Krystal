@@ -5,6 +5,7 @@ import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest.*;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderRequest.*;
 
+import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.Dependency;
 import com.flipkart.krystal.vajram.Input;
@@ -18,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+@ExternalInvocation(allow = true)
 @VajramDef
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class SplitAdder extends ComputeVajram<Integer> {
@@ -76,6 +78,8 @@ public abstract class SplitAdder extends ComputeVajram<Integer> {
 
   @Output
   static Integer add(SplitAdderFacets facets) {
-    return facets.splitSum1().orElse(0) + facets.splitSum2().orElse(0) + facets.sum().orElse(0);
+    return facets.splitSum1().value().orElse(0)
+        + facets.splitSum2().value().orElse(0)
+        + facets.sum().value().orElse(0);
   }
 }

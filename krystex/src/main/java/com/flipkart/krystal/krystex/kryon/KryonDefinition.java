@@ -8,6 +8,7 @@ import static java.util.stream.Collectors.groupingBy;
 
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
+import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -29,7 +30,8 @@ public record KryonDefinition(
     ImmutableList<ResolverDefinition> resolverDefinitions,
     Optional<KryonLogicId> multiResolverLogicId,
     KryonDefinitionRegistry kryonDefinitionRegistry,
-    KryonDefinitionView view) {
+    KryonDefinitionView view,
+    ElementTags tags) {
 
   public KryonDefinition(
       KryonId kryonId,
@@ -38,7 +40,8 @@ public record KryonDefinition(
       ImmutableMap<String, KryonId> dependencyKryons,
       ImmutableList<ResolverDefinition> resolverDefinitions,
       Optional<KryonLogicId> multiResolverLogicId,
-      KryonDefinitionRegistry kryonDefinitionRegistry) {
+      KryonDefinitionRegistry kryonDefinitionRegistry,
+      ElementTags tags) {
     this(
         kryonId,
         ImmutableSet.copyOf(inputs),
@@ -47,7 +50,8 @@ public record KryonDefinition(
         resolverDefinitions,
         multiResolverLogicId,
         kryonDefinitionRegistry,
-        KryonDefinitionView.createView(inputs, resolverDefinitions, dependencyKryons));
+        KryonDefinitionView.createView(inputs, resolverDefinitions, dependencyKryons),
+        tags);
   }
 
   public <T> OutputLogicDefinition<T> getOutputLogicDefinition() {

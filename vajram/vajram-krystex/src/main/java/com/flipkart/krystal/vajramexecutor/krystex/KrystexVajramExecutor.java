@@ -8,14 +8,12 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.kryondecoration.KryonExecutionContext;
-import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.exec.VajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.VajramInjectionProvider;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import lombok.Builder;
 import lombok.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -28,7 +26,6 @@ public class KrystexVajramExecutor implements VajramExecutor {
   @Builder
   public KrystexVajramExecutor(
       @NonNull VajramKryonGraph vajramKryonGraph,
-      MultiLeasePool<? extends ExecutorService> executorServicePool,
       @NonNull KrystexVajramExecutorConfig executorConfig) {
     this.vajramKryonGraph = vajramKryonGraph;
     VajramInjectionProvider inputInjectionProvider = executorConfig.inputInjectionProvider();
@@ -47,8 +44,7 @@ public class KrystexVajramExecutor implements VajramExecutor {
     }
     this.krystalExecutor =
         new KryonExecutor(
-            vajramKryonGraph.getKryonDefinitionRegistry(),
-            executorServicePool,
+            vajramKryonGraph.kryonDefinitionRegistry(),
             executorConfig.kryonExecutorConfigBuilder().build(),
             executorConfig.requestId());
   }

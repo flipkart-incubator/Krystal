@@ -20,9 +20,6 @@ public final class KryonInputInjector implements KryonDecorator {
 
   private final @Nullable VajramInjectionProvider inputInjector;
 
-  private final Map<Kryon<KryonCommand, KryonResponse>, InjectingDecoratedKryon> decoratedKryons =
-      new LinkedHashMap<>();
-
   public KryonInputInjector(
       @UnknownInitialization VajramKryonGraph vajramKryonGraph,
       @Nullable VajramInjectionProvider inputInjector) {

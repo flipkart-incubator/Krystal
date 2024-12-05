@@ -1,14 +1,20 @@
 package com.flipkart.krystal.vajram.facets;
 
-import com.flipkart.krystal.config.Tag;
-import com.google.common.collect.ImmutableMap;
+import com.flipkart.krystal.tags.ElementTags;
+import java.lang.reflect.Field;
+import java.util.Arrays;
 
 public sealed interface VajramFacetDefinition permits DependencyDef, InputDef {
+
   String name();
 
   boolean isMandatory();
 
   String documentation();
 
-  ImmutableMap<Object, Tag> tags();
+  ElementTags tags();
+
+  static ElementTags parseFacetTags(Field facetField) {
+    return ElementTags.of(Arrays.stream(facetField.getAnnotations()).toList());
+  }
 }

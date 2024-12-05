@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
-import com.flipkart.krystal.config.Tag;
+import static com.flipkart.krystal.tags.ElementTags.emptyTags;
+
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
@@ -12,7 +13,7 @@ import com.flipkart.krystal.krystex.resolution.MultiResolver;
 import com.flipkart.krystal.krystex.resolution.MultiResolverDefinition;
 import com.flipkart.krystal.krystex.resolution.ResolverLogic;
 import com.flipkart.krystal.krystex.resolution.ResolverLogicDefinition;
-import com.google.common.collect.ImmutableMap;
+import com.flipkart.krystal.tags.ElementTags;
 import java.util.Set;
 
 public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
@@ -21,7 +22,7 @@ public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
       String kryonId, String kryonLogicId, Set<String> inputs, ResolverLogic logic) {
     ResolverLogicDefinition def =
         new ResolverLogicDefinition(
-            new KryonLogicId(new KryonId(kryonId), kryonLogicId), inputs, logic, ImmutableMap.of());
+            new KryonLogicId(new KryonId(kryonId), kryonLogicId), inputs, logic, emptyTags());
     delegate.addResolver(def);
     return def;
   }
@@ -30,7 +31,7 @@ public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
       String kryonId, String kryonLogicId, Set<String> inputs, MultiResolver logic) {
     MultiResolverDefinition def =
         new MultiResolverDefinition(
-            new KryonLogicId(new KryonId(kryonId), kryonLogicId), inputs, logic, ImmutableMap.of());
+            new KryonLogicId(new KryonId(kryonId), kryonLogicId), inputs, logic, emptyTags());
     delegate.addMultiResolver(def);
     return def;
   }
@@ -40,11 +41,11 @@ public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
       KryonLogicId kryonLogicId,
       Set<String> inputs,
       OutputLogic<T> kryonLogic,
-      ImmutableMap<Object, Tag> logicTags) {
+      ElementTags tags) {
     OutputLogicDefinition<T> def =
         isIOLogic
-            ? new IOLogicDefinition<>(kryonLogicId, inputs, kryonLogic, logicTags)
-            : new ComputeLogicDefinition<>(kryonLogicId, inputs, kryonLogic, logicTags);
+            ? new IOLogicDefinition<>(kryonLogicId, inputs, kryonLogic, tags)
+            : new ComputeLogicDefinition<>(kryonLogicId, inputs, kryonLogic, tags);
     delegate.addOutputLogic(def);
     return def;
   }

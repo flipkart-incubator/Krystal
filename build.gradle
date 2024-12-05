@@ -114,6 +114,11 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
     java {
         withSourcesJar()
     }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs += '-Xlint:unchecked'
+        options.deprecation = true
+    }
     tasks.named('sourcesJar').configure { mustRunAfter('compileJava') }
 
 }

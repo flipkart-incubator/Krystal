@@ -14,10 +14,8 @@ public record KryonExecutionConfig(
     if (executionId == null) {
       executionId = "KyonExecution-" + EXEC_COUNT.getAndIncrement();
     }
-  }
-
-  @Override
-  public ImmutableSet<DependantChain> disabledDependantChains() {
-    return disabledDependantChains != null ? disabledDependantChains : ImmutableSet.of();
+    if (disabledDependantChains == null) {
+      disabledDependantChains = ImmutableSet.of();
+    }
   }
 }

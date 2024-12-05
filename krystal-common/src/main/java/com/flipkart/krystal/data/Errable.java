@@ -1,7 +1,7 @@
 package com.flipkart.krystal.data;
 
+import com.flipkart.krystal.except.ThrowingCallable;
 import java.util.Optional;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -34,8 +34,8 @@ public record Errable<T>(Optional<T> value, Optional<Throwable> error) implement
     }
   }
 
+  @SuppressWarnings("unchecked")
   public static <T> Errable<T> empty() {
-    //noinspection unchecked
     return (Errable<T>) EMPTY;
   }
 
@@ -47,7 +47,7 @@ public record Errable<T>(Optional<T> value, Optional<Throwable> error) implement
     return errableFrom(null, t);
   }
 
-  public static <T> Errable<T> errableFrom(Callable<@Nullable T> valueProvider) {
+  public static <T> Errable<T> errableFrom(ThrowingCallable<@Nullable T> valueProvider) {
     try {
       return withValue(valueProvider.call());
     } catch (Throwable e) {
@@ -60,17 +60,19 @@ public record Errable<T>(Optional<T> value, Optional<Throwable> error) implement
     return s -> errableFrom(() -> valueComputer.apply(s));
   }
 
+  @SuppressWarnings("unchecked")
   public static <T> Errable<T> errableFrom(@Nullable Object value, @Nullable Throwable error) {
-    //noinspection unchecked,rawtypes
-    return new Errable<T>(
-        (value instanceof Optional o) ? o : (Optional<T>) Optional.ofNullable(value),
+    return new Errable<>(
+        (value instanceof Optional<?> o)
+            ? (Optional<T>) o
+            : (Optional<T>) Optional.ofNullable(value),
         Optional.ofNullable(error));
   }
 
   /**
-   * @return a new {@link CompletableFuture} which is completed exceptionally with the contents of
-   *     {@link #error()} if it is present, or completed normally with contents of {@link #value()}
-   *     (or null if it is empty)
+   * Returns a new {@link CompletableFuture} which is completed exceptionally with the contents of
+   * {@link #error()} if it is present, or completed normally with contents of {@link #value()} (or
+   * null if it is empty)
    */
   public CompletableFuture<@Nullable T> toFuture() {
     if (error().isPresent()) {

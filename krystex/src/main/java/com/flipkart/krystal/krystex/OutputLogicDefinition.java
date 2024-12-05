@@ -1,6 +1,5 @@
 package com.flipkart.krystal.krystex;
 
-import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
@@ -9,6 +8,7 @@ import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.LogicDecoratorContext;
+import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
@@ -28,11 +28,8 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
     permits IOLogicDefinition, ComputeLogicDefinition {
 
   protected OutputLogicDefinition(
-      KryonLogicId kryonLogicId,
-      Set<String> inputs,
-      ImmutableMap<Object, Tag> logicTags,
-      OutputLogic<T> outputLogic) {
-    super(kryonLogicId, inputs, logicTags, outputLogic);
+      KryonLogicId kryonLogicId, Set<String> inputs, ElementTags tags, OutputLogic<T> outputLogic) {
+    super(kryonLogicId, inputs, tags, outputLogic);
   }
 
   public final ImmutableMap<Facets, CompletableFuture<@Nullable T>> execute(
@@ -60,7 +57,7 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
             LogicExecutionContext logicExecutionContext =
                 new LogicExecutionContext(
                     kryonDefinition.kryonId(),
-                    logicTags(),
+                    tags(),
                     dependants,
                     kryonDefinition.kryonDefinitionRegistry());
             String instanceId = decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
@@ -92,7 +89,6 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
 
   public void registerRequestScopedDecorator(
       Collection<OutputLogicDecoratorConfig> decoratorConfigs) {
-    //noinspection UnstableApiUsage
     requestScopedLogicDecoratorConfigs =
         ImmutableMap.<String, List<OutputLogicDecoratorConfig>>builderWithExpectedSize(
                 requestScopedLogicDecoratorConfigs.size() + decoratorConfigs.size())

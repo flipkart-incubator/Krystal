@@ -19,15 +19,15 @@ public final class AsIsResolverStage<T, CV extends VajramRequest<?>, DV extends 
     this.sourceInput = sourceInput;
   }
 
+  @SuppressWarnings("unchecked")
   public AsIsResolverStage<T, CV, DV> skipIf(Predicate<Errable<T>> whenToSkip, String reason) {
-    //noinspection unchecked
     this.skipConditions.add(
         new SkipPredicate<>(reason, errables -> whenToSkip.test((Errable<T>) errables.get(0))));
     return this;
   }
 
+  @SuppressWarnings("unchecked")
   public SimpleInputResolverSpec<T, CV, DV> asResolver() {
-    //noinspection unchecked
     return new SimpleInputResolverSpec<>(
         targetInput,
         List.of(sourceInput),
