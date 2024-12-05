@@ -633,6 +633,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
   }
 
   public static final class VajramKryonGraphBuilder {
+    private final Set<String> packagePrefixes = new LinkedHashSet<>();
     private final Map<String, OutputLogicDecoratorConfig> sessionScopedDecoratorConfigs =
         new HashMap<>();
 
