@@ -1839,7 +1839,7 @@ public class VajramCodeGenerator {
                 ? CodeBlock.of(
                     "return this.%s.$L()".formatted(facet.isBatched() ? "_batchable" : "_common"),
                     dep.name())
-                : CodeBlock.of("return this.$L()", dep.name()));
+                : CodeBlock.of("return this.$L", dep.name()));
       }
     }
     if (!codeGenParams.withImpl) {
