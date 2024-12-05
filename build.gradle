@@ -1,6 +1,7 @@
 plugins {
     id 'com.diffplug.spotless' version '6.16.0'
     id 'org.checkerframework' version '0.6.30'
+    id 'net.ltgt.errorprone' version '3.1.0'
 }
 
 ext {
@@ -53,6 +54,7 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
     apply plugin: 'com.diffplug.spotless'
     apply plugin: 'org.checkerframework'
     apply plugin: 'jacoco'
+    apply plugin: 'net.ltgt.errorprone'
 
     spotless {
         java {
@@ -68,6 +70,7 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
         implementation 'org.checkerframework:checker-qual'
         implementation 'org.slf4j:slf4j-api'
         implementation 'jakarta.inject:jakarta.inject-api'
+        errorprone 'com.google.errorprone:error_prone_core'
 
         compileOnly 'org.projectlombok:lombok'
         annotationProcessor 'org.projectlombok:lombok'
@@ -85,6 +88,7 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
         api platform('org.assertj:assertj-bom:3.25.2')
         api platform('io.github.resilience4j:resilience4j-bom:2.2.0')
         api platform('com.google.inject:guice-bom:7.0.0')
+        api platform('org.slf4j:slf4j-bom:2.0.13')
         constraints {
             implementation 'com.google.guava:guava:33.0.0-jre'
             implementation 'org.checkerframework:checker-qual:3.42.0'
@@ -96,6 +100,8 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
 
             implementation 'com.google.auto.service:auto-service:1.1.1'
             annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
+
+            errorprone 'com.google.errorprone:error_prone_core:2.27.1'
 
             annotationProcessor 'com.flipkart.krystal:vajram-codegen:' + krystal_version
             testAnnotationProcessor 'com.flipkart.krystal:vajram-codegen:' + krystal_version
@@ -116,6 +122,7 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
     checkerFramework {
         checkers = [
                 'org.checkerframework.checker.nullness.NullnessChecker',
+                'org.checkerframework.checker.calledmethods.CalledMethodsChecker',
         ]
         extraJavacArgs = [
                 "-Astubs=${rootDir}/config/checker/stubs",

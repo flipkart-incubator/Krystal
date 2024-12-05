@@ -119,7 +119,6 @@ import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.MethodSpec.Builder;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
@@ -341,14 +340,14 @@ public class VajramCodeGenerator {
           .indent("  ")
           .build()
           .writeTo(writer);
-    } catch (IOException ignored) {
-
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
     return writer.toString();
   }
 
   private MethodSpec createInputResolvers() {
-    Builder getInputResolversMethod =
+    MethodSpec.Builder getInputResolversMethod =
         methodBuilder(GET_INPUT_RESOLVERS)
             .addModifiers(PUBLIC)
             .returns(ParameterizedTypeName.get(ImmutableCollection.class, InputResolver.class))
@@ -362,8 +361,8 @@ public class VajramCodeGenerator {
         CodeBlock.builder()
                 .add(
          """
-         resolve(       
-        """);
+         resolve(      \s
+       \s""");
 
     Map<String, List<ExecutableElement>> resolverMap = new HashMap<>();
     for (ExecutableElement resolver : getParsedVajramData().resolvers()) {
@@ -442,7 +441,7 @@ public class VajramCodeGenerator {
    */
   private MethodSpec createComputeVajramExecuteMethod(TypeName vajramResponseType) {
 
-    Builder executeBuilder =
+    MethodSpec.Builder executeBuilder =
         methodBuilder(METHOD_EXECUTE_COMPUTE)
             .addModifiers(PUBLIC)
             .addParameter(ParameterizedTypeName.get(ImmutableList.class, Facets.class), INPUTS_LIST)
@@ -469,7 +468,8 @@ public class VajramCodeGenerator {
     return executeBuilder.build();
   }
 
-  private void nonBatchedExecuteMethodBuilder(Builder executeBuilder, boolean isIOVajram) {
+  private void nonBatchedExecuteMethodBuilder(
+      MethodSpec.Builder executeBuilder, boolean isIOVajram) {
     CodeBlock.Builder returnBuilder =
         CodeBlock.builder()
             .add(
@@ -713,7 +713,7 @@ public class VajramCodeGenerator {
    */
   private MethodSpec createBatchFacetConvertersMethod(
       ClassName batchableInputs, ClassName commonInputs) {
-    Builder inputConvertersBuilder =
+    MethodSpec.Builder inputConvertersBuilder =
         methodBuilder(METHOD_GET_FACETS_CONVERTOR)
             .addModifiers(PUBLIC)
             .returns(
@@ -729,7 +729,7 @@ public class VajramCodeGenerator {
   }
 
   private MethodSpec createBatchFacetConvertersMethodException() {
-    Builder inputConvertersBuilder =
+    MethodSpec.Builder inputConvertersBuilder =
         methodBuilder(METHOD_GET_FACETS_CONVERTOR)
             .addModifiers(PUBLIC)
             .returns(
@@ -755,7 +755,7 @@ public class VajramCodeGenerator {
   private MethodSpec createIOVajramExecuteMethod(
       ClassName batchableInputs, ClassName commonFacets, TypeName vajramResponseType) {
 
-    Builder executeMethodBuilder =
+    MethodSpec.Builder executeMethodBuilder =
         methodBuilder(METHOD_EXECUTE)
             .addModifiers(PUBLIC)
             .addParameter(ParameterizedTypeName.get(ImmutableList.class, Facets.class), INPUTS_LIST)
@@ -861,7 +861,7 @@ public class VajramCodeGenerator {
       Map</*depId*/ Integer, List<ExecutableElement>> resolverMap,
       Map</*depName*/ String, Boolean> depFanoutMap) {
     String resolverIdVarName = "resolverId";
-    Builder resolveInputsBuilder =
+    MethodSpec.Builder resolveInputsBuilder =
         methodBuilder(METHOD_RESOLVE_INPUT_OF_DEPENDENCY)
             .addModifiers(PUBLIC)
             .addParameter(int.class, resolverIdVarName)
@@ -1312,7 +1312,7 @@ public class VajramCodeGenerator {
    */
   private MethodSpec createFacetDefinitions() {
     // Method : getFacetDefinitions
-    Builder facetDefinitionsBuilder =
+    MethodSpec.Builder facetDefinitionsBuilder =
         methodBuilder(GET_FACET_DEFINITIONS)
             .addModifiers(PUBLIC)
             .returns(ParameterizedTypeName.get(ImmutableList.class, VajramFacetDefinition.class))
@@ -1523,8 +1523,8 @@ public class VajramCodeGenerator {
           getPackageName() + '.' + getRequestInterfaceName(vajramName),
           writer.toString(),
           vajramInfo.vajramClass());
-    } catch (IOException ignored) {
-
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
     try {
       StringWriter writer = new StringWriter();
@@ -1552,8 +1552,8 @@ public class VajramCodeGenerator {
           getPackageName() + '.' + getImmutRequestClassName(vajramName),
           writer.toString(),
           vajramInfo.vajramClass());
-    } catch (IOException ignored) {
-
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -1573,7 +1573,7 @@ public class VajramCodeGenerator {
       throw new IllegalArgumentException("A batchable should not be a request - this is a bug");
     }
     //TODO : Add checks for subsetRequest
-    Builder fullConstructor = constructorBuilder();
+    MethodSpec.Builder fullConstructor = constructorBuilder();
     clazz.addAnnotations(
         codeGenParams.isBuilder ? annotations(ToString.class) : recordAnnotations());
     ClassName requestInterfacetType =
@@ -1617,7 +1617,7 @@ public class VajramCodeGenerator {
     }
 
     if (codeGenParams.subsetRequest && codeGenParams.isBuilder) {
-      Builder requestConstructor = constructorBuilder();
+      MethodSpec.Builder requestConstructor = constructorBuilder();
       requestConstructor.addParameter(
           ParameterSpec.builder(requestInterfacetType, "_request").addAnnotation(NonNull.class).build());
       for (FacetGenModel facet : eligibleFacets) {
@@ -1766,7 +1766,7 @@ public class VajramCodeGenerator {
   private void createFacetGetter(
       TypeSpec.Builder clazz, FacetGenModel facet, CodeGenParams codeGenParams) {
     TypeAndName facetType = getTypeName(getDataType(facet));
-    Builder method;
+    MethodSpec.Builder method;
     if (!(facet instanceof DependencyModel dep) || !dep.canFanout()) {
       // Non-fanout facet
       ReturnType returnType = getReturnType(facet);
@@ -1922,8 +1922,9 @@ public class VajramCodeGenerator {
       PrimitiveType primitiveType;
       try {
         primitiveType = processingEnv.getTypeUtils().unboxedType(javaType.type().get());
-      } catch (IllegalArgumentException ignored) {
+      } catch (IllegalArgumentException e) {
         // This means the type is not a boxed type
+        log.info("", e);
         return javaType;
       }
       return new TypeAndName(
@@ -1942,7 +1943,7 @@ public class VajramCodeGenerator {
     }
     //TODO : add validations for subsetRequest
 
-    List<Builder> methodBuilders = new ArrayList<>();
+    List<MethodSpec.Builder> methodBuilders = new ArrayList<>();
 
     String facetIdParamName = "facetId";
     methodBuilders.add(_getMethod(eligibleFacets, codeGenParams.isRequest));
@@ -2020,7 +2021,7 @@ public class VajramCodeGenerator {
     if (codeGenParams.isBuilder) {
       // _set
       String facetValueParamName = "facetValue";
-      Builder setMethod;
+      MethodSpec.Builder setMethod;
       methodBuilders.add(
           setMethod =
               methodBuilder("_set")
@@ -2111,7 +2112,7 @@ public class VajramCodeGenerator {
     }
 
     ImmutableList.Builder<MethodSpec> list = ImmutableList.builder();
-    for (Builder b : methodBuilders) {
+    for (MethodSpec.Builder b : methodBuilders) {
       if (b != null) {
         MethodSpec build = b.addModifiers(PUBLIC).addAnnotation(Override.class).build();
         list.add(build);
@@ -2120,7 +2121,7 @@ public class VajramCodeGenerator {
     return list.build();
   }
 
-  private Builder _getDepResponsesMethod() {
+  private MethodSpec.Builder _getDepResponsesMethod() {
     String facetIdParamName = "facetId";
     ParameterizedTypeName responsesType =
         responsesType(ParameterizedTypeName.get(Request.class, Object.class), Object.class);
@@ -2130,7 +2131,7 @@ public class VajramCodeGenerator {
         .addStatement("return ($T)_get($L)", responsesType, facetIdParamName);
   }
 
-  private Builder _getErrableMethod() {
+  private MethodSpec.Builder _getErrableMethod() {
     String facetIdParamName = "facetId";
     return methodBuilder("_getErrable")
         .returns(errable(Object.class))
@@ -2138,7 +2139,7 @@ public class VajramCodeGenerator {
         .addStatement("return ($T)_get($L)", errable(Object.class), facetIdParamName);
   }
 
-  private static Builder _asMapMethod(
+  private static MethodSpec.Builder _asMapMethod(
       List<? extends FacetGenModel> eligibleFacets, boolean isRequest, boolean isBuilder) {
     return methodBuilder("_asMap")
         .returns(
@@ -2179,9 +2180,10 @@ public class VajramCodeGenerator {
                 .toArray());
   }
 
-  private Builder _getMethod(List<? extends FacetGenModel> eligibleFacets, boolean isRequest) {
+  private MethodSpec.Builder _getMethod(
+      List<? extends FacetGenModel> eligibleFacets, boolean isRequest) {
     String facetIdParamName = "facetId";
-    Builder getMethod =
+    MethodSpec.Builder getMethod =
         methodBuilder("_get")
             .returns(
                 isRequest

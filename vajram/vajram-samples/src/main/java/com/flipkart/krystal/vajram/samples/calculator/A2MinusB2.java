@@ -24,9 +24,8 @@ import com.google.common.collect.ImmutableCollection;
 /** Computes a*2 - b*2 */
 @VajramDef
 public abstract class A2MinusB2 extends ComputeVajram<Integer> {
-  class _Facets {
-    @Input
-    int a;
+  static class _Facets {
+    @Input int a;
     @Input int b;
 
     @Dependency(onVajram = Multiplier.class)

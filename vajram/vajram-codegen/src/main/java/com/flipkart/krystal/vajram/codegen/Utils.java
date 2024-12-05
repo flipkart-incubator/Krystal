@@ -15,6 +15,7 @@ import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.Generated;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.VajramDefinitionException;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.codegen.models.DependencyModel;
@@ -217,6 +218,8 @@ public class Utils {
         Optional.ofNullable(givenIdsByName.get(facetName))
             .orElseGet(() -> getNextAvailableFacetId(takenFacetIds, nextFacetId)));
     inputBuilder.name(facetName);
+    inputBuilder.documentation(
+        Optional.ofNullable(elementUtils.getDocComment(inputField)).orElse(""));
     inputBuilder.isMandatory(!isOptional(inputField.asType(), processingEnv));
     DataType<Object> dataType =
         inputField.asType().accept(new DeclaredTypeVisitor<>(this, true, inputField), null);
@@ -280,8 +283,9 @@ public class Utils {
                       "At least one of `onVajram` or `withVajramReq` is needed in dependency declaration '%s' of vajram '%s'"
                           .formatted(depField.getSimpleName(), vajramId),
                       depField);
-                  return new RuntimeException("Invalid Dependency specification");
+                  return new VajramDefinitionException("Invalid Dependency specification");
                 });
+    depBuilder.documentation(Optional.ofNullable(elementUtils.getDocComment(depField)).orElse(""));
     if (vajramReqType.isPresent() && vajramType.isPresent()) {
       error(
           ("Both `withVajramReq` and `onVajram` cannot be set."
@@ -366,7 +370,7 @@ public class Utils {
 
   private Optional<TypeMirror> getTypeFromAnnotationMember(Supplier<Class<?>> runnable) {
     try {
-      runnable.get();
+      var ignored = runnable.get();
       throw new AssertionError();
     } catch (MirroredTypeException mte) {
       return Optional.ofNullable(mte.getTypeMirror());
@@ -441,8 +445,13 @@ public class Utils {
   }
 
   private String getTimestamp() {
+    String ist = "IST";
     return DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(
-        Clock.systemDefaultZone().instant().atZone(ZoneId.systemDefault()));
+        Clock.system(
+                ZoneId.of(
+                    Optional.ofNullable(ZoneId.SHORT_IDS.get(ist))
+                        .orElseThrow(() -> new IllegalStateException("Could not find Zone" + ist))))
+            .instant());
   }
 
   public static String getRequestInterfaceName(String vajramName) {
@@ -517,8 +526,8 @@ public class Utils {
   }
 
   /**
-   * @return true of the raw type (without generics) of {@code from} can be assigned to the raw type
-   *     of {@code to}
+   * Return true if the raw type (without generics) of {@code from} can be assigned to the raw type
+   * of {@code to}
    */
   public boolean isRawAssignable(TypeMirror from, Class<?> to) {
     return typeUtils.isAssignable(

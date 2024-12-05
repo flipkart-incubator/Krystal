@@ -34,7 +34,7 @@ public final class DefaultDependantChain extends AbstractDependantChain {
   @Override
   public int hashCode() {
     if (this._hashCodeCache == 0) {
-      this._hashCodeCache = super.hashCode();
+      this._hashCodeCache = System.identityHashCode(this);
     }
     return this._hashCodeCache;
   }

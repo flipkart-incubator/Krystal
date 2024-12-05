@@ -176,9 +176,11 @@ public class VajramPrimer extends AbstractKryonDecorator {
         .dependencyKryons()
         .forEach(
             (depName, depKryon) -> {
-              executeCommand(
-                  new Flush(depKryon, forwardBatch.dependantChain().extend(kryonId, depName)),
-                  kryonExecutor);
+              //noinspection unused
+              CompletableFuture<KryonResponse> unused =
+                  executeCommand(
+                      new Flush(depKryon, forwardBatch.dependantChain().extend(kryonId, depName)),
+                      kryonExecutor);
             });
   }
 }

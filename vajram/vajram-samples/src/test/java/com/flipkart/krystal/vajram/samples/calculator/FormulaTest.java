@@ -28,7 +28,6 @@ import com.flipkart.krystal.vajram.samples.calculator.divider.DividerRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -39,7 +38,7 @@ import org.junit.jupiter.api.Test;
 
 class FormulaTest {
 
-  private Builder graph;
+  private VajramKryonGraph.Builder graph;
   private static final String REQUEST_ID = "formulaTest";
 
   @BeforeEach

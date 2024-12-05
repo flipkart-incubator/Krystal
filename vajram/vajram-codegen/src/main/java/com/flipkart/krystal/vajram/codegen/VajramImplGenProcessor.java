@@ -79,6 +79,6 @@ public class VajramImplGenProcessor extends AbstractProcessor {
             vajramClass);
       }
     }
-    return true;
+    return false;
   }
 }

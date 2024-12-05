@@ -17,6 +17,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.LongAdder;
 
 @VajramDef
@@ -46,14 +47,16 @@ public abstract class TestUserService extends IOVajram<TestUserInfo> {
                 inputBatch -> inputBatch,
                 modInputs -> {
                   CompletableFuture<TestUserInfo> future = new CompletableFuture<>();
-                  LATENCY_INDUCER.schedule(
-                      (Runnable)
-                          () ->
-                              future.complete(
-                                  new TestUserInfo(
-                                      "Firstname Lastname (%s)".formatted(modInputs.userId()))),
-                      50,
-                      MILLISECONDS);
+                  @SuppressWarnings({"FutureReturnValueIgnored", "unused"})
+                  ScheduledFuture<?> unused =
+                      LATENCY_INDUCER.schedule(
+                          (Runnable)
+                              () ->
+                                  future.complete(
+                                      new TestUserInfo(
+                                          "Firstname Lastname (%s)".formatted(modInputs.userId()))),
+                          50,
+                          MILLISECONDS);
                   return future;
                 }));
   }
