@@ -68,6 +68,6 @@ class AddZeroTest {
               AddZeroRequest.builder().number(5).build(),
               KryonExecutionConfig.builder().executionId("addZeroTest").build());
     }
-    assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(4);
+    assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(5);
   }
 }
