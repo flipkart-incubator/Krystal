@@ -621,13 +621,13 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     }
     SetView<String> allInputNames =
         Sets.difference(kryonDefinition.facetNames(), kryonDefinition.dependencyKryons().keySet());
-    if (!providedInputNames.containsAll(allInputNames)) {
-      if (log.isInfoEnabled()) {
+    if (log.isInfoEnabled()) {
+      if (!providedInputNames.containsAll(allInputNames)) {
         log.info(
             """
                 Kryon '{}' invoked via depChain '{}' did not receive these inputs: {}. \
                 Proceeding with kryon execution. \
-                If any of this inputs in manadatory, the kryon is expected to through relevant exceptions.""",
+                If any of these inputs is manadatory, the kryon is expected to throw relevant exceptions.""",
             kryonId,
             forwardBatch.dependantChain(),
             Sets.difference(allInputNames, providedInputNames));
