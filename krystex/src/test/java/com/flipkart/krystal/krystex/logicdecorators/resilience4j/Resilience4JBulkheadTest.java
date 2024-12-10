@@ -1,7 +1,9 @@
 package com.flipkart.krystal.krystex.logicdecorators.resilience4j;
 
+import static com.flipkart.krystal.annos.ExternalInvocation.ExternalInvocations.externalInvocation;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.GRANULAR;
+import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
@@ -9,11 +11,12 @@ import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.concurrent.SingleThreadExecutor;
+import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.FacetsMapBuilder;
 import com.flipkart.krystal.data.SimpleRequestBuilder;
-import com.flipkart.krystal.krystex.ForkJoinExecutorPool;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
@@ -28,6 +31,9 @@ import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
+import com.flipkart.krystal.pooling.Lease;
+import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableMap;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
 import java.time.Duration;
@@ -40,26 +46,44 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class Resilience4JBulkheadTest {
 
   private static final Duration TIMEOUT = ofSeconds(1);
+  private static SingleThreadExecutorsPool EXEC_POOL;
+
+  @BeforeAll
+  static void beforeAll() {
+    EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
+  }
+
+  private Lease<SingleThreadExecutor> executorLease;
   private KryonExecutor kryonExecutor;
   private KryonDefinitionRegistry kryonDefinitionRegistry;
   private LogicDefinitionRegistry logicDefinitionRegistry;
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws LeaseUnavailableException {
+    this.executorLease = EXEC_POOL.lease();
     this.logicDefinitionRegistry = new LogicDefinitionRegistry();
     this.kryonDefinitionRegistry = new KryonDefinitionRegistry(logicDefinitionRegistry);
     this.kryonExecutor =
         new KryonExecutor(
             kryonDefinitionRegistry,
-            new ForkJoinExecutorPool(1),
-            KryonExecutorConfig.builder().kryonExecStrategy(GRANULAR).build(),
+            KryonExecutorConfig.builder()
+                .singleThreadExecutor(executorLease.get())
+                .kryonExecStrategy(GRANULAR)
+                .build(),
             "test");
+  }
+
+  @AfterEach
+  void tearDown() {
+    executorLease.close();
   }
 
   @Test
@@ -110,8 +134,12 @@ class Resilience4JBulkheadTest {
             "kryon",
             Set.of(1),
             outputLogicDef.kryonLogicId(),
+            ImmutableMap.of(),
+            ImmutableMap.of(),
             newCreateNewRequestLogic(),
-            newFacetsFromRequestLogic());
+            newFacetsFromRequestLogic(),
+            null,
+            ElementTags.of(externalInvocation(true)));
 
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         kryonExecutor.executeKryon(
@@ -128,7 +156,7 @@ class Resilience4JBulkheadTest {
             kryonDefinition.kryonId(),
             new SimpleRequestBuilder<>(ImmutableMap.of(1, withValue(3))),
             KryonExecutionConfig.builder().executionId("req_3").build());
-    kryonExecutor.flush();
+    kryonExecutor.close();
     assertThat(callAfterBulkheadExhaustion)
         .failsWithin(TIMEOUT)
         .withThrowableOfType(Exception.class)
@@ -187,8 +215,12 @@ class Resilience4JBulkheadTest {
             "kryon",
             Set.of(1),
             outputLogic.kryonLogicId(),
+            ImmutableMap.of(),
+            ImmutableMap.of(),
             newCreateNewRequestLogic(),
-            newFacetsFromRequestLogic());
+            newFacetsFromRequestLogic(),
+            null,
+            ElementTags.of(externalInvocation(true)));
 
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         kryonExecutor.executeKryon(
@@ -205,7 +237,7 @@ class Resilience4JBulkheadTest {
             kryonDefinition.kryonId(),
             new SimpleRequestBuilder<>(ImmutableMap.of(1, withValue(3))),
             KryonExecutionConfig.builder().executionId("req_3").build());
-    kryonExecutor.flush();
+    kryonExecutor.close();
     assertThat(callAfterBulkheadExhaustion)
         .failsWithin(1, HOURS)
         .withThrowableOfType(Exception.class)
@@ -229,7 +261,7 @@ class Resilience4JBulkheadTest {
             inputsList ->
                 inputsList.stream()
                     .collect(ImmutableMap.toImmutableMap(Function.identity(), logic)),
-            ImmutableMap.of());
+            emptyTags());
     logicDefinitionRegistry.addOutputLogic(def);
     return def;
   }

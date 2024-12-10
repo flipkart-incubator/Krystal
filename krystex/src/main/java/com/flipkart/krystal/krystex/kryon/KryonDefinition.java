@@ -12,6 +12,7 @@ import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
+import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
@@ -35,7 +36,8 @@ public record KryonDefinition(
     LogicDefinition<CreateNewRequest> createNewRequest,
     LogicDefinition<FacetsFromRequest> facetsFromRequest,
     KryonDefinitionRegistry kryonDefinitionRegistry,
-    KryonDefinitionView view) {
+    KryonDefinitionView view,
+    ElementTags tags) {
 
   public KryonDefinition(
       KryonId kryonId,
@@ -46,7 +48,8 @@ public record KryonDefinition(
       Optional<KryonLogicId> multiResolverLogicId,
       LogicDefinition<CreateNewRequest> createNewRequest,
       LogicDefinition<FacetsFromRequest> facetsFromRequest,
-      KryonDefinitionRegistry kryonDefinitionRegistry) {
+      KryonDefinitionRegistry kryonDefinitionRegistry,
+      ElementTags tags) {
     this(
         kryonId,
         ImmutableSet.copyOf(inputs),
@@ -57,7 +60,8 @@ public record KryonDefinition(
         createNewRequest,
         facetsFromRequest,
         kryonDefinitionRegistry,
-        KryonDefinitionView.createView(inputs, resolverDefinitions, dependencyKryons));
+        KryonDefinitionView.createView(inputs, resolverDefinitions, dependencyKryons),
+        tags);
   }
 
   public <T> OutputLogicDefinition<T> getOutputLogicDefinition() {

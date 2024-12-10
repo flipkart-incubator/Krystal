@@ -55,11 +55,15 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
         requestScopedDecoratorsSupplier.apply(
             new LogicExecutionContext(
                 kryonId,
-                outputLogicDefinition.logicTags(),
+                outputLogicDefinition.tags(),
                 dependantChain,
                 kryonDefinition.kryonDefinitionRegistry())));
     TreeSet<OutputLogicDecorator> sortedDecorators =
-        new TreeSet<>(logicDecorationOrdering.decorationOrder());
+        new TreeSet<>(
+            logicDecorationOrdering
+                .encounterOrder()
+                // Reverse the ordering so that the ones with the highest index are applied first.
+                .reversed());
     sortedDecorators.addAll(decorators.values());
     return sortedDecorators;
   }

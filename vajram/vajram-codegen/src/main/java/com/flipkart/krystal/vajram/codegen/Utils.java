@@ -3,8 +3,8 @@ package com.flipkart.krystal.vajram.codegen;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants.IMMUT_FACETS_CLASS_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.Constants._FACETS_CLASS;
 import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
-import static com.flipkart.krystal.vajram.utils.Constants.FACETS_CLASS_NAME_SUFFIX;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
@@ -132,7 +132,7 @@ public class Utils {
     Optional<Element> facetsClass =
         vajramClass.getEnclosedElements().stream()
             .filter(element -> element.getKind() == ElementKind.CLASS)
-            .filter(element -> element.getSimpleName().contentEquals(FACETS_CLASS_NAME_SUFFIX))
+            .filter(element -> element.getSimpleName().contentEquals(_FACETS_CLASS))
             .findFirst()
             .map(element -> typeUtils.asElement(element.asType()));
     Set<Integer> reservedFacets =
@@ -526,7 +526,7 @@ public class Utils {
   }
 
   /**
-   * Return true if the raw type (without generics) of {@code from} can be assigned to the raw type
+   * Returns true if the raw type (without generics) of {@code from} can be assigned to the raw type
    * of {@code to}
    */
   public boolean isRawAssignable(TypeMirror from, Class<?> to) {

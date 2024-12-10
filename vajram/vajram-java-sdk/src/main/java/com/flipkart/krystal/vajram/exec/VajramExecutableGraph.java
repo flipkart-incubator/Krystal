@@ -1,9 +1,10 @@
 package com.flipkart.krystal.vajram.exec;
 
-import com.flipkart.krystal.vajram.ApplicationRequestContext;
-
-public interface VajramExecutableGraph extends AutoCloseable {
-  <C extends ApplicationRequestContext> VajramExecutor<C> createExecutor(C requestContext);
+/**
+ * @param <EC> Configuration for creating and executor of this graph
+ */
+public interface VajramExecutableGraph<EC> extends AutoCloseable {
+  VajramExecutor createExecutor(EC executorConfig);
 
   @Override
   void close();

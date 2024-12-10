@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajram.samples.calculator.divider;
 
 import com.flipkart.krystal.vajram.ComputeVajram;
+import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.VajramDef;
 import java.util.Optional;
 
 @VajramDef
@@ -19,7 +19,7 @@ public abstract class Divider extends ComputeVajram<Integer> {
     return divide(_allFacets.numerator(), _allFacets.denominator().orElse(1));
   }
 
-  public static int divide(int a, int b) {
-    return a / b;
+  public static int divide(int numerator, int denominator) {
+    return numerator / denominator;
   }
 }

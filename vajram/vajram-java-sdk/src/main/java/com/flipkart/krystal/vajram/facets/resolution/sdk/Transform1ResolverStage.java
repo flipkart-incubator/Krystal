@@ -31,9 +31,9 @@ public final class Transform1ResolverStage<S, T, CV extends Request<?>, DV exten
    * @param whenToSkip The condition when the dependency needs to be skipped
    * @param reason The reason for skipping the dependency
    */
+  @SuppressWarnings("unchecked")
   public Transform1ResolverStage<S, T, CV, DV> skipIf(
       Predicate<Errable<S>> whenToSkip, String reason) {
-    //noinspection unchecked
     this.skipConditions.add(
         new SkipPredicate<>(reason, errable -> whenToSkip.test((Errable<S>) errable.get(0))));
     return this;
@@ -44,6 +44,7 @@ public final class Transform1ResolverStage<S, T, CV extends Request<?>, DV exten
    *     value of target data type {@code T} (no fanout)
    * @return The resultant {@link SimpleInputResolverSpec}
    */
+  @SuppressWarnings("unchecked")
   public SimpleInputResolverSpec<T, CV, DV> asResolver(
       Function<Errable<S>, @Nullable T> transformer) {
     return new SimpleInputResolverSpec<>(
@@ -51,7 +52,6 @@ public final class Transform1ResolverStage<S, T, CV extends Request<?>, DV exten
         List.of(sourceInput),
         skipConditions,
         list -> {
-          //noinspection unchecked
           return transformer.apply((Errable<S>) list.get(0));
         },
         null);

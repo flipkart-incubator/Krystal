@@ -69,6 +69,7 @@ compileTestJava {
                 '--module-path', classpath.asPath,
                 '--patch-module', "$moduleName=" + files(sourceSets.test.java.srcDirs).asPath,
                 '-A' + COGENGEN_PHASE_KEY + '=' + IMPLS,
+                '-parameters'
         ]
     }
 }

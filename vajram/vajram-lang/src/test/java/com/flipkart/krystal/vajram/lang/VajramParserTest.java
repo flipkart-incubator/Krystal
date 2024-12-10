@@ -16,22 +16,55 @@ import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Recognizer;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class VajramParserTest {
+
+  @Test
+  void computeAveragePrice() throws Exception {
+    parseFile("computeAveragePrice.vajram");
+  }
+
+  @Test
+  @Disabled("Comments are not yet supported")
+  void errabilityDemo() throws Exception {
+    parseFile("errabilityDemo.vajram");
+  }
+
+  @Test
+  void getAvailableProductDetails() throws Exception {
+    parseFile("getAvailableProductDetails.vajram");
+  }
+
+  @Test
+  void getFriendsOfUser() throws Exception {
+    parseFile("getFriendsOfUser.vajram");
+  }
+
+  @Test
+  void getProductDetails() throws Exception {
+    parseFile("getProductDetails.vajram");
+  }
+
   @Test
   void getUserInfo() throws Exception {
     parseFile("getUserInfo.vajram");
   }
 
   @Test
-  void sayHelloToFriends() throws Exception {
-    parseFile("sayHelloToFriends.vajram");
+  void helloWorld() throws Exception {
+    parseFile("helloWorld.vajram");
   }
 
   @Test
-  void getFriendsOfUser() throws Exception {
-    parseFile("getFriendsOfUser.vajram");
+  void isProductAvailable() throws Exception {
+    parseFile("isProductAvailable.vajram");
+  }
+
+  @Test
+  void sayHelloToFriends() throws Exception {
+    parseFile("sayHelloToFriends.vajram");
   }
 
   @Test

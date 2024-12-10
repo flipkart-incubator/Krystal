@@ -1,11 +1,11 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.data.Errable.nil;
 import static com.flipkart.krystal.data.Errable.withError;
 import static com.flipkart.krystal.krystex.kryon.KryonUtils.enqueueOrExecuteCommand;
 import static com.flipkart.krystal.resolution.ResolverCommand.computedRequests;
 import static com.flipkart.krystal.resolution.ResolverCommand.skip;
-import static com.flipkart.krystal.utils.Futures.linkFutures;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -24,6 +24,7 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.data.Results;
+import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
@@ -42,7 +43,6 @@ import com.flipkart.krystal.krystex.resolution.MultiResolver;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.flipkart.krystal.resolution.ResolverCommand;
 import com.flipkart.krystal.resolution.ResolverCommand.SkipDependency;
-import com.flipkart.krystal.utils.SkippedExecutionException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -79,13 +79,6 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
 
   /** A unique Result future for every dependant chain. */
   private final Map<DependantChain, CompletableFuture<BatchResponse>> resultsByDepChain =
-      new LinkedHashMap<>();
-
-  /**
-   * A unique {@link CompletableFuture} for every new set of Inputs. This acts as a cache so that
-   * the same computation is not repeated multiple times .
-   */
-  private final Map<Request<Object>, CompletableFuture<@Nullable Object>> resultsCache =
       new LinkedHashMap<>();
 
   private final Map<DependantChain, Set<Integer>> executedDependencies = new LinkedHashMap<>();
@@ -431,6 +424,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     if (log.isDebugEnabled())
       for (int timeout : List.of(5, 10, 15)) {
         depResponse
+            .copy()
             .orTimeout(timeout, SECONDS)
             .whenComplete(
                 (_r, throwable) -> {
@@ -451,6 +445,12 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
 
   private Optional<CompletableFuture<BatchResponse>> executeOutputLogicIfPossible(
       DependantChain dependantChain) {
+
+    if (outputLogicExecuted.getOrDefault(dependantChain, false)) {
+      // Output logic aleady executed
+      return Optional.empty();
+    }
+
     ForwardBatch forwardCommand = getForwardCommand(dependantChain);
     // If all the inputs and dependency values needed by the output logic are available, then
     // prepare to run outputLogic
@@ -516,24 +516,18 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     Map<RequestId, CompletableFuture<Errable<Object>>> resultsByRequest = new LinkedHashMap<>();
     inputs.forEach(
         (requestId, outputLogicFacets) -> {
-          // Retrieve existing result from cache if result for this set of inputs has already been
-          // calculated
-          CompletableFuture<@Nullable Object> cachedResult =
-              resultsCache.get(outputLogicFacets.request());
-          if (cachedResult == null) {
-            try {
-              cachedResult =
-                  finalLogic
-                      .execute(ImmutableList.of(outputLogicFacets.allFacets()))
-                      .values()
-                      .iterator()
-                      .next();
-            } catch (Exception e) {
-              cachedResult = failedFuture(e);
-            }
-            resultsCache.put(outputLogicFacets.request(), cachedResult);
+          CompletableFuture<@Nullable Object> result;
+          try {
+            result =
+                finalLogic
+                    .execute(ImmutableList.of(outputLogicFacets.allFacets()))
+                    .values()
+                    .iterator()
+                    .next();
+          } catch (Throwable e) {
+            result = failedFuture(e);
           }
-          resultsByRequest.put(requestId, cachedResult.handle(Errable::errableFrom));
+          resultsByRequest.put(requestId, result.handle(Errable::errableFrom));
         });
     return resultsByRequest;
   }
@@ -572,7 +566,18 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       Iterable<OutputLogicDecorator> reverseSortedDecorators =
           getSortedDecorators(dependantChain)::descendingIterator;
       for (OutputLogicDecorator decorator : reverseSortedDecorators) {
-        decorator.executeCommand(new FlushCommand(dependantChain));
+        try {
+          decorator.executeCommand(new FlushCommand(dependantChain));
+        } catch (Throwable e) {
+          log.error(
+              """
+                  Error while flushing decorator: {}. \
+                  This is most probably a bug since decorator methods are not supposed to throw exceptions. \
+                  This can cause unpredictable behaviour in the krystal graph execution. \
+                  Please fix!""",
+              decorator,
+              e);
+        }
       }
     }
   }
@@ -612,22 +617,32 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
           "Duplicate batch request received for dependant chain %s"
               .formatted(forwardBatch.dependantChain()));
     }
-    ImmutableSet<Integer> inputIds = forwardBatch.facetIds();
+    ImmutableSet<Integer> resolvedInputIds = forwardBatch.facetIds();
     if (inputsValueCollector.putIfAbsent(forwardBatch.dependantChain(), forwardBatch) != null) {
+
       throw new DuplicateRequestException(
           "Duplicate data for inputs %s of kryon %s in dependant chain %s"
-              .formatted(inputIds, kryonId, forwardBatch.dependantChain()));
+              // TODO: Use input names instead of input ids
+              .formatted(resolvedInputIds, kryonId, forwardBatch.dependantChain()));
     }
-    SetView<Integer> resolvableInputNames =
+    SetView<Integer> resolvableInputIds =
         Sets.difference(kryonDefinition.facetIds(), kryonDefinition.dependencyKryons().keySet());
-    if (!inputIds.containsAll(resolvableInputNames)) {
-      throw new IllegalArgumentException(
-          "Did not receive inputs " + Sets.difference(resolvableInputNames, inputIds));
+    if (log.isInfoEnabled()) {
+      if (!resolvedInputIds.containsAll(resolvableInputIds)) {
+        log.info(
+            """
+                Kryon '{}' invoked via depChain '{}' did not receive these inputs: {}. \
+                Proceeding with kryon execution. \
+                If any of these inputs are manadatory, the kryon is expected to return relevant errors.""",
+            kryonId,
+            forwardBatch.dependantChain(),
+            Sets.difference(resolvableInputIds, resolvedInputIds));
+      }
     }
 
     availableFacetsByDepChain
         .computeIfAbsent(forwardBatch.dependantChain(), _k -> new LinkedHashSet<>())
-        .addAll(inputIds);
+        .addAll(resolvedInputIds);
     forwardBatch
         .executableRequests()
         .forEach(

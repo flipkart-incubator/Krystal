@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.samples.greeting;
 
-public class AnalyticsEventSink {
+public interface AnalyticsEventSink {
 
-  public void pushEvent(String eventType, GreetingEvent greetingEvent) {}
+  void pushEvent(String eventType, GreetingEvent greetingEvent);
 }

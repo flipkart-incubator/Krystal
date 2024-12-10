@@ -1,7 +1,7 @@
 package com.flipkart.krystal.data;
 
+import com.flipkart.krystal.except.ThrowingCallable;
 import java.util.Optional;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -21,7 +21,7 @@ public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Succes
     return new Failure<>(t);
   }
 
-  static <T> Errable<T> errableFrom(Callable<T> valueProvider) {
+  static <T> Errable<T> errableFrom(ThrowingCallable<@Nullable T> valueProvider) {
     try {
       return withValue(valueProvider.call());
     } catch (Throwable e) {
@@ -29,7 +29,7 @@ public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Succes
     }
   }
 
-  static <S, T> Function<S, Errable<T>> errableFrom(Function<S, T> valueComputer) {
+  static <S, T> Function<S, Errable<T>> computeErrableFrom(Function<S, @Nullable T> valueComputer) {
     return s -> errableFrom(() -> valueComputer.apply(s));
   }
 

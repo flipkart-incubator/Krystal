@@ -1,13 +1,11 @@
 package com.flipkart.krystal.vajram.facets;
 
-import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.datatypes.DataType;
-import com.google.common.collect.ImmutableMap;
+import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import lombok.Builder;
 
 @Builder
@@ -17,11 +15,11 @@ public record InputDef<T>(
     DataType<?> type,
     boolean isMandatory,
     T defaultValue,
-    Function<? extends Facets,Object> getter,
+    Function<? extends Facets, Object> getter,
     String documentation,
     boolean isBatched,
     ImmutableSet<InputSource> sources,
-    ImmutableMap<Object, Tag> tags)
+    ElementTags tags)
     implements VajramFacetDefinition {
 
   private static final ImmutableSet<InputSource> DEFAULT_INPUT_SOURCES =

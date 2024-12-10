@@ -1,16 +1,10 @@
 package com.flipkart.krystal.vajram;
 
-import static com.flipkart.krystal.vajram.Vajrams.getVajramIdString;
-
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
 import java.util.Collection;
 
 // @jdk.internal.ValueBased
 public record VajramID(String vajramId) implements DataAccessSpec {
-
-  public static VajramID ofVajram(Class<? extends Vajram<?>> vajramClass) {
-    return vajramID(getVajramIdString(vajramClass));
-  }
 
   public static VajramID vajramID(String id) {
     return new VajramID(id);

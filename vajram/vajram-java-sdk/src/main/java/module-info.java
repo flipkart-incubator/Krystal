@@ -5,7 +5,6 @@ module flipkart.krystal.vajram {
   exports com.flipkart.krystal.vajram.das;
   exports com.flipkart.krystal.vajram.batching;
   exports com.flipkart.krystal.vajram.exec;
-  exports com.flipkart.krystal.vajram.tags;
   exports com.flipkart.krystal.vajram.exception;
   exports com.flipkart.krystal.vajram.facets.resolution.sdk;
   exports com.flipkart.krystal.vajram.utils;

@@ -1,0 +1,41 @@
+package com.flipkart.krystal.vajram.lang.samples.tickets;
+
+@LinearStateMachine
+bool bookTickets(
+      @input Event event,
+      @input int count,
+      @input userId){
+
+  TicketSelectionResponse? selectedTickets
+          = selectTickets(forEvent = event, number = count);
+  @State
+  bool ticketsSelected = selectedTickets?valuePresent();
+
+  TicketReservationResponse? reservedTickets
+          = reserveTickets(tickets = selectedTickets.tickets());
+  @State
+  bool ticketsReserved = reservedTickets?valuePresent();
+
+  TicketPrice? ticketPrice =
+          getPrice(tickets = reservedTickets.tickets());
+
+  PaymentInit? paymentInit
+          = initPayment(user = userId, amount = ticketPrice.getPrice());
+  @State
+  bool paymentInitiated = paymentInit?valuePresent();
+
+  PaymentConfirmation? paymentConfirmation
+          = confirmPayment(paymentId = paymentInit.id());
+  @State
+  bool paymentConfirmed = paymentConfirmation?valuePresent();
+
+  TicketBooking ticketBooking
+          = confirmTickets(
+               tickets = ticketsReserved.tickets(),
+               paymentId = paymentConfirmation.paymentId());
+
+  @State
+  {
+    ticketBooking.isSuccessful()
+  }
+}

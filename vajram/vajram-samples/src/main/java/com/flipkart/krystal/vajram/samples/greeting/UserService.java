@@ -4,11 +4,11 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacets.BatchFacets;
 import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacets.CommonFacets;
 import java.util.List;
@@ -38,10 +38,7 @@ public abstract class UserService extends IOVajram<UserInfo> {
                 userInfos.stream()
                     .collect(
                         Collectors.toMap(
-                            userInfo ->
-                                BatchFacets._builder()
-                                    .userId(userInfo.userId())
-                                    ._build(),
+                            userInfo -> BatchFacets._builder().userId(userInfo.userId())._build(),
                             userInfo -> userInfo)));
     return _batchedFacets.batch().stream()
         .collect(
@@ -52,8 +49,7 @@ public abstract class UserService extends IOVajram<UserInfo> {
                         results -> Optional.ofNullable(results.get(im)).orElseThrow())));
   }
 
-  private static CompletableFuture<List<UserInfo>> batchServiceCall(
-      List<BatchFacets> modInputs) {
+  private static CompletableFuture<List<UserInfo>> batchServiceCall(List<BatchFacets> modInputs) {
     return completedFuture(
         modInputs.stream()
             .map(BatchFacets::userId)

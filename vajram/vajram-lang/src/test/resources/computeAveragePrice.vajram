@@ -1,0 +1,16 @@
+package com.flipkart.krystal.vajram.lang.samples.products;
+
+double? computeAveragePrice(ProductCollection collection){
+  ProductDetails?* productDetails =* getProductDetails(
+      productId =* collection.productIds();
+  );
+
+  {
+    productDetails.values()
+      .stream()
+      .filter(_?valuePresent())
+      .map(_.price())
+      .mapToDouble()
+      .average()
+  }
+}

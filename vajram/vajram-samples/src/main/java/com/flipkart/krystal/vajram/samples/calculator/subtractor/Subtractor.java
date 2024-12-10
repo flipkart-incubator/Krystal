@@ -1,11 +1,13 @@
 package com.flipkart.krystal.vajram.samples.calculator.subtractor;
 
+import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajram;
+import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.VajramDef;
 import java.util.Optional;
 
+@ExternalInvocation(allow = true)
 @VajramDef
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class Subtractor extends ComputeVajram<Integer> {

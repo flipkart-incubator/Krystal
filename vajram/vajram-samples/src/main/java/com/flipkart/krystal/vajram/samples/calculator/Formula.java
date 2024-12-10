@@ -9,19 +9,25 @@ import static com.flipkart.krystal.vajram.samples.calculator.FormulaRequest.*;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest.*;
 import static com.flipkart.krystal.vajram.samples.calculator.divider.DividerRequest.*;
 
+import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.vajram.ComputeVajram;
+import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
 import com.flipkart.krystal.vajram.samples.calculator.divider.Divider;
 import com.google.common.collect.ImmutableCollection;
+import java.util.Optional;
 
 /** a/(p+q) */
+@ExternalInvocation(allow = true)
 @VajramDef
 public abstract class Formula extends ComputeVajram<Integer> {
+  @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
     @Input int a;
     @Input int p;
@@ -31,7 +37,7 @@ public abstract class Formula extends ComputeVajram<Integer> {
     int sum;
 
     @Dependency(onVajram = Divider.class)
-    int quotient;
+    Optional<Integer> quotient;
   }
 
   @Override
@@ -50,7 +56,15 @@ public abstract class Formula extends ComputeVajram<Integer> {
   }
 
   @Output
-  static int result(int quotient) {
-    return quotient;
+  static int result(Errable<Integer> quotient) throws Throwable {
+    /* Return quotient */
+    return quotient
+        .valueOpt()
+        .orElseThrow(
+            () ->
+                quotient
+                    .errorOpt()
+                    .orElseGet(
+                        () -> new StackTracelessException("Did not receive division result")));
   }
 }

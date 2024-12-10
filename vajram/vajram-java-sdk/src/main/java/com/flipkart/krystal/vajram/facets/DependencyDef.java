@@ -1,9 +1,8 @@
 package com.flipkart.krystal.vajram.facets;
 
-import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.tags.ElementTags;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
-import com.google.common.collect.ImmutableMap;
 import java.util.function.Function;
 import lombok.Builder;
 
@@ -17,5 +16,5 @@ public record DependencyDef<T>(
     boolean isBatched,
     boolean canFanout,
     String documentation,
-    ImmutableMap<Object, Tag> tags)
+    ElementTags tags)
     implements VajramFacetDefinition {}

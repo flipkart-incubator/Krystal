@@ -4,14 +4,14 @@ string sayHelloToFriends(
     string userId,
     int? numberOfFriends){
 
-  @dep UserInfo userInfo = getUserInfo(userId = userId)
+  @dep UserInfo userInfo = getUserInfo(userId = userId);
 
   @dep UserInfo* friendsInfos = getUserInfo(
       userId =*
           IntStream
-              .range(0, numberOfFriends?or(2))
+              .range(0, numberOfFriends?default(2))
               .mapToObj(i, getFriendId(i))
-  )
+  );
 
   @output {
     return "Hello Friends of %s ! %s"
@@ -19,7 +19,7 @@ string sayHelloToFriends(
           userInfo.name(),
           friendInfos.responses()
             .filterPresent()
-            .map(_.userName())
+            .map{_.userName()}
             .collect(joining(", "))
         );
   }

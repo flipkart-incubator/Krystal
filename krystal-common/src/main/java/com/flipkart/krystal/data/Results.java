@@ -18,8 +18,8 @@ public record Results<R extends Request<T>, T>(
                 ::iterator);
   }
 
+  @SuppressWarnings("unchecked")
   public static <R extends Request<T>, T> Results<R, T> empty() {
-    //noinspection unchecked
     return (Results<R, T>) EMPTY;
   }
 }

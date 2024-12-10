@@ -4,17 +4,17 @@ import java.lang.Set;
 import com.flipkart.krystal.vajram.lang.samples.friendsservice.FriendServiceClient;
 
 public Set<string> getFriendsOfUser(
-    @mod @input string userId,
+    @input string userId,
     @inject FriendServiceClient svcClient){
 
   @output ~{
     svcClient.getFriendsIds(
         new FriendServiceRequest(
             #mod().stream()
-                .map(_.userId())
+                .map{_.userId()}
                 .toSet()))
       ~?.results()
-      ~? or(List.of())
+      ~? default(List.of())
       ~ .stream()
       ~ .toMap {
           new #mod(_.userId()), _.friendIds()}

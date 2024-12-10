@@ -1,66 +1,80 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
+import static com.flipkart.krystal.vajram.VajramID.vajramID;
+
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
-import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
-import com.flipkart.krystal.utils.MultiLeasePool;
-import com.flipkart.krystal.vajram.ApplicationRequestContext;
+import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
+import com.flipkart.krystal.krystex.kryondecoration.KryonExecutionContext;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.exec.VajramExecutor;
+import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
+import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.VajramInjectionProvider;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.function.Function;
+import lombok.Builder;
+import lombok.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public class KrystexVajramExecutor<C extends ApplicationRequestContext>
-    implements VajramExecutor<C> {
+public class KrystexVajramExecutor implements VajramExecutor {
 
   private final VajramKryonGraph vajramKryonGraph;
-  private final C applicationRequestContext;
   private final KrystalExecutor krystalExecutor;
 
+  @Builder
   public KrystexVajramExecutor(
-      VajramKryonGraph vajramKryonGraph,
-      C applicationRequestContext,
-      MultiLeasePool<? extends ExecutorService> executorServicePool,
-      KryonExecutorConfig config) {
+      @NonNull VajramKryonGraph vajramKryonGraph,
+      @NonNull KrystexVajramExecutorConfig executorConfig) {
     this.vajramKryonGraph = vajramKryonGraph;
-    this.applicationRequestContext = applicationRequestContext;
+    VajramInjectionProvider inputInjectionProvider = executorConfig.inputInjectionProvider();
+    if (inputInjectionProvider != null) {
+      executorConfig
+          .kryonExecutorConfigBuilder()
+          .requestScopedKryonDecoratorConfig(
+              KryonInputInjector.DECORATOR_TYPE,
+              new KryonDecoratorConfig(
+                  KryonInputInjector.DECORATOR_TYPE,
+                  /* shouldDecorate= */ executorContext ->
+                      isInjectionNeeded(vajramKryonGraph, executorContext),
+                  /* instanceIdGenerator= */ executionContext -> KryonInputInjector.DECORATOR_TYPE,
+                  /* factory= */ decoratorContext ->
+                      new KryonInputInjector(vajramKryonGraph, inputInjectionProvider)));
+    }
     this.krystalExecutor =
         new KryonExecutor(
-            vajramKryonGraph.getKryonDefinitionRegistry(),
-            executorServicePool,
-            config,
-            applicationRequestContext.requestId());
+            vajramKryonGraph.kryonDefinitionRegistry(),
+            executorConfig.kryonExecutorConfigBuilder().build(),
+            executorConfig.requestId());
+  }
+
+  private static boolean isInjectionNeeded(
+      VajramKryonGraph vajramKryonGraph, KryonExecutionContext executionContext) {
+    return vajramKryonGraph
+        .getVajramDefinition(vajramID(executionContext.kryonId().value()))
+        .map(v -> v.vajramMetadata().isInputInjectionNeeded())
+        .orElse(false);
   }
 
   @Override
   public <T> CompletableFuture<@Nullable T> execute(
-      VajramID vajramId, Function<C, ImmutableRequest<T>> vajramRequestCreator) {
+      VajramID vajramId, ImmutableRequest<T> vajramRequest) {
     return execute(
         vajramId,
-        vajramRequestCreator,
+        vajramRequest,
         KryonExecutionConfig.builder().executionId("defaultExecution").build());
   }
 
   public <T> CompletableFuture<@Nullable T> execute(
-      VajramID vajramId,
-      Function<C, ImmutableRequest<T>> vajramRequestCreator,
-      KryonExecutionConfig executionConfig) {
-    return executeWithFacets(vajramId, vajramRequestCreator, executionConfig);
+      VajramID vajramId, ImmutableRequest<T> vajramRequest, KryonExecutionConfig executionConfig) {
+    return executeWithFacets(vajramId, vajramRequest, executionConfig);
   }
 
   public <T> CompletableFuture<@Nullable T> executeWithFacets(
-      VajramID vajramId,
-      Function<C, ? extends Request<T>> facetsCreator,
-      KryonExecutionConfig executionConfig) {
+      VajramID vajramId, Request<T> facets, KryonExecutionConfig executionConfig) {
     return krystalExecutor.executeKryon(
-        vajramKryonGraph.getKryonId(vajramId),
-        facetsCreator.apply(applicationRequestContext),
-        executionConfig);
+        vajramKryonGraph.getKryonId(vajramId), facets, executionConfig);
   }
 
   public KrystalExecutor getKrystalExecutor() {
@@ -68,12 +82,12 @@ public class KrystexVajramExecutor<C extends ApplicationRequestContext>
   }
 
   @Override
-  public void flush() {
-    krystalExecutor.flush();
+  public void close() {
+    krystalExecutor.close();
   }
 
   @Override
-  public void close() {
-    krystalExecutor.close();
+  public void shutdownNow() {
+    krystalExecutor.shutdownNow();
   }
 }

@@ -7,12 +7,13 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihell
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Request.skip_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Request.userIds_s;
 
-import com.flipkart.krystal.data.RequestResponse;
+import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.vajram.ComputeVajram;
+import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+@ExternalInvocation(allow = true)
 @VajramDef
 public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
   static class _Facets {
@@ -39,8 +41,13 @@ public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
             hellos_s,
             depInputFanout(HelloFriendsV2Request.userId_s)
                 .using(userIds_s, skip_s)
-                .skipIf((userIds, skip) -> skip.valueOpt().orElse(false), "skip requested")
-                .asResolver((userIds, skip) -> userIds.valueOpt().orElse(Set.of()))));
+                .asResolver(
+                    (userIds, skip) -> {
+                      if (skip.valueOpt().orElse(false)) {
+                        throw new SkippedExecutionException("skip requested");
+                      }
+                      return userIds.valueOpt().orElse(Set.of());
+                    })));
   }
 
   @Output

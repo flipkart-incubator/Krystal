@@ -1,6 +1,5 @@
 package com.flipkart.krystal.krystex;
 
-import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
@@ -8,7 +7,8 @@ import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
-import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.DecoratorContext;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.LogicDecoratorContext;
+import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
@@ -30,9 +30,9 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
   protected OutputLogicDefinition(
       KryonLogicId kryonLogicId,
       Set<Integer> inputs,
-      ImmutableMap<Object, Tag> logicTags,
+      ElementTags tags,
       OutputLogic<T> outputLogic) {
-    super(kryonLogicId, inputs, logicTags, outputLogic);
+    super(kryonLogicId, inputs, tags, outputLogic);
   }
 
   public final ImmutableMap<Facets, CompletableFuture<@Nullable T>> execute(
@@ -60,7 +60,7 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
             LogicExecutionContext logicExecutionContext =
                 new LogicExecutionContext(
                     kryonDefinition.kryonId(),
-                    logicTags(),
+                    tags(),
                     dependants,
                     kryonDefinition.kryonDefinitionRegistry());
             String instanceId = decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
@@ -75,7 +75,9 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
                           k ->
                               decoratorConfig
                                   .factory()
-                                  .apply(new DecoratorContext(instanceId, logicExecutionContext))));
+                                  .apply(
+                                      new LogicDecoratorContext(
+                                          instanceId, logicExecutionContext))));
             }
           } catch (Exception e) {
             log.error(

@@ -16,7 +16,6 @@ final class Nil<T> implements Errable<T> {
   private final CompletableFuture<@Nullable T> NIL_FUTURE = completedFuture(null);
 
   static <T> Nil<T> nil() {
-    //noinspection unchecked
     return (Nil<T>) NIL;
   }
 

@@ -1,7 +1,10 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
-import static com.flipkart.krystal.utils.Futures.linkFutures;
+import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.concurrent.CompletableFuture.failedFuture;
+import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.config.NestedConfig;
@@ -14,11 +17,11 @@ import com.flipkart.krystal.krystex.logicdecoration.FlushCommand;
 import com.flipkart.krystal.krystex.logicdecoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecoratorCommand;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
+import com.flipkart.krystal.vajram.batching.BatchableFacets;
 import com.flipkart.krystal.vajram.batching.BatchableImmutableFacets;
 import com.flipkart.krystal.vajram.batching.BatchableSupplier;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
-import com.flipkart.krystal.vajram.batching.BatchableFacets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -30,7 +33,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -98,7 +100,7 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
       return facetsList.stream()
           .collect(
               ImmutableMap.<Facets, Facets, CompletableFuture<@Nullable Object>>toImmutableMap(
-                  Function.identity(),
+                  identity(),
                   key ->
                       Optional.ofNullable(futureCache.get(key._build()))
                           .orElseThrow(
@@ -125,21 +127,29 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
     }
   }
 
+  @SuppressWarnings("UnnecessaryTypeArgument") // To Handle nullChecker errors
   private void batchFacetsList(
       OutputLogic<Object> logicToDecorate, BatchedFacets<Facets, Facets> batchedFacets) {
     ImmutableList<BatchableFacets> requests =
         batchedFacets.batch().stream()
             .map(each -> batchableSupplier.createBatchable(each, batchedFacets.common()))
             .collect(toImmutableList());
-    logicToDecorate
-        .execute(requests)
-        .forEach(
-            (inputs, resultFuture) -> {
-              linkFutures(
-                  resultFuture,
-                  futureCache.computeIfAbsent(
-                      inputs._build(), request -> new CompletableFuture<@Nullable Object>()));
-            });
+    ImmutableMap<Facets, CompletableFuture<@Nullable Object>> result;
+    ImmutableList<Facets> facetsList = requests.stream().collect(toImmutableList());
+    try {
+      result = logicToDecorate.execute(facetsList);
+    } catch (Throwable e) {
+      result = facetsList.stream().collect(toImmutableMap(identity(), i -> failedFuture(e)));
+    }
+
+    result.forEach(
+        (inputs, resultFuture) -> {
+          //noinspection RedundantTypeArguments: To Handle nullChecker errors
+          linkFutures(
+              resultFuture,
+              futureCache.<CompletableFuture<@Nullable Object>>computeIfAbsent(
+                  inputs._build(), request -> new CompletableFuture<@Nullable Object>()));
+        });
   }
 
   @Override

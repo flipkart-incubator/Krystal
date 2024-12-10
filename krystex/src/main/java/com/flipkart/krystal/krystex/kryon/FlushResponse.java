@@ -1,7 +1,7 @@
 package com.flipkart.krystal.krystex.kryon;
 
 @SuppressWarnings("Singleton")
-final class FlushResponse implements KryonResponse {
+public final class FlushResponse implements KryonResponse {
 
   private static final FlushResponse INSTANCE = new FlushResponse();
 

@@ -1,0 +1,54 @@
+package com.flipkart.krystal.vajram.lang.samples;
+
+void errabilityDemo() {
+
+  // this dependency might fail
+  string? errableFacet = tryGetString();
+
+  {
+    //returns "" of errableFacet.valuePresent() is false
+    errableFacet?default("");
+
+    // returns true if value is present
+    errableFacet?valuePresent();
+    // returns true if value is absent
+    errableFacet?valueAbsent();
+
+    // returns true if both value and error are absent.
+    errableFacet?isNil();
+
+    // returns true if error is present
+    errableFacet?errorPresent();
+    // returns true if error is absent
+    errableFacet?errorAbsent();
+
+    nil?default("");     // returns ""
+    nil?valuePresent();  // returns false
+    nil?valueAbsent();   // returns true
+    nil?value();         // returns nil
+    nil?isNil();         // returns true
+    nil?errorPresent();  // returns false
+    nil?errorAbsent();   // returns true
+    nil?error();         // returns nil
+
+    string? test = "test";
+    test?default("");     // returns "test"
+    test?valuePresent();  // returns true
+    test?valueAbsent();   // returns false
+    test?value();         // returns "test"
+    test?isNil();         // returns false
+    test?errorPresent();  // returns false
+    test?errorAbsent();   // returns true
+    test?error();         // returns nil
+
+    string? error = err("test error");
+    error?default("");     // returns ""
+    error?valuePresent();  // returns false
+    error?valueAbsent();   // returns true
+    error?value();         // returns nil
+    error?isNil();         // returns false
+    error?errorPresent();  // returns true
+    error?errorAbsent();   // returns false
+    error?error();         // returns err("test error")
+  }
+}

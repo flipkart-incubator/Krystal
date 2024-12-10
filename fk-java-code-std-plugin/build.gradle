@@ -1,0 +1,58 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath 'com.diffplug.spotless:spotless-plugin-gradle:6.16.0'
+    }
+}
+
+plugins {
+    id 'java-gradle-plugin'
+    id 'groovy'
+    id 'maven-publish'
+}
+
+group 'com.flipkart.java.code.standard'
+version '3.0'
+
+gradlePlugin {
+    plugins {
+        simplePlugin {
+            id = 'com.flipkart.java.code.standard'
+            implementationClass = 'com.flipkart.java.code.FkJavaCodeStandard'
+        }
+    }
+}
+
+dependencies {
+    implementation 'org.checkerframework:checkerframework-gradle-plugin:0.6.42'
+    implementation 'com.diffplug.spotless:spotless-plugin-gradle:6.16.0'
+    implementation 'net.ltgt.gradle:gradle-errorprone-plugin:4.0.0'
+
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+publishing {
+    repositories {
+        maven {
+            url "https://clojars.org/repo"
+            credentials {
+                username = rootProject.ext.clojarsusername
+                password = rootProject.ext.clojarspassword
+            }
+        }
+    }
+    publications.withType(MavenPublication).configureEach {
+        pom {
+            licenses {
+                license {
+                    name = 'The Apache License, Version 2.0'
+                    url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                }
+            }
+        }
+    }
+}

@@ -5,6 +5,7 @@ import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
 import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
+import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -38,39 +39,12 @@ public final class KryonDefinitionRegistry {
       String kryonId,
       Set<Integer> inputs,
       KryonLogicId outputLogicId,
-      LogicDefinition<CreateNewRequest> createNewRequest,
-      LogicDefinition<FacetsFromRequest> facetsFromRequest) {
-    return newKryonDefinition(
-        kryonId, inputs, outputLogicId, ImmutableMap.of(), createNewRequest, facetsFromRequest);
-  }
-
-  public KryonDefinition newKryonDefinition(
-      String kryonId,
-      Set<Integer> inputs,
-      KryonLogicId outputLogicId,
-      ImmutableMap<Integer, KryonId> dependencyKryons,
-      LogicDefinition<CreateNewRequest> createNewRequest,
-      LogicDefinition<FacetsFromRequest> facetsFromRequest) {
-    return newKryonDefinition(
-        kryonId,
-        inputs,
-        outputLogicId,
-        dependencyKryons,
-        ImmutableMap.of(),
-        createNewRequest,
-        facetsFromRequest,
-        null);
-  }
-
-  public KryonDefinition newKryonDefinition(
-      String kryonId,
-      Set<Integer> inputs,
-      KryonLogicId outputLogicId,
       ImmutableMap<Integer, KryonId> dependencyKryons,
       ImmutableMap</*ResolverID*/ Integer, ResolverDefinition> resolverDefinitions,
       LogicDefinition<CreateNewRequest> createNewRequest,
       LogicDefinition<FacetsFromRequest> facetsFromRequest,
-      @Nullable KryonLogicId mulitResolverId) {
+      @Nullable KryonLogicId mulitResolverId,
+      ElementTags tags) {
     if (!resolverDefinitions.isEmpty() && mulitResolverId == null) {
       throw new IllegalArgumentException("missing multi resolver logic");
     }
@@ -84,7 +58,8 @@ public final class KryonDefinitionRegistry {
             Optional.ofNullable(mulitResolverId),
             createNewRequest,
             facetsFromRequest,
-            this);
+            this,
+            tags);
     kryonDefinitions.put(kryonDefinition.kryonId(), kryonDefinition);
     return kryonDefinition;
   }

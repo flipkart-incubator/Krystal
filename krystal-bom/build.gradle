@@ -9,5 +9,17 @@ dependencies {
         api 'com.flipkart.krystal:vajram:' + project.krystal_version
         api 'com.flipkart.krystal:krystal-common:' + project.krystal_version
         api 'com.flipkart.krystal:vajram-krystex:' + project.krystal_version
+        api 'com.flipkart.krystal:vajram-guice:' + project.krystal_version
+    }
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.flipkart.krystal'
+            artifactId = project.name
+            version = project.krystal_version
+            from components.javaPlatform
+        }
     }
 }

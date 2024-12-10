@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
 import static com.flipkart.krystal.data.Errable.nil;
+import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Comparator.comparing;
@@ -14,6 +15,8 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestBuilder;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.data.Success;
+import com.flipkart.krystal.except.SkippedExecutionException;
+import com.flipkart.krystal.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.QualifiedInputs;
@@ -48,14 +51,20 @@ public final class InputResolverUtil {
           resolvers.getOrDefault(dependencyId, List.of());
       for (SimpleInputResolver<?, ?, ?, ?> simpleResolver : depResolvers) {
         int resolvable = simpleResolver.getResolverSpec().targetInput().id();
-        //noinspection unchecked,rawtypes
-        DependencyCommand<?> command =
-            _resolutionHelper(
-                (List) simpleResolver.getResolverSpec().sourceInputs(),
-                simpleResolver.getResolverSpec().transformer(),
-                simpleResolver.getResolverSpec().fanoutTransformer(),
-                simpleResolver.getResolverSpec().skipConditions(),
-                facets);
+        DependencyCommand<?> command;
+        var fanoutTransformer = simpleResolver.getResolverSpec().fanoutTransformer();
+        boolean fanout = fanoutTransformer != null;
+        try {
+          command =
+              _resolutionHelper(
+                  simpleResolver.getResolverSpec().sourceInputs(),
+                  simpleResolver.getResolverSpec().transformer(),
+                  simpleResolver.getResolverSpec().fanoutTransformer(),
+                  simpleResolver.getResolverSpec().skipConditions(),
+                  facets);
+        } catch (Throwable e) {
+          command = handleResolverException(e, fanout);
+        }
         if (command.shouldSkip()) {
           skippedDependencies.put(dependencyId, skipExecution(command.doc()));
           break;
@@ -67,6 +76,40 @@ public final class InputResolverUtil {
       }
     }
     return new ResolutionResult(results, skippedDependencies);
+  }
+
+  public static ResolverCommand toResolverCommand(
+      DependencyCommand<Request<Object>> dependencyCommand) {
+    if (dependencyCommand.shouldSkip()) {
+      return ResolverCommand.skip(dependencyCommand.doc());
+    }
+    return ResolverCommand.computedRequests(
+        dependencyCommand.inputs().stream()
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .collect(toImmutableList()));
+  }
+
+  public static <T> DependencyCommand<T> handleResolverException(Throwable e, boolean fanout) {
+    return handleResolverException(e, fanout, "Resolver threw exception.");
+  }
+
+  public static <T> DependencyCommand<T> handleResolverException(
+      Throwable e, boolean fanout, String messagePrefix) {
+    String exceptionMessage = e.getMessage();
+    if (e instanceof SkippedExecutionException skippedExecutionException) {
+      exceptionMessage = skippedExecutionException.getMessage();
+    }
+    if (exceptionMessage == null) {
+      exceptionMessage = messagePrefix + ' ' + e;
+    }
+    DependencyCommand<T> command;
+    if (fanout) {
+      command = skipFanout(exceptionMessage);
+    } else {
+      command = skipExecution(exceptionMessage);
+    }
+    return command;
   }
 
   public static void collectDepInputs(
@@ -115,7 +158,7 @@ public final class InputResolverUtil {
 
   @SuppressWarnings("rawtypes")
   static <T> DependencyCommand<T> _resolutionHelper(
-      List<VajramFacetSpec> sourceInputs,
+      List<? extends VajramFacetSpec<?, ?>> sourceInputs,
       @Nullable Function<List<Errable<?>>, ?> oneToOneTransformer,
       @Nullable Function<List<Errable<?>>, ? extends Collection<?>> fanoutTransformer,
       List<? extends SkipPredicate<?>> skipPredicates,
@@ -147,7 +190,7 @@ public final class InputResolverUtil {
       inputValues.add(inputValue);
     }
 
-    //noinspection unchecked
+    @SuppressWarnings("unchecked")
     Optional<SkipPredicate<Object>> skipPredicate =
         skipPredicates.stream()
             .map(p -> (SkipPredicate<Object>) p)
@@ -155,12 +198,12 @@ public final class InputResolverUtil {
             .findFirst();
     if (skipPredicate.isPresent()) {
       if (fanout) {
-        return MultiExecute.skipFanout(skipPredicate.get().reason());
+        return skipFanout(skipPredicate.get().reason());
       } else {
         return skipExecution(skipPredicate.get().reason());
       }
     }
-    //noinspection unchecked
+    @SuppressWarnings("unchecked")
     Function<List<Errable<?>>, Object> transformer =
         ofNullable((Function<List<Errable<?>>, Object>) oneToOneTransformer)
             .or(
@@ -177,14 +220,18 @@ public final class InputResolverUtil {
                 });
     Optional<Object> transformedInput = ofNullable(transformer.apply(inputValues));
     if (fanout) {
-      //noinspection unchecked
-      return MultiExecute.executeFanoutWith(
-          transformedInput.map(ts -> ((Collection<T>) ts).stream()).stream()
-              .flatMap(identity())
-              .collect(toImmutableList()));
+      @SuppressWarnings("unchecked")
+      MultiExecute<T> multiExecute =
+          MultiExecute.executeFanoutWith(
+              transformedInput.map(ts -> ((Collection<T>) ts).stream()).stream()
+                  .flatMap(identity())
+                  .collect(toImmutableList()));
+      return multiExecute;
     } else {
-      //noinspection unchecked
-      return SingleExecute.executeWith((T) transformedInput.orElse(null));
+      @SuppressWarnings("unchecked")
+      SingleExecute<T> tSingleExecute =
+          SingleExecute.executeWith((T) transformedInput.orElse(null));
+      return tSingleExecute;
     }
   }
 

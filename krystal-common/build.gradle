@@ -1,6 +1,5 @@
 description 'Common data structures and utilities used across krystal components.'
 
-
 publishing {
     publications {
         maven(MavenPublication) {

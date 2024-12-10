@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajram.lang.samples.friends;
 import com.flipkart.userservice.models.UserServiceClient;
 
 private UserInfo getUserInfo(
-    @mod @input string userId,
+    #batch @input string userId,
     @inject UserServiceClient svcClient)
     permits sayHelloToFriends {
 
@@ -15,7 +15,7 @@ private UserInfo getUserInfo(
                 .toSet()))
       ~?.userInfos()
       ~?.stream()
-      ~? or(Stream.of())
+      ~? default(Stream.of())
       ~ .toMap {
           new #mod(_.userId()), _
         }

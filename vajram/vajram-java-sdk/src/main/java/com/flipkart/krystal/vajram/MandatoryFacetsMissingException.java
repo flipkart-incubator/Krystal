@@ -33,7 +33,7 @@ public class MandatoryFacetsMissingException extends RuntimeException {
                 failedMandatoryInputs.keySet().stream()
                     .map(
                         s ->
-                            "%s (Cause: %s)"
+                            "'%s' (Cause: %s)"
                                 .formatted(
                                     s,
                                     String.valueOf(

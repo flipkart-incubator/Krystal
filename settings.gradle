@@ -2,7 +2,7 @@ pluginManagement {
     repositories {
         mavenLocal()
         mavenCentral()
-        maven {url 'https://clojars.org/repo'}
+        maven { url 'https://clojars.org/repo' }
         gradlePluginPortal()
     }
 }
@@ -12,7 +12,7 @@ dependencyResolutionManagement {
     repositories {
         mavenLocal()
         mavenCentral()
-        maven {url 'https://clojars.org/repo'}
+        maven { url 'https://clojars.org/repo' }
         gradlePluginPortal()
     }
 }
@@ -40,5 +40,8 @@ include 'vajram-lang'
 project(':vajram-lang').projectDir = file('vajram/vajram-lang')
 
 include 'krystal-bom'
+
+include 'vajram-guice'
+project(':vajram-guice').projectDir = file('extensions/vajram-guice')
 
 include 'code-coverage-report'
