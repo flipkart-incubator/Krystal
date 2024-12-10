@@ -282,7 +282,7 @@ class KrystexVajramExecutorTest {
       helloString =
           krystexVajramExecutor.executeWithFacets(
               graph.getVajramId(HelloFriendsV2.class),
-              this::helloFriendsV2Request,
+              this.helloFriendsV2Request(requestContext),
               KryonExecutionConfig.builder().executionId("execution").build());
     }
     assertThat(helloString)

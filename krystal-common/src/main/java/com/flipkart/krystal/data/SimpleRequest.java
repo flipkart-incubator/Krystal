@@ -3,7 +3,9 @@ package com.flipkart.krystal.data;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.EqualsAndHashCode;
 
+@EqualsAndHashCode
 public final class SimpleRequest<T> implements ImmutableRequest<T> {
 
   private final SimpleRequestBuilder<T> data;

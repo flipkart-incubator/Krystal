@@ -5,8 +5,9 @@ import static com.flipkart.krystal.data.Errable.nil;
 import com.flipkart.krystal.except.IllegalModificationException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.EqualsAndHashCode;
 
-@SuppressWarnings("unchecked")
+@EqualsAndHashCode
 public final class SimpleRequestBuilder<T> implements RequestBuilder<T> {
   private final Map<Integer, Errable<Object>> data;
 

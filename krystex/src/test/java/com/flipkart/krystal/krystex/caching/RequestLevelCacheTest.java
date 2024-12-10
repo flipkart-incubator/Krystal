@@ -90,8 +90,7 @@ class RequestLevelCacheTest {
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void multiRequestExecution_withCache_cacheHitSuccess(
-      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy)
-      throws LeaseUnavailableException {
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     // This is redundant. This should Ideally move to a paramterized @BeforeEach method or after
     // parametrizing this at the test class level.
     // This is currently not supported in jupiter-junit:5.9.x.

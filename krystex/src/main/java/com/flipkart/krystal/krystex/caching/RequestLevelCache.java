@@ -5,6 +5,8 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
@@ -80,7 +82,7 @@ public class RequestLevelCache implements KryonDecorator {
         Kryon<KryonCommand, KryonResponse> kryon, ForwardBatch forwardBatch) {
       ImmutableMap<RequestId, Request<Object>> executableRequests =
           forwardBatch.executableRequests();
-      Map<RequestId, Request<Object>> cacheMisses = new LinkedHashMap<>();
+      Map<RequestId, ImmutableRequest<Object>> cacheMisses = new LinkedHashMap<>();
       Map<RequestId, CompletableFuture<@Nullable Object>> cacheHits = new LinkedHashMap<>();
       Map<RequestId, CompletableFuture<@Nullable Object>> newCacheEntries = new LinkedHashMap<>();
       executableRequests.forEach(
@@ -91,7 +93,7 @@ public class RequestLevelCache implements KryonDecorator {
               var placeHolderFuture = new CompletableFuture<@Nullable Object>();
               newCacheEntries.put(requestId, placeHolderFuture);
               cache.put(cacheKey, placeHolderFuture);
-              cacheMisses.put(requestId, facets);
+              cacheMisses.put(requestId, facets._build());
             } else {
               cacheHits.put(requestId, cachedFuture);
             }

@@ -297,7 +297,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
           int dependencyId = inputResolverDefinition.resolutionTarget().dependencyId();
           VajramFacetDefinition vajramFacetDefinition =
               vajramDefinition.facetsById().get(dependencyId);
-          if (vajramFacetDefinition == null) throw new IllegalStateException();
+          if (vajramFacetDefinition == null) {
+            throw new IllegalStateException();
+          }
           String depName = vajramFacetDefinition.name();
           ImmutableSet<String> resolvedInputNames =
               inputResolverDefinition.resolutionTarget().inputNames();
