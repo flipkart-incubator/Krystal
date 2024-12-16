@@ -3,6 +3,8 @@ package com.flipkart.krystal.pooling;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.pooling.PartitionedPool.PooledObject;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class PartitionedPoolTest {
@@ -94,19 +96,36 @@ class PartitionedPoolTest {
 
   @Test
   void leaseAndCloseLoop() throws LeaseUnavailableException {
-    PartitionedPool<Object> partitionedPool = new PartitionedPool<>(2);
+    PartitionedPool<Object> partitionedPool = new PartitionedPool<>(1);
 
     assertThat(partitionedPool.availableCount()).isEqualTo(0);
     for (int i = 0; i < 10; i++) {
-      partitionedPool.leaseAndAdd(new Object());
-      assertThat(partitionedPool.availableCount()).isEqualTo(i + 1);
+      partitionedPool.closeLease(partitionedPool.leaseAndAdd(new Object()));
     }
+    assertThat(partitionedPool.availableCount()).isEqualTo(10);
 
     for (int i = 0; i < 10; i++) {
       PooledObject<Object> leasedObject = partitionedPool.getForLeasing(0);
       assertThat(partitionedPool.availableCount()).isEqualTo(9);
       partitionedPool.closeLease(leasedObject);
       assertThat(partitionedPool.availableCount()).isEqualTo(10);
+    }
+  }
+
+  @Test
+  void leaseLoopAndCloseLoop() throws LeaseUnavailableException {
+    PartitionedPool<Object> partitionedPool = new PartitionedPool<>(1);
+
+    List<PooledObject<Object>> leasedObjects = new ArrayList<>();
+
+    for (int i = 0; i < 10; i++) {
+      leasedObjects.add(partitionedPool.leaseAndAdd(new Object()));
+      assertThat(partitionedPool.availableCount()).isEqualTo(0);
+    }
+    for (int i = 0; i < 10; i++) {
+      assertThat(partitionedPool.availableCount()).isEqualTo(i);
+      partitionedPool.closeLease(leasedObjects.get(i));
+      assertThat(partitionedPool.availableCount()).isEqualTo(i + 1);
     }
   }
 }
