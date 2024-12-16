@@ -9,6 +9,7 @@ import com.flipkart.krystal.data.RequestBuilder;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -57,11 +58,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public sealed interface Vajram<T> permits AbstractVajram, BatchableVajram {
 
-  default ImmutableCollection<InputResolver> getSimpleInputResolvers() {
+  default ImmutableCollection<SimpleInputResolver> getSimpleInputResolvers() {
     return ImmutableList.of();
   }
 
-  default ImmutableCollection<InputResolver> getInputResolvers() {
+  default ImmutableCollection<? extends InputResolver> getInputResolvers() {
     return getSimpleInputResolvers();
   }
 

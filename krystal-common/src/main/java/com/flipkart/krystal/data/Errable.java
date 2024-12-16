@@ -9,6 +9,52 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Success, Failure, Nil {
 
+  /**
+   * @return a {@link CompletableFuture} which is completed exceptionally with the error if this is
+   *     a {@link Failure}, or completed normally with the value if this is a {@link Success}, or
+   *     completed normally with null if this is {@link Nil}
+   */
+  CompletableFuture<@Nullable T> toFuture();
+
+  Optional<T> valueOpt();
+
+  default Optional<Throwable> errorOpt() {
+    return Optional.empty();
+  }
+
+  /**
+   * @return a non-empty {@link Optional} if this is a {@link Success} or empty {@link Optional} it
+   *     this is {@link Nil}
+   * @throws RuntimeException if this is a {@link Failure}. If the error in {@link Failure} is not a
+   *     {@link RuntimeException}, then the error is wrapped in a new {@link RuntimeException} and
+   *     thrown.
+   */
+  Optional<T> valueOptOrThrow();
+
+  T valueOrThrow();
+
+  static <T> Errable<T> with(Errable<T> t) {
+    return t;
+  }
+
+  static <T> Errable<T> with(Optional<T> t) {
+    return withValue(t.get());
+  }
+
+  static <T> Errable<T> with(@Nullable Object t) {
+    if (t instanceof Errable<?>) {
+      if (t instanceof Success<?> success) {
+        return with((T) success.value());
+      } else {
+        return (Errable<T>) t;
+      }
+    } else if (t instanceof Optional<?> o) {
+      return with((T) o.get());
+    } else {
+      return withValue((T) t);
+    }
+  }
+
   static <T> Errable<T> nil() {
     return Nil.nil();
   }
@@ -40,7 +86,7 @@ public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Succes
         if (error != null) {
           throw illegalState();
         } else {
-          return withValue((T) valueOpt.get());
+          return errableFrom((T) valueOpt.get(), null);
         }
       } else if (error != null) {
         return withError(error);
@@ -56,35 +102,11 @@ public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Succes
     } else if (error != null) {
       return withError(error);
     } else {
-      return Nil.nil();
+      return nil();
     }
   }
 
   private static IllegalArgumentException illegalState() {
     return new IllegalArgumentException("Both of 'value' and 'error' cannot be present together");
-  }
-
-  /**
-   * @return a {@link CompletableFuture} which is completed exceptionally with the error if this is
-   *     a {@link Failure}, or completed normally with the value if this is a {@link Success}, or
-   *     completed normally with null if this is {@link Nil}
-   */
-  CompletableFuture<@Nullable T> toFuture();
-
-  Optional<T> valueOpt();
-
-  /**
-   * @return a non-empty {@link Optional} if this is a {@link Success} or empty {@link Optional} it
-   *     this is {@link Nil}
-   * @throws RuntimeException if this is a {@link Failure}. If the error in {@link Failure} is not a
-   *     {@link RuntimeException}, then the error is wrapped in a new {@link RuntimeException} and
-   *     thrown.
-   */
-  Optional<T> valueOptOrThrow();
-
-  T valueOrThrow();
-
-  default Optional<Throwable> errorOpt() {
-    return Optional.empty();
   }
 }

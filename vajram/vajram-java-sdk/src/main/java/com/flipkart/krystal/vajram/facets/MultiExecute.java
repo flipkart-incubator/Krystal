@@ -5,14 +5,35 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.common.collect.ImmutableList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Optional;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
-public record MultiExecute<T>(Collection<T> multiInputs, boolean shouldSkip, String doc)
-    implements DependencyCommand<T> {
+@EqualsAndHashCode
+@ToString
+public final class MultiExecute<T> implements DependencyCommand<T> {
+  private final ImmutableList<T> inputs;
+  private final boolean shouldSkip;
+  private final String doc;
+
+  public MultiExecute(Collection<T> inputs, boolean shouldSkip, String doc) {
+    this.inputs = ImmutableList.copyOf(inputs);
+    this.shouldSkip = shouldSkip;
+    this.doc = doc;
+  }
 
   @Override
-  public ImmutableList<Optional<T>> inputs() {
-    return multiInputs.stream().map(Optional::ofNullable).collect(toImmutableList());
+  public ImmutableList<T> inputs() {
+    return inputs;
+  }
+
+  @Override
+  public boolean shouldSkip() {
+    return shouldSkip;
+  }
+
+  @Override
+  public String doc() {
+    return doc;
   }
 
   public static <T> MultiExecute<T> executeFanoutWith(Collection<? extends T> inputs) {

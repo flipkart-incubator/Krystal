@@ -8,7 +8,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Resolve {
-  String depName();
+  int dep();
 
-  String[] depInputs() default {};
+  int[] depInputs() default {};
 }

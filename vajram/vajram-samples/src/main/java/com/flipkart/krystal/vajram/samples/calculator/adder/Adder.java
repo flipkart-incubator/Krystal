@@ -11,7 +11,8 @@ import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.samples.calculator.adder.AdderFacets.BatchFacets;
-import com.flipkart.krystal.vajram.samples.calculator.adder.AdderFacets.CommonFacets;
+import com.flipkart.krystal.vajram.samples.calculator.adder.AdderFacets.CommonInputs;
+import com.google.common.collect.ImmutableList;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.Map;
@@ -36,12 +37,12 @@ public abstract class Adder extends IOVajram<Integer> {
 
   @Output
   static Map<BatchFacets, CompletableFuture<Integer>> add(
-      BatchedFacets<BatchFacets, CommonFacets> _batchedFacets) {
+      ImmutableList<BatchFacets> _batches, Optional<Boolean> fail) {
     CALL_COUNTER.increment();
-    if (_batchedFacets.common().fail().valueOpt().orElse(false)) {
+    if (fail.orElse(false)) {
       throw new RuntimeException("Adder failed because fail flag was set");
     }
-    return _batchedFacets.batch().stream()
+    return _batches.stream()
         .collect(
             toImmutableMap(
                 identity(),

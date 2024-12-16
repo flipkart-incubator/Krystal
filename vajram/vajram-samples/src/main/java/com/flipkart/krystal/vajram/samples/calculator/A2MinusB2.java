@@ -16,6 +16,7 @@ import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.multiplier.Multiplier;
 import com.flipkart.krystal.vajram.samples.calculator.multiplier.MultiplierRequest;
 import com.flipkart.krystal.vajram.samples.calculator.subtractor.Subtractor;
@@ -41,7 +42,7 @@ public abstract class A2MinusB2 extends ComputeVajram<Integer> {
   }
 
   @Override
-  public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
+  public ImmutableCollection<SimpleInputResolver> getSimpleInputResolvers() {
     return resolve(
         dep(
             twoA_s,
@@ -58,7 +59,7 @@ public abstract class A2MinusB2 extends ComputeVajram<Integer> {
   }
 
   @Output
-  static int result(A2MinusB2Facets _allFacets) {
-    return _allFacets.diff();
+  static int result(int diff) {
+    return diff;
   }
 }

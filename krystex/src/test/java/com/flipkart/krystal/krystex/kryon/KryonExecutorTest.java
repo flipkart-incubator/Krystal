@@ -267,7 +267,7 @@ class KryonExecutorTest {
                     dependencyValues ->
                         dependencyValues
                                 ._getDepResponses(1)
-                                .requestResponses()
+                                .requestResponsePairs()
                                 .iterator()
                                 .next()
                                 .response()
@@ -315,7 +315,7 @@ class KryonExecutorTest {
                 l2Dep,
                 Set.of(1),
                 dependencyValues ->
-                    dependencyValues._getDepResponses(1).requestResponses().stream()
+                    dependencyValues._getDepResponses(1).requestResponsePairs().stream()
                             .map(RequestResponse::response)
                             .iterator()
                             .next()
@@ -337,7 +337,7 @@ class KryonExecutorTest {
                 l3Dep,
                 Set.of(1),
                 dependencyValues -> {
-                  return dependencyValues._getDepResponses(1).requestResponses().stream()
+                  return dependencyValues._getDepResponses(1).requestResponsePairs().stream()
                           .map(RequestResponse::response)
                           .iterator()
                           .next()
@@ -360,7 +360,7 @@ class KryonExecutorTest {
                 l4Dep,
                 Set.of(1),
                 dependencyValues ->
-                    dependencyValues._getDepResponses(1).requestResponses().stream()
+                    dependencyValues._getDepResponses(1).requestResponsePairs().stream()
                             .map(RequestResponse::response)
                             .iterator()
                             .next()
@@ -384,7 +384,7 @@ class KryonExecutorTest {
                             "requestExecution_multiLevelDependencies_final",
                             Set.of(1),
                             dependencyValues ->
-                                dependencyValues._getDepResponses(1).requestResponses().stream()
+                                dependencyValues._getDepResponses(1).requestResponsePairs().stream()
                                         .map(RequestResponse::response)
                                         .iterator()
                                         .next()

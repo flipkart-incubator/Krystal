@@ -6,7 +6,7 @@ import static java.util.Arrays.stream;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.VajramDependencySpec;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
-import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import com.google.common.collect.ImmutableList;
 import java.util.Collection;
@@ -20,24 +20,28 @@ public final class InputResolvers {
    * @return An aggregated list of all the resolvers
    */
   @SafeVarargs
-  public static ImmutableList<InputResolver> resolve(List<InputResolver>... inputResolvers) {
-    return stream(inputResolvers)
-        .flatMap(Collection::stream)
-        .collect(ImmutableList.toImmutableList());
+  public static ImmutableList<SimpleInputResolver> resolve(
+      List<? extends SimpleInputResolver>... inputResolvers) {
+    ImmutableList.Builder<SimpleInputResolver> builder = ImmutableList.builder();
+    for (List<? extends SimpleInputResolver> inputResolver : inputResolvers) {
+      builder.addAll(inputResolver);
+    }
+    return builder.build();
   }
 
   /**
    * @param dependency The dependency whose inputs are being resolved
    * @param resolverStages The resolver specs of the dependency
-   * @return The list of InputResolvers
    * @param <T> The return type of the dependency.
    * @param <CV> The current vajram which has the dependency
    * @param <DV> The dependency vajram
+   * @return The list of InputResolvers
    */
   @SafeVarargs
-  public static <T, R, CV extends Request<?>, DV extends Request<T>> List<InputResolver> dep(
-      VajramDependencySpec<T, R, CV, DV> dependency,
-      SimpleInputResolverSpec<?, CV, DV>... resolverStages) {
+  public static <T, R, CV extends Request<?>, DV extends Request<T>>
+      List<? extends SimpleInputResolver> dep(
+          VajramDependencySpec<T, R, CV, DV> dependency,
+          SimpleInputResolverSpec<?, CV, DV>... resolverStages) {
     return stream(resolverStages)
         .map(
             spec -> {

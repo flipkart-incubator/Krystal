@@ -1,14 +1,14 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
 import static com.flipkart.krystal.data.Errable.withValue;
-import static com.flipkart.krystal.resolution.ResolverCommand.computedRequests;
+import static com.flipkart.krystal.resolution.ResolverCommand.executeWithRequests;
 import static com.flipkart.krystal.resolution.ResolverCommand.skip;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil._resolutionHelper;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.data.RequestBuilder;
 import com.flipkart.krystal.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
@@ -17,7 +17,7 @@ import java.util.List;
 
 /** A resolver which resolves exactly one input of a dependency. */
 public final class SimpleFanoutInputResolver<S, T, CV extends Request<?>, DV extends Request<?>>
-    extends SimpleInputResolver<S, T, CV, DV> implements FanoutInputResolver {
+    extends AbstractSimpleInputResolver<S, T, CV, DV> implements FanoutInputResolver {
 
   SimpleFanoutInputResolver(
       VajramDependencySpec<?, ?, CV, DV> dependency,
@@ -26,7 +26,7 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request<?>, DV ext
   }
 
   @Override
-  public ResolverCommand resolve(ImmutableRequest<Object> depRequest, Facets facets) {
+  public ResolverCommand resolve(RequestBuilder<?> depRequest, Facets facets) {
     {
       long start = System.nanoTime();
       try {
@@ -42,7 +42,7 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request<?>, DV ext
           if (depCommand.shouldSkip()) {
             return skip(depCommand.doc());
           } else {
-            return computedRequests(
+            return executeWithRequests(
                 depCommand.inputs().stream()
                     .map(
                         o ->

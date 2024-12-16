@@ -4,7 +4,7 @@ import com.flipkart.krystal.vajram.facets.QualifiedInputs;
 import com.google.common.collect.ImmutableSet;
 
 public abstract sealed class AbstractInputResolver implements InputResolver
-    permits AbstractFanoutInputResolver, AbstractSingleInputResolver, SimpleInputResolver {
+    permits AbstractFanoutInputResolver, AbstractSimpleInputResolver, AbstractSingleInputResolver {
 
   private final ImmutableSet<Integer> sources;
   private final QualifiedInputs resolutionTarget;

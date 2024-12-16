@@ -15,6 +15,7 @@ import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest;
 import com.google.common.collect.ImmutableCollection;
@@ -36,7 +37,7 @@ public abstract class MultiHelloFriends extends ComputeVajram<String> {
   private static final List<Integer> NUMBER_OF_FRIENDS = List.of(1, 2);
 
   @Override
-  public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
+  public ImmutableCollection<SimpleInputResolver> getSimpleInputResolvers() {
     return resolve(
         dep(
             hellos_s,

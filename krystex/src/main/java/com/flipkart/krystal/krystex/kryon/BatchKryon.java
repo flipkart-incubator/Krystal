@@ -4,7 +4,7 @@ import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.data.Errable.nil;
 import static com.flipkart.krystal.data.Errable.withError;
 import static com.flipkart.krystal.krystex.kryon.KryonUtils.enqueueOrExecuteCommand;
-import static com.flipkart.krystal.resolution.ResolverCommand.computedRequests;
+import static com.flipkart.krystal.resolution.ResolverCommand.executeWithRequests;
 import static com.flipkart.krystal.resolution.ResolverCommand.skip;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -17,13 +17,13 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
+import com.flipkart.krystal.data.DepResponsesImpl;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.FacetsBuilder;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
-import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.OutputLogic;
@@ -244,7 +244,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
             // For such dependencies, trigger them with empty inputs
             commandsByDependency
                 .computeIfAbsent(depName, _k -> new LinkedHashMap<>())
-                .put(Set.of(requestId), computedRequests(ImmutableList.of(emptyRequest())));
+                .put(Set.of(requestId), executeWithRequests(ImmutableList.of(emptyRequest())));
           });
       Facets facets = getFacetsFor(dependantChain, requestId);
       multiResolverOpt
@@ -341,7 +341,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
             skipReasonsByReq.put(
                 depReqId, "Resolvers for dependency %s resolved to empty list".formatted(depId));
           } else {
-            for (Request<Object> request : resolverCommand.getRequests()) {
+            for (Request<?> request : resolverCommand.getRequests()) {
               int currentCount = count++;
               RequestId depReqId =
                   requestIdGenerator.newSubRequest(
@@ -349,7 +349,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
               depReqsByIncomingReq
                   .computeIfAbsent(incomingReqId, _k -> new LinkedHashSet<>())
                   .add(depReqId);
-              inputsByDepReq.put(depReqId, request._build());
+              inputsByDepReq.put(depReqId, (ImmutableRequest<Object>) request._build());
             }
           }
         }
@@ -384,14 +384,14 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
         (batchResponse, throwable) -> {
           Set<RequestId> requestIds =
               resolverCommandsByReq.keySet().stream().flatMap(Collection::stream).collect(toSet());
-          ImmutableMap<RequestId, Results<?, Object>> results =
+          ImmutableMap<RequestId, DepResponsesImpl<?, Object>> results =
               requestIds.stream()
                   .collect(
                       toImmutableMap(
                           identity(),
                           requestId -> {
                             if (throwable != null) {
-                              return new Results<>(
+                              return new DepResponsesImpl<>(
                                   ImmutableList.of(
                                       new RequestResponse<>(emptyRequest(), withError(throwable))));
                             } else {
@@ -410,7 +410,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
                                                     .getOrDefault(depReqId, nil()));
                                           })
                                       .collect(toImmutableList());
-                              return new Results<>(collect);
+                              return new DepResponsesImpl<>(collect);
                             }
                           }));
 
@@ -507,7 +507,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       Map<RequestId, OutputLogicFacets> inputs,
       DependantChain dependantChain) {
     NavigableSet<OutputLogicDecorator> sortedDecorators = getSortedDecorators(dependantChain);
-    OutputLogic<Object> logic = outputLogicDefinition::execute;
+    OutputLogic<Object> logic = outputLogicDefinition.logic()::execute;
 
     for (OutputLogicDecorator outputLogicDecorator : sortedDecorators) {
       logic = outputLogicDecorator.decorateLogic(logic, outputLogicDefinition);
@@ -591,7 +591,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
   private OutputLogicFacets getFacetsForOutputLogic(
       DependantChain dependantChain, RequestId requestId) {
     ForwardBatch forwardBatch = getForwardCommand(dependantChain);
-    ImmutableMap<Integer, Results<?, Object>> depValues =
+    ImmutableMap<Integer, DepResponsesImpl<?, Object>> depValues =
         dependencyValuesCollector
             .getOrDefault(dependantChain, ImmutableMap.of())
             .entrySet()
@@ -599,7 +599,10 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
             .collect(
                 toImmutableMap(
                     Entry::getKey,
-                    e -> e.getValue().resultsByRequest().getOrDefault(requestId, Results.empty())));
+                    e ->
+                        e.getValue()
+                            .resultsByRequest()
+                            .getOrDefault(requestId, DepResponsesImpl.empty())));
     Request<Object> inputValues =
         forwardBatch.executableRequests().getOrDefault(requestId, emptyRequest());
     FacetsBuilder allFacets =

@@ -3,10 +3,10 @@ package com.flipkart.krystal.krystex.logicdecorators.observability;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.flipkart.krystal.data.DepResponsesImpl;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetContainer;
 import com.flipkart.krystal.data.Failure;
-import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.google.common.collect.ImmutableCollection;
@@ -135,10 +135,10 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
         ._asMap()
         .forEach(
             (key, value) -> {
-              if (!(value instanceof Results<?, ?> results)) {
+              if (!(value instanceof DepResponsesImpl<?, ?> depResponses)) {
                 return;
               }
-              inputMap.put(key, convertResult(results));
+              inputMap.put(key, convertResult(depResponses));
             });
     return ImmutableMap.copyOf(inputMap);
   }
@@ -158,8 +158,9 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     return sha256;
   }
 
-  private Map<ImmutableMap<Integer, String>, Object> convertResult(Results<?, ?> results) {
-    return results.requestResponses().stream()
+  private Map<ImmutableMap<Integer, String>, Object> convertResult(
+      DepResponsesImpl<?, ?> depResponses) {
+    return depResponses.requestResponsePairs().stream()
         .collect(
             Collectors.toMap(
                 e -> extractAndConvertInputs(e.request()), e -> convertErrable(e.response())));

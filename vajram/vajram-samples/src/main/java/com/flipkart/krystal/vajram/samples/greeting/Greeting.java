@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.samples.greeting;
 
-import static com.flipkart.krystal.vajram.samples.greeting.GreetingFacets.userInfo_n;
+import static com.flipkart.krystal.vajram.samples.greeting.GreetingFacets.userInfo_i;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajram;
@@ -41,7 +41,7 @@ public abstract class Greeting extends ComputeVajram<String> {
   // Vajrams).
   // In this case the UserServiceVajram needs a user_id to retrieve the user info.
   // So it's GreetingVajram's responsibility to provide that input.
-  @Resolve(depName = userInfo_n, depInputs = UserServiceRequest.userId_n)
+  @Resolve(dep = userInfo_i, depInputs = UserServiceRequest.userId_i)
   public static String userIdForUserService(String userId) {
     return userId;
   }
@@ -49,14 +49,16 @@ public abstract class Greeting extends ComputeVajram<String> {
   // This is the core business logic of this Vajram
   // Sync vajrams can return any object. AsyncVajrams need to return {CompletableFuture}s
   @Output
-  static String createGreetingMessage(GreetingFacets _allFacets) {
-    String userId = _allFacets.userId();
-    Optional<UserInfo> userInfo = _allFacets.userInfo().valueOpt();
+  static String createGreetingMessage(
+      String userId,
+      Optional<UserInfo> userInfo,
+      Optional<Logger> log,
+      AnalyticsEventSink analyticsEventSink) {
     String greeting =
         "Hello " + userInfo.map(UserInfo::userName).orElse("friend") + "! Hope you are doing well!";
-    _allFacets.log().valueOpt().ifPresent(l -> l.log(Level.INFO, greeting));
-    _allFacets.log().valueOpt().ifPresent(l -> l.log(Level.INFO, "Greeting user " + userId));
-    _allFacets.analyticsEventSink().pushEvent("event_type", new GreetingEvent(userId, greeting));
+    log.ifPresent(l -> l.log(Level.INFO, greeting));
+    log.ifPresent(l -> l.log(Level.INFO, "Greeting user " + userId));
+    analyticsEventSink.pushEvent("event_type", new GreetingEvent(userId, greeting));
     return greeting;
   }
 }

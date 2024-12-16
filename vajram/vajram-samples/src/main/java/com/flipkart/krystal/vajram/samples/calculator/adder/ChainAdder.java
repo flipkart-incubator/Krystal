@@ -4,13 +4,13 @@ import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest.numberOne_n;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest.numberTwo_n;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderFacets.chainSum_n;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderFacets.sum_n;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderRequest.numbers_n;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderFacets.chainSum_i;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderFacets.sum_i;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderRequest.numbers_i;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.data.DependencyResponses;
+import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
@@ -39,9 +39,9 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
     Optional<Integer> sum;
   }
 
-  @Resolve(depName = chainSum_n, depInputs = numbers_n)
+  @Resolve(dep = chainSum_i, depInputs = numbers_i)
   public static MultiExecute<List<Integer>> numbersForSubChainer(
-      @Using(numbers_n) List<Integer> numbers) {
+      @Using(numbers_i) List<Integer> numbers) {
     if (numbers.size() < 3) {
       return skipFanout(
           "Skipping chainer as count of numbers is less than 3. Will call adder instead");
@@ -53,13 +53,13 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
     }
   }
 
-  @Resolve(depName = sum_n, depInputs = numberOne_n)
-  public static SingleExecute<Integer> adderNumberOne(@Using(numbers_n) List<Integer> numbers) {
+  @Resolve(dep = sum_i, depInputs = AdderRequest.numberOne_i)
+  public static SingleExecute<Integer> adderNumberOne(@Using(numbers_i) List<Integer> numbers) {
     return skipAdder(numbers).orElseGet(() -> executeWith(numbers.get(0)));
   }
 
-  @Resolve(depName = sum_n, depInputs = numberTwo_n)
-  public static SingleExecute<Integer> adderNumberTwo(@Using(numbers_n) List<Integer> numbers) {
+  @Resolve(dep = sum_i, depInputs = AdderRequest.numberTwo_i)
+  public static SingleExecute<Integer> adderNumberTwo(@Using(numbers_i) List<Integer> numbers) {
     return skipAdder(numbers)
         .orElseGet(
             () -> {
@@ -72,9 +72,10 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
   }
 
   @Output
-  static Integer add(ChainAdderFacets _allFacets) {
-    return _allFacets.sum().valueOpt().orElse(0)
-        + _allFacets.chainSum().requestResponses().stream()
+  static Integer add(
+      Errable<Integer> sum, DependencyResponses<ChainAdderRequest, Integer> chainSum) {
+    return sum.valueOpt().orElse(0)
+        + chainSum.requestResponsePairs().stream()
             .mapToInt(response -> response.response().valueOpt().orElse(0))
             .sum();
   }

@@ -9,7 +9,6 @@ import static java.lang.System.lineSeparator;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
@@ -22,11 +21,9 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.F
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @ExternalInvocation(allow = true)
 @VajramDef
@@ -43,12 +40,12 @@ public abstract class MutualFriendsHello extends ComputeVajram<String> {
     String hellos;
   }
 
-  @Resolve(depName = friendIds_n, depInputs = FriendsServiceRequest.userId_n)
+  @Resolve(dep = friendIds_n, depInputs = FriendsServiceRequest.userId_n)
   public static String userIdForFriendService(String userId) {
     return userId;
   }
 
-  @Resolve(depName = hellos_n, depInputs = HelloFriendsV2Request.userId_n)
+  @Resolve(dep = hellos_n, depInputs = HelloFriendsV2Request.userId_n)
   public static MultiExecute<String> userIDForHelloService(
       @Using(friendIds_n) Set<String> friendIds, @Using(skip_n) Optional<Boolean> skip) {
     if (skip.orElse(false)) {

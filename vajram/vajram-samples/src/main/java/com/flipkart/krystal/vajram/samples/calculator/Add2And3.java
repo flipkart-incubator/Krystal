@@ -10,7 +10,7 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
 import com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest;
 import com.google.common.collect.ImmutableCollection;
@@ -25,7 +25,7 @@ abstract class Add2And3 extends ComputeVajram<Integer> {
   }
 
   @Override
-  public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
+  public ImmutableCollection<SimpleInputResolver> getSimpleInputResolvers() {
     return resolve(
         dep(
             sumOf2And3_s,
@@ -34,7 +34,7 @@ abstract class Add2And3 extends ComputeVajram<Integer> {
   }
 
   @Output
-  static int sum(Add2And3Facets _allFacets) {
-    return _allFacets.sumOf2And3();
+  static int sum(int sumOf2And3) {
+    return sumOf2And3;
   }
 }

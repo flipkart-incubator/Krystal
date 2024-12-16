@@ -5,7 +5,6 @@ import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Comparator.comparing;
-import static java.util.Comparator.comparingInt;
 import static java.util.Optional.ofNullable;
 import static java.util.function.Function.identity;
 
@@ -19,7 +18,6 @@ import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
-import com.flipkart.krystal.vajram.facets.QualifiedInputs;
 import com.flipkart.krystal.vajram.facets.SingleExecute;
 import com.flipkart.krystal.vajram.facets.VajramDepFanoutTypeSpec;
 import com.flipkart.krystal.vajram.facets.VajramDepSingleTypeSpec;
@@ -27,7 +25,6 @@ import com.flipkart.krystal.vajram.facets.VajramDependencySpec;
 import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +36,7 @@ public final class InputResolverUtil {
 
   public static ResolutionResult multiResolve(
       List<ResolutionRequest> resolutionRequests,
-      Map<Integer, Collection<? extends SimpleInputResolver<?, ?, ?, ?>>> resolvers,
+      Map<Integer, Collection<? extends SimpleInputResolver>> resolvers,
       Facets facets) {
 
     Map<Integer, List<RequestBuilder<Object>>> results = new LinkedHashMap<>();
@@ -47,9 +44,9 @@ public final class InputResolverUtil {
         new LinkedHashMap<>();
     for (ResolutionRequest resolutionRequest : resolutionRequests) {
       int dependencyId = resolutionRequest.dependencyId();
-      Collection<? extends SimpleInputResolver<?, ?, ?, ?>> depResolvers =
+      Collection<? extends SimpleInputResolver> depResolvers =
           resolvers.getOrDefault(dependencyId, List.of());
-      for (SimpleInputResolver<?, ?, ?, ?> simpleResolver : depResolvers) {
+      for (SimpleInputResolver simpleResolver : depResolvers) {
         int resolvable = simpleResolver.getResolverSpec().targetInput().id();
         DependencyCommand<?> command;
         var fanoutTransformer = simpleResolver.getResolverSpec().fanoutTransformer();
@@ -83,11 +80,7 @@ public final class InputResolverUtil {
     if (dependencyCommand.shouldSkip()) {
       return ResolverCommand.skip(dependencyCommand.doc());
     }
-    return ResolverCommand.computedRequests(
-        dependencyCommand.inputs().stream()
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .collect(toImmutableList()));
+    return ResolverCommand.executeWithRequests(dependencyCommand.inputs());
   }
 
   public static <T> DependencyCommand<T> handleResolverException(Throwable e, boolean fanout) {
@@ -122,7 +115,7 @@ public final class InputResolverUtil {
     if (command instanceof SingleExecute<?> singleExecute) {
       depReqs.forEach(request -> handleResolverReturn(resolvable, singleExecute.input(), request));
     } else if (command instanceof MultiExecute<?> multiExecute) {
-      Collection<?> objects = multiExecute.multiInputs();
+      Collection<?> objects = multiExecute.inputs();
       if (depReqs.size() > 1) {
         throw new IllegalArgumentException("A varjam can have at most one fanout resolver.");
       } else if (depReqs.isEmpty()) {
@@ -169,14 +162,14 @@ public final class InputResolverUtil {
       final Errable<Object> inputValue;
       if (sourceInput instanceof VajramDepSingleTypeSpec<?, ?, ?>) {
         inputValue =
-            facets._getDepResponses(sourceInput.id()).requestResponses().stream()
+            facets._getDepResponses(sourceInput.id()).requestResponsePairs().stream()
                 .map(RequestResponse::response)
                 .iterator()
                 .next();
       } else if (sourceInput instanceof VajramDepFanoutTypeSpec<?, ?, ?>) {
         inputValue =
             Errable.withValue(
-                facets._getDepResponses(sourceInput.id()).requestResponses().stream()
+                facets._getDepResponses(sourceInput.id()).requestResponsePairs().stream()
                     .map(RequestResponse::response)
                     .filter(e -> e instanceof Success<?>)
                     .map(e -> (Success<?>) e)
@@ -235,7 +228,7 @@ public final class InputResolverUtil {
     }
   }
 
-  public static <T, CV extends Request<?>, DV extends Request<?>> InputResolver toResolver(
+  public static <T, CV extends Request<?>, DV extends Request<?>> SimpleInputResolver toResolver(
       VajramDependencySpec<?, ?, CV, DV> dependency, SimpleInputResolverSpec<T, CV, DV> spec) {
     if (spec.canFanout()) {
       return new SimpleFanoutInputResolver<>(dependency, spec);
@@ -246,14 +239,14 @@ public final class InputResolverUtil {
 
   private InputResolverUtil() {}
 
-  public static Comparator<QualifiedInputs> getQualifiedInputsComparator() {
-    return comparingInt(QualifiedInputs::dependencyId)
-        .thenComparingInt(q -> q.inputNames().size())
-        .thenComparing(
-            QualifiedInputs::inputNames,
-            // Two resolvers resoving the same dependency cannot have a common inputName
-            // So we can just compare the lexicographically first elements of both
-            // inputNames to get a deterministic comparator
-            comparing(strings -> strings.stream().sorted().findFirst().orElse("")));
-  }
+  //  public static Comparator<QualifiedInputs> getQualifiedInputsComparator() {
+  //    return comparingInt(QualifiedInputs::dependencyId)
+  //        .thenComparingInt(q -> q.inputNames().size())
+  //        .thenComparing(
+  //            QualifiedInputs::inputNames,
+  //            // Two resolvers resoving the same dependency cannot have a common inputName
+  //            // So we can just compare the lexicographically first elements of both
+  //            // inputNames to get a deterministic comparator
+  //            comparing(strings -> strings.stream().sorted().findFirst().orElse("")));
+  //  }
 }

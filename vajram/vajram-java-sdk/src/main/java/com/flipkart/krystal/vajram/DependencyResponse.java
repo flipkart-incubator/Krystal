@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram;
 
 import static com.flipkart.krystal.data.Errable.nil;
 
+import com.flipkart.krystal.data.DependencyResponses;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.data.Request;
@@ -9,6 +10,7 @@ import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import java.util.Optional;
 
+@Deprecated(forRemoval = true)
 public record DependencyResponse<R extends Request<?>, V>(ImmutableMap<R, Errable<V>> responses) {
   public Errable<V> get(R request) {
     return responses.getOrDefault(request, nil());

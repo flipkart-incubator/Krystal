@@ -21,8 +21,9 @@ dependencies {
     testImplementation 'org.slf4j:slf4j-log4j12'
 }
 
-tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
-
+if (!fast_compile) {
+    tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
+}
 publishing {
     publications {
         maven(MavenPublication) {

@@ -16,7 +16,7 @@ import java.util.List;
 
 /** A resolver which resolves exactly one input of a dependency. */
 public final class SimpleSingleInputResolver<S, T, CV extends Request<?>, DV extends Request<?>>
-    extends SimpleInputResolver<S, T, CV, DV> implements SingleInputResolver {
+    extends AbstractSimpleInputResolver<S, T, CV, DV> implements SingleInputResolver {
 
   SimpleSingleInputResolver(
       VajramDependencySpec<?, ?, CV, DV> dependency,
@@ -25,7 +25,8 @@ public final class SimpleSingleInputResolver<S, T, CV extends Request<?>, DV ext
   }
 
   @Override
-  public ResolverCommand resolve(ImmutableList<RequestBuilder<Object>> depRequests, Facets facets) {
+  public ResolverCommand resolve(
+      ImmutableList<? extends RequestBuilder<?>> depRequests, Facets facets) {
     {
       long start = System.nanoTime();
       try {
@@ -46,7 +47,7 @@ public final class SimpleSingleInputResolver<S, T, CV extends Request<?>, DV ext
               depRequest._set(
                   getResolverSpec().targetInput().id(), withValue(singleExecute.input()));
             }
-            command = ResolverCommand.computedRequests(depRequests);
+            command = ResolverCommand.executeWithRequests(depRequests);
           }
           return command;
         } else {

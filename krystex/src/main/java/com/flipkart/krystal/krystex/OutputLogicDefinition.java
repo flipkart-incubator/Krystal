@@ -35,11 +35,6 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
     super(kryonLogicId, inputs, tags, outputLogic);
   }
 
-  public final ImmutableMap<Facets, CompletableFuture<@Nullable T>> execute(
-      ImmutableList<? extends Facets> inputs) {
-    return logic().execute(inputs);
-  }
-
   @Getter
   private ImmutableMap<String, List<OutputLogicDecoratorConfig>>
       requestScopedLogicDecoratorConfigs = ImmutableMap.of();

@@ -29,7 +29,7 @@ public abstract class TooManyQualifiers extends ComputeVajram<String> {
   }
 
   @Output
-  static String output(TooManyQualifiersFacets _allFacets) {
-    return _allFacets.input() + ' ' + _allFacets.inject();
+  static String output(String input, String inject) {
+    return input + ' ' + inject;
   }
 }

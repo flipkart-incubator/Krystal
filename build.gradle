@@ -6,12 +6,14 @@ ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
     krystal_version = '9.0.0-SNAPSHOT'
+    //Use this during development time to fasten compilation by disabling heavy compiler plugins
+    fast_compile = false
 }
 
-checkerFramework {
-    extraJavacArgs = [
-            "-Astubs=${rootDir}/config/checker/stubs",
-    ]
+if (!fast_compile) {
+    checkerFramework {
+        extraJavacArgs = ["-Astubs=${rootDir}/config/checker/stubs",]
+    }
 }
 
 subprojects {
@@ -46,7 +48,9 @@ subprojects {
 
 configure(subprojects.findAll { it.name != 'krystal-bom' }) {
     apply plugin: 'java-library'
-    apply plugin: 'com.flipkart.java.code.standard'
+    if (!fast_compile) {
+        apply plugin: 'com.flipkart.java.code.standard'
+    }
     apply plugin: 'jacoco'
 
     dependencies {
@@ -102,9 +106,11 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
         }
     }
 
-    checkerFramework {
-        extraJavacArgs = ["-Astubs=${rootDir}/config/checker/stubs",]
-        excludeTests = true
+    if (!fast_compile) {
+        checkerFramework {
+            extraJavacArgs = ["-Astubs=${rootDir}/config/checker/stubs",]
+            excludeTests = true
+        }
     }
 
     jacoco {

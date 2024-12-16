@@ -8,7 +8,7 @@ asynchronous workflows involving hundreds of steps. The core features supported 
 1. Understanding individual fields and nested fields in the workflow payload.
 1. Tracking workflow instance progress at individual field level in the payload.
 1. Support fork-join where one workflow forks into N instances of another workflow and then collects
-   the results from all of them.
+   the depResponses from all of them.
 1. Maintain a call-hierarchy of parent to forked workflow instance.
 1. Manage queueing and asynchronous communications among all asynchronous portions of the workflow.
 1. Support observability by providing visual interfaces to the following data

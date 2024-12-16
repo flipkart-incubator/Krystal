@@ -8,8 +8,12 @@ public record SingleExecute<T>(@Nullable T input, boolean shouldSkip, String doc
     implements DependencyCommand<T> {
 
   @Override
-  public ImmutableList<Optional<T>> inputs() {
-    return ImmutableList.of(Optional.ofNullable(input));
+  public ImmutableList<T> inputs() {
+    if (input == null) {
+      return ImmutableList.of();
+    } else {
+      return ImmutableList.of(input);
+    }
   }
 
   public static <T> SingleExecute<T> executeWith(@Nullable T input) {

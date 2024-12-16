@@ -1,15 +1,13 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2;
 
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Facets.friendIds_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Facets.friendInfos_s;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.data.RequestBuilder;
 import com.flipkart.krystal.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -19,6 +17,7 @@ import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.QualifiedInputs;
 import com.flipkart.krystal.vajram.facets.resolution.AbstractFanoutInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
@@ -46,7 +45,7 @@ public abstract class HelloFriendsV2 extends ComputeVajram<String> {
   }
 
   @Override
-  public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
+  public ImmutableCollection<SimpleInputResolver> getSimpleInputResolvers() {
     List<InputResolver> resolvers =
         new ArrayList<>(
             resolve(
@@ -66,7 +65,7 @@ public abstract class HelloFriendsV2 extends ComputeVajram<String> {
             ImmutableSet.of(1), new QualifiedInputs(2, FriendsServiceRequest.userId_n)) {
 
           @Override
-          public ResolverCommand resolve(ImmutableRequest<Object> depRequest, Facets facets) {
+          public ResolverCommand resolve(RequestBuilder<Object> depRequest, Facets facets) {
             return null;
           }
 

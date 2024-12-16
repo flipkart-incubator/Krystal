@@ -11,6 +11,7 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
+import com.flipkart.krystal.data.DepResponsesImpl;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetContainer;
 import com.flipkart.krystal.data.Facets;
@@ -20,7 +21,6 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestBuilder;
 import com.flipkart.krystal.data.RequestResponse;
-import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.except.IllegalModificationException;
 import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.krystex.LogicDefinition;
@@ -226,7 +226,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
     try {
       dependencyValuesCollector
           .computeIfAbsent(requestId, k -> emptyFacets()._asBuilder())
-          ._set(dependencyId, executeWithInput.results());
+          ._set(dependencyId, executeWithInput.depResponses());
     } catch (IllegalModificationException e) {
       throw new DuplicateRequestException(
           "Duplicate data for dependency %s of kryon %s in request %s"
@@ -402,7 +402,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
       // The current resolver  has triggered a fan-out.
       // So we need multiply the total number of requests to the dependency by n where n is
       // the size of the fan-out triggered by this resolver
-      ImmutableList<? extends Request<Object>> inputList = resolverCommand.getRequests();
+      ImmutableList<? extends Request<?>> inputList = resolverCommand.getRequests();
       long executionsInProgress = dependencyKryonExecutions.executionCounter().longValue();
       Map<RequestId, Request<Object>> oldInputs = new LinkedHashMap<>();
       for (int i = 0; i < executionsInProgress; i++) {
@@ -421,7 +421,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
       long requestCounter = 0;
       for (int j = 0; j < inputList.size(); j++) {
         int jFinal = j;
-        Request<Object> facets = inputList.get(j);
+        Request<Object> facets = (Request<Object>) inputList.get(j);
         for (int i = 0; i < batchSize; i++) {
           int iFinal = i;
           RequestId dependencyRequestId =
@@ -483,16 +483,16 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
               (unused, throwable) -> {
                 enqueueOrExecuteCommand(
                     () -> {
-                      Results<?, Object> results;
+                      DepResponsesImpl<?, Object> depResponses;
                       if (throwable != null) {
-                        results =
-                            new Results<>(
+                        depResponses =
+                            new DepResponsesImpl<>(
                                 ImmutableList.of(
                                     new RequestResponse<>(
                                         getNewDepRequest(dependencyId), withError(throwable))));
                       } else {
-                        results =
-                            new Results<>(
+                        depResponses =
+                            new DepResponsesImpl<>(
                                 dependencyKryonExecutions
                                     .individualCallResponses()
                                     .values()
@@ -508,7 +508,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                       return new CallbackGranule(
                           this.kryonId,
                           dependencyId,
-                          results,
+                          depResponses,
                           requestId,
                           getDepChainFor(requestId));
                     },
@@ -619,7 +619,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
                                 return new CallbackGranule(
                                     this.kryonId,
                                     depId,
-                                    new Results<>(
+                                    new DepResponsesImpl<>(
                                         ImmutableList.of(
                                             new RequestResponse<>(emptyRequest(), errable))),
                                     requestId,
@@ -661,7 +661,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
       Facets facets, OutputLogicDefinition<Object> outputLogicDefinition, RequestId requestId) {
     SortedSet<OutputLogicDecorator> sortedDecorators =
         getSortedDecorators(getDepChainFor(requestId));
-    OutputLogic<Object> logic = outputLogicDefinition::execute;
+    OutputLogic<Object> logic = outputLogicDefinition.logic()::execute;
 
     for (OutputLogicDecorator outputLogicDecorator : sortedDecorators) {
       logic = outputLogicDecorator.decorateLogic(logic, outputLogicDefinition);

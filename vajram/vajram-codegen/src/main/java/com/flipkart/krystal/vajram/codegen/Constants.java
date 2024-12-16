@@ -10,7 +10,7 @@ public final class Constants {
   public static final String INPUT_SRC = "inputSrc";
   public static final String INPUT_BATCHING = "inputBatching";
   public static final String COMMON_INPUT = "commonInput";
-  public static final String RETURN_TYPE = "returnType";
+  public static final String RETURN_TYPE = "facetJavaType";
   public static final String VAJRAM_LOGIC_METHOD = "outputLogicMethod";
   public static final String VAJRAM_LOGIC_INPUT_ARGS = "outputLogicInputArguments";
   public static final String HASH_MAP = "hashMap";
@@ -20,7 +20,7 @@ public final class Constants {
   public static final String MAP = "map";
   public static final String LIST = "list";
   public static final String FACET_DEFINITIONS_VAR = "facetDefinitions";
-  public static final String FACET_NAME_SUFFIX = "_n";
+  public static final String FACET_ID_SUFFIX = "_i";
   public static final String FACET_SPEC_SUFFIX = "_s";
 
   public static final char DOT_SEPARATOR = '.';
@@ -39,15 +39,22 @@ public final class Constants {
   public static final String METHOD_EXECUTE_COMPUTE = "executeCompute";
   public static final String GET_FACET_DEFINITIONS = "getFacetDefinitions";
   public static final String GET_INPUT_RESOLVERS = "getInputResolvers";
+  public static final String GET_SIMPLE_INPUT_RESOLVERS = "getSimpleInputResolvers";
   public static final String FACETS_CLASS_SUFFIX = "Facets";
   public static final String IMMUT_FACETS_CLASS_SUFFIX = "ImmutableFacets";
-  public static final String INPUTS_LIST = "facetsList";
+  public static final String FACETS_LIST = "_facetsList";
   public static final String BATCH_FACETS = "BatchFacets";
   public static final String BATCH_IMMUT_FACETS_CLASS_SUFFIX = "Batch" + IMMUT_FACETS_CLASS_SUFFIX;
-  public static final String COMMON_FACETS = "CommonFacets";
+  public static final String COMMON_INPUTS = "CommonInputs";
   public static final String COMMON_IMMUT_FACETS_CLASS_SUFFIX =
       "Common" + IMMUT_FACETS_CLASS_SUFFIX;
-  public static final String FACETS = "facets";
+  public static final String FACETS_VAR = "_facets";
+  public static final String RESOLVER_REQUESTS = "_resolverRequests";
+  public static final String RESOLVER_REQUEST = "_resolverRequest";
+  public static final String RESOLVER_RESULTS = "_resolverResults";
+  public static final String RESOLVER_RESULT = "_resolverResult";
+  public static final String INCOMING_FACETS = "_incomingFacets";
+  public static final String BATCHES_VAR = "_batches";
   public static final String DEP_REQ_PARAM = "dependecyRequest";
   public static final String UNMOD_INPUT = "unmodInput";
   public static final String MOD_INPUT = "modInput";
@@ -63,23 +70,45 @@ public final class Constants {
 
   public static final String INPUT_BATCHING_FUTURE_CODE_BLOCK =
       """
-          $map:T<$inputBatching:T, $facets:T> mapping = new $hashMap:T<>();
-          $commonInput:T commonFacets = null;
-          for ($facets:T facets : facetsList) {
-            $unmodInput:T allInputs = ($unmodInput:T) facets;
-            commonFacets = allInputs._common();
-            $inputBatching:T im = allInputs._batchable();
-            mapping.put(im, facets);
+          if($facetsList:L.isEmpty()) {
+            return $imMap:T.of();
           }
-          $map:T<$facets:T, $comFuture:T<$returnType:T>> returnValue = new $linkHashMap:T<>();
+          $map:T<$inputBatching:T, $facets:T> _batches = new $hashMap:T<>();
+          $commonInput:T _common = $facetsList:L.get(0)._common();
+          for ($facets:T $facetsVar:L : $facetsList:L) {
+            $unmodInput:T _castFacets = ($unmodInput:T) $facetsVar:L;
+            $inputBatching:T im = _castFacets._batchable();
+            _batches.put(im, $facetsVar:L);
+          }
+          $map:T<$facets:T, $comFuture:T<$facetJavaType:T>> returnValue = new $linkHashMap:T<>();
 
-          if (commonFacets != null) {
-            var logicExecResults = $outputLogicMethod:L(%s);
-            logicExecResults.forEach((im, future) -> returnValue.put(
-                  $optional:T.ofNullable(mapping.get(im)).orElseThrow(),
-                  future.<$returnType:T>thenApply($function:T.identity())));
-          }
+          var logicExecResults = $outputLogicMethod:L(%s);
+          logicExecResults.forEach((im, future) -> returnValue.put(
+                $optional:T.ofNullable(mapping.get(im)).orElseThrow(),
+                future.<$facetJavaType:T>thenApply($function:T.identity())));
           return $imMap:T.copyOf(returnValue);
+      """;
+  public static final String BATCHING_EXECUTE_PREPARE_PARAMS =
+      """
+          if($facetsList:L.isEmpty()) {
+            return $imMap:T.of();
+          }
+          $map:T<$inputBatching:T, $facets:T> _batches = new $hashMap:T<>();
+          $commonInput:T _common = $facetsList:L.get(0)._common();
+          for ($facets:T $facetsVar:L : $facetsList:L) {
+            $unmodInput:T _castFacets = ($unmodInput:T) $facetsVar:L;
+            $inputBatching:T _batch = _castFacets._batchable();
+            _batches.put(_batch, $facetsVar:L);
+          }
+      """;
+  public static final String BATCHING_EXECUTE_PREPARE_RESULTS =
+      """
+          $map:T<$facets:T, $comFuture:T<$facetJavaType:T>> _returnValue = new $linkHashMap:T<>();
+
+          _output.forEach((_batch, _result) -> _returnValue.put(
+                $optional:T.ofNullable(_batches.get(_batch)).orElseThrow(),
+                _result.<$facetJavaType:T>thenApply($function:T.identity())));
+          return $imMap:T.copyOf(_returnValue);
       """;
 
   private Constants() {}

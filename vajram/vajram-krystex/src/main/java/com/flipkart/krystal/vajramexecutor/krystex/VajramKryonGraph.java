@@ -301,11 +301,11 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
             throw new IllegalStateException();
           }
           String depName = vajramFacetDefinition.name();
-          ImmutableSet<String> resolvedInputNames =
-              inputResolverDefinition.resolutionTarget().inputNames();
+          ImmutableSet<Integer> resolvedInputNames =
+              inputResolverDefinition.resolutionTarget().inputIds();
           ImmutableSet<Integer> resolvedInputIds =
               resolvedInputNames.stream()
-                  .map(s -> Optional.ofNullable(vajramDefinition.facetsByName().get(s)))
+                  .map(s -> Optional.ofNullable(vajramDefinition.facetsById().get(s)))
                   .filter(Optional::isPresent)
                   .map(Optional::get)
                   .map(VajramFacetDefinition::id)
@@ -342,7 +342,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                                   + " can have at most one fanout resolver");
                         }
                         resolverCommand =
-                            fanoutInputResolver.resolve(depRequests.get(0)._build(), facets);
+                            fanoutInputResolver.resolve(depRequests.get(0), facets);
                       }
                     } catch (Throwable t) {
                       resolverCommand =
@@ -401,7 +401,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                                     + " can have at most one fanout resolver");
                           }
                           resolverCommand =
-                              fanoutInputResolver.resolve(depRequests.get(0)._build(), facets);
+                              fanoutInputResolver.resolve(depRequests.get(0), facets);
                         }
                       } catch (Throwable t) {
                         resolverCommand = toResolverCommand(handleResolverException(t, false));

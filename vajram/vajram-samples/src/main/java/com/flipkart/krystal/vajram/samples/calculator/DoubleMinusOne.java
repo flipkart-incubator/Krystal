@@ -4,13 +4,15 @@ import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
-import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOneFacets.doubledNumbers_n;
+import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOneFacets.doubledNumbers_i;
 import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOneFacets.doubledNumbers_s;
-import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOneFacets.result_n;
+import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOneFacets.result_i;
 import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOneFacets.result_s;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.data.DependencyResponses;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -18,7 +20,7 @@ import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajram.samples.calculator.multiplier.Multiplier;
 import com.flipkart.krystal.vajram.samples.calculator.multiplier.MultiplierRequest;
@@ -46,7 +48,7 @@ public abstract class DoubleMinusOne extends ComputeVajram<Integer> {
   }
 
   @Override
-  public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
+  public ImmutableCollection<SimpleInputResolver> getSimpleInputResolvers() {
     return resolve(
         dep(
             doubledNumbers_s,
@@ -54,14 +56,15 @@ public abstract class DoubleMinusOne extends ComputeVajram<Integer> {
         dep(result_s, depInput(SubtractorRequest.numberTwo_s).usingValueAsResolver(() -> 1)));
   }
 
-  @Resolve(depName = doubledNumbers_n, depInputs = MultiplierRequest.numberOne_n)
+  @Resolve(dep = doubledNumbers_i, depInputs = MultiplierRequest.numberOne_i)
   static MultiExecute<Integer> numbersToDouble(List<Integer> numbers) {
     return executeFanoutWith(numbers);
   }
 
-  @Resolve(depName = result_n, depInputs = SubtractorRequest.numberOne_n)
-  static int sumOfDoubles(DependencyResponse<MultiplierRequest, Integer> doubledNumbers) {
-    return doubledNumbers.values().stream()
+  @Resolve(dep = result_i, depInputs = SubtractorRequest.numberOne_i)
+  static int sumOfDoubles(DependencyResponses<MultiplierRequest, Integer> doubledNumbers) {
+    return doubledNumbers.requestResponsePairs().stream()
+        .map(RequestResponse::response)
         .map(Errable::valueOpt)
         .map(Optional::orElseThrow)
         .mapToInt(Integer::intValue)

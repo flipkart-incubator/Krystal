@@ -46,10 +46,10 @@ public final class FacetsMap implements ImmutableFacets {
 
   @SuppressWarnings("unchecked")
   @Override
-  public Responses<Request<Object>, Object> _getDepResponses(int facetId) {
+  public DependencyResponses<Request<Object>, Object> _getDepResponses(int facetId) {
     FacetValue<Object> datum = data.getOrDefault(facetId, Errable.nil());
-    if (datum instanceof Responses<?, ?> errable) {
-      return (Responses<Request<Object>, Object>) errable;
+    if (datum instanceof DependencyResponses<?, ?> errable) {
+      return (DependencyResponses<Request<Object>, Object>) errable;
     } else {
       throw new IllegalArgumentException("%s is not of type Responses".formatted(facetId));
     }

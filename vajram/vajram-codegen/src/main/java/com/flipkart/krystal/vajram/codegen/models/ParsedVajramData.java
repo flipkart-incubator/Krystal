@@ -47,14 +47,11 @@ public record ParsedVajramData(
   public static void validateNoDuplicateResolvers(
       List<ExecutableElement> methods, VajramInfo vajramInfo, Utils util) {
     // add comments
-    Map<Integer, Map<String, Boolean>> lookUpMap = new HashMap<>();
+    Map<Integer, Map<Integer, Boolean>> lookUpMap = new HashMap<>();
     for (ExecutableElement method : methods) {
-      int depId =
-          Optional.ofNullable(
-                  vajramInfo.facetIdsByName().get(method.getAnnotation(Resolve.class).depName()))
-              .orElseThrow();
-      String[] depInputs = method.getAnnotation(Resolve.class).depInputs();
-      for (String depinput : depInputs) {
+      int depId = Optional.ofNullable(method.getAnnotation(Resolve.class)).orElseThrow().dep();
+      int[] depInputs = method.getAnnotation(Resolve.class).depInputs();
+      for (int depinput : depInputs) {
         if (lookUpMap.getOrDefault(depId, Map.of()).getOrDefault(depinput, false)) {
           String errorMessage =
               "Two Resolver resolving same input (%s) for dependency name (%s)"

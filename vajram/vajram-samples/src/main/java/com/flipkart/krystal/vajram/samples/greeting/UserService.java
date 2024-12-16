@@ -10,7 +10,8 @@ import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacets.BatchFacets;
-import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacets.CommonFacets;
+import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacets.CommonInputs;
+import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -27,10 +28,10 @@ public abstract class UserService extends IOVajram<UserInfo> {
 
   @Output
   static Map<BatchFacets, CompletableFuture<UserInfo>> callUserService(
-      BatchedFacets<BatchFacets, CommonFacets> _batchedFacets) {
+      ImmutableList<BatchFacets> _batches) {
 
     // Make a call to user service and get user info
-    CompletableFuture<List<UserInfo>> serviceResponse = batchServiceCall(_batchedFacets.batch());
+    CompletableFuture<List<UserInfo>> serviceResponse = batchServiceCall(_batches);
 
     CompletableFuture<Map<BatchFacets, UserInfo>> resultsFuture =
         serviceResponse.thenApply(
@@ -40,7 +41,7 @@ public abstract class UserService extends IOVajram<UserInfo> {
                         Collectors.toMap(
                             userInfo -> BatchFacets._builder().userId(userInfo.userId())._build(),
                             userInfo -> userInfo)));
-    return _batchedFacets.batch().stream()
+    return _batches.stream()
         .collect(
             toImmutableMap(
                 im -> im,

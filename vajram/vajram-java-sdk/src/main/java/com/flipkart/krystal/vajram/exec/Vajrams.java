@@ -69,13 +69,25 @@ final class Vajrams {
     return ImmutableMap.copyOf(map);
   }
 
-  private static String inferFacetName(Parameter parameter) {
+  private static int inferFacetId(
+      Parameter parameter,
+      ImmutableMap<String, VajramFacetDefinition> facetsByName,
+      Vajram<?> vajram) {
     return Arrays.stream(parameter.getAnnotations())
         .filter(annotation -> annotation instanceof Using)
         .map(annotation -> (Using) annotation)
         .findAny()
         .map(Using::value)
-        .orElseGet(parameter::getName);
+        .orElseGet(
+            () -> {
+              VajramFacetDefinition vajramFacetDefinition = facetsByName.get(parameter.getName());
+              if (vajramFacetDefinition == null) {
+                throw new IllegalArgumentException(
+                    "Unable to infer facet id for parameter %s of vajram %s"
+                        .formatted(parameter.getName(), vajram.getClass()));
+              }
+              return vajramFacetDefinition.id();
+            });
   }
 
   static ElementTags parseOutputLogicTags(Vajram<?> vajram) {
@@ -166,11 +178,7 @@ final class Vajrams {
       } else {
         ImmutableSet.Builder<Integer> facetIds = ImmutableSet.builder();
         for (Parameter param : outputLogicParams) {
-          String facetName = Vajrams.inferFacetName(param);
-          VajramFacetDefinition facetDef = facetsByName.get(facetName);
-          if (facetDef != null) {
-            facetIds.add(facetDef.id());
-          }
+          facetIds.add(Vajrams.inferFacetId(param, facetsByName, vajram));
         }
         return facetIds.build();
       }

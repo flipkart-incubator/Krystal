@@ -2,7 +2,6 @@ package com.flipkart.krystal.vajram.codegen.models;
 
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
-import com.flipkart.krystal.vajram.VajramID;
 import com.google.common.collect.ImmutableSet;
 import java.util.EnumSet;
 import javax.lang.model.element.VariableElement;
@@ -13,7 +12,7 @@ import lombok.NonNull;
 public record DependencyModel(
     int id,
     @NonNull String name,
-    @NonNull VajramID depVajramId,
+    @NonNull VajramInfoLite depVajramInfoLite,
     @NonNull DataType<?> dataType,
     @NonNull String depReqClassQualifiedName,
     boolean isMandatory,
@@ -29,5 +28,9 @@ public record DependencyModel(
   @Override
   public ImmutableSet<FacetType> facetTypes() {
     return DEP_FACET_TYPE;
+  }
+
+  public String depReqPackageName() {
+    return depReqClassQualifiedName.substring(0, depReqClassQualifiedName.lastIndexOf('.'));
   }
 }
