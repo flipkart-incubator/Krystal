@@ -91,4 +91,22 @@ class PartitionedPoolTest {
       assertThat(partitionedPool.availableCount()).isEqualTo(i + 1);
     }
   }
+
+  @Test
+  void leaseAndCloseLoop() throws LeaseUnavailableException {
+    PartitionedPool<Object> partitionedPool = new PartitionedPool<>(2);
+
+    assertThat(partitionedPool.availableCount()).isEqualTo(0);
+    for (int i = 0; i < 10; i++) {
+      partitionedPool.leaseAndAdd(new Object());
+      assertThat(partitionedPool.availableCount()).isEqualTo(i + 1);
+    }
+
+    for (int i = 0; i < 10; i++) {
+      PooledObject<Object> leasedObject = partitionedPool.getForLeasing(0);
+      assertThat(partitionedPool.availableCount()).isEqualTo(9);
+      partitionedPool.closeLease(leasedObject);
+      assertThat(partitionedPool.availableCount()).isEqualTo(10);
+    }
+  }
 }
