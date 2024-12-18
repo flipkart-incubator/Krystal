@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.facets;
 
+import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.tags.ElementTags;
 import com.flipkart.krystal.vajram.das.DataAccessSpec;
@@ -12,9 +13,10 @@ public record DependencyDef<T>(
     String name,
     DataAccessSpec dataAccessSpec,
     boolean isMandatory,
-    Function<? extends Facets, Object> getter,
     boolean isBatched,
     boolean canFanout,
     String documentation,
-    ElementTags tags)
+    ElementTags tags,
+    FacetValueGetter getter,
+    FacetValueSetter setter)
     implements VajramFacetDefinition {}

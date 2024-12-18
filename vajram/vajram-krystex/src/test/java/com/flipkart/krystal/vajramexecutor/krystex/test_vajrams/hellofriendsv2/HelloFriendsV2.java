@@ -1,11 +1,17 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2;
 
+import static com.flipkart.krystal.resolution.ResolverCommand.executeWithRequests;
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Facets.friendIds_i;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Facets.friendIds_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Facets.friendInfos_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request.userId_i;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.data.DependencyResponses;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.RequestBuilder;
 import com.flipkart.krystal.resolution.ResolverCommand;
@@ -19,6 +25,8 @@ import com.flipkart.krystal.vajram.facets.resolution.AbstractFanoutInputResolver
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceImmutableRequest;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceImmutableRequest.Builder;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService;
@@ -45,7 +53,7 @@ public abstract class HelloFriendsV2 extends ComputeVajram<String> {
   }
 
   @Override
-  public ImmutableCollection<SimpleInputResolver> getSimpleInputResolvers() {
+  public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
     List<InputResolver> resolvers =
         new ArrayList<>(
             resolve(
@@ -62,38 +70,29 @@ public abstract class HelloFriendsV2 extends ComputeVajram<String> {
     */
     resolvers.add(
         new AbstractFanoutInputResolver(
-            ImmutableSet.of(1), new QualifiedInputs(2, FriendsServiceRequest.userId_n)) {
-
-          @Override
-          public ResolverCommand resolve(RequestBuilder<Object> depRequest, Facets facets) {
-            return null;
-          }
+            ImmutableSet.of(userId_i),
+            new QualifiedInputs(friendIds_i, FriendsServiceRequest.userId_i)) {
 
           @Override
           public boolean canFanout() {
             return super.canFanout();
           }
 
-          //          @Override
-          //          public DependencyCommand<? extends Request<Object>> resolve(
-          //              ImmutableList<? extends RequestBuilder<Object>> depRequests, Facets
-          // facets) {
-          //            HelloFriendsV2Facets helloFriendsV2Facets = (HelloFriendsV2Facets) facets;
-          //            for (RequestBuilder<?> requestBuilder : depRequests) {
-          //              ((FriendsServiceImmutableRequest.Builder) requestBuilder)
-          //                  .userId(helloFriendsV2Facets.userId());
-          //            }
-          //            return executeFanoutWith(depRequests);
-          //          }
+          @Override
+          public ResolverCommand resolve(RequestBuilder<?> requestBuilder, Facets facets) {
+            HelloFriendsV2Facets helloFriendsV2Facets = (HelloFriendsV2Facets) facets;
+            Builder builder = ((Builder) requestBuilder).userId(helloFriendsV2Facets.userId());
+            return executeWithRequests(ImmutableList.of(builder));
+          }
         });
     return ImmutableList.copyOf(resolvers);
   }
 
   @Output
-  static String sayHellos(HelloFriendsV2Facets _allFacets) {
+  static String sayHellos(DependencyResponses<TestUserServiceRequest, TestUserInfo> friendInfos) {
     return "Hello Friends! %s"
         .formatted(
-            _allFacets.friendInfos().requestResponses().stream()
+            friendInfos.requestResponsePairs().stream()
                 .map(rr -> rr.response().valueOpt().orElse(null))
                 .filter(Objects::nonNull)
                 .map(TestUserInfo::userName)

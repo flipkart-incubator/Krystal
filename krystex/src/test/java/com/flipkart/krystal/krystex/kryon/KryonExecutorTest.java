@@ -464,8 +464,9 @@ class KryonExecutorTest {
                               numberOfExecutions.increment();
                               return dependencyValues
                                       ._getDepResponses(1)
-                                      .asMap()
-                                      .values()
+                                      .requestResponsePairs()
+                                      .stream()
+                                      .map(RequestResponse::response)
                                       .iterator()
                                       .next()
                                       .valueOpt()
@@ -473,8 +474,9 @@ class KryonExecutorTest {
                                   + ":"
                                   + dependencyValues
                                       ._getDepResponses(2)
-                                      .asMap()
-                                      .values()
+                                      .requestResponsePairs()
+                                      .stream()
+                                      .map(RequestResponse::response)
                                       .iterator()
                                       .next()
                                       .valueOpt()
@@ -565,8 +567,9 @@ class KryonExecutorTest {
                               (unused, throwable) -> {
                                 return dependencyValues
                                         ._getDepResponses(1)
-                                        .asMap()
-                                        .values()
+                                        .requestResponsePairs()
+                                        .stream()
+                                        .map(RequestResponse::response)
                                         .iterator()
                                         .next()
                                         .valueOpt()

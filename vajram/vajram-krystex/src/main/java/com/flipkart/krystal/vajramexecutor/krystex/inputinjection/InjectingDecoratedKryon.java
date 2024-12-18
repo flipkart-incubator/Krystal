@@ -118,7 +118,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
       Set<InputDef<?>> injectableFacetDefs,
       Request<Object> facets,
       Map<Integer, Errable<Object>> injectedValues) {
-    Map<Integer, FacetValue<Object>> newValues = new HashMap<>();
+    Map<Integer, FacetValue> newValues = new HashMap<>();
     for (VajramFacetDefinition facetDefinition : injectableFacetDefs) {
       int facetId = facetDefinition.id();
       if (facetDefinition instanceof InputDef<?> inputDef) {

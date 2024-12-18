@@ -12,7 +12,8 @@ import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceFacets.BatchFacets;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceFacets.CommonFacets;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceFacets.CommonInputs;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -36,14 +37,14 @@ public abstract class TestUserService extends IOVajram<TestUserInfo> {
 
   @Output
   static ImmutableMap<BatchFacets, CompletableFuture<TestUserInfo>> callUserService(
-      BatchedFacets<BatchFacets, CommonFacets> _batchedFacets) {
+      ImmutableList<BatchFacets> _batches) {
     CALL_COUNTER.increment();
-    _batchedFacets.batch().stream()
+    _batches.stream()
         .map(im -> TestUserServiceRequest._builder().userId(im.userId())._build())
         .forEach(REQUESTS::add);
 
     // Make a call to user service and get user info
-    return _batchedFacets.batch().stream()
+    return _batches.stream()
         .collect(
             toImmutableMap(
                 inputBatch -> inputBatch,

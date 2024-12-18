@@ -15,11 +15,12 @@ public record InputDef<T>(
     DataType<?> type,
     boolean isMandatory,
     T defaultValue,
-    Function<? extends Facets, Object> getter,
     String documentation,
     boolean isBatched,
     ImmutableSet<InputSource> sources,
-    ElementTags tags)
+    ElementTags tags,
+    FacetValueGetter getter,
+    FacetValueSetter setter)
     implements VajramFacetDefinition {
 
   private static final ImmutableSet<InputSource> DEFAULT_INPUT_SOURCES =

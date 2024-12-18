@@ -60,7 +60,7 @@ import org.junit.jupiter.api.Test;
 
 class GreetingTest {
 
-  private static final Duration TIMEOUT = Duration.ofSeconds(10);
+  private static final Duration TIMEOUT = Duration.ofSeconds(1);
   private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll
@@ -184,7 +184,7 @@ class GreetingTest {
       VajramKryonGraph graph, KrystexVajramExecutor krystexVajramExecutor, RequestContext rc) {
     return krystexVajramExecutor.execute(
         graph.getVajramId((Greeting.class)),
-        GreetingRequest.builder().userId(rc.userId).build(),
+        GreetingRequest._builder().userId(rc.userId)._build(),
         KryonExecutionConfig.builder().executionId("req_1").build());
   }
 
@@ -208,7 +208,7 @@ class GreetingTest {
                             .build(),
                         requestLevelCache)
                     .withMock(
-                        UserServiceRequest.builder().userId(USER_ID).build(),
+                        UserServiceRequest._builder().userId(USER_ID)._build(),
                         withValue(new UserInfo(USER_ID, USER_NAME)))
                     .buildConfig())) {
       future = executeVajram(vajramKryonGraph, krystexVajramExecutor, requestContext);
@@ -236,7 +236,7 @@ class GreetingTest {
                             .build(),
                         requestLevelCache)
                     .withMock(
-                        UserServiceRequest.builder().userId(USER_ID).build(),
+                        UserServiceRequest._builder().userId(USER_ID)._build(),
                         Errable.withError(new IOException("Request Timeout")))
                     .buildConfig())) {
       future = executeVajram(vajramKryonGraph, krystexVajramExecutor, requestContext);

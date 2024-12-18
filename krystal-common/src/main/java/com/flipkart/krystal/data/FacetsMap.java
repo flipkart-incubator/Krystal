@@ -5,20 +5,20 @@ import com.google.common.collect.ImmutableMap;
 public final class FacetsMap implements ImmutableFacets {
 
   private final SimpleRequest<Object> request;
-  private final ImmutableMap<Integer, FacetValue<Object>> data;
+  private final ImmutableMap<Integer, FacetValue> data;
 
   public FacetsMap(SimpleRequestBuilder<Object> request) {
     this(request, ImmutableMap.of());
   }
 
   public FacetsMap(
-      SimpleRequestBuilder<Object> request, ImmutableMap<Integer, FacetValue<Object>> otherFacets) {
+      SimpleRequestBuilder<Object> request, ImmutableMap<Integer, FacetValue> otherFacets) {
     this.request = request._build();
     this.data = otherFacets;
   }
 
   @Override
-  public FacetValue<Object> _get(int facetId) {
+  public FacetValue _get(int facetId) {
     if (request._hasValue(facetId)) {
       Errable<Object> v = request._get(facetId);
       if (v != null) {
@@ -31,12 +31,12 @@ public final class FacetsMap implements ImmutableFacets {
   }
 
   @Override
-  public Errable<Object> _getErrable(int facetId) {
+  public Errable<?> _getErrable(int facetId) {
     if (request._hasValue(facetId)) {
       return request._get(facetId);
     } else {
-      FacetValue<Object> datum = data.getOrDefault(facetId, Errable.nil());
-      if (datum instanceof Errable<Object> errable) {
+      FacetValue datum = data.getOrDefault(facetId, Errable.nil());
+      if (datum instanceof Errable<?> errable) {
         return errable;
       } else {
         throw new IllegalArgumentException("%s is not of type Errable".formatted(facetId));
@@ -47,7 +47,7 @@ public final class FacetsMap implements ImmutableFacets {
   @SuppressWarnings("unchecked")
   @Override
   public DependencyResponses<Request<Object>, Object> _getDepResponses(int facetId) {
-    FacetValue<Object> datum = data.getOrDefault(facetId, Errable.nil());
+    FacetValue datum = data.getOrDefault(facetId, Errable.nil());
     if (datum instanceof DependencyResponses<?, ?> errable) {
       return (DependencyResponses<Request<Object>, Object>) errable;
     } else {
@@ -56,8 +56,8 @@ public final class FacetsMap implements ImmutableFacets {
   }
 
   @Override
-  public ImmutableMap<Integer, FacetValue<Object>> _asMap() {
-    return ImmutableMap.<Integer, FacetValue<Object>>builder()
+  public ImmutableMap<Integer, FacetValue> _asMap() {
+    return ImmutableMap.<Integer, FacetValue>builder()
         .putAll(request._asMap())
         .putAll(data)
         .build();

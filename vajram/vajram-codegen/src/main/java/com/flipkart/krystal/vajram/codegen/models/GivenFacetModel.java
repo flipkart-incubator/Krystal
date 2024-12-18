@@ -10,8 +10,12 @@ import lombok.Builder;
 import lombok.NonNull;
 import org.checkerframework.common.returnsreceiver.qual.This;
 
+/**
+ * Represents any face which is "given" to the vajram from outside - like client provided inputs and
+ * platform provided injections
+ */
 @Builder
-public record InputModel<T>(
+public record GivenFacetModel<T>(
     int id,
     @NonNull String name,
     @NonNull DataType<T> dataType,
@@ -21,6 +25,16 @@ public record InputModel<T>(
     ImmutableSet<FacetType> facetTypes,
     @NonNull VariableElement facetField)
     implements FacetGenModel {
+
+  private static final ImmutableSet<FacetType> ALLOWED_FACET_TYPES =
+      ImmutableSet.copyOf(EnumSet.of(FacetType.INPUT, FacetType.INJECTION));
+
+  public GivenFacetModel {
+    if (!facetTypes.stream().allMatch(ALLOWED_FACET_TYPES::contains)) {
+      throw new IllegalArgumentException(
+          "Allowed Facet types: " + ALLOWED_FACET_TYPES + ". Found: " + facetTypes);
+    }
+  }
 
   public ImmutableSet<InputSource> sources() {
     ImmutableSet.Builder<InputSource> sources = ImmutableSet.builderWithExpectedSize(2);
@@ -34,9 +48,9 @@ public record InputModel<T>(
     return sources.build();
   }
 
-  public static class InputModelBuilder<T> {
+  public static class GivenFacetModelBuilder<T> {
 
-    public @This InputModelBuilder<T> facetTypes(EnumSet<FacetType> facetTypes) {
+    public @This GivenFacetModelBuilder<T> facetTypes(EnumSet<FacetType> facetTypes) {
       if (facetTypes != null) {
         this.facetTypes = ImmutableSet.copyOf(facetTypes);
       }

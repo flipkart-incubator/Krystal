@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends;
 
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
@@ -11,6 +12,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.data.DependencyResponses;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
@@ -65,11 +67,13 @@ public abstract class HelloFriends extends ComputeVajram<String> {
   }
 
   @Output
-  static String sayHellos(HelloFriendsFacets _allFacets) {
+  static String sayHellos(
+      TestUserInfo userInfo,
+      DependencyResponses<TestUserServiceRequest, TestUserInfo> friendInfos) {
     return "Hello Friends of %s! %s"
         .formatted(
-            _allFacets.userInfo().userName(),
-            _allFacets.friendInfos().requestResponses().stream()
+            userInfo.userName(),
+            friendInfos.requestResponsePairs().stream()
                 .map(errable -> errable.response().valueOpt())
                 .filter(Optional::isPresent)
                 .map(Optional::get)

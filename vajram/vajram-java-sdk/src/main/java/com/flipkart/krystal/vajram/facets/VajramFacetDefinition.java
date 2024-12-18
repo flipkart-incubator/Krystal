@@ -14,11 +14,13 @@ public sealed interface VajramFacetDefinition permits DependencyDef, InputDef {
 
   boolean isMandatory();
 
-  Function<? extends Facets, Object> getter();
-
   String documentation();
 
   ElementTags tags();
+
+  FacetValueSetter setter();
+
+  FacetValueGetter getter();
 
   static ElementTags parseFacetTags(Field facetField) {
     return ElementTags.of(Arrays.stream(facetField.getAnnotations()).toList());

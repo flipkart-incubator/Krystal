@@ -39,7 +39,7 @@ public final class SimpleRequestBuilder<T> implements RequestBuilder<T> {
   }
 
   @Override
-  public RequestBuilder<T> _set(int facetId, FacetValue<?> value) {
+  public RequestBuilder<T> _set(int facetId, FacetValue value) {
     if (!(value instanceof Errable<?> errable)) {
       throw new IllegalArgumentException(
           "Expected Errable but found %s".formatted(value.getClass()));

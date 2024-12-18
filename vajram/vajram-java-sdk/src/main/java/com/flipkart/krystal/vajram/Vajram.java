@@ -58,7 +58,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public sealed interface Vajram<T> permits AbstractVajram, BatchableVajram {
 
-  default ImmutableCollection<SimpleInputResolver> getSimpleInputResolvers() {
+  default ImmutableCollection<? extends InputResolver> getSimpleInputResolvers() {
     return ImmutableList.of();
   }
 

@@ -53,7 +53,7 @@ class DividerTest {
               () ->
                   krystexVajramExecutor.execute(
                       graph.getVajramId(Divider.class),
-                      SubtractorRequest.builder().numberOne(5).numberTwo(7).build()))
+                      SubtractorRequest._builder().numberOne(5).numberTwo(7)._build()))
           .isInstanceOf(RejectedExecutionException.class)
           .hasMessage("External invocation is not allowed for kryonId: k<Divider>");
     }

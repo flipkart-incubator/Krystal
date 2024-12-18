@@ -8,7 +8,7 @@ import java.util.Map;
  * this interface - this can lead to unexpected behaviour.
  */
 public sealed interface FacetContainer extends Model permits Facets, Request {
-  FacetValue<?> _get(int facetId);
+  FacetValue _get(int facetId);
 
-  Map<Integer, ? extends FacetValue<?>> _asMap();
+  Map<Integer, ? extends FacetValue> _asMap();
 }

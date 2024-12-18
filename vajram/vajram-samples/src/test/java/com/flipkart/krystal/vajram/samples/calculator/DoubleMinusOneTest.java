@@ -52,7 +52,7 @@ class DoubleMinusOneTest {
       future =
           krystexVajramExecutor.execute(
               graph.getVajramId(DoubleMinusOne.class),
-              DoubleMinusOneRequest.builder().numbers(List.of(1, 2, 3)).build());
+              DoubleMinusOneRequest._builder().numbers(List.of(1, 2, 3))._build());
     }
     Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(11);
   }

@@ -65,7 +65,7 @@ class A2MinusB2Test {
       VajramKryonGraph graph, KrystexVajramExecutor krystexVajramExecutor, A2MinusB2Request req) {
     return krystexVajramExecutor.execute(
         graph.getVajramId(A2MinusB2.class),
-        req,
+        req._build(),
         KryonExecutionConfig.builder().executionId("1").build());
   }
 }

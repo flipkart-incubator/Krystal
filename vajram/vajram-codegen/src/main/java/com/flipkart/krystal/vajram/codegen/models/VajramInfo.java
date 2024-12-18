@@ -11,7 +11,7 @@ public record VajramInfo(
     VajramID vajramId,
     DataType<?> responseType,
     String packageName,
-    ImmutableList<InputModel<?>> inputs,
+    ImmutableList<GivenFacetModel<?>> inputs,
     ImmutableList<DependencyModel> dependencies,
     ImmutableBiMap<String, Integer> facetIdsByName,
     TypeElement vajramClass) {

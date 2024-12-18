@@ -9,5 +9,7 @@ public interface FacetsBuilder extends Facets, FacetContainerBuilder {
   FacetsBuilder _newCopy();
 
   @Override
-  FacetsBuilder _set(int facetId, FacetValue<?> value);
+  default FacetsBuilder _set(int facetId, FacetValue value) {
+    return this;
+  }
 }

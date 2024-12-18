@@ -94,7 +94,7 @@ public final class Constants {
             return $imMap:T.of();
           }
           $map:T<$inputBatching:T, $facets:T> _batches = new $hashMap:T<>();
-          $commonInput:T _common = $facetsList:L.get(0)._common();
+          $commonInput:T _common = (($unmodInput:T)$facetsList:L.get(0))._common();
           for ($facets:T $facetsVar:L : $facetsList:L) {
             $unmodInput:T _castFacets = ($unmodInput:T) $facetsVar:L;
             $inputBatching:T _batch = _castFacets._batchable();

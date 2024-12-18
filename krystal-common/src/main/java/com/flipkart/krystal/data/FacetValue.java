@@ -1,3 +1,5 @@
 package com.flipkart.krystal.data;
 
-public sealed interface FacetValue<T> permits DependencyResponses, Errable {}
+public sealed interface FacetValue permits DependencyResponses, Errable {
+
+}

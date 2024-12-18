@@ -7,7 +7,7 @@ import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Success, Failure, Nil {
+public sealed interface Errable<@NonNull T> extends FacetValue permits Success, Failure, Nil {
 
   /**
    * @return a {@link CompletableFuture} which is completed exceptionally with the error if this is
@@ -33,23 +33,23 @@ public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Succes
 
   T valueOrThrow();
 
-  static <T> Errable<T> with(Errable<T> t) {
+  static <T> Errable<T> of(Errable<T> t) {
     return t;
   }
 
-  static <T> Errable<T> with(Optional<T> t) {
-    return withValue(t.get());
+  static <T> Errable<T> of(Optional<T> t) {
+    return withValue(t.orElse(null));
   }
 
-  static <T> Errable<T> with(@Nullable Object t) {
+  static <T> Errable<T> of(@Nullable Object t) {
     if (t instanceof Errable<?>) {
       if (t instanceof Success<?> success) {
-        return with((T) success.value());
+        return of((T) success.value());
       } else {
         return (Errable<T>) t;
       }
     } else if (t instanceof Optional<?> o) {
-      return with((T) o.get());
+      return of((T) o.get());
     } else {
       return withValue((T) t);
     }

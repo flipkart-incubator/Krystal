@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2;
 
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Facets.hellos_s;
@@ -7,6 +8,7 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihell
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Request.userIds_s;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.data.DependencyResponses;
 import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -51,12 +53,13 @@ public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
   }
 
   @Output
-  static String sayHellos(MultiHelloFriendsV2Facets _allFacets) {
-    if (_allFacets.skip().orElse(false)) {
+  static String sayHellos(
+      Optional<Boolean> skip, DependencyResponses<HelloFriendsV2Request, String> hellos) {
+    if (skip.orElse(false)) {
       return "";
     }
     List<String> result = new ArrayList<>();
-    for (var rr : _allFacets.hellos().requestResponses()) {
+    for (var rr : hellos.requestResponsePairs()) {
       rr.response().valueOpt().ifPresent(result::add);
     }
     return String.join(System.lineSeparator(), result);

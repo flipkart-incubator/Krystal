@@ -5,7 +5,7 @@ import com.flipkart.krystal.facets.FacetType;
 import com.google.common.collect.ImmutableSet;
 import javax.lang.model.element.VariableElement;
 
-public sealed interface FacetGenModel permits InputModel, DependencyModel {
+public sealed interface FacetGenModel permits GivenFacetModel, DependencyModel {
   int id();
 
   String name();

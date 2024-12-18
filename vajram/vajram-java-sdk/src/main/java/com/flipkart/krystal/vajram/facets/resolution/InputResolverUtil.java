@@ -159,7 +159,7 @@ public final class InputResolverUtil {
     boolean fanout = fanoutTransformer != null;
     List<Errable<?>> inputValues = new ArrayList<>();
     for (VajramFacetSpec sourceInput : sourceInputs) {
-      final Errable<Object> inputValue;
+      final Errable<?> inputValue;
       if (sourceInput instanceof VajramDepSingleTypeSpec<?, ?, ?>) {
         inputValue =
             facets._getDepResponses(sourceInput.id()).requestResponsePairs().stream()

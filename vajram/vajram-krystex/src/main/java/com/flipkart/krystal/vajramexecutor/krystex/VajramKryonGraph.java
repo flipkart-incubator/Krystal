@@ -434,7 +434,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
         requiredInputs.stream().filter(VajramFacetDefinition::isMandatory)::iterator;
     Map<String, Throwable> missingMandatoryValues = new HashMap<>();
     for (VajramFacetDefinition mandatoryFacet : mandatoryFacets) {
-      FacetValue<?> value = facets._get(mandatoryFacet.id());
+      FacetValue value = facets._get(mandatoryFacet.id());
       if (value instanceof Errable<?> e) {
         if (!(e instanceof Success<?>)) {
           missingMandatoryValues.put(

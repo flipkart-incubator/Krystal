@@ -6,5 +6,5 @@ package com.flipkart.krystal.data;
  * this interface - this can lead to unexpected behaviour.
  */
 public interface FacetContainerBuilder extends ModelBuilder {
-  FacetContainerBuilder _set(int facetId, FacetValue<?> value);
+  FacetContainerBuilder _set(int facetId, FacetValue value);
 }

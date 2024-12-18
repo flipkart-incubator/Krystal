@@ -3,7 +3,7 @@ package com.flipkart.krystal.data;
 import com.google.common.collect.ImmutableCollection;
 
 /** Represents the results of a depdendency invocation. */
-public sealed interface DependencyResponses<R extends Request<T>, T> extends FacetValue<T>
+public sealed interface DependencyResponses<R extends Request<T>, T> extends FacetValue
     permits DepResponsesImpl {
 
   ImmutableCollection<RequestResponse<R, T>> requestResponsePairs();

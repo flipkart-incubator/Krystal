@@ -54,7 +54,7 @@ class TooManyQualifiersTest {
       result =
           executor.execute(
               vajramKryonGraph.getVajramId(TooManyQualifiers.class),
-              TooManyQualifiersRequest.builder().input("i1").build());
+              TooManyQualifiersRequest._builder().input("i1")._build());
     }
     assertThat(result)
         .failsWithin(1, SECONDS)

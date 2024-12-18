@@ -22,8 +22,8 @@ import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.codegen.models.DependencyModel;
 import com.flipkart.krystal.vajram.codegen.models.DependencyModel.DependencyModelBuilder;
-import com.flipkart.krystal.vajram.codegen.models.InputModel;
-import com.flipkart.krystal.vajram.codegen.models.InputModel.InputModelBuilder;
+import com.flipkart.krystal.vajram.codegen.models.GivenFacetModel;
+import com.flipkart.krystal.vajram.codegen.models.GivenFacetModel.GivenFacetModelBuilder;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.models.VajramInfoLite;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
@@ -35,7 +35,6 @@ import com.flipkart.krystal.vajram.facets.ReservedFacets;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableBiMap;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Primitives;
@@ -54,9 +53,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -206,12 +203,12 @@ public class Utils {
     return vajramInfo;
   }
 
-  private InputModel<Object> toInputModel(
+  private GivenFacetModel<Object> toInputModel(
       VariableElement inputField,
       BiMap<String, Integer> givenIdsByName,
       Set<Integer> takenFacetIds,
       AtomicInteger nextFacetId) {
-    InputModelBuilder<Object> inputBuilder = InputModel.builder().facetField(inputField);
+    GivenFacetModelBuilder<Object> inputBuilder = GivenFacetModel.builder().facetField(inputField);
     String facetName = inputField.getSimpleName().toString();
     inputBuilder.id(
         Optional.ofNullable(givenIdsByName.get(facetName))
@@ -231,9 +228,9 @@ public class Utils {
     if (inputField.getAnnotation(Inject.class) != null) {
       facetTypes.add(FacetType.INJECTION);
     }
-    InputModel<Object> inputModel = inputBuilder.facetTypes(facetTypes).build();
-    givenIdsByName.putIfAbsent(facetName, inputModel.id());
-    return inputModel;
+    GivenFacetModel<Object> givenFacetModel = inputBuilder.facetTypes(facetTypes).build();
+    givenIdsByName.putIfAbsent(facetName, givenFacetModel.id());
+    return givenFacetModel;
   }
 
   private static int getNextAvailableFacetId(

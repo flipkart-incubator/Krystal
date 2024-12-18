@@ -9,6 +9,7 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihell
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.userIds_s;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.data.DependencyResponses;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
@@ -51,19 +52,17 @@ public abstract class MultiHelloFriends extends ComputeVajram<String> {
   }
 
   @Output
-  static String sayHellos(MultiHelloFriendsFacets _allFacets) {
+  static String sayHellos(
+      List<String> userIds, DependencyResponses<HelloFriendsRequest, String> hellos) {
     List<String> result = new ArrayList<>();
-    for (String userId : _allFacets.userIds()) {
+    for (String userId : userIds) {
       for (Integer numberOfFriend : NUMBER_OF_FRIENDS) {
-        _allFacets
-            .hellos()
-            .asMap()
-            .getOrDefault(
+        hellos
+            .getForRequest(
                 HelloFriendsRequest._builder()
                     .userId(userId)
                     .numberOfFriends(numberOfFriend)
-                    ._build(),
-                nil())
+                    ._build())
             .valueOpt()
             .ifPresent(result::add);
       }

@@ -9,20 +9,20 @@ import java.util.Map;
 public final class FacetsMapBuilder implements FacetsBuilder {
 
   private final SimpleRequestBuilder<Object> request;
-  private final Map<Integer, FacetValue<Object>> data;
+  private final Map<Integer, FacetValue> data;
 
   public FacetsMapBuilder(SimpleRequestBuilder<Object> request) {
     this(request, request._asMap());
   }
 
   FacetsMapBuilder(
-      SimpleRequestBuilder<Object> request, Map<Integer, ? extends FacetValue<Object>> data) {
+      SimpleRequestBuilder<Object> request, Map<Integer, ? extends FacetValue> data) {
     this.request = request._asBuilder();
     this.data = new LinkedHashMap<>(data);
   }
 
   @Override
-  public FacetValue<Object> _get(int facetId) {
+  public FacetValue _get(int facetId) {
     if (request._hasValue(facetId)) {
       Errable<Object> v = request._get(facetId);
       if (v != null) {
@@ -35,12 +35,12 @@ public final class FacetsMapBuilder implements FacetsBuilder {
   }
 
   @Override
-  public Errable<Object> _getErrable(int facetId) {
+  public Errable<?> _getErrable(int facetId) {
     if (request._hasValue(facetId)) {
       return request._get(facetId);
     } else {
-      FacetValue<Object> datum = data.getOrDefault(facetId, Errable.nil());
-      if (datum instanceof Errable<Object> errable) {
+      FacetValue datum = data.getOrDefault(facetId, Errable.nil());
+      if (datum instanceof Errable<?> errable) {
         return errable;
       } else {
         throw new IllegalArgumentException("%s is not of type Errable".formatted(facetId));
@@ -51,7 +51,7 @@ public final class FacetsMapBuilder implements FacetsBuilder {
   @SuppressWarnings("unchecked")
   @Override
   public DependencyResponses<Request<Object>, Object> _getDepResponses(int facetId) {
-    FacetValue<Object> datum = data.getOrDefault(facetId, Errable.nil());
+    FacetValue datum = data.getOrDefault(facetId, Errable.nil());
     if (datum instanceof DependencyResponses<?, ?> errable) {
       return (DependencyResponses<Request<Object>, Object>) errable;
     } else {
@@ -60,8 +60,8 @@ public final class FacetsMapBuilder implements FacetsBuilder {
   }
 
   @Override
-  public Map<Integer, FacetValue<Object>> _asMap() {
-    Map<Integer, FacetValue<Object>> map = new LinkedHashMap<>(request._asMap());
+  public Map<Integer, FacetValue> _asMap() {
+    Map<Integer, FacetValue> map = new LinkedHashMap<>(request._asMap());
     map.putAll(data);
     return map;
   }
@@ -81,11 +81,11 @@ public final class FacetsMapBuilder implements FacetsBuilder {
   }
 
   @Override
-  public FacetsMapBuilder _set(int facetId, FacetValue<?> value) {
+  public FacetsMapBuilder _set(int facetId, FacetValue value) {
     if (this._hasValue(facetId)) {
       throw new IllegalModificationException();
     }
-    data.put(facetId, (FacetValue<Object>) value);
+    data.put(facetId, (FacetValue) value);
     return this;
   }
 
