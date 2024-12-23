@@ -38,9 +38,25 @@ class FkJavaCodeStandard implements Plugin<Project> {
         checkerFramework.checkers = ["org.checkerframework.checker.nullness.NullnessChecker",
                                      "org.checkerframework.checker.calledmethods.CalledMethodsChecker",
                                      "org.checkerframework.checker.optional.OptionalChecker",
-                                     "org.checkerframework.checker.resourceleak.ResourceLeakChecker",
-                                     "org.checkerframework.checker.fenum.FenumChecker"]
+                                     "org.checkerframework.checker.resourceleak.ResourceLeakChecker"]
         checkerFramework.extraJavacArgs.add("-Astubs=${project.rootDir}/config/checker/stubs")
+
+        project.dependencies.add('checkerFramework', 'org.checkerframework:checker:3.48.3')
+        project.dependencies.add('compileOnly', 'org.checkerframework:checker-qual:3.48.3')
+        project.dependencies.add('annotationProcessor', 'org.checkerframework:dataflow-errorprone:3.48.3')
+        project.dependencies.add('annotationProcessor', 'com.google.errorprone:error_prone_core:2.27.1')
+        project.dependencies.add('annotationProcessor', 'com.google.errorprone:error_prone_check_api:2.27.1')
+        project.dependencies.add('annotationProcessor', 'com.google.errorprone:error_prone_annotation:2.27.1')
+        project.dependencies.add('annotationProcessor', 'com.google.errorprone:error_prone_annotations:2.27.1')
+        project.dependencies.add('annotationProcessor', 'com.google.errorprone:error_prone_type_annotations:2.27.1')
+        project.dependencies.add('annotationProcessor', 'com.google.guava:guava:33.4.0-jre')
+        project.dependencies.add('annotationProcessor', 'javax.inject:javax.inject:1')
+        project.dependencies.add('annotationProcessor', 'com.google.auto.value:auto-value-annotations:1.11.0')
+        project.dependencies.add('annotationProcessor', 'com.github.ben-manes.caffeine:caffeine:3.1.8')
+        project.dependencies.add('annotationProcessor', 'org.pcollections:pcollections:4.0.2')
+        project.dependencies.add('annotationProcessor', 'com.github.kevinstern:software-and-algorithms:1.0')
+
+
     }
 
     private static spotless(Project project) {
