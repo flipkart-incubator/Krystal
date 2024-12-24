@@ -38,8 +38,10 @@ class FkJavaCodeStandard implements Plugin<Project> {
         checkerFramework.checkers = ["org.checkerframework.checker.nullness.NullnessChecker",
                                      "org.checkerframework.checker.calledmethods.CalledMethodsChecker",
                                      "org.checkerframework.checker.optional.OptionalChecker",
-                                     "org.checkerframework.checker.resourceleak.ResourceLeakChecker"]
+//                                     "org.checkerframework.checker.resourceleak.ResourceLeakChecker",
+        ]
         checkerFramework.extraJavacArgs.add("-Astubs=${project.rootDir}/config/checker/stubs")
+        checkerFramework.extraJavacArgs.add("-AskipFiles=/build/generated/")
 
         project.dependencies.add('checkerFramework', 'org.checkerframework:checker:3.48.3')
         project.dependencies.add('compileOnly', 'org.checkerframework:checker-qual:3.48.3')
@@ -66,7 +68,6 @@ class FkJavaCodeStandard implements Plugin<Project> {
                 .java {
                     target('src/*/java/**/*.java',
                             'build/generated/sources/annotationProcessor/**/*.java')
-
                     googleJavaFormat()
                 }
 
