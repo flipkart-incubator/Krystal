@@ -109,7 +109,8 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
             ImmutableSet.copyOf(newInputsNames),
             newRequests.build(),
             forwardBatch.dependantChain(),
-            forwardBatch.skippedRequests()));
+            forwardBatch.skippedRequests(),
+            forwardBatch.providersForRequests()));
   }
 
   private Facets injectFacetsOfVajram(

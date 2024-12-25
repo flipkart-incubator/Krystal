@@ -33,6 +33,7 @@ import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.LogicDecoratorContext;
+import com.flipkart.krystal.krystex.providers.Providers;
 import com.flipkart.krystal.krystex.request.IntReqGenerator;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
@@ -453,6 +454,13 @@ public final class KryonExecutor implements KrystalExecutor {
         .forEach(
             (kryonId, kryonResults) -> {
               KryonDefinition kryonDefinition = kryonDefinitionRegistry.get(kryonId);
+              Map<RequestId, Providers> requestIdProvidersMap = new LinkedHashMap<>();
+              for (KryonExecution kryonExecution : kryonResults) {
+                if (kryonExecution.executionConfig().providersForRequest() != null)
+                  requestIdProvidersMap.put(
+                      kryonExecution.instanceExecutionId(),
+                      kryonExecution.executionConfig().providersForRequest());
+              }
               CompletableFuture<BatchResponse> batchResponseFuture =
                   this.executeCommand(
                       new ForwardBatch(
@@ -463,7 +471,8 @@ public final class KryonExecutor implements KrystalExecutor {
                                   toImmutableMap(
                                       KryonExecution::instanceExecutionId, KryonExecution::facets)),
                           kryonDefinitionRegistry.getDependantChainsStart(),
-                          ImmutableMap.of()));
+                          ImmutableMap.of(),
+                          ImmutableMap.copyOf(requestIdProvidersMap)));
               batchResponseFuture
                   .thenApply(BatchResponse::responses)
                   .whenComplete(

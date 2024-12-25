@@ -1,12 +1,15 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import com.flipkart.krystal.krystex.providers.Providers;
 import com.google.common.collect.ImmutableSet;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.Builder;
 
 @Builder(toBuilder = true)
 public record KryonExecutionConfig(
-    String executionId, ImmutableSet<DependantChain> disabledDependantChains) {
+    String executionId,
+    ImmutableSet<DependantChain> disabledDependantChains,
+    Providers providersForRequest) {
 
   private static final AtomicLong EXEC_COUNT = new AtomicLong();
 
