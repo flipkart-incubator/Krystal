@@ -2,7 +2,7 @@ package com.flipkart.krystal.krystex.providers;
 
 import java.util.Collections;
 import java.util.Map;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import java.util.Optional;
 
 public record Providers(Map<Class<?>, Provider<?>> providersMap) {
 
@@ -10,14 +10,11 @@ public record Providers(Map<Class<?>, Provider<?>> providersMap) {
     return providersMap.containsKey(clazz) && clazz.isInstance(providersMap.get(clazz).get());
   }
 
-  public @Nullable Provider<?> getProviderFor(Class<?> clazz) {
+  public Optional<Provider<?>> getProviderFor(Class<?> clazz) {
     if (!containsProviderFor(clazz)) {
-      throw new RuntimeException(
-          "Provider for the class "
-              + clazz.getSimpleName()
-              + " was not found or the wrong provider is mapped against this class");
+      return Optional.empty();
     }
-    return providersMap.get(clazz);
+    return Optional.ofNullable(providersMap.get(clazz));
   }
 
   public static Providers empty() {

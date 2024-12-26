@@ -13,6 +13,8 @@ import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonResponse;
+import com.flipkart.krystal.krystex.providers.Provider;
+import com.flipkart.krystal.krystex.providers.Providers;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
@@ -98,9 +100,29 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
     Map<String, Errable<Object>> newInputsValues = new LinkedHashMap<>();
     for (Entry<RequestId, Facets> entry : requestIdToFacets.entrySet()) {
       RequestId requestId = entry.getKey();
+      VajramInjectionProvider requestScopedInjectionProvider = null;
+      if (requestId != null
+          && Optional.ofNullable(forwardBatch.providersForRequests())
+              .map(m -> m.getOrDefault(requestId, Providers.empty()))
+              .map(providers -> providers.containsProviderFor(VajramInjectionProvider.class))
+              .orElse(false)) {
+        Optional<Provider<?>> providerOpt =
+            forwardBatch
+                .providersForRequests()
+                .getOrDefault(requestId, Providers.empty())
+                .getProviderFor(VajramInjectionProvider.class);
+        if (providerOpt.isPresent() && providerOpt.get().get() != null) {
+          requestScopedInjectionProvider = (VajramInjectionProvider) providerOpt.get().get();
+        }
+      }
       Facets facets = entry.getValue();
       Facets newFacets =
-          injectFacetsOfVajram(vajramDefinition, injectableFacetDefs, facets, newInputsValues);
+          injectFacetsOfVajram(
+              vajramDefinition,
+              injectableFacetDefs,
+              facets,
+              newInputsValues,
+              requestScopedInjectionProvider);
       newRequests.put(requestId, newFacets);
     }
     return kryon.executeCommand(
@@ -117,7 +139,8 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
       VajramDefinition vajramDefinition,
       Set<InputDef<?>> injectableFacetDefs,
       Facets facets,
-      Map<String, Errable<Object>> injectedValues) {
+      Map<String, Errable<Object>> injectedValues,
+      @Nullable VajramInjectionProvider requestScopedInjectionProvider) {
     Map<String, FacetValue<Object>> newValues = new HashMap<>();
     for (VajramFacetDefinition facetDefinition : injectableFacetDefs) {
       String inputName = facetDefinition.name();
@@ -128,7 +151,10 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
         // Input was not resolved by calling vajram.
         Errable<Object> value =
             injectedValues.computeIfAbsent(
-                inputName, _i -> getInjectedValue(vajramDefinition.vajramId(), inputDef));
+                inputName,
+                _i ->
+                    getInjectedValue(
+                        vajramDefinition.vajramId(), inputDef, requestScopedInjectionProvider));
         newValues.put(inputName, value);
       }
     }
@@ -140,7 +166,10 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
     }
   }
 
-  private Errable<Object> getInjectedValue(VajramID vajramId, InputDef<?> inputDef) {
+  private Errable<Object> getInjectedValue(
+      VajramID vajramId,
+      InputDef<?> inputDef,
+      @Nullable VajramInjectionProvider requestScopedInjectionProvider) {
     VajramInjectionProvider inputInjector = this.injectionProvider;
     if (inputInjector == null) {
       var exception = new StackTracelessException("Dependency injector is null");
@@ -151,16 +180,33 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
           exception);
       return Errable.withError(exception);
     }
+    Errable<Object> injectedValue = null;
     try {
       @SuppressWarnings("unchecked")
       InputDef<Object> casted = (InputDef<Object>) inputDef;
-      return inputInjector.get(vajramId, casted);
+      injectedValue = inputInjector.get(vajramId, casted);
     } catch (Throwable e) {
+      injectedValue = Errable.withError(e);
+    }
+    if (requestScopedInjectionProvider != null && injectedValue.value().isEmpty()) {
+      try {
+        @SuppressWarnings("unchecked")
+        InputDef<Object> casted = (InputDef<Object>) inputDef;
+        injectedValue = requestScopedInjectionProvider.get(vajramId, casted);
+      } catch (Throwable e) {
+        String message =
+            "Could not inject input %s of vajram %s"
+                .formatted(inputDef, kryon.getKryonDefinition().kryonId().value());
+        log.error(message, e);
+        injectedValue = Errable.withError(e);
+      }
+    }
+    if (injectedValue.error().isPresent()) {
       String message =
           "Could not inject input %s of vajram %s"
               .formatted(inputDef, kryon.getKryonDefinition().kryonId().value());
-      log.error(message, e);
-      return Errable.withError(e);
+      log.error(message, injectedValue.error().get());
     }
+    return injectedValue;
   }
 }
