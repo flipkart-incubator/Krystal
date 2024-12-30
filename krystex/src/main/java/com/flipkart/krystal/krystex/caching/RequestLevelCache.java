@@ -104,7 +104,8 @@ public class RequestLevelCache implements KryonDecorator {
                   forwardBatch.inputNames(),
                   ImmutableMap.copyOf(cacheMisses),
                   forwardBatch.dependantChain(),
-                  ImmutableMap.copyOf(skippedRequests)));
+                  ImmutableMap.copyOf(skippedRequests),
+                  forwardBatch.providersForRequests()));
 
       cacheMissesResponse.whenComplete(
           (kryonResponse, throwable) -> {

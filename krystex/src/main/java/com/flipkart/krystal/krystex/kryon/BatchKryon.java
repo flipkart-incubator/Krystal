@@ -31,6 +31,7 @@ import com.flipkart.krystal.krystex.logicdecoration.FlushCommand;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
+import com.flipkart.krystal.krystex.providers.Providers;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
@@ -262,6 +263,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
                     .put(Set.of(requestId), resolverCommand);
               });
     }
+    ImmutableMap<RequestId, Providers> requestIdToProviders = forwardBatch.providersForRequests();
     for (var entry : commandsByDependency.entrySet()) {
       String depName = entry.getKey();
       var resolverCommandsForDep = entry.getValue();
@@ -269,7 +271,8 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
           depName,
           dependantChain,
           resolverCommandsForDep,
-          triggerableDependencies.getOrDefault(depName, ImmutableSet.of()));
+          triggerableDependencies.getOrDefault(depName, ImmutableSet.of()),
+          requestIdToProviders);
     }
   }
 
@@ -285,7 +288,8 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       String depName,
       DependantChain dependantChain,
       Map<Set<RequestId>, ResolverCommand> resolverCommandsByReq,
-      Set<ResolverDefinition> resolverDefinitions) {
+      Set<ResolverDefinition> resolverDefinitions,
+      ImmutableMap<RequestId, Providers> requestIdToProviders) {
     if (executedDependencies.getOrDefault(dependantChain, Set.of()).contains(depName)) {
       return;
     }
@@ -301,6 +305,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     Map<RequestId, Facets> inputsByDepReq = new LinkedHashMap<>();
     Map<RequestId, String> skipReasonsByReq = new LinkedHashMap<>();
     Map<RequestId, Set<RequestId>> depReqsByIncomingReq = new LinkedHashMap<>();
+    Map<RequestId, Providers> providersByDepReq = new LinkedHashMap<>();
     for (var entry : resolverCommandsByReq.entrySet()) {
       Set<RequestId> incomingReqIds = entry.getKey();
       ResolverCommand resolverCommand = entry.getValue();
@@ -333,6 +338,8 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
                   .computeIfAbsent(incomingReqId, _k -> new LinkedHashSet<>())
                   .add(depReqId);
               inputsByDepReq.put(depReqId, facets);
+              providersByDepReq.put(
+                  depReqId, requestIdToProviders.getOrDefault(incomingReqId, Providers.empty()));
             }
           }
         }
@@ -360,7 +367,8 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
                     .collect(toImmutableSet()),
                 ImmutableMap.copyOf(inputsByDepReq),
                 dependantChain.extend(kryonId, depName),
-                ImmutableMap.copyOf(skipReasonsByReq)));
+                ImmutableMap.copyOf(skipReasonsByReq),
+                ImmutableMap.copyOf(providersByDepReq)));
 
     depResponse.whenComplete(
         (batchResponse, throwable) -> {
