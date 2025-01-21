@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajram.exec;
 
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.flipkart.krystal.data.FacetContainer;
+import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.tags.ElementTags;
 import com.flipkart.krystal.vajram.Annos;
 import com.flipkart.krystal.vajram.ComputeDelegationType;
@@ -12,12 +12,10 @@ import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramID;
-import com.flipkart.krystal.vajram.facets.InputDef;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.Using;
-import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
-import com.flipkart.krystal.vajram.facets.resolution.InputResolverDefinition;
+import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.lang.annotation.Annotation;
@@ -44,13 +42,7 @@ final class Vajrams {
   }
 
   static VajramID parseVajramId(Vajram<?> vajram) {
-    Class<?> vajramDefClass = getVajramDefClass(vajram.getClass());
-    return vajramID(
-        Optional.ofNullable(vajramDefClass.getAnnotation(VajramDef.class))
-            .map(VajramDef::id)
-            .filter(id -> !id.isEmpty())
-            // Empty id means we must infer vajram id from class name
-            .orElseGet(vajramDefClass::getSimpleName));
+    return vajramID(getVajramDefClass(vajram.getClass()).getSimpleName());
   }
 
   static ElementTags parseVajramTags(VajramID inferredVajramId, Vajram<?> vajram) {
@@ -60,33 +52,35 @@ final class Vajrams {
             .toList());
   }
 
-  static ImmutableMap<Integer, InputResolverDefinition> parseInputResolvers(Vajram<?> vajram) {
-    Map<Integer, InputResolverDefinition> map = new LinkedHashMap<>();
+  static ImmutableMap<ResolverDefinition, InputResolver> parseInputResolvers(Vajram<?> vajram) {
+    Map<ResolverDefinition, InputResolver> map = new LinkedHashMap<>();
     int i = 0;
     for (InputResolver inputResolver : vajram.getInputResolvers()) {
-      map.put(i++, inputResolver);
+      map.put(inputResolver.definition(), inputResolver);
     }
     return ImmutableMap.copyOf(map);
   }
 
-  private static int inferFacetId(
+  private static FacetSpec inferFacetId(
       Parameter parameter,
-      ImmutableMap<String, VajramFacetDefinition> facetsByName,
+      ImmutableMap<String, FacetSpec> facetsByName,
+      ImmutableMap<Integer, FacetSpec> facetsById,
       Vajram<?> vajram) {
     return Arrays.stream(parameter.getAnnotations())
         .filter(annotation -> annotation instanceof Using)
         .map(annotation -> (Using) annotation)
         .findAny()
         .map(Using::value)
+        .map(integer -> facetsById.get(integer))
         .orElseGet(
             () -> {
-              VajramFacetDefinition vajramFacetDefinition = facetsByName.get(parameter.getName());
-              if (vajramFacetDefinition == null) {
+              FacetSpec facetSpec = facetsByName.get(parameter.getName());
+              if (facetSpec == null) {
                 throw new IllegalArgumentException(
                     "Unable to infer facet id for parameter %s of vajram %s"
                         .formatted(parameter.getName(), vajram.getClass()));
               }
-              return vajramFacetDefinition.id();
+              return facetSpec;
             });
   }
 
@@ -152,19 +146,16 @@ final class Vajrams {
     return _getVajramDefClass(superclass);
   }
 
-  static ImmutableSet<Integer> parseOutputLogicSources(
-      Vajram<?> vajram, ImmutableMap<String, VajramFacetDefinition> facetsByName) {
+  static ImmutableSet<FacetSpec> parseOutputLogicSources(
+      Vajram<?> vajram,
+      ImmutableSet<FacetSpec> facetSpecs,
+      ImmutableMap<String, FacetSpec> facetsByName,
+      ImmutableMap<Integer, FacetSpec> facetsById) {
     Optional<Method> outputLogicMethod =
         Arrays.stream(getVajramDefClass(vajram.getClass()).getDeclaredMethods())
             .filter(method -> method.getAnnotation(Output.class) != null)
             .findFirst();
-    ImmutableSet<Integer> allFacetIds =
-        vajram.getFacetDefinitions().stream()
-            .map(VajramFacetDefinition::id)
-            .collect(toImmutableSet());
-    if (outputLogicMethod.isPresent()
-        && vajram.getFacetDefinitions().stream()
-            .noneMatch(f -> f instanceof InputDef<?> input && input.isBatched())) {
+    if (outputLogicMethod.isPresent() && facetSpecs.stream().noneMatch(FacetSpec::isBatched)) {
       // This is a vajram which doesn't have batched facets. So we can infer the output logic's
       // sources from the parameters
       Parameter[] outputLogicParams = outputLogicMethod.get().getParameters();
@@ -174,17 +165,17 @@ final class Vajrams {
          This means the output logic is consuming the auto-generated Facets class which implies it
          consumes all the facets
         */
-        return allFacetIds;
+        return facetSpecs;
       } else {
-        ImmutableSet.Builder<Integer> facetIds = ImmutableSet.builder();
+        ImmutableSet.Builder<FacetSpec> facetIds = ImmutableSet.builder();
         for (Parameter param : outputLogicParams) {
-          facetIds.add(Vajrams.inferFacetId(param, facetsByName, vajram));
+          facetIds.add(Vajrams.inferFacetId(param, facetsByName, facetsById, vajram));
         }
         return facetIds.build();
       }
     } else {
       // The output logic consumes all facets
-      return allFacetIds;
+      return facetSpecs;
     }
   }
 

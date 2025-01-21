@@ -2,6 +2,7 @@ package com.flipkart.krystal.krystex.kryon;
 
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
+import com.flipkart.krystal.krystex.commands.ServerSideCommand;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
@@ -14,7 +15,7 @@ import java.util.TreeSet;
 import java.util.function.Function;
 
 abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonResponse>
-    implements Kryon<C, R> permits BatchKryon, GranularKryon {
+    implements Kryon<C, R> permits BatchKryon {
 
   protected final KryonDefinition kryonDefinition;
   protected final KryonId kryonId;

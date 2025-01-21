@@ -7,4 +7,4 @@ import com.google.common.collect.ImmutableSet;
 public record ResolutionRequest(
     int dependencyId,
     ImmutableSet<Integer> inputsToResolve,
-    ImmutableList<RequestBuilder<Object>> depRequests) {}
+    ImmutableList<RequestBuilder> depRequests) {}

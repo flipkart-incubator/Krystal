@@ -1,5 +1,7 @@
 package com.flipkart.krystal.data;
 
+import com.flipkart.krystal.facets.BasicFacetInfo;
+import com.google.common.collect.ImmutableSet;
 import java.util.Map;
 
 /**
@@ -7,8 +9,8 @@ import java.util.Map;
  * is intended for use by the krystal platform code generator. Developers must not implement/extend
  * this interface - this can lead to unexpected behaviour.
  */
-public sealed interface FacetContainer extends Model permits Facets, Request {
-  FacetValue _get(int facetId);
+public interface FacetContainer {
 
-  Map<Integer, ? extends FacetValue> _asMap();
+  /** Returns the basic facet infos of the facets whose values this container contains */
+  ImmutableSet<? extends BasicFacetInfo> _facets();
 }

@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello;
 
-import static com.flipkart.krystal.data.Errable.nil;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
@@ -9,13 +8,12 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihell
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.userIds_s;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
-import com.flipkart.krystal.data.DependencyResponses;
+import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest;
@@ -53,7 +51,7 @@ public abstract class MultiHelloFriends extends ComputeVajram<String> {
 
   @Output
   static String sayHellos(
-      List<String> userIds, DependencyResponses<HelloFriendsRequest, String> hellos) {
+      List<String> userIds, FanoutDepResponses hellos) {
     List<String> result = new ArrayList<>();
     for (String userId : userIds) {
       for (Integer numberOfFriend : NUMBER_OF_FRIENDS) {

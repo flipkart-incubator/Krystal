@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex;
 
-import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
@@ -9,7 +9,6 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.LogicDecoratorContext;
 import com.flipkart.krystal.tags.ElementTags;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -18,10 +17,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
 public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<OutputLogic<T>>
@@ -29,10 +26,10 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
 
   protected OutputLogicDefinition(
       KryonLogicId kryonLogicId,
-      Set<Integer> inputs,
+      Set<Facet> usedFacets,
       ElementTags tags,
       OutputLogic<T> outputLogic) {
-    super(kryonLogicId, inputs, tags, outputLogic);
+    super(kryonLogicId, usedFacets, tags, outputLogic);
   }
 
   @Getter

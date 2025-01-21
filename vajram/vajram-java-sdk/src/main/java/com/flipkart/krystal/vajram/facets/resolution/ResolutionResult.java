@@ -7,5 +7,5 @@ import java.util.List;
 import java.util.Map;
 
 public record ResolutionResult(
-    Map</*DepFacetId*/ Integer, List<RequestBuilder<Object>>> results,
-    Map<Integer, DependencyCommand<? extends Request<Object>>> skippedDependencies) {}
+    Map</*DepFacetId*/ Integer, List<RequestBuilder>> results,
+    Map<Integer, DependencyCommand<? extends Request>> skippedDependencies) {}

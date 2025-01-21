@@ -22,14 +22,10 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.experimental.Accessors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@Accessors(fluent = true)
-@EqualsAndHashCode(
-    of = {"canonicalClassName", "typeParameters"},
-    callSuper = false)
+@EqualsAndHashCode(of = {"canonicalClassName", "typeParameters"})
 public final class JavaType<T> implements DataType<T> {
 
   /** the fully qualified name of the class, i.e. pck.outer.inner */
@@ -42,7 +38,7 @@ public final class JavaType<T> implements DataType<T> {
 
   private @MonotonicNonNull Type clazz;
 
-  JavaType(Class<T> clazz, List<? extends DataType<?>> typeParams) {
+  JavaType(Class<?> clazz, List<? extends DataType<?>> typeParams) {
     this(
         Optional.ofNullable(clazz.getPackage()).map(Package::getName).orElse(null),
         clazz.getSimpleName(),
@@ -77,12 +73,12 @@ public final class JavaType<T> implements DataType<T> {
   }
 
   @SuppressWarnings("unchecked")
-  public static <T> JavaType<T> create(Class<T> clazz, List<DataType<?>> typeParams) {
+  public static <T> JavaType<T> create(Class<?> clazz, List<DataType<?>> typeParams) {
     String canonicalClassName = clazz.getCanonicalName();
     if (canonicalClassName != null && dataTypeMappings.containsKey(canonicalClassName)) {
       return (JavaType<T>) dataTypeMappings.get(canonicalClassName).apply(typeParams);
     } else {
-      return new JavaType<>(clazz, typeParams);
+      return new JavaType<T>(clazz, typeParams);
     }
   }
 

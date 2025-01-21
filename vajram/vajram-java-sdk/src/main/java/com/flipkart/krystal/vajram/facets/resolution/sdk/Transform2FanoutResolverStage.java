@@ -2,9 +2,11 @@ package com.flipkart.krystal.vajram.facets.resolution.sdk;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SkipPredicate;
+import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
+import com.flipkart.krystal.vajram.facets.specs.InputDefinition;
+import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -19,16 +21,16 @@ import java.util.function.BiPredicate;
  * @param <DV> DependencyVajram: The vajram whose input is being resolved
  */
 public final class Transform2FanoutResolverStage<
-    S1, S2, T, CV extends Request<?>, DV extends Request<?>> {
-  private final VajramFacetSpec<T, DV> targetInput;
-  private final VajramFacetSpec<S1, CV> sourceInput1;
-  private final VajramFacetSpec<S2, CV> sourceInput2;
+    S1, S2, T, CV extends Request, DV extends Request> {
+  private final InputDefinition<T, DV> targetInput;
+  private final FacetSpec<S1, CV> sourceInput1;
+  private final FacetSpec<S2, CV> sourceInput2;
   private final List<SkipPredicate<?>> skipConditions = new ArrayList<>();
 
   Transform2FanoutResolverStage(
-      VajramFacetSpec<T, DV> targetInput,
-      VajramFacetSpec<S1, CV> sourceInput1,
-      VajramFacetSpec<S2, CV> sourceInput2) {
+      InputDefinition<T, DV> targetInput,
+      FacetSpec<S1, CV> sourceInput1,
+      FacetSpec<S2, CV> sourceInput2) {
     this.targetInput = targetInput;
     this.sourceInput1 = sourceInput1;
     this.sourceInput2 = sourceInput2;
@@ -59,7 +61,7 @@ public final class Transform2FanoutResolverStage<
       BiFunction<Errable<S1>, Errable<S2>, ? extends Collection<? extends T>> transformer) {
     return new SimpleInputResolverSpec<>(
         targetInput,
-        List.of(sourceInput1, sourceInput2),
+        ImmutableSet.of(sourceInput1, sourceInput2),
         skipConditions,
         null,
         list -> {

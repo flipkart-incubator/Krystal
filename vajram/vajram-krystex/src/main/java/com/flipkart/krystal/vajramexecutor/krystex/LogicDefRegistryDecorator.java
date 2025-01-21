@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 
+import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinition;
@@ -18,7 +19,7 @@ import java.util.Set;
 public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
 
   public LogicDefinition<ResolverLogic> newResolverLogic(
-      String kryonId, String kryonLogicId, Set<Integer> inputs, ResolverLogic logic) {
+      String kryonId, String kryonLogicId, Set<? extends Facet> inputs, ResolverLogic logic) {
     LogicDefinition<ResolverLogic> def =
         new LogicDefinition<>(
             new KryonLogicId(new KryonId(kryonId), kryonLogicId), inputs, emptyTags(), logic);
@@ -27,7 +28,7 @@ public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
   }
 
   public LogicDefinition<MultiResolver> newMultiResolver(
-      String kryonId, String kryonLogicId, Set<Integer> inputs, MultiResolver logic) {
+      String kryonId, String kryonLogicId, Set<? extends Facet> inputs, MultiResolver logic) {
     LogicDefinition<MultiResolver> def =
         new LogicDefinition<>(
             new KryonLogicId(new KryonId(kryonId), kryonLogicId), inputs, emptyTags(), logic);
@@ -38,7 +39,7 @@ public record LogicDefRegistryDecorator(LogicDefinitionRegistry delegate) {
   public <T> OutputLogicDefinition<T> newOutputLogic(
       boolean isIOLogic,
       KryonLogicId kryonLogicId,
-      Set<Integer> inputs,
+      Set<Facet> inputs,
       OutputLogic<T> kryonLogic,
       ElementTags tags) {
     OutputLogicDefinition<T> def =

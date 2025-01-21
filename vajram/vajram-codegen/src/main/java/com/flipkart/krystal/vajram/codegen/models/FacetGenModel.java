@@ -19,4 +19,8 @@ public sealed interface FacetGenModel permits GivenFacetModel, DependencyModel {
   DataType<?> dataType();
 
   boolean isBatched();
+
+  default boolean isOptional() {
+    return !isMandatory();
+  }
 }

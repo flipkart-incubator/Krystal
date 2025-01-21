@@ -11,7 +11,6 @@ import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.samples.calculator.adder.AdderFacets.BatchFacets;
-import com.flipkart.krystal.vajram.samples.calculator.adder.AdderFacets.CommonInputs;
 import com.google.common.collect.ImmutableList;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;

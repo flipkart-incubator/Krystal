@@ -8,8 +8,7 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFri
 import static java.lang.System.lineSeparator;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
-import com.flipkart.krystal.data.DependencyResponses;
-import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
@@ -57,7 +56,7 @@ public abstract class MutualFriendsHello extends ComputeVajram<String> {
   }
 
   @Output
-  static String sayHelloToMutualFriends(DependencyResponses<HelloFriendsV2Request, String> hellos) {
+  static String sayHelloToMutualFriends(FanoutDepResponses hellos) {
     List<String> result = new ArrayList<>();
     for (var response : hellos.requestResponsePairs()) {
       response.response().valueOpt().ifPresent(result::add);

@@ -10,11 +10,10 @@ import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOneFacet
 import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOneFacets.result_s;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
-import com.flipkart.krystal.data.DependencyResponses;
+import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.DependencyResponse;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
@@ -27,6 +26,7 @@ import com.flipkart.krystal.vajram.samples.calculator.multiplier.MultiplierReque
 import com.flipkart.krystal.vajram.samples.calculator.subtractor.Subtractor;
 import com.flipkart.krystal.vajram.samples.calculator.subtractor.SubtractorRequest;
 import com.google.common.collect.ImmutableCollection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,7 +62,7 @@ public abstract class DoubleMinusOne extends ComputeVajram<Integer> {
   }
 
   @Resolve(dep = result_i, depInputs = SubtractorRequest.numberOne_i)
-  static int sumOfDoubles(DependencyResponses<MultiplierRequest, Integer> doubledNumbers) {
+  static int sumOfDoubles(FanoutDepResponses<DoubleMinusOneRequest, Integer> doubledNumbers) {
     return doubledNumbers.requestResponsePairs().stream()
         .map(RequestResponse::response)
         .map(Errable::valueOpt)

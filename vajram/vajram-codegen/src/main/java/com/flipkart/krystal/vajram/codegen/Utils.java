@@ -7,7 +7,6 @@ import static com.flipkart.krystal.vajram.codegen.Constants._FACETS_CLASS;
 import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
 import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.flipkart.krystal.data.ImmutableRequest;
@@ -480,8 +479,12 @@ public class Utils {
     return vajramName + Constants.REQUEST_SUFFIX;
   }
 
-  public static String getImmutRequestClassName(String vajramName) {
+  public static String getImmutRequestInterfaceName(String vajramName) {
     return vajramName + Constants.IMMUT_REQUEST_SUFFIX;
+  }
+
+  public static String getImmutRequestPojoName(String vajramName) {
+    return vajramName + Constants.IMMUT_REQUEST_POJO_SUFFIX;
   }
 
   public static String getVajramImplClassName(String vajramId) {

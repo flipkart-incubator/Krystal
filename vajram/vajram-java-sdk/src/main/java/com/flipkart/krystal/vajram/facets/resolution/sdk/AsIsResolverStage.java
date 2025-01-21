@@ -2,19 +2,21 @@ package com.flipkart.krystal.vajram.facets.resolution.sdk;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SkipPredicate;
+import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
+import com.flipkart.krystal.vajram.facets.specs.InputDefinition;
+import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
-public final class AsIsResolverStage<T, CV extends Request<?>, DV extends Request<?>> {
-  private final VajramFacetSpec<T, DV> targetInput;
-  private final VajramFacetSpec<T, CV> sourceInput;
+public final class AsIsResolverStage<T, CV extends Request, DV extends Request> {
+  private final InputDefinition<T, DV> targetInput;
+  private final FacetSpec<T, CV> sourceInput;
   private final List<SkipPredicate<?>> skipConditions = new ArrayList<>();
 
-  AsIsResolverStage(VajramFacetSpec<T, DV> targetInput, VajramFacetSpec<T, CV> sourceInput) {
+  AsIsResolverStage(InputDefinition<T, DV> targetInput, FacetSpec<T, CV> sourceInput) {
     this.targetInput = targetInput;
     this.sourceInput = sourceInput;
   }
@@ -30,7 +32,7 @@ public final class AsIsResolverStage<T, CV extends Request<?>, DV extends Reques
   public SimpleInputResolverSpec<T, CV, DV> asResolver() {
     return new SimpleInputResolverSpec<>(
         targetInput,
-        List.of(sourceInput),
+        ImmutableSet.of(sourceInput),
         skipConditions,
         t -> (T) t.get(0).valueOpt().orElse(null),
         null);

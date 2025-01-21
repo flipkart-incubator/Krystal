@@ -9,7 +9,7 @@ import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderFac
 import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderRequest.numbers_i;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
-import com.flipkart.krystal.data.DependencyResponses;
+import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -73,7 +73,7 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
 
   @Output
   static Integer add(
-      Errable<Integer> sum, DependencyResponses<ChainAdderRequest, Integer> chainSum) {
+      Errable<Integer> sum, FanoutDepResponses<ChainAdderRequest, Integer> chainSum) {
     return sum.valueOpt().orElse(0)
         + chainSum.requestResponsePairs().stream()
             .mapToInt(response -> response.response().valueOpt().orElse(0))

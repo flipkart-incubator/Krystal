@@ -1,27 +1,22 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
-import com.flipkart.krystal.vajram.facets.QualifiedInputs;
+import com.flipkart.krystal.facets.Facet;
+import com.flipkart.krystal.facets.resolution.ResolutionTarget;
+import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.google.common.collect.ImmutableSet;
 
 public abstract sealed class AbstractInputResolver implements InputResolver
-    permits AbstractFanoutInputResolver, AbstractSimpleInputResolver, AbstractSingleInputResolver {
+    permits AbstractFanoutInputResolver, AbstractSimpleInputResolver, AbstractOne2OneInputResolver {
 
-  private final ImmutableSet<Integer> sources;
-  private final QualifiedInputs resolutionTarget;
-  private int resolverId = -1;
+  private final ResolverDefinition definition;
 
-  protected AbstractInputResolver(ImmutableSet<Integer> sources, QualifiedInputs resolutionTarget) {
-    this.sources = sources;
-    this.resolutionTarget = resolutionTarget;
+  protected AbstractInputResolver(
+      ImmutableSet<? extends Facet> sources, ResolutionTarget resolutionTarget, boolean canFanout) {
+    this.definition = new ResolverDefinition(sources, resolutionTarget, canFanout);
   }
 
   @Override
-  public ImmutableSet<Integer> sources() {
-    return sources;
-  }
-
-  @Override
-  public QualifiedInputs resolutionTarget() {
-    return resolutionTarget;
+  public ResolverDefinition definition() {
+    return definition;
   }
 }

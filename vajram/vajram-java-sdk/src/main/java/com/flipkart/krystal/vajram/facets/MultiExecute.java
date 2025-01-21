@@ -1,7 +1,5 @@
 package com.flipkart.krystal.vajram.facets;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-
 import com.google.common.collect.ImmutableList;
 import java.util.Collection;
 import java.util.Collections;

@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex;
 
+import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableSet;
@@ -8,7 +9,7 @@ import java.util.Set;
 public class LogicDefinition<L extends Logic> {
 
   private final KryonLogicId kryonLogicId;
-  private final ImmutableSet<Integer> inputIds;
+  private final ImmutableSet<Facet> inputIds;
   private final ElementTags tags;
   private final L logic;
 
@@ -17,9 +18,9 @@ public class LogicDefinition<L extends Logic> {
   }
 
   public LogicDefinition(
-      KryonLogicId kryonLogicId, Set<Integer> inputs, ElementTags tags, L logic) {
+      KryonLogicId kryonLogicId, Set<? extends Facet> usedFacets, ElementTags tags, L logic) {
     this.kryonLogicId = kryonLogicId;
-    this.inputIds = ImmutableSet.copyOf(inputs);
+    this.inputIds = ImmutableSet.copyOf(usedFacets);
     this.tags = tags;
     this.logic = logic;
   }
@@ -28,7 +29,7 @@ public class LogicDefinition<L extends Logic> {
     return kryonLogicId;
   }
 
-  public ImmutableSet<Integer> inputIds() {
+  public ImmutableSet<Facet> usedFacets() {
     return inputIds;
   }
 

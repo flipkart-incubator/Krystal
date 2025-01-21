@@ -1,12 +1,14 @@
 package com.flipkart.krystal.data;
 
+import com.flipkart.krystal.facets.RemoteInput;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode
-public final class SimpleRequest<T> implements ImmutableRequest<T> {
+public final class SimpleRequest<T> implements ImmutableRequest {
 
   private final SimpleRequestBuilder<T> data;
 
@@ -18,7 +20,6 @@ public final class SimpleRequest<T> implements ImmutableRequest<T> {
     this.data = new SimpleRequestBuilder<>(ImmutableMap.copyOf(data));
   }
 
-  @Override
   public Errable<Object> _get(int facetId) {
     return data._get(facetId);
   }
@@ -29,13 +30,16 @@ public final class SimpleRequest<T> implements ImmutableRequest<T> {
   }
 
   @Override
-  public ImmutableRequest<T> _newCopy() {
+  public ImmutableRequest _newCopy() {
     return this;
   }
 
-  @Override
   public ImmutableMap<Integer, Errable<Object>> _asMap() {
     return ImmutableMap.copyOf(data._asMap());
+  }
+
+  public ImmutableSet<RemoteInput> _facets() {
+    return ImmutableSet.of();
   }
 
   public boolean _hasValue(int facetId) {

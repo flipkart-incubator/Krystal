@@ -7,9 +7,7 @@ import com.flipkart.krystal.data.FacetsBuilder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestBuilder;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
-import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
-import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -66,16 +64,14 @@ public sealed interface Vajram<T> permits AbstractVajram, BatchableVajram {
     return getSimpleInputResolvers();
   }
 
-  default DependencyCommand<? extends Request<Object>> resolveInputOfDependency(
-      int resolverId, ImmutableList<? extends RequestBuilder<Object>> depRequests, Facets facets) {
+  default DependencyCommand<? extends Request> resolveInputOfDependency(
+      int resolverId, ImmutableList<? extends RequestBuilder> depRequests, Facets facets) {
     return executeFanoutWith(depRequests);
   }
 
-  ImmutableCollection<VajramFacetDefinition> getFacetDefinitions();
-
   ImmutableMap<Facets, CompletableFuture<@Nullable T>> execute(ImmutableList<Facets> inputs);
 
-  RequestBuilder<T> newRequestBuilder();
+  RequestBuilder newRequestBuilder();
 
-  FacetsBuilder facetsFromRequest(Request<?> requestBuilder);
+  FacetsBuilder facetsFromRequest(Request requestBuilder);
 }

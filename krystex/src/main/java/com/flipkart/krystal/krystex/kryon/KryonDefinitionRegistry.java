@@ -1,10 +1,13 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import com.flipkart.krystal.facets.Dependency;
+import com.flipkart.krystal.facets.Facet;
+import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
-import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
+import com.flipkart.krystal.krystex.resolution.Resolver;
 import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashMap;
@@ -37,24 +40,24 @@ public final class KryonDefinitionRegistry {
 
   public KryonDefinition newKryonDefinition(
       String kryonId,
-      Set<Integer> inputs,
+      Set<? extends Facet> facets,
       KryonLogicId outputLogicId,
-      ImmutableMap<Integer, KryonId> dependencyKryons,
-      ImmutableMap</*ResolverID*/ Integer, ResolverDefinition> resolverDefinitions,
+      ImmutableMap<Dependency, KryonId> dependencyKryons,
+      ImmutableMap<ResolverDefinition, Resolver> resolversByDefinition,
       LogicDefinition<CreateNewRequest> createNewRequest,
       LogicDefinition<FacetsFromRequest> facetsFromRequest,
       @Nullable KryonLogicId mulitResolverId,
       ElementTags tags) {
-    if (!resolverDefinitions.isEmpty() && mulitResolverId == null) {
+    if (!resolversByDefinition.isEmpty() && mulitResolverId == null) {
       throw new IllegalArgumentException("missing multi resolver logic");
     }
     KryonDefinition kryonDefinition =
         new KryonDefinition(
             new KryonId(kryonId),
-            inputs,
+            facets,
             outputLogicId,
             dependencyKryons,
-            resolverDefinitions,
+            resolversByDefinition,
             Optional.ofNullable(mulitResolverId),
             createNewRequest,
             facetsFromRequest,

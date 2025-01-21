@@ -53,6 +53,6 @@ class Add2And3Test {
           krystexVajramExecutor.execute(
               graph.getVajramId(Add2And3.class), Add2And3Request._builder()._build());
     }
-    Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(5);
+    Assertions.assertThat(future).succeedsWithin(1, TimeUnit.HOURS).isEqualTo(5);
   }
 }

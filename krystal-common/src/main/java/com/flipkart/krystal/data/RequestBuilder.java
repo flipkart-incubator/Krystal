@@ -6,13 +6,10 @@ package com.flipkart.krystal.data;
 public interface RequestBuilder<T> extends Request<T>, FacetContainerBuilder {
 
   @Override
-  default RequestBuilder<T> _set(int facetId, FacetValue value){
+  default RequestBuilder _asBuilder() {
     return this;
   }
 
   @Override
-  RequestBuilder<T> _asBuilder();
-
-  @Override
-  RequestBuilder<T> _newCopy();
+  RequestBuilder _newCopy();
 }

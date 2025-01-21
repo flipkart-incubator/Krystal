@@ -1,4 +1,8 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
-public sealed interface InputResolver extends InputResolverDefinition
-    permits AbstractInputResolver, FanoutInputResolver, SimpleInputResolver, SingleInputResolver {}
+import com.flipkart.krystal.facets.resolution.ResolverDefinition;
+
+public sealed interface InputResolver
+    permits AbstractInputResolver, FanoutInputResolver, SimpleInputResolver, SingleInputResolver {
+  ResolverDefinition definition();
+}

@@ -1,17 +1,17 @@
 package com.flipkart.krystal.vajram.exec;
 
+import static com.flipkart.krystal.facets.FacetType.INJECTION;
+
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.facets.InputDef;
-import com.flipkart.krystal.vajram.facets.InputSource;
+import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
+import com.google.common.collect.ImmutableSet;
 
-public record VajramMetadata(boolean isInputInjectionNeeded) {
+public record VajramMetadata(boolean isInputInjectionNeeded, boolean isBatched) {
 
-  public VajramMetadata(Vajram<?> vajram) {
+  public VajramMetadata(Vajram<?> vajram, ImmutableSet<FacetSpec> facetSpecs) {
     this(
-        /* isInputInjectionNeeded= */ vajram.getFacetDefinitions().stream()
-            .filter(facetDefinition -> facetDefinition instanceof InputDef<?>)
-            .map(facetDefinition -> ((InputDef<?>) facetDefinition))
-            .anyMatch(
-                input -> input.sources() != null && input.sources().contains(InputSource.SESSION)));
+        /* isInputInjectionNeeded= */ facetSpecs.stream()
+            .anyMatch(facetDefinition -> facetDefinition.facetTypes().contains(INJECTION)),
+        facetSpecs.stream().anyMatch(FacetSpec::isBatched));
   }
 }

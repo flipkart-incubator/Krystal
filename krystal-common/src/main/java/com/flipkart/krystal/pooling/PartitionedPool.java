@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import lombok.experimental.Accessors;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
@@ -205,7 +204,6 @@ class PartitionedPool<T> implements Iterable<PooledObject<T>> {
     return ImmutableList.copyOf(partitionedList).iterator();
   }
 
-  @Accessors(fluent = true)
   @Getter(PRIVATE)
   @RequiredArgsConstructor(access = PRIVATE)
   static final class PooledObject<T> {

@@ -8,7 +8,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public interface VajramExecutor extends AutoCloseable {
 
   <T> CompletableFuture<@Nullable T> execute(
-      VajramID vajramId, ImmutableRequest<T> vajramInputProviders);
+      VajramID vajramId, ImmutableRequest request);
 
   // Override to suppress "throws Exception"
   /**

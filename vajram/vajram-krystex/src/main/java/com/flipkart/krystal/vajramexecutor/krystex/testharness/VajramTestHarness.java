@@ -20,7 +20,7 @@ import java.util.Objects;
  */
 public class VajramTestHarness {
 
-  private final Map<String, Map<ImmutableRequest<Object>, Errable<Object>>> vajramIdMockData;
+  private final Map<String, Map<ImmutableRequest, Errable<Object>>> vajramIdMockData;
   private final KrystexVajramExecutorConfig kryonExecutorConfigBuilder;
   private final RequestLevelCache requestLevelCache;
 
@@ -39,19 +39,19 @@ public class VajramTestHarness {
   }
 
   @SuppressWarnings("unchecked")
-  public <T> VajramTestHarness withMock(ImmutableRequest<T> request, Errable<T> response) {
+  public <T> VajramTestHarness withMock(ImmutableRequest request, Errable<T> response) {
     String requestName = request.getClass().getSimpleName();
     int index = requestName.lastIndexOf('R');
     String vajramId = requestName.substring(0, index);
-    Map<ImmutableRequest<Object>, Errable<Object>> mockDataMap =
+    Map<ImmutableRequest, Errable<Object>> mockDataMap =
         this.vajramIdMockData.get(vajramId);
     if (Objects.isNull(mockDataMap)) {
       this.vajramIdMockData.put(
-          vajramId, Map.of((ImmutableRequest<Object>) request, (Errable<Object>) response));
+          vajramId, Map.of((ImmutableRequest) request, (Errable<Object>) response));
     } else {
-      Errable<Object> errable = mockDataMap.get((ImmutableRequest<Object>) request);
+      Errable<Object> errable = mockDataMap.get((ImmutableRequest) request);
       if (Objects.isNull(errable)) {
-        mockDataMap.put((ImmutableRequest<Object>) request, (Errable<Object>) response);
+        mockDataMap.put((ImmutableRequest) request, (Errable<Object>) response);
         this.vajramIdMockData.put(vajramId, mockDataMap);
       }
     }

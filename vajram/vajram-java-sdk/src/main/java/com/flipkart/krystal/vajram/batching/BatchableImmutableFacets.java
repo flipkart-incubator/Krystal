@@ -1,10 +1,14 @@
 package com.flipkart.krystal.vajram.batching;
 
+import com.flipkart.krystal.data.ImmutableFacetContainer;
 import com.flipkart.krystal.data.ImmutableFacets;
 
 public interface BatchableImmutableFacets extends BatchableFacets, ImmutableFacets {
 
-  ImmutableFacets _batchable();
+  ImmutableFacetContainer _batchable();
 
-  ImmutableFacets _common();
+  ImmutableFacetContainer _common();
+
+  @Override
+  BatchableImmutableFacets _newCopy();
 }

@@ -1,15 +1,16 @@
 package com.flipkart.krystal.vajramexecutor.krystex.inputinjection;
 
+import static com.flipkart.krystal.facets.FacetType.INJECTION;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.FacetValue;
+import com.flipkart.krystal.data.FacetContainer;
+import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetsBuilder;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.data.RequestBuilder;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
-import com.flipkart.krystal.krystex.commands.ForwardBatch;
-import com.flipkart.krystal.krystex.commands.ForwardGranule;
+import com.flipkart.krystal.krystex.commands.ForwardReceive;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
@@ -17,16 +18,11 @@ import com.flipkart.krystal.krystex.kryon.KryonResponse;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
-import com.flipkart.krystal.vajram.facets.InputDef;
-import com.flipkart.krystal.vajram.facets.InputSource;
-import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
+import com.flipkart.krystal.vajram.facets.specs.DefaultFacetSpec;
+import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
@@ -66,100 +62,86 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
         vajramKryonGraph.getVajramDefinition(vajramID(kryonCommand.kryonId().value()));
     if (vajramDefinition.isPresent()
         && vajramDefinition.get().vajramMetadata().isInputInjectionNeeded()) {
-      if (kryonCommand instanceof ForwardBatch forwardBatch) {
+      if (kryonCommand instanceof ForwardReceive forwardBatch) {
         return injectFacets(forwardBatch, vajramDefinition.get());
-      } else if (kryonCommand instanceof ForwardGranule) {
-        var e =
-            new UnsupportedOperationException(
-                "KryonInputInjector does not support KryonExecStrategy GRANULAR. Please use BATCH instead");
-        log.error("", e);
-        throw e;
       }
     }
     return kryon.executeCommand(kryonCommand);
   }
 
   private CompletableFuture<KryonResponse> injectFacets(
-      ForwardBatch forwardBatch, VajramDefinition vajramDefinition) {
-    ImmutableMap<RequestId, Request<Object>> requestIdToFacets = forwardBatch.executableRequests();
+      ForwardReceive forwardBatch, VajramDefinition vajramDefinition) {
+    ImmutableMap<RequestId, ? extends FacetContainer> requestIdToFacets =
+        forwardBatch.executableRequests();
 
-    Set<Integer> newInputsNames = new LinkedHashSet<>(forwardBatch.facetIds());
-    ImmutableMap.Builder<RequestId, Request<Object>> newRequests = ImmutableMap.builder();
-    Set<InputDef<?>> injectableFacetDefs = new LinkedHashSet<>();
-    for (VajramFacetDefinition facetDefinition : vajramDefinition.vajram().getFacetDefinitions()) {
-      if (facetDefinition instanceof InputDef<?> inputDef
-          && inputDef.sources().contains(InputSource.SESSION)) {
-        injectableFacetDefs.add(inputDef);
-      }
-    }
-    for (InputDef<?> injectableFacet : injectableFacetDefs) {
-      newInputsNames.add(injectableFacet.id());
-    }
+    ImmutableMap.Builder<RequestId, FacetsBuilder> newRequests = ImmutableMap.builder();
+    Set<FacetSpec<?, ?>> injectableFacetDefs = new LinkedHashSet<>();
+    vajramDefinition
+        .facetSpecs()
+        .forEach(
+            (facetSpec) -> {
+              if (facetSpec.facetTypes().contains(INJECTION)) {
+                injectableFacetDefs.add(facetSpec);
+              }
+            });
 
-    Map<Integer, Errable<Object>> newInputsValues = new LinkedHashMap<>();
-    for (Entry<RequestId, Request<Object>> entry : requestIdToFacets.entrySet()) {
+    for (Entry<RequestId, ? extends FacetContainer> entry : requestIdToFacets.entrySet()) {
       RequestId requestId = entry.getKey();
-      Request<Object> facets = entry.getValue();
-      Request<Object> newFacets =
-          injectFacetsOfVajram(vajramDefinition, injectableFacetDefs, facets, newInputsValues);
-      newRequests.put(requestId, newFacets);
+      FacetContainer container = entry.getValue();
+      FacetsBuilder facetsBuilder;
+      if (container instanceof Request request) {
+        facetsBuilder = vajramDefinition.vajram().facetsFromRequest(request);
+      } else if (container instanceof Facets facets) {
+        facetsBuilder = facets._asBuilder();
+      } else {
+        throw new UnsupportedOperationException("");
+      }
+      newRequests.put(
+          requestId, injectFacetsOfVajram(vajramDefinition, injectableFacetDefs, facetsBuilder));
     }
     return kryon.executeCommand(
-        new ForwardBatch(
+        new ForwardReceive(
             forwardBatch.kryonId(),
-            ImmutableSet.copyOf(newInputsNames),
             newRequests.build(),
             forwardBatch.dependantChain(),
             forwardBatch.skippedRequests()));
   }
 
-  private Request<Object> injectFacetsOfVajram(
+  private FacetsBuilder injectFacetsOfVajram(
       VajramDefinition vajramDefinition,
-      Set<InputDef<?>> injectableFacetDefs,
-      Request<Object> facets,
-      Map<Integer, Errable<Object>> injectedValues) {
-    Map<Integer, FacetValue> newValues = new HashMap<>();
-    for (VajramFacetDefinition facetDefinition : injectableFacetDefs) {
-      int facetId = facetDefinition.id();
-      if (facetDefinition instanceof InputDef<?> inputDef) {
-        if (facets._get(facetId).valueOpt().isPresent()) {
-          continue;
-        }
-        // Input was not resolved by calling vajram.
-        Errable<Object> value =
-            injectedValues.computeIfAbsent(
-                facetId, _i -> getInjectedValue(vajramDefinition.vajramId(), inputDef));
-        newValues.put(facetId, value);
+      Set<FacetSpec<?, ?>> injectableFacets,
+      FacetsBuilder facetsBuilder) {
+    for (FacetSpec facetSpec : injectableFacets) {
+      if (!(facetSpec instanceof DefaultFacetSpec defaultFacetSpec)) {
+        continue;
       }
+      if (defaultFacetSpec.getFacetValue(facetsBuilder) != null) {
+        continue;
+      }
+      // Input was not resolved by calling vajram.
+      defaultFacetSpec.setFacetValue(
+          facetsBuilder, getInjectedValue(vajramDefinition.vajramId(), facetSpec));
     }
-    RequestBuilder<Object> facetsBuilder = facets._asBuilder();
-    if (!newValues.isEmpty()) {
-      facets._asMap().forEach(facetsBuilder::_set);
-      return facetsBuilder;
-    } else {
-      return facets;
-    }
+    return facetsBuilder;
   }
 
-  private Errable<Object> getInjectedValue(VajramID vajramId, InputDef<?> inputDef) {
+  private Errable<Object> getInjectedValue(VajramID vajramId, FacetSpec facetDef) {
     VajramInjectionProvider inputInjector = this.injectionProvider;
     if (inputInjector == null) {
       var exception = new StackTracelessException("Dependency injector is null");
       log.error(
           "Cannot inject input {} of vajram {}",
-          inputDef,
+          facetDef,
           kryon.getKryonDefinition().kryonId().value(),
           exception);
       return Errable.withError(exception);
     }
     try {
-      @SuppressWarnings("unchecked")
-      InputDef<Object> casted = (InputDef<Object>) inputDef;
-      return inputInjector.get(vajramId, casted);
+      return (Errable<Object>) inputInjector.get(vajramId, facetDef);
     } catch (Throwable e) {
       String message =
           "Could not inject input %s of vajram %s"
-              .formatted(inputDef, kryon.getKryonDefinition().kryonId().value());
+              .formatted(facetDef, kryon.getKryonDefinition().kryonId().value());
       log.error(message, e);
       return Errable.withError(e);
     }

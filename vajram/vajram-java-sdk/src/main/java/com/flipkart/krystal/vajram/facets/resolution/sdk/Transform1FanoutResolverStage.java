@@ -2,9 +2,11 @@ package com.flipkart.krystal.vajram.facets.resolution.sdk;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SkipPredicate;
+import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
+import com.flipkart.krystal.vajram.facets.specs.InputDefinition;
+import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -18,15 +20,14 @@ import java.util.function.Predicate;
  * @param <DV> DependencyVajram: The vajram whose input is being resolved
  */
 public final class Transform1FanoutResolverStage<
-    S, T, CV extends Request<?>, DV extends Request<?>> {
-  private final VajramFacetSpec<T, DV> targetInput;
-  private final VajramFacetSpec<S, CV> sourceInput;
+    S, T, CV extends Request, DV extends Request> {
+  private final InputDefinition<T, DV> targetInput;
+  private final FacetSpec<S, CV> sourceFacet;
   private final List<SkipPredicate<?>> skipConditions = new ArrayList<>();
 
-  Transform1FanoutResolverStage(
-      VajramFacetSpec<T, DV> targetInput, VajramFacetSpec<S, CV> sourceInput) {
+  Transform1FanoutResolverStage(InputDefinition<T, DV> targetInput, FacetSpec<S, CV> sourceFacet) {
     this.targetInput = targetInput;
-    this.sourceInput = sourceInput;
+    this.sourceFacet = sourceFacet;
   }
 
   /**
@@ -51,7 +52,7 @@ public final class Transform1FanoutResolverStage<
       Function<Errable<S>, ? extends Collection<? extends T>> transformer) {
     return new SimpleInputResolverSpec<>(
         targetInput,
-        List.of(sourceInput),
+        ImmutableSet.of(sourceFacet),
         skipConditions,
         null,
         list -> {

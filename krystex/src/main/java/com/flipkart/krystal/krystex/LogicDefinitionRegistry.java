@@ -34,6 +34,16 @@ public final class LogicDefinitionRegistry {
     return multiResolverDefinition;
   }
 
+  public LogicDefinition<ResolverLogic> getResolver(KryonLogicId resolverLogicId) {
+    LogicDefinition<ResolverLogic> resolverLogicDefinition =
+        resolverLogicDefinitions.get(resolverLogicId);
+    if (resolverLogicDefinition == null) {
+      throw new NoSuchElementException(
+          "Could not find resolverLogicDefinition for " + resolverLogicId);
+    }
+    return resolverLogicDefinition;
+  }
+
   public void addOutputLogic(OutputLogicDefinition<?> outputLogicDefinition) {
     if (outputLogicDefinitions.containsKey(outputLogicDefinition.kryonLogicId())) {
       return;

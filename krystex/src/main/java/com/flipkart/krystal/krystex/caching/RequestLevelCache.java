@@ -6,11 +6,10 @@ import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
-import com.flipkart.krystal.krystex.commands.ForwardBatch;
+import com.flipkart.krystal.krystex.commands.ForwardReceive;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.Kryon;
@@ -45,7 +44,7 @@ public class RequestLevelCache implements KryonDecorator {
   }
 
   public void primeCache(
-      String kryonId, Request<Object> request, CompletableFuture<@Nullable Object> data) {
+      String kryonId, Request request, CompletableFuture<@Nullable Object> data) {
     cache.put(new CacheKey(new KryonId(kryonId), request._build()), data);
   }
 
@@ -69,7 +68,7 @@ public class RequestLevelCache implements KryonDecorator {
 
     @Override
     public CompletableFuture<KryonResponse> executeCommand(KryonCommand kryonCommand) {
-      if (kryonCommand instanceof ForwardBatch forwardBatch) {
+      if (kryonCommand instanceof ForwardReceive forwardBatch) {
         return readFromCache(kryon, forwardBatch);
       } else {
         // Let all other commands just pass through. Request level cache is supposed to intercept
@@ -79,10 +78,9 @@ public class RequestLevelCache implements KryonDecorator {
     }
 
     private CompletableFuture<KryonResponse> readFromCache(
-        Kryon<KryonCommand, KryonResponse> kryon, ForwardBatch forwardBatch) {
-      ImmutableMap<RequestId, Request<Object>> executableRequests =
-          forwardBatch.executableRequests();
-      Map<RequestId, ImmutableRequest<Object>> cacheMisses = new LinkedHashMap<>();
+        Kryon<KryonCommand, KryonResponse> kryon, ForwardReceive forwardBatch) {
+      var executableRequests = forwardBatch.executableRequests();
+      Map<RequestId, Facets> cacheMisses = new LinkedHashMap<>();
       Map<RequestId, CompletableFuture<@Nullable Object>> cacheHits = new LinkedHashMap<>();
       Map<RequestId, CompletableFuture<@Nullable Object>> newCacheEntries = new LinkedHashMap<>();
       executableRequests.forEach(
@@ -103,9 +101,8 @@ public class RequestLevelCache implements KryonDecorator {
           (requestId, _f) -> skippedRequests.put(requestId, "Skipping due to cache hit!"));
       CompletableFuture<KryonResponse> cacheMissesResponse =
           kryon.executeCommand(
-              new ForwardBatch(
+              new ForwardReceive(
                   forwardBatch.kryonId(),
-                  forwardBatch.facetIds(),
                   ImmutableMap.copyOf(cacheMisses),
                   forwardBatch.dependantChain(),
                   ImmutableMap.copyOf(skippedRequests)));

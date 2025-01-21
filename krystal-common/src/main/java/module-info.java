@@ -10,11 +10,10 @@ module flipkart.krystal.common {
   exports com.flipkart.krystal.facets;
   exports com.flipkart.krystal.datatypes;
   exports com.flipkart.krystal.config;
-  exports com.flipkart.krystal.schema;
   exports com.flipkart.krystal.except;
   exports com.flipkart.krystal.concurrent;
   exports com.flipkart.krystal.pooling;
   exports com.flipkart.krystal.tags;
   exports com.flipkart.krystal.annos;
-  exports com.flipkart.krystal.resolution;
+  exports com.flipkart.krystal.facets.resolution;
 }

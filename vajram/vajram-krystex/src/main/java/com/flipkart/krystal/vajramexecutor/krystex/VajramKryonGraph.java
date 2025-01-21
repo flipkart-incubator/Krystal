@@ -17,6 +17,10 @@ import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.RequestBuilder;
 import com.flipkart.krystal.data.Success;
+import com.flipkart.krystal.facets.Dependency;
+import com.flipkart.krystal.facets.Facet;
+import com.flipkart.krystal.facets.resolution.ResolverCommand;
+import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
@@ -31,26 +35,21 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.L
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.DependencyResolutionRequest;
 import com.flipkart.krystal.krystex.resolution.MultiResolver;
-import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
+import com.flipkart.krystal.krystex.resolution.Resolver;
 import com.flipkart.krystal.krystex.resolution.ResolverLogic;
-import com.flipkart.krystal.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.BatchableVajram;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDefinitionException;
 import com.flipkart.krystal.vajram.VajramID;
-import com.flipkart.krystal.vajram.das.AccessSpecMatchingResult;
-import com.flipkart.krystal.vajram.das.DataAccessSpec;
-import com.flipkart.krystal.vajram.das.VajramIndex;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.exec.VajramExecutableGraph;
-import com.flipkart.krystal.vajram.facets.DependencyDef;
-import com.flipkart.krystal.vajram.facets.InputDef;
-import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.FanoutInputResolver;
-import com.flipkart.krystal.vajram.facets.resolution.InputResolverDefinition;
+import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.SingleInputResolver;
+import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
+import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig.BatcherContext;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -70,11 +69,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.experimental.Accessors;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** The execution graph encompassing all registered vajrams. */
-@Accessors(fluent = true)
 public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajramExecutorConfig> {
 
   @Getter private final KryonDefinitionRegistry kryonDefinitionRegistry;
@@ -87,8 +84,6 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
 
   /** These are those call graphs of a vajram where no other vajram depends on this. */
   private final Map<VajramID, KryonId> vajramExecutables = new LinkedHashMap<>();
-
-  private final VajramIndex vajramIndex = new VajramIndex();
 
   /** LogicDecorator Id -> LogicDecoratorConfig */
   private final ImmutableMap<String, OutputLogicDecoratorConfig> sessionScopedDecoratorConfigs;
@@ -143,10 +138,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                         inputBatcherConfig.instanceIdGenerator().apply(logicExecutionContext),
                         logicExecutionContext));
             return inputBatcherConfig.shouldBatch().test(batcherContext)
-                && vajram.getFacetDefinitions().stream()
-                    .filter(facetDefinition -> facetDefinition instanceof InputDef<?>)
-                    .map(facetDefinition -> (InputDef<?>) facetDefinition)
-                    .anyMatch(InputDef::isBatched);
+                && vajramDefinition.vajramMetadata().isBatched();
           };
       outputLogicDecoratorConfigList.add(
           new OutputLogicDecoratorConfig(
@@ -171,13 +163,13 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
    *     DependantChain in trigger order
    */
   public DependantChain computeDependantChain(
-      String firstVajramId, int firstDependencyId, int... subsequentDependencyIds) {
+      String firstVajramId, Dependency firstDependencyId, Dependency... subsequentDependencyIds) {
     KryonId firstKryonId = _getVajramExecutionGraph(vajramID(firstVajramId));
     KryonDefinition currentKryon = kryonDefinitionRegistry.get(firstKryonId);
     DependantChain currentDepChain =
         kryonDefinitionRegistry.getDependantChainsStart().extend(firstKryonId, firstDependencyId);
-    int previousDepName = firstDependencyId;
-    for (int currentDepName : subsequentDependencyIds) {
+    Facet previousDepName = firstDependencyId;
+    for (Dependency currentDepName : subsequentDependencyIds) {
       KryonId depKryonId = currentKryon.dependencyKryons().get(previousDepName);
       if (depKryonId == null) {
         throw new IllegalStateException(
@@ -207,7 +199,6 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       return;
     }
     vajramDefinitions.put(vajramID, vajramDefinition);
-    vajramIndex.add(vajramDefinition);
     vajramDataByClass.putIfAbsent(vajramDefinition.vajramDefClass(), vajramDefinition);
   }
 
@@ -245,17 +236,13 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     InputResolverCreationResult inputResolverCreationResult =
         createKryonLogicsForInputResolvers(vajramDefinition);
 
-    ImmutableMap<Integer, KryonId> depIdToProviderKryon =
+    ImmutableMap<Dependency, KryonId> depIdToProviderKryon =
         createKryonDefinitionsForDependencies(vajramDefinition);
 
     OutputLogicDefinition<?> outputLogicDefinition =
         createKryonOutputLogic(kryonId, vajramDefinition);
 
-    ImmutableSet<Integer> inputIds =
-        vajramDefinition.vajram().getFacetDefinitions().stream()
-            .filter(vajramFacetDefinition -> vajramFacetDefinition instanceof InputDef<?>)
-            .map(VajramFacetDefinition::id)
-            .collect(toImmutableSet());
+    ImmutableSet<? extends Facet> inputIds = vajramDefinition.facetSpecs();
 
     LogicDefinition<CreateNewRequest> createNewRequest =
         new LogicDefinition<>(
@@ -269,7 +256,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
             inputIds,
             outputLogicDefinition.kryonLogicId(),
             depIdToProviderKryon,
-            inputResolverCreationResult.resolverDefinitionsById(),
+            inputResolverCreationResult.resolversByDefinition(),
             createNewRequest,
             new LogicDefinition<>(
                 new KryonLogicId(kryonId, "%s:facetsFromRequest"),
@@ -283,39 +270,44 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
 
   private InputResolverCreationResult createKryonLogicsForInputResolvers(
       VajramDefinition vajramDefinition) {
-    Vajram<?> vajram = vajramDefinition.vajram();
     VajramID vajramId = vajramDefinition.vajramId();
-    ImmutableCollection<VajramFacetDefinition> facetDefinitions = vajram.getFacetDefinitions();
+    ImmutableSet<FacetSpec> facetDefinitions = vajramDefinition.facetSpecs();
 
     // Create kryon definitions for all input resolvers defined in this vajram
-    ImmutableMap<Integer, InputResolverDefinition> inputResolvers =
-        vajramDefinition.inputResolverDefinitions();
+    ImmutableMap<ResolverDefinition, InputResolver> inputResolvers =
+        vajramDefinition.inputResolvers();
 
-    Map<Integer, ResolverDefinition> resolverDefinitions = new LinkedHashMap<>();
+    Map<ResolverDefinition, Resolver> resolverDefinitions = new LinkedHashMap<>();
     inputResolvers.forEach(
-        (resolverId, inputResolverDefinition) -> {
-          int dependencyId = inputResolverDefinition.resolutionTarget().dependencyId();
-          VajramFacetDefinition vajramFacetDefinition =
-              vajramDefinition.facetsById().get(dependencyId);
-          if (vajramFacetDefinition == null) {
+        (resolverId, inputResolver) -> {
+          ResolverDefinition inputResolverDefinition = inputResolver.definition();
+          Facet dependencyId = inputResolverDefinition.target().dependency();
+          Facet facet = dependencyId;
+          if (facet == null) {
             throw new IllegalStateException();
           }
-          String depName = vajramFacetDefinition.name();
-          ImmutableSet<Integer> resolvedInputNames =
-              inputResolverDefinition.resolutionTarget().inputIds();
-          ImmutableSet<Integer> resolvedInputIds =
-              resolvedInputNames.stream()
-                  .map(s -> Optional.ofNullable(vajramDefinition.facetsById().get(s)))
-                  .filter(Optional::isPresent)
-                  .map(Optional::get)
-                  .map(VajramFacetDefinition::id)
+          String depName = facet.name();
+          ImmutableSet<FacetSpec> resolvedInputNames =
+              inputResolver.definition().target().targetInputs().stream()
+                  .map(
+                      c -> {
+                        FacetSpec facetSpec = vajramDefinition.facetsById().get(c.id());
+                        if (facetSpec == null) {
+                          throw new IllegalStateException(
+                              "Resolver input with id "
+                                  + c.id()
+                                  + " named '"
+                                  + c.name()
+                                  + "' not found among server side facets "
+                                  + vajramDefinition.facetSpecs());
+                        }
+                        return facetSpec;
+                      })
                   .collect(toImmutableSet());
 
-          ImmutableSet<Integer> sources = inputResolverDefinition.sources();
-          ImmutableCollection<VajramFacetDefinition> requiredInputs =
-              facetDefinitions.stream()
-                  .filter(def -> sources.contains(def.id()))
-                  .collect(toImmutableList());
+          ImmutableSet<? extends Facet> sources = inputResolver.definition().sources();
+          ImmutableCollection<FacetSpec> requiredInputs =
+              facetDefinitions.stream().filter(e -> sources.contains(e)).collect(toImmutableList());
           LogicDefinition<ResolverLogic> inputResolverLogic =
               logicRegistryDecorator.newResolverLogic(
                   vajramId.vajramId(),
@@ -330,19 +322,16 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                     validateMandatory(vajramId, facets, requiredInputs);
                     ResolverCommand resolverCommand = ResolverCommand.skip("");
                     try {
-                      if (inputResolverDefinition
-                          instanceof SingleInputResolver singleInputResolver) {
+                      if (inputResolver instanceof SingleInputResolver singleInputResolver) {
                         resolverCommand = singleInputResolver.resolve(depRequests, facets);
-                      } else if (inputResolverDefinition
-                          instanceof FanoutInputResolver fanoutInputResolver) {
+                      } else if (inputResolver instanceof FanoutInputResolver fanoutInputResolver) {
                         if (depRequests.size() != 1) {
                           throw new IllegalStateException(
                               "The vajram "
                                   + vajramId.vajramId()
                                   + " can have at most one fanout resolver");
                         }
-                        resolverCommand =
-                            fanoutInputResolver.resolve(depRequests.get(0), facets);
+                        resolverCommand = fanoutInputResolver.resolve(depRequests.get(0), facets);
                       }
                     } catch (Throwable t) {
                       resolverCommand =
@@ -355,25 +344,20 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                     }
                     return resolverCommand;
                   });
-          ResolverDefinition resolverDefinition =
-              new ResolverDefinition(
-                  resolverId,
-                  inputResolverLogic.kryonLogicId(),
-                  sources,
-                  dependencyId,
-                  resolvedInputIds);
-          resolverDefinitions.put(resolverDefinition.resolverId(), resolverDefinition);
+          Resolver resolver =
+              new Resolver(inputResolverLogic.kryonLogicId(), inputResolver.definition());
+          resolverDefinitions.put(resolver.definition(), resolver);
         });
     LogicDefinition<MultiResolver> multiResolverDefinition =
         logicRegistryDecorator.newMultiResolver(
             vajramId.vajramId(),
             vajramId.vajramId() + ":multiResolver",
-            facetDefinitions.stream().map(VajramFacetDefinition::id).collect(toImmutableSet()),
+            facetDefinitions,
             (resolutionRequests, facets) -> {
-              Map<Integer, List<InputResolverDefinition>> resolversByDep = new HashMap<>();
+              Map<Facet, List<InputResolver>> resolversByDep = new HashMap<>();
               for (DependencyResolutionRequest resolutionRequest : resolutionRequests) {
-                for (int resolverId : resolutionRequest.resolverIds()) {
-                  InputResolverDefinition resolverDefinition = inputResolvers.get(resolverId);
+                for (ResolverDefinition resolverId : resolutionRequest.resolverDefs()) {
+                  InputResolver resolverDefinition = inputResolvers.get(resolverId);
                   if (resolverDefinition != null) {
                     resolversByDep
                         .computeIfAbsent(resolutionRequest.dependencyId(), _k -> new ArrayList<>())
@@ -381,18 +365,17 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                   }
                 }
               }
-              Map<Integer, ResolverCommand> resolverCommandsByDep = new LinkedHashMap<>();
+              Map<Facet, ResolverCommand> resolverCommandsByDep = new LinkedHashMap<>();
               resolversByDep.forEach(
                   (depId, resolvers) -> {
-                    ImmutableList<RequestBuilder<Object>> depRequests =
-                        ImmutableList.of(newRequestForDependency(vajramDefinition, depId));
-                    for (InputResolverDefinition inputResolverDefinition : resolvers) {
+                    ImmutableList<RequestBuilder> depRequests =
+                        ImmutableList.of(newRequestForDependency(depId));
+                    for (InputResolver inputResolver : resolvers) {
                       ResolverCommand resolverCommand = ResolverCommand.skip("");
                       try {
-                        if (inputResolverDefinition
-                            instanceof SingleInputResolver singleInputResolver) {
+                        if (inputResolver instanceof SingleInputResolver singleInputResolver) {
                           resolverCommand = singleInputResolver.resolve(depRequests, facets);
-                        } else if (inputResolverDefinition
+                        } else if (inputResolver
                             instanceof FanoutInputResolver fanoutInputResolver) {
                           if (depRequests.size() != 1) {
                             throw new IllegalStateException(
@@ -400,8 +383,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                                     + vajramId.vajramId()
                                     + " can have at most one fanout resolver");
                           }
-                          resolverCommand =
-                              fanoutInputResolver.resolve(depRequests.get(0), facets);
+                          resolverCommand = fanoutInputResolver.resolve(depRequests.get(0), facets);
                         }
                       } catch (Throwable t) {
                         resolverCommand = toResolverCommand(handleResolverException(t, false));
@@ -415,26 +397,22 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
         ImmutableMap.copyOf(resolverDefinitions), multiResolverDefinition.kryonLogicId());
   }
 
-  private RequestBuilder<Object> newRequestForDependency(
-      VajramDefinition vajramDefinition, int dependencyId) {
+  private RequestBuilder newRequestForDependency(Facet dependencyId) {
     return checkNotNull(
             vajramDefinitions.get(
-                (VajramID)
-                    ((DependencyDef<?>)
-                            checkNotNull(vajramDefinition.facetsById().get(dependencyId)))
-                        .dataAccessSpec()))
+                (VajramID) ((DependencySpec<?, ?, ?>) checkNotNull(dependencyId)).onVajramId()))
         .vajram()
         .newRequestBuilder();
   }
 
   private void validateMandatory(
-      VajramID vajramID, Facets facets, ImmutableCollection<VajramFacetDefinition> requiredInputs) {
+      VajramID vajramID, Facets facets, ImmutableCollection<FacetSpec> requiredInputs) {
     @SuppressWarnings("StreamToIterable")
-    Iterable<VajramFacetDefinition> mandatoryFacets =
-        requiredInputs.stream().filter(VajramFacetDefinition::isMandatory)::iterator;
+    Iterable<FacetSpec> mandatoryFacets =
+        requiredInputs.stream().filter(FacetSpec::isMandatory)::iterator;
     Map<String, Throwable> missingMandatoryValues = new HashMap<>();
-    for (VajramFacetDefinition mandatoryFacet : mandatoryFacets) {
-      FacetValue value = facets._get(mandatoryFacet.id());
+    for (Facet mandatoryFacet : mandatoryFacets) {
+      FacetValue value = mandatoryFacet.getFacetValue(facets);
       if (value instanceof Errable<?> e) {
         if (!(e instanceof Success<?>)) {
           missingMandatoryValues.put(
@@ -442,7 +420,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
               e.errorOpt()
                   .orElse(
                       new NoSuchElementException(
-                          "No value present for input '%s'".formatted(mandatoryFacet.name()))));
+                          "No value present for facet '%s'".formatted(mandatoryFacet.name()))));
         }
       }
     }
@@ -455,11 +433,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
   private OutputLogicDefinition<?> createKryonOutputLogic(
       KryonId kryonId, VajramDefinition vajramDefinition) {
     VajramID vajramId = vajramDefinition.vajramId();
-    ImmutableCollection<VajramFacetDefinition> facetDefinitions =
-        vajramDefinition.vajram().getFacetDefinitions();
-    ImmutableSet<Integer> kryonOutputLogicSources =
-        facetDefinitions.stream()
-            .map(VajramFacetDefinition::id)
+    ImmutableSet<FacetSpec> facetSpecs = vajramDefinition.facetSpecs();
+    ImmutableSet<Facet> kryonOutputLogicSources =
+        facetSpecs.stream()
             .filter(vajramDefinition.outputLogicSources()::contains)
             .collect(toImmutableSet());
     KryonLogicId outputLogicName = new KryonLogicId(kryonId, "%s:outputLogic".formatted(vajramId));
@@ -477,7 +453,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
               inputsList.forEach(
                   inputs -> {
                     try {
-                      validateMandatory(vajramId, inputs, facetDefinitions);
+                      validateMandatory(vajramId, inputs, facetSpecs);
                       validInputs.add(inputs);
                     } catch (Throwable e) {
                       failedValidations.put(inputs, failedFuture(e));
@@ -504,42 +480,30 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     return outputLogic;
   }
 
-  private ImmutableMap<Integer, KryonId> createKryonDefinitionsForDependencies(
+  private ImmutableMap<Dependency, KryonId> createKryonDefinitionsForDependencies(
       VajramDefinition vajramDefinition) {
-    List<DependencyDef<?>> dependencies = new ArrayList<>();
-    for (VajramFacetDefinition vajramFacetDefinition :
-        vajramDefinition.vajram().getFacetDefinitions()) {
-      if (vajramFacetDefinition instanceof DependencyDef<?> definition) {
+    List<DependencySpec> dependencies = new ArrayList<>();
+    for (Facet facet : vajramDefinition.facetSpecs()) {
+      if (facet instanceof DependencySpec definition) {
         dependencies.add(definition);
       }
     }
-    Map<Integer, KryonId> depIdToProviderKryon = new HashMap<>();
+    Map<Dependency, KryonId> depIdToProviderKryon = new HashMap<>();
     // Create and register sub graphs for dependencies of this vajram
-    for (DependencyDef<?> dependencyDef : dependencies) {
-      var accessSpec = dependencyDef.dataAccessSpec();
-      int dependencyName = dependencyDef.id();
-      AccessSpecMatchingResult<DataAccessSpec> accessSpecMatchingResult =
-          vajramIndex.getVajrams(accessSpec);
-      if (accessSpecMatchingResult.hasUnsuccessfulMatches()) {
+    for (DependencySpec dependency : dependencies) {
+      var accessSpec = dependency.onVajramId();
+      VajramDefinition dependencyVajram = vajramDefinitions.get(accessSpec);
+      if (dependencyVajram == null) {
         throw new VajramDefinitionException(
-            "Unable to find vajrams for accessSpecs %s"
-                .formatted(accessSpecMatchingResult.unsuccessfulMatches()));
+            "Unable to find vajram for vajramId %s".formatted(accessSpec));
       }
-      ImmutableMap<DataAccessSpec, VajramDefinition> dependencyVajrams =
-          accessSpecMatchingResult.successfulMatches();
-      if (dependencyVajrams.size() > 1) {
-        throw new UnsupportedOperationException("");
-      }
-      VajramDefinition dependencyVajram = dependencyVajrams.values().iterator().next();
-
-      depIdToProviderKryon.put(
-          dependencyName, _getVajramExecutionGraph(dependencyVajram.vajramId()));
+      depIdToProviderKryon.put(dependency, _getVajramExecutionGraph(dependencyVajram.vajramId()));
     }
     return ImmutableMap.copyOf(depIdToProviderKryon);
   }
 
   private record InputResolverCreationResult(
-      ImmutableMap<Integer, ResolverDefinition> resolverDefinitionsById,
+      ImmutableMap<ResolverDefinition, Resolver> resolversByDefinition,
       KryonLogicId multiResolver) {}
 
   public Optional<VajramDefinition> getVajramDefinition(VajramID vajramId) {

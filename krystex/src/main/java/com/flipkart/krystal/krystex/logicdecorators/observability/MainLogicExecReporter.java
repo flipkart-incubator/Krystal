@@ -54,19 +54,19 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
   @Override
   public OutputLogic<Object> decorateLogic(
       OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
-    return inputs -> {
+    return facets -> {
       KryonId kryonId = originalLogicDefinition.kryonLogicId().kryonId();
       KryonLogicId kryonLogicId = originalLogicDefinition.kryonLogicId();
       /*
        Report logic start
       */
-      kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, inputs);
+      kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facets);
 
       /*
        Execute logic
       */
       ImmutableMap<Facets, CompletableFuture<@Nullable Object>> results =
-          logicToDecorate.execute(inputs);
+          logicToDecorate.execute(facets);
       /*
        Report logic end
       */

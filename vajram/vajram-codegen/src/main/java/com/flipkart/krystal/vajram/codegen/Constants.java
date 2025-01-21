@@ -45,7 +45,7 @@ public final class Constants {
   public static final String FACETS_LIST = "_facetsList";
   public static final String BATCH_FACETS = "BatchFacets";
   public static final String BATCH_IMMUT_FACETS_CLASS_SUFFIX = "Batch" + IMMUT_FACETS_CLASS_SUFFIX;
-  public static final String COMMON_INPUTS = "CommonInputs";
+  public static final String COMMON_INPUTS = "CommonFacets";
   public static final String COMMON_IMMUT_FACETS_CLASS_SUFFIX =
       "Common" + IMMUT_FACETS_CLASS_SUFFIX;
   public static final String FACETS_VAR = "_facets";
@@ -64,8 +64,9 @@ public final class Constants {
   public static final String OPTIONAL = "optional";
   public static final String _FACETS_CLASS = "_Facets";
   public static final String FACETS_FIELDS_VAR = "facetsFields";
-  public static final String REQUEST_SUFFIX = "Request";
-  public static final String IMMUT_REQUEST_SUFFIX = "ImmutableRequest";
+  public static final String REQUEST_SUFFIX = "_Req";
+  public static final String IMMUT_REQUEST_SUFFIX = "_ImmutReq";
+  public static final String IMMUT_REQUEST_POJO_SUFFIX = "_ImmutReqPojo";
   public static final String IMPL_SUFFIX = "Impl";
 
   public static final String INPUT_BATCHING_FUTURE_CODE_BLOCK =

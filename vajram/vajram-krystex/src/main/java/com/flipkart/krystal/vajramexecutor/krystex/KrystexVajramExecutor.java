@@ -59,20 +59,20 @@ public class KrystexVajramExecutor implements VajramExecutor {
 
   @Override
   public <T> CompletableFuture<@Nullable T> execute(
-      VajramID vajramId, ImmutableRequest<T> vajramRequest) {
+      VajramID vajramId, ImmutableRequest request) {
     return execute(
         vajramId,
-        vajramRequest,
+        request,
         KryonExecutionConfig.builder().executionId("defaultExecution").build());
   }
 
   public <T> CompletableFuture<@Nullable T> execute(
-      VajramID vajramId, ImmutableRequest<T> vajramRequest, KryonExecutionConfig executionConfig) {
+      VajramID vajramId, ImmutableRequest vajramRequest, KryonExecutionConfig executionConfig) {
     return executeWithFacets(vajramId, vajramRequest, executionConfig);
   }
 
   public <T> CompletableFuture<@Nullable T> executeWithFacets(
-      VajramID vajramId, Request<T> facets, KryonExecutionConfig executionConfig) {
+      VajramID vajramId, Request facets, KryonExecutionConfig executionConfig) {
     return krystalExecutor.executeKryon(
         vajramKryonGraph.getKryonId(vajramId), facets, executionConfig);
   }

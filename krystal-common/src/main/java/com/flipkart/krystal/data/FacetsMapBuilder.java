@@ -1,12 +1,15 @@
 package com.flipkart.krystal.data;
 
 import com.flipkart.krystal.except.IllegalModificationException;
+import com.flipkart.krystal.facets.Facet;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 @SuppressWarnings("unchecked")
-public final class FacetsMapBuilder implements FacetsBuilder {
+public final class FacetsMapBuilder implements FacetsMap, FacetsBuilder {
 
   private final SimpleRequestBuilder<Object> request;
   private final Map<Integer, FacetValue> data;
@@ -15,13 +18,11 @@ public final class FacetsMapBuilder implements FacetsBuilder {
     this(request, request._asMap());
   }
 
-  FacetsMapBuilder(
-      SimpleRequestBuilder<Object> request, Map<Integer, ? extends FacetValue> data) {
+  FacetsMapBuilder(SimpleRequestBuilder<Object> request, Map<Integer, ? extends FacetValue> data) {
     this.request = request._asBuilder();
     this.data = new LinkedHashMap<>(data);
   }
 
-  @Override
   public FacetValue _get(int facetId) {
     if (request._hasValue(facetId)) {
       Errable<Object> v = request._get(facetId);
@@ -34,7 +35,6 @@ public final class FacetsMapBuilder implements FacetsBuilder {
     return data.getOrDefault(facetId, Errable.nil());
   }
 
-  @Override
   public Errable<?> _getErrable(int facetId) {
     if (request._hasValue(facetId)) {
       return request._get(facetId);
@@ -49,21 +49,34 @@ public final class FacetsMapBuilder implements FacetsBuilder {
   }
 
   @SuppressWarnings("unchecked")
-  @Override
-  public DependencyResponses<Request<Object>, Object> _getDepResponses(int facetId) {
+  public FanoutDepResponses _getDepResponses(int facetId) {
     FacetValue datum = data.getOrDefault(facetId, Errable.nil());
-    if (datum instanceof DependencyResponses<?, ?> errable) {
-      return (DependencyResponses<Request<Object>, Object>) errable;
+    if (datum instanceof FanoutDepResponses fanoutDepResponses) {
+      return (FanoutDepResponses) fanoutDepResponses;
+    } else if (datum instanceof RequestResponse requestResponse) {
+      return new FanoutDepResponses(
+          ImmutableList.of((RequestResponse) requestResponse));
+    } else if (datum instanceof One2OneDepResponse.NoRequest noRequest) {
+      return new FanoutDepResponses(
+          ImmutableList.of(
+              new RequestResponse(
+                  SimpleRequest.empty(), (Errable<Object>) noRequest.response())));
     } else {
       throw new IllegalArgumentException("%s is not of type Responses".formatted(facetId));
     }
   }
 
   @Override
-  public Map<Integer, FacetValue> _asMap() {
-    Map<Integer, FacetValue> map = new LinkedHashMap<>(request._asMap());
-    map.putAll(data);
-    return map;
+  public ImmutableMap<Integer, FacetValue> _asMap() {
+    return ImmutableMap.<Integer, FacetValue>builder()
+        .putAll(request._asMap())
+        .putAll(data)
+        .build();
+  }
+
+  @Override
+  public ImmutableSet<Facet> _facets() {
+    return ImmutableSet.of();
   }
 
   public boolean _hasValue(int facetId) {
@@ -71,8 +84,8 @@ public final class FacetsMapBuilder implements FacetsBuilder {
   }
 
   @Override
-  public FacetsMap _build() {
-    return new FacetsMap(request, ImmutableMap.copyOf(_asMap()));
+  public ImmutableFacetsMap _build() {
+    return new ImmutableFacetsMap(request, ImmutableMap.copyOf(_asMap()));
   }
 
   @Override
@@ -80,17 +93,11 @@ public final class FacetsMapBuilder implements FacetsBuilder {
     return new FacetsMapBuilder(request, new LinkedHashMap<>(data));
   }
 
-  @Override
   public FacetsMapBuilder _set(int facetId, FacetValue value) {
     if (this._hasValue(facetId)) {
       throw new IllegalModificationException();
     }
     data.put(facetId, (FacetValue) value);
-    return this;
-  }
-
-  @Override
-  public FacetsMapBuilder _asBuilder() {
     return this;
   }
 }

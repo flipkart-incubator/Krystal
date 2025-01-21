@@ -1589,6 +1589,7 @@
           <option value="UnnecessaryTypeArgument" />
           <option value="UnusedMethod" />
           <option value="UnusedVariable" />
+          <option value="MethodOverloadsMethodOfSuperclass" />
         </list>
       </option>
     </inspection_tool>

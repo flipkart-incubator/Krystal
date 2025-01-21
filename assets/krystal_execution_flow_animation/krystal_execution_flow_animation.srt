@@ -2,7 +2,7 @@
 00:00:01,000 --> 00:00:02,000
 <font size="10px">
 Krystal receives a request to execute Vajram V1.
-The request contains the values of all the inputDef facets of V1.
+The request contains the values of all the facetDef facets of V1.
 V1 is ready for execution.
 </font>
 
@@ -11,8 +11,8 @@ V1 is ready for execution.
 <font size="10px">
 V1 depends on vajrams V2, V3, and V4 in sequential order,
   i.e V3 waits for V2 and V4 waits for V3.
-V1 constructs the request for V2 containing values for V2's inputDef facets.
-This is called inputDef resolution.
+V1 constructs the request for V2 containing values for V2's facetDef facets.
+This is called facetDef resolution.
 V2 is ready for execution.
 </font>
 
@@ -142,7 +142,7 @@ V8 succeeds.
 00:00:40,000 --> 00:00:42,000
 <font size="10px">
 V8's response is intercepted by the caching decorator.
-The response is cached with the inputDef facets values of V8 as key.
+The response is cached with the facetDef facets values of V8 as key.
 </font>
 
 22

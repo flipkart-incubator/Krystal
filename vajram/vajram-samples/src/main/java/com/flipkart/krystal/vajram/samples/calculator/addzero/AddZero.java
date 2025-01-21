@@ -3,8 +3,8 @@ package com.flipkart.krystal.vajram.samples.calculator.addzero;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
+import static com.flipkart.krystal.vajram.samples.calculator.addzero.AddZeroFacets.number_s;
 import static com.flipkart.krystal.vajram.samples.calculator.addzero.AddZeroFacets.sum_s;
-import static com.flipkart.krystal.vajram.samples.calculator.addzero.AddZeroRequest.number_s;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajram;
@@ -30,7 +30,7 @@ public abstract class AddZero extends ComputeVajram<Integer> {
 
   @Override
   public ImmutableCollection<SimpleInputResolver> getSimpleInputResolvers() {
-    return resolve(dep(sum_s, depInput(AdderRequest.numberOne_s).usingAsIs(number_s).asResolver()));
+    return resolve(dep(sum_s, depInput(AdderRequest.numberOne_s).usingAsIs(AddZeroFacets.number_s).asResolver()));
   }
 
   @Output

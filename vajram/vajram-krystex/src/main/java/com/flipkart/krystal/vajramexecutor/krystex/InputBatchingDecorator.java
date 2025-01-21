@@ -84,7 +84,7 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
                   })
               .map(BatchableFacets::_build)
               .collect(toImmutableList());
-      List<BatchedFacets<Facets, Facets>> batchedFacetsList =
+      List<BatchedFacets> batchedFacetsList =
           immutableFacetsList.stream()
               .map(f -> (BatchableImmutableFacets) f)
               .map(unbatched -> inputBatcher.add(unbatched._batchable(), unbatched._common()))
@@ -135,7 +135,7 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
             .map(each -> batchableSupplier.createBatchable(each, batchedFacets.common()))
             .collect(toImmutableList());
     ImmutableMap<Facets, CompletableFuture<@Nullable Object>> result;
-    ImmutableList<Facets> facetsList = requests.stream().collect(toImmutableList());
+    ImmutableList<BatchableFacets> facetsList = requests.stream().collect(toImmutableList());
     try {
       result = logicToDecorate.execute(facetsList);
     } catch (Throwable e) {

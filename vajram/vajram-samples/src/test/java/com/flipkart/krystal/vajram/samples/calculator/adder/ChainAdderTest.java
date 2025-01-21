@@ -6,7 +6,9 @@ import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.add;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderFacets.chainSum_i;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderFacets.chainSum_s;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderFacets.splitSum1_i;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderFacets.splitSum1_s;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderFacets.splitSum2_i;
 import static com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig.autoRegisterSharedBatchers;
 import static java.util.concurrent.CompletableFuture.allOf;
@@ -346,16 +348,16 @@ class ChainAdderTest {
     return ImmutableSet.of(
         graph.computeDependantChain(
             graph.getVajramId(ChainAdder.class).vajramId(),
-            chainSum_i,
-            chainSum_i,
-            chainSum_i,
-            chainSum_i,
-            chainSum_i,
-            chainSum_i,
-            chainSum_i,
-            chainSum_i,
-            chainSum_i),
-        graph.computeDependantChain(graph.getVajramId(SplitAdder.class).vajramId(), splitSum1_i),
-        graph.computeDependantChain(graph.getVajramId(SplitAdder.class).vajramId(), splitSum2_i));
+            chainSum_s,
+            chainSum_s,
+            chainSum_s,
+            chainSum_s,
+            chainSum_s,
+            chainSum_s,
+            chainSum_s,
+            chainSum_s,
+            chainSum_s),
+        graph.computeDependantChain(graph.getVajramId(SplitAdder.class).vajramId(), splitSum1_s),
+        graph.computeDependantChain(graph.getVajramId(SplitAdder.class).vajramId(), splitSum1_s));
   }
 }

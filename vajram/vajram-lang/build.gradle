@@ -12,5 +12,5 @@ dependencies {
 // depending on what order the tasks are executed.
 if (!fast_compile) {
     tasks.named("spotlessJava").configure { dependsOn("generateGrammarSource") }
-    tasks.named("sourcesJar").configure { dependsOn("generateGrammarSource") }
 }
+tasks.named("sourcesJar").configure { dependsOn("generateGrammarSource") }

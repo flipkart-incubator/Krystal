@@ -10,7 +10,6 @@ import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacets.BatchFacets;
-import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacets.CommonInputs;
 import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.Map;

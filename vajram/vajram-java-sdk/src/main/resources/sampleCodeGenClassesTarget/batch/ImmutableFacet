@@ -5,7 +5,7 @@ import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetsBuilder;
 import com.flipkart.krystal.data.ImmutableFacets;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.data.DependencyResponses;
+import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.vajram.Generated;
 import com.flipkart.krystal.vajram.batching.BatchableFacetsBuilder;
 import com.flipkart.krystal.vajram.batching.BatchableImmutableFacets;

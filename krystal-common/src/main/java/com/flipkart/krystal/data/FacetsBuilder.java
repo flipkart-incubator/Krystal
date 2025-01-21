@@ -1,15 +1,12 @@
 package com.flipkart.krystal.data;
 
-public interface FacetsBuilder extends Facets, FacetContainerBuilder {
+public interface FacetsBuilder extends Facets, FacetContainerBuilder, ModelBuilder{
 
   @Override
-  FacetsBuilder _asBuilder();
+  default FacetsBuilder _asBuilder() {
+    return this;
+  }
 
   @Override
   FacetsBuilder _newCopy();
-
-  @Override
-  default FacetsBuilder _set(int facetId, FacetValue value) {
-    return this;
-  }
 }

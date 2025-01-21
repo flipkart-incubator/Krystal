@@ -7,7 +7,7 @@ import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public sealed interface Errable<@NonNull T> extends FacetValue permits Success, Failure, Nil {
+public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Success, Failure, Nil {
 
   /**
    * @return a {@link CompletableFuture} which is completed exceptionally with the error if this is

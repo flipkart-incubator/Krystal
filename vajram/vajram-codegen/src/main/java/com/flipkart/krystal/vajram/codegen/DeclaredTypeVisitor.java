@@ -33,7 +33,7 @@ class DeclaredTypeVisitor<T> extends AbstractTypeVisitor14<DataType<T>, Void> {
 
   DeclaredTypeVisitor(Utils util, boolean ignoreFirstOptional, Element element) {
     this.util = util;
-    this.processingEnv = util.getProcessingEnv();
+    this.processingEnv = util.processingEnv();
     this.ignoreFirstOptional = ignoreFirstOptional;
     this.element = element;
     if (ignoreFirstOptional) {

@@ -11,12 +11,12 @@ public record VajramInfo(
     VajramID vajramId,
     DataType<?> responseType,
     String packageName,
-    ImmutableList<GivenFacetModel<?>> inputs,
+    ImmutableList<GivenFacetModel<?>> givenFacets,
     ImmutableList<DependencyModel> dependencies,
     ImmutableBiMap<String, Integer> facetIdsByName,
     TypeElement vajramClass) {
 
   public Stream<FacetGenModel> facetStream() {
-    return Stream.concat(inputs.stream(), dependencies.stream());
+    return Stream.concat(givenFacets.stream(), dependencies.stream());
   }
 }

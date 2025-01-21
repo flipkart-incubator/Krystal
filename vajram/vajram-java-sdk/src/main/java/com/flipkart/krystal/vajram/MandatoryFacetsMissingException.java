@@ -1,10 +1,11 @@
 package com.flipkart.krystal.vajram;
 
+import com.flipkart.krystal.except.StackTracelessException;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-public class MandatoryFacetsMissingException extends RuntimeException {
+public class MandatoryFacetsMissingException extends StackTracelessException {
 
   private final VajramID vajramID;
   private final ImmutableMap<String, Throwable> failedMandatoryInputs;

@@ -1,0 +1,43 @@
+package com.flipkart.krystal.vajram.facets.specs;
+
+import static com.flipkart.krystal.data.Errable.errableFrom;
+
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetsBuilder;
+import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.datatypes.DataType;
+import com.flipkart.krystal.facets.FacetType;
+import com.flipkart.krystal.tags.ElementTags;
+import com.google.common.collect.ImmutableSet;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+public final class MandatoryFacetDefaultSpec<T, CV extends Request> extends DefaultFacetSpec<T, CV>
+    implements MandatoryFacetSpec<T, CV> {
+
+  public MandatoryFacetDefaultSpec(
+      int id,
+      String name,
+      DataType<T> type,
+      ImmutableSet<FacetType> facetTypes,
+      Class<CV> ofVajram,
+      String documentation,
+      boolean isBatched,
+      ElementTags tags,
+      Function<Facets, T> getFromFacets,
+      BiConsumer<Facets, T> setToFacets) {
+    super(
+        id,
+        name,
+        type,
+        facetTypes,
+        ofVajram,
+        documentation,
+        isBatched,
+        tags,
+        getFromFacets,
+        setToFacets);
+  }
+}

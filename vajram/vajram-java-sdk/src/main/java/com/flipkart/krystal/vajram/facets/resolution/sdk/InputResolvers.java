@@ -4,12 +4,11 @@ import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.to
 import static java.util.Arrays.stream;
 
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.vajram.facets.VajramDependencySpec;
-import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
+import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
+import com.flipkart.krystal.vajram.facets.specs.InputDefinition;
 import com.google.common.collect.ImmutableList;
-import java.util.Collection;
 import java.util.List;
 
 public final class InputResolvers {
@@ -38,9 +37,9 @@ public final class InputResolvers {
    * @return The list of InputResolvers
    */
   @SafeVarargs
-  public static <T, R, CV extends Request<?>, DV extends Request<T>>
+  public static <T, R, CV extends Request, DV extends Request>
       List<? extends SimpleInputResolver> dep(
-          VajramDependencySpec<T, R, CV, DV> dependency,
+          DependencySpec<T, CV, DV> dependency,
           SimpleInputResolverSpec<?, CV, DV>... resolverStages) {
     return stream(resolverStages)
         .map(
@@ -56,8 +55,8 @@ public final class InputResolvers {
    * @param <T> The data type of the input
    * @param <DV> The dependency whose input is being resolved.
    */
-  public static <T, DV extends Request<?>> ResolveStage<T, DV> depInput(
-      VajramFacetSpec<T, DV> depInput) {
+  public static <T, DV extends Request> ResolveStage<T, DV> depInput(
+      InputDefinition<T, DV> depInput) {
     return new ResolveStage<>(depInput);
   }
 
@@ -68,8 +67,8 @@ public final class InputResolvers {
    * @param <T> The data type of the input being resolved.
    * @param <DV> The dependency whose input is being resolved.
    */
-  public static <T, DV extends Request<?>> ResolveFanoutStage<T, DV> depInputFanout(
-      VajramFacetSpec<T, DV> depInput) {
+  public static <T, DV extends Request> ResolveFanoutStage<T, DV> depInputFanout(
+      InputDefinition<T, DV> depInput) {
     return new ResolveFanoutStage<>(depInput);
   }
 

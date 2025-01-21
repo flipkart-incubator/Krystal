@@ -3,12 +3,14 @@ package com.flipkart.krystal.data;
 import static com.flipkart.krystal.data.Errable.nil;
 
 import com.flipkart.krystal.except.IllegalModificationException;
+import com.flipkart.krystal.facets.RemoteInput;
+import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.EqualsAndHashCode;
 
 @EqualsAndHashCode
-public final class SimpleRequestBuilder<T> implements RequestBuilder<T> {
+public final class SimpleRequestBuilder<T> implements RequestBuilder {
   private final Map<Integer, Errable<Object>> data;
 
   public SimpleRequestBuilder() {
@@ -19,14 +21,16 @@ public final class SimpleRequestBuilder<T> implements RequestBuilder<T> {
     this.data = data;
   }
 
-  @Override
   public Errable<Object> _get(int facetId) {
     return data.getOrDefault(facetId, nil());
   }
 
-  @Override
   public Map<Integer, Errable<Object>> _asMap() {
     return data;
+  }
+
+  public ImmutableSet<RemoteInput> _facets() {
+    return ImmutableSet.of();
   }
 
   public boolean _hasValue(int facetId) {
@@ -38,8 +42,7 @@ public final class SimpleRequestBuilder<T> implements RequestBuilder<T> {
     return new SimpleRequest<>(data);
   }
 
-  @Override
-  public RequestBuilder<T> _set(int facetId, FacetValue value) {
+  public RequestBuilder _set(int facetId, FacetValue value) {
     if (!(value instanceof Errable<?> errable)) {
       throw new IllegalArgumentException(
           "Expected Errable but found %s".formatted(value.getClass()));
