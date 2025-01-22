@@ -17,7 +17,8 @@ public record MultiExecute<T>(Collection<T> multiInputs, boolean shouldSkip, Str
   }
 
   public static <T> MultiExecute<T> executeFanoutWith(Collection<T> inputs) {
-    return new MultiExecute<>(ImmutableList.copyOf(inputs), false, EMPTY_STRING);
+    return new MultiExecute<>(
+        inputs == null ? ImmutableList.of() : ImmutableList.copyOf(inputs), false, EMPTY_STRING);
   }
 
   public static <T> MultiExecute<T> skipFanout(String reason) {
