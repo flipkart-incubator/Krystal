@@ -61,8 +61,11 @@ public abstract class DoubleMinusOne extends ComputeVajram<Integer> {
   }
 
   @Resolve(depName = result_n, depInputs = SubtractorRequest.numberOne_n)
-  static int sumOfDoubles(DependencyResponse<MultiplierRequest, Integer> doubledNumbers) {
-    return doubledNumbers.values().stream()
+  static int sumOfDoubles(
+      List<Integer> numbers, DependencyResponse<MultiplierRequest, Integer> doubledNumbers) {
+    return numbers.stream()
+        .map(integer -> MultiplierRequest.builder().numberOne(integer).numberTwo(2).build())
+        .map(doubledNumbers::get)
         .map(Errable::value)
         .map(Optional::orElseThrow)
         .mapToInt(Integer::intValue)
