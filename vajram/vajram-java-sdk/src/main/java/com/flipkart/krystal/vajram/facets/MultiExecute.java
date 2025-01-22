@@ -35,7 +35,8 @@ public final class MultiExecute<T> implements DependencyCommand<T> {
   }
 
   public static <T> MultiExecute<T> executeFanoutWith(Collection<? extends T> inputs) {
-    return new MultiExecute<>(ImmutableList.copyOf(inputs), false, EMPTY_STRING);
+    return new MultiExecute<>(
+        inputs == null ? ImmutableList.of() : ImmutableList.copyOf(inputs), false, EMPTY_STRING);
   }
 
   public static <T> MultiExecute<T> skipFanout(String reason) {
