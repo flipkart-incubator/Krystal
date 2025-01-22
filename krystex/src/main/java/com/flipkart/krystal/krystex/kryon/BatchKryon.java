@@ -388,7 +388,8 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
                                               depReqId ->
                                                   batchResponse
                                                       .responses()
-                                                      .getOrDefault(depReqId, empty()))));
+                                                      .getOrDefault(depReqId, empty()),
+                                              (o1, o2) -> o1)));
                             }
                           }));
 

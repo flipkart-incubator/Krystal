@@ -112,31 +112,33 @@ public final class InputResolverUtil {
       depInputs.forEach(map -> handleResolverReturn(resolvable, singleExecute.input(), map));
     } else if (command instanceof MultiExecute<?> multiExecute) {
       Collection<?> objects = multiExecute.multiInputs();
-      if (depInputs.isEmpty()) {
-        objects.forEach(
-            o -> {
-              LinkedHashMap<String, @Nullable Object> e = new LinkedHashMap<>();
-              depInputs.add(e);
-              handleResolverReturn(resolvable, o, e);
-            });
-      } else {
-        List<Map<String, @Nullable Object>> more =
-            new ArrayList<>(depInputs.size() * objects.size() - depInputs.size());
-        for (Map<String, @Nullable Object> depInput : depInputs) {
-          boolean first = true;
-          ImmutableMap<String, @Nullable Object> originalDepInput = ImmutableMap.copyOf(depInput);
-          for (Object object : objects) {
-            if (first) {
-              first = false;
-              handleResolverReturn(resolvable, object, depInput);
-            } else {
-              LinkedHashMap<String, @Nullable Object> e = new LinkedHashMap<>(originalDepInput);
-              more.add(e);
-              handleResolverReturn(resolvable, object, e);
+      if (!objects.isEmpty()) {
+        if (depInputs.isEmpty()) {
+          objects.forEach(
+              o -> {
+                LinkedHashMap<String, @Nullable Object> e = new LinkedHashMap<>();
+                depInputs.add(e);
+                handleResolverReturn(resolvable, o, e);
+              });
+        } else {
+          List<Map<String, @Nullable Object>> more =
+              new ArrayList<>(depInputs.size() * objects.size() - depInputs.size());
+          for (Map<String, @Nullable Object> depInput : depInputs) {
+            boolean first = true;
+            ImmutableMap<String, @Nullable Object> originalDepInput = ImmutableMap.copyOf(depInput);
+            for (Object object : objects) {
+              if (first) {
+                first = false;
+                handleResolverReturn(resolvable, object, depInput);
+              } else {
+                LinkedHashMap<String, @Nullable Object> e = new LinkedHashMap<>(originalDepInput);
+                more.add(e);
+                handleResolverReturn(resolvable, object, e);
+              }
             }
           }
+          depInputs.addAll(more);
         }
-        depInputs.addAll(more);
       }
     }
   }
