@@ -7,5 +7,5 @@ import com.flipkart.krystal.krystex.Logic;
 import com.google.common.collect.ImmutableList;
 
 public non-sealed interface ResolverLogic extends Logic {
-  ResolverCommand resolve(ImmutableList<Builder> depRequests, Facets facets);
+  ResolverCommand resolve(ImmutableList<? extends Builder> depRequests, Facets facets);
 }

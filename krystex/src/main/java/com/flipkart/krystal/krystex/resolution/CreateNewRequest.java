@@ -5,5 +5,5 @@ import com.flipkart.krystal.krystex.Logic;
 
 @FunctionalInterface
 public non-sealed interface CreateNewRequest extends Logic {
-  Builder newRequestBuilder();
+  Builder<?> newRequestBuilder();
 }

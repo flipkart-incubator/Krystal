@@ -6,21 +6,10 @@ public final class Constants {
 
   public static final String COGENGEN_PHASE_KEY = "krystal.vajram.codegen.phase";
 
-  public static final String VAL_ERR = "valErr";
   public static final String DEP_RESP = "depResp";
   public static final String RESOLVABLE_INPUTS = "resolvableInputs";
   public static final String INPUT_SRC = "inputSrc";
-  public static final String INPUT_BATCHING = "inputBatching";
-  public static final String COMMON_INPUT = "commonInput";
-  public static final String RETURN_TYPE = "facetJavaType";
-  public static final String VAJRAM_LOGIC_METHOD = "outputLogicMethod";
   public static final String VAJRAM_LOGIC_INPUT_ARGS = "outputLogicInputArguments";
-  public static final String HASH_MAP = "hashMap";
-  public static final String ARRAY_LIST = "arrayList";
-  public static final String COM_FUTURE = "comFuture";
-  public static final String LINK_HASH_MAP = "linkHashMap";
-  public static final String MAP = "map";
-  public static final String LIST = "list";
   public static final String FACET_DEFINITIONS_VAR = "facetDefinitions";
   public static final String FACET_ID_SUFFIX = "_i";
   public static final String FACET_SPEC_SUFFIX = "_s";
@@ -59,12 +48,6 @@ public final class Constants {
   public static final String INCOMING_FACETS = "_incomingFacets";
   public static final String BATCHES_VAR = "_batches";
   public static final String DEP_REQ_PARAM = "dependecyRequest";
-  public static final String UNMOD_INPUT = "unmodInput";
-  public static final String MOD_INPUT = "modInput";
-  public static final String IM_MAP = "imMap";
-  public static final String IM_LIST = "imList";
-  public static final String FUNCTION = "function";
-  public static final String OPTIONAL = "optional";
   public static final String _FACETS_CLASS = "_Facets";
   public static final String FACETS_FIELDS_VAR = "facetsFields";
   public static final String REQUEST_SUFFIX = "_Req";
@@ -91,19 +74,6 @@ public final class Constants {
                 $optional:T.ofNullable(mapping.get(im)).orElseThrow(),
                 future.<$facetJavaType:T>thenApply($function:T.identity())));
           return $imMap:T.copyOf(returnValue);
-      """;
-  public static final String BATCHING_EXECUTE_PREPARE_PARAMS =
-      """
-          if($facetsList:L.isEmpty()) {
-            return $imMap:T.of();
-          }
-          $map:T<$inputBatching:T, $facets:T> _batches = new $hashMap:T<>();
-          $commonInput:T _common = (($unmodInput:T)$facetsList:L.get(0))._common();
-          for ($facets:T $facetsVar:L : $facetsList:L) {
-            $unmodInput:T _castFacets = ($unmodInput:T) $facetsVar:L;
-            $inputBatching:T _batch = _castFacets._batchElement();
-            _batches.put(_batch, $facetsVar:L);
-          }
       """;
   public static final String BATCHING_EXECUTE_PREPARE_RESULTS =
       """

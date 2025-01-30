@@ -130,7 +130,7 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
       BatchedFacets<BatchedFacetsElement, Facets> batchedFacets) {
     ImmutableList<BatchEnabledImmutableFacets> requests =
         batchedFacets.batchItems().stream()
-            .map(each -> each._batchEnabledFacets())
+            .map(each -> each._allFacetValues())
             .collect(toImmutableList());
     ImmutableMap<Facets, CompletableFuture<@Nullable Object>> result;
     ImmutableList<BatchEnabledFacets> facetsList = requests.stream().collect(toImmutableList());

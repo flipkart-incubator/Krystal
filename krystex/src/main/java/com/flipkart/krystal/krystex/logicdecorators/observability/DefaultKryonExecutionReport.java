@@ -4,6 +4,7 @@ import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.stream.Collectors.toMap;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
@@ -31,6 +32,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.ToString;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -38,7 +40,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @ToString
 @Slf4j
 public final class DefaultKryonExecutionReport implements KryonExecutionReport {
-  @Getter private final Instant startTime;
+  @JsonProperty @Getter private final Instant startTime;
   private final boolean verbose;
   private final Clock clock;
   private static final String SHA_256 = "SHA-256";
@@ -53,10 +55,10 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     }
   }
 
-  @Getter
+  @JsonProperty @Getter
   private final Map<KryonExecution, LogicExecInfo> mainLogicExecInfos = new LinkedHashMap<>();
 
-  @Getter private final Map<String, Object> dataMap = new HashMap<>();
+  @JsonProperty @Getter private final Map<String, Object> dataMap = new HashMap<>();
 
   public DefaultKryonExecutionReport(Clock clock) {
     this(clock, false);
@@ -127,14 +129,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
         .stream()
             .forEach(
                 (inputDef) -> {
-                  Object value = inputDef.getFromRequest(request);
-                  if (!(value instanceof Errable<?>)) {
-                    return;
-                  }
-                  String collect = convertErrable((Errable<?>) value);
-                  if (collect != null) {
-                    inputMap.put(inputDef, collect);
-                  }
+                  inputMap.put(inputDef, convertValue(inputDef.getFromRequest(request)));
                 });
     return ImmutableMap.copyOf(inputMap);
   }
@@ -181,10 +176,17 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
       sha256 = verbose ? hashValues(stackTraceAsString) : hashValues(throwable.toString());
       dataMap.put(sha256, verbose ? stackTraceAsString : throwable.toString());
     } else {
-      Object value = voe.valueOpt().isPresent() ? voe.valueOpt().get() : "null";
-      sha256 = hashValues(value);
-      dataMap.put(sha256, value);
+      sha256 = convertValue(voe.valueOpt().orElse(null));
     }
+    return sha256;
+  }
+
+  private String convertValue(@Nullable Object value) {
+    if (value == null) {
+      value = "null";
+    }
+    String sha256 = hashValues(value);
+    dataMap.put(sha256, value);
     return sha256;
   }
 
@@ -207,7 +209,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
                 (o1, o2) -> o1));
   }
 
-  public static <T> String hashValues(T input) {
+  public static <T> String hashValues(@Nullable T input) {
     return hashString(String.valueOf(input));
   }
 

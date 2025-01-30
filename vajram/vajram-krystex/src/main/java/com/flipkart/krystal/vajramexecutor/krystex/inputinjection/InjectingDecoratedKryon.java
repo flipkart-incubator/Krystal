@@ -9,6 +9,7 @@ import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.FacetsBuilder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.except.StackTracelessException;
+import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
@@ -22,6 +23,8 @@ import com.flipkart.krystal.vajram.facets.specs.DefaultFacetSpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import java.util.LinkedHashSet;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -75,13 +78,13 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
         forwardBatch.executableRequests();
 
     ImmutableMap.Builder<RequestId, FacetsBuilder> newRequests = ImmutableMap.builder();
-    Set<FacetSpec<?, ?>> injectableFacetDefs = new LinkedHashSet<>();
+    Set<FacetSpec<?, ?>> injectableFacets = new LinkedHashSet<>();
     vajramDefinition
         .facetSpecs()
         .forEach(
             (facetSpec) -> {
               if (facetSpec.facetTypes().contains(INJECTION)) {
-                injectableFacetDefs.add(facetSpec);
+                injectableFacets.add(facetSpec);
               }
             });
 
@@ -94,10 +97,11 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
       } else if (container instanceof Facets facets) {
         facetsBuilder = facets._asBuilder();
       } else {
-        throw new UnsupportedOperationException("");
+        throw new UnsupportedOperationException(
+            "Unknown facet container type " + container.getClass());
       }
       newRequests.put(
-          requestId, injectFacetsOfVajram(vajramDefinition, injectableFacetDefs, facetsBuilder));
+          requestId, injectFacetsOfVajram(vajramDefinition, injectableFacets, facetsBuilder));
     }
     return kryon.executeCommand(
         new ForwardReceive(
@@ -115,7 +119,8 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
       if (!(facetSpec instanceof DefaultFacetSpec defaultFacetSpec)) {
         continue;
       }
-      if (defaultFacetSpec.getFacetValue(facetsBuilder) != null) {
+      Errable<?> facetValue = defaultFacetSpec.getFacetValue(facetsBuilder);
+      if (facetValue.valueOpt().isPresent()) {
         continue;
       }
       // Input was not resolved by calling vajram.

@@ -29,11 +29,16 @@ import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
+import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.guice.VajramGuiceInjector;
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
+import com.flipkart.krystal.vajram.samples.calculator.adder.AdderFacets;
+import com.flipkart.krystal.vajram.samples.calculator.adder.AdderImmutableFacets;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder_ImmutReqPojo;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder_Req;
+import com.flipkart.krystal.vajram.samples.calculator.divider.DividerFacets;
+import com.flipkart.krystal.vajram.samples.calculator.divider.DividerImmutableFacets;
 import com.flipkart.krystal.vajram.samples.calculator.divider.Divider_ImmutReqPojo;
 import com.flipkart.krystal.vajram.samples.calculator.divider.Divider_Req;
 import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig;
@@ -120,7 +125,7 @@ class FormulaTest {
         graph.createExecutor(
             VajramTestHarness.prepareForTest(vajramExecutorConfig, requestLevelCache)
                 .withMock(
-                    Adder_ImmutReqPojo._builder().numberOne(0).numberTwo(0)._build(),
+                    AdderImmutableFacets._builder().numberOne(0).numberTwo(0)._build(),
                     Errable.withValue(0))
                 .buildConfig())) {
       future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
@@ -153,8 +158,8 @@ class FormulaTest {
         .failsWithin(1, SECONDS)
         .withThrowableOfType(ExecutionException.class)
         .havingCause()
-        .isInstanceOf(RuntimeException.class)
-        .withMessage("Adder failed because fail flag was set");
+        .isInstanceOf(MandatoryFacetsMissingException.class)
+        .withMessageContaining("Adder failed because fail flag was set");
   }
 
   @Disabled("Long running benchmark (~40s)")
@@ -386,7 +391,7 @@ class FormulaTest {
   private record FormulaRequestContext(int a, int p, int q, String requestId) {}
 
   @Test
-  void formula_success_withAllMockedDependencies() throws Exception {
+  void formula_success_withAllMockedDependencies() {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
@@ -402,10 +407,10 @@ class FormulaTest {
         graph.createExecutor(
             VajramTestHarness.prepareForTest(executorConfigBuilder, requestLevelCache)
                 .withMock(
-                    Adder_ImmutReqPojo._builder().numberOne(20).numberTwo(5)._build(),
+                    AdderImmutableFacets._builder().numberOne(20).numberTwo(5)._build(),
                     Errable.withValue(25))
                 .withMock(
-                    Divider_ImmutReqPojo._builder().numerator(100).denominator(25)._build(),
+                    DividerImmutableFacets._builder().numerator(100).denominator(25)._build(),
                     Errable.withValue(4))
                 .buildConfig())) {
       future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
@@ -415,7 +420,7 @@ class FormulaTest {
   }
 
   @Test
-  void formula_success_with_mockedDependencyAdder() throws Exception {
+  void formula_success_with_mockedDependencyAdder() {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
@@ -434,7 +439,7 @@ class FormulaTest {
         graph.createExecutor(
             VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder, requestLevelCache)
                 .withMock(
-                    Adder_ImmutReqPojo._builder().numberOne(20).numberTwo(5)._build(),
+                    AdderImmutableFacets._builder().numberOne(20).numberTwo(5)._build(),
                     Errable.withValue(25))
                 .buildConfig())) {
       future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
@@ -444,7 +449,7 @@ class FormulaTest {
   }
 
   @Test
-  void formula_success_with_mockedDependencyDivider() throws Exception {
+  void formula_success_with_mockedDependencyDivider() {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
@@ -463,7 +468,7 @@ class FormulaTest {
         graph.createExecutor(
             VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
                 .withMock(
-                    Divider_ImmutReqPojo._builder().numerator(100).denominator(25)._build(),
+                    DividerImmutableFacets._builder().numerator(100).denominator(25)._build(),
                     Errable.withValue(4))
                 .buildConfig())) {
       future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
@@ -491,7 +496,7 @@ class FormulaTest {
         graph.createExecutor(
             VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
                 .withMock(
-                    Adder_ImmutReqPojo._builder().numberOne(0).numberTwo(0)._build(),
+                    AdderImmutableFacets._builder().numberOne(0).numberTwo(0)._build(),
                     Errable.withValue(0))
                 .buildConfig())) {
       future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);

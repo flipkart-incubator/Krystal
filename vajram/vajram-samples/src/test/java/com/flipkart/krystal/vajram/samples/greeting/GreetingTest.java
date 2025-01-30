@@ -208,7 +208,7 @@ class GreetingTest {
                             .build(),
                         requestLevelCache)
                     .withMock(
-                        UserService_ImmutReqPojo._builder().userId(USER_ID)._build(),
+                        UserServiceImmutableFacets._builder().userId(USER_ID)._build(),
                         withValue(new UserInfo(USER_ID, USER_NAME)))
                     .buildConfig())) {
       future = executeVajram(vajramKryonGraph, krystexVajramExecutor, requestContext);
@@ -236,7 +236,7 @@ class GreetingTest {
                             .build(),
                         requestLevelCache)
                     .withMock(
-                        UserService_ImmutReqPojo._builder().userId(USER_ID)._build(),
+                        UserServiceImmutableFacets._builder().userId(USER_ID)._build(),
                         Errable.withError(new IOException("Request Timeout")))
                     .buildConfig())) {
       future = executeVajram(vajramKryonGraph, krystexVajramExecutor, requestContext);

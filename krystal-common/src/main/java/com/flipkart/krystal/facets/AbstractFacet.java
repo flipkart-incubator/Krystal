@@ -25,6 +25,6 @@ public abstract class AbstractFacet implements Facet {
 
   @Override
   public String toString() {
-    return "Facet(" + name() + ',' + facetTypes() + ", '" + documentation() + "'" + ')';
+    return "Facet(" + id() + ", " + name() + ", " + facetTypes() + ')';
   }
 }

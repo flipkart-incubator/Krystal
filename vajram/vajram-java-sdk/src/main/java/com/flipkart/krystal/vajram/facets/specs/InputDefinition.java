@@ -42,4 +42,9 @@ public final class InputDefinition<T, CV extends Request> implements RemoteInput
   public void setToRequest(Builder request, @Nullable Object value) {
     setToRequest.accept(request, (T) value);
   }
+
+  @Override
+  public String toString() {
+    return "RemoteInput(id=" + id + ", name=" + name + ", doc=" + documentation + ')';
+  }
 }

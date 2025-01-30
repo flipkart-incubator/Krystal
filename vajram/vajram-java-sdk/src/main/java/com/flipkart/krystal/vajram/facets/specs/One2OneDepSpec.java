@@ -70,12 +70,4 @@ public abstract sealed class One2OneDepSpec<T, CV extends Request, DV extends Re
   public boolean canFanout() {
     return false;
   }
-
-  public interface DepValueGetter<T> {
-    Errable<T> getFromFacets(Facets facets);
-  }
-
-  public interface DepValueSetter<T> {
-    void setToFacets(Facets facets, Errable<T> value);
-  }
 }

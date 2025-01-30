@@ -19,6 +19,8 @@ import java.util.function.Function;
 
 public final class Util {
 
+  public static final Duration TEST_TIMEOUT = Duration.ofSeconds(1);
+
   private Util() {}
 
   public static long javaMethodBenchmark(Consumer<Integer> consumer, int loopCount) {

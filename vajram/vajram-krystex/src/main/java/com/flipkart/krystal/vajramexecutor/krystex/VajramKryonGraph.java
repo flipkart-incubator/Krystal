@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
+import static com.flipkart.krystal.vajram.facets.FacetValidation.validateMandatoryFacet;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.handleResolverException;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.toResolverCommand;
 import static com.flipkart.krystal.vajram.utils.VajramLoader.loadVajramsFromClassPath;
@@ -16,9 +17,12 @@ import com.flipkart.krystal.data.DepResponse;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.data.ImmutableRequest.Builder;
+import com.flipkart.krystal.data.NonNil;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Success;
+import com.flipkart.krystal.facets.BasicFacetInfo;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
@@ -47,6 +51,7 @@ import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.exec.VajramExecutableGraph;
+import com.flipkart.krystal.vajram.facets.FacetValidation;
 import com.flipkart.krystal.vajram.facets.resolution.FanoutInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.One2OneInputResolver;
@@ -288,23 +293,6 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
             throw new IllegalStateException();
           }
           String depName = facet.name();
-          ImmutableSet<FacetSpec> resolvedInputNames =
-              inputResolver.definition().target().targetInputs().stream()
-                  .map(
-                      c -> {
-                        FacetSpec facetSpec = vajramDefinition.facetsById().get(c.id());
-                        if (facetSpec == null) {
-                          throw new IllegalStateException(
-                              "Resolver input with id "
-                                  + c.id()
-                                  + " named '"
-                                  + c.name()
-                                  + "' not found among server side facets "
-                                  + vajramDefinition.facetSpecs());
-                        }
-                        return facetSpec;
-                      })
-                  .collect(toImmutableSet());
 
           ImmutableSet<? extends Facet> sources = inputResolver.definition().sources();
           ImmutableCollection<FacetSpec> requiredInputs =
@@ -317,7 +305,10 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                           vajramId,
                           dependencyId,
                           String.join(
-                              ",", resolvedInputNames.stream().map(String::valueOf).toList())),
+                              ",",
+                              inputResolver.definition().target().targetInputs().stream()
+                                  .map(BasicFacetInfo::name)
+                                  .toList())),
                   sources,
                   (depRequests, facets) -> {
                     validateMandatory(vajramId, facets, requiredInputs);
@@ -343,8 +334,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                               handleResolverException(
                                   t,
                                   false,
-                                  "Got exception while executing the resolver of the dependency "
-                                      + depName));
+                                  "Got exception '%s' while executing the resolver of the dependency '%s'"
+                                      .formatted(t, depName)));
                     }
                     return resolverCommand;
                   });
@@ -416,24 +407,24 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
         requiredInputs.stream().filter(FacetSpec::isMandatory)::iterator;
     Map<String, Throwable> missingMandatoryValues = new HashMap<>();
     for (Facet mandatoryFacet : mandatoryFacets) {
-      FacetValue value = mandatoryFacet.getFacetValue(facets);
-      if (value instanceof Errable<?> e) {
-        if (!(e instanceof Success<?>)) {
-          missingMandatoryValues.put(
-              mandatoryFacet.name(),
-              e.errorOpt()
-                  .orElse(
-                      new NoSuchElementException(
-                          "No value present for facet '%s'".formatted(mandatoryFacet.name()))));
-        }
-      } else if (value instanceof DepResponse<?, ?> depResponse) {
-        if (depResponse instanceof One2OneDepResponse<?, ?> one2OneDepResponse) {
-          if (one2OneDepResponse instanceof One2OneDepResponse.NoRequest noRequest) {
-            missingMandatoryValues.put(
-                mandatoryFacet.name(),
-                new NoSuchElementException(
-                    "No value present for facet '%s'".formatted(mandatoryFacet.name())));
-          }
+      FacetValue facetValue = mandatoryFacet.getFacetValue(facets);
+      Errable<?> value;
+      if (facetValue instanceof Errable<?> errable) {
+        value = errable;
+      } else if (facetValue instanceof One2OneDepResponse<?, ?> depResponse) {
+        value = depResponse.response();
+      } else {
+        continue;
+      }
+      Optional<Throwable> error = value.errorOpt();
+      if (error.isPresent()) {
+        missingMandatoryValues.put(mandatoryFacet.name(), error.get());
+      } else {
+        try {
+          validateMandatoryFacet(
+              value.valueOpt().orElse(null), vajramID.vajramId(), mandatoryFacet.name());
+        } catch (Throwable e) {
+          missingMandatoryValues.put(mandatoryFacet.name(), e);
         }
       }
     }

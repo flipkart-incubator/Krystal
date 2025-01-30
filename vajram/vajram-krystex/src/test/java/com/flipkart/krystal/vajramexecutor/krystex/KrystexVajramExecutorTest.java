@@ -120,7 +120,9 @@ class KrystexVajramExecutorTest {
             .registerModule(new JavaTimeModule())
             .registerModule(new Jdk8Module())
             .setSerializationInclusion(NON_NULL)
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
+            .disable(SerializationFeature.FAIL_ON_SELF_REFERENCES);
   }
 
   @AfterEach
