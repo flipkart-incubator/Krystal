@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.LongAdder;
 public abstract sealed class AbstractSimpleInputResolver<
         S, T, CV extends Request, DV extends Request>
     extends AbstractInputResolver implements SimpleInputResolver
-    permits SimpleFanoutInputResolver, SimpleSingleInputResolver {
+    permits SimpleFanoutInputResolver, SimpleOne2OneInputResolver {
   public static final LongAdder TIME = new LongAdder();
   private final DependencySpec<?, CV, DV> dependency;
 

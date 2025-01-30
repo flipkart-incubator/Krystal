@@ -15,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.data.DividerRequest;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
@@ -31,8 +32,10 @@ import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.guice.VajramGuiceInjector;
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
-import com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest;
-import com.flipkart.krystal.vajram.samples.calculator.divider.DividerRequest;
+import com.flipkart.krystal.vajram.samples.calculator.adder.Adder_ImmutReqPojo;
+import com.flipkart.krystal.vajram.samples.calculator.adder.Adder_Req;
+import com.flipkart.krystal.vajram.samples.calculator.divider.Divider_ImmutReqPojo;
+import com.flipkart.krystal.vajram.samples.calculator.divider.Divider_Req;
 import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
@@ -52,6 +55,7 @@ import org.junit.jupiter.api.Test;
 
 class FormulaTest {
 
+  private static final Duration TEST_TIMEOUT = ofSeconds(1);
   private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll
@@ -116,7 +120,7 @@ class FormulaTest {
         graph.createExecutor(
             VajramTestHarness.prepareForTest(vajramExecutorConfig, requestLevelCache)
                 .withMock(
-                    AdderRequest._builder().numberOne(0).numberTwo(0)._build(),
+                    Adder_ImmutReqPojo._builder().numberOne(0).numberTwo(0)._build(),
                     Errable.withValue(0))
                 .buildConfig())) {
       future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
@@ -355,7 +359,7 @@ class FormulaTest {
       FormulaRequestContext rc) {
     return krystexVajramExecutor.execute(
         graph.getVajramId((Formula.class)),
-        FormulaRequest._builder().a(rc.a + value).p(rc.p + value).q(rc.q + value)._build(),
+        Formula_ImmutReqPojo._builder().a(rc.a + value).p(rc.p + value).q(rc.q + value)._build(),
         KryonExecutionConfig.builder().executionId("formulaTest" + value).build());
   }
 
@@ -398,15 +402,15 @@ class FormulaTest {
         graph.createExecutor(
             VajramTestHarness.prepareForTest(executorConfigBuilder, requestLevelCache)
                 .withMock(
-                    AdderRequest._builder().numberOne(20).numberTwo(5)._build(),
+                    Adder_ImmutReqPojo._builder().numberOne(20).numberTwo(5)._build(),
                     Errable.withValue(25))
                 .withMock(
-                    DividerRequest._builder().numerator(100).denominator(25)._build(),
+                    Divider_ImmutReqPojo._builder().numerator(100).denominator(25)._build(),
                     Errable.withValue(4))
                 .buildConfig())) {
       future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
     }
-    assertThat(future.get()).isEqualTo(4);
+    assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(4);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(0);
   }
 
@@ -430,12 +434,12 @@ class FormulaTest {
         graph.createExecutor(
             VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder, requestLevelCache)
                 .withMock(
-                    AdderRequest._builder().numberOne(20).numberTwo(5)._build(),
+                    Adder_ImmutReqPojo._builder().numberOne(20).numberTwo(5)._build(),
                     Errable.withValue(25))
                 .buildConfig())) {
       future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
     }
-    assertThat(future.get()).isEqualTo(4);
+    assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(4);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(0);
   }
 
@@ -459,12 +463,12 @@ class FormulaTest {
         graph.createExecutor(
             VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
                 .withMock(
-                    DividerRequest._builder().numerator(100).denominator(25)._build(),
+                    Divider_ImmutReqPojo._builder().numerator(100).denominator(25)._build(),
                     Errable.withValue(4))
                 .buildConfig())) {
       future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
     }
-    assertThat(future.get()).isEqualTo(4);
+    assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(4);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
   }
 
@@ -487,12 +491,12 @@ class FormulaTest {
         graph.createExecutor(
             VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
                 .withMock(
-                    AdderRequest._builder().numberOne(0).numberTwo(0)._build(),
+                    Adder_ImmutReqPojo._builder().numberOne(0).numberTwo(0)._build(),
                     Errable.withValue(0))
                 .buildConfig())) {
       future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
       assertThat(future)
-          .failsWithin(Duration.ofSeconds(1))
+          .failsWithin(TEST_TIMEOUT)
           .withThrowableOfType(ExecutionException.class)
           .withCauseInstanceOf(ArithmeticException.class)
           .withMessage("java.lang.ArithmeticException: / by zero");

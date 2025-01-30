@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram;
+package com.flipkart.krystal.vajram.exception;
 
 public class VajramDefinitionException extends RuntimeException {
 

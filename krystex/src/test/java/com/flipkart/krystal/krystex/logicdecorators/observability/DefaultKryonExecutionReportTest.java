@@ -1,22 +1,28 @@
 package com.flipkart.krystal.krystex.logicdecorators.observability;
 
 import static com.flipkart.krystal.data.Errable.withValue;
+import static com.flipkart.krystal.krystex.testutils.SimpleFacet.input;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.in;
 
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.ImmutableFacetsMap;
 import com.flipkart.krystal.data.SimpleRequestBuilder;
+import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport.LogicExecInfo;
+import com.flipkart.krystal.krystex.testutils.SimpleFacet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -37,11 +43,15 @@ class DefaultKryonExecutionReportTest {
   void reportStartAndEnd_success() {
     KryonId kryonId = new KryonId("kryon_1");
     KryonLogicId kryonLogicId = new KryonLogicId(kryonId, "kryon_1__logic_1");
+    Set<SimpleFacet> allInputs = Set.of(input(1));
     ImmutableList<Facets> facetsList =
         ImmutableList.of(
-            new ImmutableFacetsMap(new SimpleRequestBuilder<>(ImmutableMap.of(1, withValue("v1")))),
             new ImmutableFacetsMap(
-                new SimpleRequestBuilder<>(ImmutableMap.of(1, withValue("v2")))));
+                new SimpleRequestBuilder<>(allInputs, ImmutableMap.of(1, withValue("v1"))),
+                allInputs),
+            new ImmutableFacetsMap(
+                new SimpleRequestBuilder<>(allInputs, ImmutableMap.of(1, withValue("v2"))),
+                allInputs));
 
     clock.setInstant(START_TIME);
     kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetsList);
@@ -65,30 +75,32 @@ class DefaultKryonExecutionReportTest {
     assertThat(logicExecInfo.endTimeMs()).isEqualTo(END_TIME.toEpochMilli());
     assertThat(logicExecInfo.result()).isInstanceOf(Map.class);
     @SuppressWarnings("unchecked")
-    Map<ImmutableMap<Integer, String>, String> mapResult =
-        (Map<ImmutableMap<Integer, String>, String>) logicExecInfo.result();
-    Map<ImmutableMap<Integer, String>, String> derefedMap = new LinkedHashMap<>();
+    Map<ImmutableMap<Facet, String>, String> mapResult =
+        (Map<ImmutableMap<Facet, String>, String>) logicExecInfo.result();
+    Map<ImmutableMap<Facet, String>, String> derefedMap = new LinkedHashMap<>();
     mapResult.forEach(
         (key, resultRef) -> {
-          Map<Integer, String> map = new LinkedHashMap<>();
+          Map<Facet, String> map = new LinkedHashMap<>();
           key.forEach(
-              (inputName, valueRef) -> {
-                map.put(inputName, (String) kryonExecutionReport.dataMap().get(valueRef));
+              (inputId, valueRef) -> {
+                map.put(inputId, (String) kryonExecutionReport.dataMap().get(valueRef));
               });
           derefedMap.put(
               ImmutableMap.copyOf(map), (String) kryonExecutionReport.dataMap().get(resultRef));
         });
     assertThat(derefedMap)
-        .isEqualTo(ImmutableMap.of(ImmutableMap.of(1, "v1"), "r1", ImmutableMap.of(1, "v2"), "r1"));
+        .isEqualTo(
+            ImmutableMap.of(
+                ImmutableMap.of(input(1), "v1"), "r1", ImmutableMap.of(input(1), "v2"), "r1"));
 
-    ImmutableList<ImmutableMap<Integer, String>> inputsList = logicExecInfo.inputsList();
+    ImmutableList<ImmutableMap<Facet, String>> inputsList = logicExecInfo.inputsList();
 
     List<Map<Integer, String>> dereffedInputList = new ArrayList<>();
-    for (ImmutableMap<Integer, String> inputs : inputsList) {
+    for (ImmutableMap<Facet, String> inputs : inputsList) {
       Map<Integer, String> map = new LinkedHashMap<>();
       inputs.forEach(
           (inputName, valueRef) -> {
-            map.put(inputName, (String) kryonExecutionReport.dataMap().get(valueRef));
+            map.put(inputName.id(), (String) kryonExecutionReport.dataMap().get(valueRef));
           });
       dereffedInputList.add(map);
     }
@@ -102,9 +114,12 @@ class DefaultKryonExecutionReportTest {
     KryonLogicId kryonLogicId = new KryonLogicId(kryonId, "kryon_1__logic_1");
     ImmutableList<Facets> facetsList =
         ImmutableList.of(
-            new ImmutableFacetsMap(new SimpleRequestBuilder<>(ImmutableMap.of(1, withValue("v1")))),
             new ImmutableFacetsMap(
-                new SimpleRequestBuilder<>(ImmutableMap.of(2, withValue("v2")))));
+                new SimpleRequestBuilder<>(Set.of(input(1)), ImmutableMap.of(1, withValue("v1"))),
+                Set.of(input(1))),
+            new ImmutableFacetsMap(
+                new SimpleRequestBuilder<>(Set.of(input(2)), ImmutableMap.of(2, withValue("v2"))),
+                Set.of(input(2))));
 
     clock.setInstant(START_TIME);
     kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetsList);
@@ -126,9 +141,12 @@ class DefaultKryonExecutionReportTest {
     KryonLogicId kryonLogicId = new KryonLogicId(kryonId, "kryon_1__logic_1");
     ImmutableList<Facets> facetsList =
         ImmutableList.of(
-            new ImmutableFacetsMap(new SimpleRequestBuilder<>(ImmutableMap.of(1, withValue("v1")))),
             new ImmutableFacetsMap(
-                new SimpleRequestBuilder<>(ImmutableMap.of(2, withValue("v2")))));
+                new SimpleRequestBuilder<>(Set.of(input(1)), ImmutableMap.of(1, withValue("v1"))),
+                Set.of(input(1))),
+            new ImmutableFacetsMap(
+                new SimpleRequestBuilder<>(Set.of(input(2)), ImmutableMap.of(2, withValue("v2"))),
+                Set.of(input(2))));
 
     clock.setInstant(START_TIME);
     kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetsList);
@@ -165,9 +183,12 @@ class DefaultKryonExecutionReportTest {
     KryonLogicId kryonLogicId = new KryonLogicId(kryonId, "kryon_1__logic_1");
     ImmutableList<Facets> facetsList =
         ImmutableList.of(
-            new ImmutableFacetsMap(new SimpleRequestBuilder<>(ImmutableMap.of(1, withValue("v1")))),
             new ImmutableFacetsMap(
-                new SimpleRequestBuilder<>(ImmutableMap.of(2, withValue("v2")))));
+                new SimpleRequestBuilder<>(Set.of(input(1)), ImmutableMap.of(1, withValue("v1"))),
+                Set.of(input(1))),
+            new ImmutableFacetsMap(
+                new SimpleRequestBuilder<>(Set.of(input(2)), ImmutableMap.of(2, withValue("v2"))),
+                Set.of(input(2))));
 
     clock.setInstant(END_TIME);
     String result = "r1";

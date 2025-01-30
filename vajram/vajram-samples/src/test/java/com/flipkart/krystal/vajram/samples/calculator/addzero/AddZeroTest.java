@@ -53,8 +53,7 @@ class AddZeroTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
-        graph.getVajramId(Adder.class),
-        InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
+        graph.getVajramId(Adder.class), InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
@@ -65,7 +64,7 @@ class AddZeroTest {
       future =
           krystexVajramExecutor.execute(
               graph.getVajramId((AddZero.class)),
-              AddZeroRequest._builder().number(5)._build(),
+              AddZero_ImmutReqPojo._builder().number(5)._build(),
               KryonExecutionConfig.builder().executionId("addZeroTest").build());
     }
     assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(5);

@@ -6,8 +6,8 @@ import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil._r
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.data.RequestBuilder;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
@@ -25,7 +25,7 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request, DV extend
   }
 
   @Override
-  public ResolverCommand resolve(RequestBuilder depRequest, Facets facets) {
+  public ResolverCommand resolve(Builder depRequest, Facets facets) {
     {
       long start = System.nanoTime();
       try {
@@ -39,19 +39,19 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request, DV extend
                 facets);
         if (depCommand instanceof MultiExecute<T>) {
           if (depCommand.shouldSkip()) {
-            return skip(depCommand.doc());
+            return skip(depCommand.doc(), depCommand.skipCause());
           } else {
-            Iterator<RequestBuilder> newReqIterator =
-                new Iterator<RequestBuilder>() {
+            Iterator<Builder> newReqIterator =
+                new Iterator<Builder>() {
                   private boolean first = true;
 
                   @Override
-                  public RequestBuilder next() {
+                  public Builder next() {
                     if (first) {
                       first = false;
-                      return (RequestBuilder) depRequest;
+                      return (Builder) depRequest;
                     } else {
-                      return (RequestBuilder) depRequest._newCopy();
+                      return (Builder) depRequest._newCopy();
                     }
                   }
 
@@ -62,14 +62,13 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request, DV extend
                 };
             if (depCommand.inputs().size() == 1) {
               getResolverSpec().targetInput().setToRequest(depRequest, depCommand.inputs().get(0));
-              return executeWithRequests(ImmutableList.of((RequestBuilder) depRequest));
+              return executeWithRequests(ImmutableList.of((Builder) depRequest));
             } else {
               return executeWithRequests(
                   depCommand.inputs().stream()
                       .map(
                           o -> {
-                            RequestBuilder next =
-                                (RequestBuilder) depRequest._newCopy();
+                            Builder next = (Builder) depRequest._newCopy();
                             getResolverSpec().targetInput().setToRequest(next, o);
                             return next;
                           })
@@ -84,7 +83,8 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request, DV extend
         return skip(
             String.format(
                 "Got exception %s while executing the resolver of the dependency %s",
-                e, getDependency().name()));
+                e, getDependency().name()),
+            e);
       } finally {
         TIME.add(System.nanoTime() - start);
       }

@@ -4,7 +4,7 @@ import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloFacets.friendIds_i;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloFacets.hellos_i;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloRequest.skip_i;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloFacets.skip_i;
 import static java.lang.System.lineSeparator;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
@@ -18,9 +18,9 @@ import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsServiceRequest;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService_Req;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_Req;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -41,12 +41,12 @@ public abstract class MutualFriendsHello extends ComputeVajram<String> {
     String hellos;
   }
 
-  @Resolve(dep = friendIds_i, depInputs = FriendsServiceRequest.userId_i)
+  @Resolve(dep = friendIds_i, depInputs = FriendsService_Req.userId_i)
   public static String userIdForFriendService(String userId) {
     return userId;
   }
 
-  @Resolve(dep = hellos_i, depInputs = HelloFriendsV2Request.userId_i)
+  @Resolve(dep = hellos_i, depInputs = HelloFriendsV2_Req.userId_i)
   public static MultiExecute<String> userIDForHelloService(
       @Using(friendIds_i) Set<String> friendIds, @Using(skip_i) Optional<Boolean> skip) {
     if (skip.orElse(false)) {
@@ -56,7 +56,7 @@ public abstract class MutualFriendsHello extends ComputeVajram<String> {
   }
 
   @Output
-  static String sayHelloToMutualFriends(FanoutDepResponses hellos) {
+  static String sayHelloToMutualFriends(FanoutDepResponses<HelloFriendsV2_Req, String> hellos) {
     List<String> result = new ArrayList<>();
     for (var response : hellos.requestResponsePairs()) {
       response.response().valueOpt().ifPresent(result::add);

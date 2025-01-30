@@ -19,8 +19,7 @@ import java.util.function.Predicate;
  * @param <CV> CurrentVajram: The current vajram which is resolving the input
  * @param <DV> DependencyVajram: The vajram whose input is being resolved
  */
-public final class Transform1FanoutResolverStage<
-    S, T, CV extends Request, DV extends Request> {
+public final class Transform1FanoutResolverStage<S, T, CV extends Request, DV extends Request> {
   private final InputDefinition<T, DV> targetInput;
   private final FacetSpec<S, CV> sourceFacet;
   private final List<SkipPredicate<?>> skipConditions = new ArrayList<>();

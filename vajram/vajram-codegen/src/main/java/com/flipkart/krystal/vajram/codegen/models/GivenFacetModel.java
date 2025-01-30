@@ -18,6 +18,7 @@ import org.checkerframework.common.returnsreceiver.qual.This;
 public record GivenFacetModel<T>(
     int id,
     @NonNull String name,
+    @NonNull VajramInfoLite vajramInfo,
     @NonNull DataType<T> dataType,
     boolean isMandatory,
     @NonNull String documentation,
@@ -46,6 +47,11 @@ public record GivenFacetModel<T>(
       }
     }
     return sources.build();
+  }
+
+  @Override
+  public boolean isGiven() {
+    return true;
   }
 
   public static class GivenFacetModelBuilder<T> {

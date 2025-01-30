@@ -9,7 +9,7 @@ public final class ComputeLogicDefinition<T> extends OutputLogicDefinition<T> {
 
   public ComputeLogicDefinition(
       KryonLogicId kryonLogicId,
-      Set<Facet> usedFacets,
+      Set<? extends Facet> usedFacets,
       OutputLogic<T> outputLogic,
       ElementTags tags) {
     super(kryonLogicId, usedFacets, tags, outputLogic);

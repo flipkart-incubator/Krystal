@@ -1,10 +1,6 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
-import static com.flipkart.krystal.data.Errable.errableFrom;
-
-import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.FacetsBuilder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
@@ -26,8 +22,8 @@ public final class OptionalFacetDefaultSpec<T, CV extends Request> extends Defau
       String documentation,
       boolean isBatched,
       ElementTags tags,
-      Function<Facets, T> getFromFacets,
-      BiConsumer<Facets, T> setToFacets) {
+      Function<Facets, @Nullable T> getFromFacets,
+      BiConsumer<Facets, @Nullable T> setToFacets) {
     super(
         id,
         name,

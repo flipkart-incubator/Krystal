@@ -12,6 +12,7 @@ import lombok.NonNull;
 public record DependencyModel(
     int id,
     @NonNull String name,
+    @NonNull VajramInfoLite vajramInfo,
     @NonNull VajramInfoLite depVajramInfoLite,
     @NonNull DataType<?> dataType,
     @NonNull String depReqClassQualifiedName,

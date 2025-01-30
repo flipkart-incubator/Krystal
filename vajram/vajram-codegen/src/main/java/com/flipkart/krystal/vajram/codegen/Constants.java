@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.codegen;
 
+import com.squareup.javapoet.CodeBlock;
+
 public final class Constants {
 
   public static final String COGENGEN_PHASE_KEY = "krystal.vajram.codegen.phase";
@@ -44,8 +46,9 @@ public final class Constants {
   public static final String IMMUT_FACETS_CLASS_SUFFIX = "ImmutableFacets";
   public static final String FACETS_LIST = "_facetsList";
   public static final String BATCH_FACETS = "BatchFacets";
-  public static final String BATCH_IMMUT_FACETS_CLASS_SUFFIX = "Batch" + IMMUT_FACETS_CLASS_SUFFIX;
+  public static final String BATCH_FACETS_SUFFIX = "_BatchElem";
   public static final String COMMON_INPUTS = "CommonFacets";
+  public static final String COMMON_FACETS_SUFFIX = "_CommonFacets";
   public static final String COMMON_IMMUT_FACETS_CLASS_SUFFIX =
       "Common" + IMMUT_FACETS_CLASS_SUFFIX;
   public static final String FACETS_VAR = "_facets";
@@ -78,7 +81,7 @@ public final class Constants {
           $commonInput:T _common = $facetsList:L.get(0)._common();
           for ($facets:T $facetsVar:L : $facetsList:L) {
             $unmodInput:T _castFacets = ($unmodInput:T) $facetsVar:L;
-            $inputBatching:T im = _castFacets._batchable();
+            $inputBatching:T im = _castFacets._batchElement();
             _batches.put(im, $facetsVar:L);
           }
           $map:T<$facets:T, $comFuture:T<$facetJavaType:T>> returnValue = new $linkHashMap:T<>();
@@ -98,7 +101,7 @@ public final class Constants {
           $commonInput:T _common = (($unmodInput:T)$facetsList:L.get(0))._common();
           for ($facets:T $facetsVar:L : $facetsList:L) {
             $unmodInput:T _castFacets = ($unmodInput:T) $facetsVar:L;
-            $inputBatching:T _batch = _castFacets._batchable();
+            $inputBatching:T _batch = _castFacets._batchElement();
             _batches.put(_batch, $facetsVar:L);
           }
       """;
@@ -111,6 +114,7 @@ public final class Constants {
                 _result.<$facetJavaType:T>thenApply($function:T.identity())));
           return $imMap:T.copyOf(_returnValue);
       """;
+  public static final CodeBlock EMPTY_CODE_BLOCK = CodeBlock.builder().build();
 
   private Constants() {}
 }

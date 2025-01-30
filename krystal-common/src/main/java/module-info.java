@@ -5,6 +5,7 @@ module flipkart.krystal.common {
   requires java.compiler;
   requires java.xml;
   requires org.slf4j;
+  requires jdk.httpserver;
 
   exports com.flipkart.krystal.data;
   exports com.flipkart.krystal.facets;

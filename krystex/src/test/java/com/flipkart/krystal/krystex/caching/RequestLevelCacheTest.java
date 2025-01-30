@@ -15,7 +15,7 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.FacetsMapBuilder;
-import com.flipkart.krystal.data.SimpleRequest;
+import com.flipkart.krystal.data.SimpleImmutRequest;
 import com.flipkart.krystal.data.SimpleRequestBuilder;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
@@ -35,6 +35,7 @@ import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
+import com.flipkart.krystal.krystex.testutils.SimpleFacet;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.tags.ElementTags;
@@ -113,19 +114,19 @@ class RequestLevelCacheTest {
                 .kryonLogicId(),
             ImmutableMap.of(),
             ImmutableMap.of(),
-            newCreateNewRequestLogic("kryon"),
+            newCreateNewRequestLogic("kryon", emptySet()),
             newFacetsFromRequestLogic("kryon"),
             null,
             ElementTags.of(List.of(externalInvocation(true))));
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            SimpleRequest.empty(),
+            SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> future2 =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            SimpleRequest.empty(),
+            SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("req_2").build());
 
     kryonExecutor.close();
@@ -161,7 +162,7 @@ class RequestLevelCacheTest {
                 .kryonLogicId(),
             ImmutableMap.of(),
             ImmutableMap.of(),
-            newCreateNewRequestLogic("kryon"),
+            newCreateNewRequestLogic("kryon", emptySet()),
             newFacetsFromRequestLogic("kryon"),
             null,
             ElementTags.of(List.of(externalInvocation(true))));
@@ -169,12 +170,12 @@ class RequestLevelCacheTest {
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            SimpleRequest.empty(),
+            SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> future2 =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            SimpleRequest.empty(),
+            SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("req_2").build());
 
     kryonExecutor.close();
@@ -231,14 +232,16 @@ class RequestLevelCacheTest {
   private static LogicDefinition<FacetsFromRequest> newFacetsFromRequestLogic(String kryonName) {
     return new LogicDefinition<>(
         new KryonLogicId(new KryonId(kryonName), kryonName + ":facetsFromRequest"),
-        request -> new FacetsMapBuilder((SimpleRequestBuilder<Object>) request._asBuilder()));
+        request ->
+            new FacetsMapBuilder((SimpleRequestBuilder<Object>) request._asBuilder(), Set.of()));
   }
 
   @NonNull
-  private static LogicDefinition<CreateNewRequest> newCreateNewRequestLogic(String kryonName) {
+  private static LogicDefinition<CreateNewRequest> newCreateNewRequestLogic(
+      String kryonName, Set<SimpleFacet> inputDefs) {
     return new LogicDefinition<>(
         new KryonLogicId(new KryonId(kryonName), kryonName + ":newRequest"),
-        SimpleRequestBuilder::new);
+        () -> new SimpleRequestBuilder(inputDefs));
   }
 
   public static Stream<Arguments> executorConfigsToTest() {

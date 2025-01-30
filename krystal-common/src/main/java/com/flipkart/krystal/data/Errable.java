@@ -1,13 +1,15 @@
 package com.flipkart.krystal.data;
 
+import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.except.ThrowingCallable;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Success, Failure, Nil {
+public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Success, Failure {
 
   /**
    * @return a {@link CompletableFuture} which is completed exceptionally with the error if this is
@@ -18,9 +20,7 @@ public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Succes
 
   Optional<T> valueOpt();
 
-  default Optional<Throwable> errorOpt() {
-    return Optional.empty();
-  }
+  Optional<Throwable> errorOpt();
 
   /**
    * @return a non-empty {@link Optional} if this is a {@link Success} or empty {@link Optional} it
@@ -31,7 +31,22 @@ public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Succes
    */
   Optional<T> valueOptOrThrow();
 
+  /**
+   *
+   *
+   * <ul>
+   *   <li>NonNil: returns the value <br>
+   *   <li>Nil: throws {@link NoSuchElementException} <br>
+   *   <li>Failure: throws a {@link RuntimeException} representing the throwable which caused the
+   *       failure. If the throwable is a {@link RuntimeException}, it is thrown as is. Else it is
+   *       wrapped in a {@link StackTracelessException} and thrown.
+   * </ul>
+   */
   T valueOrThrow();
+
+  /************************************************************************************************/
+  /*************************************** Static utilities ***************************************/
+  /************************************************************************************************/
 
   static <T> Errable<T> of(Errable<T> t) {
     return t;
@@ -43,24 +58,24 @@ public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Succes
 
   static <T> Errable<T> of(@Nullable Object t) {
     if (t instanceof Errable<?>) {
-      if (t instanceof Success<?> success) {
+      if (t instanceof NonNil<?> success) {
         return of((T) success.value());
       } else {
         return (Errable<T>) t;
       }
     } else if (t instanceof Optional<?> o) {
-      return of((T) o.get());
+      return of(((Optional<T>) o).orElse(null));
     } else {
       return withValue((T) t);
     }
   }
 
   static <T> Errable<T> nil() {
-    return Nil.nil();
+    return Success.nil();
   }
 
   static <T> Errable<T> withValue(@Nullable T t) {
-    return t != null ? new Success<>(t) : nil();
+    return t != null ? new NonNil<>(t) : nil();
   }
 
   static <T> Errable<T> withError(Throwable t) {

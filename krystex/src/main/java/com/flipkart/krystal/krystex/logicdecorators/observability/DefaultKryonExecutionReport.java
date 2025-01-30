@@ -2,6 +2,7 @@ package com.flipkart.krystal.krystex.logicdecorators.observability;
 
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.stream.Collectors.toMap;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
@@ -191,7 +192,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
       FanoutDepResponses<?, ?> depResponses) {
     return depResponses.requestResponsePairs().stream()
         .collect(
-            Collectors.toMap(
+            toMap(
                 e -> extractAndConvertFacets(e.request()), //
                 e -> convertErrable(e.response())));
   }
@@ -200,8 +201,10 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
       LogicExecResults logicExecResults) {
     return logicExecResults.responses().stream()
         .collect(
-            Collectors.toMap(
-                e -> extractAndConvertFacets(e.facets()), e -> convertErrable(e.response())));
+            toMap(
+                e -> extractAndConvertFacets(e.facets()),
+                e -> convertErrable(e.response()),
+                (o1, o2) -> o1));
   }
 
   public static <T> String hashValues(T input) {

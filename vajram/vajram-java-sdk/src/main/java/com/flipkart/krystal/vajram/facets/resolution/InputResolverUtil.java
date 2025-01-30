@@ -8,10 +8,10 @@ import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.ImmutableRequest.Builder;
+import com.flipkart.krystal.data.NonNil;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.data.RequestBuilder;
 import com.flipkart.krystal.data.RequestResponse;
-import com.flipkart.krystal.data.Success;
 import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
@@ -32,10 +32,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputResolverUtil {
 
-  public static ResolverCommand toResolverCommand(
-      DependencyCommand<RequestBuilder> dependencyCommand) {
+  public static ResolverCommand toResolverCommand(DependencyCommand<Builder> dependencyCommand) {
     if (dependencyCommand.shouldSkip()) {
-      return ResolverCommand.skip(dependencyCommand.doc());
+      return ResolverCommand.skip(dependencyCommand.doc(), dependencyCommand.skipCause());
     }
     return ResolverCommand.executeWithRequests(dependencyCommand.inputs());
   }
@@ -46,18 +45,11 @@ public final class InputResolverUtil {
 
   public static <T> DependencyCommand<T> handleResolverException(
       Throwable e, boolean fanout, String messagePrefix) {
-    String exceptionMessage = e.getMessage();
-    if (e instanceof SkippedExecutionException skippedExecutionException) {
-      exceptionMessage = skippedExecutionException.getMessage();
-    }
-    if (exceptionMessage == null) {
-      exceptionMessage = messagePrefix + ' ' + e;
-    }
     DependencyCommand<T> command;
     if (fanout) {
-      command = skipFanout(exceptionMessage);
+      command = skipFanout(messagePrefix, e);
     } else {
-      command = skipExecution(exceptionMessage);
+      command = skipExecution(messagePrefix, e);
     }
     return command;
   }
@@ -80,12 +72,12 @@ public final class InputResolverUtil {
             Errable.withValue(
                 depSpec.getFacetValue(facets).requestResponsePairs().stream()
                     .map(RequestResponse::response)
-                    .filter(e -> e instanceof Success<?>)
-                    .map(e -> (Success<?>) e)
-                    .map(Success::value)
+                    .filter(e -> e instanceof NonNil<?>)
+                    .map(e -> (NonNil<?>) e)
+                    .map(NonNil::value)
                     .toList());
       } else if (sourceInput instanceof DefaultFacetSpec mandatoryFacetDefaultSpec) {
-        inputValue = Errable.withValue(mandatoryFacetDefaultSpec.getFacetValue(facets));
+        inputValue = mandatoryFacetDefaultSpec.getFacetValue(facets);
       } else {
         throw new UnsupportedOperationException("Unknown facet type " + sourceInput.getClass());
       }
@@ -142,7 +134,7 @@ public final class InputResolverUtil {
     if (spec.canFanout()) {
       return new SimpleFanoutInputResolver<>(dependency, spec);
     } else {
-      return new SimpleSingleInputResolver<>(dependency, spec);
+      return new SimpleOne2OneInputResolver<>(dependency, spec);
     }
   }
 

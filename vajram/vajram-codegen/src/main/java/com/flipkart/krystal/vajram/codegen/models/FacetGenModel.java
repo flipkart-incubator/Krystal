@@ -10,6 +10,8 @@ public sealed interface FacetGenModel permits GivenFacetModel, DependencyModel {
 
   String name();
 
+  VajramInfoLite vajramInfo();
+
   boolean isMandatory();
 
   VariableElement facetField();
@@ -22,5 +24,9 @@ public sealed interface FacetGenModel permits GivenFacetModel, DependencyModel {
 
   default boolean isOptional() {
     return !isMandatory();
+  }
+
+  default boolean isGiven() {
+    return false;
   }
 }

@@ -8,16 +8,12 @@ import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+@SuppressWarnings("Singleton")
 @EqualsAndHashCode
 @ToString
-final class Nil<T> implements Errable<T> {
-  static final Nil<Object> NIL = new Nil<>();
-
-  private final CompletableFuture<@Nullable T> NIL_FUTURE = completedFuture(null);
-
-  static <T> Nil<T> nil() {
-    return (Nil<T>) NIL;
-  }
+final class Nil<T> extends Success<T> {
+  private static final Nil NIL = new Nil();
+  private static final CompletableFuture NIL_FUTURE = completedFuture(null);
 
   @Override
   public CompletableFuture<@Nullable T> toFuture() {
@@ -29,15 +25,9 @@ final class Nil<T> implements Errable<T> {
     return Optional.empty();
   }
 
-  @Override
-  public Optional<T> valueOptOrThrow() {
-    return Optional.empty();
+  static <T> Nil<T> nil() {
+    return NIL;
   }
 
-  @Override
-  public T valueOrThrow() {
-    return valueOpt().orElseThrow();
-  }
-
-  Nil() {}
+  private Nil() {}
 }

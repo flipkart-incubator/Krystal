@@ -6,7 +6,7 @@ import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderFacets.chainSum_i;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderFacets.sum_i;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderRequest.numbers_i;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdder_Req.numbers_i;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.FanoutDepResponses;
@@ -53,12 +53,12 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
     }
   }
 
-  @Resolve(dep = sum_i, depInputs = AdderRequest.numberOne_i)
+  @Resolve(dep = sum_i, depInputs = Adder_Req.numberOne_i)
   public static SingleExecute<Integer> adderNumberOne(@Using(numbers_i) List<Integer> numbers) {
     return skipAdder(numbers).orElseGet(() -> executeWith(numbers.get(0)));
   }
 
-  @Resolve(dep = sum_i, depInputs = AdderRequest.numberTwo_i)
+  @Resolve(dep = sum_i, depInputs = Adder_Req.numberTwo_i)
   public static SingleExecute<Integer> adderNumberTwo(@Using(numbers_i) List<Integer> numbers) {
     return skipAdder(numbers)
         .orElseGet(
@@ -72,8 +72,7 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
   }
 
   @Output
-  static Integer add(
-      Errable<Integer> sum, FanoutDepResponses<ChainAdderRequest, Integer> chainSum) {
+  static Integer add(Errable<Integer> sum, FanoutDepResponses<ChainAdder_Req, Integer> chainSum) {
     return sum.valueOpt().orElse(0)
         + chainSum.requestResponsePairs().stream()
             .mapToInt(response -> response.response().valueOpt().orElse(0))

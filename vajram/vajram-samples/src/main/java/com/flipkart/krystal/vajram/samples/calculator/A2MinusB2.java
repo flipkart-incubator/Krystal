@@ -9,7 +9,7 @@ import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2Facets.a_s
 import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2Facets.diff_s;
 import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2Facets.twoA_s;
 import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2Facets.twoB_s;
-import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2Request.b_s;
+import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Req.b_s;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajram;
@@ -20,9 +20,9 @@ import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.multiplier.Multiplier;
-import com.flipkart.krystal.vajram.samples.calculator.multiplier.MultiplierRequest;
+import com.flipkart.krystal.vajram.samples.calculator.multiplier.Multiplier_Req;
 import com.flipkart.krystal.vajram.samples.calculator.subtractor.Subtractor;
-import com.flipkart.krystal.vajram.samples.calculator.subtractor.SubtractorRequest;
+import com.flipkart.krystal.vajram.samples.calculator.subtractor.Subtractor_Req;
 import com.google.common.collect.ImmutableCollection;
 
 /** Computes a*2 - b*2 */
@@ -49,16 +49,16 @@ public abstract class A2MinusB2 extends ComputeVajram<Integer> {
     return resolve(
         dep(
             twoA_s,
-            depInput(MultiplierRequest.numberOne_s).usingAsIs(A2MinusB2Facets.a_s).asResolver(),
-            depInput(MultiplierRequest.numberTwo_s).usingValueAsResolver(() -> 2)),
+            depInput(Multiplier_Req.numberOne_s).usingAsIs(A2MinusB2Facets.a_s).asResolver(),
+            depInput(Multiplier_Req.numberTwo_s).usingValueAsResolver(() -> 2)),
         dep(
             twoB_s,
-            depInput(MultiplierRequest.numberOne_s).usingAsIs(A2MinusB2Facets.b_s).asResolver(),
-            depInput(MultiplierRequest.numberTwo_s).usingValueAsResolver(() -> 2)),
+            depInput(Multiplier_Req.numberOne_s).usingAsIs(A2MinusB2Facets.b_s).asResolver(),
+            depInput(Multiplier_Req.numberTwo_s).usingValueAsResolver(() -> 2)),
         dep(
             diff_s,
-            depInput(SubtractorRequest.numberOne_s).usingAsIs(twoA_s).asResolver(),
-            depInput(SubtractorRequest.numberTwo_s).usingAsIs(twoB_s).asResolver()));
+            depInput(Subtractor_Req.numberOne_s).usingAsIs(twoA_s).asResolver(),
+            depInput(Subtractor_Req.numberTwo_s).usingAsIs(twoB_s).asResolver()));
   }
 
   @Output

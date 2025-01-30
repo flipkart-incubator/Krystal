@@ -2,6 +2,7 @@ package com.flipkart.krystal.data;
 
 import static java.util.concurrent.CompletableFuture.failedFuture;
 
+import com.flipkart.krystal.except.StackTracelessException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import lombok.EqualsAndHashCode;
@@ -53,6 +54,6 @@ public final class Failure<T> implements Errable<T> {
   }
 
   private RuntimeException asRuntimException() {
-    return error instanceof RuntimeException e ? e : new RuntimeException(error);
+    return error instanceof RuntimeException e ? e : new StackTracelessException("Failure", error);
   }
 }

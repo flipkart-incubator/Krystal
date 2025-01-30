@@ -1,9 +1,11 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2;
 
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Facets.hellos_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Request.skip_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Request.userIds_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Facets.skip_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Facets.userIds_s;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.FanoutDepResponses;
@@ -15,7 +17,7 @@ import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_Req;
 import com.google.common.collect.ImmutableCollection;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +40,7 @@ public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
     return resolve(
         dep(
             hellos_s,
-            depInputFanout(HelloFriendsV2Request.userId_s)
+            depInputFanout(HelloFriendsV2_Req.userId_s)
                 .using(userIds_s, skip_s)
                 .asResolver(
                     (userIds, skip) -> {
@@ -51,7 +53,7 @@ public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
 
   @Output
   static String sayHellos(
-      Optional<Boolean> skip, FanoutDepResponses hellos) {
+      Optional<Boolean> skip, FanoutDepResponses<HelloFriendsV2_Req, String> hellos) {
     if (skip.orElse(false)) {
       return "";
     }

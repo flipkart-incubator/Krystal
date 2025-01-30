@@ -9,7 +9,7 @@ public final class IOLogicDefinition<T> extends OutputLogicDefinition<T> {
 
   public IOLogicDefinition(
       KryonLogicId kryonLogicId,
-      Set<Facet> usedFacets,
+      Set<? extends Facet> usedFacets,
       OutputLogic<T> outputLogic,
       ElementTags tags) {
     super(kryonLogicId, usedFacets, tags, outputLogic);

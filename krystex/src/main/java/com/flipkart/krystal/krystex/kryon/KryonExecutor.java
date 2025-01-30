@@ -15,12 +15,14 @@ import static java.util.stream.Collectors.groupingBy;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.FacetsBuilder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
+import com.flipkart.krystal.krystex.commands.ForwardSend;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationInput;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
@@ -291,28 +293,49 @@ public final class KryonExecutor implements KrystalExecutor {
   private <R extends KryonResponse> CompletableFuture<R> _executeCommand(
       KryonCommand kryonCommand) {
     try {
-      validate(kryonCommand);
+      if (kryonCommand instanceof ForwardSend forwardSend) {
+        return _executeCommand(
+            new ForwardReceive(
+                forwardSend.kryonId(),
+                forwardSend.executableRequests().entrySet().stream()
+                    .collect(
+                        toImmutableMap(
+                            Entry::getKey,
+                            e ->
+                                kryonDefinitionRegistry
+                                    .get(kryonCommand.kryonId())
+                                    .facetsFromRequest()
+                                    .logic()
+                                    .facetsFromRequest(e.getValue()))),
+                forwardSend.dependantChain(),
+                forwardSend.skippedRequests()));
+      }
+      try {
+        validate(kryonCommand);
+      } catch (Throwable e) {
+        return failedFuture(e);
+      }
+      KryonId kryonId = kryonCommand.kryonId();
+      @SuppressWarnings("unchecked")
+      Kryon<KryonCommand, R> kryon = (Kryon<KryonCommand, R>) kryonRegistry.get(kryonId);
+      for (KryonDecorator kryonDecorator : getSortedKryonDecorators(kryonId, kryonCommand)) {
+        @SuppressWarnings("unchecked")
+        Kryon<KryonCommand, R> decoratedKryon =
+            (Kryon<KryonCommand, R>)
+                kryonDecorator.decorateKryon(
+                    new KryonDecorationInput((Kryon<KryonCommand, KryonResponse>) kryon, this));
+        kryon = decoratedKryon;
+      }
+      if (kryonCommand instanceof Flush flush) {
+        kryon.executeCommand(flush);
+        @SuppressWarnings("unchecked")
+        CompletableFuture<R> f = completedFuture((R) FlushResponse.getInstance());
+        return f;
+      } else {
+        return kryon.executeCommand(kryonCommand);
+      }
     } catch (Throwable e) {
       return failedFuture(e);
-    }
-    KryonId kryonId = kryonCommand.kryonId();
-    @SuppressWarnings("unchecked")
-    Kryon<KryonCommand, R> kryon = (Kryon<KryonCommand, R>) kryonRegistry.get(kryonId);
-    for (KryonDecorator kryonDecorator : getSortedKryonDecorators(kryonId, kryonCommand)) {
-      @SuppressWarnings("unchecked")
-      Kryon<KryonCommand, R> decoratedKryon =
-          (Kryon<KryonCommand, R>)
-              kryonDecorator.decorateKryon(
-                  new KryonDecorationInput((Kryon<KryonCommand, KryonResponse>) kryon, this));
-      kryon = decoratedKryon;
-    }
-    if (kryonCommand instanceof Flush flush) {
-      kryon.executeCommand(flush);
-      @SuppressWarnings("unchecked")
-      CompletableFuture<R> f = completedFuture((R) FlushResponse.getInstance());
-      return f;
-    } else {
-      return kryon.executeCommand(kryonCommand);
     }
   }
 

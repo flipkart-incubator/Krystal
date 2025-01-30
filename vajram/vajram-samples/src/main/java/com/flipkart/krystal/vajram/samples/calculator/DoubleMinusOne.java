@@ -22,9 +22,9 @@ import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajram.samples.calculator.multiplier.Multiplier;
-import com.flipkart.krystal.vajram.samples.calculator.multiplier.MultiplierRequest;
+import com.flipkart.krystal.vajram.samples.calculator.multiplier.Multiplier_Req;
 import com.flipkart.krystal.vajram.samples.calculator.subtractor.Subtractor;
-import com.flipkart.krystal.vajram.samples.calculator.subtractor.SubtractorRequest;
+import com.flipkart.krystal.vajram.samples.calculator.subtractor.Subtractor_Req;
 import com.google.common.collect.ImmutableCollection;
 import java.util.Iterator;
 import java.util.List;
@@ -50,19 +50,17 @@ public abstract class DoubleMinusOne extends ComputeVajram<Integer> {
   @Override
   public ImmutableCollection<SimpleInputResolver> getSimpleInputResolvers() {
     return resolve(
-        dep(
-            doubledNumbers_s,
-            depInput(MultiplierRequest.numberTwo_s).usingValueAsResolver(() -> 2)),
-        dep(result_s, depInput(SubtractorRequest.numberTwo_s).usingValueAsResolver(() -> 1)));
+        dep(doubledNumbers_s, depInput(Multiplier_Req.numberTwo_s).usingValueAsResolver(() -> 2)),
+        dep(result_s, depInput(Subtractor_Req.numberTwo_s).usingValueAsResolver(() -> 1)));
   }
 
-  @Resolve(dep = doubledNumbers_i, depInputs = MultiplierRequest.numberOne_i)
+  @Resolve(dep = doubledNumbers_i, depInputs = Multiplier_Req.numberOne_i)
   static MultiExecute<Integer> numbersToDouble(List<Integer> numbers) {
     return executeFanoutWith(numbers);
   }
 
-  @Resolve(dep = result_i, depInputs = SubtractorRequest.numberOne_i)
-  static int sumOfDoubles(FanoutDepResponses<DoubleMinusOneRequest, Integer> doubledNumbers) {
+  @Resolve(dep = result_i, depInputs = Subtractor_Req.numberOne_i)
+  static int sumOfDoubles(FanoutDepResponses<Multiplier_Req, Integer> doubledNumbers) {
     return doubledNumbers.requestResponsePairs().stream()
         .map(RequestResponse::response)
         .map(Errable::valueOpt)

@@ -1,5 +1,6 @@
 package com.flipkart.krystal.data;
 
+import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.facets.RemoteInput;
 import com.google.common.collect.ImmutableSet;
 
@@ -8,7 +9,7 @@ public interface Request<T> extends FacetContainer {
 
   ImmutableRequest<T> _build();
 
-  RequestBuilder<T> _asBuilder();
+  Builder<T> _asBuilder();
 
   Request<T> _newCopy();
 

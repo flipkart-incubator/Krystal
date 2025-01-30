@@ -3,20 +3,28 @@ package com.flipkart.krystal.data;
 import com.flipkart.krystal.facets.Facet;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.Objects;
+import java.util.Set;
+import lombok.Getter;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class ImmutableFacetsMap implements FacetsMap, ImmutableFacets {
 
-  private final SimpleRequest<Object> request;
-  private final ImmutableMap<Integer, FacetValue> data;
+  private final SimpleImmutRequest<Object> request;
+  @Getter private ImmutableSet<? extends Facet> _facets;
+  private final ImmutableMap<Integer, FacetValue> otherFacets;
 
-  public ImmutableFacetsMap(SimpleRequestBuilder<Object> request) {
-    this(request, ImmutableMap.of());
+  public ImmutableFacetsMap(SimpleRequestBuilder<Object> request, Set<? extends Facet> _facets) {
+    this(request, _facets, ImmutableMap.of());
   }
 
   public ImmutableFacetsMap(
-      SimpleRequestBuilder<Object> request, ImmutableMap<Integer, FacetValue> otherFacets) {
+      SimpleRequestBuilder<Object> request,
+      Set<? extends Facet> _facets,
+      ImmutableMap<Integer, FacetValue> otherFacets) {
     this.request = request._build();
-    this.data = otherFacets;
+    this._facets = ImmutableSet.copyOf(_facets);
+    this.otherFacets = otherFacets;
   }
 
   public FacetValue _get(int facetId) {
@@ -28,7 +36,7 @@ public final class ImmutableFacetsMap implements FacetsMap, ImmutableFacets {
         throw new AssertionError("This should not be possible sinve _hasValue is true");
       }
     }
-    return data.getOrDefault(facetId, Errable.nil());
+    return otherFacets.getOrDefault(facetId, Errable.nil());
   }
 
   @Override
@@ -36,7 +44,7 @@ public final class ImmutableFacetsMap implements FacetsMap, ImmutableFacets {
     if (request._hasValue(facetId)) {
       return request._get(facetId);
     } else {
-      FacetValue datum = data.getOrDefault(facetId, Errable.nil());
+      FacetValue datum = otherFacets.getOrDefault(facetId, Errable.nil());
       if (datum instanceof Errable<?> errable) {
         return errable;
       } else {
@@ -48,7 +56,7 @@ public final class ImmutableFacetsMap implements FacetsMap, ImmutableFacets {
   @SuppressWarnings("unchecked")
   @Override
   public FanoutDepResponses _getDepResponses(int facetId) {
-    FacetValue datum = data.getOrDefault(facetId, Errable.nil());
+    FacetValue datum = otherFacets.getOrDefault(facetId, Errable.nil());
     if (datum instanceof FanoutDepResponses errable) {
       return (FanoutDepResponses) errable;
     } else {
@@ -60,21 +68,17 @@ public final class ImmutableFacetsMap implements FacetsMap, ImmutableFacets {
   public ImmutableMap<Integer, FacetValue> _asMap() {
     return ImmutableMap.<Integer, FacetValue>builder()
         .putAll(request._asMap())
-        .putAll(data)
+        .putAll(otherFacets)
         .build();
   }
 
-  public ImmutableSet<Facet> _facets() {
-    return ImmutableSet.of();
-  }
-
   public boolean _hasValue(int facetId) {
-    return request._hasValue(facetId) || data.containsKey(facetId);
+    return request._hasValue(facetId) || otherFacets.containsKey(facetId);
   }
 
   @Override
   public FacetsMapBuilder _asBuilder() {
-    return new FacetsMapBuilder(request._asBuilder(), data);
+    return new FacetsMapBuilder(request._asBuilder(), _facets, otherFacets);
   }
 
   @Override
@@ -85,5 +89,15 @@ public final class ImmutableFacetsMap implements FacetsMap, ImmutableFacets {
   @Override
   public ImmutableFacetsMap _newCopy() {
     return this;
+  }
+
+  public boolean equals(@Nullable final Object o) {
+    if (o == this) return true;
+    if (!(o instanceof FacetsMap other)) return false;
+    return Objects.equals(this._asMap(), other._asMap());
+  }
+
+  public int hashCode() {
+    return Objects.hash(this._asMap());
   }
 }

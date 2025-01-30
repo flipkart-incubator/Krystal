@@ -71,13 +71,9 @@ public record InputBatcherConfig(
                 .toString(),
         batcherContext -> true,
         batcherContext -> {
-          @SuppressWarnings("unchecked")
-          BatchableSupplier<Facets, Facets> facetsConvertor =
-              (BatchableSupplier<Facets, Facets>) batcherContext.vajram().getBatchFacetsConvertor();
           return new InputBatchingDecorator(
               batcherContext.logicDecoratorContext().instanceId(),
               inputBatcherSupplier.get(),
-              facetsConvertor,
               dependantChain ->
                   batcherContext
                       .logicDecoratorContext()
@@ -104,11 +100,8 @@ public record InputBatcherConfig(
             dependantChains.contains(
                 batcherContext.logicDecoratorContext().logicExecutionContext().dependants()),
         batcherContext -> {
-          @SuppressWarnings("unchecked")
-          BatchableSupplier<Facets, Facets> facetsConvertor =
-              (BatchableSupplier<Facets, Facets>) batcherContext.vajram().getBatchFacetsConvertor();
           return new InputBatchingDecorator(
-              instanceId, inputBatcherSupplier.get(), facetsConvertor, dependantChains::contains);
+              instanceId, inputBatcherSupplier.get(), dependantChains::contains);
         });
   }
 

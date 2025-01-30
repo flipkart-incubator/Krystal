@@ -2,7 +2,6 @@ package com.flipkart.krystal.data;
 
 import com.flipkart.krystal.facets.BasicFacetInfo;
 import com.google.common.collect.ImmutableSet;
-import java.util.Map;
 
 /**
  * Marker interface extended by auto-generated classes holding facet values of a vajram. This class

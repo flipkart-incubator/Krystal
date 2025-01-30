@@ -6,7 +6,6 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.FacetsBuilder;
-import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
@@ -22,7 +21,7 @@ public abstract sealed class DefaultFacetSpec<T, CV extends Request>
     permits MandatoryFacetDefaultSpec, OptionalFacetDefaultSpec {
 
   private final Function<Facets, @Nullable T> getFromFacets;
-  private final BiConsumer<Facets, T> setToFacets;
+  private final BiConsumer<Facets, @Nullable T> setToFacets;
 
   public DefaultFacetSpec(
       int id,
@@ -34,7 +33,7 @@ public abstract sealed class DefaultFacetSpec<T, CV extends Request>
       boolean isBatched,
       ElementTags tags,
       Function<Facets, @Nullable T> getFromFacets,
-      BiConsumer<Facets, T> setToFacets) {
+      BiConsumer<Facets, @Nullable T> setToFacets) {
     super(id, name, type, facetTypes, ofVajram, documentation, isBatched, tags);
     this.getFromFacets = getFromFacets;
     this.setToFacets = setToFacets;

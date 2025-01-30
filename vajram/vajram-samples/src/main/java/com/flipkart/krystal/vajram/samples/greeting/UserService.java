@@ -2,14 +2,13 @@ package com.flipkart.krystal.vajram.samples.greeting;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.batching.Batch;
-import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.samples.greeting.UserServiceFacets.BatchFacets;
 import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.Map;
@@ -26,34 +25,31 @@ public abstract class UserService extends IOVajram<UserInfo> {
   }
 
   @Output
-  static Map<BatchFacets, CompletableFuture<UserInfo>> callUserService(
-      ImmutableList<BatchFacets> _batches) {
+  static Map<UserService_BatchElem, CompletableFuture<UserInfo>> callUserService(
+      ImmutableList<UserService_BatchElem> _batches) {
 
     // Make a call to user service and get user info
-    CompletableFuture<List<UserInfo>> serviceResponse = batchServiceCall(_batches);
+    CompletableFuture<Map<UserService_BatchElem, UserInfo>> resultsFuture =
+        batchServiceCall(_batches);
 
-    CompletableFuture<Map<BatchFacets, UserInfo>> resultsFuture =
-        serviceResponse.thenApply(
-            userInfos ->
-                userInfos.stream()
-                    .collect(
-                        Collectors.toMap(
-                            userInfo -> BatchFacets._builder().userId(userInfo.userId())._build(),
-                            userInfo -> userInfo)));
     return _batches.stream()
         .collect(
             toImmutableMap(
-                im -> im,
-                im ->
+                identity(),
+                batch ->
                     resultsFuture.thenApply(
-                        results -> Optional.ofNullable(results.get(im)).orElseThrow())));
+                        results -> Optional.ofNullable(results.get(batch)).orElseThrow())));
   }
 
-  private static CompletableFuture<List<UserInfo>> batchServiceCall(List<BatchFacets> modInputs) {
+  private static CompletableFuture<Map<UserService_BatchElem, UserInfo>> batchServiceCall(
+      List<UserService_BatchElem> modInputs) {
     return completedFuture(
         modInputs.stream()
-            .map(BatchFacets::userId)
-            .map(userId -> new UserInfo(userId, "Firstname Lastname (%s)".formatted(userId)))
-            .toList());
+            .collect(
+                Collectors.toMap(
+                    identity(),
+                    batch ->
+                        new UserInfo(
+                            batch.userId(), "Firstname Lastname (%s)".formatted(batch.userId())))));
   }
 }

@@ -1,6 +1,7 @@
-package com.flipkart.krystal.vajram;
+package com.flipkart.krystal.vajram.exception;
 
 import com.flipkart.krystal.except.StackTracelessException;
+import com.flipkart.krystal.vajram.VajramID;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;

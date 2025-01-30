@@ -30,8 +30,7 @@ public final class ResolveStage<I, DV extends Request> {
    * @see #using(FacetSpec)
    * @param sourceInput the spec of the source input being used for resolution
    */
-  public <CV extends Request> AsIsResolverStage<I, CV, DV> usingAsIs(
-      FacetSpec<I, CV> sourceInput) {
+  public <CV extends Request> AsIsResolverStage<I, CV, DV> usingAsIs(FacetSpec<I, CV> sourceInput) {
     return new AsIsResolverStage<>(targetInput, sourceInput);
   }
 

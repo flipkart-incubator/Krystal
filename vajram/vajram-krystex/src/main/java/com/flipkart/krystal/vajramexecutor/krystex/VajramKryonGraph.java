@@ -12,10 +12,12 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.function.Function.identity;
 
+import com.flipkart.krystal.data.DepResponse;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.RequestBuilder;
+import com.flipkart.krystal.data.ImmutableRequest.Builder;
+import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Success;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;
@@ -39,15 +41,15 @@ import com.flipkart.krystal.krystex.resolution.Resolver;
 import com.flipkart.krystal.krystex.resolution.ResolverLogic;
 import com.flipkart.krystal.vajram.BatchableVajram;
 import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.MandatoryFacetsMissingException;
+import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.VajramDefinitionException;
+import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.exec.VajramExecutableGraph;
 import com.flipkart.krystal.vajram.facets.resolution.FanoutInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
-import com.flipkart.krystal.vajram.facets.resolution.SingleInputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.One2OneInputResolver;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig.BatcherContext;
@@ -67,7 +69,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
-import lombok.Builder;
 import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -88,7 +89,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
   /** LogicDecorator Id -> LogicDecoratorConfig */
   private final ImmutableMap<String, OutputLogicDecoratorConfig> sessionScopedDecoratorConfigs;
 
-  @Builder
+  @lombok.Builder
   private VajramKryonGraph(
       Set<String> packagePrefixes,
       Map<String, OutputLogicDecoratorConfig> sessionScopedDecoratorConfigs) {
@@ -320,9 +321,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                   sources,
                   (depRequests, facets) -> {
                     validateMandatory(vajramId, facets, requiredInputs);
-                    ResolverCommand resolverCommand = ResolverCommand.skip("");
+                    ResolverCommand resolverCommand;
                     try {
-                      if (inputResolver instanceof SingleInputResolver singleInputResolver) {
+                      if (inputResolver instanceof One2OneInputResolver singleInputResolver) {
                         resolverCommand = singleInputResolver.resolve(depRequests, facets);
                       } else if (inputResolver instanceof FanoutInputResolver fanoutInputResolver) {
                         if (depRequests.size() != 1) {
@@ -332,6 +333,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                                   + " can have at most one fanout resolver");
                         }
                         resolverCommand = fanoutInputResolver.resolve(depRequests.get(0), facets);
+                      } else {
+                        throw new UnsupportedOperationException(
+                            "Unsupported input resolver type: " + inputResolver);
                       }
                     } catch (Throwable t) {
                       resolverCommand =
@@ -368,12 +372,12 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
               Map<Facet, ResolverCommand> resolverCommandsByDep = new LinkedHashMap<>();
               resolversByDep.forEach(
                   (depId, resolvers) -> {
-                    ImmutableList<RequestBuilder> depRequests =
+                    ImmutableList<Builder> depRequests =
                         ImmutableList.of(newRequestForDependency(depId));
                     for (InputResolver inputResolver : resolvers) {
                       ResolverCommand resolverCommand = ResolverCommand.skip("");
                       try {
-                        if (inputResolver instanceof SingleInputResolver singleInputResolver) {
+                        if (inputResolver instanceof One2OneInputResolver singleInputResolver) {
                           resolverCommand = singleInputResolver.resolve(depRequests, facets);
                         } else if (inputResolver
                             instanceof FanoutInputResolver fanoutInputResolver) {
@@ -397,7 +401,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
         ImmutableMap.copyOf(resolverDefinitions), multiResolverDefinition.kryonLogicId());
   }
 
-  private RequestBuilder newRequestForDependency(Facet dependencyId) {
+  private Builder newRequestForDependency(Facet dependencyId) {
     return checkNotNull(
             vajramDefinitions.get(
                 (VajramID) ((DependencySpec<?, ?, ?>) checkNotNull(dependencyId)).onVajramId()))
@@ -421,6 +425,15 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                   .orElse(
                       new NoSuchElementException(
                           "No value present for facet '%s'".formatted(mandatoryFacet.name()))));
+        }
+      } else if (value instanceof DepResponse<?, ?> depResponse) {
+        if (depResponse instanceof One2OneDepResponse<?, ?> one2OneDepResponse) {
+          if (one2OneDepResponse instanceof One2OneDepResponse.NoRequest noRequest) {
+            missingMandatoryValues.put(
+                mandatoryFacet.name(),
+                new NoSuchElementException(
+                    "No value present for facet '%s'".formatted(mandatoryFacet.name())));
+          }
         }
       }
     }

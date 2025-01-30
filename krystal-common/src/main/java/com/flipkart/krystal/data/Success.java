@@ -1,50 +1,26 @@
 package com.flipkart.krystal.data;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
-
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import lombok.EqualsAndHashCode;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
-@EqualsAndHashCode(of = "value")
-public final class Success<T> implements Errable<T> {
-  private final @NonNull T value;
+public abstract sealed class Success<T> implements Errable<T> permits Nil, NonNil {
 
-  private @MonotonicNonNull CompletableFuture<@Nullable T> c;
-  private Optional<T> o = Optional.empty();
-
-  public Success(@NonNull T value) {
-    this.value = value;
-  }
+  private static final Success NIL = Nil.nil();
 
   @Override
-  public CompletableFuture<@Nullable T> toFuture() {
-    return c != null ? c : (c = completedFuture(value));
-  }
-
-  @Override
-  public Optional<T> valueOpt() {
-    return o.isPresent() ? o : (o = Optional.of(value));
-  }
-
-  @Override
-  public Optional<T> valueOptOrThrow() {
-    return valueOpt();
-  }
-
-  @Override
-  public T valueOrThrow() {
+  public final T valueOrThrow() {
     return valueOpt().orElseThrow();
   }
 
-  public T value() {
-    return value;
+  @Override
+  public final Optional<T> valueOptOrThrow() {
+    return valueOpt();
   }
 
-  public String toString() {
-    return value.toString();
+  public final Optional<Throwable> errorOpt() {
+    return Optional.empty();
+  }
+
+  static <T> Success<T> nil() {
+    return NIL;
   }
 }

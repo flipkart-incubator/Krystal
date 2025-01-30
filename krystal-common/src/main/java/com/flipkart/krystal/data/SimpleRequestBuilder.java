@@ -2,65 +2,83 @@ package com.flipkart.krystal.data;
 
 import static com.flipkart.krystal.data.Errable.nil;
 
+import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.except.IllegalModificationException;
 import com.flipkart.krystal.facets.RemoteInput;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import lombok.EqualsAndHashCode;
+import java.util.Objects;
+import java.util.Set;
+import lombok.Getter;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-@EqualsAndHashCode
-public final class SimpleRequestBuilder<T> implements RequestBuilder {
-  private final Map<Integer, Errable<Object>> data;
+@Getter
+public final class SimpleRequestBuilder<T> implements Builder {
 
-  public SimpleRequestBuilder() {
-    this(new LinkedHashMap<>());
+  private final ImmutableSet<? extends RemoteInput> _facets;
+  private final Map<Integer, Errable<Object>> _data;
+
+  public SimpleRequestBuilder(Set<? extends RemoteInput> _facets) {
+    this(_facets, new LinkedHashMap<>());
   }
 
-  public SimpleRequestBuilder(Map<Integer, Errable<Object>> data) {
-    this.data = data;
+  public SimpleRequestBuilder(
+      Set<? extends RemoteInput> _facets, Map<Integer, Errable<Object>> data) {
+    this._facets = ImmutableSet.copyOf(_facets);
+    this._data = data;
   }
 
   public Errable<Object> _get(int facetId) {
-    return data.getOrDefault(facetId, nil());
+    return _data.getOrDefault(facetId, nil());
   }
 
   public Map<Integer, Errable<Object>> _asMap() {
-    return data;
+    return _data;
   }
 
-  public ImmutableSet<RemoteInput> _facets() {
-    return ImmutableSet.of();
+  public ImmutableSet<? extends RemoteInput> _facets() {
+    return _facets;
   }
 
   public boolean _hasValue(int facetId) {
-    return data.containsKey(facetId);
+    return _data.containsKey(facetId);
   }
 
   @Override
-  public SimpleRequest<T> _build() {
-    return new SimpleRequest<>(data);
+  public SimpleImmutRequest<T> _build() {
+    return new SimpleImmutRequest<>(_data);
   }
 
-  public RequestBuilder _set(int facetId, FacetValue value) {
+  public Builder _set(int facetId, FacetValue value) {
     if (!(value instanceof Errable<?> errable)) {
       throw new IllegalArgumentException(
           "Expected Errable but found %s".formatted(value.getClass()));
     }
-    if (data.containsKey(facetId)) {
+    if (_data.containsKey(facetId)) {
       throw new IllegalModificationException();
     }
-    data.put(facetId, (Errable<Object>) errable);
+    _data.put(facetId, (Errable<Object>) errable);
     return this;
   }
 
   @Override
   public SimpleRequestBuilder<T> _newCopy() {
-    return new SimpleRequestBuilder<>(new LinkedHashMap<>(data));
+    return new SimpleRequestBuilder<>(_facets, new LinkedHashMap<>(_data));
   }
 
   @Override
   public SimpleRequestBuilder<T> _asBuilder() {
     return this;
+  }
+
+  public boolean equals(@Nullable final Object o) {
+    if (o == this) return true;
+    if (!(o instanceof SimpleRequest<?> other)) return false;
+    return Objects.equals(this._data, other._asMap());
+  }
+
+  public int hashCode() {
+    return Objects.hash(this._data);
   }
 }

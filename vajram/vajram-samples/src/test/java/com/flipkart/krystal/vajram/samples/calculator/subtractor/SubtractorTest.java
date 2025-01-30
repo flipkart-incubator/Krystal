@@ -52,7 +52,7 @@ class SubtractorTest {
       future =
           krystexVajramExecutor.execute(
               graph.getVajramId(Subtractor.class),
-              SubtractorRequest._builder().numberOne(5).numberTwo(7)._build());
+              Subtractor_ImmutReqPojo._builder().numberOne(5).numberTwo(7)._build());
     }
     Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(-2);
   }

@@ -26,7 +26,7 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
 
   protected OutputLogicDefinition(
       KryonLogicId kryonLogicId,
-      Set<Facet> usedFacets,
+      Set<? extends Facet> usedFacets,
       ElementTags tags,
       OutputLogic<T> outputLogic) {
     super(kryonLogicId, usedFacets, tags, outputLogic);

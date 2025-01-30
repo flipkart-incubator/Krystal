@@ -6,8 +6,24 @@ package com.flipkart.krystal.data;
 public interface ImmutableRequest<T> extends Request<T>, ImmutableFacetContainer {
 
   @Override
-  ImmutableRequest _build();
+  default ImmutableRequest _build() {
+    return this;
+  }
 
   @Override
   ImmutableRequest _newCopy();
+
+  /**
+   * @param <T> The response type of the vajram corresponding to this request
+   */
+  interface Builder<T> extends Request<T>, FacetContainerBuilder {
+
+    @Override
+    default Builder<T> _asBuilder() {
+      return this;
+    }
+
+    @Override
+    Builder _newCopy();
+  }
 }

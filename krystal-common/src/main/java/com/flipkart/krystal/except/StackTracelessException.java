@@ -15,7 +15,7 @@ public class StackTracelessException extends RuntimeException {
     super(message);
   }
 
-  public StackTracelessException(String message, Exception cause) {
+  public StackTracelessException(String message, Throwable cause) {
     super(message, cause);
   }
 

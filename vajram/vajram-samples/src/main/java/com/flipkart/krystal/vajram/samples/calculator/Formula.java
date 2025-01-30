@@ -8,9 +8,6 @@ import static com.flipkart.krystal.vajram.samples.calculator.FormulaFacets.p_s;
 import static com.flipkart.krystal.vajram.samples.calculator.FormulaFacets.q_s;
 import static com.flipkart.krystal.vajram.samples.calculator.FormulaFacets.quotient_s;
 import static com.flipkart.krystal.vajram.samples.calculator.FormulaFacets.sum_s;
-import static com.flipkart.krystal.vajram.samples.calculator.FormulaRequest.*;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.AdderRequest.*;
-import static com.flipkart.krystal.vajram.samples.calculator.divider.DividerRequest.*;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.Errable;
@@ -22,7 +19,9 @@ import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
+import com.flipkart.krystal.vajram.samples.calculator.adder.Adder_Req;
 import com.flipkart.krystal.vajram.samples.calculator.divider.Divider;
+import com.flipkart.krystal.vajram.samples.calculator.divider.Divider_Req;
 import com.google.common.collect.ImmutableCollection;
 import java.util.Optional;
 
@@ -49,13 +48,13 @@ public abstract class Formula extends ComputeVajram<Integer> {
         /* sum = adder(numberOne=p, numberTwo=q) */
         dep(
             sum_s,
-            depInput(numberOne_s).usingAsIs(p_s).asResolver(),
-            depInput(numberTwo_s).usingAsIs(q_s).asResolver()),
+            depInput(Adder_Req.numberOne_s).usingAsIs(p_s).asResolver(),
+            depInput(Adder_Req.numberTwo_s).usingAsIs(q_s).asResolver()),
         /* quotient = divider(numerator = a, denominator= sum) */
         dep(
             quotient_s,
-            depInput(numerator_s).usingAsIs(a_s).asResolver(),
-            depInput(denominator_s).usingAsIs(sum_s).asResolver()));
+            depInput(Divider_Req.numerator_s).usingAsIs(a_s).asResolver(),
+            depInput(Divider_Req.denominator_s).usingAsIs(sum_s).asResolver()));
   }
 
   @Output

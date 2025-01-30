@@ -1,7 +1,5 @@
 package com.flipkart.krystal.vajram;
 
-import java.util.Collection;
-
 // @jdk.internal.ValueBased
 public record VajramID(String vajramId) {
 

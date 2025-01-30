@@ -54,9 +54,7 @@ class VajramPlugin implements Plugin<Project> {
             // with the full compile step. This is so that gradle caching works optimally - gradle doesn't cache outputs of tasks
             // which share output directories with other tasks -
             // See: https://docs.gradle.org/current/userguide/build_cache_concepts.html#concepts_overlapping_outputs
-            getDestinationDirectory().set(
-                    project.getObjects().directoryProperty().fileValue(
-                            getBuildDir(project).toPath().resolve(EMPTY_DIR).toFile()))
+            getDestinationDirectory().set(project.getObjects().directoryProperty().fileValue(getBuildDir(project).toPath().resolve(EMPTY_DIR).toFile()))
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
             options.generatedSourceOutputDirectory.fileValue(project.file(mainModelsGenDir))
@@ -74,8 +72,7 @@ class VajramPlugin implements Plugin<Project> {
                     // So that @Resolver method param names can be read at runtime
                     // in case @Using annotation has not been used on the parameters
                     // See VajramDefinition#parseInputResolvers
-                    '-parameters'
-            ]
+                    '-parameters']
         }
 
         project.tasks.register('testCodeGenVajramModels', JavaCompile) {
@@ -83,20 +80,18 @@ class VajramPlugin implements Plugin<Project> {
             group = 'krystal'
             mustRunAfter it.project.tasks.compileJava
             source mainSrcDir, testSrcDir
-            classpath = project.configurations.testCompileClasspath + project.configurations.compileClasspath
+            classpath = project.configurations.compileClasspath + project.configurations.testCompileClasspath
             // This is a 'proc:only' compile step. Which means, no .class files are generated. This means the destinationDirectory property
             // is not essential used by this step.
             // We reassign the `destinationDirectory` to a dummy empty directory so that the destination directory doesnot clash
             // with the full compile step. This is so that gradle caching works optimally - gradle doesn't cache outputs of tasks
             // which share output directories with other tasks -
             // See: https://docs.gradle.org/current/userguide/build_cache_concepts.html#concepts_overlapping_outputs
-            getDestinationDirectory().set(
-                    project.getObjects().directoryProperty().fileValue(
-                            getBuildDir(project).toPath().resolve(EMPTY_DIR).toFile()))
+            getDestinationDirectory().set(project.getObjects().directoryProperty().fileValue(getBuildDir(project).toPath().resolve(EMPTY_DIR).toFile()))
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileTestJava.options.annotationProcessorPath
             options.generatedSourceOutputDirectory.fileValue(project.file(testModelsGenDir))
-            options.compilerArgs += ['-A' + COGENGEN_PHASE_KEY + '=' + MODELS]
+            options.compilerArgs += ['-proc:only', '-A' + COGENGEN_PHASE_KEY + '=' + MODELS]
         }
 
         project.tasks.named("jar").configure { it.dependsOn("compileJava") }

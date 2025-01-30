@@ -7,7 +7,6 @@ import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.add;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderFacets.splitSum1_s;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderFacets.splitSum2_s;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderRequest.*;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -125,7 +124,7 @@ class SplitAdderTest {
       future =
           krystexVajramExecutor.execute(
               graph.getVajramId(SplitAdder.class),
-              SplitAdderRequest._builder().numbers(List.of())._build(),
+              SplitAdder_ImmutReqPojo._builder().numbers(List.of())._build(),
               KryonExecutionConfig.builder()
                   .disabledDependantChains(disabledDepChains(graph))
                   .build());
@@ -280,7 +279,7 @@ class SplitAdderTest {
       VajramKryonGraph graph, KrystexVajramExecutor krystexVajramExecutor, int multiplier) {
     return krystexVajramExecutor.execute(
         graph.getVajramId(SplitAdder.class),
-        SplitAdderRequest._builder()
+        SplitAdder_ImmutReqPojo._builder()
             .numbers(
                 new ArrayList<>(
                     Stream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)

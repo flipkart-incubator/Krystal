@@ -26,7 +26,7 @@ import com.flipkart.krystal.data.FacetsBuilder;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.data.RequestBuilder;
+import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.facets.Dependency;
@@ -257,12 +257,12 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
             ResolverDefinition fanoutResolverDef = null;
             if (fanoutResolvers.size() > 1) {
               throw new IllegalStateException(
-                  "Multiple fanout resolvers found for dependency %s. This is not supported."
-                      .formatted(dep));
+                  "Multiple fanout resolvers found for dependency %s of vajram %s. This is not supported."
+                      .formatted(dep, kryonId.value()));
             } else if (fanoutResolvers.size() == 1) {
               fanoutResolverDef = fanoutResolvers.get(0);
             }
-            Supplier<RequestBuilder> newDepRequestBuilder =
+            Supplier<Builder> newDepRequestBuilder =
                 () ->
                     requireNonNull(
                             kryonDefinition
@@ -271,7 +271,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
                         .createNewRequest()
                         .logic()
                         .newRequestBuilder();
-            ImmutableList<RequestBuilder> depRequestBuilders =
+            ImmutableList<Builder> depRequestBuilders =
                 ImmutableList.of(newDepRequestBuilder.get());
             ResolverCommand resolverCommand = null;
             for (ResolverDefinition resolverDef : oneToOneResolvers) {
@@ -286,7 +286,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
                       .getResolver(resolver.resolverKryonLogicId())
                       .logic()
                       .resolve(depRequestBuilders, facets);
-              depRequestBuilders = (ImmutableList<RequestBuilder>) resolverCommand.getRequests();
+              depRequestBuilders = (ImmutableList<Builder>) resolverCommand.getRequests();
             }
             if (fanoutResolverDef != null) {
               Resolver fanoutResolver =
@@ -357,9 +357,9 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
     return kryonDefinition.facetsFromRequest().logic().facetsFromRequest(emptyRequest());
   }
 
-  private RequestBuilder<Object> emptyRequest() {
+  private Builder<Object> emptyRequest() {
     //noinspection unchecked
-    return (RequestBuilder) kryonDefinition.createNewRequest().logic().newRequestBuilder();
+    return (Builder) kryonDefinition.createNewRequest().logic().newRequestBuilder();
   }
 
   private ForwardReceive getForwardCommand(DependantChain dependantChain) {
@@ -681,19 +681,17 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
                     getForwardCommand(dependantChain).executableRequests().get(requestId))));
   }
 
-  private FacetsBuilder facetsBuilderFromContainer(FacetContainer facetContainer) {
-    FacetsBuilder facetsBuilder;
+  private FacetsBuilder facetsBuilderFromContainer(@Nullable FacetContainer facetContainer) {
     if (facetContainer == null) {
-      facetsBuilder = emptyFacets();
+      return emptyFacets();
     } else if (facetContainer instanceof Request request) {
-      facetsBuilder = facetsFromRequest(request);
+      return facetsFromRequest(request);
     } else if (facetContainer instanceof Facets facets) {
-      facetsBuilder = facets._asBuilder();
+      return facets._asBuilder();
     } else {
       throw new UnsupportedOperationException(
           "Unknown container type " + facetContainer.getClass());
     }
-    return facetsBuilder;
   }
 
   private void collectInputValues(ForwardReceive forwardBatch) {
@@ -737,7 +735,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
           .filter(Objects::nonNull)
           .collect(toSet());
     } else {
-      throw new UnsupportedOperationException();
+      throw new UnsupportedOperationException("" + command);
     }
   }
 

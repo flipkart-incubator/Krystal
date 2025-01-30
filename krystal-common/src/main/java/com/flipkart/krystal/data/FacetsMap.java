@@ -7,7 +7,7 @@ public sealed interface FacetsMap extends Facets permits FacetsMapBuilder, Immut
   Errable<?> _getErrable(int facetId);
 
   @SuppressWarnings("unchecked")
-  FanoutDepResponses _getDepResponses(int facetId);
+  FanoutDepResponses<?, ?> _getDepResponses(int facetId);
 
   ImmutableMap<Integer, FacetValue> _asMap();
 }

@@ -1,12 +1,13 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends;
 
+import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsFacets.friendInfos_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsFacets.numberOfFriends_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsFacets.userId_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsFacets.userInfo_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.numberOfFriends_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.userId_s;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 
@@ -18,9 +19,10 @@ import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService_Req;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService_Req;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collections;
@@ -46,12 +48,12 @@ public abstract class HelloFriends extends ComputeVajram<String> {
     return resolve(
         dep(
             userInfo_s,
-            depInput(TestUserServiceRequest.userId_s)
+            depInput(TestUserService_Req.userId_s)
                 .using(userId_s)
                 .asResolver(s -> s.valueOpt().map(String::trim).orElse(null))),
         dep(
             friendInfos_s,
-            depInputFanout(TestUserServiceRequest.userId_s)
+            depInputFanout(TestUserService_Req.userId_s)
                 .using(userId_s, numberOfFriends_s)
                 .asResolver(
                     (userId, numberOfFriends) -> {
@@ -66,8 +68,7 @@ public abstract class HelloFriends extends ComputeVajram<String> {
 
   @Output
   static String sayHellos(
-      TestUserInfo userInfo,
-      FanoutDepResponses friendInfos) {
+      TestUserInfo userInfo, FanoutDepResponses<TestUserService_Req, TestUserInfo> friendInfos) {
     return "Hello Friends of %s! %s"
         .formatted(
             userInfo.userName(),

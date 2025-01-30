@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.batching;
 
 import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.facets.Input;
 
 /**
  * A facet with this annotation is batched using an {@link InputBatcher} . This annotation can only

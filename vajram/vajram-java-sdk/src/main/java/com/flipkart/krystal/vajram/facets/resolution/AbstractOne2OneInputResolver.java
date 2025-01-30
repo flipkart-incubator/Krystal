@@ -5,7 +5,7 @@ import com.flipkart.krystal.facets.resolution.ResolutionTarget;
 import com.google.common.collect.ImmutableSet;
 
 public abstract non-sealed class AbstractOne2OneInputResolver extends AbstractInputResolver
-    implements SingleInputResolver {
+    implements One2OneInputResolver {
 
   protected AbstractOne2OneInputResolver(
       ImmutableSet<Facet> sources, ResolutionTarget resolutionTarget) {

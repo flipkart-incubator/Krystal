@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
+import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.data.RequestBuilder;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.RemoteInput;
 import java.util.function.BiConsumer;
@@ -16,7 +16,7 @@ public final class InputDefinition<T, CV extends Request> implements RemoteInput
   @Getter private final String name;
   @Getter private final String documentation;
   private final Function<Request, @Nullable T> getFromRequest;
-  private final BiConsumer<RequestBuilder, @Nullable T> setToRequest;
+  private final BiConsumer<Builder, @Nullable T> setToRequest;
 
   public InputDefinition(
       int id,
@@ -25,7 +25,7 @@ public final class InputDefinition<T, CV extends Request> implements RemoteInput
       Class<CV> ofVajram,
       String documentation,
       Function<Request, @Nullable T> getFromRequest,
-      BiConsumer<RequestBuilder, @Nullable T> setToRequest) {
+      BiConsumer<Builder, @Nullable T> setToRequest) {
     this.id = id;
     this.name = name;
     this.type = type;
@@ -39,7 +39,7 @@ public final class InputDefinition<T, CV extends Request> implements RemoteInput
     return getFromRequest.apply(request);
   }
 
-  public void setToRequest(RequestBuilder request, @Nullable Object value) {
+  public void setToRequest(Builder request, @Nullable Object value) {
     setToRequest.accept(request, (T) value);
   }
 }

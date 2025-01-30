@@ -12,7 +12,6 @@ dependencies {
     api project(':krystex')
 
     testAnnotationProcessor 'com.flipkart.krystal:vajram-codegen'
-    testAnnotationProcessor 'org.projectlombok:lombok'
 
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
@@ -101,5 +100,8 @@ private static ArrayList<String> modulePathArgs(String moduleName) {
 
             '--add-modules', 'com.fasterxml.jackson.datatype.jsr310',
             '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jsr310",
+
+            '--add-modules', 'lombok',
+            '--add-reads', "$moduleName=lombok",
     ]
 }
