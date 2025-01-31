@@ -2,9 +2,9 @@ package com.flipkart.krystal.vajram.samples.calculator.adder;
 
 import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderFacets.splitSum1_i;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderFacets.splitSum2_i;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderFacets.sum_i;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdder_Fac.splitSum1_i;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdder_Fac.splitSum2_i;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdder_Fac.sum_i;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdder_Req.numbers_i;
 
 import com.flipkart.krystal.annos.ExternalInvocation;

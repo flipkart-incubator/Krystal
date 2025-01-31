@@ -17,7 +17,7 @@ public final class InputBatcherImpl implements InputBatcher {
 
   private static final int DEFAULT_BATCH_SIZE = 1;
   private @Nullable Consumer<ImmutableList<BatchedFacets>> batchingListener;
-  private final Map<ImmutableFacetContainer, List<BatchedFacetsElement>> unBatchedRequests =
+  private final Map<ImmutableFacetContainer, List<BatchEnabledFacets>> unBatchedRequests =
       new HashMap<>();
   private int minBatchSize = DEFAULT_BATCH_SIZE;
 
@@ -28,12 +28,10 @@ public final class InputBatcherImpl implements InputBatcher {
   }
 
   @Override
-  public ImmutableList<BatchedFacets> add(
-      BatchedFacetsElement batchableFacets, ImmutableFacetContainer immutableCommonFacets) {
-    unBatchedRequests
-        .computeIfAbsent(immutableCommonFacets, k -> new ArrayList<>())
-        .add(batchableFacets);
-    return getBatchedInputs(immutableCommonFacets, false);
+  public ImmutableList<BatchedFacets> add(BatchEnabledFacets batchEnabledFacets) {
+    ImmutableFacetContainer commonFacets = batchEnabledFacets._common();
+    unBatchedRequests.computeIfAbsent(commonFacets, k -> new ArrayList<>()).add(batchEnabledFacets);
+    return getBatchedInputs(commonFacets, false);
   }
 
   private ImmutableList<BatchedFacets> getBatchedInputs(
@@ -41,12 +39,13 @@ public final class InputBatcherImpl implements InputBatcher {
     if (commonFacets == null) {
       return ImmutableList.of();
     }
-    List<BatchedFacetsElement> batchableInputs =
+    List<BatchEnabledFacets> batchItems =
         unBatchedRequests.getOrDefault(commonFacets, ImmutableList.of());
-    if (force || batchableInputs.size() >= minBatchSize) {
+    if (force || batchItems.size() >= minBatchSize) {
+      ImmutableList<BatchedFacets> batchedFacets =
+          ImmutableList.of(new BatchedFacets(ImmutableList.copyOf(batchItems)));
       unBatchedRequests.put(commonFacets, new ArrayList<>());
-      return ImmutableList.of(
-          new BatchedFacets<>(ImmutableList.copyOf(batchableInputs), commonFacets));
+      return batchedFacets;
     }
     return ImmutableList.of();
   }

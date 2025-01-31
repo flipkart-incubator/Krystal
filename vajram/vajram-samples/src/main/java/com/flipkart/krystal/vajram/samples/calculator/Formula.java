@@ -3,11 +3,11 @@ package com.flipkart.krystal.vajram.samples.calculator;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
-import static com.flipkart.krystal.vajram.samples.calculator.FormulaFacets.a_s;
-import static com.flipkart.krystal.vajram.samples.calculator.FormulaFacets.p_s;
-import static com.flipkart.krystal.vajram.samples.calculator.FormulaFacets.q_s;
-import static com.flipkart.krystal.vajram.samples.calculator.FormulaFacets.quotient_s;
-import static com.flipkart.krystal.vajram.samples.calculator.FormulaFacets.sum_s;
+import static com.flipkart.krystal.vajram.samples.calculator.Formula_Fac.a_s;
+import static com.flipkart.krystal.vajram.samples.calculator.Formula_Fac.p_s;
+import static com.flipkart.krystal.vajram.samples.calculator.Formula_Fac.q_s;
+import static com.flipkart.krystal.vajram.samples.calculator.Formula_Fac.quotient_s;
+import static com.flipkart.krystal.vajram.samples.calculator.Formula_Fac.sum_s;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.Errable;

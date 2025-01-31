@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajram.facets.resolution;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
-import com.flipkart.krystal.vajram.facets.specs.InputDefinition;
+import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collection;
 import java.util.List;
@@ -18,7 +18,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <DV> The type of the vajram whose input is being resolved.
  */
 public record SimpleInputResolverSpec<T, CV extends Request, DV extends Request>(
-    InputDefinition<T, DV> targetInput,
+    InputMirrorSpec<T, DV> targetInput,
     ImmutableSet<FacetSpec<?, CV>> sources,
     List<SkipPredicate<?>> skipConditions,
     @Nullable Function<List<Errable<?>>, @Nullable T> transformer,

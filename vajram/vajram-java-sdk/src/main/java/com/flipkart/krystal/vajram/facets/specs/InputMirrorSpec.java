@@ -3,13 +3,13 @@ package com.flipkart.krystal.vajram.facets.specs;
 import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
-import com.flipkart.krystal.facets.RemoteInput;
+import com.flipkart.krystal.facets.InputMirror;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class InputDefinition<T, CV extends Request> implements RemoteInput {
+public final class InputMirrorSpec<T, CV extends Request> implements InputMirror {
   @Getter private final DataType<T> type;
   @Getter private final Class<CV> ofVajram;
   @Getter private final int id;
@@ -18,7 +18,7 @@ public final class InputDefinition<T, CV extends Request> implements RemoteInput
   private final Function<Request, @Nullable T> getFromRequest;
   private final BiConsumer<Builder, @Nullable T> setToRequest;
 
-  public InputDefinition(
+  public InputMirrorSpec(
       int id,
       String name,
       DataType<T> type,
@@ -45,6 +45,6 @@ public final class InputDefinition<T, CV extends Request> implements RemoteInput
 
   @Override
   public String toString() {
-    return "RemoteInput(id=" + id + ", name=" + name + ", doc=" + documentation + ')';
+    return "InputMirror(id=" + id + ", name=" + name + ", doc=" + documentation + ')';
   }
 }

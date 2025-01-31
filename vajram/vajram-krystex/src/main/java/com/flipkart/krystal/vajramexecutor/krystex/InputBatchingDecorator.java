@@ -18,9 +18,7 @@ import com.flipkart.krystal.krystex.logicdecoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecoratorCommand;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.vajram.batching.BatchEnabledFacets;
-import com.flipkart.krystal.vajram.batching.BatchEnabledImmutableFacets;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
-import com.flipkart.krystal.vajram.batching.BatchedFacetsElement;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -83,15 +81,15 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
               .collect(toImmutableList());
       List<BatchedFacets> batchedFacetsList =
           immutableFacetsList.stream()
-              .map(f -> (BatchEnabledImmutableFacets) f)
-              .map(unbatched -> inputBatcher.add(unbatched._batchElement(), unbatched._common()))
+              .map(f -> f)
+              .map(inputBatcher::add)
               .flatMap(Collection::stream)
               .toList();
       facetsList.forEach(
           facets ->
               futureCache.computeIfAbsent(
                   facets._build(), e -> new CompletableFuture<@Nullable Object>()));
-      for (BatchedFacets<BatchedFacetsElement, Facets> batchedFacets : batchedFacetsList) {
+      for (BatchedFacets batchedFacets : batchedFacetsList) {
         batchFacetsList(logicToDecorate, batchedFacets);
       }
       return facetsList.stream()
@@ -124,16 +122,10 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
     }
   }
 
-  @SuppressWarnings("UnnecessaryTypeArgument") // To Handle nullChecker errors
-  private void batchFacetsList(
-      OutputLogic<Object> logicToDecorate,
-      BatchedFacets<BatchedFacetsElement, Facets> batchedFacets) {
-    ImmutableList<BatchEnabledImmutableFacets> requests =
-        batchedFacets.batchItems().stream()
-            .map(each -> each._allFacetValues())
-            .collect(toImmutableList());
+  @SuppressWarnings("UnnecessaryTypeArgument") // --> To Handle nullChecker errors
+  private void batchFacetsList(OutputLogic<Object> logicToDecorate, BatchedFacets batchedFacets) {
+    ImmutableList<BatchEnabledFacets> facetsList = batchedFacets.batchItems();
     ImmutableMap<Facets, CompletableFuture<@Nullable Object>> result;
-    ImmutableList<BatchEnabledFacets> facetsList = requests.stream().collect(toImmutableList());
     try {
       result = logicToDecorate.execute(facetsList);
     } catch (Throwable e) {

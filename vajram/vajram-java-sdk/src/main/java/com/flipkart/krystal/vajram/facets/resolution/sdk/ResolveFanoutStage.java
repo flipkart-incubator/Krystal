@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajram.facets.resolution.sdk;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
-import com.flipkart.krystal.vajram.facets.specs.InputDefinition;
+import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collection;
 import java.util.List;
@@ -17,9 +17,9 @@ import java.util.function.Supplier;
  */
 public final class ResolveFanoutStage<I, DV extends Request> {
 
-  private final InputDefinition<I, DV> targetInput;
+  private final InputMirrorSpec<I, DV> targetInput;
 
-  ResolveFanoutStage(InputDefinition<I, DV> targetInput) {
+  ResolveFanoutStage(InputMirrorSpec<I, DV> targetInput) {
     this.targetInput = targetInput;
   }
 

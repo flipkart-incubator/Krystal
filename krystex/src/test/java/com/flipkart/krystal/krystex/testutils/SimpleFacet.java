@@ -15,7 +15,7 @@ import com.flipkart.krystal.data.SimpleRequest;
 import com.flipkart.krystal.data.SimpleRequestBuilder;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.FacetType;
-import com.flipkart.krystal.facets.RemoteInput;
+import com.flipkart.krystal.facets.InputMirror;
 import com.google.common.collect.ImmutableSet;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -27,7 +27,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Value
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @AllArgsConstructor(access = PACKAGE)
-public @NonFinal sealed class SimpleFacet implements Facet, RemoteInput permits SimpleDep {
+public @NonFinal sealed class SimpleFacet implements Facet, InputMirror permits SimpleDep {
 
   public static SimpleFacet input(int facetId) {
     return new SimpleFacet(facetId, "input" + count++, INPUT);

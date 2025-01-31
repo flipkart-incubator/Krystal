@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.batching;
 
 import com.flipkart.krystal.config.ConfigListener;
-import com.flipkart.krystal.data.ImmutableFacetContainer;
 import com.google.common.collect.ImmutableList;
 import java.util.function.Consumer;
 
@@ -22,14 +21,13 @@ import java.util.function.Consumer;
  */
 public interface InputBatcher extends ConfigListener {
 
-  ImmutableList<BatchedFacets> add(
-      BatchedFacetsElement batchableInputs, ImmutableFacetContainer immutableCommonFacets);
+  ImmutableList<BatchedFacets> add(BatchEnabledFacets batchEnabledFacets);
 
   /** Externally trigger batching */
   void batch();
 
   /**
-   * When this InputBatcher decides to modulate (due to some internal state like a timer), or when
+   * When this InputBatcher decides to batch (due to some internal state like a timer), or when
    * the {@link #batch()} method is called, execute the given callback.
    */
   void onBatching(Consumer<ImmutableList<BatchedFacets>> callback);

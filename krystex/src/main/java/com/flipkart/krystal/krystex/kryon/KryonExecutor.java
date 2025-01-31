@@ -5,7 +5,6 @@ import static com.flipkart.krystal.concurrent.Futures.propagateCancellation;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Sets.union;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -16,11 +15,8 @@ import static java.util.stream.Collectors.groupingBy;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.FacetsBuilder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.Dependency;
-import com.flipkart.krystal.facets.Facet;
-import com.flipkart.krystal.facets.RemoteInput;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.Flush;
@@ -49,7 +45,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
@@ -299,24 +294,6 @@ public final class KryonExecutor implements KrystalExecutor {
     try {
       if (kryonCommand instanceof ForwardSend forwardSend) {
         KryonDefinition kryonDefinition = kryonDefinitionRegistry.get(kryonCommand.kryonId());
-        ImmutableSet<Facet> availableFacets =
-            kryonDefinition.createNewRequest().logic().newRequestBuilder()._facets().stream()
-                .map(
-                    remoteInput -> {
-                      Facet facet = kryonDefinition.facetsById().get(remoteInput.id());
-                      if (facet == null) {
-                        AssertionError e = new AssertionError("Unidentified facet id");
-                        log.error(
-                            "Unknown facet id of facet {} reveived in kryon with id {}. Known facets ids: {}.",
-                            remoteInput,
-                            kryonCommand.kryonId(),
-                            kryonDefinition.facets(),
-                            e);
-                        throw e;
-                      }
-                      return facet;
-                    })
-                .collect(toImmutableSet());
         return _executeCommand(
             new ForwardReceive(
                 forwardSend.kryonId(),

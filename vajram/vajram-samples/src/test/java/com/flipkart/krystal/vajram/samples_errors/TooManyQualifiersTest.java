@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.samples_errors;
 
+import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
 import static com.google.inject.Guice.createInjector;
 import static com.google.inject.name.Names.named;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -12,6 +13,7 @@ import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.guice.VajramGuiceInjector;
+import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
@@ -57,7 +59,7 @@ class TooManyQualifiersTest {
               TooManyQualifiers_ImmutReqPojo._builder().input("i1")._build());
     }
     assertThat(result)
-        .failsWithin(1, SECONDS)
+        .failsWithin(TEST_TIMEOUT)
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(MandatoryFacetsMissingException.class)
         .withMessageContainingAll(

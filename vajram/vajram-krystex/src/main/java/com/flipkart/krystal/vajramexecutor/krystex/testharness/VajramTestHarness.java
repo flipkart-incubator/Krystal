@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex.testharness;
 
+import static com.flipkart.krystal.vajram.utils.Constants.IMMUT_FACETS_CLASS_SUFFIX;
+
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ImmutableFacets;
@@ -7,6 +9,7 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
+import com.flipkart.krystal.vajram.utils.Constants;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import jakarta.inject.Inject;
 import java.util.HashMap;
@@ -42,7 +45,7 @@ public class VajramTestHarness {
   @SuppressWarnings("unchecked")
   public <T> VajramTestHarness withMock(ImmutableFacets facets, Errable<T> response) {
     String requestName = facets.getClass().getSimpleName();
-    int index = requestName.lastIndexOf("Facets");
+    int index = requestName.lastIndexOf(IMMUT_FACETS_CLASS_SUFFIX);
     String vajramId = requestName.substring(0, index);
     Map<ImmutableFacets, Errable<Object>> mockDataMap = this.vajramIdMockData.get(vajramId);
     if (Objects.isNull(mockDataMap)) {

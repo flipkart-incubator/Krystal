@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.samples.greeting;
 
-import static com.flipkart.krystal.vajram.samples.greeting.GreetingFacets.userInfo_i;
+import static com.flipkart.krystal.vajram.samples.greeting.Greeting_Fac.userInfo_i;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajram;

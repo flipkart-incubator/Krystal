@@ -12,7 +12,7 @@ import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.Facet;
-import com.flipkart.krystal.facets.RemoteInput;
+import com.flipkart.krystal.facets.InputMirror;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.google.common.collect.ImmutableCollection;
@@ -29,10 +29,8 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.ToString;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -123,9 +121,9 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     }
   }
 
-  private ImmutableMap<RemoteInput, String> extractAndConvertFacets(Request request) {
-    Map<RemoteInput, String> inputMap = new LinkedHashMap<>();
-    ((ImmutableSet<? extends RemoteInput>) request._facets())
+  private ImmutableMap<InputMirror, String> extractAndConvertFacets(Request request) {
+    Map<InputMirror, String> inputMap = new LinkedHashMap<>();
+    ((ImmutableSet<? extends InputMirror>) request._facets())
         .stream()
             .forEach(
                 (inputDef) -> {
@@ -190,7 +188,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     return sha256;
   }
 
-  private Map<ImmutableMap<RemoteInput, String>, Object> convertResult(
+  private Map<ImmutableMap<InputMirror, String>, Object> convertResult(
       FanoutDepResponses<?, ?> depResponses) {
     return depResponses.requestResponsePairs().stream()
         .collect(
@@ -222,12 +220,15 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
   @Getter
   static final class LogicExecInfo {
 
-    private final String kryonId;
-    private final ImmutableList<ImmutableMap<Facet, String>> inputsList;
+    @JsonProperty private final String kryonId;
+    @JsonProperty private final ImmutableList<ImmutableMap<Facet, String>> inputsList;
+
+    @JsonProperty
     private final @Nullable ImmutableList<ImmutableMap<Facet, Object>> dependencyResults;
-    private @Nullable Object result;
-    @Getter private final long startTimeMs;
-    @Getter private long endTimeMs;
+
+    @JsonProperty private @Nullable Object result;
+    @JsonProperty private final long startTimeMs;
+    @JsonProperty private long endTimeMs;
 
     LogicExecInfo(
         DefaultKryonExecutionReport kryonExecutionReport,

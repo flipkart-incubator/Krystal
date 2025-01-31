@@ -65,7 +65,7 @@ public class VajramImplGenProcessor extends AbstractProcessor {
       VajramCodeGenerator vajramCodeGenerator = util.createCodeGenerator(vajramInfo);
 
       String className =
-          vajramCodeGenerator.getPackageName()
+          vajramCodeGenerator.packageName()
               + '.'
               + getVajramImplClassName(vajramInfo.vajramId().vajramId());
       try {

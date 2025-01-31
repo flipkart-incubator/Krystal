@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_CLASS_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.Constants.IMMUT_FACETS_CLASS_SUFFIX;
+import static com.flipkart.krystal.vajram.utils.Constants.IMMUT_FACETS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants._FACETS_CLASS;
 import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -10,6 +10,7 @@ import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
@@ -17,10 +18,16 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
+import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.Generated;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.codegen.FacetJavaType.Actual;
+import com.flipkart.krystal.vajram.codegen.FacetJavaType.Boxed;
+import com.flipkart.krystal.vajram.codegen.FacetJavaType.FanoutResponses;
+import com.flipkart.krystal.vajram.codegen.FacetJavaType.One2OneResponse;
+import com.flipkart.krystal.vajram.codegen.FacetJavaType.OptionalType;
 import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.batching.Batch;
@@ -37,7 +44,6 @@ import com.flipkart.krystal.vajram.facets.FacetId;
 import com.flipkart.krystal.vajram.facets.FacetIdNameMapping;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.ReservedFacets;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableBiMap;
@@ -72,6 +78,7 @@ import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
@@ -86,7 +93,9 @@ import javax.lang.model.util.SimpleTypeVisitor14;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.JavaFileObject;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -112,6 +121,16 @@ public class Utils {
         depReqClassName.substring(0, lastDotIndex), depReqClassName.substring(lastDotIndex + 1));
   }
 
+  static List<AnnotationSpec> recordAnnotations() {
+    return List.of(
+        AnnotationSpec.builder(EqualsAndHashCode.class).build(),
+        AnnotationSpec.builder(ToString.class).addMember("doNotUseGetters", "true").build());
+  }
+
+  static List<AnnotationSpec> annotations(Class<?>... annotations) {
+    return stream(annotations).map(aClass -> AnnotationSpec.builder(aClass).build()).toList();
+  }
+
   List<TypeElement> getVajramClasses(RoundEnvironment roundEnv) {
     return roundEnv.getElementsAnnotatedWith(VajramDef.class).stream()
         .filter(element -> element.getKind() == ElementKind.CLASS)
@@ -120,7 +139,7 @@ public class Utils {
   }
 
   VajramCodeGenerator createCodeGenerator(VajramInfo vajramInfo) {
-    return new VajramCodeGenerator(vajramInfo, processingEnv, this);
+    return new VajramCodeGenerator(vajramInfo, this);
   }
 
   void generateSourceFile(String className, String code, TypeElement vajramDefinition) {
@@ -521,22 +540,6 @@ public class Utils {
     return vajramName + IMMUT_FACETS_CLASS_SUFFIX;
   }
 
-  //  public static String getCommonFacetsInterfaceName(String vajramName) {
-  //    return vajramName + COMMON_FACETS;
-  //  }
-  //
-  //  public static String getCommonImmutFacetsClassname(String vajramName) {
-  //    return vajramName + COMMON_IMMUT_FACETS_CLASS_SUFFIX;
-  //  }
-  //
-  //  public static String getBatchFacetsInterfaceName(String vajramName) {
-  //    return vajramName + BATCH_FACETS;
-  //  }
-  //
-  //  public static String getBatchImmutFacetsClassname(String vajramName) {
-  //    return vajramName + BATCH_IMMUT_FACETS_CLASS_SUFFIX;
-  //  }
-
   public TypeName toTypeName(DataType<?> dataType) {
     return TypeName.get(toTypeMirror(dataType));
   }
@@ -674,19 +677,81 @@ public class Utils {
     }
   }
 
-  private TypeAndName unboxPrimitive(TypeAndName javaType) {
-    if (javaType.type().isPresent()) {
-      PrimitiveType primitiveType;
-      try {
-        primitiveType = processingEnv.getTypeUtils().unboxedType(javaType.type().get());
-      } catch (IllegalArgumentException e) {
-        // This means the type is not a boxed type
-        log.info("", e);
-        return javaType;
+  ExecutableElement getMethodToOverride(Class<?> clazz, String methodName, int paramCount) {
+    return checkNotNull(
+            processingEnv()
+                .getElementUtils()
+                .getTypeElement(checkNotNull(clazz.getCanonicalName())))
+        .getEnclosedElements()
+        .stream()
+        .filter(element -> element instanceof ExecutableElement)
+        .map(element -> (ExecutableElement) element)
+        .filter(
+            element ->
+                element.getSimpleName().contentEquals(methodName)
+                    && element.getParameters().size() == paramCount)
+        .findAny()
+        .orElseThrow();
+  }
+
+  FacetJavaType getReturnType(FacetGenModel facet, CodeGenParams codeGenParams) {
+    if (facet instanceof DependencyModel dep) {
+      if (dep.canFanout()) {
+        return new FanoutResponses(this);
+      } else {
+        return new One2OneResponse(this);
       }
-      return new TypeAndName(
-          TypeName.get(primitiveType), Optional.of(primitiveType), javaType.annotationSpecs());
+    } else if (facet.isMandatory()) {
+      return new Actual(this);
+    } else if (codeGenParams.isDevAccessible() && codeGenParams.isLocal()) {
+      return new OptionalType(this);
+    } else {
+      return new Boxed(this);
     }
-    return javaType;
+  }
+
+  FacetJavaType getFacetFieldType(FacetGenModel facet) {
+    if (facet instanceof DependencyModel dep) {
+      if (dep.canFanout()) {
+        // Fanout dependency
+        return new FanoutResponses(this);
+      } else {
+        return new One2OneResponse(this);
+      }
+    } else if (facet.isMandatory()) {
+      return new Actual(this);
+    } else {
+      return new Boxed(this);
+    }
+  }
+
+  TypeName wrapWithFacetValueClass(DependencyModel dep) {
+    return dep.canFanout() ? responsesType(dep) : responseType(dep);
+  }
+
+  String getJavaTypeCreationCode(
+      JavaType<?> javaType, List<TypeName> collectClassNames, VariableElement facetField) {
+    TypeMirror typeMirror = javaType.javaModelType(processingEnv);
+    collectClassNames.add(ClassName.get(JavaType.class));
+    if (javaType.typeParameters().isEmpty()) {
+      collectClassNames.add(TypeName.get(typeMirror));
+      return "$T.create($T.class)";
+    } else {
+      collectClassNames.add(TypeName.get(processingEnv.getTypeUtils().erasure(typeMirror)));
+      collectClassNames.add(ClassName.get(List.class));
+      return "$T.create($T.class, $T.of("
+          + javaType.typeParameters().stream()
+              .map(
+                  dataType -> {
+                    if (!(dataType instanceof JavaType<?> typeParamType)) {
+                      error("Unrecognised data type %s".formatted(dataType), facetField);
+                      return "";
+                    } else {
+                      return getJavaTypeCreationCode(typeParamType, collectClassNames, facetField);
+                    }
+                  })
+              .collect(joining(","))
+          + "))";
+    }
   }
 }

@@ -2,7 +2,7 @@ package com.flipkart.krystal.data;
 
 import static com.flipkart.krystal.data.Errable.nil;
 
-import com.flipkart.krystal.facets.RemoteInput;
+import com.flipkart.krystal.facets.InputMirror;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
@@ -42,7 +42,7 @@ public final class SimpleImmutRequest<T> implements SimpleRequest<T>, ImmutableR
   }
 
   @Override
-  public ImmutableSet<RemoteInput> _facets() {
+  public ImmutableSet<InputMirror> _facets() {
     return ImmutableSet.of();
   }
 

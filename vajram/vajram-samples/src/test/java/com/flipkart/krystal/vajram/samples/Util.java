@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.samples;
 
 import static java.time.Duration.ofNanos;
+import static java.time.Duration.ofSeconds;
 import static java.util.Arrays.stream;
 import static java.util.concurrent.CompletableFuture.allOf;
 
@@ -19,7 +20,7 @@ import java.util.function.Function;
 
 public final class Util {
 
-  public static final Duration TEST_TIMEOUT = Duration.ofSeconds(1);
+  public static final Duration TEST_TIMEOUT = ofSeconds(1);
 
   private Util() {}
 

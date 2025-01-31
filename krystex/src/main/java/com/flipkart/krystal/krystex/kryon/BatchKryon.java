@@ -82,9 +82,6 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
 
   private final Map<DependantChain, ForwardReceive> inputsValueCollector = new LinkedHashMap<>();
 
-  //  private final Map<DependantChain, Map<Dependency, CallbackBatch>> dependencyValuesCollector =
-  //      new LinkedHashMap<>();
-
   /** A unique Result future for every dependant chain. */
   private final Map<DependantChain, CompletableFuture<BatchResponse>> resultsByDepChain =
       new LinkedHashMap<>();
@@ -309,7 +306,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
                         .getResolver(fanoutResolver.resolverKryonLogicId())
                         .logic()
                         .resolve(depRequestBuilders, facets);
-                if (resolverCommand instanceof ExecuteDependency executeDependency
+                if (resolverCommand instanceof ExecuteDependency
                     && resolverCommand.getRequests().isEmpty()) {
                   // This means the resolvers resolved any input. This can occur, for
                   // example if a fanout resolver returns empty inputs

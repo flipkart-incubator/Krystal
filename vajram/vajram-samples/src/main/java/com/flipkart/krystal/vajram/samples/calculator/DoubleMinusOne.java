@@ -4,10 +4,10 @@ import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
-import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOneFacets.doubledNumbers_i;
-import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOneFacets.doubledNumbers_s;
-import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOneFacets.result_i;
-import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOneFacets.result_s;
+import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.doubledNumbers_i;
+import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.doubledNumbers_s;
+import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.result_i;
+import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.result_s;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.FanoutDepResponses;

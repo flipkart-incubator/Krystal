@@ -18,7 +18,7 @@ import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.FacetsMapBuilder;
 import com.flipkart.krystal.data.SimpleRequestBuilder;
 import com.flipkart.krystal.facets.Facet;
-import com.flipkart.krystal.facets.RemoteInput;
+import com.flipkart.krystal.facets.InputMirror;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
@@ -41,7 +41,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.github.resilience4j.bulkhead.BulkheadFullException;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -306,7 +305,7 @@ class Resilience4JBulkheadTest {
 
   @NonNull
   private static LogicDefinition<CreateNewRequest> newCreateNewRequestLogic(
-      Set<? extends RemoteInput> inputs) {
+      Set<? extends InputMirror> inputs) {
     return new LogicDefinition<>(
         new KryonLogicId(new KryonId("kryon"), "kryon:newRequest"),
         () -> new SimpleRequestBuilder(inputs));

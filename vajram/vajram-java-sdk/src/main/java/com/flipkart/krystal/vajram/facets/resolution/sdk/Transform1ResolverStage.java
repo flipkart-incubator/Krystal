@@ -5,7 +5,7 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SkipPredicate;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
-import com.flipkart.krystal.vajram.facets.specs.InputDefinition;
+import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,11 +20,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <DV> DependencyVajram: The vajram whose input is being resolved
  */
 public final class Transform1ResolverStage<S, T, CV extends Request, DV extends Request> {
-  private final InputDefinition<T, DV> targetInput;
+  private final InputMirrorSpec<T, DV> targetInput;
   private final FacetSpec<S, CV> sourceInput;
   private final List<SkipPredicate<?>> skipConditions = new ArrayList<>();
 
-  Transform1ResolverStage(InputDefinition<T, DV> targetInput, FacetSpec<S, CV> sourceInput) {
+  Transform1ResolverStage(InputMirrorSpec<T, DV> targetInput, FacetSpec<S, CV> sourceInput) {
     this.targetInput = targetInput;
     this.sourceInput = sourceInput;
   }

@@ -5,7 +5,7 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import com.flipkart.krystal.vajram.facets.resolution.SkipPredicate;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
-import com.flipkart.krystal.vajram.facets.specs.InputDefinition;
+import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -22,13 +22,13 @@ import java.util.function.BiPredicate;
  */
 public final class Transform2FanoutResolverStage<
     S1, S2, T, CV extends Request, DV extends Request> {
-  private final InputDefinition<T, DV> targetInput;
+  private final InputMirrorSpec<T, DV> targetInput;
   private final FacetSpec<S1, CV> sourceInput1;
   private final FacetSpec<S2, CV> sourceInput2;
   private final List<SkipPredicate<?>> skipConditions = new ArrayList<>();
 
   Transform2FanoutResolverStage(
-      InputDefinition<T, DV> targetInput,
+      InputMirrorSpec<T, DV> targetInput,
       FacetSpec<S1, CV> sourceInput1,
       FacetSpec<S2, CV> sourceInput2) {
     this.targetInput = targetInput;

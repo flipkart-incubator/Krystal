@@ -4,8 +4,8 @@ import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
 import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderFacets.chainSum_i;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderFacets.sum_i;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdder_Fac.chainSum_i;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdder_Fac.sum_i;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdder_Req.numbers_i;
 
 import com.flipkart.krystal.annos.ExternalInvocation;

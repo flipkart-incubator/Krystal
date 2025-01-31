@@ -4,7 +4,7 @@ import static com.flipkart.krystal.data.Errable.nil;
 
 import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.except.IllegalModificationException;
-import com.flipkart.krystal.facets.RemoteInput;
+import com.flipkart.krystal.facets.InputMirror;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -16,15 +16,15 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Getter
 public final class SimpleRequestBuilder<T> implements Builder {
 
-  private final ImmutableSet<? extends RemoteInput> _facets;
+  private final ImmutableSet<? extends InputMirror> _facets;
   private final Map<Integer, Errable<Object>> _data;
 
-  public SimpleRequestBuilder(Set<? extends RemoteInput> _facets) {
+  public SimpleRequestBuilder(Set<? extends InputMirror> _facets) {
     this(_facets, new LinkedHashMap<>());
   }
 
   public SimpleRequestBuilder(
-      Set<? extends RemoteInput> _facets, Map<Integer, Errable<Object>> data) {
+      Set<? extends InputMirror> _facets, Map<Integer, Errable<Object>> data) {
     this._facets = ImmutableSet.copyOf(_facets);
     this._data = data;
   }
@@ -37,7 +37,7 @@ public final class SimpleRequestBuilder<T> implements Builder {
     return _data;
   }
 
-  public ImmutableSet<? extends RemoteInput> _facets() {
+  public ImmutableSet<? extends InputMirror> _facets() {
     return _facets;
   }
 

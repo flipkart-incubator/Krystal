@@ -18,7 +18,6 @@ record CodeGenParams(
     boolean isBuilder,
     boolean isRequest,
     boolean wrapsRequest,
-    boolean isUnBatched,
     boolean isSubsetBatch,
     boolean isSubsetCommon,
     boolean withImpl) {

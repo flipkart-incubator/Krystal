@@ -1,7 +1,7 @@
 package com.flipkart.krystal.data;
 
 import com.flipkart.krystal.data.ImmutableRequest.Builder;
-import com.flipkart.krystal.facets.RemoteInput;
+import com.flipkart.krystal.facets.InputMirror;
 import com.google.common.collect.ImmutableSet;
 
 @SuppressWarnings("ClassReferencesSubclass") // By Design
@@ -15,5 +15,5 @@ public interface Request<T> extends FacetContainer {
 
   /** Returns the facet definitions of the all the inputs of the vajram. */
   @Override
-  ImmutableSet<? extends RemoteInput> _facets();
+  ImmutableSet<? extends InputMirror> _facets();
 }

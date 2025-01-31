@@ -4,7 +4,7 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
-import com.flipkart.krystal.vajram.facets.specs.InputDefinition;
+import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import java.util.function.Supplier;
@@ -16,9 +16,9 @@ import java.util.function.Supplier;
  * @param <DV> The dependency whose input is being resolved.
  */
 public final class ResolveStage<I, DV extends Request> {
-  private final InputDefinition<I, DV> targetInput;
+  private final InputMirrorSpec<I, DV> targetInput;
 
-  ResolveStage(InputDefinition<I, DV> targetInput) {
+  ResolveStage(InputMirrorSpec<I, DV> targetInput) {
     this.targetInput = targetInput;
   }
 

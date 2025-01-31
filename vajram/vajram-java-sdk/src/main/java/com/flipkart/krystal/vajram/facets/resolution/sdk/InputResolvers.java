@@ -7,7 +7,7 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
-import com.flipkart.krystal.vajram.facets.specs.InputDefinition;
+import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.google.common.collect.ImmutableList;
 import java.util.List;
 
@@ -56,7 +56,7 @@ public final class InputResolvers {
    * @param <DV> The dependency whose input is being resolved.
    */
   public static <T, DV extends Request> ResolveStage<T, DV> depInput(
-      InputDefinition<T, DV> depInput) {
+      InputMirrorSpec<T, DV> depInput) {
     return new ResolveStage<>(depInput);
   }
 
@@ -68,7 +68,7 @@ public final class InputResolvers {
    * @param <DV> The dependency whose input is being resolved.
    */
   public static <T, DV extends Request> ResolveFanoutStage<T, DV> depInputFanout(
-      InputDefinition<T, DV> depInput) {
+      InputMirrorSpec<T, DV> depInput) {
     return new ResolveFanoutStage<>(depInput);
   }
 
