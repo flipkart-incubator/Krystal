@@ -13,15 +13,11 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.function.Function.identity;
 
-import com.flipkart.krystal.data.DepResponse;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.data.ImmutableRequest.Builder;
-import com.flipkart.krystal.data.NonNil;
 import com.flipkart.krystal.data.One2OneDepResponse;
-import com.flipkart.krystal.data.Success;
 import com.flipkart.krystal.facets.BasicFacetInfo;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;
@@ -51,12 +47,12 @@ import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
 import com.flipkart.krystal.vajram.VajramID;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.exec.VajramExecutableGraph;
-import com.flipkart.krystal.vajram.facets.FacetValidation;
 import com.flipkart.krystal.vajram.facets.resolution.FanoutInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.One2OneInputResolver;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
+import com.flipkart.krystal.vajram.utils.VajramLoader;
 import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig.BatcherContext;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -97,6 +93,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
   @lombok.Builder
   private VajramKryonGraph(
       Set<String> packagePrefixes,
+      Set<Class<? extends Vajram>> classes,
       Map<String, OutputLogicDecoratorConfig> sessionScopedDecoratorConfigs) {
     this.sessionScopedDecoratorConfigs = ImmutableMap.copyOf(sessionScopedDecoratorConfigs);
     LogicDefinitionRegistry logicDefinitionRegistry = new LogicDefinitionRegistry();
@@ -104,6 +101,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     this.logicRegistryDecorator = new LogicDefRegistryDecorator(logicDefinitionRegistry);
     for (String packagePrefix : packagePrefixes) {
       loadVajramsFromClassPath(packagePrefix).forEach(this::registerVajram);
+    }
+    for (Class<? extends Vajram> clazz : classes) {
+      this.registerVajram(VajramLoader.loadVajramsFromClass(clazz));
     }
   }
 
@@ -525,11 +525,17 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
 
   public static final class VajramKryonGraphBuilder {
     private final Set<String> packagePrefixes = new LinkedHashSet<>();
+    private final Set<Class<? extends Vajram>> classes = new LinkedHashSet<>();
     private final Map<String, OutputLogicDecoratorConfig> sessionScopedDecoratorConfigs =
         new HashMap<>();
 
     public VajramKryonGraphBuilder loadFromPackage(String packagePrefix) {
       packagePrefixes.add(packagePrefix);
+      return this;
+    }
+
+    public VajramKryonGraphBuilder loadClass(Class<? extends Vajram> clazz) {
+      classes.add(clazz);
       return this;
     }
 
@@ -550,6 +556,12 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     @SuppressWarnings({"UnusedMethod", "UnusedVariable", "unused"})
     // Make this private so that client use loadFromPackage instead.
     private VajramKryonGraphBuilder packagePrefixes(Set<String> packagePrefixes) {
+      return this;
+    }
+
+    @SuppressWarnings({"UnusedMethod", "UnusedVariable", "unused"})
+    // Make this private so that client use loadFromPackage instead.
+    private VajramKryonGraphBuilder classes(Set<Class<? extends Vajram>> packagePrefixes) {
       return this;
     }
 

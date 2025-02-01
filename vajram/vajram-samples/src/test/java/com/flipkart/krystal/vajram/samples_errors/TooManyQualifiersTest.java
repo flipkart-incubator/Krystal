@@ -62,11 +62,10 @@ class TooManyQualifiersTest {
         .failsWithin(TEST_TIMEOUT)
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(MandatoryFacetsMissingException.class)
-        .withMessageContainingAll(
-            "Cause: More than one @jakarta.inject.Qualifier annotations ([",
-            "@jakarta.inject.Named(\"toInject\")",
-            "@com.flipkart.krystal.vajram.samples_errors.TooManyQualifiers$InjectionQualifier()",
-            "]) found on input 'inject' of vajram 'TooManyQualifiers'. This is not allowed");
+        .withMessageContaining(
+            "Vajram v<TooManyQualifiers> did not receive these mandatory inputs:"
+                + " [ 'inject' (Cause: Mandatory facet 'inject' of vajram 'TooManyQualifiers'"
+                + " does not have a value) ]");
   }
 
   private KrystexVajramExecutor createExecutor(VajramKryonGraph vajramKryonGraph) {
@@ -81,7 +80,11 @@ class TooManyQualifiersTest {
                           binder
                               .bind(String.class)
                               .annotatedWith(named("toInject"))
-                              .toInstance("i2");
+                              .toInstance("i2a");
+                          binder
+                              .bind(String.class)
+                              .annotatedWith(TooManyQualifiers.InjectionQualifier.class)
+                              .toInstance("i2b");
                         })))
             .build());
   }

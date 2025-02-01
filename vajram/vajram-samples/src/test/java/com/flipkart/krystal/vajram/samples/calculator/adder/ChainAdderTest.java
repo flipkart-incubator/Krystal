@@ -5,9 +5,9 @@ import static com.flipkart.krystal.vajram.samples.Util.javaFuturesBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.add;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdder_Fac.chainSum_i;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdder_Fac.chainSum_s;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdder_Fac.splitSum1_s;
+import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdder_Fac.splitSum2_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig.autoRegisterSharedBatchers;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -31,17 +31,14 @@ import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecution
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.vajram.samples.calculator.Formula;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.time.Clock;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
@@ -68,7 +65,8 @@ class ChainAdderTest {
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
     Adder.CALL_COUNTER.reset();
-    this.graph = loadFromClasspath(Formula.class.getPackageName()).build();
+    this.graph =
+        VajramKryonGraph.builder().loadClass(ChainAdder.class).loadClass(Adder.class).build();
     this.executorLease = EXEC_POOL.lease();
     this.objectMapper =
         new ObjectMapper()
@@ -336,12 +334,6 @@ class ChainAdderTest {
     return completedFuture(a + b);
   }
 
-  private static VajramKryonGraphBuilder loadFromClasspath(String... packagePrefixes) {
-    VajramKryonGraphBuilder builder = VajramKryonGraph.builder();
-    Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
-    return builder;
-  }
-
   private static ImmutableSet<DependantChain> getDisabledDependantChains(VajramKryonGraph graph) {
     return ImmutableSet.of(
         graph.computeDependantChain(
@@ -354,8 +346,6 @@ class ChainAdderTest {
             chainSum_s,
             chainSum_s,
             chainSum_s,
-            chainSum_s),
-        graph.computeDependantChain(graph.getVajramId(SplitAdder.class).vajramId(), splitSum1_s),
-        graph.computeDependantChain(graph.getVajramId(SplitAdder.class).vajramId(), splitSum1_s));
+            chainSum_s));
   }
 }

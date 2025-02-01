@@ -5,10 +5,10 @@ import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsFacets.hellos_i;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsFacets.hellos_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsFacets.skip_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsFacets.userIds_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends_Fac.hellos_i;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends_Fac.hellos_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends_Fac.skip_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends_Fac.userIds_s;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.FanoutDepResponses;

@@ -4,10 +4,10 @@ import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.d
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsFacets.friendInfos_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsFacets.numberOfFriends_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsFacets.userId_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsFacets.userInfo_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Fac.friendInfos_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Fac.numberOfFriends_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Fac.userId_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Fac.userInfo_s;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 

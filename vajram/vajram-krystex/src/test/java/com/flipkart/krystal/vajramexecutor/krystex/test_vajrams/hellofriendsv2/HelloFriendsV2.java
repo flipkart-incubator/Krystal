@@ -4,11 +4,11 @@ import static com.flipkart.krystal.facets.resolution.ResolverCommand.executeWith
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Facets.friendIds_i;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Facets.friendIds_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Facets.friendInfos_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Facets.userId_i;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Facets.userId_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_Fac.friendIds_i;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_Fac.friendIds_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_Fac.friendInfos_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_Fac.userId_i;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_Fac.userId_s;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
@@ -24,12 +24,13 @@ import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.facets.resolution.ResolutionTarget;
 import com.flipkart.krystal.vajram.facets.resolution.AbstractFanoutInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService_ImmutReq;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService_Req;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceFacets;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService_Fac;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService_Req;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -53,36 +54,19 @@ public abstract class HelloFriendsV2 extends ComputeVajram<String> {
   }
 
   @Override
-  public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
-    List<InputResolver> resolvers =
-        new ArrayList<>(
-            resolve(
-                dep(
-                    friendInfos_s,
-                    depInputFanout(TestUserService_Req.userId_s)
-                        .using(friendIds_s)
-                        .asResolver(friendIds -> friendIds.valueOpt().orElseThrow()))));
-    /*
-     Following is not a preferred way to write resolvers by application developers.
-     But it is mentioned here because some platform code might contain resolvers
-     written in this way (for example as a result of some code generation).
-     We write the below resolver so that these kind of resolvers are also tested in the unit tests.
-    */
-    resolvers.add(
-        new AbstractFanoutInputResolver(
-            ImmutableSet.of(userId_s),
-            new ResolutionTarget(friendIds_s, FriendsService_Req.userId_s)) {
-
-          @Override
-          public ResolverCommand resolve(Builder requestBuilder, Facets facets) {
-            HelloFriendsV2Facets helloFriendsV2Facets = (HelloFriendsV2Facets) facets;
-            Builder builder =
-                ((FriendsService_ImmutReq.Builder) requestBuilder)
-                    .userId(helloFriendsV2Facets.userId());
-            return executeWithRequests(ImmutableList.of(builder));
-          }
-        });
-    return ImmutableList.copyOf(resolvers);
+  public ImmutableCollection<SimpleInputResolver> getSimpleInputResolvers() {
+    return resolve(
+        dep(
+            friendInfos_s,
+            depInputFanout(TestUserService_Req.userId_s)
+                .using(friendIds_s)
+                .asResolver(friendIds -> friendIds.valueOpt().orElseThrow())),
+        dep(
+            friendIds_s,
+            depInputFanout(FriendsService_Req.userId_s)
+                .using(userId_s)
+                .asResolver(
+                    stringErrable -> ImmutableList.of(stringErrable.valueOpt().orElseThrow()))));
   }
 
   @Output

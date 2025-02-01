@@ -3,9 +3,9 @@ package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Facets.hellos_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Facets.skip_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Facets.userIds_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2_Fac.hellos_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2_Fac.skip_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2_Fac.userIds_s;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.FanoutDepResponses;

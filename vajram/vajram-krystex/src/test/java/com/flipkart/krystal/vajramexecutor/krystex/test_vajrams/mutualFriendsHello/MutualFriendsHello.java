@@ -2,9 +2,9 @@ package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHe
 
 import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloFacets.friendIds_i;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloFacets.hellos_i;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHelloFacets.skip_i;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello_Fac.friendIds_i;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello_Fac.hellos_i;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello_Fac.skip_i;
 import static java.lang.System.lineSeparator;
 
 import com.flipkart.krystal.annos.ExternalInvocation;

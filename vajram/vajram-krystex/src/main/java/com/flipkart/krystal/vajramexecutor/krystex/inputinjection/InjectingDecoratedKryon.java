@@ -7,7 +7,9 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetContainer;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.FacetsBuilder;
+import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.data.Success;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.commands.Flush;
@@ -124,8 +126,16 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
         continue;
       }
       // Input was not resolved by calling vajram.
-      defaultFacetSpec.setFacetValue(
-          facetsBuilder, getInjectedValue(vajramDefinition.vajramId(), facetSpec));
+      Errable<Object> injectedValue = getInjectedValue(vajramDefinition.vajramId(), facetSpec);
+      if (injectedValue instanceof Success<Object> success) {
+        defaultFacetSpec.setFacetValue(facetsBuilder, success);
+      } else if (injectedValue instanceof Failure<Object> f) {
+        log.error(
+            "Could not inject input {} of vajram {}",
+            facetSpec,
+            kryon.getKryonDefinition().kryonId().value(),
+            f.error());
+      }
     }
     return facetsBuilder;
   }
