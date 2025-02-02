@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
-import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 

@@ -4,7 +4,6 @@ import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.testutils.SimpleFacet.input;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.in;
 
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.ImmutableFacetsMap;
@@ -16,7 +15,6 @@ import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonEx
 import com.flipkart.krystal.krystex.testutils.SimpleFacet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

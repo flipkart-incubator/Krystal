@@ -9,7 +9,6 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
-import com.flipkart.krystal.vajram.utils.Constants;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import jakarta.inject.Inject;
 import java.util.HashMap;

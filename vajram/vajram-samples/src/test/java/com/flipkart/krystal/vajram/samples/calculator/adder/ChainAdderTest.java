@@ -6,8 +6,6 @@ import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.Adder.add;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdder_Fac.chainSum_s;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdder_Fac.splitSum1_s;
-import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdder_Fac.splitSum2_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig.autoRegisterSharedBatchers;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;

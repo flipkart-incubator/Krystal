@@ -1,7 +1,6 @@
 package com.flipkart.krystal.facets.resolution;
 
 import com.flipkart.krystal.data.ImmutableRequest;
-import com.flipkart.krystal.data.Request;
 import com.google.common.collect.ImmutableList;
 import org.checkerframework.checker.nullness.qual.Nullable;
 

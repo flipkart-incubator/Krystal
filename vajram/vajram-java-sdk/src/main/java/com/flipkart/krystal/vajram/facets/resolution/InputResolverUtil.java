@@ -12,7 +12,6 @@ import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.NonNil;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
-import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.MultiExecute;

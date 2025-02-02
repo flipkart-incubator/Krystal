@@ -863,8 +863,7 @@ public class VajramCodeGenerator {
             usingFacetName);
       } else {
         // This means the dependency being consumed used is not a fanout dependency
-        String depValueAccessorCode =
-            """
+        String depValueAccessorCode = """
               $1T $2L =
                 _facets.$3L()""";
         if (usingFacetDef.isMandatory()) {
@@ -1923,11 +1922,9 @@ public class VajramCodeGenerator {
         }
         initializerCodeBlock.add(params.stream().collect(joining(",")) + "),", args.toArray());
       }
-      initializerCodeBlock.add(
-          """
+      initializerCodeBlock.add("""
               $T.class,
-            """,
-          vajramReqClass);
+            """, vajramReqClass);
       if (facet instanceof DependencyModel vajramDepDef) {
         ClassName depReqClass = ClassName.bestGuess(vajramDepDef.depReqClassQualifiedName());
         initializerCodeBlock.add(

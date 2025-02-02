@@ -3,7 +3,6 @@ package com.flipkart.krystal.krystex.kryon;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toMap;
 
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;

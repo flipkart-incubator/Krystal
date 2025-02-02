@@ -6,7 +6,6 @@ import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;

@@ -10,8 +10,8 @@ import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.
 import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.result_s;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
-import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -26,7 +26,6 @@ import com.flipkart.krystal.vajram.samples.calculator.multiplier.Multiplier_Req;
 import com.flipkart.krystal.vajram.samples.calculator.subtractor.Subtractor;
 import com.flipkart.krystal.vajram.samples.calculator.subtractor.Subtractor_Req;
 import com.google.common.collect.ImmutableCollection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 

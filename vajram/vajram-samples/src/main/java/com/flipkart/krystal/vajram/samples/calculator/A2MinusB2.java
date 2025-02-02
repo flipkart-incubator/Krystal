@@ -5,9 +5,6 @@ import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.d
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
 import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.*;
 import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.a_s;
-import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.a_s;
-import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.a_s;
-import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.b_s;
 import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.b_s;
 import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.diff_s;
 import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.twoA_s;
@@ -19,7 +16,6 @@ import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.multiplier.Multiplier;
 import com.flipkart.krystal.vajram.samples.calculator.multiplier.Multiplier_Req;

@@ -3,9 +3,7 @@ package com.flipkart.krystal.krystex.testutils;
 import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
 
 import com.flipkart.krystal.data.DepResponse;
-import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.FacetsMap;
 import com.flipkart.krystal.data.FacetsMapBuilder;
 import com.flipkart.krystal.facets.Dependency;
 

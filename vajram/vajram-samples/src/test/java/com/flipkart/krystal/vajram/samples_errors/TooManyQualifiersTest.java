@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram.samples_errors;
 import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
 import static com.google.inject.Guice.createInjector;
 import static com.google.inject.name.Names.named;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
@@ -13,7 +12,6 @@ import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.guice.VajramGuiceInjector;
-import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;

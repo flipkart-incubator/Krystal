@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
-import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.krystex.kryon.DefaultDependantChain;
@@ -18,7 +17,6 @@ import com.flipkart.krystal.vajram.BatchableVajram;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramID;
-import com.flipkart.krystal.vajram.batching.BatchableSupplier;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;

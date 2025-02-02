@@ -1,8 +1,6 @@
 package com.flipkart.krystal.krystex.logicdecorators.observability;
 
-import com.flipkart.krystal.data.FacetContainer;
 import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.google.common.collect.ImmutableList;

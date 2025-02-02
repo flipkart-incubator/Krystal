@@ -27,8 +27,8 @@ public interface InputBatcher extends ConfigListener {
   void batch();
 
   /**
-   * When this InputBatcher decides to batch (due to some internal state like a timer), or when
-   * the {@link #batch()} method is called, execute the given callback.
+   * When this InputBatcher decides to batch (due to some internal state like a timer), or when the
+   * {@link #batch()} method is called, execute the given callback.
    */
   void onBatching(Consumer<ImmutableList<BatchedFacets>> callback);
 }

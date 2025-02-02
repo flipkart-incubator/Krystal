@@ -108,10 +108,10 @@ class Resilience4JBulkheadTest {
           @Override
           public <T> Optional<T> getConfig(String key) {
             return switch (key) {
-              case "bulkhead_restrictsConcurrency.bulkhead.max_concurrency" ->
-                  (Optional<T>) Optional.of(2);
-              case "bulkhead_restrictsConcurrency.bulkhead.enabled" ->
-                  (Optional<T>) Optional.of(true);
+              case "bulkhead_restrictsConcurrency.bulkhead.max_concurrency" -> (Optional<T>)
+                  Optional.of(2);
+              case "bulkhead_restrictsConcurrency.bulkhead.enabled" -> (Optional<T>)
+                  Optional.of(true);
               default -> Optional.empty();
             };
           }
@@ -204,12 +204,13 @@ class Resilience4JBulkheadTest {
           @Override
           public <T> Optional<T> getConfig(String key) {
             return switch (key) {
-              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.max_concurrency" ->
-                  (Optional<T>) Optional.of(2);
-              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.enabled" ->
-                  (Optional<T>) Optional.of(true);
-              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.type" ->
-                  (Optional<T>) Optional.of("THREADPOOL");
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.max_concurrency" -> (Optional<
+                      T>)
+                  Optional.of(2);
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.enabled" -> (Optional<T>)
+                  Optional.of(true);
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.type" -> (Optional<T>)
+                  Optional.of("THREADPOOL");
               default -> Optional.empty();
             };
           }

@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
 import com.flipkart.krystal.data.DepResponse;
-import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.FacetsBuilder;
 import com.flipkart.krystal.data.One2OneDepResponse;

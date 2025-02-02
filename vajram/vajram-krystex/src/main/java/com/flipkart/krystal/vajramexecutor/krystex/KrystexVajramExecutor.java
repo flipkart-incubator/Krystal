@@ -58,12 +58,9 @@ public class KrystexVajramExecutor implements VajramExecutor {
   }
 
   @Override
-  public <T> CompletableFuture<@Nullable T> execute(
-      VajramID vajramId, ImmutableRequest request) {
+  public <T> CompletableFuture<@Nullable T> execute(VajramID vajramId, ImmutableRequest request) {
     return execute(
-        vajramId,
-        request,
-        KryonExecutionConfig.builder().executionId("defaultExecution").build());
+        vajramId, request, KryonExecutionConfig.builder().executionId("defaultExecution").build());
   }
 
   public <T> CompletableFuture<@Nullable T> execute(
