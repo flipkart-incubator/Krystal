@@ -49,6 +49,7 @@ public record ParsedVajramData(
     // add comments
     Map<Integer, Map<Integer, Boolean>> lookUpMap = new HashMap<>();
     for (ExecutableElement method : methods) {
+      @SuppressWarnings("method.invocation")
       int depId = Optional.ofNullable(method.getAnnotation(Resolve.class)).orElseThrow().dep();
       int[] depInputs = method.getAnnotation(Resolve.class).depInputs();
       for (int depinput : depInputs) {

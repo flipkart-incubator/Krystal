@@ -292,7 +292,7 @@ public class Utils {
     return vajramInfo;
   }
 
-  private GivenFacetModel<Object> toInputModel(
+  private GivenFacetModel toInputModel(
       VariableElement inputField,
       BiMap<String, Integer> givenIdsByName,
       Set<Integer> takenFacetIds,
@@ -318,7 +318,7 @@ public class Utils {
     if (inputField.getAnnotation(Inject.class) != null) {
       facetTypes.add(FacetType.INJECTION);
     }
-    GivenFacetModel<Object> givenFacetModel =
+    GivenFacetModel givenFacetModel =
         inputBuilder.facetTypes(facetTypes).vajramInfo(vajramInfoLite).build();
     givenIdsByName.putIfAbsent(facetName, givenFacetModel.id());
     return givenFacetModel;
@@ -350,7 +350,7 @@ public class Utils {
         getTypeFromAnnotationMember(dependency::withVajramReq)
             .filter(
                 typeMirror ->
-                    !((QualifiedNameable) typeUtils.asElement(typeMirror))
+                    !checkNotNull((QualifiedNameable) typeUtils.asElement(typeMirror))
                         .getQualifiedName()
                         .equals(
                             getTypeElement(Request.class.getName(), processingEnv)
@@ -359,7 +359,7 @@ public class Utils {
         getTypeFromAnnotationMember(dependency::onVajram)
             .filter(
                 typeMirror ->
-                    !((QualifiedNameable) typeUtils.asElement(typeMirror))
+                    !checkNotNull((QualifiedNameable) typeUtils.asElement(typeMirror))
                         .getQualifiedName()
                         .equals(
                             getTypeElement(Vajram.class.getName(), processingEnv)
@@ -387,7 +387,7 @@ public class Utils {
       DataType<?> declaredDataType =
           new DeclaredTypeVisitor<>(this, depField).visit(depField.asType());
       TypeElement vajramOrReqElement =
-          (TypeElement) processingEnv.getTypeUtils().asElement(vajramOrReqType);
+          checkNotNull((TypeElement) processingEnv.getTypeUtils().asElement(vajramOrReqType));
       VajramInfoLite depVajramInfoLite = getVajramInfoLite(vajramOrReqElement);
       depBuilder
           .depVajramInfoLite(depVajramInfoLite)
@@ -426,7 +426,8 @@ public class Utils {
               .filter(Objects::nonNull)
               .collect(toImmutableBiMap(FacetIdNameMapping::id, FacetIdNameMapping::name));
       TypeMirror responseType = getResponseType(vajramOrReqClass, Request.class);
-      TypeElement responseTypeElement = (TypeElement) typeUtils.asElement(responseType);
+      TypeElement responseTypeElement =
+          checkNotNull((TypeElement) typeUtils.asElement(responseType));
       return new VajramInfoLite(
           packageName.getQualifiedName().toString(),
           vajramID(
@@ -436,7 +437,8 @@ public class Utils {
           facetIdNameMappings);
     } else if (isRawAssignable(vajramOrReqClass.asType(), Vajram.class)) {
       TypeMirror responseType = getResponseType(vajramOrReqClass, Vajram.class);
-      TypeElement responseTypeElement = (TypeElement) typeUtils.asElement(responseType);
+      TypeElement responseTypeElement =
+          checkNotNull((TypeElement) typeUtils.asElement(responseType));
       TypeElement requestType =
           elementUtils.getTypeElement(
               packageName.getQualifiedName()
@@ -666,11 +668,12 @@ public class Utils {
         Streams.concat(javaType.annotationSpecs().stream(), stream(annotationSpecs))
             .distinct()
             .toList();
-    if (javaType.type().isEmpty() || !javaType.type().get().getKind().isPrimitive()) {
+    Optional<TypeMirror> typeMirror = javaType.type();
+    if (typeMirror.isEmpty() || !typeMirror.get().getKind().isPrimitive()) {
       return new TypeAndName(javaType.typeName(), Optional.empty(), annotationSpecList);
     }
     TypeMirror boxed =
-        processingEnv.getTypeUtils().boxedClass((PrimitiveType) javaType.type().get()).asType();
+        processingEnv.getTypeUtils().boxedClass((PrimitiveType) typeMirror.get()).asType();
     return new TypeAndName(
         TypeName.get(boxed).annotated(annotationSpecList), Optional.of(boxed), annotationSpecList);
   }
@@ -716,7 +719,7 @@ public class Utils {
   }
 
   DataType<?> getDataType(FacetGenModel abstractInput) {
-    if (abstractInput instanceof GivenFacetModel<?> facetDef) {
+    if (abstractInput instanceof GivenFacetModel facetDef) {
       return facetDef.dataType();
     } else if (abstractInput instanceof DependencyModel dep) {
       return dep.dataType();
@@ -726,6 +729,7 @@ public class Utils {
     }
   }
 
+  @SuppressWarnings("method.invocation")
   ExecutableElement getMethodToOverride(Class<?> clazz, String methodName, int paramCount) {
     return checkNotNull(
             processingEnv()

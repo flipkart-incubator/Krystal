@@ -52,16 +52,16 @@ public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Succes
     return t;
   }
 
-  static <T> Errable<T> of(Optional<T> t) {
+  static <T> Errable<@NonNull T> of(Optional<T> t) {
     return withValue(t.orElse(null));
   }
 
-  static <T> Errable<T> of(@Nullable Object t) {
+  static <T> Errable<@NonNull T> of(@Nullable Object t) {
     if (t instanceof Errable<?>) {
       if (t instanceof NonNil<?> success) {
         return of((T) success.value());
       } else {
-        return (Errable<T>) t;
+        return (Errable<@NonNull T>) t;
       }
     } else if (t instanceof Optional<?> o) {
       return of(((Optional<T>) o).orElse(null));
@@ -74,7 +74,7 @@ public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Succes
     return Success.nil();
   }
 
-  static <T> Errable<T> withValue(@Nullable T t) {
+  static <T> Errable<@NonNull T> withValue(@Nullable T t) {
     return t != null ? new NonNil<>(t) : nil();
   }
 
@@ -82,7 +82,7 @@ public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Succes
     return new Failure<>(t);
   }
 
-  static <T> Errable<T> errableFrom(ThrowingCallable<@Nullable T> valueProvider) {
+  static <T> Errable<@NonNull T> errableFrom(ThrowingCallable<@Nullable T> valueProvider) {
     try {
       return withValue(valueProvider.call());
     } catch (Throwable e) {
@@ -90,12 +90,13 @@ public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Succes
     }
   }
 
-  static <S, T> Function<S, Errable<T>> computeErrableFrom(Function<S, @Nullable T> valueComputer) {
+  static <S, T> Function<S, Errable<@NonNull T>> computeErrableFrom(
+      Function<S, @Nullable T> valueComputer) {
     return s -> errableFrom(() -> valueComputer.apply(s));
   }
 
   @SuppressWarnings("unchecked")
-  static <T> Errable<T> errableFrom(@Nullable Object value, @Nullable Throwable error) {
+  static <T> Errable<@NonNull T> errableFrom(@Nullable Object value, @Nullable Throwable error) {
     if (value instanceof Optional<?> valueOpt) {
       if (valueOpt.isPresent()) {
         if (error != null) {
@@ -112,7 +113,7 @@ public sealed interface Errable<@NonNull T> extends FacetValue<T> permits Succes
       if (error != null) {
         throw illegalState();
       } else {
-        return (Errable<T>) withValue(value);
+        return (Errable<@NonNull T>) withValue(value);
       }
     } else if (error != null) {
       return withError(error);

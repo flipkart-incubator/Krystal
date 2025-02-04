@@ -69,6 +69,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
@@ -592,7 +593,8 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
           } catch (Throwable e) {
             result = failedFuture(e);
           }
-          resultsByRequest.put(requestId, result.handle(Errable::errableFrom));
+          resultsByRequest.put(
+              requestId, result.<Errable<@NonNull Object>>handle(Errable::errableFrom));
         });
     return resultsByRequest;
   }

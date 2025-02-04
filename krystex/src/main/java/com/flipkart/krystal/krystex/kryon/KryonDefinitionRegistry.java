@@ -12,9 +12,7 @@ import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class KryonDefinitionRegistry {
 
@@ -46,11 +44,7 @@ public final class KryonDefinitionRegistry {
       ImmutableMap<ResolverDefinition, Resolver> resolversByDefinition,
       LogicDefinition<CreateNewRequest> createNewRequest,
       LogicDefinition<FacetsFromRequest> facetsFromRequest,
-      @Nullable KryonLogicId mulitResolverId,
       ElementTags tags) {
-    if (!resolversByDefinition.isEmpty() && mulitResolverId == null) {
-      throw new IllegalArgumentException("missing multi resolver logic");
-    }
     KryonDefinition kryonDefinition =
         new KryonDefinition(
             new KryonId(kryonId),
@@ -58,7 +52,6 @@ public final class KryonDefinitionRegistry {
             outputLogicId,
             dependencyKryons,
             resolversByDefinition,
-            Optional.ofNullable(mulitResolverId),
             createNewRequest,
             facetsFromRequest,
             this,

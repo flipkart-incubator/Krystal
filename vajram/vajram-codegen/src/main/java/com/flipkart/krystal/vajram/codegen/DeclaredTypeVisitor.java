@@ -6,7 +6,6 @@ import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.vajram.facets.Mandatory;
 import java.util.List;
-import javax.annotation.Nullable;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.VariableElement;
@@ -22,6 +21,7 @@ import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.UnionType;
 import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.AbstractTypeVisitor14;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 class DeclaredTypeVisitor<T> extends AbstractTypeVisitor14<DataType<T>, Void> {
 

@@ -14,6 +14,7 @@ import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.google.common.collect.ImmutableList;
 import java.util.Iterator;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** A resolver which resolves exactly one input of a dependency. */
 public final class SimpleFanoutInputResolver<S, T, CV extends Request, DV extends Request>
@@ -66,7 +67,7 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request, DV extend
             } else {
               return executeWithRequests(
                   depCommand.inputs().stream()
-                      .map(
+                      .<@NonNull Builder>map(
                           o -> {
                             Builder next = (Builder) depRequest._newCopy();
                             getResolverSpec().targetInput().setToRequest(next, o);

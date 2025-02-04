@@ -51,13 +51,17 @@ public final class JavaType<T> implements DataType<T> {
     this.clazz = clazz;
   }
 
+  @SuppressWarnings("UnnecessaryTypeArgument") // -> To prevent Null checker errors
   private JavaType(
       @Nullable String packageName,
       String simpleName,
       List<String> enclosingClasses,
       List<? extends DataType<?>> typeParameters) {
     this(
-        Stream.of(Stream.of(packageName), enclosingClasses.stream(), Stream.of(simpleName))
+        Stream.of(
+                Optional.ofNullable(packageName).stream(),
+                enclosingClasses.stream(),
+                Stream.of(simpleName))
             .flatMap(identity())
             .filter(Objects::nonNull)
             .collect(Collectors.joining(".")),

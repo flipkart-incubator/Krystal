@@ -8,7 +8,9 @@ public abstract sealed class Success<T> implements Errable<T> permits Nil, NonNi
 
   @Override
   public final T valueOrThrow() {
-    return valueOpt().orElseThrow();
+    @SuppressWarnings("method.invocation")
+    T t = valueOpt().orElseThrow();
+    return t;
   }
 
   @Override

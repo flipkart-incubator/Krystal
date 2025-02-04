@@ -177,14 +177,16 @@ public final class KryonExecutor implements KrystalExecutor {
       throw new RejectedExecutionException("KryonExecutor is already closed");
     }
     checkArgument(executionConfig != null, "executionConfig can not be null");
-    if (!kryonDefinitionRegistry
-        .get(kryonId)
-        .tags()
-        .getAnnotationByType(ExternalInvocation.class)
-        .map(ExternalInvocation::allow)
-        .orElse(false)) {
-      throw new RejectedExecutionException(
-          "External invocation is not allowed for kryonId: " + kryonId);
+    if (!executorConfig._riskyOpenAllKryonsForExternalInvocation()) {
+      if (!kryonDefinitionRegistry
+          .get(kryonId)
+          .tags()
+          .getAnnotationByType(ExternalInvocation.class)
+          .map(ExternalInvocation::allow)
+          .orElse(false)) {
+        throw new RejectedExecutionException(
+            "External invocation is not allowed for kryonId: " + kryonId);
+      }
     }
 
     String executionId = executionConfig.executionId();
@@ -420,42 +422,42 @@ public final class KryonExecutor implements KrystalExecutor {
   }
 
   private void submitBatch(Set<RequestId> unFlushedRequests) {
-    unFlushedRequests.stream()
-        .map(this::getKryonExecution)
-        .collect(groupingBy(KryonExecution::kryonId))
-        .forEach(
-            (kryonId, kryonExecutions) -> {
-              CompletableFuture<BatchResponse> batchResponseFuture =
-                  this.executeCommand(
-                      new ForwardSend(
-                          kryonId,
-                          kryonExecutions.stream()
-                              .collect(
-                                  toImmutableMap(
-                                      KryonExecution::instanceExecutionId,
-                                      kryonExecution -> kryonExecution.request())),
-                          kryonDefinitionRegistry.getDependantChainsStart(),
-                          ImmutableMap.of()));
-              batchResponseFuture
-                  .thenApply(BatchResponse::responses)
-                  .whenComplete(
-                      (responses, throwable) -> {
-                        for (KryonExecution kryonExecution : kryonExecutions) {
-                          if (throwable != null) {
-                            kryonExecution.future().completeExceptionally(throwable);
-                          } else {
-                            Errable<Object> result =
-                                responses.getOrDefault(
-                                    kryonExecution.instanceExecutionId(), Errable.nil());
-                            linkFutures(result.toFuture(), kryonExecution.future());
-                          }
-                        }
-                      });
-              propagateCancellation(
-                  allOf(
-                      kryonExecutions.stream().map(getFuture()).toArray(CompletableFuture[]::new)),
-                  batchResponseFuture);
-            });
+    Map<KryonId, List<KryonExecution>> executionsByKryon =
+        unFlushedRequests.stream()
+            .map(this::getKryonExecution)
+            .collect(groupingBy(KryonExecution::kryonId));
+    executionsByKryon.forEach(
+        (kryonId, kryonExecutions) -> {
+          CompletableFuture<BatchResponse> batchResponseFuture =
+              this.executeCommand(
+                  new ForwardSend(
+                      kryonId,
+                      kryonExecutions.stream()
+                          .collect(
+                              toImmutableMap(
+                                  KryonExecution::instanceExecutionId,
+                                  kryonExecution -> kryonExecution.request())),
+                      kryonDefinitionRegistry.getDependantChainsStart(),
+                      ImmutableMap.of()));
+          batchResponseFuture
+              .thenApply(BatchResponse::responses)
+              .whenComplete(
+                  (responses, throwable) -> {
+                    for (KryonExecution kryonExecution : kryonExecutions) {
+                      if (throwable != null) {
+                        kryonExecution.future().completeExceptionally(throwable);
+                      } else {
+                        Errable<Object> result =
+                            responses.getOrDefault(
+                                kryonExecution.instanceExecutionId(), Errable.nil());
+                        linkFutures(result.toFuture(), kryonExecution.future());
+                      }
+                    }
+                  });
+          propagateCancellation(
+              allOf(kryonExecutions.stream().map(getFuture()).toArray(CompletableFuture[]::new)),
+              batchResponseFuture);
+        });
   }
 
   public KryonExecutorMetrics getKryonMetrics() {

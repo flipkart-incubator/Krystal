@@ -175,7 +175,9 @@ public class VajramCodeGenerator {
                     FacetGenModel::id,
                     Function.identity(),
                     (o1, o2) -> o1,
-                    LinkedHashMap::new)); // need ordered map for dependencies
+                    () ->
+                        new LinkedHashMap<
+                            Integer, FacetGenModel>())); // need ordered map for dependencies
     this.facetModelsByName =
         vajramInfo
             .facetStream()
@@ -184,7 +186,9 @@ public class VajramCodeGenerator {
                     FacetGenModel::name,
                     Function.identity(),
                     (o1, o2) -> o1,
-                    LinkedHashMap::new)); // need ordered map for dependencies
+                    () ->
+                        new LinkedHashMap<
+                            String, FacetGenModel>())); // need ordered map for dependencies
     this.needsBatching = vajramInfo.givenFacets().stream().anyMatch(GivenFacetModel::isBatched);
     depFanoutMap =
         vajramInfo.dependencies().stream()
@@ -250,12 +254,12 @@ public class VajramCodeGenerator {
     if (util.isRawAssignable(
         getParsedVajramData().vajramInfo().vajramClass().asType(), IOVajram.class)) {
       methodSpecs.add(
-          createIOVajramExecuteMethod(
+          ioVajramExecuteMethod(
               batchFacetsClassName,
               commonFacetsClassName,
               vajramResponseType.box().annotated(AnnotationSpec.builder(Nullable.class).build())));
     } else {
-      methodSpecs.add(createComputeVajramExecuteMethod(vajramResponseType));
+      methodSpecs.add(computeVajramExecuteMethod(vajramResponseType));
     }
 
     ClassName requestInterfaceType = getRequestInterfaceType();
@@ -322,6 +326,7 @@ public class VajramCodeGenerator {
     }
     resolverMap.forEach(
         (depName, resolverMethods) -> {
+          @SuppressWarnings("method.invocation")
           DependencyModel dep =
               vajramInfo.dependencies().stream()
                   .filter(d -> d.id() == depName)
@@ -438,7 +443,7 @@ public class VajramCodeGenerator {
    * @param vajramResponseType Vajram response type
    * @return generated code for "executeCompute" {@link MethodSpec}
    */
-  private MethodSpec createComputeVajramExecuteMethod(TypeName vajramResponseType) {
+  private MethodSpec computeVajramExecuteMethod(TypeName vajramResponseType) {
 
     MethodSpec.Builder executeBuilder =
         methodBuilder(METHOD_EXECUTE_COMPUTE)
@@ -557,7 +562,7 @@ public class VajramCodeGenerator {
    * @param vajramResponseType Vajram response type
    * @return generated code for "execute" {@link MethodSpec}
    */
-  private MethodSpec createIOVajramExecuteMethod(
+  private MethodSpec ioVajramExecuteMethod(
       ClassName batchableInputs, ClassName commonFacets, TypeName vajramResponseType) {
 
     MethodSpec.Builder executeMethodBuilder =
@@ -574,7 +579,7 @@ public class VajramCodeGenerator {
 
     CodeBlock.Builder codeBuilder = CodeBlock.builder();
     if (needsBatching)
-      batchedExecutedMethodBuilder(
+      batchedExecuteMethodBuilder(
           batchableInputs, commonFacets, vajramResponseType, codeBuilder, executeMethodBuilder);
     else {
       nonBatchedExecuteMethodBuilder(executeMethodBuilder, true);
@@ -582,7 +587,7 @@ public class VajramCodeGenerator {
     return executeMethodBuilder.build();
   }
 
-  private void batchedExecutedMethodBuilder(
+  private void batchedExecuteMethodBuilder(
       ClassName batchableInputs,
       ClassName commonFacets,
       TypeName vajramResponseType,
@@ -755,7 +760,7 @@ public class VajramCodeGenerator {
     FacetGenModel usingFacetModel = checkNotNull(facetModels.get(usingFacetId));
     if (usingFacetModel instanceof DependencyModel) {
       generateDependencyResolutions(method, usingFacetId, codeBuilder, parameter);
-    } else if (usingFacetModel instanceof GivenFacetModel<?> givenFacetModel) {
+    } else if (usingFacetModel instanceof GivenFacetModel givenFacetModel) {
       TypeMirror facetType = util.toTypeMirror(givenFacetModel.dataType());
       String variable = usingFacetModel.name();
       TypeMirror parameterTypeMirror = parameter.asType();
@@ -1132,7 +1137,7 @@ public class VajramCodeGenerator {
   }
 
   public void codeGenVajramRequest() {
-    ImmutableList<GivenFacetModel<?>> inputDefs = vajramInfo.givenFacets();
+    ImmutableList<GivenFacetModel> inputDefs = vajramInfo.givenFacets();
     ClassName requestInterfaceType = getRequestInterfaceType();
     ClassName immutReqInterfaceType =
         ClassName.get(packageName, getImmutRequestInterfaceName(vajramName));
@@ -1147,7 +1152,7 @@ public class VajramCodeGenerator {
                 AnnotationSpec.builder(SuppressWarnings.class)
                     .addMember("value", "$S", "ClassReferencesSubclass")
                     .build());
-    List<GivenFacetModel<?>> inputs =
+    List<GivenFacetModel> inputs =
         vajramInfo.givenFacets().stream().filter(i -> i.facetTypes().contains(INPUT)).toList();
 
     addFacetConstants(requestInterface, inputs, CodeGenParams.builder().isRequest(true).build());
@@ -1204,7 +1209,7 @@ public class VajramCodeGenerator {
         vajramInfo.facetStream().filter(facet -> facet.facetTypes().contains(INPUT)).toList(),
         CodeGenParams.builder().isRequest(true).isBuilder(true).withImpl(true).build());
 
-    List<GivenFacetModel<?>> clientProvidedInputs =
+    List<GivenFacetModel> clientProvidedInputs =
         inputDefs.stream().filter(facetDef -> facetDef.facetTypes().contains(INPUT)).toList();
     util.generateSourceFile(
         requestInterfaceType.canonicalName(),
@@ -1910,7 +1915,7 @@ public class VajramCodeGenerator {
                       (JavaType<?>) facet.dataType(), collectClassNames, facet.facetField())
                   + ",",
               collectClassNames.toArray());
-      if (facet instanceof GivenFacetModel<?> && !codeGenParams.isRequest()) {
+      if (facet instanceof GivenFacetModel && !codeGenParams.isRequest()) {
         initializerCodeBlock.add("$T.of(", ImmutableSet.class);
         List<String> params = new ArrayList<>();
         List<Object> args = new ArrayList<>();

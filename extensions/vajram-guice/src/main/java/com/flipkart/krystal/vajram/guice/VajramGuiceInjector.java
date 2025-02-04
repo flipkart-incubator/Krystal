@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -32,7 +33,7 @@ public class VajramGuiceInjector implements VajramInjectionProvider {
   }
 
   @Override
-  public <T> Errable<T> get(VajramID vajramID, FacetSpec<T, ?> facetDef) {
+  public <T> Errable<@NonNull T> get(VajramID vajramID, FacetSpec<T, ?> facetDef) {
     if (!facetDef.facetTypes().contains(INJECTION)) {
       return nil();
     }

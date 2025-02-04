@@ -27,5 +27,5 @@ public interface VajramInjectionProvider {
    *     framework, or a failure Errable containing the error encountered why injection, or a nil
    *     Errable if the binding is optional.
    */
-  <T> @NonNull Errable<T> get(VajramID vajramID, FacetSpec<T, ?> facetDef) throws Exception;
+  <T> Errable<@NonNull T> get(VajramID vajramID, FacetSpec<T, ?> facetDef) throws Exception;
 }

@@ -119,7 +119,6 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(kryonName, emptySet()),
             newFacetsFromRequestLogic(kryonName, emptySet()),
-            null,
             ElementTags.of(externalInvocation(true)));
 
     CompletableFuture<Object> future1 =
@@ -154,7 +153,6 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(kryonName, emptySet()),
             newFacetsFromRequestLogic(kryonName, emptySet()),
-            null,
             ElementTags.of(List.of(externalInvocation(true))));
 
     CompletableFuture<Object> future1 =
@@ -188,7 +186,6 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(kryonName, emptySet()),
             newFacetsFromRequestLogic(kryonName, emptySet()),
-            null,
             ElementTags.of(externalInvocation(true)));
 
     CompletableFuture<Object> future =
@@ -226,7 +223,6 @@ class KryonExecutorTest {
                 ImmutableMap.of(),
                 newCreateNewRequestLogic(kryonName, inputDefs),
                 newFacetsFromRequestLogic(kryonName, inputDefs),
-                null,
                 ElementTags.of(externalInvocation(true)))
             .kryonId();
     CompletableFuture<Object> future =
@@ -255,7 +251,6 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(kryonName, emptySet()),
             newFacetsFromRequestLogic(kryonName, emptySet()),
-            null,
             emptyTags());
 
     Set<SimpleDep> allFacets = Set.of(dependency(1));
@@ -280,7 +275,6 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic("n2", emptySet()),
             newFacetsFromRequestLogic("n2", allFacets),
-            null,
             ElementTags.of(externalInvocation(true)));
 
     CompletableFuture<Object> future =
@@ -306,7 +300,6 @@ class KryonExecutorTest {
         ImmutableMap.of(),
         newCreateNewRequestLogic(l1Dep, emptySet()),
         newFacetsFromRequestLogic(l1Dep, emptySet()),
-        null,
         emptyTags());
 
     String l2Dep = "requestExecution_multiLevelDependencies_level2";
@@ -330,7 +323,6 @@ class KryonExecutorTest {
         ImmutableMap.of(),
         newCreateNewRequestLogic(l2Dep, emptySet()),
         newFacetsFromRequestLogic(l2Dep, allFacets),
-        null,
         emptyTags());
 
     String l3Dep = "requestExecution_multiLevelDependencies_level3";
@@ -354,7 +346,6 @@ class KryonExecutorTest {
         ImmutableMap.of(),
         newCreateNewRequestLogic(l3Dep, emptySet()),
         newFacetsFromRequestLogic(l3Dep, allFacets),
-        null,
         emptyTags());
 
     String l4Dep = "requestExecution_multiLevelDependencies_level4";
@@ -377,7 +368,6 @@ class KryonExecutorTest {
         ImmutableMap.of(),
         newCreateNewRequestLogic(l4Dep, emptySet()),
         newFacetsFromRequestLogic(l4Dep, allFacets),
-        null,
         ElementTags.of(List.of(externalInvocation(true))));
 
     CompletableFuture<Object> future =
@@ -402,7 +392,6 @@ class KryonExecutorTest {
                     ImmutableMap.of(),
                     newCreateNewRequestLogic(l4Dep, emptySet()),
                     newFacetsFromRequestLogic(l4Dep, allFacets),
-                    null,
                     ElementTags.of(externalInvocation(true)))
                 .kryonId(),
             SimpleImmutRequest.empty(),
@@ -442,7 +431,6 @@ class KryonExecutorTest {
         ImmutableMap.of(),
         newCreateNewRequestLogic(dep1, emptySet()),
         newFacetsFromRequestLogic(dep1, emptySet()),
-        null,
         emptyTags());
 
     String dep2 =
@@ -455,7 +443,6 @@ class KryonExecutorTest {
         ImmutableMap.of(),
         newCreateNewRequestLogic(dep2, emptySet()),
         newFacetsFromRequestLogic(dep2, emptySet()),
-        null,
         emptyTags());
 
     LongAdder numberOfExecutions = new LongAdder();
@@ -496,7 +483,6 @@ class KryonExecutorTest {
                     ImmutableMap.of(),
                     newCreateNewRequestLogic(kryonName, emptySet()),
                     newFacetsFromRequestLogic(kryonName, allFacets),
-                    null,
                     ElementTags.of(externalInvocation(true)))
                 .kryonId(),
             SimpleImmutRequest.empty(),
@@ -526,7 +512,6 @@ class KryonExecutorTest {
                         ImmutableMap.of(),
                         newCreateNewRequestLogic(kryonName, Set.of()),
                         newFacetsFromRequestLogic(kryonName, Set.of()),
-                        null,
                         emptyTags())
                     .kryonId(),
                 SimpleImmutRequest.empty(),
@@ -548,7 +533,6 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic("n1_logic", emptySet()),
             newFacetsFromRequestLogic("n1_logic", emptySet()),
-            null,
             emptyTags());
 
     CountDownLatch countDownLatch = new CountDownLatch(1);
@@ -588,7 +572,6 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic("n1_logic", emptySet()),
             newFacetsFromRequestLogic("n1_logic", allFacets),
-            null,
             ElementTags.of(List.of(externalInvocation(true))));
 
     CompletableFuture<Object> future =

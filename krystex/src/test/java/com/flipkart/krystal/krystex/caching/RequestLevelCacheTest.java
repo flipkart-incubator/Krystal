@@ -116,7 +116,6 @@ class RequestLevelCacheTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic("kryon", emptySet()),
             newFacetsFromRequestLogic("kryon"),
-            null,
             ElementTags.of(List.of(externalInvocation(true))));
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
@@ -164,7 +163,6 @@ class RequestLevelCacheTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic("kryon", emptySet()),
             newFacetsFromRequestLogic("kryon"),
-            null,
             ElementTags.of(List.of(externalInvocation(true))));
 
     CompletableFuture<Object> future1 =

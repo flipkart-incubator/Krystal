@@ -131,7 +131,6 @@ class Resilience4JBulkheadTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(Set.of(input(1))),
             newFacetsFromRequestLogic(),
-            null,
             ElementTags.of(externalInvocation(true)));
 
     KryonExecutor executor1 =
@@ -230,7 +229,6 @@ class Resilience4JBulkheadTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(inputs),
             newFacetsFromRequestLogic(),
-            null,
             ElementTags.of(externalInvocation(true)));
 
     KryonExecutor executor1 =

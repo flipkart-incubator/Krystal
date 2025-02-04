@@ -17,11 +17,11 @@ import org.checkerframework.common.returnsreceiver.qual.This;
  * platform provided injections
  */
 @Builder
-public record GivenFacetModel<T>(
+public record GivenFacetModel(
     int id,
     @NonNull String name,
     @NonNull VajramInfoLite vajramInfo,
-    @NonNull DataType<T> dataType,
+    @NonNull DataType<Object> dataType,
     @Nullable Mandatory mandatoryAnno,
     @NonNull String documentation,
     boolean isBatched,

@@ -2,6 +2,7 @@ package com.flipkart.krystal.facets.resolution;
 
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.google.common.collect.ImmutableList;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SuppressWarnings("ClassReferencesSubclass")
@@ -19,7 +20,7 @@ public interface ResolverCommand {
   }
 
   static ExecuteDependency executeWithRequests(
-      ImmutableList<? extends ImmutableRequest.Builder> inputs) {
+      ImmutableList<? extends ImmutableRequest.@NonNull Builder> inputs) {
     return new ExecuteDependency(inputs);
   }
 

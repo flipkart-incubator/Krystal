@@ -26,6 +26,7 @@ public abstract class UserService extends IOVajram<UserInfo> {
   }
 
   @Output
+  @SuppressWarnings("method.invocation")
   static Map<UserService_BatchElem, CompletableFuture<UserInfo>> callUserService(
       ImmutableList<UserService_BatchElem> _batches) {
 

@@ -1,5 +1,5 @@
 plugins {
-    id 'com.flipkart.java.code.standard' version '0.1.2-SNAPSHOT'
+    id 'com.flipkart.java.code.standard' version '3.4'
 }
 
 ext {
@@ -8,12 +8,6 @@ ext {
     krystal_version = '9.0.0-SNAPSHOT'
     //Use this during development time to fasten compilation by disabling heavy compiler plugins
     fast_compile = false
-}
-
-if (!fast_compile) {
-    checkerFramework {
-        extraJavacArgs = ["-Astubs=${rootDir}/config/checker/stubs",]
-    }
 }
 
 subprojects {
@@ -46,16 +40,14 @@ subprojects {
     }
 }
 
-configure(subprojects.findAll { it.name != 'krystal-bom' }) {
+configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-coverage-report" }) {
     apply plugin: 'java-library'
     if (!fast_compile) {
         apply plugin: 'com.flipkart.java.code.standard'
     }
-    apply plugin: 'jacoco'
 
     dependencies {
         implementation 'com.google.guava:guava'
-        implementation 'org.checkerframework:checker-qual'
         implementation 'org.slf4j:slf4j-api'
         implementation 'jakarta.inject:jakarta.inject-api'
 
@@ -86,7 +78,6 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
             implementation 'org.yaml:snakeyaml:2.2'
 
             implementation 'com.google.guava:guava:33.0.0-jre'
-            implementation 'org.checkerframework:checker-qual:3.42.0'
             implementation 'org.slf4j:slf4j-api:2.0.11'
             implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
             implementation 'org.reflections:reflections:0.10.2'
@@ -108,13 +99,8 @@ configure(subprojects.findAll { it.name != 'krystal-bom' }) {
 
     if (!fast_compile) {
         checkerFramework {
-            extraJavacArgs = ["-Astubs=${rootDir}/config/checker/stubs",]
             excludeTests = true
         }
-    }
-
-    jacoco {
-        toolVersion = "0.8.11"
     }
 
     java {

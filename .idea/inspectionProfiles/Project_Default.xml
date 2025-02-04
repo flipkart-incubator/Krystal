@@ -316,6 +316,7 @@
     <inspection_tool class="DelegatesTo" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="Dependency" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="DependencyNotationArgument" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="DeprecatedAggregateContextBounds" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="DeprecatedAlphanumericInfixCall" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="DeprecatedClassUsageInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="DeprecatedConfigurations" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -1604,6 +1605,7 @@
           <option value="UnusedMethod" />
           <option value="UnusedVariable" />
           <option value="MethodOverloadsMethodOfSuperclass" />
+          <option value="methodref.receiver" />
         </list>
       </option>
     </inspection_tool>

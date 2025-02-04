@@ -62,6 +62,7 @@ public abstract class DoubleMinusOne extends ComputeVajram<Integer> {
   }
 
   @Resolve(dep = result_i, depInputs = Subtractor_Req.numberOne_i)
+  @SuppressWarnings("methodref.receiver")
   static int sumOfDoubles(FanoutDepResponses<Multiplier_Req, Integer> doubledNumbers) {
     return doubledNumbers.requestResponsePairs().stream()
         .map(RequestResponse::response)

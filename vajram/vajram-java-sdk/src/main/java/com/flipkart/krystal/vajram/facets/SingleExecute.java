@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.facets;
 
 import com.google.common.collect.ImmutableList;
 import java.util.function.Consumer;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record SingleExecute<T>(
@@ -9,7 +10,7 @@ public record SingleExecute<T>(
     implements DependencyCommand<T> {
 
   @Override
-  public ImmutableList<T> inputs() {
+  public ImmutableList<@NonNull T> inputs() {
     if (input == null) {
       return ImmutableList.of();
     } else {
