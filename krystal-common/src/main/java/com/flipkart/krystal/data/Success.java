@@ -1,28 +1,28 @@
 package com.flipkart.krystal.data;
 
 import java.util.Optional;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
-public abstract sealed class Success<T> implements Errable<T> permits Nil, NonNil {
-
-  private static final Success NIL = Nil.nil();
+public sealed interface Success<T> extends Errable<@NonNull T> permits Nil, NonNil {
 
   @Override
-  public final T valueOrThrow() {
+  public default @NonNull T valueOrThrow() {
     @SuppressWarnings("method.invocation")
     T t = valueOpt().orElseThrow();
     return t;
   }
 
   @Override
-  public final Optional<T> valueOptOrThrow() {
+  public default Optional<@NonNull T> valueOptOrThrow() {
     return valueOpt();
   }
 
-  public final Optional<Throwable> errorOpt() {
+  @Override
+  public default Optional<Throwable> errorOpt() {
     return Optional.empty();
   }
 
   static <T> Success<T> nil() {
-    return NIL;
+    return Nil.nil();
   }
 }

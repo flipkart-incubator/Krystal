@@ -7,13 +7,16 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import lombok.EqualsAndHashCode;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @EqualsAndHashCode(of = "error")
-public final class Failure<T> implements Errable<T> {
+public final class Failure<T> implements Errable<@NonNull T> {
   private final Throwable error;
 
   private @MonotonicNonNull CompletableFuture<@Nullable T> c;
+
+  @SuppressWarnings("optional.field")
   private Optional<Throwable> o = Optional.empty();
 
   public Failure(Throwable error) {
@@ -26,20 +29,21 @@ public final class Failure<T> implements Errable<T> {
   }
 
   @Override
-  public Optional<T> valueOptOrThrow() {
+  public Optional<@NonNull T> valueOptOrThrow() {
     throw asRuntimException();
   }
 
   @Override
-  public T valueOrThrow() {
+  public @NonNull T valueOrThrow() {
     throw asRuntimException();
   }
 
   @Override
-  public Optional<T> valueOpt() {
+  public Optional<@NonNull T> valueOpt() {
     return Optional.empty();
   }
 
+  @Override
   public String toString() {
     return error.toString();
   }

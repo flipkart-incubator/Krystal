@@ -44,6 +44,7 @@ public final class FacetsMapBuilder implements FacetsMap, FacetsBuilder {
     return otherFacetValues.getOrDefault(facetId, Errable.nil());
   }
 
+  @Override
   public Errable<?> _getErrable(int facetId) {
     if (request._hasValue(facetId)) {
       return request._get(facetId);
@@ -57,6 +58,7 @@ public final class FacetsMapBuilder implements FacetsMap, FacetsBuilder {
     }
   }
 
+  @Override
   @SuppressWarnings("unchecked")
   public FanoutDepResponses _getDepResponses(int facetId) {
     FacetValue datum = otherFacetValues.getOrDefault(facetId, Errable.nil());
@@ -104,12 +106,14 @@ public final class FacetsMapBuilder implements FacetsMap, FacetsBuilder {
     return this;
   }
 
-  public boolean equals(@Nullable final Object o) {
+  @Override
+  public boolean equals(final @Nullable Object o) {
     if (o == this) return true;
     if (!(o instanceof FacetsMap other)) return false;
     return Objects.equals(this._asMap(), other._asMap());
   }
 
+  @Override
   public int hashCode() {
     return Objects.hash(this._asMap());
   }

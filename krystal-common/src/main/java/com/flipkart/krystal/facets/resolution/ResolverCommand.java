@@ -25,6 +25,7 @@ public interface ResolverCommand {
   }
 
   record SkipDependency(String reason, @Nullable Throwable cause) implements ResolverCommand {
+    @Override
     public ImmutableList<? extends ImmutableRequest.Builder> getRequests() {
       return ImmutableList.of();
     }
@@ -32,6 +33,7 @@ public interface ResolverCommand {
 
   record ExecuteDependency(ImmutableList<? extends ImmutableRequest.Builder> requests)
       implements ResolverCommand {
+    @Override
     public ImmutableList<? extends ImmutableRequest.Builder> getRequests() {
       return requests;
     }

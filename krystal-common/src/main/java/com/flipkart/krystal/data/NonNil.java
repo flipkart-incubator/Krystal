@@ -13,11 +13,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 @EqualsAndHashCode(of = "value")
 @ToString(of = "value")
-public final class NonNil<T> extends Success<T> {
+public final class NonNil<T> implements Success<T> {
   @Getter private final @NonNull T value;
 
   private @MonotonicNonNull CompletableFuture<@Nullable T> c;
-  private Optional<T> o = Optional.empty();
+
+  @SuppressWarnings("optional.field")
+  private Optional<@NonNull T> o = Optional.empty();
 
   public NonNil(@NonNull T value) {
     this.value = value;
@@ -29,7 +31,7 @@ public final class NonNil<T> extends Success<T> {
   }
 
   @Override
-  public Optional<T> valueOpt() {
+  public Optional<@NonNull T> valueOpt() {
     return o.isPresent() ? o : (o = Optional.of(value));
   }
 }

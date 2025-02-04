@@ -2,7 +2,6 @@ package com.flipkart.krystal.data;
 
 import static com.flipkart.krystal.data.Errable.nil;
 
-import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.except.IllegalModificationException;
 import com.flipkart.krystal.facets.InputMirror;
 import com.google.common.collect.ImmutableSet;
@@ -14,7 +13,7 @@ import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Getter
-public final class SimpleRequestBuilder<T> implements Builder {
+public final class SimpleRequestBuilder<T> implements ImmutableRequest.Builder<T> {
 
   private final ImmutableSet<? extends InputMirror> _facets;
   private final Map<Integer, Errable<Object>> _data;
@@ -37,6 +36,7 @@ public final class SimpleRequestBuilder<T> implements Builder {
     return _data;
   }
 
+  @Override
   public ImmutableSet<? extends InputMirror> _facets() {
     return _facets;
   }
@@ -50,7 +50,8 @@ public final class SimpleRequestBuilder<T> implements Builder {
     return new SimpleImmutRequest<>(_data);
   }
 
-  public Builder _set(int facetId, FacetValue value) {
+  @SuppressWarnings("unchecked")
+  public ImmutableRequest.Builder _set(int facetId, FacetValue value) {
     if (!(value instanceof Errable<?> errable)) {
       throw new IllegalArgumentException(
           "Expected Errable but found %s".formatted(value.getClass()));
@@ -72,12 +73,14 @@ public final class SimpleRequestBuilder<T> implements Builder {
     return this;
   }
 
-  public boolean equals(@Nullable final Object o) {
+  @Override
+  public boolean equals(final @Nullable Object o) {
     if (o == this) return true;
     if (!(o instanceof SimpleRequest<?> other)) return false;
     return Objects.equals(this._data, other._asMap());
   }
 
+  @Override
   public int hashCode() {
     return Objects.hash(this._data);
   }

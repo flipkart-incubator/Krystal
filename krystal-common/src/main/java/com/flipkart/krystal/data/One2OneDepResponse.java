@@ -4,12 +4,14 @@ import static com.flipkart.krystal.data.Errable.nil;
 
 import com.flipkart.krystal.data.One2OneDepResponse.NoRequest;
 import lombok.ToString;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public sealed interface One2OneDepResponse<R extends Request<T>, T> extends DepResponse<R, T>
     permits NoRequest, RequestResponse {
 
-  Errable<T> response();
+  Errable<@NonNull T> response();
 
+  @SuppressWarnings("unchecked")
   public static <R extends Request<T>, T> One2OneDepResponse<R, T> noRequest() {
     return NoRequest.NO_REQUEST;
   }

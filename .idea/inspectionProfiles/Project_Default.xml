@@ -1606,6 +1606,8 @@
           <option value="UnusedVariable" />
           <option value="MethodOverloadsMethodOfSuperclass" />
           <option value="methodref.receiver" />
+          <option value="optional.field" />
+          <option value="optional.parameter" />
         </list>
       </option>
     </inspection_tool>

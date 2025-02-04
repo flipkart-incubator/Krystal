@@ -6,25 +6,28 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SuppressWarnings("Singleton")
 @EqualsAndHashCode
 @ToString
-final class Nil<T> extends Success<T> {
+final class Nil<T> implements Success<T> {
   private static final Nil NIL = new Nil();
   private static final CompletableFuture NIL_FUTURE = completedFuture(null);
 
   @Override
+  @SuppressWarnings("unchecked")
   public CompletableFuture<@Nullable T> toFuture() {
     return NIL_FUTURE;
   }
 
   @Override
-  public Optional<T> valueOpt() {
+  public Optional<@NonNull T> valueOpt() {
     return Optional.empty();
   }
 
+  @SuppressWarnings("unchecked")
   static <T> Nil<T> nil() {
     return NIL;
   }

@@ -1,5 +1,5 @@
 plugins {
-    id 'com.flipkart.java.code.standard' version '3.4'
+    id 'com.flipkart.java.code.standard' version '3.5'
 }
 
 ext {
@@ -107,10 +107,11 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
         withSourcesJar()
     }
 
-    tasks.withType(JavaCompile).configureEach {
+    compileJava {
         options.compilerArgs += '-Xlint:unchecked'
         options.deprecation = true
     }
+
     tasks.named('sourcesJar').configure { mustRunAfter('compileJava') }
 }
 

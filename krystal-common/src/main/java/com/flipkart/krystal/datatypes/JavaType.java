@@ -4,6 +4,7 @@ import static com.flipkart.krystal.datatypes.TypeUtils.box;
 import static com.flipkart.krystal.datatypes.TypeUtils.dataTypeMappings;
 import static com.flipkart.krystal.datatypes.TypeUtils.getJavaType;
 import static com.flipkart.krystal.datatypes.TypeUtils.typeKindMappings;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.function.Function.identity;
 
 import com.google.common.base.Defaults;
@@ -44,29 +45,29 @@ public final class JavaType<T> implements DataType<T> {
 
   JavaType(Class<?> clazz, List<? extends DataType<?>> typeParams) {
     this(
-        Optional.ofNullable(clazz.getPackage()).map(Package::getName).orElse(null),
+        Optional.ofNullable(clazz.getPackage()).map(Package::getName),
         clazz.getSimpleName(),
         getEnclosingClasses(clazz),
         typeParams);
     this.clazz = clazz;
   }
 
-  @SuppressWarnings("UnnecessaryTypeArgument") // -> To prevent Null checker errors
+  @SuppressWarnings({
+    "UnnecessaryTypeArgument",
+    "optional.parameter"
+  }) // -> To prevent Null checker errors
   private JavaType(
-      @Nullable String packageName,
+      Optional<String> packageName,
       String simpleName,
       List<String> enclosingClasses,
       List<? extends DataType<?>> typeParameters) {
     this(
-        Stream.of(
-                Optional.ofNullable(packageName).stream(),
-                enclosingClasses.stream(),
-                Stream.of(simpleName))
+        Stream.of(packageName.stream(), enclosingClasses.stream(), Stream.of(simpleName))
             .flatMap(identity())
             .filter(Objects::nonNull)
             .collect(Collectors.joining(".")),
         typeParameters);
-    this.packageName = packageName;
+    this.packageName = packageName.orElse(null);
     this.simpleName = simpleName;
     this.enclosingClasses = ImmutableList.copyOf(enclosingClasses);
   }
@@ -126,13 +127,7 @@ public final class JavaType<T> implements DataType<T> {
       }
       @SuppressWarnings("unchecked")
       Class<T> type =
-          (Class<T>)
-              Optional.ofNullable(this.getClass().getClassLoader())
-                  .orElseThrow(
-                      () ->
-                          new IllegalStateException(
-                              "null classloader returned. Cannot proceed further"))
-                  .loadClass(canonicalClassName());
+          (Class<T>) checkNotNull(this.getClass().getClassLoader()).loadClass(canonicalClassName());
 
       List<Type> list = new ArrayList<>();
       for (DataType<?> typeParameter : typeParameters) {
@@ -168,6 +163,7 @@ public final class JavaType<T> implements DataType<T> {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public T getPlatformDefaultValue() {
     try {
       Type type = javaReflectType();
@@ -204,6 +200,7 @@ public final class JavaType<T> implements DataType<T> {
     return TypeUtils.hasPlatformDefaultValue(javaModelType(processingEnv));
   }
 
+  @SuppressWarnings("unchecked")
   private @Nullable T defaultNonPrimitiveValue(Class<?> c) {
     if (String.class.isAssignableFrom(c)) {
       return (T) "";

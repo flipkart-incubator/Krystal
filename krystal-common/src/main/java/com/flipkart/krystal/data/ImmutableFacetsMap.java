@@ -91,12 +91,14 @@ public final class ImmutableFacetsMap implements FacetsMap, ImmutableFacets {
     return this;
   }
 
-  public boolean equals(@Nullable final Object o) {
+  @Override
+  public boolean equals(final @Nullable Object o) {
     if (o == this) return true;
     if (!(o instanceof FacetsMap other)) return false;
     return Objects.equals(this._asMap(), other._asMap());
   }
 
+  @Override
   public int hashCode() {
     return Objects.hash(this._asMap());
   }

@@ -33,10 +33,11 @@ public final class SimpleImmutRequest<T> implements SimpleRequest<T>, ImmutableR
   }
 
   @Override
-  public ImmutableRequest _newCopy() {
+  public ImmutableRequest<T> _newCopy() {
     return this;
   }
 
+  @Override
   public Map<Integer, Errable<Object>> _asMap() {
     return _data;
   }
@@ -55,12 +56,14 @@ public final class SimpleImmutRequest<T> implements SimpleRequest<T>, ImmutableR
     return new SimpleRequestBuilder<>(_facets(), new LinkedHashMap<>(_data));
   }
 
-  public boolean equals(@Nullable final Object o) {
+  @Override
+  public boolean equals(final @Nullable Object o) {
     if (o == this) return true;
     if (!(o instanceof SimpleRequest<?> other)) return false;
     return Objects.equals(this._data, other._asMap());
   }
 
+  @Override
   public int hashCode() {
     return Objects.hash(this._data);
   }
