@@ -90,11 +90,12 @@ import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.One2OneInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
-import com.flipkart.krystal.vajram.facets.specs.FanoutDepSpec;
 import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.flipkart.krystal.vajram.facets.specs.MandatoryFacetDefaultSpec;
+import com.flipkart.krystal.vajram.facets.specs.MandatoryFanoutDepSpec;
 import com.flipkart.krystal.vajram.facets.specs.MandatoryOne2OneDepSpec;
 import com.flipkart.krystal.vajram.facets.specs.OptionalFacetDefaultSpec;
+import com.flipkart.krystal.vajram.facets.specs.OptionalFanoutDepSpec;
 import com.flipkart.krystal.vajram.facets.specs.OptionalOne2OneDepSpec;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -793,8 +794,7 @@ public class VajramCodeGenerator {
       } else {
         String message =
             String.format(
-                "Optional facetDef dependencyDef %s must have type as Optional",
-                usingFacetModel.name());
+                "Optional dependency %s must have type as Optional", usingFacetModel.name());
         util.error(message, parameter);
         throw new VajramValidationException(message);
       }
@@ -918,7 +918,7 @@ public class VajramCodeGenerator {
                 usingFacetName);
           } else {
             String message =
-                ("A resolver ('%s') must not access an optional dependencyDef ('%s') directly."
+                ("A resolver ('%s') must not access an optional dependency ('%s') directly."
                         + "Use Optional<>, Errable<>, or DependencyResponse<> instead")
                     .formatted(logicName, usingFacetName);
             util.error(message, parameter);
@@ -1321,7 +1321,7 @@ public class VajramCodeGenerator {
         }
         classSpec.addField(field.build());
       }
-      if (codeGenParams.isSubsetRequest() && codeGenParams.isBuilder()) {
+      if (codeGenParams.isFacetsSubset() && codeGenParams.isBuilder()) {
         MethodSpec.Builder requestConstructor = constructorBuilder();
         requestConstructor.addParameter(
             ParameterSpec.builder(requestInterfacetType, "_request")
@@ -1397,8 +1397,8 @@ public class VajramCodeGenerator {
       classSpec.addMethod(fullConstructor.build());
     }
 
-    if (codeGenParams.withImpl()
-        && codeGenParams.isBuilder()
+    if (codeGenParams.isBuilder()
+        && codeGenParams.withImpl()
         && !fullConstructor.parameters.isEmpty()) {
       // Make sure there is always a no-arg constructor for the builder
       classSpec.addMethod(
@@ -1413,14 +1413,14 @@ public class VajramCodeGenerator {
     }
     if (codeGenParams.isBuilder()
         && codeGenParams.withImpl()
-        && !(codeGenParams.isRequest() || codeGenParams.isSubsetRequest())) {
+        && !(codeGenParams.isRequest() || codeGenParams.isFacetsSubset())) {
       // Make sure Builder always has a constructor which accepts only the request irrespective of
       // type of Facet class
       // See Vajram#facetsFromRequest
       classSpec.addMethod(
           constructorBuilder()
-              .addParameter(ParameterSpec.builder(getRequestInterfaceType(), "request").build())
-              .addStatement("this._request = request._asBuilder()")
+              .addParameter(ParameterSpec.builder(getRequestInterfaceType(), "_request").build())
+              .addStatement("this._request = _request._asBuilder()")
               .build());
     }
   }
@@ -1884,7 +1884,9 @@ public class VajramCodeGenerator {
                   ? InputMirrorSpec.class
                   : facet instanceof DependencyModel vajramDepDef
                       ? vajramDepDef.canFanout()
-                          ? FanoutDepSpec.class
+                          ? vajramDepDef.isMandatory()
+                              ? MandatoryFanoutDepSpec.class
+                              : OptionalFanoutDepSpec.class
                           : vajramDepDef.isMandatory()
                               ? MandatoryOne2OneDepSpec.class
                               : OptionalOne2OneDepSpec.class

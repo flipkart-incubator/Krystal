@@ -3,11 +3,13 @@ package com.flipkart.krystal.vajram.codegen.models;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.facets.InputSource;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.google.common.collect.ImmutableSet;
 import java.util.EnumSet;
 import javax.lang.model.element.VariableElement;
 import lombok.Builder;
 import lombok.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.common.returnsreceiver.qual.This;
 
 /**
@@ -20,7 +22,7 @@ public record GivenFacetModel<T>(
     @NonNull String name,
     @NonNull VajramInfoLite vajramInfo,
     @NonNull DataType<T> dataType,
-    boolean isMandatory,
+    @Nullable Mandatory mandatoryAnno,
     @NonNull String documentation,
     boolean isBatched,
     ImmutableSet<FacetType> facetTypes,

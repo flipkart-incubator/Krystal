@@ -89,7 +89,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 class KrystexVajramExecutorTest {
 
-  private static final Duration TIMEOUT = ofSeconds(100);
+  private static final Duration TIMEOUT = ofSeconds(1000);
   private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll

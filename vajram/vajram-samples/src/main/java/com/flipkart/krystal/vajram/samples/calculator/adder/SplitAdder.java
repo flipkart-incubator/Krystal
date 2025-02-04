@@ -12,6 +12,7 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.SingleExecute;
 import com.flipkart.krystal.vajram.facets.Using;
@@ -25,16 +26,16 @@ import java.util.Optional;
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class SplitAdder extends ComputeVajram<Integer> {
   static class _Facets {
-    @Input List<Integer> numbers;
+    @Mandatory @Input List<Integer> numbers;
 
     @Dependency(onVajram = SplitAdder.class)
-    Optional<Integer> splitSum1;
+    int splitSum1;
 
     @Dependency(onVajram = SplitAdder.class)
-    Optional<Integer> splitSum2;
+    int splitSum2;
 
     @Dependency(onVajram = Adder.class)
-    Optional<Integer> sum;
+    int sum;
   }
 
   @Resolve(dep = splitSum1_i, depInputs = numbers_i)

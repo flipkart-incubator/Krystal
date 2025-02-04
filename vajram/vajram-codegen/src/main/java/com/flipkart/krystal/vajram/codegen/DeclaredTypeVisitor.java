@@ -1,13 +1,15 @@
 package com.flipkart.krystal.vajram.codegen;
 
+import static com.flipkart.krystal.vajram.codegen.Utils.getDisallowedMessage;
+
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import java.util.List;
-import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.Name;
-import javax.lang.model.element.QualifiedNameable;
+import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
@@ -16,47 +18,31 @@ import javax.lang.model.type.IntersectionType;
 import javax.lang.model.type.NoType;
 import javax.lang.model.type.NullType;
 import javax.lang.model.type.PrimitiveType;
-import javax.lang.model.type.TypeMirror;
 import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.UnionType;
 import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.AbstractTypeVisitor14;
-import org.checkerframework.checker.initialization.qual.NotOnlyInitialized;
 
 class DeclaredTypeVisitor<T> extends AbstractTypeVisitor14<DataType<T>, Void> {
+
   private final ProcessingEnvironment processingEnv;
   private final Utils util;
-  private final boolean ignoreFirstOptional;
   private final Element element;
 
-  @NotOnlyInitialized private final DeclaredTypeVisitor<T> subVisitor;
-
-  DeclaredTypeVisitor(Utils util, boolean ignoreFirstOptional, Element element) {
+  DeclaredTypeVisitor(Utils util, Element element) {
     this.util = util;
     this.processingEnv = util.processingEnv();
-    this.ignoreFirstOptional = ignoreFirstOptional;
     this.element = element;
-    if (ignoreFirstOptional) {
-      this.subVisitor = new DeclaredTypeVisitor<>(util, false, element);
-    } else {
-      this.subVisitor = this;
-    }
   }
 
   @Override
   public DataType<T> visitDeclared(DeclaredType t, Void inputDef) {
-    boolean optional = isOptional(t, processingEnv);
-    if (optional) {
-      TypeMirror optionalOf = t.getTypeArguments().get(0);
-      if (isOptional(optionalOf, processingEnv)) {
-        util.error("Optional<Optional<..>> is not supported", element);
-      }
-      if (ignoreFirstOptional) {
-        return subVisitor.visit(optionalOf);
-      }
+    String disallowedMessage = getDisallowedMessage(t, processingEnv);
+    if (disallowedMessage != null) {
+      util.error(disallowedMessage, element);
     }
     return JavaType.create(
-        t.asElement().toString(), t.getTypeArguments().stream().map(subVisitor::visit).toList());
+        t.asElement().toString(), t.getTypeArguments().stream().map(this::visit).toList());
   }
 
   @Override
@@ -109,16 +95,8 @@ class DeclaredTypeVisitor<T> extends AbstractTypeVisitor14<DataType<T>, Void> {
     throw uoe();
   }
 
-  static boolean isOptional(TypeMirror t, ProcessingEnvironment processingEnv) {
-    Element e = processingEnv.getTypeUtils().asElement(t);
-    if (e == null) {
-      return false;
-    }
-    Name name =
-        (e instanceof QualifiedNameable qualifiedNameable)
-            ? qualifiedNameable.getQualifiedName()
-            : e.getSimpleName();
-    return name.contentEquals(Optional.class.getName());
+  static @Nullable Mandatory getMandatoryTag(VariableElement facetField) {
+    return facetField.getAnnotation(Mandatory.class);
   }
 
   private static UnsupportedOperationException uoe() {

@@ -15,6 +15,7 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.multiplier.Multiplier;
@@ -28,16 +29,19 @@ import com.google.common.collect.ImmutableCollection;
 @VajramDef
 public abstract class A2MinusB2 extends ComputeVajram<Integer> {
   static class _Facets {
-    @Input int a;
-    @Input int b;
+    @Mandatory @Input int a;
+    @Mandatory @Input int b;
 
     /** The value of facet {@code a} multiplied by {@code 2} */
+    @Mandatory
     @Dependency(onVajram = Multiplier.class)
     int twoA;
 
+    @Mandatory
     @Dependency(onVajram = Multiplier.class)
     int twoB;
 
+    @Mandatory
     @Dependency(onVajram = Subtractor.class)
     int diff;
   }

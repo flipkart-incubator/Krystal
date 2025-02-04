@@ -7,6 +7,7 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import jakarta.inject.Inject;
@@ -25,15 +26,16 @@ import java.util.Optional;
 // ComputeVajram means that this Vajram does not directly perform any blocking operations.
 public abstract class Greeting extends ComputeVajram<String> {
   static class _Facets {
-    @Input String userId;
-    @Inject Optional<Logger> log;
+    @Mandatory @Input String userId;
+    @Inject Logger log;
 
+    @Mandatory
     @Inject
     @Named("analytics_sink")
     AnalyticsEventSink analyticsEventSink;
 
     @Dependency(onVajram = UserService.class)
-    Optional<UserInfo> userInfo;
+    UserInfo userInfo;
   }
 
   // Resolving (or providing) inputs of its dependencies

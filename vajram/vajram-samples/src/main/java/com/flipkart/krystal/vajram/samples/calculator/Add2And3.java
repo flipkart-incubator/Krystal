@@ -9,6 +9,7 @@ import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
@@ -20,6 +21,7 @@ import com.google.common.collect.ImmutableCollection;
 @VajramDef
 abstract class Add2And3 extends ComputeVajram<Integer> {
   static class _Facets {
+    @Mandatory
     @Dependency(onVajram = Adder.class)
     int sumOf2And3;
   }

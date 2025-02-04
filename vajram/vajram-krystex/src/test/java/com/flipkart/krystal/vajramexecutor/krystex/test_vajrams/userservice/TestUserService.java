@@ -9,6 +9,7 @@ import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -23,7 +24,7 @@ import java.util.concurrent.atomic.LongAdder;
 @VajramDef
 public abstract class TestUserService extends IOVajram<TestUserInfo> {
   static class _Facets {
-    @Batch @Input String userId;
+    @Mandatory @Batch @Input String userId;
   }
 
   private static final ScheduledExecutorService LATENCY_INDUCER =

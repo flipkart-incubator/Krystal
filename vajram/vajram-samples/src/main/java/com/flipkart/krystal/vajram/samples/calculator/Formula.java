@@ -16,6 +16,7 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
@@ -23,7 +24,6 @@ import com.flipkart.krystal.vajram.samples.calculator.adder.Adder_Req;
 import com.flipkart.krystal.vajram.samples.calculator.divider.Divider;
 import com.flipkart.krystal.vajram.samples.calculator.divider.Divider_Req;
 import com.google.common.collect.ImmutableCollection;
-import java.util.Optional;
 
 /** a/(p+q) */
 @ExternalInvocation(allow = true)
@@ -35,11 +35,12 @@ public abstract class Formula extends ComputeVajram<Integer> {
     @Input int p;
     @Input int q;
 
+    @Mandatory
     @Dependency(onVajram = Adder.class)
     int sum;
 
     @Dependency(onVajram = Divider.class)
-    Optional<Integer> quotient;
+    int quotient;
   }
 
   @Override

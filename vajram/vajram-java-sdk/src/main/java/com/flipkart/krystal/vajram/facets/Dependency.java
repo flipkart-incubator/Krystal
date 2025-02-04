@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.facets;
 
-import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.Vajram;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
@@ -20,7 +20,7 @@ public @interface Dependency {
    * <p>Due to this reason, setting this should be preferred over setting {@link #onVajram()} which
    * tightly couples the classpaths of this vajram and the dependency
    */
-  Class<? extends ImmutableRequest> withVajramReq() default ImmutableRequest.class;
+  Class<? extends Request> withVajramReq() default Request.class;
 
   /**
    * The vajram class on which this vajram depends. This should only be used if the dependency

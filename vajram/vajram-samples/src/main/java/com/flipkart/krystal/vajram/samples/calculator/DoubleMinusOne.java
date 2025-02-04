@@ -17,6 +17,7 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
@@ -37,11 +38,13 @@ import java.util.Optional;
 public abstract class DoubleMinusOne extends ComputeVajram<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
-    @Input List<Integer> numbers;
+    @Mandatory @Input List<Integer> numbers;
 
+    @Mandatory
     @Dependency(onVajram = Multiplier.class, canFanout = true)
     int doubledNumbers;
 
+    @Mandatory
     @Dependency(onVajram = Subtractor.class)
     int result;
   }

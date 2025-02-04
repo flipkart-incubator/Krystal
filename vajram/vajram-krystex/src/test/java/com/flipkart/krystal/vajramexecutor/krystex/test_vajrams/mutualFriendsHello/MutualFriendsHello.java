@@ -13,6 +13,7 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.Using;
@@ -30,10 +31,10 @@ import java.util.Set;
 @VajramDef
 public abstract class MutualFriendsHello extends ComputeVajram<String> {
   static class _Facets {
-    @Input String userId;
+    @Mandatory @Input String userId;
+    @Input boolean skip;
 
-    @Input Optional<Boolean> skip;
-
+    @Mandatory
     @Dependency(onVajram = FriendsService.class)
     Set<String> friendIds;
 

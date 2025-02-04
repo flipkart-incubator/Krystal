@@ -4,6 +4,7 @@ import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -20,8 +21,9 @@ public abstract class TooManyQualifiers extends ComputeVajram<String> {
 
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
-    @Input String input;
+    @Mandatory @Input String input;
 
+    @Mandatory
     @Inject
     @Named("toInject")
     @InjectionQualifier

@@ -21,8 +21,8 @@ import lombok.Getter;
  * @param <DV> The dependency vajram
  */
 @Getter
-public final class FanoutDepSpec<T, CV extends Request, DV extends Request<T>>
-    extends DependencySpec<T, CV, DV> implements OptionalFacetSpec<T, CV> {
+public abstract sealed class FanoutDepSpec<T, CV extends Request, DV extends Request<T>>
+    extends DependencySpec<T, CV, DV> permits MandatoryFanoutDepSpec, OptionalFanoutDepSpec {
 
   private final Function<Facets, FanoutDepResponses<DV, T>> getFromFacets;
   private final BiConsumer<Facets, FanoutDepResponses<DV, T>> setToFacets;
@@ -62,6 +62,11 @@ public final class FanoutDepSpec<T, CV extends Request, DV extends Request<T>>
   @SuppressWarnings("MethodOverloadsMethodOfSuperclass")
   public void setFacetValue(FacetsBuilder facets, FanoutDepResponses value) {
     setToFacets.accept(facets, value);
+  }
+
+  @Override
+  public final <D> D getPlatformDefaultValue() throws UnsupportedOperationException {
+    return (D) FanoutDepResponses.empty();
   }
 
   @Override

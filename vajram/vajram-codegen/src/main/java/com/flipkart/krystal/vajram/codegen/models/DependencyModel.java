@@ -2,11 +2,13 @@ package com.flipkart.krystal.vajram.codegen.models;
 
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.google.common.collect.ImmutableSet;
 import java.util.EnumSet;
 import javax.lang.model.element.VariableElement;
 import lombok.Builder;
 import lombok.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Builder
 public record DependencyModel(
@@ -16,7 +18,7 @@ public record DependencyModel(
     @NonNull VajramInfoLite depVajramInfoLite,
     @NonNull DataType<?> dataType,
     @NonNull String depReqClassQualifiedName,
-    boolean isMandatory,
+    @Nullable Mandatory mandatoryAnno,
     boolean canFanout,
     @NonNull String documentation,
     boolean isBatched,

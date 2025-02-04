@@ -1,12 +1,9 @@
 package com.flipkart.krystal.vajram;
 
-import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
-
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.FacetsBuilder;
 import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.google.common.collect.ImmutableCollection;
@@ -65,14 +62,9 @@ public sealed interface Vajram<T> permits AbstractVajram, BatchableVajram {
     return getSimpleInputResolvers();
   }
 
-  default DependencyCommand<? extends Request> resolveInputOfDependency(
-      int resolverId, ImmutableList<? extends Builder> depRequests, Facets facets) {
-    return executeFanoutWith(depRequests);
-  }
-
   ImmutableMap<Facets, CompletableFuture<@Nullable T>> execute(ImmutableList<Facets> inputs);
 
   Builder newRequestBuilder();
 
-  FacetsBuilder facetsFromRequest(Request<?> requestBuilder);
+  FacetsBuilder facetsFromRequest(Request<?> request);
 }

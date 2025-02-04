@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.samples.calculator.divider;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import java.util.Optional;
 
@@ -10,8 +11,8 @@ import java.util.Optional;
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class Divider extends ComputeVajram<Integer> {
   static class _Facets {
-    @Input int numerator;
-    @Input Optional<Integer> denominator;
+    @Mandatory @Input int numerator;
+    @Input int denominator;
   }
 
   @Output

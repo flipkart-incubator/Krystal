@@ -17,6 +17,7 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
@@ -32,9 +33,10 @@ import java.util.stream.IntStream;
 @VajramDef
 public abstract class HelloFriends extends ComputeVajram<String> {
   static class _Facets {
-    @Input String userId;
-    @Input Optional<Integer> numberOfFriends;
+    @Mandatory @Input String userId;
+    @Input int numberOfFriends;
 
+    @Mandatory
     @Dependency(onVajram = TestUserService.class)
     TestUserInfo userInfo;
 

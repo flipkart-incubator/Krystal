@@ -66,6 +66,11 @@ public abstract sealed class One2OneDepSpec<T, CV extends Request, DV extends Re
   }
 
   @Override
+  public <D> D getPlatformDefaultValue() throws UnsupportedOperationException {
+    return (D) One2OneDepResponse.noRequest();
+  }
+
+  @Override
   public boolean canFanout() {
     return false;
   }

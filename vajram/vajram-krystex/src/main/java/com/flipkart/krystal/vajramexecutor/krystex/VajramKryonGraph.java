@@ -16,6 +16,7 @@ import static java.util.function.Function.identity;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.facets.BasicFacetInfo;
@@ -43,6 +44,7 @@ import com.flipkart.krystal.vajram.BatchableVajram;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.vajram.exception.MandatoryFacetMissingException;
 import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
@@ -413,6 +415,14 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
         value = errable;
       } else if (facetValue instanceof One2OneDepResponse<?, ?> depResponse) {
         value = depResponse.response();
+      } else if (facetValue instanceof FanoutDepResponses<?, ?> fanoutDepResponses) {
+        if (fanoutDepResponses.requestResponsePairs().stream()
+            .allMatch(reqResp -> reqResp.response().valueOpt().isEmpty())) {
+          missingMandatoryValues.put(
+              mandatoryFacet.name(),
+              new MandatoryFacetMissingException(vajramID.vajramId(), mandatoryFacet.name()));
+        }
+        continue;
       } else {
         continue;
       }

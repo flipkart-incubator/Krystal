@@ -14,6 +14,7 @@ import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
@@ -28,8 +29,8 @@ import java.util.Set;
 @VajramDef
 public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
   static class _Facets {
-    @Input Set<String> userIds;
-    @Input Optional<Boolean> skip;
+    @Mandatory @Input Set<String> userIds;
+    @Input boolean skip;
 
     @Dependency(onVajram = HelloFriendsV2.class, canFanout = true)
     String hellos;

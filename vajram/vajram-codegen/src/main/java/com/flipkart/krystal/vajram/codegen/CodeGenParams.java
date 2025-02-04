@@ -24,10 +24,10 @@ record CodeGenParams(
 
   @Override
   public boolean wrapsRequest() {
-    return !isRequest() && !isSubsetRequest();
+    return !isRequest() && !isFacetsSubset();
   }
 
-  public boolean isSubsetRequest() {
+  public boolean isFacetsSubset() {
     return isSubsetBatch() || isSubsetCommon();
   }
 

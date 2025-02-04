@@ -36,4 +36,8 @@ public final class OptionalFacetDefaultSpec<T, CV extends Request> extends Defau
         getFromFacets,
         setToFacets);
   }
+
+  public <D> D getPlatformDefaultValue() throws UnsupportedOperationException {
+    throw new UnsupportedOperationException("Optional facets do not have a platform default value");
+  }
 }

@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator.adder;
 
+import static com.flipkart.krystal.vajram.facets.Mandatory.IfNotSet.DEFAULT_TO_ZERO;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Function.identity;
@@ -8,6 +9,7 @@ import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.google.common.collect.ImmutableList;
 import jakarta.inject.Inject;
@@ -24,12 +26,16 @@ public abstract class Adder extends IOVajram<Integer> {
 
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
-    @Batch @Input int numberOne;
-    @Batch @Input Optional<Integer> numberTwo;
+    @Mandatory @Batch @Input int numberOne;
+
+    @Mandatory(ifNotSet = DEFAULT_TO_ZERO)
+    @Batch
+    @Input
+    int numberTwo;
 
     @Inject
     @Named(FAIL_ADDER_FLAG)
-    Optional<Boolean> fail;
+    boolean fail;
   }
 
   @Output
@@ -42,8 +48,7 @@ public abstract class Adder extends IOVajram<Integer> {
     return _batches.stream()
         .collect(
             toImmutableMap(
-                identity(),
-                batch -> completedFuture(add(batch.numberOne(), batch.numberTwo().orElse(0)))));
+                identity(), batch -> completedFuture(add(batch.numberOne(), batch.numberTwo()))));
   }
 
   public static int add(int a, int b) {

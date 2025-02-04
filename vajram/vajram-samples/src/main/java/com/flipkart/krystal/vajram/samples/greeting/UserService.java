@@ -8,6 +8,7 @@ import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.google.common.collect.ImmutableList;
 import java.util.List;
@@ -20,8 +21,8 @@ import java.util.stream.Collectors;
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class UserService extends IOVajram<UserInfo> {
   static class _Facets {
-    @Batch @Input String userId;
-    @Input Optional<String> test;
+    @Mandatory @Batch @Input String userId;
+    @Input String test;
   }
 
   @Output

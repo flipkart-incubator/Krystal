@@ -6,18 +6,22 @@ import static com.flipkart.krystal.datatypes.TypeUtils.getJavaType;
 import static com.flipkart.krystal.datatypes.TypeUtils.typeKindMappings;
 import static java.util.function.Function.identity;
 
+import com.google.common.base.Defaults;
 import com.google.common.collect.ImmutableList;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import lombok.EqualsAndHashCode;
@@ -157,6 +161,54 @@ public final class JavaType<T> implements DataType<T> {
             typeParameters.stream()
                 .map(t -> box(t.javaModelType(processingEnv), processingEnv))
                 .toArray(TypeMirror[]::new));
+  }
+
+  @Override
+  public T getPlatformDefaultValue() {
+    try {
+      Type type = javaReflectType();
+      if (type instanceof Class<?> c) {
+        T defaultPrimitiveValue = (T) Defaults.defaultValue(c);
+        if (defaultPrimitiveValue != null) {
+          return defaultPrimitiveValue;
+        } else {
+          T defaultNonPrimitiveValue = defaultNonPrimitiveValue(c);
+          if (defaultNonPrimitiveValue != null) {
+            return defaultNonPrimitiveValue;
+          }
+        }
+      } else if (type instanceof ArrayType) {
+        return (T) new Object[0];
+      } else if (type instanceof ParameterizedType p) {
+        Type rawType = p.getRawType();
+        if (rawType instanceof Class<?> c) {
+          T defaultValue = defaultNonPrimitiveValue(c);
+          if (defaultValue != null) {
+            return defaultValue;
+          }
+        }
+      }
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException(e);
+    }
+    throw new IllegalArgumentException(
+        "Cannot determine platform default value for type %s".formatted(this));
+  }
+
+  @Override
+  public boolean hasPlatformDefaultValue(ProcessingEnvironment processingEnv) {
+    return TypeUtils.hasPlatformDefaultValue(javaModelType(processingEnv));
+  }
+
+  private @Nullable T defaultNonPrimitiveValue(Class<?> c) {
+    if (String.class.isAssignableFrom(c)) {
+      return (T) "";
+    } else if (List.class.isAssignableFrom(c)) {
+      return (T) List.of();
+    } else if (Map.class.isAssignableFrom(c)) {
+      return (T) Map.of();
+    }
+    return null;
   }
 
   private static ImmutableList<String> getEnclosingClasses(Class<?> clazz) {

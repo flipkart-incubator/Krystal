@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajram.codegen;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants._FACETS_CLASS;
-import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.isOptional;
+import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.getMandatoryTag;
 import static com.flipkart.krystal.vajram.utils.Constants.IMMUT_FACETS_CLASS_SUFFIX;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
@@ -13,6 +13,7 @@ import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.One2OneDepResponse;
@@ -43,10 +44,12 @@ import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FacetId;
 import com.flipkart.krystal.vajram.facets.FacetIdNameMapping;
 import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.ReservedFacets;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
@@ -73,7 +76,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
-import javax.annotation.Nullable;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
@@ -97,11 +99,26 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
 public class Utils {
 
   private static final boolean DEBUG = false;
+  private static final ImmutableMap<Class<?>, String> DISALLOWED_SUPERTYPES_AT_TOP_LEVEL =
+      ImmutableMap.<Class<?>, String>builder()
+          .put(
+              Optional.class,
+              Optional.class
+                  + " is not an allowed facet type. All facets are optional by default. So this should not be needed.")
+          .put(
+              Request.class,
+              Request.class
+                  + " is not an allowed facet type as this can cause undesired behaviour.")
+          .put(
+              Facets.class,
+              Facets.class + " is not an allowed facet type as this can cause undesired behaviour.")
+          .build();
 
   @Getter private final ProcessingEnvironment processingEnv;
   private final Types typeUtils;
@@ -129,6 +146,43 @@ public class Utils {
 
   static List<AnnotationSpec> annotations(Class<?>... annotations) {
     return stream(annotations).map(aClass -> AnnotationSpec.builder(aClass).build()).toList();
+  }
+
+  static @Nullable String getDisallowedMessage(
+      TypeMirror type, ProcessingEnvironment processingEnv) {
+    return DISALLOWED_SUPERTYPES_AT_TOP_LEVEL.entrySet().stream()
+        .<@Nullable String>map(
+            e -> {
+              if (isRawAssignable(type, e.getKey(), processingEnv)) {
+                return e.getValue();
+              } else {
+                return null;
+              }
+            })
+        .filter(Objects::nonNull)
+        .findFirst()
+        .orElse(null);
+  }
+
+  /**
+   * Returns true if the raw type (without generics) of {@code from} can be assigned to the raw type
+   * of {@code to}
+   */
+  public static boolean isRawAssignable(
+      TypeMirror from, Class<?> to, ProcessingEnvironment processingEnv) {
+    Types typeUtils = processingEnv.getTypeUtils();
+    return typeUtils.isAssignable(
+        typeUtils.erasure(from),
+        typeUtils.erasure(
+            getTypeElement(checkNotNull(to.getCanonicalName()), processingEnv).asType()));
+  }
+
+  public static TypeElement getTypeElement(String name, ProcessingEnvironment processingEnv) {
+    return Optional.ofNullable(processingEnv.getElementUtils().getTypeElement(name))
+        .orElseThrow(
+            () ->
+                new IllegalStateException(
+                    "Could not find type element with name %s".formatted(name)));
   }
 
   List<TypeElement> getVajramClasses(RoundEnvironment roundEnv) {
@@ -252,9 +306,9 @@ public class Utils {
     inputBuilder.name(facetName);
     inputBuilder.documentation(
         Optional.ofNullable(elementUtils.getDocComment(inputField)).orElse(""));
-    inputBuilder.isMandatory(!isOptional(inputField.asType(), processingEnv));
+    inputBuilder.mandatoryAnno(getMandatoryTag(inputField));
     DataType<Object> dataType =
-        inputField.asType().accept(new DeclaredTypeVisitor<>(this, true, inputField), null);
+        inputField.asType().accept(new DeclaredTypeVisitor<>(this, inputField), null);
     inputBuilder.dataType(dataType);
     inputBuilder.isBatched(Optional.ofNullable(inputField.getAnnotation(Batch.class)).isPresent());
     EnumSet<FacetType> facetTypes = EnumSet.noneOf(FacetType.class);
@@ -291,7 +345,7 @@ public class Utils {
         Optional.ofNullable(givenIdsByName.get(facetName))
             .orElseGet(() -> getNextAvailableFacetId(takenFacetIds, nextFacetId)));
     depBuilder.name(facetName);
-    depBuilder.isMandatory(!isOptional(depField.asType(), processingEnv));
+    depBuilder.mandatoryAnno(getMandatoryTag(depField));
     Optional<TypeMirror> vajramReqType =
         getTypeFromAnnotationMember(dependency::withVajramReq)
             .filter(
@@ -299,14 +353,17 @@ public class Utils {
                     !((QualifiedNameable) typeUtils.asElement(typeMirror))
                         .getQualifiedName()
                         .equals(
-                            getTypeElement(ImmutableRequest.class.getName()).getQualifiedName()));
+                            getTypeElement(Request.class.getName(), processingEnv)
+                                .getQualifiedName()));
     Optional<TypeMirror> vajramType =
         getTypeFromAnnotationMember(dependency::onVajram)
             .filter(
                 typeMirror ->
                     !((QualifiedNameable) typeUtils.asElement(typeMirror))
                         .getQualifiedName()
-                        .equals(getTypeElement(Vajram.class.getName()).getQualifiedName()));
+                        .equals(
+                            getTypeElement(Vajram.class.getName(), processingEnv)
+                                .getQualifiedName()));
     TypeMirror vajramOrReqType =
         vajramReqType
             .or(() -> vajramType)
@@ -328,7 +385,7 @@ public class Utils {
           depField);
     } else {
       DataType<?> declaredDataType =
-          new DeclaredTypeVisitor<>(this, true, depField).visit(depField.asType());
+          new DeclaredTypeVisitor<>(this, depField).visit(depField.asType());
       TypeElement vajramOrReqElement =
           (TypeElement) processingEnv.getTypeUtils().asElement(vajramOrReqType);
       VajramInfoLite depVajramInfoLite = getVajramInfoLite(vajramOrReqElement);
@@ -358,14 +415,6 @@ public class Utils {
         depField);
   }
 
-  public TypeElement getTypeElement(String name) {
-    return Optional.ofNullable(elementUtils.getTypeElement(name))
-        .orElseThrow(
-            () ->
-                new IllegalStateException(
-                    "Could not find type element with name %s".formatted(name)));
-  }
-
   private VajramInfoLite getVajramInfoLite(TypeElement vajramOrReqClass) {
     String vajramClassSimpleName = vajramOrReqClass.getSimpleName().toString();
     PackageElement packageName = elementUtils.getPackageOf(vajramOrReqClass);
@@ -379,10 +428,11 @@ public class Utils {
       TypeMirror responseType = getResponseType(vajramOrReqClass, Request.class);
       TypeElement responseTypeElement = (TypeElement) typeUtils.asElement(responseType);
       return new VajramInfoLite(
+          packageName.getQualifiedName().toString(),
           vajramID(
               vajramClassSimpleName.substring(
                   0, vajramClassSimpleName.length() - Constants.REQUEST_SUFFIX.length())),
-          new DeclaredTypeVisitor<>(this, false, responseTypeElement).visit(responseType),
+          new DeclaredTypeVisitor<>(this, responseTypeElement).visit(responseType),
           facetIdNameMappings);
     } else if (isRawAssignable(vajramOrReqClass.asType(), Vajram.class)) {
       TypeMirror responseType = getResponseType(vajramOrReqClass, Vajram.class);
@@ -410,8 +460,9 @@ public class Utils {
       }
       VajramID vajramId = vajramID(vajramClassSimpleName);
       return new VajramInfoLite(
+          packageName.getQualifiedName().toString(),
           vajramId,
-          new DeclaredTypeVisitor<>(this, false, responseTypeElement).visit(responseType),
+          new DeclaredTypeVisitor<>(this, responseTypeElement).visit(responseType),
           facetIdNameMappings);
     } else {
       throw new IllegalArgumentException(
@@ -580,9 +631,7 @@ public class Utils {
    * of {@code to}
    */
   public boolean isRawAssignable(TypeMirror from, Class<?> to) {
-    return typeUtils.isAssignable(
-        typeUtils.erasure(from),
-        typeUtils.erasure(getTypeElement(checkNotNull(to.getCanonicalName())).asType()));
+    return isRawAssignable(from, to, processingEnv());
   }
 
   public TypeMirror box(TypeMirror type) {
@@ -701,11 +750,15 @@ public class Utils {
       } else {
         return new One2OneResponse(this);
       }
-    } else if (facet.isMandatory()) {
-      return new Actual(this);
-    } else if (codeGenParams.isDevAccessible() && codeGenParams.isLocal()) {
-      return new OptionalType(this);
     } else {
+      boolean devAccessible = codeGenParams.isDevAccessible() && codeGenParams.isLocal();
+      Mandatory mandatoryAnno = facet.mandatoryAnno();
+      if (mandatoryAnno != null
+          && (mandatoryAnno.ifNotSet().usePlatformDefault() || devAccessible)) {
+        return new Actual(this);
+      } else if (devAccessible) {
+        return new OptionalType(this);
+      }
       return new Boxed(this);
     }
   }
