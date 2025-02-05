@@ -71,7 +71,7 @@ abstract class GetUsefulData extends ComputeVajram<MyResponse> {
   @Dependency(idx = 3, value = "GetUsefulDataFromDB")
   UsefulDataDAO usefulData;
 
-  @Resolve(dep = "usefulData", depInputs = "queryInputs")
+  @Resolve(depName = "usefulData", depInputs = "queryInputs")
   static UsefulDataQuery computeQuery(@Using("userId") String userId, @Using("dataCount") Optional<Integer> dataCount){
     return UsefulDataQuery.builder()
             .userId(userId.trim())

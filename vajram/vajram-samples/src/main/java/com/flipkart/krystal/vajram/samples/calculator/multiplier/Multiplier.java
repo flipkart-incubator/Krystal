@@ -2,10 +2,10 @@ package com.flipkart.krystal.vajram.samples.calculator.multiplier;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.Input;
-import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.samples.calculator.multiplier.MultiplierFacetUtil.MultiplierFacets;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.vajram.facets.Output;
 import java.util.Optional;
 
 @ExternalInvocation(allow = true)
@@ -13,12 +13,12 @@ import java.util.Optional;
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class Multiplier extends ComputeVajram<Integer> {
   static class _Facets {
-    @Input int numberOne;
-    @Input Optional<Integer> numberTwo;
+    @Mandatory @Input int numberOne;
+    @Input int numberTwo;
   }
 
   @Output
-  static int multiply(MultiplierFacets allInputs) {
-    return allInputs.numberOne() * allInputs.numberTwo().orElse(1);
+  static int multiply(int numberOne, Optional<Integer> numberTwo) {
+    return numberOne * numberTwo.orElse(1);
   }
 }

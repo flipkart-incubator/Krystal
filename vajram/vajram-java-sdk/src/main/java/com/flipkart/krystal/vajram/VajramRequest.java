@@ -1,9 +1,8 @@
 package com.flipkart.krystal.vajram;
 
-import com.flipkart.krystal.vajram.facets.FacetValuesAdaptor;
+import com.flipkart.krystal.data.Request;
 
 /**
  * @param <T> The response type of the vajram corresponding to this request
  */
-@FunctionalInterface
-public interface VajramRequest<T> extends FacetValuesAdaptor {}
+public interface VajramRequest<T> extends Request<T> {}

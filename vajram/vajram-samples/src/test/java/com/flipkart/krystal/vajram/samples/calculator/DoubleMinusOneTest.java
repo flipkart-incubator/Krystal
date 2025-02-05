@@ -52,8 +52,44 @@ class DoubleMinusOneTest {
       future =
           krystexVajramExecutor.execute(
               graph.getVajramId(DoubleMinusOne.class),
-              DoubleMinusOneRequest.builder().numbers(List.of(1, 2, 3)).build());
+              DoubleMinusOne_ImmutReqPojo._builder().numbers(List.of(1, 2, 3))._build());
     }
     Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(11);
+  }
+
+  @Test
+  void doubleMinusOne_duplicateNumbers_success() {
+    CompletableFuture<Integer> future;
+    try (KrystexVajramExecutor krystexVajramExecutor =
+        graph.createExecutor(
+            KrystexVajramExecutorConfig.builder()
+                .requestId("doubleMinusOne")
+                .kryonExecutorConfigBuilder(
+                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                .build())) {
+      future =
+          krystexVajramExecutor.execute(
+              graph.getVajramId(DoubleMinusOne.class),
+              DoubleMinusOne_ImmutReqPojo._builder().numbers(List.of(1, 1, 3))._build());
+    }
+    Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(9);
+  }
+
+  @Test
+  void doubleMinusOne_noNumbers_success() {
+    CompletableFuture<Integer> future;
+    try (KrystexVajramExecutor krystexVajramExecutor =
+        graph.createExecutor(
+            KrystexVajramExecutorConfig.builder()
+                .requestId("doubleMinusOne")
+                .kryonExecutorConfigBuilder(
+                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                .build())) {
+      future =
+          krystexVajramExecutor.execute(
+              graph.getVajramId(DoubleMinusOne.class),
+              DoubleMinusOne_ImmutReqPojo._builder().numbers(List.of())._build());
+    }
+    Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(-1);
   }
 }

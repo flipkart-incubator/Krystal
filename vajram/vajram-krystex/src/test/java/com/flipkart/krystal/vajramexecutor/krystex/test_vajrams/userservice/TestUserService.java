@@ -6,13 +6,12 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.Input;
-import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.batching.Batch;
-import com.flipkart.krystal.vajram.batching.BatchedFacets;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceFacetUtil.TestUserServiceBatchFacets;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceFacetUtil.TestUserServiceCommonFacets;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.vajram.facets.Output;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -25,25 +24,25 @@ import java.util.concurrent.atomic.LongAdder;
 @VajramDef
 public abstract class TestUserService extends IOVajram<TestUserInfo> {
   static class _Facets {
-    @Batch @Input String userId;
+    @Mandatory @Batch @Input String userId;
   }
 
   private static final ScheduledExecutorService LATENCY_INDUCER =
       newSingleThreadScheduledExecutor();
 
   public static final LongAdder CALL_COUNTER = new LongAdder();
-  public static final Set<TestUserServiceRequest> REQUESTS = new LinkedHashSet<>();
+  public static final Set<TestUserService_Req> REQUESTS = new LinkedHashSet<>();
 
   @Output
-  static ImmutableMap<TestUserServiceBatchFacets, CompletableFuture<TestUserInfo>> callUserService(
-      BatchedFacets<TestUserServiceBatchFacets, TestUserServiceCommonFacets> batchedRequest) {
+  static ImmutableMap<TestUserService_BatchElem, CompletableFuture<TestUserInfo>> callUserService(
+      ImmutableList<TestUserService_BatchElem> _batches) {
     CALL_COUNTER.increment();
-    batchedRequest.batch().stream()
-        .map(im -> TestUserServiceRequest.builder().userId(im.userId()).build())
+    _batches.stream()
+        .map(im -> TestUserService_ImmutReqPojo._builder().userId(im.userId())._build())
         .forEach(REQUESTS::add);
 
     // Make a call to user service and get user info
-    return batchedRequest.batch().stream()
+    return _batches.stream()
         .collect(
             toImmutableMap(
                 inputBatch -> inputBatch,

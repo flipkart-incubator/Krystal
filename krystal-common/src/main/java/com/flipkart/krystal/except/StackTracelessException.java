@@ -9,11 +9,13 @@ package com.flipkart.krystal.except;
  */
 public class StackTracelessException extends RuntimeException {
 
+  protected StackTracelessException() {}
+
   public StackTracelessException(String message) {
     super(message);
   }
 
-  public StackTracelessException(String message, Exception cause) {
+  public StackTracelessException(String message, Throwable cause) {
     super(message, cause);
   }
 

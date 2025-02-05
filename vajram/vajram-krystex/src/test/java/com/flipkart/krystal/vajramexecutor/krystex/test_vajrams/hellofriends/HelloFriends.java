@@ -1,40 +1,44 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends;
 
+import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInput;
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsFacetUtil.friendInfos_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsFacetUtil.userInfo_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.numberOfFriends_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest.userId_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Fac.friendInfos_i;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Fac.userId_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Fac.userInfo_s;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.Dependency;
-import com.flipkart.krystal.vajram.Input;
-import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsFacetUtil.HelloFriendsFacets;
+import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.FanoutCommand;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.vajram.facets.Output;
+import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserServiceRequest;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService_Req;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableSet;
-import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.IntStream;
 
 @ExternalInvocation(allow = true)
 @VajramDef
 public abstract class HelloFriends extends ComputeVajram<String> {
   static class _Facets {
-    @Input String userId;
-    @Input Optional<Integer> numberOfFriends;
+    @Mandatory @Input String userId;
 
+    @Input int numberOfFriends;
+
+    @Mandatory
     @Dependency(onVajram = TestUserService.class)
     TestUserInfo userInfo;
 
@@ -43,36 +47,35 @@ public abstract class HelloFriends extends ComputeVajram<String> {
   }
 
   @Override
-  public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
+  public ImmutableCollection<SimpleInputResolver> getSimpleInputResolvers() {
     return resolve(
         dep(
             userInfo_s,
-            depInput(TestUserServiceRequest.userId_s)
+            depInput(TestUserService_Req.userId_s)
                 .using(userId_s)
-                .asResolver(s -> s.value().map(String::trim).orElse(null))),
-        dep(
-            friendInfos_s,
-            depInputFanout(TestUserServiceRequest.userId_s)
-                .using(userId_s, numberOfFriends_s)
-                .asResolver(
-                    (userId, numberOfFriends) -> {
-                      if (numberOfFriends.value().isPresent()) {
-                        return getFriendsFor(
-                            userId.value().orElseThrow(), numberOfFriends.value().get());
-                      } else {
-                        return Collections.emptySet();
-                      }
-                    })));
+                .asResolver(s -> s.valueOpt().map(String::trim).orElse(null))));
+  }
+
+  @Resolve(dep = friendInfos_i, depInputs = TestUserService_Req.userId_i)
+  static FanoutCommand<String> userIdsForFriendInfos(
+      String userId, Optional<Integer> numberOfFriends) {
+    if (numberOfFriends.isPresent()) {
+      return executeFanoutWith(getFriendsFor(userId, numberOfFriends.get()));
+    } else {
+      return executeFanoutWith(Set.of());
+    }
   }
 
   @Output
-  static String sayHellos(HelloFriendsFacets facets) {
+  static String sayHellos(
+      TestUserInfo userInfo, FanoutDepResponses<TestUserService_Req, TestUserInfo> friendInfos) {
     return "Hello Friends of %s! %s"
         .formatted(
-            facets.userInfo().userName(),
-            facets.friendInfos().values().stream()
-                .filter(voe -> voe.value().isPresent())
-                .map(voe -> voe.value().get())
+            userInfo.userName(),
+            friendInfos.requestResponsePairs().stream()
+                .map(errable -> errable.response().valueOpt())
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .map(TestUserInfo::userName)
                 .collect(joining(", ")));
   }

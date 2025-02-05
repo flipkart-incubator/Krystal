@@ -1,24 +1,21 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2;
 
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2FacetUtil.hellos_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Request.skip_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2Request.userIds_s;
+import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2_Fac.hellos_i;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.Dependency;
-import com.flipkart.krystal.vajram.Input;
-import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.FanoutCommand;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.vajram.facets.Output;
+import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2Request;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2FacetUtil.MultiHelloFriendsV2Facets;
-import com.google.common.collect.ImmutableCollection;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_Req;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -28,42 +25,30 @@ import java.util.Set;
 @VajramDef
 public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
   static class _Facets {
-    @Input Set<String> userIds;
-    @Input Optional<Boolean> skip;
+    @Mandatory @Input Set<String> userIds;
+    @Input boolean skip;
 
     @Dependency(onVajram = HelloFriendsV2.class, canFanout = true)
     String hellos;
   }
 
-  @Override
-  public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
-    return resolve(
-        dep(
-            hellos_s,
-            depInputFanout(HelloFriendsV2Request.userId_s)
-                .using(userIds_s, skip_s)
-                .asResolver(
-                    (userIds, skip) -> {
-                      if (skip.value().orElse(false)) {
-                        throw new SkippedExecutionException("skip requested");
-                      }
-                      return userIds.value().orElse(Set.of());
-                    })));
+  @Resolve(dep = hellos_i, depInputs = HelloFriendsV2_Req.userId_i)
+  static FanoutCommand<String> userIdsForHellos(Set<String> userIds, Optional<Boolean> skip) {
+    if (skip.orElse(false)) {
+      throw new SkippedExecutionException("skip requested");
+    }
+    return executeFanoutWith(userIds);
   }
 
   @Output
-  static String sayHellos(MultiHelloFriendsV2Facets facets) {
-    if (facets.skip().orElse(false)) {
+  static String sayHellos(
+      Optional<Boolean> skip, FanoutDepResponses<HelloFriendsV2_Req, String> hellos) {
+    if (skip.orElse(false)) {
       return "";
     }
-    Set<String> userIds = facets.userIds();
     List<String> result = new ArrayList<>();
-    for (String userId : userIds) {
-      facets
-          .hellos()
-          .get(HelloFriendsV2Request.builder().userId(userId).build())
-          .value()
-          .ifPresent(result::add);
+    for (var rr : hellos.requestResponsePairs()) {
+      rr.response().valueOpt().ifPresent(result::add);
     }
     return String.join(System.lineSeparator(), result);
   }

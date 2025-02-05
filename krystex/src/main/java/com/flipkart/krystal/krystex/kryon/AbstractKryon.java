@@ -14,7 +14,7 @@ import java.util.TreeSet;
 import java.util.function.Function;
 
 abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonResponse>
-    implements Kryon<C, R> permits BatchKryon, GranularKryon {
+    implements Kryon<C, R> permits BatchKryon {
 
   protected final KryonDefinition kryonDefinition;
   protected final KryonId kryonId;

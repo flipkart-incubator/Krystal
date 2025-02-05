@@ -10,7 +10,7 @@ import lombok.EqualsAndHashCode.CacheStrategy;
  *
  * <p>All {@link DependantChain}s are guaranteed to begin with a {@link DependantChainStart}
  *
- * <p>{@link GranularKryon}s which are executed explicitly using {@link
+ * <p>{@link Kryon}s which are executed explicitly, externally using {@link
  * KrystalExecutor#executeKryon} have this as their dependantChain.
  */
 @EqualsAndHashCode(callSuper = false, cacheStrategy = CacheStrategy.LAZY)

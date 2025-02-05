@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
+import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
+
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
@@ -9,7 +11,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -51,8 +52,8 @@ class Add2And3Test {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              graph.getVajramId(Add2And3.class), Add2And3Request.builder().build());
+              graph.getVajramId(Add2And3.class), Add2And3_ImmutReqPojo._builder()._build());
     }
-    Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(5);
+    Assertions.assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(5);
   }
 }

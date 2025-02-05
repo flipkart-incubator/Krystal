@@ -4,6 +4,8 @@ import com.diffplug.gradle.spotless.SpotlessExtension
 import org.checkerframework.gradle.plugin.CheckerFrameworkExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.testing.jacoco.plugins.JacocoPluginExtension
 
 class FkJavaCodeStandard implements Plugin<Project> {
@@ -85,6 +87,10 @@ class FkJavaCodeStandard implements Plugin<Project> {
         project.pluginManager.apply('net.ltgt.errorprone')
 
         project.dependencies.add('errorprone', 'com.google.errorprone:error_prone_core:2.27.1')
+        project.tasks.compileTestJava.configure { JavaCompile task -> task.options.errorprone.enabled = false }
+        project.tasks.withType(JavaCompile).configureEach { JavaCompile task ->
+            task.options.errorprone.disableWarningsInGeneratedCode = true
+        }
     }
 
     private static void junitPlatform(Project project) {

@@ -28,8 +28,9 @@ gradlePlugin {
         }
     }
 }
-
-tasks.named('spotlessJava').configure { mustRunAfter('compileGroovy') }
+if (!fast_compile) {
+    tasks.named('spotlessJava').configure { mustRunAfter('compileGroovy') }
+}
 
 dependencies {
     api project(':vajram-java-sdk')
@@ -40,9 +41,8 @@ dependencies {
     compileOnly 'com.google.auto.service:auto-service'
     annotationProcessor 'com.google.auto.service:auto-service'
 }
-
-checkerFramework {
-    extraJavacArgs += [
-            '-AresolveReflection',
-    ]
+if (!fast_compile) {
+    checkerFramework {
+        extraJavacArgs += ['-AresolveReflection',]
+    }
 }

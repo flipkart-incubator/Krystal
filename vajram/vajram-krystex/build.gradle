@@ -11,7 +11,6 @@ dependencies {
     api project(':vajram-java-sdk')
     api project(':krystex')
 
-    annotationProcessor 'com.flipkart.krystal:vajram-codegen'
     testAnnotationProcessor 'com.flipkart.krystal:vajram-codegen'
 
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
@@ -22,8 +21,9 @@ dependencies {
     testImplementation 'org.slf4j:slf4j-log4j12'
 }
 
-tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
-
+if (!fast_compile) {
+    tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
+}
 publishing {
     publications {
         maven(MavenPublication) {
@@ -33,6 +33,11 @@ publishing {
             from components.java
         }
     }
+}
+
+afterEvaluate {
+    //The main sourceSet doesn't have any vajrams - so remove this dependency
+    compileJava.dependsOn -= "codeGenVajramModels"
 }
 
 /*
@@ -95,5 +100,8 @@ private static ArrayList<String> modulePathArgs(String moduleName) {
 
             '--add-modules', 'com.fasterxml.jackson.datatype.jsr310',
             '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jsr310",
+
+            '--add-modules', 'lombok',
+            '--add-reads', "$moduleName=lombok",
     ]
 }

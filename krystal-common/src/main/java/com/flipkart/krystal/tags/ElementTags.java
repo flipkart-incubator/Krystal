@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import lombok.EqualsAndHashCode;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -24,6 +25,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * AnnotatedElement#getAnnotations()}). The only exception to this rule is{@link NamedValueTag} (see
  * its documentation for more details)
  */
+@EqualsAndHashCode
 public final class ElementTags {
 
   private static final ElementTags EMPTY_TAGS = new ElementTags(List.of());
@@ -46,9 +48,6 @@ public final class ElementTags {
   }
 
   public static ElementTags of(Annotation... tags) {
-    if (tags.length == 0) {
-      return emptyTags();
-    }
     return new ElementTags(Arrays.asList(tags));
   }
 

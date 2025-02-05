@@ -1,8 +1,8 @@
 package com.flipkart.krystal.krystex.logicdecorators.observability;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
-import static com.flipkart.krystal.data.Errable.empty;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.flipkart.krystal.data.Errable.nil;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.io.File.separator;
 import static java.util.concurrent.CompletableFuture.allOf;
 
@@ -12,8 +12,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.Results;
+import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonId;
@@ -28,7 +27,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -56,19 +54,19 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
   @Override
   public OutputLogic<Object> decorateLogic(
       OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
-    return inputs -> {
+    return facets -> {
       KryonId kryonId = originalLogicDefinition.kryonLogicId().kryonId();
       KryonLogicId kryonLogicId = originalLogicDefinition.kryonLogicId();
       /*
        Report logic start
       */
-      kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, inputs);
+      kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facets);
 
       /*
        Execute logic
       */
-      ImmutableMap<Facets, CompletableFuture<@Nullable Object>> results =
-          logicToDecorate.execute(inputs);
+      ImmutableMap<FacetValues, CompletableFuture<@Nullable Object>> results =
+          logicToDecorate.execute(facets);
       /*
        Report logic end
       */
@@ -78,15 +76,14 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
                 kryonExecutionReport.reportMainLogicEnd(
                     kryonId,
                     kryonLogicId,
-                    new Results<>(
+                    new LogicExecResults(
                         results.entrySet().stream()
-                            .collect(
-                                toImmutableMap(
-                                    Entry::getKey,
-                                    e ->
-                                        e.getValue()
-                                            .handle(Errable::errableFrom)
-                                            .getNow(empty())))));
+                            .map(
+                                e ->
+                                    new LogicExecResponse(
+                                        e.getKey(),
+                                        e.getValue().handle(Errable::errableFrom).getNow(nil())))
+                            .collect(toImmutableList())));
               });
       return results;
     };

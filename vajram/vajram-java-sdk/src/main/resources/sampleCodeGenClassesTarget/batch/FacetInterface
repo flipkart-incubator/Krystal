@@ -1,0 +1,67 @@
+package com.flipkart.krystal.vajram.samples.anandtest;
+
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.vajram.batching.BatchEnabledFacetValues;
+import com.flipkart.krystal.vajram.facetValues.One2OneDepSpec;
+import java.lang.Integer;
+import java.lang.Override;
+import java.lang.String;
+import java.lang.SuppressWarnings;
+import java.util.Optional;
+
+@SuppressWarnings("ClassReferencesSubclass")
+public interface DependencyTestFacets extends BatchableFacets {
+  VajramDepSingleTypeSpec<Integer, DependencyTestRequest, TestRequest> testField_s = new VajramDepSingleTypeSpec<>(0, "testField", DependencyTestRequest.class, TestRequest.class);
+
+  String testField_n = "testField";
+
+  Optional<Integer> fieldOne();
+
+  Optional<String> fieldTwo();
+
+  Errable<Integer> testField();
+
+  DependencyTestImmutableFacets _build();
+
+  DependencyTestImmutableFacets.Builder _asBuilder();
+
+  static DependencyTestImmutableFacets.Builder _builder() {
+    return new DependencyTestImmutableFacets.Builder();
+  }
+
+  @Override
+  BatchFacets _batchable();
+
+  @Override
+  CommonFacets _common();
+
+  @SuppressWarnings("ClassReferencesSubclass")
+  interface BatchFacets extends Facets {
+    Optional<Integer> fieldOne();
+
+    DependencyTestImmutableFacets.BatchImmutableFacets _build();
+
+    DependencyTestImmutableFacets.BatchImmutableFacets.Builder _asBuilder();
+
+    static DependencyTestImmutableFacets.BatchImmutableFacets.Builder _builder() {
+      return new DependencyTestImmutableFacets.BatchImmutableFacets.Builder();
+    }
+  }
+
+  @SuppressWarnings("ClassReferencesSubclass")
+  interface CommonFacets extends Facets {
+    Optional<String> fieldTwo();
+
+    Errable<Integer> testField();
+
+    DependencyTestImmutableFacets.CommonImmutableFacets _build();
+
+    DependencyTestImmutableFacets.CommonImmutableFacets.Builder _asBuilder();
+
+    static DependencyTestImmutableFacets.CommonImmutableFacets.Builder _builder() {
+      return new DependencyTestImmutableFacets.CommonImmutableFacets.Builder();
+    }
+  }
+}
+

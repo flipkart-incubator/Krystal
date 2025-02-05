@@ -1,23 +1,23 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello;
 
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsFacetUtil.hellos_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.skip_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsRequest.userIds_s;
+import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
+import static com.flipkart.krystal.vajram.facets.FanoutCommand.skipFanout;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends_Fac.hellos_i;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.Dependency;
-import com.flipkart.krystal.vajram.Input;
-import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.FanoutCommand;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.vajram.facets.Output;
+import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriendsRequest;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriendsFacetUtil.MultiHelloFriendsFacets;
-import com.google.common.collect.ImmutableCollection;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_ImmutReqPojo;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_ImmutReqPojo.Builder;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Req;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -26,8 +26,8 @@ import java.util.Optional;
 @VajramDef
 public abstract class MultiHelloFriends extends ComputeVajram<String> {
   static class _Facets {
-    @Input List<String> userIds;
-    @Input Optional<Boolean> skip;
+    @Mandatory @Input List<String> userIds;
+    @Input boolean skip;
 
     @Dependency(onVajram = HelloFriends.class, canFanout = true)
     String hellos;
@@ -35,33 +35,36 @@ public abstract class MultiHelloFriends extends ComputeVajram<String> {
 
   private static final List<Integer> NUMBER_OF_FRIENDS = List.of(1, 2);
 
-  @Override
-  public ImmutableCollection<InputResolver> getSimpleInputResolvers() {
-    return resolve(
-        dep(
-            hellos_s,
-            depInputFanout(HelloFriendsRequest.numberOfFriends_s)
-                .using(userIds_s)
-                .asResolver(_x -> NUMBER_OF_FRIENDS),
-            depInputFanout(HelloFriendsRequest.userId_s)
-                .using(userIds_s, skip_s)
-                .skipIf((userIds, skip) -> skip.value().orElse(false), "skip requested")
-                .asResolver((userIds, skip) -> userIds.value().orElse(List.of()))));
+  @Resolve(
+      dep = hellos_i,
+      depInputs = {HelloFriends_Req.userId_i, HelloFriends_Req.numberOfFriends_i})
+  static FanoutCommand<Builder> sayHello(List<String> userIds, Optional<Boolean> skip) {
+    if (skip.orElse(false)) {
+      return skipFanout("skip requested");
+    }
+    List<HelloFriends_ImmutReqPojo.Builder> requests = new ArrayList<>();
+    for (String userId : userIds) {
+      for (int numberOfFriend : NUMBER_OF_FRIENDS) {
+        requests.add(
+            HelloFriends_ImmutReqPojo._builder().userId(userId).numberOfFriends(numberOfFriend));
+      }
+    }
+    return executeFanoutWith(requests);
   }
 
   @Output
-  static String sayHellos(MultiHelloFriendsFacets facets) {
+  static String sayHellos(
+      List<String> userIds, FanoutDepResponses<HelloFriends_Req, String> hellos) {
     List<String> result = new ArrayList<>();
-    for (String userId : facets.userIds()) {
+    for (String userId : userIds) {
       for (Integer numberOfFriend : NUMBER_OF_FRIENDS) {
-        facets
-            .hellos()
-            .get(
-                HelloFriendsRequest.builder()
+        hellos
+            .getForRequest(
+                HelloFriends_ImmutReqPojo._builder()
                     .userId(userId)
                     .numberOfFriends(numberOfFriend)
-                    .build())
-            .value()
+                    ._build())
+            .valueOpt()
             .ifPresent(result::add);
       }
     }

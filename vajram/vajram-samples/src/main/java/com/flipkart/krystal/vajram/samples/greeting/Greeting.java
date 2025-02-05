@@ -1,16 +1,15 @@
 package com.flipkart.krystal.vajram.samples.greeting;
 
-import static com.flipkart.krystal.vajram.samples.greeting.GreetingRequest.userInfo_n;
+import static com.flipkart.krystal.vajram.samples.greeting.Greeting_Fac.userInfo_i;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
-import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.Dependency;
-import com.flipkart.krystal.vajram.Input;
-import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
-import com.flipkart.krystal.vajram.samples.greeting.GreetingFacetUtil.GreetingFacets;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.lang.System.Logger;
@@ -27,15 +26,16 @@ import java.util.Optional;
 // ComputeVajram means that this Vajram does not directly perform any blocking operations.
 public abstract class Greeting extends ComputeVajram<String> {
   static class _Facets {
-    @Input String userId;
-    @Inject Optional<Logger> log;
+    @Mandatory @Input String userId;
+    @Inject Logger log;
 
+    @Mandatory
     @Inject
     @Named("analytics_sink")
     AnalyticsEventSink analyticsEventSink;
 
     @Dependency(onVajram = UserService.class)
-    Optional<UserInfo> userInfo;
+    UserInfo userInfo;
   }
 
   // Resolving (or providing) inputs of its dependencies
@@ -43,7 +43,7 @@ public abstract class Greeting extends ComputeVajram<String> {
   // Vajrams).
   // In this case the UserServiceVajram needs a user_id to retrieve the user info.
   // So it's GreetingVajram's responsibility to provide that input.
-  @Resolve(depName = userInfo_n, depInputs = UserServiceRequest.userId_n)
+  @Resolve(dep = userInfo_i, depInputs = UserService_Req.userId_i)
   public static String userIdForUserService(String userId) {
     return userId;
   }
@@ -51,16 +51,16 @@ public abstract class Greeting extends ComputeVajram<String> {
   // This is the core business logic of this Vajram
   // Sync vajrams can return any object. AsyncVajrams need to return {CompletableFuture}s
   @Output
-  static String createGreetingMessage(GreetingFacets facets) {
-    String userId = facets.userId();
-    Errable<UserInfo> userInfo = facets.userInfo();
+  static String createGreetingMessage(
+      String userId,
+      Optional<UserInfo> userInfo,
+      Optional<Logger> log,
+      AnalyticsEventSink analyticsEventSink) {
     String greeting =
-        "Hello "
-            + userInfo.value().map(UserInfo::userName).orElse("friend")
-            + "! Hope you are doing well!";
-    facets.log().ifPresent(l -> l.log(Level.INFO, greeting));
-    facets.log().ifPresent(l -> l.log(Level.INFO, "Greeting user " + userId));
-    facets.analyticsEventSink().pushEvent("event_type", new GreetingEvent(userId, greeting));
+        "Hello " + userInfo.map(UserInfo::userName).orElse("friend") + "! Hope you are doing well!";
+    log.ifPresent(l -> l.log(Level.INFO, greeting));
+    log.ifPresent(l -> l.log(Level.INFO, "Greeting user " + userId));
+    analyticsEventSink.pushEvent("event_type", new GreetingEvent(userId, greeting));
     return greeting;
   }
 }

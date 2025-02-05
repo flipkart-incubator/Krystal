@@ -1,0 +1,535 @@
+package com.flipkart.krystal.vajram.samples.anandtest;
+
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.FacetValue;
+import com.flipkart.krystal.data.FacetValuesBuilder;
+import com.flipkart.krystal.data.ImmutableFacetValues;
+import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.vajram.Generated;
+import com.flipkart.krystal.vajram.batching.BatchEnabledFacetsBuilder;
+import com.flipkart.krystal.vajram.batching.BatchEnabledImmutableFacetValues;
+import com.google.common.collect.ImmutableMap;
+import java.lang.IllegalArgumentException;
+import java.lang.Integer;
+import java.lang.Object;
+import java.lang.Override;
+import java.lang.String;
+import java.lang.SuppressWarnings;
+import java.util.Map;
+import java.util.Optional;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+@EqualsAndHashCode
+@ToString
+final class DependencyTestImmutableFacets implements BatchableImmutableFacets, DependencyTestFacets {
+  private final BatchImmutableFacets _batchable;
+
+  private final CommonImmutableFacets _common;
+
+  DependencyTestImmutableFacets(BatchImmutableFacets _batchable, CommonImmutableFacets _common) {
+    this._batchable = _batchable;
+    this._common = _common;
+  }
+
+  @Override
+  public BatchImmutableFacets _batchable() {
+    return this._batchable;
+  }
+
+  @Override
+  public CommonImmutableFacets _common() {
+    return this._common;
+  }
+
+  public static Builder _builder() {
+    return new Builder();
+  }
+
+  public Optional<Integer> fieldOne() {
+    return this._batchable.fieldOne();
+  }
+
+  public Optional<String> fieldTwo() {
+    return this._common.fieldTwo();
+  }
+
+  public Errable<Integer> testField() {
+    return this._common.testField();
+  }
+
+  @Override
+  public FacetValue<?> _get(int facetId) {
+    return switch (facetId) {
+      case 1 -> Errable.withValue(fieldOne());
+      case 2 -> Errable.withValue(fieldTwo());
+      case 3 -> testField();
+      default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
+    }
+    ;
+  }
+
+  @Override
+  public ImmutableMap<Integer, FacetValue<?>> _asMap() {
+    return ImmutableMap.of(
+        1, Errable.withValue(fieldOne()),
+        2, Errable.withValue(fieldTwo()),
+        3, testField())
+        ;
+  }
+
+  @Override
+  public DependencyTestImmutableFacets _build() {
+    return this;
+  }
+
+  @Override
+  public Builder _asBuilder() {
+    return new Builder(_batchable._asBuilder(), _common._asBuilder());
+  }
+
+  @Override
+  public DependencyTestImmutableFacets _newCopy() {
+    return this;
+  }
+
+  @Override
+  public Errable<Object> _getErrable(int facetId) {
+    return (Errable<Object>)_get(facetId);
+  }
+
+  @Override
+  public Responses<Request<Object>, Object> _getDepResponses(int facetId) {
+    return (Responses<Request<Object>, Object>)_get(facetId);
+  }
+
+  @ToString
+  static final class Builder implements DependencyTestFacets, BatchableFacetsBuilder {
+    private BatchImmutableFacets.Builder _batchable;
+
+    private CommonImmutableFacets.Builder _common;
+
+    Builder(BatchImmutableFacets.Builder _batchable, CommonImmutableFacets.Builder _common) {
+      this._batchable = _batchable;
+      this._common = _common;
+    }
+
+    Builder() {
+      this._batchable = BatchImmutableFacets._builder();
+      this._common = CommonImmutableFacets._builder();
+    }
+
+    Builder(DependencyTestRequest request) {
+      this._batchable = new BatchImmutableFacets.Builder(request._asBuilder());;
+      this._common = new CommonImmutableFacets.Builder(request._asBuilder());;
+    }
+
+    @Override
+    public BatchImmutableFacets.Builder _batchable() {
+      return this._batchable;
+    }
+
+    @Override
+    public CommonImmutableFacets.Builder _common() {
+      return this._common;
+    }
+
+    public Optional<Integer> fieldOne() {
+      return this._batchable.fieldOne();
+    }
+
+    public Builder fieldOne(@Nullable Integer fieldOne) {
+      this._batchable.fieldOne(fieldOne);
+      return this;
+    }
+
+    public Optional<String> fieldTwo() {
+      return this._common.fieldTwo();
+    }
+
+    public Builder fieldTwo(@Nullable String fieldTwo) {
+      this._common.fieldTwo(fieldTwo);
+      return this;
+    }
+
+    public Errable<Integer> testField() {
+      return this._common.testField();
+    }
+
+    public Builder testField(@NonNull Errable<Integer> testField) {
+      this._common.testField(testField);
+      return this;
+    }
+
+    @Override
+    public FacetValue<?> _get(int facetId) {
+      return switch (facetId) {
+        case 1 -> Errable.withValue(fieldOne());
+        case 2 -> Errable.withValue(fieldTwo());
+        case 3 -> testField();
+        default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
+      }
+      ;
+    }
+
+    @Override
+    public Map<Integer, FacetValue<?>> _asMap() {
+      return ImmutableMap.of(
+          1, Errable.withValue(fieldOne()),
+          2, Errable.withValue(fieldTwo()),
+          3, testField())
+          ;
+    }
+
+    @Override
+    public DependencyTestImmutableFacets _build() {
+      return new DependencyTestImmutableFacets(_batchable._build(), _common._build());
+    }
+
+    @Override
+    public Builder _asBuilder() {
+      return this;
+    }
+
+    @Override
+    public Builder _newCopy() {
+      return new Builder(_batchable._newCopy(), _common._newCopy());
+    }
+
+    @Override
+    public Errable<Object> _getErrable(int facetId) {
+      return (Errable<Object>)_get(facetId);
+    }
+
+    @Override
+    public Responses<Request<Object>, Object> _getDepResponses(int facetId) {
+      return (Responses<Request<Object>, Object>)_get(facetId);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public Builder _set(int facetId, FacetValue<?> facetValue) {
+      switch (facetId) {
+        case 1 -> this._batchable.fieldOne(((Errable<Integer>)facetValue).valueOpt().orElse(null));
+        case 2 -> this._common.fieldTwo(((Errable<String>)facetValue).valueOpt().orElse(null));
+        case 3 -> this._common.testField((Errable<Integer>)facetValue);
+        default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
+      }
+      return this;
+    }
+  }
+
+  @Generated(
+      by = "com.flipkart.krystal.vajram.codegen.VajramModelGenProcessor"
+  )
+  @EqualsAndHashCode
+  @ToString
+  static final class BatchImmutableFacets implements ImmutableFacets, DependencyTestFacets.BatchFacets {
+    private final DependencyTestImmutableRequest _request;
+
+    BatchImmutableFacets(DependencyTestImmutableRequest _request) {
+      this._request = _request;
+    }
+
+    public static Builder _builder() {
+      return new Builder();
+    }
+
+    public Optional<Integer> fieldOne() {
+      return this._request.fieldOne();
+    }
+
+    @Override
+    public FacetValue<?> _get(int facetId) {
+      return switch (facetId) {
+        case 1 -> Errable.withValue(fieldOne());
+        default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
+      }
+      ;
+    }
+
+    @Override
+    public ImmutableMap<Integer, FacetValue<?>> _asMap() {
+      return ImmutableMap.of(
+          1, Errable.withValue(fieldOne()))
+          ;
+    }
+
+    @Override
+    public BatchImmutableFacets _build() {
+      return this;
+    }
+
+    @Override
+    public Builder _asBuilder() {
+      return new Builder(_request._asBuilder());
+    }
+
+    @Override
+    public BatchImmutableFacets _newCopy() {
+      return this;
+    }
+
+    @Override
+    public Errable<Object> _getErrable(int facetId) {
+      return (Errable<Object>)_get(facetId);
+    }
+
+    @Override
+    public Responses<Request<Object>, Object> _getDepResponses(int facetId) {
+      return (Responses<Request<Object>, Object>)_get(facetId);
+    }
+
+    @Generated(
+        by = "com.flipkart.krystal.vajram.codegen.VajramModelGenProcessor"
+    )
+    @ToString
+    static final class Builder implements DependencyTestFacets.BatchFacets, FacetsBuilder {
+      private final DependencyTestImmutableRequest.Builder _request;
+
+      Builder(DependencyTestImmutableRequest.Builder _request) {
+        this._request = _request;
+      }
+
+      Builder() {
+        this._request = DependencyTestRequest._builder();
+      }
+
+      Builder(DependencyTestRequest request) {
+        this._request = request._asBuilder();
+      }
+
+      public Optional<Integer> fieldOne() {
+        return this._request.fieldOne();
+      }
+
+      public Builder fieldOne(@Nullable Integer fieldOne) {
+        this._request.fieldOne(fieldOne);
+        return this;
+      }
+
+      @Override
+      public FacetValue<?> _get(int facetId) {
+        return switch (facetId) {
+          case 1 -> Errable.withValue(fieldOne());
+          default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
+        }
+        ;
+      }
+
+      @Override
+      public Map<Integer, FacetValue<?>> _asMap() {
+        return ImmutableMap.of(
+            1, Errable.withValue(fieldOne()))
+            ;
+      }
+
+      @Override
+      public BatchImmutableFacets _build() {
+        return new BatchImmutableFacets(_request._build());
+      }
+
+      @Override
+      public Builder _asBuilder() {
+        return this;
+      }
+
+      @Override
+      public Builder _newCopy() {
+        return new Builder(_request._newCopy());
+      }
+
+      @Override
+      public Errable<Object> _getErrable(int facetId) {
+        return (Errable<Object>)_get(facetId);
+      }
+
+      @Override
+      public Responses<Request<Object>, Object> _getDepResponses(int facetId) {
+        return (Responses<Request<Object>, Object>)_get(facetId);
+      }
+
+      @SuppressWarnings("unchecked")
+      @Override
+      public Builder _set(int facetId, FacetValue<?> facetValue) {
+        switch (facetId) {
+          case 1 -> this._request.fieldOne(((Errable<Integer>)facetValue).valueOpt().orElse(null));
+          default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
+        }
+        return this;
+      }
+    }
+  }
+
+  @Generated(
+      by = "com.flipkart.krystal.vajram.codegen.VajramModelGenProcessor"
+  )
+  @EqualsAndHashCode
+  @ToString
+  static final class CommonImmutableFacets implements ImmutableFacets, DependencyTestFacets.CommonFacets {
+    private final DependencyTestImmutableRequest _request;
+
+    private final @NonNull Errable<Integer> testField;
+
+    CommonImmutableFacets(DependencyTestImmutableRequest _request,
+        @NonNull Errable<Integer> testField) {
+      this._request = _request;
+      this.testField = testField;
+    }
+
+    public static Builder _builder() {
+      return new Builder();
+    }
+
+    public Optional<String> fieldTwo() {
+      return this._request.fieldTwo();
+    }
+
+    public Errable<Integer> testField() {
+      return this.testField;
+    }
+
+    @Override
+    public FacetValue<?> _get(int facetId) {
+      return switch (facetId) {
+        case 2 -> Errable.withValue(fieldTwo());
+        case 3 -> testField();
+        default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
+      }
+      ;
+    }
+
+    @Override
+    public ImmutableMap<Integer, FacetValue<?>> _asMap() {
+      return ImmutableMap.of(
+          2, Errable.withValue(fieldTwo()),
+          3, testField())
+          ;
+    }
+
+    @Override
+    public CommonImmutableFacets _build() {
+      return this;
+    }
+
+    @Override
+    public Builder _asBuilder() {
+      return new Builder(_request._asBuilder(), testField);
+    }
+
+    @Override
+    public CommonImmutableFacets _newCopy() {
+      return this;
+    }
+
+    @Override
+    public Errable<Object> _getErrable(int facetId) {
+      return (Errable<Object>)_get(facetId);
+    }
+
+    @Override
+    public Responses<Request<Object>, Object> _getDepResponses(int facetId) {
+      return (Responses<Request<Object>, Object>)_get(facetId);
+    }
+
+    @Generated(
+        by = "com.flipkart.krystal.vajram.codegen.VajramModelGenProcessor"
+    )
+    @ToString
+    static final class Builder implements DependencyTestFacets.CommonFacets, FacetsBuilder {
+      private final DependencyTestImmutableRequest.Builder _request;
+
+      private @NonNull Errable<Integer> testField = Errable.nil();
+
+      Builder(DependencyTestImmutableRequest.Builder _request,
+          @NonNull Errable<Integer> testField) {
+        this._request = _request;
+        this.testField = testField;
+      }
+
+      Builder() {
+        this._request = DependencyTestRequest._builder();
+      }
+
+      Builder(DependencyTestRequest request) {
+        this._request = request._asBuilder();
+      }
+
+      public Optional<String> fieldTwo() {
+        return this._request.fieldTwo();
+      }
+
+      public Builder fieldTwo(@Nullable String fieldTwo) {
+        this._request.fieldTwo(fieldTwo);
+        return this;
+      }
+
+      public Errable<Integer> testField() {
+        return this.testField;
+      }
+
+      public Builder testField(@NonNull Errable<Integer> testField) {
+        this.testField = testField;
+        return this;
+      }
+
+      @Override
+      public FacetValue<?> _get(int facetId) {
+        return switch (facetId) {
+          case 2 -> Errable.withValue(fieldTwo());
+          case 3 -> testField();
+          default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
+        }
+        ;
+      }
+
+      @Override
+      public Map<Integer, FacetValue<?>> _asMap() {
+        return ImmutableMap.of(
+            2, Errable.withValue(fieldTwo()),
+            3, testField())
+            ;
+      }
+
+      @Override
+      public CommonImmutableFacets _build() {
+        return new CommonImmutableFacets(_request._build(), testField);
+      }
+
+      @Override
+      public Builder _asBuilder() {
+        return this;
+      }
+
+      @Override
+      public Builder _newCopy() {
+        return new Builder(_request._newCopy(), testField);
+      }
+
+      @Override
+      public Errable<Object> _getErrable(int facetId) {
+        return (Errable<Object>)_get(facetId);
+      }
+
+      @Override
+      public Responses<Request<Object>, Object> _getDepResponses(int facetId) {
+        return (Responses<Request<Object>, Object>)_get(facetId);
+      }
+
+      @SuppressWarnings("unchecked")
+      @Override
+      public Builder _set(int facetId, FacetValue<?> facetValue) {
+        switch (facetId) {
+          case 2 -> this._request.fieldTwo(((Errable<String>)facetValue).valueOpt().orElse(null));
+          case 3 -> this.testField((Errable<Integer>)facetValue);
+          default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
+        }
+        return this;
+      }
+    }
+  }
+}
+

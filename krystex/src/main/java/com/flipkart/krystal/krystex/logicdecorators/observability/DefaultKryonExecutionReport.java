@@ -2,16 +2,23 @@ package com.flipkart.krystal.krystex.logicdecorators.observability;
 
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.stream.Collectors.toMap;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
-import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.Results;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.Failure;
+import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.facets.Facet;
+import com.flipkart.krystal.facets.InputMirror;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -22,34 +29,34 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @ToString
 @Slf4j
 public final class DefaultKryonExecutionReport implements KryonExecutionReport {
-  @Getter private final Instant startTime;
+  @JsonProperty @Getter private final Instant startTime;
   private final boolean verbose;
   private final Clock clock;
   private static final String SHA_256 = "SHA-256";
-  private static @Nullable MessageDigest digest = null;
+  private static final @NonNull MessageDigest digest = initMessageDigest();
 
-  static {
+  static MessageDigest initMessageDigest() {
     try {
-      digest = MessageDigest.getInstance(SHA_256);
+      return MessageDigest.getInstance(SHA_256);
     } catch (NoSuchAlgorithmException e) {
       log.error("Error could not hash inputs because of exception ", e);
+      throw new IllegalStateException(e);
     }
   }
 
-  @Getter
+  @JsonProperty @Getter
   private final Map<KryonExecution, LogicExecInfo> mainLogicExecInfos = new LinkedHashMap<>();
 
-  @Getter private final Map<String, Object> dataMap = new HashMap<>();
+  @JsonProperty @Getter private final Map<String, Object> dataMap = new HashMap<>();
 
   public DefaultKryonExecutionReport(Clock clock) {
     this(clock, false);
@@ -63,10 +70,14 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
 
   @Override
   public void reportMainLogicStart(
-      KryonId kryonId, KryonLogicId kryonLogicId, ImmutableList<Facets> inputs) {
+      KryonId kryonId, KryonLogicId kryonLogicId, ImmutableList<? extends FacetValues> inputs) {
+
     KryonExecution kryonExecution =
         new KryonExecution(
-            kryonId, inputs.stream().map(this::extractAndConvertInputs).collect(toImmutableList()));
+            kryonId,
+            inputs.stream()
+                .map(facets -> extractAndConvertFacets(facets))
+                .collect(toImmutableList()));
     if (mainLogicExecInfos.containsKey(kryonExecution)) {
       log.error("Cannot start the same kryon execution multiple times: {}", kryonExecution);
       return;
@@ -79,12 +90,13 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
 
   @Override
   public void reportMainLogicEnd(
-      KryonId kryonId, KryonLogicId kryonLogicId, Results<Object> result) {
+      KryonId kryonId, KryonLogicId kryonLogicId, LogicExecResults logicExecResults) {
     KryonExecution kryonExecution =
         new KryonExecution(
             kryonId,
-            result.values().keySet().stream()
-                .map(this::extractAndConvertInputs)
+            logicExecResults.responses().stream()
+                .map(LogicExecResponse::facetValues)
+                .map(facets -> extractAndConvertFacets(facets))
                 .collect(toImmutableList()));
     LogicExecInfo logicExecInfo = mainLogicExecInfos.get(kryonExecution);
     if (logicExecInfo == null) {
@@ -93,117 +105,155 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
           kryonExecution);
       return;
     }
-    if (logicExecInfo.getResult() != null) {
+    if (logicExecInfo.result() != null) {
       log.error("Cannot end the same kryon execution multiple times: {}", kryonExecution);
       return;
     }
     logicExecInfo.endTimeMs = startTime.until(clock.instant(), ChronoUnit.MILLIS);
-    logicExecInfo.setResult(convertResult(result));
+    logicExecInfo.setResult(convertResult(logicExecResults));
   }
 
   private record KryonExecution(
-      KryonId kryonId, ImmutableList<ImmutableMap<String, String>> inputs) {
+      KryonId kryonId, ImmutableList<ImmutableMap<Facet, String>> inputs) {
     @Override
     public String toString() {
       return "%s(%s)".formatted(kryonId.value(), inputs);
     }
   }
 
-  private ImmutableMap<String, String> extractAndConvertInputs(Facets facets) {
-    Map<String, String> inputMap = new LinkedHashMap<>();
-    for (Entry<String, FacetValue<Object>> e : facets.values().entrySet()) {
-      FacetValue<Object> value = e.getValue();
-      if (!(value instanceof Errable<Object>)) {
-        continue;
-      }
-      String collect = convertErrable((Errable<Object>) value);
-      if (collect != null) {
-        inputMap.put(e.getKey(), collect);
-      }
-    }
+  private ImmutableMap<InputMirror, String> extractAndConvertFacets(Request request) {
+    Map<InputMirror, String> inputMap = new LinkedHashMap<>();
+    ((ImmutableSet<? extends InputMirror>) request._facets())
+        .stream()
+            .forEach(
+                (inputDef) -> {
+                  inputMap.put(inputDef, convertValue(inputDef.getFromRequest(request)));
+                });
     return ImmutableMap.copyOf(inputMap);
   }
 
-  private ImmutableMap<String, Object> extractAndConvertDependencyResults(Facets facets) {
-    Map<String, Object> inputMap = new LinkedHashMap<>();
-    for (Entry<String, FacetValue<Object>> e : facets.values().entrySet()) {
-      FacetValue<Object> value = e.getValue();
-      if (!(value instanceof Results<Object>)) {
-        continue;
-      }
-      Map<ImmutableMap<String, String>, String> collect = convertResult((Results<Object>) value);
-      inputMap.put(e.getKey(), collect);
-    }
+  private ImmutableMap<Facet, String> extractAndConvertFacets(FacetValues facetValues) {
+    Map<Facet, String> inputMap = new LinkedHashMap<>();
+    facetValues._facets().stream()
+        .forEach(
+            facetDef -> {
+              FacetValue value = facetDef.getFacetValue(facetValues);
+              if (!(value instanceof Errable<?>)) {
+                return;
+              }
+              String collect = convertErrable((Errable<?>) value);
+              if (collect != null) {
+                inputMap.put(facetDef, collect);
+              }
+            });
     return ImmutableMap.copyOf(inputMap);
   }
 
-  private String convertErrable(Errable<Object> voe) {
+  private ImmutableMap<Facet, Object> extractAndConvertDependencyResults(
+      FacetValues facetValues, ImmutableSet<? extends Facet> facetDefs) {
+    {
+      Map<Facet, Object> inputMap = new LinkedHashMap<>();
+      facetDefs.stream()
+          .forEach(
+              facetDef -> {
+                FacetValue value = facetDef.getFacetValue(facetValues);
+                if (!(value instanceof FanoutDepResponses depResponses)) {
+                  return;
+                }
+                inputMap.put(facetDef, convertResult(depResponses));
+              });
+      return ImmutableMap.copyOf(inputMap);
+    }
+  }
+
+  private String convertErrable(Errable<?> voe) {
     String sha256;
-    if (voe.error().isPresent()) {
-      Throwable throwable = voe.error().get();
+    if (voe instanceof Failure<?> f) {
+      Throwable throwable = f.error();
       String stackTraceAsString = getStackTraceAsString(throwable);
       sha256 = verbose ? hashValues(stackTraceAsString) : hashValues(throwable.toString());
       dataMap.put(sha256, verbose ? stackTraceAsString : throwable.toString());
     } else {
-      Object value = voe.value().orElse("null");
-      sha256 = hashValues(value);
-      dataMap.put(sha256, value);
+      sha256 = convertValue(voe.valueOpt().orElse(null));
     }
     return sha256;
   }
 
-  private Map<ImmutableMap<String, String>, String> convertResult(Results<Object> results) {
-    return results.values().entrySet().stream()
-        .collect(
-            Collectors.toMap(
-                e -> extractAndConvertInputs(e.getKey()), e -> convertErrable(e.getValue())));
+  private String convertValue(@Nullable Object value) {
+    if (value == null) {
+      value = "null";
+    }
+    String sha256 = hashValues(value);
+    dataMap.put(sha256, value);
+    return sha256;
   }
 
-  public static <T> String hashValues(T input) {
-    return hashString(input != null ? input.toString() : "");
+  private Map<ImmutableMap<InputMirror, String>, Object> convertResult(
+      FanoutDepResponses<?, ?> depResponses) {
+    return depResponses.requestResponsePairs().stream()
+        .collect(
+            toMap(
+                e -> extractAndConvertFacets(e.request()), //
+                e -> convertErrable(e.response())));
+  }
+
+  private Map<ImmutableMap<Facet, String>, String> convertResult(
+      LogicExecResults logicExecResults) {
+    return logicExecResults.responses().stream()
+        .collect(
+            toMap(
+                e -> extractAndConvertFacets(e.facetValues()),
+                e -> convertErrable(e.response()),
+                (o1, o2) -> o1));
+  }
+
+  public static <T> String hashValues(@Nullable T input) {
+    return hashString(String.valueOf(input));
   }
 
   private static String hashString(String appendedInput) {
-    String encodedString = "";
-    if (digest != null) {
-      byte[] encodedHash = digest.digest(appendedInput.getBytes(StandardCharsets.UTF_8));
-      encodedString = Base64.getEncoder().encodeToString(encodedHash);
-    }
-    return encodedString;
+    byte[] encodedHash = digest.digest(appendedInput.getBytes(StandardCharsets.UTF_8));
+    return Base64.getEncoder().encodeToString(encodedHash);
   }
 
   @ToString
   @Getter
   static final class LogicExecInfo {
 
-    private final String kryonId;
-    private final ImmutableList<ImmutableMap<String, String>> inputsList;
-    private final @Nullable ImmutableList<ImmutableMap<String, Object>> dependencyResults;
-    private @Nullable Object result;
-    @Getter private final long startTimeMs;
-    @Getter private long endTimeMs;
+    @JsonProperty private final String kryonId;
+    @JsonProperty private final ImmutableList<ImmutableMap<Facet, String>> inputsList;
+
+    @JsonProperty
+    private final @Nullable ImmutableList<ImmutableMap<Facet, Object>> dependencyResults;
+
+    @JsonProperty private @Nullable Object result;
+    @JsonProperty private final long startTimeMs;
+    @JsonProperty private long endTimeMs;
 
     LogicExecInfo(
         DefaultKryonExecutionReport kryonExecutionReport,
         KryonId kryonId,
-        ImmutableCollection<Facets> inputList,
+        ImmutableCollection<? extends FacetValues> inputList,
         long startTimeMs) {
       this.startTimeMs = startTimeMs;
-      ImmutableList<ImmutableMap<String, Object>> dependencyResults;
+      ImmutableList<ImmutableMap<Facet, Object>> dependencyResults;
       this.kryonId = kryonId.value();
       this.inputsList =
           inputList.stream()
-              .map(kryonExecutionReport::extractAndConvertInputs)
+              .map(facets -> kryonExecutionReport.extractAndConvertFacets(facets))
               .collect(toImmutableList());
       dependencyResults =
           inputList.stream()
-              .map(kryonExecutionReport::extractAndConvertDependencyResults)
+              .map(
+                  facets ->
+                      kryonExecutionReport.extractAndConvertDependencyResults(
+                          facets, facets._facets()))
               .filter(map -> !map.isEmpty())
               .collect(toImmutableList());
       this.dependencyResults = dependencyResults.isEmpty() ? null : dependencyResults;
     }
 
-    public void setResult(Map<ImmutableMap<String, String>, String> result) {
+    public void setResult(Map<ImmutableMap<Facet, String>, String> result) {
       if (inputsList.size() <= 1 && result.size() == 1) {
         this.result = result.values().iterator().next();
       } else {

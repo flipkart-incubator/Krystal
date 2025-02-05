@@ -34,7 +34,7 @@ On the other hand let us say you have a piece of business logic which does not m
       2. should be descriptive
       3. must be unique within the vajram
       4. must be unchanging across releases if you want to avoid breaking your clients.
-   3. Decide **Input Data Type**: the data types of these inputs must be **deeply immutable** to avoid data races - this is important since the execution is concurrent. The order of execution of various vajrams might vary for every execution based on IO latencies and availability. This means data races can lead to non-determinacy and thus unpredictable results.
+   3. Decide **Input Data Type**: the data types of these inputs must be **deeply immutable** to avoid data races - this is important since the execution is concurrent. The order of execution of various vajrams might vary for every execution based on IO latencies and availability. This means data races can lead to non-determinacy and thus unpredictable logicExecResults.
    4. Decide **Input sources**: What is the right source of each input? Should it be provided by the client? or the runtime environment? or both?
       1. `@Input`: These are inputs which can only be provided by the clients of this vajram
       2. `@jakarta.inject.Inject`: These are inputs which can only be provided by the runtime via injection(simlar to the [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection) design pattern)
@@ -53,6 +53,44 @@ On the other hand let us say you have a piece of business logic which does not m
    2. At this point the vajram code generator plugin with run annotation processors on all classes with the `@VajramDef` annotation to generate data classes.
 6. Declare dependencies
 7. Declare input resolvers
+   1. Input resolvers are logic which are responsible for resolving the inputs of a vajram dependency. They can also be used to skip the computation of dependency vajrams based on some predicate
+   2. There are 2 ways to declare input resolvers:
+      1. **input resolver methods**: these are declared by annotating a method with the [`@Resolve`](src/main/java/com/flipkart/krystal/vajram/facets/resolution/sdk/Resolve.java) annotation. These methods are part of the vajram class itself. The method takes inputs of already computed facets and using them decllares how to compute a particular input of a dependency.
+           1. Sample code For a vajram with field testField_s which has to be computed using dependency Vajram called DependencyVajram, resolving 1 of the inputs of DependencyVajram:
+            ```java
+            @Resolve( depName = testField_n, depInputs = DependencyRequest.fieldOne_n)
+            public static SingleExecute<Integer> resolveFieldOneForTest(Errable<Integer> input) {
+               if(true) {
+                   return SingleExecute.skipExecution("skipping");
+               }
+               return SingleExecute.executeWith(input.valueOpt().get());
+             }
+            ```
+            2. The method parameters of the resolver method are tied to facets based on naming convention, you can use any facet as input with the variable name matching the facet name.
+            3. The type of parameter can be `Errable<T>`, `Optional<T>` or T , where T is the raw type of the facet. If that facet is mandatory you have to use the raw type. If the facet is optional you have to use `Optional<T>` or `Errable<T>`.
+            4. The return type can be I, `Optional<I>`, `SingleExecute<I>`, `MultiExecute<I>`, `? extends Collection<I>` where I is the raw type of dependecy input we are computing.
+               Or it can R or `? extends Collection<R>` where R is Dependency Vajrams request object
+               5. Two ways to skip in a resolver - Either throwing exception or returning `SingleExecute.skipExecution("reason")`. In case we are throwing an exception,
+                  it is important to note that too many exceptions can create performance issues due to creation of stack traces. For this reason krystal provides a custom Exception class [StackTracelessException](../../krystal-common/src/main/java/com/flipkart/krystal/except/StackTracelessException.java)
+                  which can be thrown as is or can be extended to create custom exceptions
+               6. I, R, `Optional<I>`, `SingleExecute<I>` hast to be used if the input is non fanout input
+               7. MultiExecute<I>`, `? extends Collection<I>`, `? extends Collection<R>` has to be used if the input is fanout input // TODO add link to a separate doc with examples and further explanation
+      2. **Simple Input Resolvers**: "getSimpleInputResolvers" is a method which is part of the vajram class. This method can be overriden and a DSL for declaring input resolvers can be used.
+           1. Sample code For a vajram with field testField2_s which has to be computed using dependency on another Vajram called DependencyVajram:
+            ```java
+            resolve(
+              dep(
+                  testField2_s,
+                   depInput(DependencyRequest.fieldOne_s).usingAsIs(DependencyTestRequest.fieldOne_s).asResolver(), //this is a single resolver for field DependencyRequest.fieldOne_s
+                    depInput(DependencyRequest.fieldTwo_s).usingValueAsResolver(() -> 2)
+              )
+            )
+            ```
+          2. Constraints- You can use maximum 2 sources inputs to compute a single input for a dependency vajram
+      3. Constraints -
+         1. There should be exactly 1 single fanout resolver (//define fanout resolver) in a vajram class for a given fanout dependency.
+         2. Resolvers should not make any IO calls
+         3. You cannot create a cyclic loop using resolvers, otherwise the build will fail
 8. Add a method with the @Output annotation.
    1. Every vajram must have exactly one method with the @Output annotation. This is the method responsible for computing the final output of the vajram, and is executed only after the dependencies have executed.
 9. Build and generate vajram impl class.

@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.samples_errors;
 
+import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
 import static com.google.inject.Guice.createInjector;
 import static com.google.inject.name.Names.named;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
@@ -10,7 +10,7 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.vajram.MandatoryFacetsMissingException;
+import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.guice.VajramGuiceInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
@@ -54,17 +54,16 @@ class TooManyQualifiersTest {
       result =
           executor.execute(
               vajramKryonGraph.getVajramId(TooManyQualifiers.class),
-              TooManyQualifiersRequest.builder().input("i1").build());
+              TooManyQualifiers_ImmutReqPojo._builder().input("i1")._build());
     }
     assertThat(result)
-        .failsWithin(1, SECONDS)
+        .failsWithin(TEST_TIMEOUT)
         .withThrowableOfType(ExecutionException.class)
         .withCauseInstanceOf(MandatoryFacetsMissingException.class)
-        .withMessageContainingAll(
-            "Cause: More than one @jakarta.inject.Qualifier annotations ([",
-            "@jakarta.inject.Named(\"toInject\")",
-            "@com.flipkart.krystal.vajram.samples_errors.TooManyQualifiers$InjectionQualifier()",
-            "]) found on input 'inject' of vajram 'TooManyQualifiers'. This is not allowed");
+        .withMessageContaining(
+            "Vajram v<TooManyQualifiers> did not receive these mandatory inputs:"
+                + " [ 'inject' (Cause: Mandatory facet 'inject' of vajram 'TooManyQualifiers'"
+                + " does not have a value) ]");
   }
 
   private KrystexVajramExecutor createExecutor(VajramKryonGraph vajramKryonGraph) {
@@ -79,7 +78,11 @@ class TooManyQualifiersTest {
                           binder
                               .bind(String.class)
                               .annotatedWith(named("toInject"))
-                              .toInstance("i2");
+                              .toInstance("i2a");
+                          binder
+                              .bind(String.class)
+                              .annotatedWith(TooManyQualifiers.InjectionQualifier.class)
+                              .toInstance("i2b");
                         })))
             .build());
   }

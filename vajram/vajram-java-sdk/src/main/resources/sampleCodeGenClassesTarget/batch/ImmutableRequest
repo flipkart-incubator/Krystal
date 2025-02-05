@@ -1,0 +1,157 @@
+package com.flipkart.krystal.vajram.samples.anandtest;
+
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.FacetValue;
+import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.data.RequestBuilder;
+import com.flipkart.krystal.vajram.Generated;
+import com.google.common.collect.ImmutableMap;
+import java.lang.IllegalArgumentException;
+import java.lang.Integer;
+import java.lang.Object;
+import java.lang.Override;
+import java.lang.String;
+import java.lang.SuppressWarnings;
+import java.util.Map;
+import java.util.Optional;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+@Generated(
+    by = "com.flipkart.krystal.vajram.codegen.VajramModelGenProcessor"
+)
+@EqualsAndHashCode
+@ToString
+public final class DependencyTestImmutableRequest implements DependencyTestRequest, ImmutableRequest<Integer> {
+  private final @Nullable Integer fieldOne;
+
+  private final @Nullable String fieldTwo;
+
+  DependencyTestImmutableRequest(@Nullable Integer fieldOne, @Nullable String fieldTwo) {
+    this.fieldOne = fieldOne;
+    this.fieldTwo = fieldTwo;
+  }
+
+  public Optional<Integer> fieldOne() {
+    return Optional.ofNullable(this.fieldOne);
+  }
+
+  public Optional<String> fieldTwo() {
+    return Optional.ofNullable(this.fieldTwo);
+  }
+
+  @Override
+  public Errable<Object> _get(int facetId) {
+    return switch (facetId) {
+      case 1 -> Errable.withValue(fieldOne());
+      case 2 -> Errable.withValue(fieldTwo());
+      default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
+    }
+    ;
+  }
+
+  @Override
+  public ImmutableMap<Integer, Errable<?>> _asMap() {
+    return ImmutableMap.of(
+        1, Errable.withValue(fieldOne()),
+        2, Errable.withValue(fieldTwo()))
+        ;
+  }
+
+  @Override
+  public DependencyTestImmutableRequest _build() {
+    return this;
+  }
+
+  @Override
+  public Builder _asBuilder() {
+    return new Builder(fieldOne, fieldTwo);
+  }
+
+  @Override
+  public DependencyTestImmutableRequest _newCopy() {
+    return this;
+  }
+
+  @Generated(
+      by = "com.flipkart.krystal.vajram.codegen.VajramModelGenProcessor"
+  )
+  @ToString
+  public static final class Builder implements DependencyTestRequest, RequestBuilder<Integer> {
+    private @Nullable Integer fieldOne;
+
+    private @Nullable String fieldTwo;
+
+    Builder(@Nullable Integer fieldOne, @Nullable String fieldTwo) {
+      this.fieldOne = fieldOne;
+      this.fieldTwo = fieldTwo;
+    }
+
+    Builder() {
+    }
+
+    public Optional<Integer> fieldOne() {
+      return Optional.ofNullable(this.fieldOne);
+    }
+
+    public Builder fieldOne(@Nullable Integer fieldOne) {
+      this.fieldOne = fieldOne;
+      return this;
+    }
+
+    public Optional<String> fieldTwo() {
+      return Optional.ofNullable(this.fieldTwo);
+    }
+
+    public Builder fieldTwo(@Nullable String fieldTwo) {
+      this.fieldTwo = fieldTwo;
+      return this;
+    }
+
+    @Override
+    public Errable<Object> _get(int facetId) {
+      return switch (facetId) {
+        case 1 -> Errable.withValue(fieldOne());
+        case 2 -> Errable.withValue(fieldTwo());
+        default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
+      }
+      ;
+    }
+
+    @Override
+    public Map<Integer, Errable<?>> _asMap() {
+      return ImmutableMap.of(
+          1, Errable.withValue(fieldOne()),
+          2, Errable.withValue(fieldTwo()))
+          ;
+    }
+
+    @Override
+    public DependencyTestImmutableRequest _build() {
+      return new DependencyTestImmutableRequest(fieldOne, fieldTwo);
+    }
+
+    @Override
+    public Builder _asBuilder() {
+      return this;
+    }
+
+    @Override
+    public Builder _newCopy() {
+      return new Builder(fieldOne, fieldTwo);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public Builder _set(int facetId, FacetValue<?> facetValue) {
+      switch (facetId) {
+        case 1 -> this.fieldOne(((Errable<Integer>)facetValue).valueOpt().orElse(null));
+        case 2 -> this.fieldTwo(((Errable<String>)facetValue).valueOpt().orElse(null));
+        default -> throw new IllegalArgumentException("Unrecognized facet id" + facetId);
+      }
+      return this;
+    }
+  }
+}
+

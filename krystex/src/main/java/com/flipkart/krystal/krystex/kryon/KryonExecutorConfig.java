@@ -3,6 +3,7 @@ package com.flipkart.krystal.krystex.kryon;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 
+import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
@@ -17,6 +18,20 @@ import lombok.Builder;
 import lombok.NonNull;
 import lombok.Singular;
 
+/**
+ * @param logicDecorationOrdering
+ * @param requestScopedLogicDecoratorConfigs
+ * @param disabledDependantChains
+ * @param kryonExecStrategy
+ * @param graphTraversalStrategy
+ * @param requestScopedKryonDecoratorConfigs
+ * @param singleThreadExecutor
+ * @param debug
+ * @param _riskyOpenAllKryonsForExternalInvocation DO NOT SET THIS TO TRUE IN PRODUCTION CODE - ELSE
+ *     NEW VERSIONS OF CODE CAN BREAK BACKWARD COMPATIBILITY. {@code true} if all vajrams are
+ *     allowed to be invoked from outside the krystal graph intead of only allowing vajrams tagged
+ *     with @{@link ExternalInvocation}(allow=true)
+ */
 public record KryonExecutorConfig(
     LogicDecorationOrdering logicDecorationOrdering,
     Map<String, List<OutputLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs,
@@ -25,7 +40,9 @@ public record KryonExecutorConfig(
     GraphTraversalStrategy graphTraversalStrategy,
     @Singular Map<String, KryonDecoratorConfig> requestScopedKryonDecoratorConfigs,
     @NonNull SingleThreadExecutor singleThreadExecutor,
-    boolean debug) {
+    boolean debug,
+    /******* Risky Flags ********/
+    boolean _riskyOpenAllKryonsForExternalInvocation) {
 
   @Builder(toBuilder = true)
   public KryonExecutorConfig {

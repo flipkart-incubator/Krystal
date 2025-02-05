@@ -1,6 +1,10 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
+import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
+
 import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.facets.Facet;
+import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.krystex.kryon.DefaultDependantChain;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.DependantChainStart;
@@ -13,15 +17,12 @@ import com.flipkart.krystal.vajram.BatchableVajram;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramID;
-import com.flipkart.krystal.vajram.batching.FacetsConverter;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
-import com.flipkart.krystal.vajram.facets.DependencyDef;
-import com.flipkart.krystal.vajram.facets.FacetValuesAdaptor;
-import com.flipkart.krystal.vajram.facets.InputDef;
-import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
-import com.flipkart.krystal.vajram.facets.resolution.InputResolverDefinition;
+import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
+import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayDeque;
@@ -59,28 +60,18 @@ public record InputBatcherConfig(
    *     InputBatchingDecorator}. This supplier is guaranteed to be called exactly once for every
    *     unique {@link InputBatchingDecorator} instance.
    */
-  public static InputBatcherConfig simple(
-      Supplier<InputBatcher<FacetValuesAdaptor, FacetValuesAdaptor>> inputBatcherSupplier) {
+  public static InputBatcherConfig simple(Supplier<InputBatcher> inputBatcherSupplier) {
     return new InputBatcherConfig(
         logicExecutionContext ->
             generateInstanceId(
                     logicExecutionContext.dependants(),
                     logicExecutionContext.kryonDefinitionRegistry())
                 .toString(),
-        batcherContext -> batcherContext.vajram().getBatchFacetsConvertor().isPresent(),
+        batcherContext -> true,
         batcherContext -> {
-          @SuppressWarnings("unchecked")
-          Optional<FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>> facetsConvertor =
-              (Optional<FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>>)
-                  batcherContext.vajram().getBatchFacetsConvertor();
-          if (facetsConvertor.isEmpty()) {
-            throw new IllegalStateException(
-                "Cannot create decorator when vajram doesn't provide facets converter");
-          }
-          return new InputBatchingDecorator<>(
+          return new InputBatchingDecorator(
               batcherContext.logicDecoratorContext().instanceId(),
               inputBatcherSupplier.get(),
-              facetsConvertor.get(),
               dependantChain ->
                   batcherContext
                       .logicDecoratorContext()
@@ -91,36 +82,24 @@ public record InputBatcherConfig(
   }
 
   public static InputBatcherConfig sharedBatcher(
-      Supplier<InputBatcher<FacetValuesAdaptor, FacetValuesAdaptor>> inputBatcherSupplier,
+      Supplier<InputBatcher> inputBatcherSupplier,
       String instanceId,
       DependantChain... dependantChains) {
     return sharedBatcher(inputBatcherSupplier, instanceId, ImmutableSet.copyOf(dependantChains));
   }
 
   public static InputBatcherConfig sharedBatcher(
-      Supplier<InputBatcher<FacetValuesAdaptor, FacetValuesAdaptor>> inputBatcherSupplier,
+      Supplier<InputBatcher> inputBatcherSupplier,
       String instanceId,
       ImmutableSet<DependantChain> dependantChains) {
     return new InputBatcherConfig(
         logicExecutionContext -> instanceId,
         batcherContext ->
-            batcherContext.vajram().getBatchFacetsConvertor().isPresent()
-                && dependantChains.contains(
-                    batcherContext.logicDecoratorContext().logicExecutionContext().dependants()),
+            dependantChains.contains(
+                batcherContext.logicDecoratorContext().logicExecutionContext().dependants()),
         batcherContext -> {
-          @SuppressWarnings("unchecked")
-          Optional<FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>> facetsConvertor =
-              (Optional<FacetsConverter<FacetValuesAdaptor, FacetValuesAdaptor>>)
-                  batcherContext.vajram().getBatchFacetsConvertor();
-          if (facetsConvertor.isEmpty()) {
-            throw new IllegalStateException(
-                "Cannot create decorator when vajram doesn't provide facets converter");
-          }
-          return new InputBatchingDecorator<>(
-              instanceId,
-              inputBatcherSupplier.get(),
-              facetsConvertor.get(),
-              dependantChains::contains);
+          return new InputBatchingDecorator(
+              instanceId, inputBatcherSupplier.get(), dependantChains::contains);
         });
   }
 
@@ -144,7 +123,7 @@ public record InputBatcherConfig(
               Set<DependantChain> depChains = entry.getValue();
               inputModulatorConfigs[inputModulatorIndex++] =
                   InputBatcherConfig.sharedBatcher(
-                      () -> new InputBatcherImpl<>(batchSizeSupplier.getBatchSize(vajramId)),
+                      () -> new InputBatcherImpl(batchSizeSupplier.getBatchSize(vajramId)),
                       vajramId.vajramId(),
                       depChains.toArray(DependantChain[]::new));
             }
@@ -173,7 +152,7 @@ public record InputBatcherConfig(
               .append('>')
               .append(vajramDef.get().id())
               .append(':')
-              .append(defaultDependantChain.dependencyName());
+              .append(defaultDependantChain.dependency());
         } else {
           throw new NoSuchElementException(
               "Could not find tag %s for kryon %s"
@@ -182,7 +161,7 @@ public record InputBatcherConfig(
       } else {
         return generateInstanceId(defaultDependantChain.dependantChain(), kryonDefinitionRegistry)
             .append('>')
-            .append(defaultDependantChain.dependencyName());
+            .append(defaultDependantChain.dependency());
       }
     }
     throw new UnsupportedOperationException();
@@ -191,9 +170,8 @@ public record InputBatcherConfig(
   private static boolean isBatchingNeededForIoVajram(VajramKryonGraph graph, VajramID ioNode) {
     Optional<VajramDefinition> ioNodeVajram = graph.getVajramDefinition(ioNode);
     if (ioNodeVajram.isPresent()) {
-      for (VajramFacetDefinition inputDefinition :
-          ioNodeVajram.get().vajram().getFacetDefinitions()) {
-        if (inputDefinition instanceof InputDef<?> inputDef && inputDef.isBatched()) {
+      for (FacetSpec facetSpec : ioNodeVajram.get().facetSpecs()) {
+        if (facetSpec.isBatched()) {
           return true;
         }
       }
@@ -234,19 +212,19 @@ public record InputBatcherConfig(
       ImmutableSet<DependantChain> disabledDependantChains) {
     // find all the child nodes of rootNode
     // get the order of execution of inputDefinitions
-    Map<VajramFacetDefinition, List<VajramFacetDefinition>> inputDefGraph = new HashMap<>();
+    Map<Facet, List<Facet>> inputDefGraph = new HashMap<>();
     KryonId kryonId = graph.getKryonId(rootNode.vajramId());
-    for (VajramFacetDefinition inputDef : getOrderedInputDef(rootNode, inputDefGraph)) {
-      if (inputDef instanceof DependencyDef<?> dependency) {
-        List<InputResolverDefinition> inputResolverDefinition =
+    for (Facet inputDef : getOrderedInputDef(rootNode, inputDefGraph)) {
+      if (inputDef instanceof DependencySpec<?, ?, ?> dependency) {
+        List<ResolverDefinition> resolverDefinition =
             getInputResolverDefinition(rootNode, dependency);
-        VajramID vajramId = (VajramID) dependency.dataAccessSpec();
-        VajramDefinition childNode = graph.getVajramDefinition(vajramId).orElse(null);
+        VajramDefinition childNode =
+            graph.getVajramDefinition(dependency.onVajramId()).orElse(null);
         if (childNode != null) {
           if (inputDefGraph.get(inputDef) != null) {
-            for (VajramFacetDefinition inputDef1 : inputDefGraph.get(inputDef)) {
+            for (Facet inputDef1 : inputDefGraph.get(inputDef)) {
               VajramID prerequisiteVajramId =
-                  dependencyInputInChildNode(inputResolverDefinition, inputDef1);
+                  dependencyInputInChildNode(resolverDefinition, inputDef1);
               if (prerequisiteVajramId != null) {
                 graph
                     .getVajramDefinition(prerequisiteVajramId)
@@ -257,7 +235,7 @@ public record InputBatcherConfig(
               }
             }
           }
-          DependantChain dependantChain = incomingDepChain.extend(kryonId, dependency.name());
+          DependantChain dependantChain = incomingDepChain.extend(kryonId, dependency);
           if (!disabledDependantChains.contains(dependantChain)) {
             if (childNode.vajram() instanceof IOVajram<?>) {
               depth = ioNodeDepths.computeIfAbsent(childNode.vajramId(), _v -> 0);
@@ -275,9 +253,9 @@ public record InputBatcherConfig(
                 ioNodeDepths,
                 disabledDependantChains);
             if (inputDefGraph.get(inputDef) != null) {
-              for (VajramFacetDefinition inputDef1 : inputDefGraph.get(inputDef)) {
+              for (Facet inputDef1 : inputDefGraph.get(inputDef)) {
                 VajramID prerequisiteVajramId =
-                    dependencyInputInChildNode(inputResolverDefinition, inputDef1);
+                    dependencyInputInChildNode(resolverDefinition, inputDef1);
                 if (prerequisiteVajramId != null
                     && graph.getVajramDefinition(prerequisiteVajramId).isPresent()) {
                   decrementTheLeafIONodeOfTheVajram(
@@ -296,10 +274,9 @@ public record InputBatcherConfig(
     if (node.vajram() instanceof IOVajram<?>) {
       ioNodeDepth.compute(node.vajramId(), (_vid, depth) -> depth == null ? 0 : depth + 1);
     }
-    for (VajramFacetDefinition inputDef : node.vajram().getFacetDefinitions()) {
-      if (inputDef instanceof DependencyDef<?> dependency) {
-        Optional<VajramDefinition> depVajram =
-            graph.getVajramDefinition((VajramID) dependency.dataAccessSpec());
+    for (Facet inputDef : node.facetSpecs()) {
+      if (inputDef instanceof DependencySpec<?, ?, ?> dependency) {
+        Optional<VajramDefinition> depVajram = graph.getVajramDefinition(dependency.onVajramId());
         depVajram.ifPresent(
             vajramDefinition ->
                 incrementTheLeafIONodeOfTheVajram(vajramDefinition, graph, ioNodeDepth));
@@ -312,10 +289,9 @@ public record InputBatcherConfig(
     if (node.vajram() instanceof IOVajram<?>) {
       ioNodeDepth.compute(node.vajramId(), (_vid, depth) -> depth == null ? 0 : depth - 1);
     }
-    for (VajramFacetDefinition inputDef : node.vajram().getFacetDefinitions()) {
-      if (inputDef instanceof DependencyDef<?> dependency) {
-        Optional<VajramDefinition> depVajram =
-            graph.getVajramDefinition((VajramID) dependency.dataAccessSpec());
+    for (Facet inputDef : node.facetSpecs()) {
+      if (inputDef instanceof DependencySpec<?, ?, ?> dependency) {
+        Optional<VajramDefinition> depVajram = graph.getVajramDefinition(dependency.onVajramId());
         depVajram.ifPresent(
             childNode -> decrementTheLeafIONodeOfTheVajram(childNode, graph, ioNodeDepth));
       }
@@ -323,52 +299,51 @@ public record InputBatcherConfig(
   }
 
   private static @Nullable VajramID dependencyInputInChildNode(
-      List<InputResolverDefinition> depInputs, VajramFacetDefinition inputDefinition) {
-    for (InputResolverDefinition depInput : depInputs) {
-      if (inputDefinition instanceof DependencyDef<?> dependency) {
-        if (depInput.sources().contains(dependency.name())) {
-          return (VajramID) dependency.dataAccessSpec();
+      List<ResolverDefinition> depInputs, Facet inputDefinition) {
+    for (ResolverDefinition depInput : depInputs) {
+      if (inputDefinition instanceof DependencySpec<?, ?, ?> dependency) {
+        if (depInput.sources().contains(inputDefinition)) {
+          return dependency.onVajramId();
         }
       }
     }
     return null;
   }
 
-  private static List<InputResolverDefinition> getInputResolverDefinition(
-      VajramDefinition rootNode, DependencyDef<?> dependency) {
-    return rootNode.inputResolverDefinitions().stream()
+  private static List<ResolverDefinition> getInputResolverDefinition(
+      VajramDefinition rootNode, DependencySpec<?, ?, ?> dependency) {
+    return rootNode.inputResolvers().values().stream()
         .filter(
-            inputResolverDef ->
-                inputResolverDef.resolutionTarget().dependencyName().equals(dependency.name()))
+            inputResolver ->
+                inputResolver.definition().target().dependency().id() == dependency.id())
+        .map(InputResolver::definition)
         .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
   }
 
-  private static Collection<VajramFacetDefinition> getOrderedInputDef(
-      VajramDefinition rootNode, Map<VajramFacetDefinition, List<VajramFacetDefinition>> graph) {
+  private static Collection<Facet> getOrderedInputDef(
+      VajramDefinition rootNode, Map<Facet, List<Facet>> graph) {
 
-    ImmutableCollection<InputResolverDefinition> resolverDefinitions =
-        rootNode.inputResolverDefinitions();
-    ImmutableCollection<VajramFacetDefinition> inputDefinitions =
-        rootNode.vajram().getFacetDefinitions();
-    for (InputResolverDefinition inputResolverDefinition : resolverDefinitions) {
-      for (VajramFacetDefinition inputDefinition : inputDefinitions) {
-        if (inputDefinition instanceof DependencyDef<?> dependency) {
-          if (inputResolverDefinition.sources().contains(dependency.name())) {
-            VajramFacetDefinition dependingVID =
-                getInputDefinitionDep(
-                    inputResolverDefinition.resolutionTarget().dependencyName(), inputDefinitions);
+    ImmutableCollection<InputResolver> resolvers = rootNode.inputResolvers().values();
+    ImmutableCollection<FacetSpec> inputDefinitions = rootNode.facetSpecs();
+    for (InputResolver resolver : resolvers) {
+      ResolverDefinition resolverDefinition = resolver.definition();
+      for (Facet facet : inputDefinitions) {
+        if (facet.facetTypes().contains(DEPENDENCY)) {
+          if (resolverDefinition.sources().contains(facet)) {
+            Facet dependingVID =
+                getInputDefinitionDep(resolverDefinition.target().dependency(), inputDefinitions);
             if (dependingVID != null) {
               graph.putIfAbsent(dependingVID, new ArrayList<>());
-              graph.get(dependingVID).add(inputDefinition);
+              graph.get(dependingVID).add(facet);
             }
           }
         }
       }
     }
-    Set<VajramFacetDefinition> visited = new HashSet<>();
-    Queue<VajramFacetDefinition> queue = new ArrayDeque<>();
-    for (VajramFacetDefinition vid : inputDefinitions) {
-      if (vid instanceof DependencyDef<?>) {
+    Set<Facet> visited = new HashSet<>();
+    Queue<Facet> queue = new ArrayDeque<>();
+    for (Facet vid : inputDefinitions) {
+      if (vid.facetTypes().contains(DEPENDENCY)) {
         if (!visited.contains(vid)) {
           topologicalSortUtil(vid, visited, graph, queue);
         }
@@ -377,12 +352,12 @@ public record InputBatcherConfig(
     return queue;
   }
 
-  private static @Nullable VajramFacetDefinition getInputDefinitionDep(
-      String dep, ImmutableCollection<VajramFacetDefinition> inputDefinitions) {
-    for (VajramFacetDefinition inputDefinition : inputDefinitions) {
-      if (inputDefinition instanceof DependencyDef<?> dependency) {
-        if (dependency.name().equals(dep)) {
-          return inputDefinition;
+  private static @Nullable Facet getInputDefinitionDep(
+      Facet dep, ImmutableCollection<? extends Facet> inputDefinitions) {
+    for (Facet facet : inputDefinitions) {
+      if (facet.facetTypes().contains(DEPENDENCY)) {
+        if (facet.id() == dep.id()) {
+          return facet;
         }
       }
     }
@@ -390,17 +365,14 @@ public record InputBatcherConfig(
   }
 
   static void topologicalSortUtil(
-      VajramFacetDefinition vid,
-      Set<VajramFacetDefinition> visited,
-      Map<VajramFacetDefinition, List<VajramFacetDefinition>> graph,
-      Queue<VajramFacetDefinition> stack) {
+      Facet vid, Set<Facet> visited, Map<Facet, List<Facet>> graph, Queue<Facet> stack) {
     visited.add(vid);
-    for (VajramFacetDefinition i : graph.getOrDefault(vid, new ArrayList<>())) {
+    for (Facet i : graph.getOrDefault(vid, new ArrayList<>())) {
       if (!visited.contains(i)) {
         topologicalSortUtil(i, visited, graph, stack);
       }
     }
-    if (vid instanceof DependencyDef<?>) {
+    if (vid.facetTypes().contains(DEPENDENCY)) {
       stack.add(vid);
     }
   }

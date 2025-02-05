@@ -5,7 +5,6 @@ import static com.flipkart.krystal.data.Errable.computeErrableFrom;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
-import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.GRANULAR;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Collections.emptySet;
@@ -14,8 +13,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.FacetValuesMapBuilder;
+import com.flipkart.krystal.data.SimpleImmutRequest;
+import com.flipkart.krystal.data.SimpleRequestBuilder;
+import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
+import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
@@ -29,10 +33,12 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfi
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
+import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
+import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
+import com.flipkart.krystal.krystex.testutils.SimpleFacet;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.tags.ElementTags;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.time.Duration;
 import java.util.List;
@@ -43,6 +49,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 import java.util.stream.Stream;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -84,8 +91,7 @@ class RequestLevelCacheTest {
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void multiRequestExecution_withCache_cacheHitSuccess(
-      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy)
-      throws LeaseUnavailableException {
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     // This is redundant. This should Ideally move to a paramterized @BeforeEach method or after
     // parametrizing this at the test class level.
     // This is currently not supported in jupiter-junit:5.9.x.
@@ -99,7 +105,7 @@ class RequestLevelCacheTest {
             "kryon",
             emptySet(),
             newComputeLogic(
-                    "kryonLogic",
+                    "kryon",
                     emptySet(),
                     dependencyValues -> {
                       adder.increment();
@@ -107,18 +113,19 @@ class RequestLevelCacheTest {
                     })
                 .kryonLogicId(),
             ImmutableMap.of(),
-            ImmutableList.of(),
-            null,
+            ImmutableMap.of(),
+            newCreateNewRequestLogic("kryon", emptySet()),
+            newFacetsFromRequestLogic("kryon"),
             ElementTags.of(List.of(externalInvocation(true))));
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            Facets.empty(),
+            SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> future2 =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            Facets.empty(),
+            SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("req_2").build());
 
     kryonExecutor.close();
@@ -153,19 +160,20 @@ class RequestLevelCacheTest {
                     })
                 .kryonLogicId(),
             ImmutableMap.of(),
-            ImmutableList.of(),
-            null,
+            ImmutableMap.of(),
+            newCreateNewRequestLogic("kryon", emptySet()),
+            newFacetsFromRequestLogic("kryon"),
             ElementTags.of(List.of(externalInvocation(true))));
 
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            Facets.empty(),
+            SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> future2 =
         kryonExecutor.executeKryon(
             kryonDefinition.kryonId(),
-            Facets.empty(),
+            SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("req_2").build());
 
     kryonExecutor.close();
@@ -181,8 +189,7 @@ class RequestLevelCacheTest {
   private KryonExecutor getKryonExecutor(
       KryonExecStrategy kryonExecStrategy,
       GraphTraversalStrategy graphTraversalStrategy,
-      boolean withCache)
-      throws LeaseUnavailableException {
+      boolean withCache) {
     KryonExecutorConfigBuilder configBuilder =
         KryonExecutorConfig.builder()
             .singleThreadExecutor(executorLease.get())
@@ -203,7 +210,7 @@ class RequestLevelCacheTest {
   }
 
   private <T> OutputLogicDefinition<T> newComputeLogic(
-      String kryonId, Set<String> inputs, Function<Facets, T> logic) {
+      String kryonId, Set<Facet> inputs, Function<FacetValues, T> logic) {
     ComputeLogicDefinition<T> def =
         new ComputeLogicDefinition<>(
             new KryonLogicId(new KryonId(kryonId), kryonId),
@@ -220,11 +227,23 @@ class RequestLevelCacheTest {
     return def;
   }
 
+  private static LogicDefinition<FacetsFromRequest> newFacetsFromRequestLogic(String kryonName) {
+    return new LogicDefinition<>(
+        new KryonLogicId(new KryonId(kryonName), kryonName + ":facetsFromRequest"),
+        request ->
+            new FacetValuesMapBuilder(
+                (SimpleRequestBuilder<Object>) request._asBuilder(), Set.of()));
+  }
+
+  @NonNull
+  private static LogicDefinition<CreateNewRequest> newCreateNewRequestLogic(
+      String kryonName, Set<SimpleFacet> inputDefs) {
+    return new LogicDefinition<>(
+        new KryonLogicId(new KryonId(kryonName), kryonName + ":newRequest"),
+        () -> new SimpleRequestBuilder(inputDefs));
+  }
+
   public static Stream<Arguments> executorConfigsToTest() {
-    return Stream.of(
-        Arguments.of(BATCH, DEPTH),
-        Arguments.of(BATCH, BREADTH),
-        Arguments.of(GRANULAR, DEPTH),
-        Arguments.of(GRANULAR, BREADTH));
+    return Stream.of(Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH));
   }
 }

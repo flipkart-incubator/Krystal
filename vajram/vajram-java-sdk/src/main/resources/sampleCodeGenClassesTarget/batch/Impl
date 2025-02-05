@@ -1,0 +1,93 @@
+package com.flipkart.krystal.vajram.samples.anandtest;
+
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.datatypes.JavaType;
+import com.flipkart.krystal.vajram.Generated;
+import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.vajram.batching.BatchableSupplier;
+import com.flipkart.krystal.vajram.batching.BatchedFacets;
+import com.flipkart.krystal.vajram.facets.DependencyDef;
+import com.flipkart.krystal.vajram.facets.DefaultFacetDef;
+import com.flipkart.krystal.vajram.facets.InputSource;
+import com.flipkart.krystal.vajram.facets.FacetDefinition;
+import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajram.samples.anandtest.DependencyTestImmutableFacets.BatchImmutableFacets;
+import com.flipkart.krystal.vajram.samples.anandtest.DependencyTestImmutableFacets.CommonImmutableFacets;
+import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import java.lang.Integer;
+import java.lang.Override;
+import java.lang.String;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+@Generated(
+    by = "com.flipkart.krystal.vajram.codegen.VajramImplGenProcessor"
+)
+public final class DependencyTestImpl extends DependencyTest {
+  private @Nullable ImmutableList<VajramFacetDefinition> facetDefinitions;
+
+  @Override
+  public ImmutableList<VajramFacetDefinition> getFacetDefinitions() {
+    if(this.facetDefinitions == null) {
+      this.facetDefinitions = ImmutableList.of(
+      InputDef.builder().id(1).name("fieldOne").sources(InputSource.CLIENT).type(JavaType.create(int.class)).isMandatory(false).isBatched(true).build(),
+      	InputDef.builder().id(2).name("fieldTwo").sources(InputSource.CLIENT).type(JavaType.create(String.class)).isMandatory(false).isBatched(false).build(),
+      	DependencyDef.builder().id(3).name("testField").dataAccessSpec(VajramID.vajramID("Test")).isMandatory(false).build()
+      );
+    }
+    return facetDefinitions;
+  }
+
+  @Override
+  public ImmutableCollection<InputResolver> getInputResolvers() {
+    List<InputResolver> inputResolvers = new ArrayList<>(getSimpleInputResolvers());
+    return ImmutableList.copyOf(inputResolvers);
+  }
+
+  @Override
+  public ImmutableMap<Facets, CompletableFuture<@Nullable Integer>> execute(
+      ImmutableList<Facets> facetValuesList) {
+        Map<BatchImmutableFacets, Facets> mapping = new HashMap<>();
+        CommonImmutableFacets commonFacets = null;
+        for (Facets facetValues : facetValuesList) {
+          DependencyTestImmutableFacets allInputs = (DependencyTestImmutableFacets) facetValues;
+          commonFacets = allInputs._common();
+          BatchImmutableFacets im = allInputs._batchable();
+          mapping.put(im, facetValues);
+        }
+        Map<Facets, CompletableFuture<@Nullable Integer>> returnValue = new LinkedHashMap<>();
+
+        if (commonFacets != null) {
+          var logicExecResults = test(new BatchedFacets<>(ImmutableList.copyOf(mapping.keySet()), commonFacets));
+          logicExecResults.forEach((im, future) -> returnValue.put(
+                Optional.ofNullable(mapping.get(im)).orElseThrow(),
+                future.<@Nullable Integer>thenApply(Function.identity())));
+        }
+        return ImmutableMap.copyOf(returnValue);
+  }
+
+  @Override
+  public BatchableSupplier<BatchImmutableFacets, CommonImmutableFacets> getBatchFacetsConvertor(
+      ) {
+    return DependencyTestImmutableFacets::new;
+  }
+
+  public DependencyTestImmutableRequest.Builder newRequestBuilder() {
+    return DependencyTestRequest._builder();
+  }
+
+  public DependencyTestImmutableFacets.Builder facetsFromRequest(Request<?> request) {
+    return new DependencyTestImmutableFacets.Builder((DependencyTestRequest)request);
+  }
+}
+

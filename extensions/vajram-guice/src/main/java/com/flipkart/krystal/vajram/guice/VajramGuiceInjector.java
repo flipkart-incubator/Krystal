@@ -1,12 +1,13 @@
 package com.flipkart.krystal.vajram.guice;
 
 import static com.flipkart.krystal.data.Errable.errableFrom;
+import static com.flipkart.krystal.data.Errable.nil;
+import static com.flipkart.krystal.facets.FacetType.INJECTION;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.vajram.VajramID;
-import com.flipkart.krystal.vajram.facets.InputDef;
-import com.flipkart.krystal.vajram.facets.InputSource;
+import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.VajramInjectionProvider;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -18,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -31,9 +33,9 @@ public class VajramGuiceInjector implements VajramInjectionProvider {
   }
 
   @Override
-  public <T> Errable<T> get(VajramID vajramID, InputDef<T> inputDef) {
-    if (!inputDef.sources().contains(InputSource.SESSION)) {
-      return Errable.empty();
+  public <T> Errable<@NonNull T> get(VajramID vajramID, FacetSpec<T, ?> facetDef) {
+    if (!facetDef.facetTypes().contains(INJECTION)) {
+      return nil();
     }
     return errableFrom(
         () -> {
@@ -43,11 +45,11 @@ public class VajramGuiceInjector implements VajramInjectionProvider {
                   providerCache
                       .computeIfAbsent(vajramID, _v -> new LinkedHashMap<>())
                       .computeIfAbsent(
-                          inputDef.name(),
+                          facetDef.name(),
                           _i -> {
                             try {
-                              Type type = inputDef.type().javaReflectType();
-                              var annotation = getQualifier(vajramID, inputDef);
+                              Type type = facetDef.type().javaReflectType();
+                              var annotation = getQualifier(vajramID, facetDef);
                               if (annotation.isEmpty()) {
                                 return injector.getProvider(Key.get(type));
                               } else {
@@ -62,9 +64,9 @@ public class VajramGuiceInjector implements VajramInjectionProvider {
         });
   }
 
-  private Optional<Annotation> getQualifier(VajramID vajramID, InputDef<?> inputDef) {
+  private <T> Optional<Annotation> getQualifier(VajramID vajramID, FacetSpec<T, ?> facetDef) {
     List<Annotation> qualifierAnnotations =
-        inputDef.tags().annotations().stream()
+        facetDef.tags().annotations().stream()
             .<Annotation>mapMulti(
                 (tag, consumer) -> {
                   boolean isQualifierAnno =
@@ -82,7 +84,7 @@ public class VajramGuiceInjector implements VajramInjectionProvider {
       throw new IllegalStateException(
           ("More than one @jakarta.inject.Qualifier annotations (%s) found on input '%s' of vajram '%s'."
                   + " This is not allowed")
-              .formatted(qualifierAnnotations, inputDef.name(), vajramID.vajramId()));
+              .formatted(qualifierAnnotations, facetDef.name(), vajramID.vajramId()));
     }
   }
 }

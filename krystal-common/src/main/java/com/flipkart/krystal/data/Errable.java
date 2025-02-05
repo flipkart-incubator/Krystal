@@ -1,53 +1,101 @@
 package com.flipkart.krystal.data;
 
+import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.except.ThrowingCallable;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-/**
- * A wrapper object representing a value or an error. This can be seen as a 'completed' version of a
- * {@link CompletableFuture}. This class avoids the prevalence of {@code null}s in the codebase and
- * also allows reactive frameworks to gracefully handle scenarios where a computation led to an
- * error because of which some value could not be computed.
- *
- * <p>Example states:
- *
- * <ul>
- *   <li>{@link #value()} is empty and {@link #error()} is empty - represents a null value.
- *   <li>{@link #value()} is empty and {@link #error()} is not empty - value could not be computed
- *       because of the given error.
- *   <li>{@link #value()} is not empty and {@link #error()} is empty - successfully computed the
- *       given value
- *   <li>{@link #value()} is not empty and {@link #error()} is not empty - this scenario is
- *       impossible.
- * </ul>
- */
-public record Errable<T>(Optional<T> value, Optional<Throwable> error) implements FacetValue<T> {
+public sealed interface Errable<T> extends FacetValue<T> permits Success, Failure {
 
-  private static final Errable<?> EMPTY = new Errable<>(Optional.empty(), Optional.empty());
+  /**
+   * Returns a {@link CompletableFuture} which is completed exceptionally with the error if this is
+   * a {@link Failure}, or completed normally with the value if this is a {@link Success}, or
+   * completed normally with null if this is {@link Nil}
+   */
+  CompletableFuture<@Nullable T> toFuture();
 
-  public Errable {
-    if ((value.isPresent() && error.isPresent())) {
-      throw new IllegalArgumentException("Both of 'value' and 'error' cannot be present together");
-    }
+  /**
+   * Returns an {@link Optional} which is has the value inside this Errable. The returned Optional
+   * is present only if and only if this Errable is of the type {@link NonNil}. In all other cases,
+   * the returned Optional is empty.
+   */
+  Optional<T> valueOpt();
+
+  /**
+   * Returns an {@link Optional} which is has the error which caused this Errable to be a {@link
+   * Failure}. The returned Optional is present only if and only if this Errable is of the type
+   * {@link Failure}. In all other cases, the returned Optional is empty.
+   */
+  Optional<Throwable> errorOpt();
+
+  /**
+   * Returns a non-empty {@link Optional} if this is a {@link Success} or empty {@link Optional} it
+   * this is {@link Nil}
+   *
+   * @throws RuntimeException if this is a {@link Failure}. If the error in {@link Failure} is not a
+   *     {@link RuntimeException}, then the error is wrapped in a new {@link RuntimeException} and
+   *     thrown.
+   */
+  Optional<T> valueOptOrThrow();
+
+  /**
+   *
+   *
+   * <ul>
+   *   <li>NonNil: returns the value <br>
+   *   <li>Nil: throws {@link NoSuchElementException} <br>
+   *   <li>Failure: throws a {@link RuntimeException} representing the throwable which caused the
+   *       failure. If the throwable is a {@link RuntimeException}, it is thrown as is. Else it is
+   *       wrapped in a {@link StackTracelessException} and thrown.
+   * </ul>
+   */
+  T valueOrThrow();
+
+  /* ***********************************************************************************************/
+  /* ************************************** Static utilities ***************************************/
+  /* ***********************************************************************************************/
+
+  static <T> Errable<@NonNull T> of(Errable<@NonNull T> t) {
+    return t;
+  }
+
+  @SuppressWarnings("optional.parameter")
+  static <T> Errable<@NonNull T> of(Optional<T> t) {
+    return withValue(t.orElse(null));
   }
 
   @SuppressWarnings("unchecked")
-  public static <T> Errable<T> empty() {
-    return (Errable<T>) EMPTY;
+  static <T> Errable<@NonNull T> of(@Nullable Object t) {
+    if (t instanceof Errable<?>) {
+      if (t instanceof NonNil<?> success) {
+        return of((T) success.value());
+      } else {
+        return (Errable<@NonNull T>) t;
+      }
+    } else if (t instanceof Optional<?> o) {
+      return of(((Optional<T>) o).orElse(null));
+    } else {
+      return withValue((T) t);
+    }
   }
 
-  public static <T> Errable<T> withValue(@Nullable T t) {
-    return errableFrom(t, null);
+  static <T> Errable<@NonNull T> nil() {
+    return Success.nil();
   }
 
-  public static <T> Errable<T> withError(Throwable t) {
-    return errableFrom(null, t);
+  static <T> Errable<@NonNull T> withValue(@Nullable T t) {
+    return t != null ? new NonNil<>(t) : nil();
   }
 
-  public static <T> Errable<T> errableFrom(ThrowingCallable<@Nullable T> valueProvider) {
+  static <T> Errable<@NonNull T> withError(Throwable t) {
+    return new Failure<>(t);
+  }
+
+  static <T> Errable<@NonNull T> errableFrom(ThrowingCallable<@Nullable T> valueProvider) {
     try {
       return withValue(valueProvider.call());
     } catch (Throwable e) {
@@ -55,51 +103,39 @@ public record Errable<T>(Optional<T> value, Optional<Throwable> error) implement
     }
   }
 
-  public static <S, T> Function<S, Errable<T>> computeErrableFrom(
+  static <S, T> Function<S, Errable<@NonNull T>> computeErrableFrom(
       Function<S, @Nullable T> valueComputer) {
     return s -> errableFrom(() -> valueComputer.apply(s));
   }
 
   @SuppressWarnings("unchecked")
-  public static <T> Errable<T> errableFrom(@Nullable Object value, @Nullable Throwable error) {
-    return new Errable<>(
-        (value instanceof Optional<?> o)
-            ? (Optional<T>) o
-            : (Optional<T>) Optional.ofNullable(value),
-        Optional.ofNullable(error));
-  }
-
-  /**
-   * Returns a new {@link CompletableFuture} which is completed exceptionally with the contents of
-   * {@link #error()} if it is present, or completed normally with contents of {@link #value()} (or
-   * null if it is empty)
-   */
-  public CompletableFuture<@Nullable T> toFuture() {
-    if (error().isPresent()) {
-      return CompletableFuture.failedFuture(error().get());
-    } else {
-      return CompletableFuture.completedFuture(value().orElse(null));
-    }
-  }
-
-  public Optional<T> getValueOrThrow() {
-    Optional<Throwable> error = error();
-    if (error.isPresent()) {
-      if (error.get() instanceof RuntimeException e) {
-        throw e;
+  static <T> Errable<@NonNull T> errableFrom(@Nullable Object value, @Nullable Throwable error) {
+    if (value instanceof Optional<?> valueOpt) {
+      if (valueOpt.isPresent()) {
+        if (error != null) {
+          throw illegalState();
+        } else {
+          return errableFrom((T) valueOpt.get(), null);
+        }
+      } else if (error != null) {
+        return withError(error);
       } else {
-        throw new RuntimeException(error.get());
+        return Nil.nil();
       }
+    } else if (value != null) {
+      if (error != null) {
+        throw illegalState();
+      } else {
+        return (Errable<@NonNull T>) withValue(value);
+      }
+    } else if (error != null) {
+      return withError(error);
+    } else {
+      return nil();
     }
-    return value();
   }
 
-  @Override
-  public String toString() {
-    if (error.isPresent()) {
-      return error.toString();
-    } else {
-      return String.valueOf(value().orElse(null));
-    }
+  private static IllegalArgumentException illegalState() {
+    return new IllegalArgumentException("Both of 'value' and 'error' cannot be present together");
   }
 }

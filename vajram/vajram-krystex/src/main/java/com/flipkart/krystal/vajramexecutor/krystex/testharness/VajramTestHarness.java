@@ -1,11 +1,14 @@
 package com.flipkart.krystal.vajramexecutor.krystex.testharness;
 
+import static com.flipkart.krystal.vajram.utils.Constants.IMMUT_FACETS_CLASS_SUFFIX;
+
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.ImmutableFacetValues;
+import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
-import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import jakarta.inject.Inject;
 import java.util.HashMap;
@@ -20,7 +23,7 @@ import java.util.Objects;
  */
 public class VajramTestHarness {
 
-  private final Map<String, Map<VajramRequest<Object>, Errable<Object>>> vajramIdMockData;
+  private final Map<String, Map<ImmutableFacetValues, Errable<Object>>> vajramIdMockData;
   private final KrystexVajramExecutorConfig kryonExecutorConfigBuilder;
   private final RequestLevelCache requestLevelCache;
 
@@ -39,18 +42,17 @@ public class VajramTestHarness {
   }
 
   @SuppressWarnings("unchecked")
-  public <T> VajramTestHarness withMock(VajramRequest<T> request, Errable<T> response) {
-    String requestName = request.getClass().getSimpleName();
-    int index = requestName.lastIndexOf('R');
+  public <T> VajramTestHarness withMock(ImmutableFacetValues facets, Errable<T> response) {
+    String requestName = facets.getClass().getSimpleName();
+    int index = requestName.lastIndexOf(IMMUT_FACETS_CLASS_SUFFIX);
     String vajramId = requestName.substring(0, index);
-    Map<VajramRequest<Object>, Errable<Object>> mockDataMap = this.vajramIdMockData.get(vajramId);
+    Map<ImmutableFacetValues, Errable<Object>> mockDataMap = this.vajramIdMockData.get(vajramId);
     if (Objects.isNull(mockDataMap)) {
-      this.vajramIdMockData.put(
-          vajramId, Map.of((VajramRequest<Object>) request, (Errable<Object>) response));
+      this.vajramIdMockData.put(vajramId, Map.of(facets, (Errable<Object>) response));
     } else {
-      Errable<Object> errable = mockDataMap.get((VajramRequest<Object>) request);
+      Errable<Object> errable = mockDataMap.get((ImmutableRequest) facets);
       if (Objects.isNull(errable)) {
-        mockDataMap.put((VajramRequest<Object>) request, (Errable<Object>) response);
+        mockDataMap.put(facets, (Errable<Object>) response);
         this.vajramIdMockData.put(vajramId, mockDataMap);
       }
     }
@@ -62,8 +64,7 @@ public class VajramTestHarness {
         (s, vajramRequestErrableMap) -> {
           vajramRequestErrableMap.forEach(
               (objectVajramRequest, objectErrable) -> {
-                requestLevelCache.primeCache(
-                    s, objectVajramRequest.toFacetValues(), objectErrable.toFuture());
+                requestLevelCache.primeCache(s, objectVajramRequest, objectErrable.toFuture());
               });
         });
     KryonExecutorConfigBuilder configBuilder =

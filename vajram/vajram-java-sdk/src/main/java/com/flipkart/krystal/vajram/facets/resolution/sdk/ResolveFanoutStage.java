@@ -1,8 +1,10 @@
 package com.flipkart.krystal.vajram.facets.resolution.sdk;
 
-import com.flipkart.krystal.vajram.VajramRequest;
-import com.flipkart.krystal.vajram.facets.VajramFacetSpec;
+import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
+import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
+import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
+import com.google.common.collect.ImmutableSet;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
@@ -13,11 +15,11 @@ import java.util.function.Supplier;
  * @param <I> The data type of the input being resolved.
  * @param <DV> The dependency whose input is being resolved.
  */
-public final class ResolveFanoutStage<I, DV extends VajramRequest<?>> {
+public final class ResolveFanoutStage<I, DV extends Request> {
 
-  private final VajramFacetSpec<I, DV> targetInput;
+  private final InputMirrorSpec<I, DV> targetInput;
 
-  ResolveFanoutStage(VajramFacetSpec<I, DV> targetInput) {
+  ResolveFanoutStage(InputMirrorSpec<I, DV> targetInput) {
     this.targetInput = targetInput;
   }
 
@@ -29,19 +31,14 @@ public final class ResolveFanoutStage<I, DV extends VajramRequest<?>> {
    * @return The resultant {@link SimpleInputResolverSpec}
    * @param <CV> The current vajram which is doing the resolution
    */
-  public <CV extends VajramRequest<?>> SimpleInputResolverSpec<I, CV, DV> usingValuesAsResolver(
+  public <CV extends Request> SimpleInputResolverSpec<I, CV, DV> usingValuesAsResolver(
       Supplier<? extends Collection<? extends I>> with) {
-    return new SimpleInputResolverSpec<>(targetInput, List.of(), List.of(), null, o -> with.get());
+    return new SimpleInputResolverSpec<>(
+        targetInput, ImmutableSet.of(), List.of(), null, o -> with.get());
   }
 
-  public <S, CV extends VajramRequest<?>> Transform1FanoutResolverStage<S, I, CV, DV> using(
-      VajramFacetSpec<S, CV> sourceInput) {
-    return new Transform1FanoutResolverStage<>(targetInput, sourceInput);
-  }
-
-  public <S1, S2, CV extends VajramRequest<?>>
-      Transform2FanoutResolverStage<S1, S2, I, CV, DV> using(
-          VajramFacetSpec<S1, CV> sourceInput1, VajramFacetSpec<S2, CV> sourceInput2) {
-    return new Transform2FanoutResolverStage<>(targetInput, sourceInput1, sourceInput2);
+  public <S, CV extends Request> TransformFanoutResolverStage<S, I, CV, DV> using(
+      FacetSpec<S, CV> sourceInput) {
+    return new TransformFanoutResolverStage<>(targetInput, sourceInput);
   }
 }

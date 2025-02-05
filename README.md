@@ -31,7 +31,7 @@ Single Bill-Of-Materials artefact with all krystal artefacts versions defined.
    independant and agnostic of each other. Classes common to both vajram and krystex modules are
    in `krystal-common` module.
 6. `com.flipkart.krystal:vajram-guice`: This module contains a kryon decorator which allows
-   the `@Inject` facets in vajrams to be provided by the guice injector. See `vajram-samples` module
+   the `@Inject` facetValues in vajrams to be provided by the guice injector. See `vajram-samples` module
    for how to use this decorator.
 
 ## Preface

@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.samples;
 
 import static java.time.Duration.ofNanos;
+import static java.time.Duration.ofSeconds;
 import static java.util.Arrays.stream;
 import static java.util.concurrent.CompletableFuture.allOf;
 
@@ -18,6 +19,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 public final class Util {
+
+  public static final Duration TEST_TIMEOUT = ofSeconds(1);
 
   private Util() {}
 
@@ -89,10 +92,10 @@ public final class Util {
             loopCount * Duration.ofSeconds(1).toNanos() / ofNanos(vajramTimeNs).toNanos())
         .printf(
             "CommandsQueuedCount: %,d%n",
-            stream(metrics).mapToInt(KryonExecutorMetrics::getCommandQueuedCount).sum())
+            stream(metrics).mapToInt(KryonExecutorMetrics::commandQueuedCount).sum())
         .printf(
             "CommandQueueBypassedCount: %,d%n",
-            stream(metrics).mapToInt(KryonExecutorMetrics::getCommandQueueBypassedCount).sum())
+            stream(metrics).mapToInt(KryonExecutorMetrics::commandQueueBypassedCount).sum())
         .printf(
             "Platform overhead over native code: %,.0f ns per request%n",
             (1.0 * vajramTimeNs - javaNativeTimeNs) / loopCount)

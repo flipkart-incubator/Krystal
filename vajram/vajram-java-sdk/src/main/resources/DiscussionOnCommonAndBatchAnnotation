@@ -1,0 +1,23 @@
+Discussion on May'24
+
+- @Batch
+  - Only the facetValues (inputs and dependencies) that are annotated with @Batch will be included in the batchInterface,
+  as we are assuming that in the final output logic only those will be required
+
+- @Common
+  - The facetValues that are annotated with @Common will be included in the commonInterface,
+  as we are assuming that in the final output logic only those will be required
+  - For backward compatibility, if there is no facet annotated with @Common, then all the facetValues which are not
+  annotated with @Batch will be assumed @Common and included in the commonInterface (? to confirm with Ram as this might get confusing along with below point)
+
+  There might be facetValues which are not annotated with @Batch or @Common, but are required to compute dependencies before final output logic,
+  they will not be available in the final output logic to the vajram developer
+
+
+  -----
+
+  Discussion on 20th June 2024
+
+  decided not to go with @Common annotation, instead @Batch(isRequiredInMainOutput = <ENUM>)
+  will be used to include the facet in the main output logic (property name is not finalised, it is just an example) .
+  Enum can have 3 value, default, true, false. default behavior the runtime actor can decide based on presence of delyable vajrams or not.

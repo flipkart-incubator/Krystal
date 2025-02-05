@@ -2,14 +2,14 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 
-import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.kryondecoration.KryonExecutionContext;
 import com.flipkart.krystal.vajram.VajramID;
-import com.flipkart.krystal.vajram.VajramRequest;
 import com.flipkart.krystal.vajram.exec.VajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.VajramInjectionProvider;
@@ -58,21 +58,18 @@ public class KrystexVajramExecutor implements VajramExecutor {
   }
 
   @Override
-  public <T> CompletableFuture<@Nullable T> execute(
-      VajramID vajramId, VajramRequest<T> vajramRequest) {
+  public <T> CompletableFuture<@Nullable T> execute(VajramID vajramId, ImmutableRequest request) {
     return execute(
-        vajramId,
-        vajramRequest,
-        KryonExecutionConfig.builder().executionId("defaultExecution").build());
+        vajramId, request, KryonExecutionConfig.builder().executionId("defaultExecution").build());
   }
 
   public <T> CompletableFuture<@Nullable T> execute(
-      VajramID vajramId, VajramRequest<T> vajramRequest, KryonExecutionConfig executionConfig) {
-    return executeWithFacets(vajramId, vajramRequest.toFacetValues(), executionConfig);
+      VajramID vajramId, ImmutableRequest vajramRequest, KryonExecutionConfig executionConfig) {
+    return executeWithFacets(vajramId, vajramRequest, executionConfig);
   }
 
   public <T> CompletableFuture<@Nullable T> executeWithFacets(
-      VajramID vajramId, Facets facets, KryonExecutionConfig executionConfig) {
+      VajramID vajramId, Request facets, KryonExecutionConfig executionConfig) {
     return krystalExecutor.executeKryon(
         vajramKryonGraph.getKryonId(vajramId), facets, executionConfig);
   }

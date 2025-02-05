@@ -2,10 +2,10 @@ package com.flipkart.krystal.vajram.samples_errors;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.Input;
-import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.samples_errors.TooManyQualifiersFacetUtil.TooManyQualifiersFacets;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.vajram.facets.Output;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Qualifier;
@@ -21,8 +21,9 @@ public abstract class TooManyQualifiers extends ComputeVajram<String> {
 
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
-    @Input String input;
+    @Mandatory @Input String input;
 
+    @Mandatory
     @Inject
     @Named("toInject")
     @InjectionQualifier
@@ -30,7 +31,7 @@ public abstract class TooManyQualifiers extends ComputeVajram<String> {
   }
 
   @Output
-  static String output(TooManyQualifiersFacets facets) {
-    return facets.input() + ' ' + facets.inject();
+  static String output(String input, String inject) {
+    return input + ' ' + inject;
   }
 }

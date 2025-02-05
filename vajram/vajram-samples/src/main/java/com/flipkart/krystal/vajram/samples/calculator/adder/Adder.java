@@ -1,17 +1,17 @@
 package com.flipkart.krystal.vajram.samples.calculator.adder;
 
+import static com.flipkart.krystal.vajram.facets.Mandatory.IfNotSet.DEFAULT_TO_ZERO;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.Input;
-import com.flipkart.krystal.vajram.Output;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.batching.Batch;
-import com.flipkart.krystal.vajram.batching.BatchedFacets;
-import com.flipkart.krystal.vajram.samples.calculator.adder.AdderFacetUtil.AdderBatchFacets;
-import com.flipkart.krystal.vajram.samples.calculator.adder.AdderFacetUtil.AdderCommonFacets;
+import com.flipkart.krystal.vajram.facets.Input;
+import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.vajram.facets.Output;
+import com.google.common.collect.ImmutableList;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.Map;
@@ -26,25 +26,29 @@ public abstract class Adder extends IOVajram<Integer> {
 
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
-    @Batch @Input int numberOne;
-    @Batch @Input Optional<Integer> numberTwo;
+    @Mandatory @Batch @Input int numberOne;
+
+    @Mandatory(ifNotSet = DEFAULT_TO_ZERO)
+    @Batch
+    @Input
+    int numberTwo;
 
     @Inject
     @Named(FAIL_ADDER_FLAG)
-    Optional<Boolean> fail;
+    boolean fail;
   }
 
   @Output
-  static Map<AdderBatchFacets, CompletableFuture<Integer>> add(
-      BatchedFacets<AdderBatchFacets, AdderCommonFacets> batchedFacets) {
+  static Map<Adder_BatchElem, CompletableFuture<Integer>> add(
+      ImmutableList<Adder_BatchElem> _batches, Optional<Boolean> fail) {
     CALL_COUNTER.increment();
-    if (batchedFacets.commonFacets().fail().orElse(false)) {
+    if (fail.orElse(false)) {
       throw new RuntimeException("Adder failed because fail flag was set");
     }
-    return batchedFacets.batch().stream()
+    return _batches.stream()
         .collect(
             toImmutableMap(
-                identity(), im -> completedFuture(add(im.numberOne(), im.numberTwo().orElse(0)))));
+                identity(), batch -> completedFuture(add(batch.numberOne(), batch.numberTwo()))));
   }
 
   public static int add(int a, int b) {

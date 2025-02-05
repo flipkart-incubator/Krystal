@@ -39,6 +39,7 @@ class SingleThreadExecutorTest {
   }
 
   @Test
+  @SuppressWarnings("FutureReturnValueIgnored")
   void maxPoolSize_shouldBeOne() {
     SingleThreadExecutor executor = new SingleThreadExecutor("poolName");
     for (int i = 0; i < 10; i++) {
