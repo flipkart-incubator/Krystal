@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajram;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetValues;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map.Entry;
@@ -24,15 +24,16 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public abstract non-sealed class ComputeVajram<T> extends AbstractVajram<T> {
 
   @Override
-  public final ImmutableMap<Facets, CompletableFuture<@Nullable T>> execute(
-      ImmutableList<Facets> facetsList) {
-    return executeCompute(facetsList).entrySet().stream()
+  public final ImmutableMap<FacetValues, CompletableFuture<@Nullable T>> execute(
+      ImmutableList<FacetValues> facetValuesList) {
+    return executeCompute(facetValuesList).entrySet().stream()
         .collect(toImmutableMap(Entry::getKey, ComputeVajram::toFuture));
   }
 
-  private static <T> CompletableFuture<@Nullable T> toFuture(Entry<Facets, Errable<T>> e) {
+  private static <T> CompletableFuture<@Nullable T> toFuture(Entry<FacetValues, Errable<T>> e) {
     return e.getValue().toFuture();
   }
 
-  public abstract ImmutableMap<Facets, Errable<T>> executeCompute(ImmutableList<Facets> facetsList);
+  public abstract ImmutableMap<FacetValues, Errable<T>> executeCompute(
+      ImmutableList<FacetValues> facetValuesList);
 }

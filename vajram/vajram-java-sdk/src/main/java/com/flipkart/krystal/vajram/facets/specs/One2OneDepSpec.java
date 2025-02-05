@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
 import com.flipkart.krystal.data.DepResponse;
-import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.FacetsBuilder;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
@@ -25,8 +25,8 @@ import lombok.Getter;
 public abstract sealed class One2OneDepSpec<T, CV extends Request, DV extends Request>
     extends DependencySpec<T, CV, DV> permits MandatoryOne2OneDepSpec, OptionalOne2OneDepSpec {
 
-  private final Function<Facets, One2OneDepResponse> getFromFacets;
-  private final BiConsumer<Facets, RequestResponse> setToFacets;
+  private final Function<FacetValues, One2OneDepResponse> getFromFacets;
+  private final BiConsumer<FacetValues, RequestResponse> setToFacets;
 
   public One2OneDepSpec(
       int id,
@@ -38,19 +38,19 @@ public abstract sealed class One2OneDepSpec<T, CV extends Request, DV extends Re
       String documentation,
       boolean isBatched,
       ElementTags tags,
-      Function<Facets, One2OneDepResponse> getFromFacets,
-      BiConsumer<Facets, RequestResponse> setToFacets) {
+      Function<FacetValues, One2OneDepResponse> getFromFacets,
+      BiConsumer<FacetValues, RequestResponse> setToFacets) {
     super(id, name, type, ofVajram, onVajram, onVajramId, documentation, isBatched, tags);
     this.getFromFacets = getFromFacets;
     this.setToFacets = setToFacets;
   }
 
-  public One2OneDepResponse getFacetValue(Facets facets) {
-    return getFromFacets.apply(facets);
+  public One2OneDepResponse getFacetValue(FacetValues facetValues) {
+    return getFromFacets.apply(facetValues);
   }
 
   @Override
-  public final void setFacetValue(FacetsBuilder facets, DepResponse value) {
+  public final void setFacetValue(FacetValuesBuilder facets, DepResponse value) {
     if (value instanceof RequestResponse requestResponse) {
       setFacetValue(facets, (RequestResponse) requestResponse);
     } else {
@@ -61,7 +61,7 @@ public abstract sealed class One2OneDepSpec<T, CV extends Request, DV extends Re
   }
 
   @SuppressWarnings("MethodOverloadsMethodOfSuperclass")
-  public final void setFacetValue(FacetsBuilder facets, RequestResponse value) {
+  public final void setFacetValue(FacetValuesBuilder facets, RequestResponse value) {
     setToFacets.accept(facets, value);
   }
 

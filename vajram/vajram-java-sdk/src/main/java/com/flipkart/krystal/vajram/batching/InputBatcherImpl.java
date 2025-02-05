@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajram.batching;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.config.ConfigProvider;
-import com.flipkart.krystal.data.ImmutableFacetContainer;
+import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,8 +17,8 @@ public final class InputBatcherImpl implements InputBatcher {
 
   private static final int DEFAULT_BATCH_SIZE = 1;
   private @Nullable Consumer<ImmutableList<BatchedFacets>> batchingListener;
-  private final Map<ImmutableFacetContainer, List<BatchEnabledFacets>> unBatchedRequests =
-      new HashMap<>();
+  private final Map<ImmutableFacetValuesContainer, List<BatchEnabledFacetValues>>
+      unBatchedRequests = new HashMap<>();
   private int minBatchSize = DEFAULT_BATCH_SIZE;
 
   public InputBatcherImpl() {}
@@ -28,18 +28,18 @@ public final class InputBatcherImpl implements InputBatcher {
   }
 
   @Override
-  public ImmutableList<BatchedFacets> add(BatchEnabledFacets batchEnabledFacets) {
-    ImmutableFacetContainer commonFacets = batchEnabledFacets._common();
+  public ImmutableList<BatchedFacets> add(BatchEnabledFacetValues batchEnabledFacets) {
+    ImmutableFacetValuesContainer commonFacets = batchEnabledFacets._common();
     unBatchedRequests.computeIfAbsent(commonFacets, k -> new ArrayList<>()).add(batchEnabledFacets);
     return getBatchedInputs(commonFacets, false);
   }
 
   private ImmutableList<BatchedFacets> getBatchedInputs(
-      ImmutableFacetContainer commonFacets, boolean force) {
+      ImmutableFacetValuesContainer commonFacets, boolean force) {
     if (commonFacets == null) {
       return ImmutableList.of();
     }
-    List<BatchEnabledFacets> batchItems =
+    List<BatchEnabledFacetValues> batchItems =
         unBatchedRequests.getOrDefault(commonFacets, ImmutableList.of());
     if (force || batchItems.size() >= minBatchSize) {
       ImmutableList<BatchedFacets> batchedFacets =

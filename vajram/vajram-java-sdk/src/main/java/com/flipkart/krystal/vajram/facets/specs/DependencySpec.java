@@ -4,8 +4,8 @@ import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
 
 import com.flipkart.krystal.data.DepResponse;
 import com.flipkart.krystal.data.FacetValue;
-import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.FacetsBuilder;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.Dependency;
@@ -46,7 +46,7 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
   }
 
   @Override
-  public final void setFacetValue(FacetsBuilder facets, FacetValue value) {
+  public final void setFacetValue(FacetValuesBuilder facets, FacetValue value) {
     if (value instanceof DepResponse depResponse) {
       setFacetValue(facets, depResponse);
     } else {
@@ -55,7 +55,7 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
     }
   }
 
-  protected abstract void setFacetValue(FacetsBuilder facets, DepResponse depResponse);
+  protected abstract void setFacetValue(FacetValuesBuilder facets, DepResponse depResponse);
 
-  public abstract DepResponse getFacetValue(Facets facets);
+  public abstract DepResponse getFacetValue(FacetValues facetValues);
 }

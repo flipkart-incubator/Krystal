@@ -8,8 +8,8 @@ import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.config.NestedConfig;
-import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.ImmutableFacets;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
@@ -17,7 +17,7 @@ import com.flipkart.krystal.krystex.logicdecoration.FlushCommand;
 import com.flipkart.krystal.krystex.logicdecoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecoratorCommand;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
-import com.flipkart.krystal.vajram.batching.BatchEnabledFacets;
+import com.flipkart.krystal.vajram.batching.BatchEnabledFacetValues;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.google.common.collect.ImmutableList;
@@ -41,7 +41,7 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
   private final String instanceId;
   private final InputBatcher inputBatcher;
   private final Predicate<DependantChain> isApplicableToDependantChain;
-  private final Map<ImmutableFacets, CompletableFuture<@Nullable Object>> futureCache =
+  private final Map<ImmutableFacetValues, CompletableFuture<@Nullable Object>> futureCache =
       new LinkedHashMap<>();
   private ImmutableSet<DependantChain> activeDependantChains = ImmutableSet.of();
   private final Set<DependantChain> flushedDependantChains = new LinkedHashSet<>();
@@ -61,12 +61,12 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
     inputBatcher.onBatching(
         requests -> requests.forEach(request -> batchFacetsList(logicToDecorate, request)));
     return facetsList -> {
-      ImmutableList<BatchEnabledFacets> immutableFacetsList =
+      ImmutableList<BatchEnabledFacetValues> immutableFacetsList =
           facetsList.stream()
               .map(
                   f -> {
-                    if (f instanceof BatchEnabledFacets) {
-                      return (BatchEnabledFacets) f;
+                    if (f instanceof BatchEnabledFacetValues) {
+                      return (BatchEnabledFacetValues) f;
                     } else {
                       throw new IllegalStateException(
                           "Expected to recieve instance of BatchableFacets in batcher %s but received %s"
@@ -77,7 +77,7 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
                                       .orElse(Void.class)));
                     }
                   })
-              .map(BatchEnabledFacets::_build)
+              .map(BatchEnabledFacetValues::_build)
               .collect(toImmutableList());
       List<BatchedFacets> batchedFacetsList =
           immutableFacetsList.stream()
@@ -94,14 +94,15 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
       }
       return facetsList.stream()
           .collect(
-              ImmutableMap.<Facets, Facets, CompletableFuture<@Nullable Object>>toImmutableMap(
-                  identity(),
-                  key ->
-                      Optional.ofNullable(futureCache.get(key._build()))
-                          .orElseThrow(
-                              () ->
-                                  new AssertionError(
-                                      "Future cache has been primed with values. This should never happen"))));
+              ImmutableMap
+                  .<FacetValues, FacetValues, CompletableFuture<@Nullable Object>>toImmutableMap(
+                      identity(),
+                      key ->
+                          Optional.ofNullable(futureCache.get(key._build()))
+                              .orElseThrow(
+                                  () ->
+                                      new AssertionError(
+                                          "Future cache has been primed with values. This should never happen"))));
     };
   }
 
@@ -124,8 +125,8 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
 
   @SuppressWarnings("UnnecessaryTypeArgument") // --> To Handle nullChecker errors
   private void batchFacetsList(OutputLogic<Object> logicToDecorate, BatchedFacets batchedFacets) {
-    ImmutableList<BatchEnabledFacets> facetsList = batchedFacets.batchItems();
-    ImmutableMap<Facets, CompletableFuture<@Nullable Object>> result;
+    ImmutableList<BatchEnabledFacetValues> facetsList = batchedFacets.batchItems();
+    ImmutableMap<FacetValues, CompletableFuture<@Nullable Object>> result;
     try {
       result = logicToDecorate.execute(facetsList);
     } catch (Throwable e) {

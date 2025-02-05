@@ -4,9 +4,9 @@ import static com.flipkart.krystal.facets.FacetType.INJECTION;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.FacetContainer;
-import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.FacetsBuilder;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.FacetValuesBuilder;
+import com.flipkart.krystal.data.FacetValuesContainer;
 import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.Success;
@@ -73,10 +73,10 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
 
   private CompletableFuture<KryonResponse> injectFacets(
       ForwardReceive forwardBatch, VajramDefinition vajramDefinition) {
-    ImmutableMap<RequestId, ? extends FacetContainer> requestIdToFacets =
+    ImmutableMap<RequestId, ? extends FacetValuesContainer> requestIdToFacets =
         forwardBatch.executableRequests();
 
-    ImmutableMap.Builder<RequestId, FacetsBuilder> newRequests = ImmutableMap.builder();
+    ImmutableMap.Builder<RequestId, FacetValuesBuilder> newRequests = ImmutableMap.builder();
     Set<FacetSpec<?, ?>> injectableFacets = new LinkedHashSet<>();
     vajramDefinition
         .facetSpecs()
@@ -87,14 +87,14 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
               }
             });
 
-    for (Entry<RequestId, ? extends FacetContainer> entry : requestIdToFacets.entrySet()) {
+    for (Entry<RequestId, ? extends FacetValuesContainer> entry : requestIdToFacets.entrySet()) {
       RequestId requestId = entry.getKey();
-      FacetContainer container = entry.getValue();
-      FacetsBuilder facetsBuilder;
+      FacetValuesContainer container = entry.getValue();
+      FacetValuesBuilder facetsBuilder;
       if (container instanceof Request request) {
         facetsBuilder = vajramDefinition.vajram().facetsFromRequest(request);
-      } else if (container instanceof Facets facets) {
-        facetsBuilder = facets._asBuilder();
+      } else if (container instanceof FacetValues facetValues) {
+        facetsBuilder = facetValues._asBuilder();
       } else {
         throw new UnsupportedOperationException(
             "Unknown facet container type " + container.getClass());
@@ -110,10 +110,10 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
             forwardBatch.skippedRequests()));
   }
 
-  private FacetsBuilder injectFacetsOfVajram(
+  private FacetValuesBuilder injectFacetsOfVajram(
       VajramDefinition vajramDefinition,
       Set<FacetSpec<?, ?>> injectableFacets,
-      FacetsBuilder facetsBuilder) {
+      FacetValuesBuilder facetsBuilder) {
     for (FacetSpec facetSpec : injectableFacets) {
       if (!(facetSpec instanceof DefaultFacetSpec defaultFacetSpec)) {
         continue;

@@ -7,7 +7,7 @@ import static java.util.Optional.ofNullable;
 import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.NonNil;
 import com.flipkart.krystal.data.Request;
@@ -59,24 +59,24 @@ public final class InputResolverUtil {
       @Nullable Function<List<Errable<?>>, ?> oneToOneTransformer,
       @Nullable Function<List<Errable<?>>, ? extends Collection<?>> fanoutTransformer,
       List<? extends SkipPredicate<?>> skipPredicates,
-      Facets facets) {
+      FacetValues facetValues) {
     boolean fanout = fanoutTransformer != null;
     List<Errable<?>> inputValues = new ArrayList<>();
     for (FacetSpec sourceInput : sourceInputs) {
       final Errable<?> inputValue;
       if (sourceInput instanceof One2OneDepSpec<?, ?, ?> depSpec) {
-        inputValue = depSpec.getFacetValue(facets).response();
+        inputValue = depSpec.getFacetValue(facetValues).response();
       } else if (sourceInput instanceof FanoutDepSpec<?, ?, ?> depSpec) {
         inputValue =
             Errable.withValue(
-                depSpec.getFacetValue(facets).requestResponsePairs().stream()
+                depSpec.getFacetValue(facetValues).requestResponsePairs().stream()
                     .map(RequestResponse::response)
                     .filter(e -> e instanceof NonNil<?>)
                     .map(e -> (NonNil<?>) e)
                     .map(NonNil::value)
                     .toList());
       } else if (sourceInput instanceof DefaultFacetSpec defaultSpec) {
-        inputValue = defaultSpec.getFacetValue(facets);
+        inputValue = defaultSpec.getFacetValue(facetValues);
       } else {
         throw new UnsupportedOperationException("Unknown facet type " + sourceInput.getClass());
       }

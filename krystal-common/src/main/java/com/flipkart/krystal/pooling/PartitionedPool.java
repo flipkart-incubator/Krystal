@@ -40,7 +40,6 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 class PartitionedPool<T> implements Iterable<PooledObject<T>> {
 
   private final int hardMaxLeasesPerObject;
-
   private final ArrayList<PooledObject<T>> partitionedList = new ArrayList<>();
 
   /**

@@ -15,7 +15,7 @@ import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
-import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.One2OneDepResponse;
@@ -355,13 +355,13 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
   }
 
   private void validateMandatory(
-      VajramID vajramID, Facets facets, ImmutableCollection<FacetSpec> requiredInputs) {
+      VajramID vajramID, FacetValues facetValues, ImmutableCollection<FacetSpec> requiredInputs) {
     @SuppressWarnings("StreamToIterable")
     Iterable<FacetSpec> mandatoryFacets =
         requiredInputs.stream().filter(FacetSpec::isMandatory)::iterator;
     Map<String, Throwable> missingMandatoryValues = new HashMap<>();
     for (Facet mandatoryFacet : mandatoryFacets) {
-      FacetValue facetValue = mandatoryFacet.getFacetValue(facets);
+      FacetValue facetValue = mandatoryFacet.getFacetValue(facetValues);
       Errable<?> value;
       if (facetValue instanceof Errable<?> errable) {
         value = errable;
@@ -409,8 +409,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     // Step 4: Create and register Kryon for the output logic
     OutputLogic<@Nullable Object> outputLogicCode =
         inputsList -> {
-          List<Facets> validInputs = new ArrayList<>();
-          Map<Facets, CompletableFuture<@Nullable Object>> failedValidations =
+          List<FacetValues> validInputs = new ArrayList<>();
+          Map<FacetValues, CompletableFuture<@Nullable Object>> failedValidations =
               new LinkedHashMap<>();
           inputsList.forEach(
               inputs -> {
@@ -422,14 +422,14 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                 }
               });
           Vajram<Object> vajram = vajramDefinition.vajram();
-          ImmutableMap<Facets, CompletableFuture<@Nullable Object>> validResults;
+          ImmutableMap<FacetValues, CompletableFuture<@Nullable Object>> validResults;
           try {
             validResults = vajram.execute(ImmutableList.copyOf(validInputs));
           } catch (Throwable e) {
             return validInputs.stream().collect(toImmutableMap(identity(), i -> failedFuture(e)));
           }
 
-          return ImmutableMap.<Facets, CompletableFuture<@Nullable Object>>builder()
+          return ImmutableMap.<FacetValues, CompletableFuture<@Nullable Object>>builder()
               .putAll(validResults)
               .putAll(failedValidations)
               .build();

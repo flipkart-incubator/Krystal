@@ -4,7 +4,7 @@ import static com.flipkart.krystal.facets.resolution.ResolverCommand.executeWith
 import static com.flipkart.krystal.facets.resolution.ResolverCommand.skip;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil._resolutionHelper;
 
-import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
@@ -23,7 +23,8 @@ public final class SimpleOne2OneInputResolver<S, T, CV extends Request, DV exten
   }
 
   @Override
-  public ResolverCommand resolve(ImmutableList<? extends Builder> depRequests, Facets facets) {
+  public ResolverCommand resolve(
+      ImmutableList<? extends Builder> depRequests, FacetValues facetValues) {
     {
       try {
         //noinspection unchecked,rawtypes
@@ -33,7 +34,7 @@ public final class SimpleOne2OneInputResolver<S, T, CV extends Request, DV exten
                 getResolverSpec().transformer(),
                 getResolverSpec().fanoutTransformer(),
                 getResolverSpec().skipConditions(),
-                facets);
+                facetValues);
         if (depCommand instanceof One2OneCommand<T> one2OneCommand) {
           ResolverCommand command;
           if (depCommand.shouldSkip()) {

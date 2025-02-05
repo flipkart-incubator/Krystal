@@ -5,7 +5,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
@@ -42,7 +42,8 @@ public class RequestLevelCache implements KryonDecorator {
     return new CachingDecoratedKryon(decorationInput.kryon());
   }
 
-  public void primeCache(String kryonId, Facets request, CompletableFuture<@Nullable Object> data) {
+  public void primeCache(
+      String kryonId, FacetValues request, CompletableFuture<@Nullable Object> data) {
     cache.put(new CacheKey(new KryonId(kryonId), request._build()), data);
   }
 
@@ -78,7 +79,7 @@ public class RequestLevelCache implements KryonDecorator {
     private CompletableFuture<KryonResponse> readFromCache(
         Kryon<KryonCommand, KryonResponse> kryon, ForwardReceive forwardBatch) {
       var executableRequests = forwardBatch.executableRequests();
-      Map<RequestId, Facets> cacheMisses = new LinkedHashMap<>();
+      Map<RequestId, FacetValues> cacheMisses = new LinkedHashMap<>();
       Map<RequestId, CompletableFuture<@Nullable Object>> cacheHits = new LinkedHashMap<>();
       Map<RequestId, CompletableFuture<@Nullable Object>> newCacheEntries = new LinkedHashMap<>();
       executableRequests.forEach(

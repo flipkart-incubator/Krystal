@@ -56,9 +56,9 @@ public record GivenFacetModel(
     return true;
   }
 
-  public static class GivenFacetModelBuilder<T> {
+  public static class GivenFacetModelBuilder {
 
-    public @This GivenFacetModelBuilder<T> facetTypes(EnumSet<FacetType> facetTypes) {
+    public @This GivenFacetModelBuilder facetTypes(EnumSet<FacetType> facetTypes) {
       if (facetTypes != null) {
         this.facetTypes = ImmutableSet.copyOf(facetTypes);
       }

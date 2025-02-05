@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonId;
@@ -65,7 +65,7 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
       /*
        Execute logic
       */
-      ImmutableMap<Facets, CompletableFuture<@Nullable Object>> results =
+      ImmutableMap<FacetValues, CompletableFuture<@Nullable Object>> results =
           logicToDecorate.execute(facets);
       /*
        Report logic end

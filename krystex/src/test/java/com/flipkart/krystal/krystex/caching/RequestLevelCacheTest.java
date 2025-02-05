@@ -13,8 +13,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.FacetsMapBuilder;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.FacetValuesMapBuilder;
 import com.flipkart.krystal.data.SimpleImmutRequest;
 import com.flipkart.krystal.data.SimpleRequestBuilder;
 import com.flipkart.krystal.facets.Facet;
@@ -210,7 +210,7 @@ class RequestLevelCacheTest {
   }
 
   private <T> OutputLogicDefinition<T> newComputeLogic(
-      String kryonId, Set<Facet> inputs, Function<Facets, T> logic) {
+      String kryonId, Set<Facet> inputs, Function<FacetValues, T> logic) {
     ComputeLogicDefinition<T> def =
         new ComputeLogicDefinition<>(
             new KryonLogicId(new KryonId(kryonId), kryonId),
@@ -231,7 +231,8 @@ class RequestLevelCacheTest {
     return new LogicDefinition<>(
         new KryonLogicId(new KryonId(kryonName), kryonName + ":facetsFromRequest"),
         request ->
-            new FacetsMapBuilder((SimpleRequestBuilder<Object>) request._asBuilder(), Set.of()));
+            new FacetValuesMapBuilder(
+                (SimpleRequestBuilder<Object>) request._asBuilder(), Set.of()));
   }
 
   @NonNull

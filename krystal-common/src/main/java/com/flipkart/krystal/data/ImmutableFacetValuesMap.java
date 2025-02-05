@@ -8,17 +8,18 @@ import java.util.Set;
 import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class ImmutableFacetsMap implements FacetsMap, ImmutableFacets {
+public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableFacetValues {
 
   private final SimpleImmutRequest<Object> request;
   @Getter private ImmutableSet<? extends Facet> _facets;
   private final ImmutableMap<Integer, FacetValue> otherFacets;
 
-  public ImmutableFacetsMap(SimpleRequestBuilder<Object> request, Set<? extends Facet> _facets) {
+  public ImmutableFacetValuesMap(
+      SimpleRequestBuilder<Object> request, Set<? extends Facet> _facets) {
     this(request, _facets, ImmutableMap.of());
   }
 
-  public ImmutableFacetsMap(
+  public ImmutableFacetValuesMap(
       SimpleRequestBuilder<Object> request,
       Set<? extends Facet> _facets,
       ImmutableMap<Integer, FacetValue> otherFacets) {
@@ -77,24 +78,24 @@ public final class ImmutableFacetsMap implements FacetsMap, ImmutableFacets {
   }
 
   @Override
-  public FacetsMapBuilder _asBuilder() {
-    return new FacetsMapBuilder(request._asBuilder(), _facets, otherFacets);
+  public FacetValuesMapBuilder _asBuilder() {
+    return new FacetValuesMapBuilder(request._asBuilder(), _facets, otherFacets);
   }
 
   @Override
-  public ImmutableFacetsMap _build() {
+  public ImmutableFacetValuesMap _build() {
     return this;
   }
 
   @Override
-  public ImmutableFacetsMap _newCopy() {
+  public ImmutableFacetValuesMap _newCopy() {
     return this;
   }
 
   @Override
   public boolean equals(final @Nullable Object o) {
     if (o == this) return true;
-    if (!(o instanceof FacetsMap other)) return false;
+    if (!(o instanceof FacetValuesMap other)) return false;
     return Objects.equals(this._asMap(), other._asMap());
   }
 

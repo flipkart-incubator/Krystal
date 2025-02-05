@@ -8,7 +8,7 @@ import com.google.common.collect.ImmutableSet;
  * is intended for use by the krystal platform code generator. Developers must not implement/extend
  * this interface - this can lead to unexpected behaviour.
  */
-public interface FacetContainer {
+public interface FacetValuesContainer {
 
   /** Returns the basic facet infos of the facets whose values this container contains */
   ImmutableSet<? extends BasicFacetInfo> _facets();

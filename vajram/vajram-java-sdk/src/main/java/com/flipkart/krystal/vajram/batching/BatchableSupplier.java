@@ -1,11 +1,11 @@
 package com.flipkart.krystal.vajram.batching;
 
-import com.flipkart.krystal.data.FacetContainer;
+import com.flipkart.krystal.data.FacetValuesContainer;
 
 @FunctionalInterface
 public interface BatchableSupplier<
-    BatchFacets extends FacetContainer, CommonFacets extends FacetContainer> {
+    BatchFacets extends FacetValuesContainer, CommonFacets extends FacetValuesContainer> {
 
   /** Creates an instance of unbatched facets from single batch and common facets. */
-  BatchEnabledFacets createBatchable(BatchFacets batch, CommonFacets common);
+  BatchEnabledFacetValues createBatchable(BatchFacets batch, CommonFacets common);
 }

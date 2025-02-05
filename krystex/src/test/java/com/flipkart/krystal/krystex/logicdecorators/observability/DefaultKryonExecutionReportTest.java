@@ -5,8 +5,8 @@ import static com.flipkart.krystal.krystex.testutils.SimpleFacet.input;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.ImmutableFacetsMap;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.ImmutableFacetValuesMap;
 import com.flipkart.krystal.data.SimpleRequestBuilder;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.kryon.KryonId;
@@ -42,17 +42,17 @@ class DefaultKryonExecutionReportTest {
     KryonId kryonId = new KryonId("kryon_1");
     KryonLogicId kryonLogicId = new KryonLogicId(kryonId, "kryon_1__logic_1");
     Set<SimpleFacet> allInputs = Set.of(input(1));
-    ImmutableList<Facets> facetsList =
+    ImmutableList<FacetValues> facetValuesList =
         ImmutableList.of(
-            new ImmutableFacetsMap(
+            new ImmutableFacetValuesMap(
                 new SimpleRequestBuilder<>(allInputs, ImmutableMap.of(1, withValue("v1"))),
                 allInputs),
-            new ImmutableFacetsMap(
+            new ImmutableFacetValuesMap(
                 new SimpleRequestBuilder<>(allInputs, ImmutableMap.of(1, withValue("v2"))),
                 allInputs));
 
     clock.setInstant(START_TIME);
-    kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetsList);
+    kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetValuesList);
 
     String result = "r1";
     clock.setInstant(END_TIME);
@@ -60,7 +60,7 @@ class DefaultKryonExecutionReportTest {
         kryonId,
         kryonLogicId,
         new LogicExecResults(
-            facetsList.stream()
+            facetValuesList.stream()
                 .map(facets -> new LogicExecResponse(facets, withValue(result)))
                 .collect(toImmutableList())));
 
@@ -110,20 +110,20 @@ class DefaultKryonExecutionReportTest {
   void reportMainLogicStart_calledTwice_hasNoEffect() {
     KryonId kryonId = new KryonId("kryon_1");
     KryonLogicId kryonLogicId = new KryonLogicId(kryonId, "kryon_1__logic_1");
-    ImmutableList<Facets> facetsList =
+    ImmutableList<FacetValues> facetValuesList =
         ImmutableList.of(
-            new ImmutableFacetsMap(
+            new ImmutableFacetValuesMap(
                 new SimpleRequestBuilder<>(Set.of(input(1)), ImmutableMap.of(1, withValue("v1"))),
                 Set.of(input(1))),
-            new ImmutableFacetsMap(
+            new ImmutableFacetValuesMap(
                 new SimpleRequestBuilder<>(Set.of(input(2)), ImmutableMap.of(2, withValue("v2"))),
                 Set.of(input(2))));
 
     clock.setInstant(START_TIME);
-    kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetsList);
+    kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetValuesList);
 
     clock.setInstant(END_TIME);
-    kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetsList);
+    kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetValuesList);
 
     assertThat(kryonExecutionReport.mainLogicExecInfos().size()).isEqualTo(1);
     LogicExecInfo logicExecInfo =
@@ -137,17 +137,17 @@ class DefaultKryonExecutionReportTest {
   void reportMainLogicEnd_calledTwice_hasNoEffect() {
     KryonId kryonId = new KryonId("kryon_1");
     KryonLogicId kryonLogicId = new KryonLogicId(kryonId, "kryon_1__logic_1");
-    ImmutableList<Facets> facetsList =
+    ImmutableList<FacetValues> facetValuesList =
         ImmutableList.of(
-            new ImmutableFacetsMap(
+            new ImmutableFacetValuesMap(
                 new SimpleRequestBuilder<>(Set.of(input(1)), ImmutableMap.of(1, withValue("v1"))),
                 Set.of(input(1))),
-            new ImmutableFacetsMap(
+            new ImmutableFacetValuesMap(
                 new SimpleRequestBuilder<>(Set.of(input(2)), ImmutableMap.of(2, withValue("v2"))),
                 Set.of(input(2))));
 
     clock.setInstant(START_TIME);
-    kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetsList);
+    kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetValuesList);
 
     String result = "r1";
     clock.setInstant(END_TIME);
@@ -155,7 +155,7 @@ class DefaultKryonExecutionReportTest {
         kryonId,
         kryonLogicId,
         new LogicExecResults(
-            facetsList.stream()
+            facetValuesList.stream()
                 .map(x -> new LogicExecResponse(x, withValue(result)))
                 .collect(toImmutableList())));
 
@@ -164,7 +164,7 @@ class DefaultKryonExecutionReportTest {
         kryonId,
         kryonLogicId,
         new LogicExecResults(
-            facetsList.stream()
+            facetValuesList.stream()
                 .map(x -> new LogicExecResponse(x, withValue(result)))
                 .collect(toImmutableList())));
 
@@ -179,12 +179,12 @@ class DefaultKryonExecutionReportTest {
   void reportMainLogicEnd_calledWithoutCallingStart_hasNoEffect() {
     KryonId kryonId = new KryonId("kryon_1");
     KryonLogicId kryonLogicId = new KryonLogicId(kryonId, "kryon_1__logic_1");
-    ImmutableList<Facets> facetsList =
+    ImmutableList<FacetValues> facetValuesList =
         ImmutableList.of(
-            new ImmutableFacetsMap(
+            new ImmutableFacetValuesMap(
                 new SimpleRequestBuilder<>(Set.of(input(1)), ImmutableMap.of(1, withValue("v1"))),
                 Set.of(input(1))),
-            new ImmutableFacetsMap(
+            new ImmutableFacetValuesMap(
                 new SimpleRequestBuilder<>(Set.of(input(2)), ImmutableMap.of(2, withValue("v2"))),
                 Set.of(input(2))));
 
@@ -194,7 +194,7 @@ class DefaultKryonExecutionReportTest {
         kryonId,
         kryonLogicId,
         new LogicExecResults(
-            facetsList.stream()
+            facetValuesList.stream()
                 .map(x -> new LogicExecResponse(x, withValue(result)))
                 .collect(toImmutableList())));
     assertThat(kryonExecutionReport.mainLogicExecInfos().isEmpty()).isTrue();

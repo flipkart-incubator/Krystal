@@ -21,7 +21,7 @@ import java.util.function.Consumer;
  */
 public interface InputBatcher extends ConfigListener {
 
-  ImmutableList<BatchedFacets> add(BatchEnabledFacets batchEnabledFacets);
+  ImmutableList<BatchedFacets> add(BatchEnabledFacetValues batchEnabledFacets);
 
   /** Externally trigger batching */
   void batch();

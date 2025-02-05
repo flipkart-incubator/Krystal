@@ -21,9 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.FacetsMap;
-import com.flipkart.krystal.data.FacetsMapBuilder;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.FacetValuesMap;
+import com.flipkart.krystal.data.FacetValuesMapBuilder;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.data.SimpleImmutRequest;
 import com.flipkart.krystal.data.SimpleRequestBuilder;
@@ -215,9 +215,9 @@ class KryonExecutorTest {
                         facets ->
                             "computed_values: a=%s;b=%s;c=%s"
                                 .formatted(
-                                    ((FacetsMap) facets)._getErrable(1).valueOrThrow(),
-                                    ((FacetsMap) facets)._getErrable(2).valueOrThrow(),
-                                    ((FacetsMap) facets)._getErrable(3).valueOrThrow()))
+                                    ((FacetValuesMap) facets)._getErrable(1).valueOrThrow(),
+                                    ((FacetValuesMap) facets)._getErrable(2).valueOrThrow(),
+                                    ((FacetValuesMap) facets)._getErrable(3).valueOrThrow()))
                     .kryonLogicId(),
                 ImmutableMap.of(),
                 ImmutableMap.of(),
@@ -262,7 +262,7 @@ class KryonExecutorTest {
                     "n2",
                     allFacets,
                     facets ->
-                        ((FacetsMap) facets)
+                        ((FacetValuesMap) facets)
                                 ._getDepResponses(1)
                                 .requestResponsePairs()
                                 .iterator()
@@ -311,7 +311,7 @@ class KryonExecutorTest {
                 l2Dep,
                 allFacets,
                 facets ->
-                    ((FacetsMap) facets)
+                    ((FacetValuesMap) facets)
                             ._getDepResponses(1).requestResponsePairs().stream()
                                 .map(RequestResponse::response)
                                 .iterator()
@@ -333,7 +333,7 @@ class KryonExecutorTest {
                 l3Dep,
                 allFacets,
                 facets -> {
-                  return ((FacetsMap) facets)
+                  return ((FacetValuesMap) facets)
                           ._getDepResponses(1).requestResponsePairs().stream()
                               .map(RequestResponse::response)
                               .iterator()
@@ -356,7 +356,7 @@ class KryonExecutorTest {
                 l4Dep,
                 allFacets,
                 facets ->
-                    ((FacetsMap) facets)
+                    ((FacetValuesMap) facets)
                             ._getDepResponses(1).requestResponsePairs().stream()
                                 .map(RequestResponse::response)
                                 .iterator()
@@ -380,7 +380,7 @@ class KryonExecutorTest {
                             "requestExecution_multiLevelDependencies_final",
                             allFacets,
                             facets ->
-                                ((FacetsMap) facets)
+                                ((FacetValuesMap) facets)
                                         ._getDepResponses(1).requestResponsePairs().stream()
                                             .map(RequestResponse::response)
                                             .iterator()
@@ -405,7 +405,8 @@ class KryonExecutorTest {
     return new LogicDefinition<>(
         new KryonLogicId(new KryonId(kryonName), kryonName + ":facetsFromRequest"),
         request ->
-            new FacetsMapBuilder((SimpleRequestBuilder<Object>) request._asBuilder(), allFacets));
+            new FacetValuesMapBuilder(
+                (SimpleRequestBuilder<Object>) request._asBuilder(), allFacets));
   }
 
   @NonNull
@@ -460,7 +461,7 @@ class KryonExecutorTest {
                             allFacets,
                             facets -> {
                               numberOfExecutions.increment();
-                              return ((FacetsMap) facets)
+                              return ((FacetValuesMap) facets)
                                       ._getDepResponses(1).requestResponsePairs().stream()
                                           .map(RequestResponse::response)
                                           .iterator()
@@ -468,7 +469,7 @@ class KryonExecutorTest {
                                           .valueOpt()
                                           .orElseThrow()
                                   + ":"
-                                  + ((FacetsMap) facets)
+                                  + ((FacetValuesMap) facets)
                                       ._getDepResponses(2).requestResponsePairs().stream()
                                           .map(RequestResponse::response)
                                           .iterator()
@@ -557,7 +558,7 @@ class KryonExecutorTest {
                               newSingleThreadExecutor())
                           .handle(
                               (unused, throwable) -> {
-                                return ((FacetsMap) facets)
+                                return ((FacetValuesMap) facets)
                                         ._getDepResponses(1).requestResponsePairs().stream()
                                             .map(RequestResponse::response)
                                             .iterator()
@@ -591,7 +592,7 @@ class KryonExecutorTest {
   }
 
   private <T> OutputLogicDefinition<T> newComputeLogic(
-      String kryonId, Set<? extends Facet> usedFacets, Function<Facets, T> logic) {
+      String kryonId, Set<? extends Facet> usedFacets, Function<FacetValues, T> logic) {
     ComputeLogicDefinition<T> def =
         new ComputeLogicDefinition<>(
             new KryonLogicId(new KryonId(kryonId), kryonId),
@@ -609,7 +610,9 @@ class KryonExecutorTest {
   }
 
   private <T> OutputLogicDefinition<T> newIoLogic(
-      String kryonId, Set<? extends Facet> inputs, Function<Facets, CompletableFuture<T>> logic) {
+      String kryonId,
+      Set<? extends Facet> inputs,
+      Function<FacetValues, CompletableFuture<T>> logic) {
     IOLogicDefinition<T> def =
         new IOLogicDefinition<>(
             new KryonLogicId(new KryonId(kryonId), kryonId),

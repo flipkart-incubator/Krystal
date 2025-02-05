@@ -13,17 +13,17 @@ import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SuppressWarnings("unchecked")
-public final class FacetsMapBuilder implements FacetsMap, FacetsBuilder {
+public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesBuilder {
 
   private final SimpleRequestBuilder<Object> request;
   @Getter private ImmutableSet<? extends Facet> _facets;
   private final Map<Integer, FacetValue> otherFacetValues;
 
-  public FacetsMapBuilder(SimpleRequestBuilder<Object> request, Set<? extends Facet> _facets) {
+  public FacetValuesMapBuilder(SimpleRequestBuilder<Object> request, Set<? extends Facet> _facets) {
     this(request, _facets, ImmutableMap.of());
   }
 
-  FacetsMapBuilder(
+  FacetValuesMapBuilder(
       SimpleRequestBuilder<Object> request,
       Set<? extends Facet> _facets,
       Map<Integer, ? extends FacetValue> otherFacetValues) {
@@ -89,16 +89,16 @@ public final class FacetsMapBuilder implements FacetsMap, FacetsBuilder {
   }
 
   @Override
-  public ImmutableFacetsMap _build() {
-    return new ImmutableFacetsMap(request, _facets, ImmutableMap.copyOf(otherFacetValues));
+  public ImmutableFacetValuesMap _build() {
+    return new ImmutableFacetValuesMap(request, _facets, ImmutableMap.copyOf(otherFacetValues));
   }
 
   @Override
-  public FacetsMapBuilder _newCopy() {
-    return new FacetsMapBuilder(request, _facets, new LinkedHashMap<>(otherFacetValues));
+  public FacetValuesMapBuilder _newCopy() {
+    return new FacetValuesMapBuilder(request, _facets, new LinkedHashMap<>(otherFacetValues));
   }
 
-  public FacetsMapBuilder _set(int facetId, FacetValue value) {
+  public FacetValuesMapBuilder _set(int facetId, FacetValue value) {
     if (this._hasValue(facetId)) {
       throw new IllegalModificationException();
     }
@@ -109,7 +109,7 @@ public final class FacetsMapBuilder implements FacetsMap, FacetsBuilder {
   @Override
   public boolean equals(final @Nullable Object o) {
     if (o == this) return true;
-    if (!(o instanceof FacetsMap other)) return false;
+    if (!(o instanceof FacetValuesMap other)) return false;
     return Objects.equals(this._asMap(), other._asMap());
   }
 

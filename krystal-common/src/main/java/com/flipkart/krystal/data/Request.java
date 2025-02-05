@@ -4,7 +4,7 @@ import com.flipkart.krystal.facets.InputMirror;
 import com.google.common.collect.ImmutableSet;
 
 @SuppressWarnings("ClassReferencesSubclass") // By Design
-public interface Request<T> extends FacetContainer {
+public interface Request<T> extends FacetValuesContainer {
 
   ImmutableRequest<T> _build();
 

@@ -20,9 +20,9 @@ import static java.util.stream.Collectors.toSet;
 
 import com.flipkart.krystal.data.DepResponse;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.FacetContainer;
-import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.FacetsBuilder;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.FacetValuesBuilder;
+import com.flipkart.krystal.data.FacetValuesContainer;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.ImmutableRequest.Builder;
@@ -77,7 +77,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
 
   private final Map<DependantChain, Set<Facet>> availableFacetsByDepChain = new LinkedHashMap<>();
 
-  private final Map<DependantChain, Map<RequestId, FacetsBuilder>> facetsCollector =
+  private final Map<DependantChain, Map<RequestId, FacetValuesBuilder>> facetsCollector =
       new LinkedHashMap<>();
 
   private final Map<DependantChain, ForwardReceive> inputsValueCollector = new LinkedHashMap<>();
@@ -243,7 +243,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
                 .computeIfAbsent(depName, _k -> new LinkedHashMap<>())
                 .put(Set.of(requestId), executeWithRequests(ImmutableList.of(emptyRequest())));
           });
-      Facets facets = getFacetsFor(dependantChain, requestId);
+      FacetValues facetValues = getFacetsFor(dependantChain, requestId);
       triggerableDependencies.forEach(
           (dep, resolverDefs) -> {
             List<ResolverDefinition> fanoutResolvers =
@@ -283,7 +283,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
                       .logicDefinitionRegistry()
                       .getResolver(resolver.resolverKryonLogicId())
                       .logic()
-                      .resolve(depRequestBuilders, facets);
+                      .resolve(depRequestBuilders, facetValues);
               if (resolverCommand instanceof ExecuteDependency
                   && resolverCommand.getRequests().isEmpty()) {
                 // This should not happen. But if it does, we ignore this resolver invocation and
@@ -305,7 +305,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
                         .logicDefinitionRegistry()
                         .getResolver(fanoutResolver.resolverKryonLogicId())
                         .logic()
-                        .resolve(depRequestBuilders, facets);
+                        .resolve(depRequestBuilders, facetValues);
                 if (resolverCommand instanceof ExecuteDependency
                     && resolverCommand.getRequests().isEmpty()) {
                   // This means the resolvers resolved any input. This can occur, for
@@ -333,11 +333,11 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
     }
   }
 
-  private FacetsBuilder facetsFromRequest(Request req) {
+  private FacetValuesBuilder facetsFromRequest(Request req) {
     return kryonDefinition.facetsFromRequest().logic().facetsFromRequest(req);
   }
 
-  private FacetsBuilder emptyFacets() {
+  private FacetValuesBuilder emptyFacets() {
     return kryonDefinition.facetsFromRequest().logic().facetsFromRequest(emptyRequest());
   }
 
@@ -586,7 +586,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
           try {
             result =
                 finalLogic
-                    .execute(ImmutableList.of(outputLogicFacets.allFacets()))
+                    .execute(ImmutableList.of(outputLogicFacets.allFacetValues()))
                     .values()
                     .iterator()
                     .next();
@@ -649,7 +649,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
     }
   }
 
-  private Facets getFacetsFor(DependantChain dependantChain, RequestId requestId) {
+  private FacetValues getFacetsFor(DependantChain dependantChain, RequestId requestId) {
     return facetsCollector
         .getOrDefault(dependantChain, Map.of())
         .getOrDefault(requestId, emptyFacets());
@@ -666,16 +666,17 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
                     getForwardCommand(dependantChain).executableRequests().get(requestId))));
   }
 
-  private FacetsBuilder facetsBuilderFromContainer(@Nullable FacetContainer facetContainer) {
-    if (facetContainer == null) {
+  private FacetValuesBuilder facetsBuilderFromContainer(
+      @Nullable FacetValuesContainer facetValuesContainer) {
+    if (facetValuesContainer == null) {
       return emptyFacets();
-    } else if (facetContainer instanceof Request request) {
+    } else if (facetValuesContainer instanceof Request request) {
       return facetsFromRequest(request);
-    } else if (facetContainer instanceof Facets facets) {
-      return facets._asBuilder();
+    } else if (facetValuesContainer instanceof FacetValues facetValues) {
+      return facetValues._asBuilder();
     } else {
       throw new UnsupportedOperationException(
-          "Unknown container type " + facetContainer.getClass());
+          "Unknown container type " + facetValuesContainer.getClass());
     }
   }
 
@@ -741,7 +742,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
         .resultsByRequest()
         .forEach(
             (requestId, depResponse) -> {
-              FacetsBuilder facetsBuilder =
+              FacetValuesBuilder facetsBuilder =
                   facetsCollector
                       .computeIfAbsent(callbackBatch.dependantChain(), _d -> new LinkedHashMap<>())
                       .get(requestId);

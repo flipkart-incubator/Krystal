@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
 import com.flipkart.krystal.data.DepResponse;
-import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.FacetsBuilder;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
@@ -24,8 +24,8 @@ import lombok.Getter;
 public abstract sealed class FanoutDepSpec<T, CV extends Request, DV extends Request<T>>
     extends DependencySpec<T, CV, DV> permits MandatoryFanoutDepSpec, OptionalFanoutDepSpec {
 
-  private final Function<Facets, FanoutDepResponses<DV, T>> getFromFacets;
-  private final BiConsumer<Facets, FanoutDepResponses<DV, T>> setToFacets;
+  private final Function<FacetValues, FanoutDepResponses<DV, T>> getFromFacets;
+  private final BiConsumer<FacetValues, FanoutDepResponses<DV, T>> setToFacets;
 
   public FanoutDepSpec(
       int id,
@@ -37,19 +37,19 @@ public abstract sealed class FanoutDepSpec<T, CV extends Request, DV extends Req
       String documentation,
       boolean isBatched,
       ElementTags tags,
-      Function<Facets, FanoutDepResponses<DV, T>> getFromFacets,
-      BiConsumer<Facets, FanoutDepResponses<DV, T>> setToFacets) {
+      Function<FacetValues, FanoutDepResponses<DV, T>> getFromFacets,
+      BiConsumer<FacetValues, FanoutDepResponses<DV, T>> setToFacets) {
     super(id, name, type, ofVajram, onVajram, onVajramId, documentation, isBatched, tags);
     this.getFromFacets = getFromFacets;
     this.setToFacets = setToFacets;
   }
 
-  public FanoutDepResponses<DV, T> getFacetValue(Facets facets) {
-    return getFromFacets.apply(facets);
+  public FanoutDepResponses<DV, T> getFacetValue(FacetValues facetValues) {
+    return getFromFacets.apply(facetValues);
   }
 
   @Override
-  public void setFacetValue(FacetsBuilder facets, DepResponse value) {
+  public void setFacetValue(FacetValuesBuilder facets, DepResponse value) {
     if (value instanceof FanoutDepResponses fanoutDepResponses) {
       setFacetValue(facets, fanoutDepResponses);
     } else {
@@ -60,7 +60,7 @@ public abstract sealed class FanoutDepSpec<T, CV extends Request, DV extends Req
   }
 
   @SuppressWarnings("MethodOverloadsMethodOfSuperclass")
-  public void setFacetValue(FacetsBuilder facets, FanoutDepResponses value) {
+  public void setFacetValue(FacetValuesBuilder facets, FanoutDepResponses value) {
     setToFacets.accept(facets, value);
   }
 

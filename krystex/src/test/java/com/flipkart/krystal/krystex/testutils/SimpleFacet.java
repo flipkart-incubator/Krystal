@@ -5,10 +5,10 @@ import static lombok.AccessLevel.PACKAGE;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
-import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.FacetsBuilder;
-import com.flipkart.krystal.data.FacetsMap;
-import com.flipkart.krystal.data.FacetsMapBuilder;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.FacetValuesBuilder;
+import com.flipkart.krystal.data.FacetValuesMap;
+import com.flipkart.krystal.data.FacetValuesMapBuilder;
 import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.SimpleRequest;
@@ -50,13 +50,13 @@ public @NonFinal sealed class SimpleFacet implements Facet, InputMirror permits 
   }
 
   @Override
-  public @Nullable FacetValue getFacetValue(Facets facets) {
-    return ((FacetsMap) facets)._asMap().get(id());
+  public @Nullable FacetValue getFacetValue(FacetValues facetValues) {
+    return ((FacetValuesMap) facetValues)._asMap().get(id());
   }
 
   @Override
-  public void setFacetValue(FacetsBuilder facets, FacetValue value) {
-    ((FacetsMapBuilder) facets)._set(id(), value);
+  public void setFacetValue(FacetValuesBuilder facets, FacetValue value) {
+    ((FacetValuesMapBuilder) facets)._set(id(), value);
   }
 
   @Override

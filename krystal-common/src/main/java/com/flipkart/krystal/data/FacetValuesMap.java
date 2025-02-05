@@ -2,7 +2,8 @@ package com.flipkart.krystal.data;
 
 import com.google.common.collect.ImmutableMap;
 
-public sealed interface FacetsMap extends Facets permits FacetsMapBuilder, ImmutableFacetsMap {
+public sealed interface FacetValuesMap extends FacetValues
+    permits FacetValuesMapBuilder, ImmutableFacetValuesMap {
 
   Errable<?> _getErrable(int facetId);
 

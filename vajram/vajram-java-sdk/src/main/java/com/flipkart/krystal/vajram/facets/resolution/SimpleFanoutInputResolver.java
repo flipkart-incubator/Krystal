@@ -5,7 +5,7 @@ import static com.flipkart.krystal.facets.resolution.ResolverCommand.skip;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil._resolutionHelper;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
-import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
@@ -25,7 +25,7 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request, DV extend
   }
 
   @Override
-  public ResolverCommand resolve(Builder depRequest, Facets facets) {
+  public ResolverCommand resolve(Builder depRequest, FacetValues facetValues) {
     {
       try {
         //noinspection unchecked,rawtypes
@@ -35,7 +35,7 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request, DV extend
                 getResolverSpec().transformer(),
                 getResolverSpec().fanoutTransformer(),
                 getResolverSpec().skipConditions(),
-                facets);
+                facetValues);
         if (depCommand instanceof FanoutCommand<T>) {
           if (depCommand.shouldSkip()) {
             return skip(depCommand.doc(), depCommand.skipCause());

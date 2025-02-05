@@ -5,4 +5,4 @@ package com.flipkart.krystal.data;
  * is intended for use by the krystal platform code generator. Developers must not implement/extend
  * this interface - this can lead to unexpected behaviour.
  */
-public interface FacetContainerBuilder extends FacetContainer {}
+public interface FacetValuesContainerBuilder extends FacetValuesContainer {}

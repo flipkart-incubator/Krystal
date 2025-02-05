@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.commands;
 
-import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.request.RequestId;
@@ -10,7 +10,7 @@ import java.util.Set;
 
 public record ForwardReceive(
     KryonId kryonId,
-    ImmutableMap<RequestId, ? extends Facets> executableRequests,
+    ImmutableMap<RequestId, ? extends FacetValues> executableRequests,
     DependantChain dependantChain,
     ImmutableMap<RequestId, String> skippedRequests)
     implements MultiRequestCommand, ServerSideCommand {

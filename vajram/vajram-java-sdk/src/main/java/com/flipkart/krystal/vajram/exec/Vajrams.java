@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.exec;
 
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 
-import com.flipkart.krystal.data.FacetContainer;
+import com.flipkart.krystal.data.FacetValuesContainer;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.tags.ElementTags;
 import com.flipkart.krystal.vajram.Annos;
@@ -160,7 +160,7 @@ final class Vajrams {
       // sources from the parameters
       Parameter[] outputLogicParams = outputLogicMethod.get().getParameters();
       if (outputLogicParams.length == 1
-          && FacetContainer.class.isAssignableFrom(outputLogicParams[0].getType())) {
+          && FacetValuesContainer.class.isAssignableFrom(outputLogicParams[0].getType())) {
         /*
          This means the output logic is consuming the auto-generated Facets class which implies it
          consumes all the facets

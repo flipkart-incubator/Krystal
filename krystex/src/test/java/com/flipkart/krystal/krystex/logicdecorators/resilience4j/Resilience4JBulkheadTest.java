@@ -14,8 +14,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.config.ConfigProvider;
-import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.FacetsMapBuilder;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.FacetValuesMapBuilder;
 import com.flipkart.krystal.data.SimpleRequestBuilder;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.InputMirror;
@@ -281,7 +281,7 @@ class Resilience4JBulkheadTest {
   private <T> OutputLogicDefinition<T> newAsyncLogic(
       String kryonId,
       Set<? extends Facet> usedFacets,
-      Function<Facets, CompletableFuture<T>> logic) {
+      Function<FacetValues, CompletableFuture<T>> logic) {
     IOLogicDefinition<T> def =
         new IOLogicDefinition<T>(
             new KryonLogicId(new KryonId(kryonId), kryonId + ":asyncLogic"),
@@ -299,7 +299,8 @@ class Resilience4JBulkheadTest {
     return new LogicDefinition<>(
         new KryonLogicId(new KryonId("kryon"), "kryon:facetsFromRequest"),
         request ->
-            new FacetsMapBuilder((SimpleRequestBuilder<Object>) request._asBuilder(), Set.of()));
+            new FacetValuesMapBuilder(
+                (SimpleRequestBuilder<Object>) request._asBuilder(), Set.of()));
   }
 
   @NonNull

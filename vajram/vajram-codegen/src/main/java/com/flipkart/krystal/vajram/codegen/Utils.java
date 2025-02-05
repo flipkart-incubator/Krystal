@@ -9,11 +9,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
 
-import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.One2OneDepResponse;
@@ -63,9 +63,8 @@ import jakarta.inject.Inject;
 import java.io.PrintWriter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.time.Clock;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -116,8 +115,9 @@ public class Utils {
               Request.class
                   + " is not an allowed facet type as this can cause undesired behaviour.")
           .put(
-              Facets.class,
-              Facets.class + " is not an allowed facet type as this can cause undesired behaviour.")
+              FacetValues.class,
+              FacetValues.class
+                  + " is not an allowed facet type as this can cause undesired behaviour.")
           .build();
 
   @Getter private final ProcessingEnvironment processingEnv;
@@ -178,11 +178,11 @@ public class Utils {
   }
 
   public static TypeElement getTypeElement(String name, ProcessingEnvironment processingEnv) {
-    return Optional.ofNullable(processingEnv.getElementUtils().getTypeElement(name))
-        .orElseThrow(
-            () ->
-                new IllegalStateException(
-                    "Could not find type element with name %s".formatted(name)));
+    TypeElement typeElement = processingEnv.getElementUtils().getTypeElement(name);
+    if (typeElement == null) {
+      throw new IllegalStateException("Could not find type element with name %s".formatted(name));
+    }
+    return typeElement;
   }
 
   List<TypeElement> getVajramClasses(RoundEnvironment roundEnv) {
@@ -298,7 +298,7 @@ public class Utils {
       Set<Integer> takenFacetIds,
       AtomicInteger nextFacetId,
       VajramInfoLite vajramInfoLite) {
-    GivenFacetModelBuilder<Object> inputBuilder = GivenFacetModel.builder().facetField(inputField);
+    GivenFacetModelBuilder inputBuilder = GivenFacetModel.builder().facetField(inputField);
     String facetName = inputField.getSimpleName().toString();
     inputBuilder.id(
         Optional.ofNullable(givenIdsByName.get(facetName))
@@ -560,13 +560,8 @@ public class Utils {
   }
 
   private String getTimestamp() {
-    String ist = "IST";
-    return DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(
-        Clock.system(
-                ZoneId.of(
-                    Optional.ofNullable(ZoneId.SHORT_IDS.get(ist))
-                        .orElseThrow(() -> new IllegalStateException("Could not find Zone" + ist))))
-            .instant());
+    return ISO_OFFSET_DATE_TIME.format(
+        OffsetDateTime.now(ZoneId.of(checkNotNull(ZoneId.SHORT_IDS.get("IST")))));
   }
 
   public static String getRequestInterfaceName(String vajramName) {
@@ -659,8 +654,38 @@ public class Utils {
     } else {
       classBuilder = TypeSpec.classBuilder(className);
     }
-    return classBuilder.addAnnotation(
-        AnnotationSpec.builder(Generated.class).addMember("by", "$S", generator.getName()).build());
+    return addDefaultAnnotations(classBuilder);
+  }
+
+  private TypeSpec.Builder addDefaultAnnotations(TypeSpec.Builder classBuilder) {
+    return classBuilder
+        .addAnnotation(
+            AnnotationSpec.builder(Generated.class)
+                .addMember("by", "$S", generator.getName())
+                .build())
+        .addAnnotation(
+            AnnotationSpec.builder(javax.annotation.processing.Generated.class)
+                .addMember("value", "$S", generator.getName())
+                .addMember("date", "$S", getTimestamp())
+                .build());
+  }
+
+  /**
+   * Creates a class builder with the given class name. If the interfaceName is a blank string, then
+   * the builder represents an anonymous class.
+   *
+   * @param interfaceName fully qualifield class name
+   * @return a class builder with the given class name, with the {@link Generated} annotation
+   *     applied on the class
+   */
+  public TypeSpec.Builder interfaceBuilder(String interfaceName) {
+    TypeSpec.Builder interfaceBuilder;
+    if (interfaceName.isBlank()) {
+      throw new RuntimeException("interface name connot be blank");
+    } else {
+      interfaceBuilder = TypeSpec.interfaceBuilder(interfaceName);
+    }
+    return addDefaultAnnotations(interfaceBuilder);
   }
 
   TypeAndName box(TypeAndName javaType, AnnotationSpec... annotationSpecs) {
@@ -680,10 +705,6 @@ public class Utils {
 
   TypeName optional(TypeAndName javaType) {
     return ParameterizedTypeName.get(ClassName.get(Optional.class), box(javaType).typeName());
-  }
-
-  TypeName errable(TypeAndName javaType) {
-    return ParameterizedTypeName.get(ClassName.get(Errable.class), box(javaType).typeName());
   }
 
   TypeName responseType(DependencyModel dep) {

@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
-import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
@@ -32,8 +32,8 @@ public final class OptionalFanoutDepSpec<T, CV extends Request, DV extends Reque
       String documentation,
       boolean isBatched,
       ElementTags tags,
-      Function<Facets, FanoutDepResponses<DV, T>> getFromFacets,
-      BiConsumer<Facets, FanoutDepResponses<DV, T>> setToFacets) {
+      Function<FacetValues, FanoutDepResponses<DV, T>> getFromFacets,
+      BiConsumer<FacetValues, FanoutDepResponses<DV, T>> setToFacets) {
     super(
         id,
         name,

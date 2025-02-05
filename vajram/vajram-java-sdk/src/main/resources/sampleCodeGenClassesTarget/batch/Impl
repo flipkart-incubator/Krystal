@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.samples.anandtest;
 
-import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.vajram.Generated;
@@ -56,14 +56,14 @@ public final class DependencyTestImpl extends DependencyTest {
 
   @Override
   public ImmutableMap<Facets, CompletableFuture<@Nullable Integer>> execute(
-      ImmutableList<Facets> facetsList) {
+      ImmutableList<Facets> facetValuesList) {
         Map<BatchImmutableFacets, Facets> mapping = new HashMap<>();
         CommonImmutableFacets commonFacets = null;
-        for (Facets facets : facetsList) {
-          DependencyTestImmutableFacets allInputs = (DependencyTestImmutableFacets) facets;
+        for (Facets facetValues : facetValuesList) {
+          DependencyTestImmutableFacets allInputs = (DependencyTestImmutableFacets) facetValues;
           commonFacets = allInputs._common();
           BatchImmutableFacets im = allInputs._batchable();
-          mapping.put(im, facets);
+          mapping.put(im, facetValues);
         }
         Map<Facets, CompletableFuture<@Nullable Integer>> returnValue = new LinkedHashMap<>();
 

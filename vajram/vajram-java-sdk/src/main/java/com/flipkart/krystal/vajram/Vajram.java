@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram;
 
-import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.FacetsBuilder;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
@@ -62,9 +62,10 @@ public sealed interface Vajram<T> permits AbstractVajram, BatchableVajram {
     return getSimpleInputResolvers();
   }
 
-  ImmutableMap<Facets, CompletableFuture<@Nullable T>> execute(ImmutableList<Facets> inputs);
+  ImmutableMap<FacetValues, CompletableFuture<@Nullable T>> execute(
+      ImmutableList<FacetValues> inputs);
 
   Builder newRequestBuilder();
 
-  FacetsBuilder facetsFromRequest(Request<?> request);
+  FacetValuesBuilder facetsFromRequest(Request<?> request);
 }

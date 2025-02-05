@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
-import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
@@ -23,8 +23,8 @@ public final class OptionalOne2OneDepSpec<T, CV extends Request, DV extends Requ
       String documentation,
       boolean isBatched,
       ElementTags tags,
-      Function<Facets, One2OneDepResponse> getFromFacets,
-      BiConsumer<Facets, RequestResponse> setToFacets) {
+      Function<FacetValues, One2OneDepResponse> getFromFacets,
+      BiConsumer<FacetValues, RequestResponse> setToFacets) {
     super(
         id,
         name,

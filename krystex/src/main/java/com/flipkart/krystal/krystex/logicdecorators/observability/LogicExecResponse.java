@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.logicdecorators.observability;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetValues;
 
-public record LogicExecResponse(Facets facets, Errable<Object> response) {}
+public record LogicExecResponse(FacetValues facetValues, Errable<Object> response) {}

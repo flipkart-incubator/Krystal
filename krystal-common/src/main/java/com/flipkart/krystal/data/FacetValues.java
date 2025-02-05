@@ -5,16 +5,16 @@ import com.google.common.collect.ImmutableSet;
 
 /** An facets object contains some or all the facet values of a given Vajram/Kryon. */
 @SuppressWarnings("ClassReferencesSubclass") // This is by design.
-public non-sealed interface Facets extends FacetContainer, Model {
+public non-sealed interface FacetValues extends FacetValuesContainer, Model {
 
   @Override
-  ImmutableFacets _build();
+  ImmutableFacetValues _build();
 
   @Override
-  FacetsBuilder _asBuilder();
+  FacetValuesBuilder _asBuilder();
 
   @Override
-  Facets _newCopy();
+  FacetValues _newCopy();
 
   /** Returns the facet definitions of the facets whose values this container potentially holds. */
   @Override

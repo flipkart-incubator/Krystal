@@ -3,7 +3,7 @@ package com.flipkart.krystal.krystex.logicdecorators.resilience4j;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.function.Function.identity;
 
-import com.flipkart.krystal.data.Facets;
+import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -17,35 +17,37 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 final class R4JUtils {
 
   @SuppressWarnings("RedundantTypeArguments") // To avoid nullChecker errors
-  static DecorateCompletionStage<ImmutableMap<Facets, CompletableFuture<@Nullable Object>>>
+  static DecorateCompletionStage<ImmutableMap<FacetValues, CompletableFuture<@Nullable Object>>>
       decorateAsyncExecute(
-          OutputLogic<Object> logicToDecorate, ImmutableList<? extends Facets> facetsList) {
-    return Decorators.<ImmutableMap<Facets, CompletableFuture<@Nullable Object>>>ofCompletionStage(
-        () -> {
-          var result = logicToDecorate.execute(facetsList);
-          return allOf(result.values().toArray(CompletableFuture[]::new))
-              .<ImmutableMap<Facets, CompletableFuture<@Nullable Object>>>handle(
-                  (unused, throwable) -> result);
-        });
+          OutputLogic<Object> logicToDecorate, ImmutableList<? extends FacetValues> facetsList) {
+    return Decorators
+        .<ImmutableMap<FacetValues, CompletableFuture<@Nullable Object>>>ofCompletionStage(
+            () -> {
+              var result = logicToDecorate.execute(facetsList);
+              return allOf(result.values().toArray(CompletableFuture[]::new))
+                  .<ImmutableMap<FacetValues, CompletableFuture<@Nullable Object>>>handle(
+                      (unused, throwable) -> result);
+            });
   }
 
-  static ImmutableMap<Facets, CompletableFuture<@Nullable Object>> extractResponseMap(
-      ImmutableList<? extends Facets> facetsList,
-      CompletionStage<ImmutableMap<Facets, CompletableFuture<@Nullable Object>>>
+  static ImmutableMap<FacetValues, CompletableFuture<@Nullable Object>> extractResponseMap(
+      ImmutableList<? extends FacetValues> facetsList,
+      CompletionStage<ImmutableMap<FacetValues, CompletableFuture<@Nullable Object>>>
           decoratedCompletion) {
-    ImmutableMap.Builder<Facets, CompletableFuture<@Nullable Object>> result =
+    ImmutableMap.Builder<FacetValues, CompletableFuture<@Nullable Object>> result =
         ImmutableMap.builderWithExpectedSize(facetsList.size());
-    for (Facets facets : facetsList) {
+    for (FacetValues facetValues : facetsList) {
       //noinspection RedundantTypeArguments : Excplicit types to avoid NullChecker errors
       result.put(
-          facets,
+          facetValues,
           decoratedCompletion
               .<CompletableFuture<@Nullable Object>>thenApply(
                   resultMap -> {
-                    return Optional.ofNullable(resultMap.get(facets))
+                    return Optional.ofNullable(resultMap.get(facetValues))
                         .orElseThrow(
                             () ->
-                                new IllegalStateException("No future found for inputs " + facets));
+                                new IllegalStateException(
+                                    "No future found for inputs " + facetValues));
                   })
               .toCompletableFuture()
               .thenCompose(identity()));

@@ -3,8 +3,8 @@ package com.flipkart.krystal.krystex.testutils;
 import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
 
 import com.flipkart.krystal.data.DepResponse;
-import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.FacetsMapBuilder;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.FacetValuesMapBuilder;
 import com.flipkart.krystal.facets.Dependency;
 
 public final class SimpleDep extends SimpleFacet implements Dependency {
@@ -13,8 +13,8 @@ public final class SimpleDep extends SimpleFacet implements Dependency {
     super(id, name, DEPENDENCY);
   }
 
-  public void setToFacets(Facets facets, DepResponse value) {
-    ((FacetsMapBuilder) facets._asBuilder())._set(id(), value);
+  public void setToFacets(FacetValues facetValues, DepResponse value) {
+    ((FacetValuesMapBuilder) facetValues._asBuilder())._set(id(), value);
   }
 
   @Override

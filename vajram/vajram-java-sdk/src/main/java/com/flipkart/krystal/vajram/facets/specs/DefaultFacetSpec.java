@@ -4,8 +4,8 @@ import static com.flipkart.krystal.data.Errable.errableFrom;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
-import com.flipkart.krystal.data.Facets;
-import com.flipkart.krystal.data.FacetsBuilder;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
@@ -21,8 +21,8 @@ public abstract sealed class DefaultFacetSpec<T, CV extends Request>
     extends AbstractFacetSpec<T, CV> implements FacetSpec<T, CV>
     permits MandatoryFacetDefaultSpec, OptionalFacetDefaultSpec {
 
-  private final Function<Facets, @Nullable T> getFromFacets;
-  private final BiConsumer<Facets, @Nullable T> setToFacets;
+  private final Function<FacetValues, @Nullable T> getFromFacets;
+  private final BiConsumer<FacetValues, @Nullable T> setToFacets;
 
   public DefaultFacetSpec(
       int id,
@@ -33,23 +33,23 @@ public abstract sealed class DefaultFacetSpec<T, CV extends Request>
       String documentation,
       boolean isBatched,
       ElementTags tags,
-      Function<Facets, @Nullable T> getFromFacets,
-      BiConsumer<Facets, @Nullable T> setToFacets) {
+      Function<FacetValues, @Nullable T> getFromFacets,
+      BiConsumer<FacetValues, @Nullable T> setToFacets) {
     super(id, name, type, facetTypes, ofVajram, documentation, isBatched, tags);
     this.getFromFacets = getFromFacets;
     this.setToFacets = setToFacets;
   }
 
-  public Errable<@NonNull T> getFacetValue(Facets facets) {
-    return errableFrom(() -> getValue(facets));
+  public Errable<@NonNull T> getFacetValue(FacetValues facetValues) {
+    return errableFrom(() -> getValue(facetValues));
   }
 
-  public @Nullable T getValue(Facets facets) {
-    return getFromFacets.apply(facets);
+  public @Nullable T getValue(FacetValues facetValues) {
+    return getFromFacets.apply(facetValues);
   }
 
   @Override
-  public final void setFacetValue(FacetsBuilder facets, FacetValue value) {
+  public final void setFacetValue(FacetValuesBuilder facets, FacetValue value) {
     if (value instanceof Errable<?> errable) {
       Optional<?> o = errable.valueOpt();
       if (o.isPresent()) {
@@ -62,7 +62,7 @@ public abstract sealed class DefaultFacetSpec<T, CV extends Request>
     }
   }
 
-  public void setValue(FacetsBuilder facets, T value) {
+  public void setValue(FacetValuesBuilder facets, T value) {
     setToFacets.accept(facets, value);
   }
 }

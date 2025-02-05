@@ -2,13 +2,13 @@ package com.flipkart.krystal.vajram.samples.anandtest;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
-import com.flipkart.krystal.data.FacetsBuilder;
-import com.flipkart.krystal.data.ImmutableFacets;
+import com.flipkart.krystal.data.FacetValuesBuilder;
+import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.vajram.Generated;
 import com.flipkart.krystal.vajram.batching.BatchEnabledFacetsBuilder;
-import com.flipkart.krystal.vajram.batching.BatchEnabledImmutableFacets;
+import com.flipkart.krystal.vajram.batching.BatchEnabledImmutableFacetValues;
 import com.google.common.collect.ImmutableMap;
 import java.lang.IllegalArgumentException;
 import java.lang.Integer;
