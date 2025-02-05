@@ -10,10 +10,9 @@ import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
-import com.flipkart.krystal.vajram.facets.MultiExecute;
+import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.google.common.collect.ImmutableList;
-import java.util.Iterator;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 /** A resolver which resolves exactly one input of a dependency. */
@@ -28,7 +27,6 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request, DV extend
   @Override
   public ResolverCommand resolve(Builder depRequest, Facets facets) {
     {
-      long start = System.nanoTime();
       try {
         //noinspection unchecked,rawtypes
         DependencyCommand<T> depCommand =
@@ -38,29 +36,10 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request, DV extend
                 getResolverSpec().fanoutTransformer(),
                 getResolverSpec().skipConditions(),
                 facets);
-        if (depCommand instanceof MultiExecute<T>) {
+        if (depCommand instanceof FanoutCommand<T>) {
           if (depCommand.shouldSkip()) {
             return skip(depCommand.doc(), depCommand.skipCause());
           } else {
-            Iterator<Builder> newReqIterator =
-                new Iterator<Builder>() {
-                  private boolean first = true;
-
-                  @Override
-                  public Builder next() {
-                    if (first) {
-                      first = false;
-                      return (Builder) depRequest;
-                    } else {
-                      return (Builder) depRequest._newCopy();
-                    }
-                  }
-
-                  @Override
-                  public boolean hasNext() {
-                    return true;
-                  }
-                };
             if (depCommand.inputs().size() == 1) {
               getResolverSpec().targetInput().setToRequest(depRequest, depCommand.inputs().get(0));
               return executeWithRequests(ImmutableList.of((Builder) depRequest));
@@ -77,8 +56,7 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request, DV extend
             }
           }
         } else {
-          throw new IllegalStateException(
-              "Fanout input resolver must return MultiExecute command only");
+          throw new AssertionError("Fanout input resolver must return FanoutCommand command only");
         }
       } catch (Exception e) {
         return skip(
@@ -86,8 +64,6 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request, DV extend
                 "Got exception %s while executing the resolver of the dependency %s",
                 e, getDependency().name()),
             e);
-      } finally {
-        TIME.add(System.nanoTime() - start);
       }
     }
   }

@@ -5,7 +5,7 @@ import java.util.function.Consumer;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public record SingleExecute<T>(
+public record One2OneCommand<T>(
     @Nullable T input, boolean shouldSkip, String doc, @Nullable Throwable skipCause)
     implements DependencyCommand<T> {
 
@@ -24,15 +24,15 @@ public record SingleExecute<T>(
     }
   }
 
-  public static <T> SingleExecute<T> executeWith(@Nullable T input) {
-    return new SingleExecute<>(input, false, EMPTY_STRING, null);
+  public static <T> One2OneCommand<T> executeWith(@Nullable T input) {
+    return new One2OneCommand<>(input, false, EMPTY_STRING, null);
   }
 
-  public static <T> SingleExecute<T> skipExecution(String reason) {
+  public static <T> One2OneCommand<T> skipExecution(String reason) {
     return skipExecution(reason, null);
   }
 
-  public static <T> SingleExecute<T> skipExecution(String reason, @Nullable Throwable skipCause) {
-    return new SingleExecute<>(null, true, reason, skipCause);
+  public static <T> One2OneCommand<T> skipExecution(String reason, @Nullable Throwable skipCause) {
+    return new One2OneCommand<>(null, true, reason, skipCause);
   }
 }

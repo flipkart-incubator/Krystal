@@ -80,8 +80,8 @@ import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.FacetIdNameMapping;
 import com.flipkart.krystal.vajram.facets.FacetValidation;
-import com.flipkart.krystal.vajram.facets.MultiExecute;
-import com.flipkart.krystal.vajram.facets.SingleExecute;
+import com.flipkart.krystal.vajram.facets.FanoutCommand;
+import com.flipkart.krystal.vajram.facets.One2OneCommand;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.AbstractFanoutInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.AbstractOne2OneInputResolver;
@@ -339,7 +339,7 @@ public class VajramCodeGenerator {
               throw new AssertionError("Cannot happen");
             }
             boolean fanoutResolver =
-                util.isRawAssignable(resolverMethod.getReturnType(), MultiExecute.class);
+                util.isRawAssignable(resolverMethod.getReturnType(), FanoutCommand.class);
 
             List<String> resolvedInputNames =
                 stream(resolve.depInputs())
@@ -996,7 +996,7 @@ public class VajramCodeGenerator {
       methodCodeBuilder.add("} else {\n\t");
 
       TypeMirror actualReturnType = getTypeParameters(returnType).get(0);
-      if (util.isRawAssignable(returnType, SingleExecute.class)) {
+      if (util.isRawAssignable(returnType, One2OneCommand.class)) {
         methodCodeBuilder.beginControlFlow(
             "for($T $L: $L)", requestBuilderType, RESOLVER_REQUEST, RESOLVER_REQUESTS);
         if (util.isRawAssignable(actualReturnType, Request.class)) {
@@ -1026,7 +1026,7 @@ public class VajramCodeGenerator {
               "$L.ifPresent($L::$L)", RESOLVER_RESULT, RESOLVER_REQUEST, depFacetName);
         }
         methodCodeBuilder.endControlFlow();
-      } else if (util.isRawAssignable(returnType, MultiExecute.class)) {
+      } else if (util.isRawAssignable(returnType, FanoutCommand.class)) {
         // TODO : add missing validations if any (??)
         if (!dependencyModel.canFanout()) {
           String message =

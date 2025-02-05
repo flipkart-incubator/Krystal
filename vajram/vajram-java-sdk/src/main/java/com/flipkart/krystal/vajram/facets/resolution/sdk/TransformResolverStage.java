@@ -19,12 +19,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param <CV> CurrentVajram: The current vajram which is resolving the input
  * @param <DV> DependencyVajram: The vajram whose input is being resolved
  */
-public final class Transform1ResolverStage<S, T, CV extends Request, DV extends Request> {
+public final class TransformResolverStage<S, T, CV extends Request, DV extends Request> {
   private final InputMirrorSpec<T, DV> targetInput;
   private final FacetSpec<S, CV> sourceInput;
   private final List<SkipPredicate<?>> skipConditions = new ArrayList<>();
 
-  Transform1ResolverStage(InputMirrorSpec<T, DV> targetInput, FacetSpec<S, CV> sourceInput) {
+  TransformResolverStage(InputMirrorSpec<T, DV> targetInput, FacetSpec<S, CV> sourceInput) {
     this.targetInput = targetInput;
     this.sourceInput = sourceInput;
   }
@@ -34,7 +34,7 @@ public final class Transform1ResolverStage<S, T, CV extends Request, DV extends 
    * @param reason The reason for skipping the dependency
    */
   @SuppressWarnings("unchecked")
-  public Transform1ResolverStage<S, T, CV, DV> skipIf(
+  public TransformResolverStage<S, T, CV, DV> skipIf(
       Predicate<Errable<S>> whenToSkip, String reason) {
     this.skipConditions.add(
         new SkipPredicate<>(reason, errable -> whenToSkip.test((Errable<S>) errable.get(0))));

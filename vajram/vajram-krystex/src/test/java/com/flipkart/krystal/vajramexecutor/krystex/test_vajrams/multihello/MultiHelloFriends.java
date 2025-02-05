@@ -1,8 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello;
 
-import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
-import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
+import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
+import static com.flipkart.krystal.vajram.facets.FanoutCommand.skipFanout;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends_Fac.hellos_i;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
@@ -10,13 +9,14 @@ import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
-import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_ImmutReqPojo;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_ImmutReqPojo.Builder;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Req;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,8 +38,7 @@ public abstract class MultiHelloFriends extends ComputeVajram<String> {
   @Resolve(
       dep = hellos_i,
       depInputs = {HelloFriends_Req.userId_i, HelloFriends_Req.numberOfFriends_i})
-  static MultiExecute<HelloFriends_ImmutReqPojo.Builder> sayHello(
-      List<String> userIds, Optional<Boolean> skip) {
+  static FanoutCommand<Builder> sayHello(List<String> userIds, Optional<Boolean> skip) {
     if (skip.orElse(false)) {
       return skipFanout("skip requested");
     }

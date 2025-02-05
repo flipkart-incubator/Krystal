@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
-import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
-import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
+import static com.flipkart.krystal.vajram.facets.FanoutCommand.skipFanout;
+import static com.flipkart.krystal.vajram.facets.One2OneCommand.skipExecution;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Optional.ofNullable;
 import static java.util.function.Function.identity;
@@ -14,8 +14,8 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
-import com.flipkart.krystal.vajram.facets.MultiExecute;
-import com.flipkart.krystal.vajram.facets.SingleExecute;
+import com.flipkart.krystal.vajram.facets.FanoutCommand;
+import com.flipkart.krystal.vajram.facets.One2OneCommand;
 import com.flipkart.krystal.vajram.facets.specs.DefaultFacetSpec;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
@@ -75,8 +75,8 @@ public final class InputResolverUtil {
                     .map(e -> (NonNil<?>) e)
                     .map(NonNil::value)
                     .toList());
-      } else if (sourceInput instanceof DefaultFacetSpec mandatoryFacetDefaultSpec) {
-        inputValue = mandatoryFacetDefaultSpec.getFacetValue(facets);
+      } else if (sourceInput instanceof DefaultFacetSpec defaultSpec) {
+        inputValue = defaultSpec.getFacetValue(facets);
       } else {
         throw new UnsupportedOperationException("Unknown facet type " + sourceInput.getClass());
       }
@@ -114,17 +114,17 @@ public final class InputResolverUtil {
     Optional<Object> transformedInput = ofNullable(transformer.apply(inputValues));
     if (fanout) {
       @SuppressWarnings("unchecked")
-      MultiExecute<T> multiExecute =
-          MultiExecute.executeFanoutWith(
+      FanoutCommand<T> fanoutCommand =
+          FanoutCommand.executeFanoutWith(
               transformedInput.map(ts -> ((Collection<T>) ts).stream()).stream()
                   .flatMap(identity())
                   .collect(toImmutableList()));
-      return multiExecute;
+      return fanoutCommand;
     } else {
       @SuppressWarnings("unchecked")
-      SingleExecute<T> tSingleExecute =
-          SingleExecute.executeWith((T) transformedInput.orElse(null));
-      return tSingleExecute;
+      One2OneCommand<T> tOne2OneCommand =
+          One2OneCommand.executeWith((T) transformedInput.orElse(null));
+      return tOne2OneCommand;
     }
   }
 
@@ -138,15 +138,4 @@ public final class InputResolverUtil {
   }
 
   private InputResolverUtil() {}
-
-  //  public static Comparator<QualifiedInputs> getQualifiedInputsComparator() {
-  //    return comparingInt(QualifiedInputs::dependencyId)
-  //        .thenComparingInt(q -> q.inputNames().size())
-  //        .thenComparing(
-  //            QualifiedInputs::inputNames,
-  //            // Two resolvers resoving the same dependency cannot have a common inputName
-  //            // So we can just compare the lexicographically first elements of both
-  //            // inputNames to get a deterministic comparator
-  //            comparing(strings -> strings.stream().sorted().findFirst().orElse("")));
-  //  }
 }

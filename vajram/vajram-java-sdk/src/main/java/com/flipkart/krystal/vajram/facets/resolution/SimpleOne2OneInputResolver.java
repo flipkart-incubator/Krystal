@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
+import static com.flipkart.krystal.facets.resolution.ResolverCommand.executeWithRequests;
 import static com.flipkart.krystal.facets.resolution.ResolverCommand.skip;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil._resolutionHelper;
 
@@ -8,7 +9,7 @@ import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
-import com.flipkart.krystal.vajram.facets.SingleExecute;
+import com.flipkart.krystal.vajram.facets.One2OneCommand;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.google.common.collect.ImmutableList;
 
@@ -24,7 +25,6 @@ public final class SimpleOne2OneInputResolver<S, T, CV extends Request, DV exten
   @Override
   public ResolverCommand resolve(ImmutableList<? extends Builder> depRequests, Facets facets) {
     {
-      long start = System.nanoTime();
       try {
         //noinspection unchecked,rawtypes
         DependencyCommand<T> depCommand =
@@ -34,20 +34,20 @@ public final class SimpleOne2OneInputResolver<S, T, CV extends Request, DV exten
                 getResolverSpec().fanoutTransformer(),
                 getResolverSpec().skipConditions(),
                 facets);
-        if (depCommand instanceof SingleExecute<T> singleExecute) {
+        if (depCommand instanceof One2OneCommand<T> one2OneCommand) {
           ResolverCommand command;
           if (depCommand.shouldSkip()) {
-            command = skip(singleExecute.doc(), singleExecute.skipCause());
+            command = skip(one2OneCommand.doc(), one2OneCommand.skipCause());
           } else {
             for (Builder depRequest : depRequests) {
-              getResolverSpec().targetInput().setToRequest(depRequest, singleExecute.input());
+              getResolverSpec().targetInput().setToRequest(depRequest, one2OneCommand.input());
             }
-            command = ResolverCommand.executeWithRequests(depRequests);
+            command = executeWithRequests(depRequests);
           }
           return command;
         } else {
           throw new IllegalStateException(
-              "single input resolver must return SingleExecute command only");
+              "single input resolver must return One2OneCommand command only");
         }
       } catch (Exception e) {
         return skip(
@@ -55,8 +55,6 @@ public final class SimpleOne2OneInputResolver<S, T, CV extends Request, DV exten
                 "Got exception %s while executing the resolver of the dependency %s",
                 e, getDependency().name()),
             e);
-      } finally {
-        TIME.add(System.nanoTime() - start);
       }
     }
   }

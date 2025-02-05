@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajram.samples.calculator.adder;
 
-import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
-import static com.flipkart.krystal.vajram.facets.MultiExecute.skipFanout;
-import static com.flipkart.krystal.vajram.facets.SingleExecute.executeWith;
-import static com.flipkart.krystal.vajram.facets.SingleExecute.skipExecution;
+import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
+import static com.flipkart.krystal.vajram.facets.FanoutCommand.skipFanout;
+import static com.flipkart.krystal.vajram.facets.One2OneCommand.executeWith;
+import static com.flipkart.krystal.vajram.facets.One2OneCommand.skipExecution;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdder_Fac.chainSum_i;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdder_Fac.sum_i;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdder_Req.numbers_i;
@@ -14,11 +14,11 @@ import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
-import com.flipkart.krystal.vajram.facets.MultiExecute;
+import com.flipkart.krystal.vajram.facets.One2OneCommand;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.facets.SingleExecute;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.google.common.collect.ImmutableList;
@@ -41,7 +41,7 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
   }
 
   @Resolve(dep = chainSum_i, depInputs = numbers_i)
-  public static MultiExecute<List<Integer>> numbersForSubChainer(
+  public static FanoutCommand<List<Integer>> numbersForSubChainer(
       @Using(numbers_i) List<Integer> numbers) {
     if (numbers.size() < 3) {
       return skipFanout(
@@ -55,12 +55,12 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
   }
 
   @Resolve(dep = sum_i, depInputs = Adder_Req.numberOne_i)
-  public static SingleExecute<Integer> adderNumberOne(@Using(numbers_i) List<Integer> numbers) {
+  public static One2OneCommand<Integer> adderNumberOne(@Using(numbers_i) List<Integer> numbers) {
     return skipAdder(numbers).orElseGet(() -> executeWith(numbers.get(0)));
   }
 
   @Resolve(dep = sum_i, depInputs = Adder_Req.numberTwo_i)
-  public static SingleExecute<Integer> adderNumberTwo(@Using(numbers_i) List<Integer> numbers) {
+  public static One2OneCommand<Integer> adderNumberTwo(@Using(numbers_i) List<Integer> numbers) {
     return skipAdder(numbers)
         .orElseGet(
             () -> {
@@ -80,7 +80,7 @@ public abstract class ChainAdder extends ComputeVajram<Integer> {
             .sum();
   }
 
-  private static Optional<SingleExecute<Integer>> skipAdder(List<Integer> numbers) {
+  private static Optional<One2OneCommand<Integer>> skipAdder(List<Integer> numbers) {
     if (numbers.isEmpty()) {
       return Optional.of(skipExecution("No numbers provided. Skipping adder call"));
     } else if (numbers.size() > 2) {

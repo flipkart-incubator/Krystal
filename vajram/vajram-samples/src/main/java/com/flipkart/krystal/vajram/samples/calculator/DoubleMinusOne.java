@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
-import static com.flipkart.krystal.vajram.facets.MultiExecute.executeFanoutWith;
+import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
@@ -16,9 +16,9 @@ import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
-import com.flipkart.krystal.vajram.facets.MultiExecute;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
@@ -57,7 +57,7 @@ public abstract class DoubleMinusOne extends ComputeVajram<Integer> {
   }
 
   @Resolve(dep = doubledNumbers_i, depInputs = Multiplier_Req.numberOne_i)
-  static MultiExecute<Integer> numbersToDouble(List<Integer> numbers) {
+  static FanoutCommand<Integer> numbersToDouble(List<Integer> numbers) {
     return executeFanoutWith(numbers);
   }
 

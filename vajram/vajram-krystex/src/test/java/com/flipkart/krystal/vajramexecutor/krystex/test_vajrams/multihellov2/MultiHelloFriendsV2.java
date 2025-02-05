@@ -1,11 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2;
 
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2_Fac.hellos_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2_Fac.skip_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2_Fac.userIds_s;
+import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2_Fac.hellos_i;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.FanoutDepResponses;
@@ -13,13 +9,13 @@ import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_Req;
-import com.google.common.collect.ImmutableCollection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -36,20 +32,12 @@ public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
     String hellos;
   }
 
-  @Override
-  public ImmutableCollection<SimpleInputResolver> getSimpleInputResolvers() {
-    return resolve(
-        dep(
-            hellos_s,
-            depInputFanout(HelloFriendsV2_Req.userId_s)
-                .using(userIds_s, skip_s)
-                .asResolver(
-                    (userIds, skip) -> {
-                      if (skip.valueOpt().orElse(false)) {
-                        throw new SkippedExecutionException("skip requested");
-                      }
-                      return userIds.valueOpt().orElse(Set.of());
-                    })));
+  @Resolve(dep = hellos_i, depInputs = HelloFriendsV2_Req.userId_i)
+  static FanoutCommand<String> userIdsForHellos(Set<String> userIds, Optional<Boolean> skip) {
+    if (skip.orElse(false)) {
+      throw new SkippedExecutionException("skip requested");
+    }
+    return executeFanoutWith(userIds);
   }
 
   @Output

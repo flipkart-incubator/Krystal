@@ -37,13 +37,8 @@ public final class ResolveFanoutStage<I, DV extends Request> {
         targetInput, ImmutableSet.of(), List.of(), null, o -> with.get());
   }
 
-  public <S, CV extends Request> Transform1FanoutResolverStage<S, I, CV, DV> using(
+  public <S, CV extends Request> TransformFanoutResolverStage<S, I, CV, DV> using(
       FacetSpec<S, CV> sourceInput) {
-    return new Transform1FanoutResolverStage<>(targetInput, sourceInput);
-  }
-
-  public <S1, S2, CV extends Request> Transform2FanoutResolverStage<S1, S2, I, CV, DV> using(
-      FacetSpec<S1, CV> sourceInput1, FacetSpec<S2, CV> sourceInput2) {
-    return new Transform2FanoutResolverStage<>(targetInput, sourceInput1, sourceInput2);
+    return new TransformFanoutResolverStage<>(targetInput, sourceInput);
   }
 }

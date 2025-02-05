@@ -54,19 +54,8 @@ public final class ResolveStage<I, DV extends Request> {
    * @param sourceInput the spec of the source input whose value is used to resolve the dependency
    *     input.
    */
-  public <S, CV extends Request> Transform1ResolverStage<S, I, CV, DV> using(
+  public <S, CV extends Request> TransformResolverStage<S, I, CV, DV> using(
       FacetSpec<S, CV> sourceInput) {
-    return new Transform1ResolverStage<>(targetInput, sourceInput);
-  }
-
-  /**
-   * Use the value of the source input and transform it to compute the resolved value.
-   *
-   * @param sourceInput1 the spec of the source input whose value is used to resolve the dependency
-   *     input.
-   */
-  public <S1, S2, CV extends Request> Transform2ResolverStage<S1, S2, I, CV, DV> using(
-      FacetSpec<S1, CV> sourceInput1, FacetSpec<S2, CV> sourceInput2) {
-    return new Transform2ResolverStage<>(targetInput, sourceInput1, sourceInput2);
+    return new TransformResolverStage<>(targetInput, sourceInput);
   }
 }

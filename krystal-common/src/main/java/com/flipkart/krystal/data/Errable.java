@@ -18,8 +18,18 @@ public sealed interface Errable<T> extends FacetValue<T> permits Success, Failur
    */
   CompletableFuture<@Nullable T> toFuture();
 
+  /**
+   * Returns an {@link Optional} which is has the value inside this Errable. The returned Optional
+   * is present only if and only if this Errable is of the type {@link NonNil}. In all other cases,
+   * the returned Optional is empty.
+   */
   Optional<T> valueOpt();
 
+  /**
+   * Returns an {@link Optional} which is has the error which caused this Errable to be a {@link
+   * Failure}. The returned Optional is present only if and only if this Errable is of the type
+   * {@link Failure}. In all other cases, the returned Optional is empty.
+   */
   Optional<Throwable> errorOpt();
 
   /**

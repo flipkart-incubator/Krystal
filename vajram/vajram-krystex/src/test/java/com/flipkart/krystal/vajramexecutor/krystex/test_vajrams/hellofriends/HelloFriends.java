@@ -1,11 +1,10 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends;
 
+import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInput;
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Fac.friendInfos_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Fac.numberOfFriends_s;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Fac.friendInfos_i;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Fac.userId_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Fac.userInfo_s;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -16,17 +15,19 @@ import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.facets.Dependency;
+import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService_Req;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableSet;
-import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.IntStream;
 
 @ExternalInvocation(allow = true)
@@ -34,6 +35,7 @@ import java.util.stream.IntStream;
 public abstract class HelloFriends extends ComputeVajram<String> {
   static class _Facets {
     @Mandatory @Input String userId;
+
     @Input int numberOfFriends;
 
     @Mandatory
@@ -51,20 +53,17 @@ public abstract class HelloFriends extends ComputeVajram<String> {
             userInfo_s,
             depInput(TestUserService_Req.userId_s)
                 .using(userId_s)
-                .asResolver(s -> s.valueOpt().map(String::trim).orElse(null))),
-        dep(
-            friendInfos_s,
-            depInputFanout(TestUserService_Req.userId_s)
-                .using(userId_s, numberOfFriends_s)
-                .asResolver(
-                    (userId, numberOfFriends) -> {
-                      if (numberOfFriends.valueOpt().isPresent()) {
-                        return getFriendsFor(
-                            userId.valueOpt().orElseThrow(), numberOfFriends.valueOpt().get());
-                      } else {
-                        return Collections.emptySet();
-                      }
-                    })));
+                .asResolver(s -> s.valueOpt().map(String::trim).orElse(null))));
+  }
+
+  @Resolve(dep = friendInfos_i, depInputs = TestUserService_Req.userId_i)
+  static FanoutCommand<String> userIdsForFriendInfos(
+      String userId, Optional<Integer> numberOfFriends) {
+    if (numberOfFriends.isPresent()) {
+      return executeFanoutWith(getFriendsFor(userId, numberOfFriends.get()));
+    } else {
+      return executeFanoutWith(Set.of());
+    }
   }
 
   @Output

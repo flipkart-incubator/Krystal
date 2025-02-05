@@ -19,12 +19,12 @@ import java.util.function.Predicate;
  * @param <CV> CurrentVajram: The current vajram which is resolving the input
  * @param <DV> DependencyVajram: The vajram whose input is being resolved
  */
-public final class Transform1FanoutResolverStage<S, T, CV extends Request, DV extends Request> {
+public final class TransformFanoutResolverStage<S, T, CV extends Request, DV extends Request> {
   private final InputMirrorSpec<T, DV> targetInput;
   private final FacetSpec<S, CV> sourceFacet;
   private final List<SkipPredicate<?>> skipConditions = new ArrayList<>();
 
-  Transform1FanoutResolverStage(InputMirrorSpec<T, DV> targetInput, FacetSpec<S, CV> sourceFacet) {
+  TransformFanoutResolverStage(InputMirrorSpec<T, DV> targetInput, FacetSpec<S, CV> sourceFacet) {
     this.targetInput = targetInput;
     this.sourceFacet = sourceFacet;
   }
@@ -34,7 +34,7 @@ public final class Transform1FanoutResolverStage<S, T, CV extends Request, DV ex
    * @param reason The reason for skipping the dependency
    */
   @SuppressWarnings("unchecked")
-  public Transform1FanoutResolverStage<S, T, CV, DV> skipIf(
+  public TransformFanoutResolverStage<S, T, CV, DV> skipIf(
       Predicate<Errable<S>> whenToSkip, String reason) {
     this.skipConditions.add(
         new SkipPredicate<>(reason, errables -> whenToSkip.test((Errable<S>) errables.get(0))));
