@@ -152,6 +152,7 @@ class SplitAdderTest {
                   .requestId("splitAdderTest")
                   .kryonExecutorConfigBuilder(
                       KryonExecutorConfig.builder()
+                          .singleThreadExecutor(executorLease.get())
                           .disabledDependantChains(disabledDepChains(graph)))
                   .build())) {
         metrics[value] =
@@ -223,6 +224,7 @@ class SplitAdderTest {
                   .requestId("splitAdderTest")
                   .kryonExecutorConfigBuilder(
                       KryonExecutorConfig.builder()
+                          .singleThreadExecutor(executorLease.get())
                           .disabledDependantChains(disabledDepChains(graph)))
                   .build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;

@@ -157,10 +157,7 @@ class FormulaTest {
   void millionExecutors_oneCallEach_singleCore_benchmark() throws Exception {
     int loopCount = 1_000_000;
     SingleThreadExecutor executor = getExecutors(1)[0];
-    VajramKryonGraph graph =
-        this.graph
-            //        .maxParallelismPerCore(10)
-            .build();
+    VajramKryonGraph graph = this.graph.build();
     long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
     long javaFuturesTimeNs = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
     @SuppressWarnings("unchecked")
@@ -245,7 +242,7 @@ class FormulaTest {
         EXEC_POOL);
   }
 
-  @Disabled("Long running benchmark (~16s)")
+  //  @Disabled("Long running benchmark (~9s)")
   @Test
   void thousandExecutors_1000CallsEach_singleCore_benchmark() throws Exception {
     SingleThreadExecutor executor = getExecutors(1)[0];
