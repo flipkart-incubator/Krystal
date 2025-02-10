@@ -1,6 +1,7 @@
 .DS_Store
 **/.gradle/
 **/build/
+**/bin/
 
 ## From https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
 

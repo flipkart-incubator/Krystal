@@ -10,14 +10,14 @@ import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
 import com.flipkart.krystal.krystex.resolution.Resolver;
 import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class KryonDefinitionRegistry {
 
   private final LogicDefinitionRegistry logicDefinitionRegistry;
-  private final Map<KryonId, KryonDefinition> kryonDefinitions = new LinkedHashMap<>();
+  private final Map<KryonId, KryonDefinition> kryonDefinitions = new ConcurrentHashMap<>();
   private final DependantChainStart dependantChainStart = new DependantChainStart();
 
   public KryonDefinitionRegistry(LogicDefinitionRegistry logicDefinitionRegistry) {
