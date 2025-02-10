@@ -259,11 +259,7 @@ other developers.
 
 #### Definition
 
-Input batching is the process of squashing/collapsing/merging multiple independent inputs to a vajram operation so that the vajram can compute outputs to these inputs in an optimal fashion consuming minimum resources like network bandwidth, disk IO etc. Input batching is a generalization of the concept we know as Batching.
-
-##### Batching vs Modulation
-
-There is a feature similar to batching called modulation which involved request merging which is different from batching. Batching is a process where we take N requests objects each consisting of one input parameter and merge them into a single request object containing a list of all N parameters. On the other hand,let us say there is an API which provides three info levels within a given API - LOW, MEDIUM, HIGH. Depending on the info level passed in the API, the server returns varying amounts of data — where LOW is a subset of MEDIUM which itself is a subset of HIGH. If two clients request data from the API, one with the LOW info level and one with MEDIUM, we would ideally want to make a single call with MEDIUM as the info level. Here the modulation modulates both the requests into a single request containing the MEDIUM info level.
+Input batching is the process of squashing/collapsing/merging multiple independent inputs to a vajram operation so that the vajram can compute outputs to these inputs in an optimal fashion consuming minimum resources like network bandwidth, disk IO etc.
 
 #### Problems
 
