@@ -86,8 +86,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       new ConcurrentHashMap<>();
 
   /**
-   * Maps every vajramId to its corresponding kryonId all of whose dependencies have also been loaded
-   * recursively. The mapped kryon id represents the complete executable sub-graph of the vajram.
+   * Maps every vajramId to its corresponding kryonId all of whose dependencies have also been
+   * loaded recursively. The mapped kryon id represents the complete executable sub-graph of the
+   * vajram.
    */
   private final Map<VajramID, KryonId> vajramExecutables = new ConcurrentHashMap<>();
 
@@ -236,11 +237,16 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     synchronized (vajramExecutables) {
       KryonId kryonId;
       if ((kryonId = vajramExecutables.get(vajramId)) != null) {
+        // This means the subgraph is already loaded.
         return kryonId;
       } else if ((kryonId = loadingInProgress.get(vajramId)) != null) {
+        // This means the subgraph is still being loaded, but there is a cyclic dependency. Just
+        // return the kryon to prevent infinite recursion.
         return kryonId;
       }
       kryonId = new KryonId(vajramId.vajramId());
+      // add to loadingInProgress so that this can be used to prevent infinite recursion in the
+      // cases where a vajram depends on itself in a cyclic dependency.
       loadingInProgress.put(vajramId, kryonId);
       VajramDefinition vajramDefinition =
           getVajramDefinition(vajramId)
