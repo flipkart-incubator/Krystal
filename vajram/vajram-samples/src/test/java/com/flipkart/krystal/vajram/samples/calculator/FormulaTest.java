@@ -163,6 +163,75 @@ class FormulaTest {
         .withMessageContaining("Adder failed because fail flag was set");
   }
 
+  /*
+   * This test case is designed to catch race condition issues in graph loading
+   * (Ex: https://github.com/flipkart-incubator/Krystal/issues/328)
+   */
+  @ParameterizedTest
+  @ValueSource(ints = {1, 2, 4}) // test with different values of parallelism
+  void parallelExecuteVajrams_success(int executorCount) throws Exception {
+    int loopCount = 100;
+    SingleThreadExecutor[] executors = getExecutors(executorCount);
+    VajramKryonGraph graph = this.graph.build();
+    long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
+    long javaFuturesTimeNs = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
+    CompletableFuture<?>[] submissionFutures = new CompletableFuture[executorCount];
+    @SuppressWarnings("unchecked")
+    CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
+    KryonExecutorMetrics[] metrics = new KryonExecutorMetrics[loopCount];
+    LongAdder timeToCreateExecutors = new LongAdder();
+    LongAdder timeToEnqueueVajram = new LongAdder();
+    long startTime = System.nanoTime();
+    int loopCountPerExecutor = loopCount / executorCount;
+
+    for (int currentExecutor : range(0, executorCount).toArray()) {
+      SingleThreadExecutor executor = executors[currentExecutor];
+      int coreCountStart = currentExecutor * loopCountPerExecutor;
+      submissionFutures[currentExecutor] =
+          runAsync(
+              () -> {
+                FormulaRequestContext requestContext =
+                    new FormulaRequestContext(100, 20, 5, "formulaTest");
+                for (int currentLoopCount :
+                    range(coreCountStart, coreCountStart + loopCountPerExecutor).toArray()) {
+                  long iterStartTime = System.nanoTime();
+                  try (KrystexVajramExecutor krystexVajramExecutor =
+                      graph.createExecutor(
+                          KrystexVajramExecutorConfig.builder()
+                              .kryonExecutorConfigBuilder(
+                                  KryonExecutorConfig.builder().singleThreadExecutor(executor))
+                              .requestId("formulaTest")
+                              .build())) {
+                    timeToCreateExecutors.add(System.nanoTime() - iterStartTime);
+                    metrics[currentLoopCount] =
+                        ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor())
+                            .getKryonMetrics();
+                    long enqueueStart = System.nanoTime();
+                    futures[currentLoopCount] =
+                        executeVajram(
+                            graph, krystexVajramExecutor, currentLoopCount, requestContext);
+                    timeToEnqueueVajram.add(System.nanoTime() - enqueueStart);
+                  }
+                }
+              },
+              executor);
+    }
+    allOf(submissionFutures).join();
+    allOf(futures).join();
+    long vajramTimeNs = System.nanoTime() - startTime;
+    assertThat(
+            allOf(futures)
+                .whenComplete(
+                    (unused, throwable) -> {
+                      for (int i = 0, futuresLength = futures.length; i < futuresLength; i++) {
+                        CompletableFuture<Integer> future = futures[i];
+                        assertThat(future.getNow(0)).isEqualTo((100 + i) / (20 + i + 5 + i));
+                      }
+                    }))
+        .succeedsWithin(ofSeconds(1));
+    assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(loopCount);
+  }
+
   @Disabled("Long running benchmarks. 1 core: ~21sec, 2 cores: ~17sec, 4 cores: ~13sec")
   @ParameterizedTest
   @ValueSource(ints = {1, 2, 4}) // test with different values of parallelism
