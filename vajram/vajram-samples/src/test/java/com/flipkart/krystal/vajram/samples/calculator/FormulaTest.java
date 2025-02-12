@@ -168,26 +168,24 @@ class FormulaTest {
    * (Ex: https://github.com/flipkart-incubator/Krystal/issues/328)
    */
   @ParameterizedTest
-  @ValueSource(ints = {1, 2, 4}) // test with different values of parallelism
-  void parallelExecuteVajrams_success(int executorCount) throws Exception {
-    int loopCount = 100;
-    SingleThreadExecutor[] executors = getExecutors(executorCount);
+  @ValueSource(ints = {1, 2, 4, 6, 8}) // test with different values of parallelism
+  void parallelExecuteVajrams_success(int parallellism) {
+    // This number must be divisible by parallellism. Else this test case will fail because we
+    // won't be able to cleanly divide this total executionsCount equally to the executors.
+    int executionsCount = 216;
+    SingleThreadExecutor[] executors = getExecutors(parallellism);
     VajramKryonGraph graph = this.graph.build();
-    long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
-    long javaFuturesTimeNs = Util.javaFuturesBenchmark(FormulaTest::asyncFormula, loopCount);
-    CompletableFuture<?>[] submissionFutures = new CompletableFuture[executorCount];
+    CompletableFuture<?>[] submissionFutures = new CompletableFuture[parallellism];
     @SuppressWarnings("unchecked")
-    CompletableFuture<Integer>[] futures = new CompletableFuture[loopCount];
-    KryonExecutorMetrics[] metrics = new KryonExecutorMetrics[loopCount];
+    CompletableFuture<Integer>[] futures = new CompletableFuture[executionsCount];
     LongAdder timeToCreateExecutors = new LongAdder();
     LongAdder timeToEnqueueVajram = new LongAdder();
-    long startTime = System.nanoTime();
-    int loopCountPerExecutor = loopCount / executorCount;
+    int loopCountPerExecutor = executionsCount / parallellism;
 
-    for (int currentExecutor : range(0, executorCount).toArray()) {
-      SingleThreadExecutor executor = executors[currentExecutor];
-      int coreCountStart = currentExecutor * loopCountPerExecutor;
-      submissionFutures[currentExecutor] =
+    for (int currentThread : range(0, parallellism).toArray()) {
+      SingleThreadExecutor executor = executors[currentThread];
+      int coreCountStart = currentThread * loopCountPerExecutor;
+      submissionFutures[currentThread] =
           runAsync(
               () -> {
                 FormulaRequestContext requestContext =
@@ -203,9 +201,6 @@ class FormulaTest {
                               .requestId("formulaTest")
                               .build())) {
                     timeToCreateExecutors.add(System.nanoTime() - iterStartTime);
-                    metrics[currentLoopCount] =
-                        ((KryonExecutor) krystexVajramExecutor.getKrystalExecutor())
-                            .getKryonMetrics();
                     long enqueueStart = System.nanoTime();
                     futures[currentLoopCount] =
                         executeVajram(
@@ -218,7 +213,6 @@ class FormulaTest {
     }
     allOf(submissionFutures).join();
     allOf(futures).join();
-    long vajramTimeNs = System.nanoTime() - startTime;
     assertThat(
             allOf(futures)
                 .whenComplete(
@@ -229,14 +223,19 @@ class FormulaTest {
                       }
                     }))
         .succeedsWithin(ofSeconds(1));
-    assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(loopCount);
+    assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(executionsCount);
   }
 
-  @Disabled("Long running benchmarks. 1 core: ~21sec, 2 cores: ~17sec, 4 cores: ~13sec")
+  // Approx Latencies:
+  // 1 core: ~21sec, 2 cores: ~16sec, 4 cores: ~12sec, 5 cores: ~20sec, 10 cores: ~16sec
+  @Disabled("Long running benchmark")
   @ParameterizedTest
-  @ValueSource(ints = {1, 2, 4}) // test with different values of parallelism
+  @ValueSource(ints = {1, 2, 4, 5, 10}) // test with different values of parallelism
   void millionExecutors_oneCallEach_NExecutors_benchmark(int executorCount) throws Exception {
+    // This number must be divisible by executorCount. Else this test case will fail because we
+    // won't be able to cleanly divide this total loopCount equally to the executors.
     int loopCount = 1_000_000;
+
     SingleThreadExecutor[] executors = getExecutors(executorCount);
     VajramKryonGraph graph = this.graph.build();
     long javaNativeTimeNs = javaMethodBenchmark(FormulaTest::syncFormula, loopCount);
