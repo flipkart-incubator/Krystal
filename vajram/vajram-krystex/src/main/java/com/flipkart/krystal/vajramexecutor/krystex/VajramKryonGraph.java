@@ -86,8 +86,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       new ConcurrentHashMap<>();
 
   /**
-   * Maps every vajram to its corresponding kryonId all whose dependencies have also been loaded
-   * recuresively. The mapped kryon id represents the complete executable sub-graph of the vajram
+   * Maps every vajramId to its corresponding kryonId all of whose dependencies have also been loaded
+   * recursively. The mapped kryon id represents the complete executable sub-graph of the vajram.
    */
   private final Map<VajramID, KryonId> vajramExecutables = new ConcurrentHashMap<>();
 
