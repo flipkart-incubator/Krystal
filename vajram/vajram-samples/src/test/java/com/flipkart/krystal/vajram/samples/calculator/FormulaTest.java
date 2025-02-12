@@ -226,8 +226,8 @@ class FormulaTest {
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(executionsCount);
   }
 
-  // Approx Latencies:  1 core: ~21sec, 2 cores: ~16sec, 4 cores: ~12sec, 8 cores: ~16sec
-  // Approx Latencies:  1 core: ~21sec, 2 cores: ~16sec, 4 cores: ~12sec, 8 cores: ~16sec
+  // Approx Latencies:
+  // 1 core: ~21sec, 2 cores: ~16sec, 4 cores: ~12sec, 5 cores: ~20sec, 10 cores: ~16sec
   @Disabled("Long running benchmark")
   @ParameterizedTest
   @ValueSource(ints = {1, 2, 4, 5, 10}) // test with different values of parallelism
