@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.Objects.requireNonNullElseGet;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.function.Function.identity;
 
@@ -28,7 +29,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
@@ -69,12 +69,8 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
                       return (BatchEnabledFacetValues) f;
                     } else {
                       throw new IllegalStateException(
-                          "Expected to recieve instance of BatchableFacets in batcher %s but received %s"
-                              .formatted(
-                                  instanceId,
-                                  Optional.ofNullable(f)
-                                      .<Class<?>>map(Object::getClass)
-                                      .orElse(Void.class)));
+                          "Expected to recieve instance of BatchEnabledFacetValues in batcher %s but received %s"
+                              .formatted(instanceId, f));
                     }
                   })
               .map(BatchEnabledFacetValues::_build)
@@ -97,12 +93,10 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
               ImmutableMap
                   .<FacetValues, FacetValues, CompletableFuture<@Nullable Object>>toImmutableMap(
                       identity(),
-                      key ->
-                          Optional.ofNullable(futureCache.get(key._build()))
-                              .orElseThrow(
-                                  () ->
-                                      new AssertionError(
-                                          "Future cache has been primed with values. This should never happen"))));
+                      key -> {
+                        return requireNonNullElseGet(
+                            futureCache.get(key._build()), CompletableFuture::new);
+                      }));
     };
   }
 

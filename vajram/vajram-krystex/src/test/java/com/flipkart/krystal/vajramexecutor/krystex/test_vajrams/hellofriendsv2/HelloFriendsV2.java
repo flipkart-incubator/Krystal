@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2;
 
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInputFanout;
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInputFanout;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_Fac.friendIds_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_Fac.friendInfos_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_Fac.userId_s;

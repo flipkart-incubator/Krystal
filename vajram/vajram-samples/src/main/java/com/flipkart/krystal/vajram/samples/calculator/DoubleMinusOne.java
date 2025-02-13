@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.dep;
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.depInput;
-import static com.flipkart.krystal.vajram.facets.resolution.sdk.InputResolvers.resolve;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
 import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.doubledNumbers_i;
 import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.doubledNumbers_s;
 import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.result_i;
@@ -20,8 +20,8 @@ import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
-import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
 import com.flipkart.krystal.vajram.samples.calculator.multiplier.Multiplier;
 import com.flipkart.krystal.vajram.samples.calculator.multiplier.Multiplier_Req;
 import com.flipkart.krystal.vajram.samples.calculator.subtractor.Subtractor;

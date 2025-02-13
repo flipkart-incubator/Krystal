@@ -8,7 +8,5 @@ import com.google.common.collect.ImmutableList;
  * BatchEnabledFacetValues#_common()} that are equal to each other. The number of elements in the
  * {@link #batchItems()} list depends on the batch size and other such configurations of the {@link
  * InputBatcher}
- *
- * @param batchItems
  */
 public record BatchedFacets(ImmutableList<BatchEnabledFacetValues> batchItems) {}

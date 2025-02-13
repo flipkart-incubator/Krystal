@@ -20,7 +20,7 @@ import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.One2OneCommand;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.Using;
-import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.List;

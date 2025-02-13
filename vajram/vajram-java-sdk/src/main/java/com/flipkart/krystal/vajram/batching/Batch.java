@@ -20,8 +20,6 @@ public @interface Batch {
    * of the IOVajram as part of the Batch Facets class. The Batch facets which are have this field
    * set as false indicate that they are directly or indirectly used to compute the Batch facets For
    * Output Logic, but are not accessed by the output logic directly.
-   *
-   * @return
    */
   boolean forOutputLogic() default false;
 }

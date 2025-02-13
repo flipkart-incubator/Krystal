@@ -8,7 +8,7 @@ import com.flipkart.krystal.vajram.facets.Output;
 import java.util.Optional;
 
 @VajramDef
-@SuppressWarnings("initialization.field.uninitialized")
+@SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 public abstract class Divider extends ComputeVajram<Integer> {
   static class _Facets {
     @Mandatory @Input int numerator;

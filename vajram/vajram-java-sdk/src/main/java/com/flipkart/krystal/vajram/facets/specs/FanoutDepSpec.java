@@ -44,14 +44,16 @@ public abstract sealed class FanoutDepSpec<T, CV extends Request, DV extends Req
     this.setToFacets = setToFacets;
   }
 
+  @Override
   public FanoutDepResponses<DV, T> getFacetValue(FacetValues facetValues) {
     return getFromFacets.apply(facetValues);
   }
 
   @Override
-  public void setFacetValue(FacetValuesBuilder facets, DepResponse value) {
+  @SuppressWarnings("unchecked")
+  public void setFacetValue(FacetValuesBuilder facets, DepResponse<DV, T> value) {
     if (value instanceof FanoutDepResponses fanoutDepResponses) {
-      setFacetValue(facets, fanoutDepResponses);
+      setFacetValue(facets, (FanoutDepResponses<DV, T>) fanoutDepResponses);
     } else {
       throw new RuntimeException(
           "Expecting facet value type 'DepResponse' for dependency facet, but found: "
@@ -59,14 +61,15 @@ public abstract sealed class FanoutDepSpec<T, CV extends Request, DV extends Req
     }
   }
 
-  @SuppressWarnings("MethodOverloadsMethodOfSuperclass")
-  public void setFacetValue(FacetValuesBuilder facets, FanoutDepResponses value) {
-    setToFacets.accept(facets, value);
+  @SuppressWarnings({"MethodOverloadsMethodOfSuperclass", "unchecked"})
+  public void setFacetValue(FacetValuesBuilder facets, FanoutDepResponses<DV, T> value) {
+    setToFacets.accept(facets, (FanoutDepResponses<DV, T>) value);
   }
 
   @Override
-  public final <D> D getPlatformDefaultValue() throws UnsupportedOperationException {
-    return (D) FanoutDepResponses.empty();
+  public final FanoutDepResponses<DV, T> getPlatformDefaultValue()
+      throws UnsupportedOperationException {
+    return FanoutDepResponses.empty();
   }
 
   @Override

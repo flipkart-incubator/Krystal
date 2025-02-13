@@ -6,7 +6,7 @@ import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil._r
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.data.ImmutableRequest.Builder;
+import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
@@ -15,8 +15,15 @@ import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.google.common.collect.ImmutableList;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-/** A resolver which resolves exactly one input of a dependency. */
-public final class SimpleFanoutInputResolver<S, T, CV extends Request, DV extends Request>
+/**
+ * A resolver which resolves exactly one input of a dependency.
+ *
+ * @param <S> the type of the source input of the current vajram
+ * @param <T> the type of the target input of the dependency vajram
+ * @param <CV> the type of the current vajram
+ * @param <DV> the type of the dependency vajram
+ */
+public final class SimpleFanoutInputResolver<S, T, CV extends Request<?>, DV extends Request<?>>
     extends AbstractSimpleInputResolver<S, T, CV, DV> implements FanoutInputResolver {
 
   SimpleFanoutInputResolver(
@@ -25,7 +32,7 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request, DV extend
   }
 
   @Override
-  public ResolverCommand resolve(Builder depRequest, FacetValues facetValues) {
+  public ResolverCommand resolve(ImmutableRequest.Builder depRequest, FacetValues facetValues) {
     {
       try {
         //noinspection unchecked,rawtypes
@@ -33,7 +40,6 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request, DV extend
             _resolutionHelper(
                 getResolverSpec().sources(),
                 getResolverSpec().transformer(),
-                getResolverSpec().fanoutTransformer(),
                 getResolverSpec().skipConditions(),
                 facetValues);
         if (depCommand instanceof FanoutCommand<T>) {
@@ -42,13 +48,13 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request, DV extend
           } else {
             if (depCommand.inputs().size() == 1) {
               getResolverSpec().targetInput().setToRequest(depRequest, depCommand.inputs().get(0));
-              return executeWithRequests(ImmutableList.of((Builder) depRequest));
+              return executeWithRequests(ImmutableList.of((ImmutableRequest.Builder) depRequest));
             } else {
               return executeWithRequests(
                   depCommand.inputs().stream()
-                      .<@NonNull Builder>map(
+                      .<ImmutableRequest.@NonNull Builder>map(
                           o -> {
-                            Builder next = (Builder) depRequest._newCopy();
+                            var next = depRequest._newCopy();
                             getResolverSpec().targetInput().setToRequest(next, o);
                             return next;
                           })

@@ -13,7 +13,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
-import io.github.resilience4j.bulkhead.BulkheadConfig.Builder;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkhead;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkheadConfig;
 import io.github.resilience4j.decorators.Decorators;
@@ -93,7 +92,7 @@ public final class Resilience4JBulkhead implements OutputLogicDecorator {
         configProvider.getConfig(instanceId + ".bulkhead.max_concurrency");
     switch (bulkheadType) {
       case SEMAPHORE -> {
-        Builder builder = BulkheadConfig.custom().writableStackTraceEnabled(false);
+        BulkheadConfig.Builder builder = BulkheadConfig.custom().writableStackTraceEnabled(false);
         maxConcurrency.ifPresent(builder::maxConcurrentCalls);
         return Optional.of(new BulkheadAdapterConfig(builder.build()));
       }

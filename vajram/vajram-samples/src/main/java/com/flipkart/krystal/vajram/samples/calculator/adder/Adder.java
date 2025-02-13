@@ -20,11 +20,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
 
 @VajramDef
+@SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 public abstract class Adder extends IOVajram<Integer> {
   public static final LongAdder CALL_COUNTER = new LongAdder();
   public static final String FAIL_ADDER_FLAG = "failAdder";
 
-  @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
     @Mandatory @Batch @Input int numberOne;
 

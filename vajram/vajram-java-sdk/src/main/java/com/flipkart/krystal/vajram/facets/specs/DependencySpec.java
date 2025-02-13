@@ -23,7 +23,7 @@ import lombok.Getter;
  * @param <DV> The request type of the dependency vajram
  */
 @Getter
-public abstract sealed class DependencySpec<T, CV extends Request, DV extends Request>
+public abstract sealed class DependencySpec<T, CV extends Request, DV extends Request<T>>
     extends AbstractFacetSpec<T, CV> implements Dependency permits FanoutDepSpec, One2OneDepSpec {
 
   private final Class<DV> onVajram;
@@ -46,16 +46,18 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public final void setFacetValue(FacetValuesBuilder facets, FacetValue value) {
     if (value instanceof DepResponse depResponse) {
-      setFacetValue(facets, depResponse);
+      setFacetValue(facets, (DepResponse<DV, T>) depResponse);
     } else {
       throw new RuntimeException(
           "Dependency expects facet value of type DepResponse. Found " + value.getClass());
     }
   }
 
-  protected abstract void setFacetValue(FacetValuesBuilder facets, DepResponse depResponse);
+  protected abstract void setFacetValue(FacetValuesBuilder facets, DepResponse<DV, T> depResponse);
 
+  @Override
   public abstract DepResponse getFacetValue(FacetValues facetValues);
 }

@@ -2,8 +2,10 @@ package com.flipkart.krystal.krystex.logicdecorators.observability;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.flipkart.krystal.data.Errable.nil;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.io.File.separator;
+import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -26,7 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.ZoneId;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -35,7 +37,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class MainLogicExecReporter implements OutputLogicDecorator {
 
   private final KryonExecutionReport kryonExecutionReport;
-  private static final String DATE_TIME_PATTERN = "yyyy-MM-dd_HH:mm:ss";
   private static final String FILE_PATH = separator + "tmp" + separator + "krystal_exec_graph_";
   private final ObjectMapper objectMapper;
 
@@ -52,6 +53,7 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
   }
 
   @Override
+  @SuppressWarnings("FutureReturnValueIgnored")
   public OutputLogic<Object> decorateLogic(
       OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
     return facets -> {
@@ -101,8 +103,10 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
   @Override
   public void onComplete() {
     String htmlString = generateGraph();
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_TIME_PATTERN);
-    String fileName = LocalDateTime.now().format(formatter) + ".html";
+    String fileName =
+        LocalDateTime.now(ZoneId.of(checkNotNull(ZoneId.SHORT_IDS.get("IST"))))
+                .format(ISO_OFFSET_DATE_TIME)
+            + ".html";
     writeToFile(htmlString, FILE_PATH + fileName);
   }
 

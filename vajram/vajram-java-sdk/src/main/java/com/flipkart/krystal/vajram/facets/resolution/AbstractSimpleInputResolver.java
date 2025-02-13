@@ -6,7 +6,7 @@ import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 
 /** A resolver which resolves exactly one input of a dependency. */
 public abstract sealed class AbstractSimpleInputResolver<
-        S, T, CV extends Request, DV extends Request>
+        S, T, CV extends Request, DV extends Request<?>>
     extends AbstractInputResolver implements SimpleInputResolver
     permits SimpleFanoutInputResolver, SimpleOne2OneInputResolver {
   private final DependencySpec<?, CV, DV> dependency;
@@ -25,10 +25,12 @@ public abstract sealed class AbstractSimpleInputResolver<
     this.resolverSpec = resolverSpec;
   }
 
+  @Override
   public DependencySpec<?, ?, ?> getDependency() {
     return dependency;
   }
 
+  @Override
   public SimpleInputResolverSpec<T, CV, DV> getResolverSpec() {
     return resolverSpec;
   }

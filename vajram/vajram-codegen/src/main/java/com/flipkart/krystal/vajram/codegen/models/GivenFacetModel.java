@@ -23,7 +23,7 @@ public record GivenFacetModel(
     @NonNull VajramInfoLite vajramInfo,
     @NonNull DataType<Object> dataType,
     @Nullable Mandatory mandatoryAnno,
-    @NonNull String documentation,
+    @Nullable String documentation,
     boolean isBatched,
     ImmutableSet<FacetType> facetTypes,
     @NonNull VariableElement facetField)

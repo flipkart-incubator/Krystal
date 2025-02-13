@@ -171,6 +171,7 @@ public final class KryonExecutor implements KrystalExecutor {
   }
 
   @Override
+  @SuppressWarnings("FutureReturnValueIgnored")
   public <T> CompletableFuture<@Nullable T> executeKryon(
       KryonId kryonId, Request facets, KryonExecutionConfig executionConfig) {
     if (closed) {
@@ -199,7 +200,7 @@ public final class KryonExecutor implements KrystalExecutor {
             // Perform all datastructure manipulations in the command queue to avoid multi-thread
             // access
             (Supplier<CompletableFuture<@Nullable T>>)
-                (() -> {
+                () -> {
                   createDependencyKryons(
                       kryonId, kryonDefinitionRegistry.getDependantChainsStart(), executionConfig);
                   CompletableFuture<@Nullable Object> future = new CompletableFuture<>();
@@ -220,7 +221,7 @@ public final class KryonExecutor implements KrystalExecutor {
                   @SuppressWarnings("unchecked")
                   CompletableFuture<@Nullable T> f = (CompletableFuture<@Nullable T>) future;
                   return f;
-                }))
+                })
         .thenCompose(identity());
   }
 
@@ -264,6 +265,7 @@ public final class KryonExecutor implements KrystalExecutor {
    * when this method is used - ensuring that all further processing of the kryonCammand happens in
    * the main thread.
    */
+  @SuppressWarnings("FutureReturnValueIgnored")
   <R extends KryonResponse> CompletableFuture<R> enqueueKryonCommand(
       Supplier<? extends KryonCommand> kryonCommand) {
     return enqueueCommand(
@@ -340,8 +342,7 @@ public final class KryonExecutor implements KrystalExecutor {
     }
   }
 
-  private TreeSet<KryonDecorator> getSortedKryonDecorators(
-      KryonId kryonId, KryonCommand kryonCommand) {
+  private Set<KryonDecorator> getSortedKryonDecorators(KryonId kryonId, KryonCommand kryonCommand) {
     Map<String, KryonDecoratorConfig> configs = executorConfig.requestScopedKryonDecoratorConfigs();
     KryonExecutionContext executionContext =
         new KryonExecutionContext(kryonId, kryonCommand.dependantChain());
@@ -377,6 +378,7 @@ public final class KryonExecutor implements KrystalExecutor {
     }
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void flush() {
     enqueueRunnable(
         () -> {
@@ -421,6 +423,7 @@ public final class KryonExecutor implements KrystalExecutor {
     return kryonExecution;
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void submitBatch(Set<RequestId> unFlushedRequests) {
     Map<KryonId, List<KryonExecution>> executionsByKryon =
         unFlushedRequests.stream()
@@ -469,6 +472,7 @@ public final class KryonExecutor implements KrystalExecutor {
    * are executed in this method.
    */
   @Override
+  @SuppressWarnings("FutureReturnValueIgnored")
   public void close() {
     if (closed) {
       return;
@@ -509,6 +513,7 @@ public final class KryonExecutor implements KrystalExecutor {
     return KryonExecution::future;
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void enqueueRunnable(Runnable command) {
     enqueueCommand(
         () -> {

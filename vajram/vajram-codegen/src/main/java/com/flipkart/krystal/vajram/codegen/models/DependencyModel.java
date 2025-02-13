@@ -20,7 +20,7 @@ public record DependencyModel(
     @NonNull String depReqClassQualifiedName,
     @Nullable Mandatory mandatoryAnno,
     boolean canFanout,
-    @NonNull String documentation,
+    @Nullable String documentation,
     boolean isBatched,
     @NonNull VariableElement facetField)
     implements FacetGenModel {

@@ -137,6 +137,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
     return facetsBuilder;
   }
 
+  @SuppressWarnings("unchecked")
   private Errable<Object> getInjectedValue(VajramID vajramId, FacetSpec facetDef) {
     VajramInjectionProvider inputInjector = this.injectionProvider;
     if (inputInjector == null) {

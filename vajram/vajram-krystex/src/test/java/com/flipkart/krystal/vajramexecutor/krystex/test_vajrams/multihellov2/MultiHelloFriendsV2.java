@@ -13,7 +13,7 @@ import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_Req;
 import java.util.ArrayList;

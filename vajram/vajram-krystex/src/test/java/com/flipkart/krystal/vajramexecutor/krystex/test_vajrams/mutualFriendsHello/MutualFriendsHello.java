@@ -17,7 +17,7 @@ import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.Using;
-import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService_Req;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;

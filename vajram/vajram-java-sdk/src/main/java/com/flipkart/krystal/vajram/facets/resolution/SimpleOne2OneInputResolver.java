@@ -5,7 +5,7 @@ import static com.flipkart.krystal.facets.resolution.ResolverCommand.skip;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil._resolutionHelper;
 
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.data.ImmutableRequest.Builder;
+import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
@@ -14,7 +14,7 @@ import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.google.common.collect.ImmutableList;
 
 /** A resolver which resolves exactly one input of a dependency. */
-public final class SimpleOne2OneInputResolver<S, T, CV extends Request, DV extends Request>
+public final class SimpleOne2OneInputResolver<S, T, CV extends Request<?>, DV extends Request<?>>
     extends AbstractSimpleInputResolver<S, T, CV, DV> implements One2OneInputResolver {
 
   SimpleOne2OneInputResolver(
@@ -24,7 +24,7 @@ public final class SimpleOne2OneInputResolver<S, T, CV extends Request, DV exten
 
   @Override
   public ResolverCommand resolve(
-      ImmutableList<? extends Builder> depRequests, FacetValues facetValues) {
+      ImmutableList<? extends ImmutableRequest.Builder> depRequests, FacetValues facetValues) {
     {
       try {
         //noinspection unchecked,rawtypes
@@ -32,7 +32,6 @@ public final class SimpleOne2OneInputResolver<S, T, CV extends Request, DV exten
             _resolutionHelper(
                 getResolverSpec().sources(),
                 getResolverSpec().transformer(),
-                getResolverSpec().fanoutTransformer(),
                 getResolverSpec().skipConditions(),
                 facetValues);
         if (depCommand instanceof One2OneCommand<T> one2OneCommand) {
@@ -40,7 +39,7 @@ public final class SimpleOne2OneInputResolver<S, T, CV extends Request, DV exten
           if (depCommand.shouldSkip()) {
             command = skip(one2OneCommand.doc(), one2OneCommand.skipCause());
           } else {
-            for (Builder depRequest : depRequests) {
+            for (ImmutableRequest.Builder depRequest : depRequests) {
               getResolverSpec().targetInput().setToRequest(depRequest, one2OneCommand.input());
             }
             command = executeWithRequests(depRequests);

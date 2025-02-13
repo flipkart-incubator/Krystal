@@ -9,12 +9,12 @@ import com.google.common.collect.Sets;
 import java.util.Set;
 
 /**
- * Command created at the client vajram end
+ * Command created at the client vajram end to send the requests to invoke the server vajram.
  *
- * @param kryonId
- * @param executableRequests
- * @param dependantChain
- * @param skippedRequests
+ * @param kryonId The dependency kryon Id to execute
+ * @param executableRequests The request which need to be executed
+ * @param dependantChain The dependant chain leading to this invocation
+ * @param skippedRequests The requests which have been skipped by some vajram
  */
 public record ForwardSend(
     KryonId kryonId,

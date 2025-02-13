@@ -6,7 +6,6 @@ import static com.flipkart.krystal.vajram.facets.FacetValidation.validateMandato
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.handleResolverException;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.toResolverCommand;
 import static com.flipkart.krystal.vajram.utils.VajramLoader.loadVajramsFromClassPath;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -17,7 +16,6 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.facets.BasicFacetInfo;
 import com.flipkart.krystal.facets.Dependency;
@@ -356,14 +354,6 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
           resolverDefinitions.put(resolver.definition(), resolver);
         });
     return new InputResolverCreationResult(ImmutableMap.copyOf(resolverDefinitions));
-  }
-
-  private Builder newRequestForDependency(Facet dependencyId) {
-    return checkNotNull(
-            vajramDefinitions.get(
-                (VajramID) ((DependencySpec<?, ?, ?>) checkNotNull(dependencyId)).onVajramId()))
-        .vajram()
-        .newRequestBuilder();
   }
 
   private void validateMandatory(

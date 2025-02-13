@@ -1,11 +1,12 @@
 package com.flipkart.krystal.vajram.codegen.models;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.flipkart.krystal.vajram.codegen.Utils;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,7 +51,7 @@ public record ParsedVajramData(
     Map<Integer, Map<Integer, Boolean>> lookUpMap = new HashMap<>();
     for (ExecutableElement method : methods) {
       @SuppressWarnings("method.invocation")
-      int depId = Optional.ofNullable(method.getAnnotation(Resolve.class)).orElseThrow().dep();
+      int depId = checkNotNull(method.getAnnotation(Resolve.class)).dep();
       int[] depInputs = method.getAnnotation(Resolve.class).depInputs();
       for (int depinput : depInputs) {
         if (lookUpMap.getOrDefault(depId, Map.of()).getOrDefault(depinput, false)) {

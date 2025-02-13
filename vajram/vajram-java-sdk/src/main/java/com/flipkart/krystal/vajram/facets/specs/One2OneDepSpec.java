@@ -19,14 +19,14 @@ import lombok.Getter;
  *
  * @param <T> The return type of the dependency vajram
  * @param <CV> The current vajram which has the dependency
- * @param <DVR> The dependency vajram
+ * @param <DV> The dependency vajram
  */
 @Getter
-public abstract sealed class One2OneDepSpec<T, CV extends Request, DV extends Request>
+public abstract sealed class One2OneDepSpec<T, CV extends Request, DV extends Request<T>>
     extends DependencySpec<T, CV, DV> permits MandatoryOne2OneDepSpec, OptionalOne2OneDepSpec {
 
-  private final Function<FacetValues, One2OneDepResponse> getFromFacets;
-  private final BiConsumer<FacetValues, RequestResponse> setToFacets;
+  private final Function<FacetValues, One2OneDepResponse<DV, T>> getFromFacets;
+  private final BiConsumer<FacetValues, RequestResponse<DV, T>> setToFacets;
 
   public One2OneDepSpec(
       int id,
@@ -38,21 +38,23 @@ public abstract sealed class One2OneDepSpec<T, CV extends Request, DV extends Re
       String documentation,
       boolean isBatched,
       ElementTags tags,
-      Function<FacetValues, One2OneDepResponse> getFromFacets,
-      BiConsumer<FacetValues, RequestResponse> setToFacets) {
+      Function<FacetValues, One2OneDepResponse<DV, T>> getFromFacets,
+      BiConsumer<FacetValues, RequestResponse<DV, T>> setToFacets) {
     super(id, name, type, ofVajram, onVajram, onVajramId, documentation, isBatched, tags);
     this.getFromFacets = getFromFacets;
     this.setToFacets = setToFacets;
   }
 
+  @Override
   public One2OneDepResponse getFacetValue(FacetValues facetValues) {
     return getFromFacets.apply(facetValues);
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public final void setFacetValue(FacetValuesBuilder facets, DepResponse value) {
     if (value instanceof RequestResponse requestResponse) {
-      setFacetValue(facets, (RequestResponse) requestResponse);
+      setFacetValue(facets, (RequestResponse<DV, T>) requestResponse);
     } else {
       throw new RuntimeException(
           "One2One Dependency expects facet value of type RequestResponse. Found "
@@ -61,13 +63,13 @@ public abstract sealed class One2OneDepSpec<T, CV extends Request, DV extends Re
   }
 
   @SuppressWarnings("MethodOverloadsMethodOfSuperclass")
-  public final void setFacetValue(FacetValuesBuilder facets, RequestResponse value) {
+  public final void setFacetValue(FacetValuesBuilder facets, RequestResponse<DV, T> value) {
     setToFacets.accept(facets, value);
   }
 
   @Override
-  public <D> D getPlatformDefaultValue() throws UnsupportedOperationException {
-    return (D) One2OneDepResponse.noRequest();
+  public One2OneDepResponse<DV, T> getPlatformDefaultValue() throws UnsupportedOperationException {
+    return One2OneDepResponse.noRequest();
   }
 
   @Override

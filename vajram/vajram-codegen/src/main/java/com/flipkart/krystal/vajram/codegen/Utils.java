@@ -9,8 +9,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.squareup.javapoet.CodeBlock.joining;
 import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 import static java.util.Arrays.stream;
+import static java.util.Objects.requireNonNullElseGet;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.data.FacetValues;
@@ -56,6 +58,7 @@ import com.google.common.collect.Streams;
 import com.google.common.primitives.Primitives;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
@@ -74,6 +77,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
@@ -301,16 +305,16 @@ public class Utils {
     GivenFacetModelBuilder inputBuilder = GivenFacetModel.builder().facetField(inputField);
     String facetName = inputField.getSimpleName().toString();
     inputBuilder.id(
-        Optional.ofNullable(givenIdsByName.get(facetName))
-            .orElseGet(() -> getNextAvailableFacetId(takenFacetIds, nextFacetId)));
+        requireNonNullElseGet(
+            givenIdsByName.get(facetName),
+            () -> getNextAvailableFacetId(takenFacetIds, nextFacetId)));
     inputBuilder.name(facetName);
-    inputBuilder.documentation(
-        Optional.ofNullable(elementUtils.getDocComment(inputField)).orElse(""));
+    inputBuilder.documentation(elementUtils.getDocComment(inputField));
     inputBuilder.mandatoryAnno(getMandatoryTag(inputField));
     DataType<Object> dataType =
         inputField.asType().accept(new DeclaredTypeVisitor<>(this, inputField), null);
     inputBuilder.dataType(dataType);
-    inputBuilder.isBatched(Optional.ofNullable(inputField.getAnnotation(Batch.class)).isPresent());
+    inputBuilder.isBatched(inputField.getAnnotation(Batch.class) != null);
     EnumSet<FacetType> facetTypes = EnumSet.noneOf(FacetType.class);
     if (inputField.getAnnotation(Input.class) != null) {
       facetTypes.add(FacetType.INPUT);
@@ -342,8 +346,9 @@ public class Utils {
     Dependency dependency = depField.getAnnotation(Dependency.class);
     DependencyModelBuilder depBuilder = DependencyModel.builder().facetField(depField);
     depBuilder.id(
-        Optional.ofNullable(givenIdsByName.get(facetName))
-            .orElseGet(() -> getNextAvailableFacetId(takenFacetIds, nextFacetId)));
+        requireNonNullElseGet(
+            givenIdsByName.get(facetName),
+            () -> getNextAvailableFacetId(takenFacetIds, nextFacetId)));
     depBuilder.name(facetName);
     depBuilder.mandatoryAnno(getMandatoryTag(depField));
     Optional<TypeMirror> vajramReqType =
@@ -375,7 +380,7 @@ public class Utils {
                       depField);
                   return new VajramDefinitionException("Invalid Dependency specification");
                 });
-    depBuilder.documentation(Optional.ofNullable(elementUtils.getDocComment(depField)).orElse(""));
+    depBuilder.documentation(elementUtils.getDocComment(depField));
     if (vajramReqType.isPresent() && vajramType.isPresent()) {
       error(
           ("Both `withVajramReq` and `onVajram` cannot be set."
@@ -402,7 +407,7 @@ public class Utils {
       DependencyModel depModel =
           depBuilder
               .dataType(declaredDataType)
-              .isBatched(Optional.ofNullable(depField.getAnnotation(Batch.class)).isPresent())
+              .isBatched(depField.getAnnotation(Batch.class) != null)
               .vajramInfo(depVajramInfoLite)
               .build();
       givenIdsByName.putIfAbsent(facetName, depModel.id());
@@ -660,6 +665,16 @@ public class Utils {
   private TypeSpec.Builder addDefaultAnnotations(TypeSpec.Builder classBuilder) {
     return classBuilder
         .addAnnotation(
+            AnnotationSpec.builder(SuppressWarnings.class)
+                .addMember(
+                    "value",
+                    List.of(
+                            CodeBlock.of("$S", "unchecked"),
+                            CodeBlock.of("$S", "ClassReferencesSubclass"))
+                        .stream()
+                        .collect(joining(",", "{", "}")))
+                .build())
+        .addAnnotation(
             AnnotationSpec.builder(Generated.class)
                 .addMember("by", "$S", generator.getName())
                 .build())
@@ -693,14 +708,13 @@ public class Utils {
         Streams.concat(javaType.annotationSpecs().stream(), stream(annotationSpecs))
             .distinct()
             .toList();
-    Optional<TypeMirror> typeMirror = javaType.type();
-    if (typeMirror.isEmpty() || !typeMirror.get().getKind().isPrimitive()) {
-      return new TypeAndName(javaType.typeName(), Optional.empty(), annotationSpecList);
+    @Nullable TypeMirror typeMirror = javaType.type();
+    if (typeMirror == null || !typeMirror.getKind().isPrimitive()) {
+      return new TypeAndName(javaType.typeName(), null, annotationSpecList);
     }
-    TypeMirror boxed =
-        processingEnv.getTypeUtils().boxedClass((PrimitiveType) typeMirror.get()).asType();
+    TypeMirror boxed = processingEnv.getTypeUtils().boxedClass((PrimitiveType) typeMirror).asType();
     return new TypeAndName(
-        TypeName.get(boxed).annotated(annotationSpecList), Optional.of(boxed), annotationSpecList);
+        TypeName.get(boxed).annotated(annotationSpecList), boxed, annotationSpecList);
   }
 
   TypeName optional(TypeAndName javaType) {
@@ -730,9 +744,7 @@ public class Utils {
   TypeAndName getTypeName(DataType<?> dataType, List<AnnotationSpec> typeAnnotations) {
     TypeMirror javaModelType = dataType.javaModelType(processingEnv);
     return new TypeAndName(
-        TypeName.get(javaModelType).annotated(typeAnnotations),
-        Optional.of(javaModelType),
-        typeAnnotations);
+        TypeName.get(javaModelType).annotated(typeAnnotations), javaModelType, typeAnnotations);
   }
 
   TypeAndName getTypeName(DataType<?> dataType) {
@@ -828,7 +840,7 @@ public class Utils {
                       return getJavaTypeCreationCode(typeParamType, collectClassNames, facetField);
                     }
                   })
-              .collect(joining(","))
+              .collect(Collectors.joining(","))
           + "))";
     }
   }

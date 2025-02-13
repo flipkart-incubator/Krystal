@@ -36,7 +36,7 @@ public sealed interface FacetSpec<T, CV extends Request> extends Facet
    *     platform default value
    * @see DataType#getPlatformDefaultValue()
    */
-  <D> D getPlatformDefaultValue() throws UnsupportedOperationException;
+  Object getPlatformDefaultValue() throws UnsupportedOperationException;
 
   static ElementTags parseFacetTags(Field facetField) {
     return ElementTags.of(Arrays.stream(facetField.getAnnotations()).toList());

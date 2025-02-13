@@ -86,7 +86,7 @@ import com.flipkart.krystal.vajram.facets.resolution.AbstractOne2OneInputResolve
 import com.flipkart.krystal.vajram.facets.resolution.FanoutInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.One2OneInputResolver;
-import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.flipkart.krystal.vajram.facets.specs.MandatoryFacetDefaultSpec;
@@ -430,7 +430,7 @@ public class VajramCodeGenerator {
   private ParsedVajramData getParsedVajramData() {
     // This should not happen since this method is only ever called after
     // initParsedVajramData is called. But we still implement the best effort fallback
-    return Optional.ofNullable(parsedVajramData).orElseGet(this::initParsedVajramData);
+    return parsedVajramData != null ? parsedVajramData : initParsedVajramData();
   }
 
   /**
@@ -1150,11 +1150,7 @@ public class VajramCodeGenerator {
         util.interfaceBuilder(requestInterfaceType.simpleName())
             .addModifiers(PUBLIC)
             .addSuperinterface(
-                ParameterizedTypeName.get(ClassName.get(Request.class), boxedVajramReturnType))
-            .addAnnotation(
-                AnnotationSpec.builder(SuppressWarnings.class)
-                    .addMember("value", "$S", "ClassReferencesSubclass")
-                    .build());
+                ParameterizedTypeName.get(ClassName.get(Request.class), boxedVajramReturnType));
     List<GivenFacetModel> inputs =
         vajramInfo.givenFacets().stream().filter(i -> i.facetTypes().contains(INPUT)).toList();
 
@@ -1568,11 +1564,7 @@ public class VajramCodeGenerator {
         util.interfaceBuilder(getFacetsInterfaceName(vajramName))
             .addModifiers(PUBLIC)
             .addSuperinterface(
-                doInputsNeedBatching ? BatchEnabledFacetValues.class : FacetValues.class)
-            .addAnnotation(
-                AnnotationSpec.builder(SuppressWarnings.class)
-                    .addMember("value", "$S", "ClassReferencesSubclass")
-                    .build());
+                doInputsNeedBatching ? BatchEnabledFacetValues.class : FacetValues.class);
     addFacetConstants(
         facetsInterface, vajramInfo.facetStream().toList(), CodeGenParams.builder().build());
     allFacets.forEach(
@@ -1799,11 +1791,7 @@ public class VajramCodeGenerator {
     TypeSpec.Builder allFacetsInterface =
         util.interfaceBuilder(getFacetsInterfaceName(vajramName))
             .addModifiers(PUBLIC)
-            .addSuperinterface(BatchEnabledFacetValues.class)
-            .addAnnotation(
-                AnnotationSpec.builder(SuppressWarnings.class)
-                    .addMember("value", "$S", "ClassReferencesSubclass")
-                    .build());
+            .addSuperinterface(BatchEnabledFacetValues.class);
 
     addFacetConstants(
         allFacetsInterface, vajramInfo.facetStream().toList(), CodeGenParams.builder().build());

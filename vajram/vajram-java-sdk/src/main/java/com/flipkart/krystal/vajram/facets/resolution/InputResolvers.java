@@ -1,11 +1,9 @@
-package com.flipkart.krystal.vajram.facets.resolution.sdk;
+package com.flipkart.krystal.vajram.facets.resolution;
 
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.toResolver;
 import static java.util.Arrays.stream;
 
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
-import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.google.common.collect.ImmutableList;
@@ -14,6 +12,8 @@ import java.util.List;
 public final class InputResolvers {
 
   /**
+   * Starting point for the resolution DSL
+   *
    * @param inputResolvers Array of lists of resolvers where each list contains resolvers for one
    *     dependency
    * @return An aggregated list of all the resolvers
@@ -29,6 +29,8 @@ public final class InputResolvers {
   }
 
   /**
+   * Starting point for defining the resolvers of a dependency
+   *
    * @param dependency The dependency whose inputs are being resolved
    * @param resolverStages The resolver specs of the dependency
    * @param <T> The return type of the dependency.
@@ -37,7 +39,7 @@ public final class InputResolvers {
    * @return The list of InputResolvers
    */
   @SafeVarargs
-  public static <T, R, CV extends Request, DV extends Request>
+  public static <T, CV extends Request, DV extends Request<T>>
       List<? extends SimpleInputResolver> dep(
           DependencySpec<T, CV, DV> dependency,
           SimpleInputResolverSpec<?, CV, DV>... resolverStages) {
@@ -50,6 +52,8 @@ public final class InputResolvers {
   }
 
   /**
+   * Specify the (one-to-one) dependency input which is being resolved.
+   *
    * @param depInput The input which is being resolved with a single value (no fanout)
    * @return A {@link ResolveStage} which can be used to further specify the details of the resolver
    * @param <T> The data type of the input
@@ -61,6 +65,8 @@ public final class InputResolvers {
   }
 
   /**
+   * Specify the (fanout) dependency input which is being resolved.
+   *
    * @param depInput The input which is being resolved with a variable number of values (fanout)
    * @return A {@link ResolveFanoutStage} which can be used to further specify the details of the
    *     fanout resolver

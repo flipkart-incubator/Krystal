@@ -1,7 +1,6 @@
 package com.flipkart.krystal.krystex.logicdecoration;
 
 import static java.util.Comparator.comparingInt;
-import static java.util.Optional.ofNullable;
 import static lombok.EqualsAndHashCode.CacheStrategy.LAZY;
 
 import com.flipkart.krystal.krystex.Decorator;
@@ -36,7 +35,7 @@ public class LogicDecorationOrdering {
 
   public <T extends Decorator> Comparator<T> encounterOrder() {
     return comparingInt(
-        key -> ofNullable(decoratorTypeIndices.get(key.decoratorType())).orElse(Integer.MIN_VALUE));
+        key -> decoratorTypeIndices.getOrDefault(key.decoratorType(), Integer.MIN_VALUE));
   }
 
   public static LogicDecorationOrdering none() {
