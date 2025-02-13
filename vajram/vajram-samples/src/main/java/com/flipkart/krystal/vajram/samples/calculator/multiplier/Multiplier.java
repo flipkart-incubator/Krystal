@@ -10,7 +10,7 @@ import java.util.Optional;
 
 @ExternalInvocation(allow = true)
 @VajramDef
-@SuppressWarnings("initialization.field.uninitialized")
+@SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 public abstract class Multiplier extends ComputeVajram<Integer> {
   static class _Facets {
     @Mandatory @Input int numberOne;

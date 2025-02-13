@@ -16,14 +16,14 @@ import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.One2OneCommand;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.Using;
-import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 @ExternalInvocation(allow = true)
 @VajramDef
-@SuppressWarnings("initialization.field.uninitialized")
+@SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 public abstract class SplitAdder extends ComputeVajram<Integer> {
   static class _Facets {
     @Mandatory @Input List<Integer> numbers;

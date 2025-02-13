@@ -5,6 +5,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
+ * Configuration for a kryon decorator.
+ *
  * @param decoratorType The type of the decorator. A kryon can never be decorated at the same time
  *     by two decorators of the same type.
  * @param instanceIdGenerator A function which returns the instance id of the kryon decorator. The

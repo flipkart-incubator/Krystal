@@ -1,17 +1,18 @@
 package com.flipkart.krystal.vajram.codegen;
 
 /**
- * @param isBuilder
- * @param isRequest
- * @param wrapsRequest
- * @param subsetRequest {@code true} when the facets class being generated is a subset of the
- *     complete set of facets (For example: BatchFacets and CommonFacets)
- * @param isUnBatched {@code true} when the facets class is of a batchable vajram
+ * Used to specify the type of class being generated
+ *
+ * @param isBuilder {@code true} when the class being generated is a builder.
+ * @param isRequest {@code true} when the class being generated is a request class
+ * @param wrapsRequest {@code true} when the class being generated wraps the request class (Ex:
+ *     Facets class)
  * @param isSubsetBatch {@code true} when the class being generated is the facet container
  *     containing Batch facets.
  * @param isSubsetCommon{@code true} when the class being generated is the facet container *
  *     containing common facets.
- * @param withImpl
+ * @param withImpl {@code true} when the class being generated is an implementation, not an
+ *     interface
  */
 @lombok.Builder(toBuilder = true)
 record CodeGenParams(

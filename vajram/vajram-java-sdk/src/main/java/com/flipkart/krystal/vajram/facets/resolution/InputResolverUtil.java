@@ -8,7 +8,7 @@ import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.data.ImmutableRequest.Builder;
+import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.NonNil;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
@@ -26,12 +26,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputResolverUtil {
 
-  public static ResolverCommand toResolverCommand(DependencyCommand<Builder> dependencyCommand) {
+  public static ResolverCommand toResolverCommand(
+      DependencyCommand<ImmutableRequest.Builder> dependencyCommand) {
     if (dependencyCommand.shouldSkip()) {
       return ResolverCommand.skip(dependencyCommand.doc(), dependencyCommand.skipCause());
     }
@@ -56,11 +55,10 @@ public final class InputResolverUtil {
   @SuppressWarnings("rawtypes")
   static <T> DependencyCommand<T> _resolutionHelper(
       Set<? extends FacetSpec<?, ?>> sourceInputs,
-      @Nullable Function<List<Errable<?>>, ?> oneToOneTransformer,
-      @Nullable Function<List<Errable<?>>, ? extends Collection<?>> fanoutTransformer,
-      List<? extends SkipPredicate<?>> skipPredicates,
+      Transformer transformer,
+      List<? extends SkipPredicate> skipPredicates,
       FacetValues facetValues) {
-    boolean fanout = fanoutTransformer != null;
+    boolean fanout = transformer instanceof Transformer.Fanout;
     List<Errable<?>> inputValues = new ArrayList<>();
     for (FacetSpec sourceInput : sourceInputs) {
       final Errable<?> inputValue;
@@ -84,9 +82,9 @@ public final class InputResolverUtil {
     }
 
     @SuppressWarnings("unchecked")
-    Optional<SkipPredicate<Object>> skipPredicate =
+    Optional<SkipPredicate> skipPredicate =
         skipPredicates.stream()
-            .map(p -> (SkipPredicate<Object>) p)
+            .map(p -> (SkipPredicate) p)
             .filter(sSkipPredicate -> sSkipPredicate.condition().test(inputValues))
             .findFirst();
     if (skipPredicate.isPresent()) {
@@ -96,21 +94,7 @@ public final class InputResolverUtil {
         return skipExecution(skipPredicate.get().reason());
       }
     }
-    @SuppressWarnings("unchecked")
-    Function<List<Errable<?>>, Object> transformer =
-        ofNullable((Function<List<Errable<?>>, Object>) oneToOneTransformer)
-            .or(
-                () ->
-                    ofNullable(fanoutTransformer)
-                        .map(
-                            function ->
-                                (Function<List<Errable<?>>, Collection<Object>>)
-                                    function.andThen(objects -> (Collection<Object>) objects))
-                        .map(x -> x.andThen(identity())))
-            .orElse(
-                errables -> {
-                  throw new AssertionError();
-                });
+
     Optional<Object> transformedInput = ofNullable(transformer.apply(inputValues));
     if (fanout) {
       @SuppressWarnings("unchecked")
@@ -128,8 +112,8 @@ public final class InputResolverUtil {
     }
   }
 
-  public static <T, CV extends Request, DV extends Request> SimpleInputResolver toResolver(
-      DependencySpec<?, CV, DV> dependency, SimpleInputResolverSpec<T, CV, DV> spec) {
+  public static <T, CV extends Request<?>, DV extends Request<T>> SimpleInputResolver toResolver(
+      DependencySpec<T, CV, DV> dependency, SimpleInputResolverSpec<?, CV, DV> spec) {
     if (spec.canFanout()) {
       return new SimpleFanoutInputResolver<>(dependency, spec);
     } else {

@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
-import com.flipkart.krystal.data.ImmutableRequest.Builder;
+import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.InputMirror;
@@ -16,7 +16,7 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
   @Getter private final String name;
   @Getter private final String documentation;
   private final Function<Request, @Nullable T> getFromRequest;
-  private final BiConsumer<Builder, @Nullable T> setToRequest;
+  private final BiConsumer<ImmutableRequest.Builder, @Nullable T> setToRequest;
 
   public InputMirrorSpec(
       int id,
@@ -25,7 +25,7 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
       Class<CV> ofVajram,
       String documentation,
       Function<Request, @Nullable T> getFromRequest,
-      BiConsumer<Builder, @Nullable T> setToRequest) {
+      BiConsumer<ImmutableRequest.Builder, @Nullable T> setToRequest) {
     this.id = id;
     this.name = name;
     this.type = type;
@@ -35,11 +35,14 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
     this.setToRequest = setToRequest;
   }
 
+  @Override
   public @Nullable T getFromRequest(Request request) {
     return getFromRequest.apply(request);
   }
 
-  public void setToRequest(Builder request, @Nullable Object value) {
+  @Override
+  @SuppressWarnings("unchecked")
+  public void setToRequest(ImmutableRequest.Builder request, @Nullable Object value) {
     setToRequest.accept(request, (T) value);
   }
 

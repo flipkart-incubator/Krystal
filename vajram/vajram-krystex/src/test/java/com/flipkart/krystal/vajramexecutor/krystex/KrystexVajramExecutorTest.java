@@ -21,7 +21,6 @@ import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
-import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
@@ -198,7 +197,8 @@ class KrystexVajramExecutorTest {
 
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
-  void executeIo_withBatcherMultipleRequests_calledOnlyOnce(GraphTraversalStrategy graphTraversalStrategy) {
+  void executeIo_withBatcherMultipleRequests_calledOnlyOnce(
+      GraphTraversalStrategy graphTraversalStrategy) {
     graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
@@ -289,7 +289,8 @@ class KrystexVajramExecutorTest {
 
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
-  void executeCompute_missingMandatoryInput_throwsException(GraphTraversalStrategy graphTraversalStrategy) {
+  void executeCompute_missingMandatoryInput_throwsException(
+      GraphTraversalStrategy graphTraversalStrategy) {
     graph =
         loadFromClasspath("com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello").build();
     CompletableFuture<String> result;
@@ -315,7 +316,8 @@ class KrystexVajramExecutorTest {
 
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
-  void execute_multiRequestNoInputBatcher_cacheHitSuccess(GraphTraversalStrategy graphTraversalStrategy) {
+  void execute_multiRequestNoInputBatcher_cacheHitSuccess(
+      GraphTraversalStrategy graphTraversalStrategy) {
     graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
@@ -352,7 +354,8 @@ class KrystexVajramExecutorTest {
 
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
-  void execute_multiRequestWithBatcher_cacheHitSuccess(GraphTraversalStrategy graphTraversalStrategy) {
+  void execute_multiRequestWithBatcher_cacheHitSuccess(
+      GraphTraversalStrategy graphTraversalStrategy) {
     graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
@@ -395,8 +398,8 @@ class KrystexVajramExecutorTest {
 
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
-  void execute_multiResolverFanouts_permutesTheFanouts(GraphTraversalStrategy graphTraversalStrategy)
-      throws Exception {
+  void execute_multiResolverFanouts_permutesTheFanouts(
+      GraphTraversalStrategy graphTraversalStrategy) throws Exception {
     graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
@@ -452,8 +455,7 @@ class KrystexVajramExecutorTest {
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void flush_singleDepthParallelDependencyDefaultInputBatcherConfig_flushes2Batchers(
-      GraphTraversalStrategy graphTraversalStrategy,
-      TestInfo testInfo) {
+      GraphTraversalStrategy graphTraversalStrategy, TestInfo testInfo) {
     graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
@@ -497,8 +499,7 @@ class KrystexVajramExecutorTest {
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void flush_singleDepthParallelDependencySharedInputBatcherConfig_flushes1Batcher(
-      GraphTraversalStrategy graphTraversalStrategy,
-      TestInfo testInfo) {
+      GraphTraversalStrategy graphTraversalStrategy, TestInfo testInfo) {
     graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
@@ -541,7 +542,8 @@ class KrystexVajramExecutorTest {
             1);
   }
 
-  private KrystexVajramExecutorConfigBuilder getExecutorConfig(GraphTraversalStrategy graphTraversalStrategy) {
+  private KrystexVajramExecutorConfigBuilder getExecutorConfig(
+      GraphTraversalStrategy graphTraversalStrategy) {
     KryonExecutorConfigBuilder kryonExecutorConfigBuilder =
         KryonExecutorConfig.builder()
             .kryonExecStrategy(BATCH)
@@ -564,12 +566,10 @@ class KrystexVajramExecutorTest {
             kryonExecutorConfigBuilder.singleThreadExecutor(executorLease.get()));
   }
 
-
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void flush_singleDepthSkipParallelDependencySharedInputBatcherConfig_flushes1Batcher(
-      GraphTraversalStrategy graphTraversalStrategy,
-      TestInfo testInfo) {
+      GraphTraversalStrategy graphTraversalStrategy, TestInfo testInfo) {
     graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
@@ -609,8 +609,7 @@ class KrystexVajramExecutorTest {
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void close_sequentialDependency_flushesBatcher(
-      GraphTraversalStrategy graphTraversalStrategy,
-      TestInfo testInfo) {
+      GraphTraversalStrategy graphTraversalStrategy, TestInfo testInfo) {
     graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
@@ -650,8 +649,7 @@ class KrystexVajramExecutorTest {
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void flush_sequentialDependency_flushesSharedBatchers(
-      GraphTraversalStrategy graphTraversalStrategy,
-      TestInfo testInfo) {
+      GraphTraversalStrategy graphTraversalStrategy, TestInfo testInfo) {
     graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
@@ -684,8 +682,7 @@ class KrystexVajramExecutorTest {
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void flush_sequentialSkipDependency_flushesSharedBatchers(
-      GraphTraversalStrategy graphTraversalStrategy,
-      TestInfo testInfo) {
+      GraphTraversalStrategy graphTraversalStrategy, TestInfo testInfo) {
     graph =
         loadFromClasspath(
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
@@ -713,8 +710,7 @@ class KrystexVajramExecutorTest {
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void flush_skippingADependency_flushesCompleteCallGraph(
-      GraphTraversalStrategy graphTraversalStrategy,
-      TestInfo testInfo) {
+      GraphTraversalStrategy graphTraversalStrategy, TestInfo testInfo) {
     CompletableFuture<FlushCommand> friendServiceFlushCommand = new CompletableFuture<>();
     CompletableFuture<FlushCommand> userServiceFlushCommand = new CompletableFuture<>();
     graph =

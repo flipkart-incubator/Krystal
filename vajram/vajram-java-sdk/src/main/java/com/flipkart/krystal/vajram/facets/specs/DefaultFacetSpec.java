@@ -40,6 +40,7 @@ public abstract sealed class DefaultFacetSpec<T, CV extends Request>
     this.setToFacets = setToFacets;
   }
 
+  @Override
   public Errable<@NonNull T> getFacetValue(FacetValues facetValues) {
     return errableFrom(() -> getValue(facetValues));
   }
@@ -49,6 +50,7 @@ public abstract sealed class DefaultFacetSpec<T, CV extends Request>
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public final void setFacetValue(FacetValuesBuilder facets, FacetValue value) {
     if (value instanceof Errable<?> errable) {
       Optional<?> o = errable.valueOpt();

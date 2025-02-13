@@ -121,14 +121,13 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
     }
   }
 
-  private ImmutableMap<InputMirror, String> extractAndConvertFacets(Request request) {
+  private ImmutableMap<InputMirror, String> extractAndConvertFacets(Request<?> request) {
     Map<InputMirror, String> inputMap = new LinkedHashMap<>();
-    ((ImmutableSet<? extends InputMirror>) request._facets())
-        .stream()
-            .forEach(
-                (inputDef) -> {
-                  inputMap.put(inputDef, convertValue(inputDef.getFromRequest(request)));
-                });
+    request._facets().stream()
+        .forEach(
+            (inputDef) -> {
+              inputMap.put(inputDef, convertValue(inputDef.getFromRequest(request)));
+            });
     return ImmutableMap.copyOf(inputMap);
   }
 

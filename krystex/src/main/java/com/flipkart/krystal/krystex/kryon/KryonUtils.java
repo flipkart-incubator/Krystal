@@ -8,6 +8,7 @@ import java.util.function.Supplier;
 
 public final class KryonUtils {
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   static void enqueueOrExecuteCommand(
       Supplier<KryonCommand> commandGenerator,
       KryonId depKryonId,

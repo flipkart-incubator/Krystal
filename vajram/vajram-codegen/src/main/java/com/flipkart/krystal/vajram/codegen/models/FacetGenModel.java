@@ -35,4 +35,6 @@ public sealed interface FacetGenModel permits GivenFacetModel, DependencyModel {
   default boolean isMandatory() {
     return mandatoryAnno() != null;
   }
+
+  @Nullable String documentation();
 }

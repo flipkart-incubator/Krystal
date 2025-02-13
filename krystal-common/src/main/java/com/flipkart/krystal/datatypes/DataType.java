@@ -3,6 +3,7 @@ package com.flipkart.krystal.datatypes;
 import java.lang.reflect.Type;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.type.TypeMirror;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public sealed interface DataType<T> permits JavaType {
 
@@ -62,6 +63,7 @@ public sealed interface DataType<T> permits JavaType {
    *     ClassNotFoundException}
    * @throws IllegalArgumentException if the datatype does not have a platform default value.
    */
+  @NonNull
   T getPlatformDefaultValue() throws ClassNotFoundException, IllegalArgumentException;
 
   /**

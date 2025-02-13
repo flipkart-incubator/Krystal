@@ -22,9 +22,8 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -53,12 +52,8 @@ final class Vajrams {
   }
 
   static ImmutableMap<ResolverDefinition, InputResolver> parseInputResolvers(Vajram<?> vajram) {
-    Map<ResolverDefinition, InputResolver> map = new LinkedHashMap<>();
-    int i = 0;
-    for (InputResolver inputResolver : vajram.getInputResolvers()) {
-      map.put(inputResolver.definition(), inputResolver);
-    }
-    return ImmutableMap.copyOf(map);
+    return vajram.getInputResolvers().stream()
+        .collect(ImmutableMap.toImmutableMap(InputResolver::definition, Function.identity()));
   }
 
   private static FacetSpec inferFacetId(

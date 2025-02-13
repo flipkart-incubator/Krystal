@@ -38,6 +38,7 @@ public final class VajramLoader {
     return initVajram(impls.get(0));
   }
 
+  @SuppressWarnings("unchecked")
   private static Vajram<Object> initVajram(Class<? extends Vajram> aClass) {
     if (!isFinal(aClass.getModifiers())) {
       throw new RuntimeException("Provided Vajram impl class should be final");

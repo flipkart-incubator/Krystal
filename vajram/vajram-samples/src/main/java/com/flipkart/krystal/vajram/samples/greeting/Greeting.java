@@ -9,7 +9,7 @@ import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.facets.resolution.sdk.Resolve;
+import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.lang.System.Logger;
@@ -22,7 +22,7 @@ import java.util.Optional;
  */
 @ExternalInvocation(allow = true)
 @VajramDef
-@SuppressWarnings("initialization.field.uninitialized")
+@SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 // ComputeVajram means that this Vajram does not directly perform any blocking operations.
 public abstract class Greeting extends ComputeVajram<String> {
   static class _Facets {

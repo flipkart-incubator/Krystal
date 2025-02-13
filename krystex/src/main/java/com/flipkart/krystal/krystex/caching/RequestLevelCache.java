@@ -76,6 +76,7 @@ public class RequestLevelCache implements KryonDecorator {
       }
     }
 
+    @SuppressWarnings("FutureReturnValueIgnored")
     private CompletableFuture<KryonResponse> readFromCache(
         Kryon<KryonCommand, KryonResponse> kryon, ForwardReceive forwardBatch) {
       var executableRequests = forwardBatch.executableRequests();

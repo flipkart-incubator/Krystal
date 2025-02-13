@@ -1,8 +1,7 @@
-package com.flipkart.krystal.vajram.facets.resolution.sdk;
+package com.flipkart.krystal.vajram.facets.resolution;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.google.common.collect.ImmutableSet;
@@ -45,7 +44,7 @@ public final class ResolveStage<I, DV extends Request> {
   public <CV extends Request> SimpleInputResolverSpec<I, CV, DV> usingValueAsResolver(
       Supplier<I> with) {
     return new SimpleInputResolverSpec<>(
-        targetInput, ImmutableSet.of(), List.of(), o -> with.get(), null);
+        targetInput, ImmutableSet.of(), List.of(), new Transformer.One2One(o -> with.get()));
   }
 
   /**

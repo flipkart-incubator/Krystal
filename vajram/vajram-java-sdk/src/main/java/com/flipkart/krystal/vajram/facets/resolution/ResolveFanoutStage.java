@@ -1,7 +1,6 @@
-package com.flipkart.krystal.vajram.facets.resolution.sdk;
+package com.flipkart.krystal.vajram.facets.resolution;
 
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolverSpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.google.common.collect.ImmutableSet;
@@ -34,7 +33,7 @@ public final class ResolveFanoutStage<I, DV extends Request> {
   public <CV extends Request> SimpleInputResolverSpec<I, CV, DV> usingValuesAsResolver(
       Supplier<? extends Collection<? extends I>> with) {
     return new SimpleInputResolverSpec<>(
-        targetInput, ImmutableSet.of(), List.of(), null, o -> with.get());
+        targetInput, ImmutableSet.of(), List.of(), new Transformer.Fanout(o -> with.get()));
   }
 
   public <S, CV extends Request> TransformFanoutResolverStage<S, I, CV, DV> using(

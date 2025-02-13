@@ -10,7 +10,7 @@ import com.flipkart.krystal.vajram.VajramID;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-public final class MandatoryOne2OneDepSpec<T, CV extends Request, DV extends Request>
+public final class MandatoryOne2OneDepSpec<T, CV extends Request, DV extends Request<T>>
     extends One2OneDepSpec<T, CV, DV> implements MandatoryFacetSpec<T, CV> {
 
   public MandatoryOne2OneDepSpec(
@@ -23,8 +23,8 @@ public final class MandatoryOne2OneDepSpec<T, CV extends Request, DV extends Req
       String documentation,
       boolean isBatched,
       ElementTags tags,
-      Function<FacetValues, One2OneDepResponse> getFromFacets,
-      BiConsumer<FacetValues, RequestResponse> setToFacets) {
+      Function<FacetValues, One2OneDepResponse<DV, T>> getFromFacets,
+      BiConsumer<FacetValues, RequestResponse<DV, T>> setToFacets) {
     super(
         id,
         name,

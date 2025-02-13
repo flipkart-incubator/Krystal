@@ -28,6 +28,7 @@ import javax.lang.model.type.TypeMirror;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @EqualsAndHashCode(of = {"canonicalClassName", "typeParameters"})
@@ -164,7 +165,7 @@ public final class JavaType<T> implements DataType<T> {
 
   @Override
   @SuppressWarnings("unchecked")
-  public T getPlatformDefaultValue() {
+  public @NonNull T getPlatformDefaultValue() {
     try {
       Type type = javaReflectType();
       if (type instanceof Class<?> c) {
@@ -178,7 +179,7 @@ public final class JavaType<T> implements DataType<T> {
           }
         }
       } else if (type instanceof ArrayType) {
-        return (T) new Object[0];
+        return (@NonNull T) new Object[0];
       } else if (type instanceof ParameterizedType p) {
         Type rawType = p.getRawType();
         if (rawType instanceof Class<?> c) {
