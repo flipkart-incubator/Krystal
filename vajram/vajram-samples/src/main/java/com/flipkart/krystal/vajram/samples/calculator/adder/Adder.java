@@ -7,11 +7,12 @@ import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.batching.Batch;
+import com.flipkart.krystal.vajram.batching.Batched;
+import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableCollection;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.Map;
@@ -22,30 +23,32 @@ import java.util.concurrent.atomic.LongAdder;
 @VajramDef
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 public abstract class Adder extends IOVajram<Integer> {
-  public static final LongAdder CALL_COUNTER = new LongAdder();
-  public static final String FAIL_ADDER_FLAG = "failAdder";
-
   static class _Facets {
-    @Mandatory @Batch @Input int numberOne;
+    @Mandatory @Batched @Input int numberOne;
 
     @Mandatory(ifNotSet = DEFAULT_TO_ZERO)
-    @Batch
+    @Batched
     @Input
     int numberTwo;
 
-    @Inject
+    @BatchesGroupedBy
     @Named(FAIL_ADDER_FLAG)
+    @Inject
     boolean fail;
   }
 
+  public static final LongAdder CALL_COUNTER = new LongAdder();
+
+  public static final String FAIL_ADDER_FLAG = "failAdder";
+
   @Output
-  static Map<Adder_BatchElem, CompletableFuture<Integer>> add(
-      ImmutableList<Adder_BatchElem> _batches, Optional<Boolean> fail) {
+  static Map<Adder_BatchItem, CompletableFuture<Integer>> add(
+      ImmutableCollection<Adder_BatchItem> _batchItems, Optional<Boolean> fail) {
     CALL_COUNTER.increment();
     if (fail.orElse(false)) {
       throw new RuntimeException("Adder failed because fail flag was set");
     }
-    return _batches.stream()
+    return _batchItems.stream()
         .collect(
             toImmutableMap(
                 identity(), batch -> completedFuture(add(batch.numberOne(), batch.numberTwo()))));

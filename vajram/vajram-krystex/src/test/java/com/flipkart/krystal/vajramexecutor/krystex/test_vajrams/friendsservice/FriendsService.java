@@ -4,11 +4,11 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.batching.Batch;
+import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
@@ -20,17 +20,17 @@ import java.util.concurrent.atomic.LongAdder;
 @VajramDef
 public abstract class FriendsService extends IOVajram<Set<String>> {
   static class _Facets {
-    @Mandatory @Batch @Input String userId;
+    @Mandatory @Batched @Input String userId;
   }
 
   public static final LongAdder CALL_COUNTER = new LongAdder();
 
   @Output
-  static ImmutableMap<FriendsService_BatchElem, CompletableFuture<Set<String>>> call(
-      ImmutableList<FriendsService_BatchElem> _batches) {
+  static ImmutableMap<FriendsService_BatchItem, CompletableFuture<Set<String>>> call(
+      ImmutableCollection<FriendsService_BatchItem> _batchItems) {
     CALL_COUNTER.increment();
-    Map<FriendsService_BatchElem, CompletableFuture<Set<String>>> result = new LinkedHashMap<>();
-    for (FriendsService_BatchElem inputsBatch : _batches) {
+    Map<FriendsService_BatchItem, CompletableFuture<Set<String>>> result = new LinkedHashMap<>();
+    for (FriendsService_BatchItem inputsBatch : _batchItems) {
       String userId = inputsBatch.userId();
       result.put(inputsBatch, completedFuture(getFriends(userId)));
     }

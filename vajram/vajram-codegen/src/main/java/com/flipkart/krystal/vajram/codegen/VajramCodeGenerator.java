@@ -37,6 +37,7 @@ import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static com.squareup.javapoet.MethodSpec.overriding;
 import static com.squareup.javapoet.TypeSpec.anonymousClassBuilder;
 import static java.util.Arrays.stream;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
 import static javax.lang.model.element.Modifier.ABSTRACT;
@@ -64,10 +65,11 @@ import com.flipkart.krystal.facets.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
-import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.batching.BatchEnabledFacetValues;
 import com.flipkart.krystal.vajram.batching.BatchEnabledImmutableFacetValues;
+import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
+import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
 import com.flipkart.krystal.vajram.codegen.models.DependencyModel;
 import com.flipkart.krystal.vajram.codegen.models.FacetGenModel;
 import com.flipkart.krystal.vajram.codegen.models.GivenFacetModel;
@@ -577,10 +579,10 @@ public class VajramCodeGenerator {
             .addAnnotation(Override.class);
 
     CodeBlock.Builder codeBuilder = CodeBlock.builder();
-    if (needsBatching)
+    if (needsBatching) {
       batchedExecuteMethodBuilder(
           batchableInputs, commonFacets, vajramResponseType, codeBuilder, executeMethodBuilder);
-    else {
+    } else {
       nonBatchedExecuteMethodBuilder(executeMethodBuilder, true);
     }
     return executeMethodBuilder.build();
@@ -593,6 +595,11 @@ public class VajramCodeGenerator {
       CodeBlock.Builder codeBuilder,
       MethodSpec.Builder executeMethodBuilder) {
     ExecutableElement outputLogic = getParsedVajramData().outputLogic();
+
+    ImmutableMap<String, FacetGenModel> facets =
+        vajramInfo
+            .facetStream()
+            .collect(ImmutableMap.toImmutableMap(FacetGenModel::name, Function.identity()));
 
     TypeMirror returnType = outputLogic.getReturnType();
     checkState(
@@ -614,12 +621,12 @@ public class VajramCodeGenerator {
             if($facetValuesList:L.isEmpty()) {
               return $imMap:T.of();
             }
-            $map:T<$inputBatching:T, $facetValues:T> _batches = new $hashMap:T<>();
+            $map:T<$inputBatching:T, $facetValues:T> _batchItems = new $hashMap:T<>();
             $commonInput:T _common = (($unmodInput:T)$facetValuesList:L.get(0))._common();
             for ($facetValues:T $facetsVar:L : $facetValuesList:L) {
               $unmodInput:T _castFacets = ($unmodInput:T) $facetsVar:L;
-              $inputBatching:T _batch = _castFacets._batchElement();
-              _batches.put(_batch, $facetsVar:L);
+              $inputBatching:T _batch = _castFacets._batchItem();
+              _batchItems.put(_batch, $facetsVar:L);
             }
         """;
     Map<String, Object> valueMap = new HashMap<>();
@@ -654,17 +661,44 @@ public class VajramCodeGenerator {
                         .getElementUtils()
                         .getTypeElement(getBatchFacetsClassName().canonicalName()))
                 .asType();
-        if (!util.isRawAssignable(paramType, ImmutableList.class)
+        if (!util.processingEnv()
+                .getTypeUtils()
+                .isSameType(
+                    requireNonNull(util.processingEnv().getTypeUtils().asElement(paramType))
+                        .asType(),
+                    requireNonNull(
+                            util.processingEnv()
+                                .getElementUtils()
+                                .getTypeElement(
+                                    requireNonNull(ImmutableCollection.class.getCanonicalName())))
+                        .asType())
             || batchTypeParams.size() != 1
             || !util.processingEnv().getTypeUtils().isSameType(expected, batchTypeParams.get(0))) {
           throw util.errorAndThrow(
-              "Batch of facetValues param must be of ImmutableList<"
+              "Batch of facetValues param must be of ImmutableCollection<"
                   + expected
                   + "> . Found: "
                   + paramType,
               param);
         }
       } else {
+        FacetGenModel facet = facets.get(param.getSimpleName().toString());
+        if (facet == null) {
+          throw util.errorAndThrow(
+              "No facet with the name "
+                  + param.getSimpleName()
+                  + " exists in the vajram "
+                  + vajramInfo.vajramId(),
+              param);
+        }
+        if (!facet.isUsedToGroupBatches()) {
+          throw util.errorAndThrow(
+              "Facet '"
+                  + facet.name()
+                  + "' can be accessed individually in the output logic only if it has been annotated as @"
+                  + BatchesGroupedBy.class.getSimpleName(),
+              param);
+        }
         generateFacetLocalVariable(outputLogic, param, codeBuilder, "_common");
       }
     }
@@ -689,7 +723,7 @@ public class VajramCodeGenerator {
         $map:T<$facetValues:T, $comFuture:T<$facetJavaType:T>> _returnValue = new $linkHashMap:T<>();
 
         _output.forEach((_batch, _result) -> _returnValue.put(
-              $optional:T.ofNullable(_batches.get(_batch)).orElseThrow(),
+              $optional:T.ofNullable(_batchItems.get(_batch)).orElseThrow(),
               _result.<$facetJavaType:T>thenApply($function:T.identity())));
         return $imMap:T.copyOf(_returnValue);
     """,
@@ -1697,9 +1731,9 @@ public class VajramCodeGenerator {
     ClassName commonImmutFacetsType = getCommonFacetsClassName();
 
     List<FacetGenModel> batchedFacets =
-        vajramInfo.facetStream().filter(t -> t.isBatched()).toList();
+        vajramInfo.facetStream().filter(FacetGenModel::isBatched).toList();
     List<FacetGenModel> commonFacets =
-        vajramInfo.facetStream().filter(t -> !t.isBatched()).toList();
+        vajramInfo.facetStream().filter(FacetGenModel::isUsedToGroupBatches).toList();
 
     TypeSpec.Builder batchImmutFacetsClass =
         util.classBuilder(batchImmutFacetsType.simpleName())
@@ -1836,7 +1870,7 @@ public class VajramCodeGenerator {
       ClassName commonFacetsType,
       CodeGenParams codeGenParams) {
     MethodSpec.Builder batchElementMethod =
-        overriding(util.getMethodToOverride(BatchEnabledFacetValues.class, "_batchElement", 0))
+        overriding(util.getMethodToOverride(BatchEnabledFacetValues.class, "_batchItem", 0))
             .returns(batchFacetsType);
     MethodSpec.Builder commonMethod =
         overriding(util.getMethodToOverride(BatchEnabledFacetValues.class, "_common", 0))
@@ -1971,7 +2005,7 @@ public class VajramCodeGenerator {
                 }
               )
             """,
-            facet.facetField().getAnnotation(Batch.class) != null,
+            facet.facetField().getAnnotation(Batched.class) != null,
             FacetSpec.class,
             "parseFacetTags",
             vajramInfo.vajramClass(),

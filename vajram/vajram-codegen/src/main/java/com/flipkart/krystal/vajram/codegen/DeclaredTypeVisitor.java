@@ -4,11 +4,9 @@ import static com.flipkart.krystal.vajram.codegen.Utils.getDisallowedMessage;
 
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
-import com.flipkart.krystal.vajram.facets.Mandatory;
 import java.util.List;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
@@ -21,7 +19,6 @@ import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.UnionType;
 import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.AbstractTypeVisitor14;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 class DeclaredTypeVisitor<T> extends AbstractTypeVisitor14<DataType<T>, Void> {
 
@@ -93,10 +90,6 @@ class DeclaredTypeVisitor<T> extends AbstractTypeVisitor14<DataType<T>, Void> {
   @Override
   public DataType<T> visitUnion(UnionType t, Void unused) {
     throw uoe();
-  }
-
-  static @Nullable Mandatory getMandatoryTag(VariableElement facetField) {
-    return facetField.getAnnotation(Mandatory.class);
   }
 
   private static UnsupportedOperationException uoe() {

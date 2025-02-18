@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram.codegen;
 import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants._FACETS_CLASS;
-import static com.flipkart.krystal.vajram.codegen.DeclaredTypeVisitor.getMandatoryTag;
 import static com.flipkart.krystal.vajram.utils.Constants.IMMUT_FACETS_CLASS_SUFFIX;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
@@ -27,7 +26,6 @@ import com.flipkart.krystal.vajram.Generated;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramID;
-import com.flipkart.krystal.vajram.batching.Batch;
 import com.flipkart.krystal.vajram.codegen.FacetJavaType.Actual;
 import com.flipkart.krystal.vajram.codegen.FacetJavaType.Boxed;
 import com.flipkart.krystal.vajram.codegen.FacetJavaType.FanoutResponses;
@@ -290,7 +288,6 @@ public class Utils {
                             takenFacetIds,
                             nextFacetId))
                 .collect(toImmutableList()),
-            ImmutableBiMap.copyOf(givenIdsByName),
             vajramClass);
     note("VajramInfo: %s".formatted(vajramInfo));
     return vajramInfo;
@@ -310,11 +307,9 @@ public class Utils {
             () -> getNextAvailableFacetId(takenFacetIds, nextFacetId)));
     inputBuilder.name(facetName);
     inputBuilder.documentation(elementUtils.getDocComment(inputField));
-    inputBuilder.mandatoryAnno(getMandatoryTag(inputField));
     DataType<Object> dataType =
         inputField.asType().accept(new DeclaredTypeVisitor<>(this, inputField), null);
     inputBuilder.dataType(dataType);
-    inputBuilder.isBatched(inputField.getAnnotation(Batch.class) != null);
     EnumSet<FacetType> facetTypes = EnumSet.noneOf(FacetType.class);
     if (inputField.getAnnotation(Input.class) != null) {
       facetTypes.add(FacetType.INPUT);
@@ -350,7 +345,6 @@ public class Utils {
             givenIdsByName.get(facetName),
             () -> getNextAvailableFacetId(takenFacetIds, nextFacetId)));
     depBuilder.name(facetName);
-    depBuilder.mandatoryAnno(getMandatoryTag(depField));
     Optional<TypeMirror> vajramReqType =
         getTypeFromAnnotationMember(dependency::withVajramReq)
             .filter(
@@ -405,11 +399,7 @@ public class Utils {
             depField);
       }
       DependencyModel depModel =
-          depBuilder
-              .dataType(declaredDataType)
-              .isBatched(depField.getAnnotation(Batch.class) != null)
-              .vajramInfo(depVajramInfoLite)
-              .build();
+          depBuilder.dataType(declaredDataType).vajramInfo(depVajramInfoLite).build();
       givenIdsByName.putIfAbsent(facetName, depModel.id());
       return depModel;
     }
@@ -789,7 +779,7 @@ public class Utils {
       }
     } else {
       boolean devAccessible = codeGenParams.isDevAccessible() && codeGenParams.isLocal();
-      Mandatory mandatoryAnno = facet.mandatoryAnno();
+      Mandatory mandatoryAnno = facet.facetField().getAnnotation(Mandatory.class);
       if (mandatoryAnno != null
           && (mandatoryAnno.ifNotSet().usePlatformDefault() || devAccessible)) {
         return new Actual(this);

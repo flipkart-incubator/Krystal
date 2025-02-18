@@ -37,7 +37,6 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.L
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.Resolver;
 import com.flipkart.krystal.krystex.resolution.ResolverLogic;
-import com.flipkart.krystal.vajram.BatchableVajram;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramID;
@@ -131,9 +130,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       throw new IllegalArgumentException("Unable to find vajram with id %s".formatted(vajramID));
     }
     Vajram<?> vajram = vajramDefinition.vajram();
-    if (!(vajram instanceof BatchableVajram<?> batchableVajram)) {
+    if (!(vajram instanceof IOVajram<?>)) {
       throw new VajramDefinitionException(
-          "Cannot register input Batchers for vajram %s since it is not a BatchableVajram"
+          "Cannot register input Batchers for vajram %s since it is not an IOVajram"
               .formatted(vajramID.vajramId()));
     }
     List<OutputLogicDecoratorConfig> outputLogicDecoratorConfigList = new ArrayList<>();
@@ -142,7 +141,6 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
           logicExecutionContext -> {
             BatcherContext batcherContext =
                 new BatcherContext(
-                    batchableVajram,
                     new LogicDecoratorContext(
                         inputBatcherConfig.instanceIdGenerator().apply(logicExecutionContext),
                         logicExecutionContext));
@@ -157,7 +155,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
               decoratorContext ->
                   inputBatcherConfig
                       .decoratorFactory()
-                      .apply(new BatcherContext(batchableVajram, decoratorContext))));
+                      .apply(new BatcherContext(decoratorContext))));
     }
     outputLogicDefinition.registerRequestScopedDecorator(outputLogicDecoratorConfigList);
   }

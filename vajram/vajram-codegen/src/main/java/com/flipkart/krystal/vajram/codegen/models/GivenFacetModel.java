@@ -2,8 +2,6 @@ package com.flipkart.krystal.vajram.codegen.models;
 
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
-import com.flipkart.krystal.vajram.facets.InputSource;
-import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.google.common.collect.ImmutableSet;
 import java.util.EnumSet;
 import javax.lang.model.element.VariableElement;
@@ -22,9 +20,7 @@ public record GivenFacetModel(
     @NonNull String name,
     @NonNull VajramInfoLite vajramInfo,
     @NonNull DataType<Object> dataType,
-    @Nullable Mandatory mandatoryAnno,
     @Nullable String documentation,
-    boolean isBatched,
     ImmutableSet<FacetType> facetTypes,
     @NonNull VariableElement facetField)
     implements FacetGenModel {
@@ -37,18 +33,6 @@ public record GivenFacetModel(
       throw new IllegalArgumentException(
           "Allowed Facet types: " + ALLOWED_FACET_TYPES + ". Found: " + facetTypes);
     }
-  }
-
-  public ImmutableSet<InputSource> sources() {
-    ImmutableSet.Builder<InputSource> sources = ImmutableSet.builderWithExpectedSize(2);
-    for (FacetType facetType : facetTypes) {
-      switch (facetType) {
-        case INPUT -> sources.add(InputSource.CLIENT);
-        case INJECTION -> sources.add(InputSource.SESSION);
-        default -> throw new IllegalStateException("Unexpected value: " + facetType);
-      }
-    }
-    return sources.build();
   }
 
   @Override

@@ -5,7 +5,7 @@ import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 
 @SuppressWarnings("ClassReferencesSubclass") // By Design
 public interface BatchEnabledFacetValues extends FacetValues {
-  ImmutableFacetValuesContainer _batchElement();
+  ImmutableFacetValuesContainer _batchItem();
 
   ImmutableFacetValuesContainer _common();
 

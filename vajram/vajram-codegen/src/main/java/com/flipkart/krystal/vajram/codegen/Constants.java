@@ -32,7 +32,7 @@ public final class Constants {
   public static final String FACETS_CLASS_SUFFIX = "_Fac";
   public static final String FACETS_LIST = "_facetValuesList";
   public static final String BATCH_FACETS = "BatchFacets";
-  public static final String BATCH_FACETS_SUFFIX = "_BatchElem";
+  public static final String BATCH_FACETS_SUFFIX = "_BatchItem";
   public static final String COMMON_INPUTS = "CommonFacets";
   public static final String COMMON_FACETS_SUFFIX = "_CommonFacets";
   public static final String COMMON_IMMUT_FACETS_CLASS_SUFFIX =
@@ -43,7 +43,7 @@ public final class Constants {
   public static final String RESOLVER_RESULTS = "_resolverResults";
   public static final String RESOLVER_RESULT = "_resolverResult";
   public static final String INCOMING_FACETS = "_incomingFacets";
-  public static final String BATCHES_VAR = "_batches";
+  public static final String BATCHES_VAR = "_batchItems";
   public static final String DEP_REQ_PARAM = "dependecyRequest";
   public static final String _FACETS_CLASS = "_Facets";
   public static final String FACETS_FIELDS_VAR = "facetsFields";
