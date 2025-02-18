@@ -72,7 +72,7 @@ abstract sealed class FacetJavaType {
 
     @Override
     CodeBlock fieldInitializer(FacetGenModel facet) {
-      Mandatory mandatory = facet.mandatoryAnno();
+      Mandatory mandatory = facet.facetField().getAnnotation(Mandatory.class);
       if (mandatory != null && mandatory.ifNotSet().usePlatformDefault()) {
         if (facet.dataType().hasPlatformDefaultValue(util.processingEnv())) {
           return CodeBlock.of(
@@ -107,7 +107,7 @@ abstract sealed class FacetJavaType {
     @Override
     CodeBlock fieldGetterCode(FacetGenModel facet, CodeGenParams codeGenParams) {
       if (codeGenParams.isSubsetBatch()) {
-        Mandatory mandatory = facet.mandatoryAnno();
+        Mandatory mandatory = facet.facetField().getAnnotation(Mandatory.class);
         if (mandatory != null && !mandatory.ifNotSet().usePlatformDefault()) {
           return CodeBlock.of(
               """

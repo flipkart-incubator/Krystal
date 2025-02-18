@@ -21,7 +21,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @param <T> The type of the output of this vajram.
  */
-public abstract non-sealed class ComputeVajram<T> extends AbstractVajram<T> {
+public abstract non-sealed class ComputeVajram<T> implements Vajram<T> {
 
   @Override
   public final ImmutableMap<FacetValues, CompletableFuture<@Nullable T>> execute(

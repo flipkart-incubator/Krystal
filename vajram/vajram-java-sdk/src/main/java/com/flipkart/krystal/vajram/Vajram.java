@@ -52,7 +52,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @param <T> The return type of the vajram
  */
-public sealed interface Vajram<T> permits AbstractVajram, BatchableVajram {
+public sealed interface Vajram<T> permits ComputeVajram, IOVajram {
 
   default ImmutableCollection<? extends SimpleInputResolver> getSimpleInputResolvers() {
     return ImmutableList.of();

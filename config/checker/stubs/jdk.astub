@@ -24,6 +24,11 @@ public class Arrays {
   public static <T> @NonNull T[] copyOfRange(T[] original, int from, int to);
 }
 
+public class Objects {
+  @NonNull
+  public static <T> T requireNonNull(T obj);
+}
+
 package javax.annotation.processing;
 
 class Messager {

@@ -2,7 +2,6 @@ package com.flipkart.krystal.vajram.codegen.models;
 
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
-import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.google.common.collect.ImmutableSet;
 import java.util.EnumSet;
 import javax.lang.model.element.VariableElement;
@@ -18,10 +17,8 @@ public record DependencyModel(
     @NonNull VajramInfoLite depVajramInfoLite,
     @NonNull DataType<?> dataType,
     @NonNull String depReqClassQualifiedName,
-    @Nullable Mandatory mandatoryAnno,
     boolean canFanout,
     @Nullable String documentation,
-    boolean isBatched,
     @NonNull VariableElement facetField)
     implements FacetGenModel {
 

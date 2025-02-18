@@ -13,7 +13,6 @@ import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.LogicDecoratorContext;
-import com.flipkart.krystal.vajram.BatchableVajram;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramID;
@@ -377,8 +376,7 @@ public record InputBatcherConfig(
     }
   }
 
-  public record BatcherContext(
-      BatchableVajram<?> vajram, LogicDecoratorContext logicDecoratorContext) {}
+  public record BatcherContext(LogicDecoratorContext logicDecoratorContext) {}
 
   @FunctionalInterface
   public interface BatchSizeSupplier {

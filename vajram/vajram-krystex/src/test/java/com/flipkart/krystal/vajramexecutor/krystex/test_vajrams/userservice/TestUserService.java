@@ -7,11 +7,11 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.batching.Batch;
+import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.LongAdder;
 @VajramDef
 public abstract class TestUserService extends IOVajram<TestUserInfo> {
   static class _Facets {
-    @Mandatory @Batch @Input String userId;
+    @Mandatory @Batched @Input String userId;
   }
 
   private static final ScheduledExecutorService LATENCY_INDUCER =
@@ -34,15 +34,15 @@ public abstract class TestUserService extends IOVajram<TestUserInfo> {
   public static final Set<TestUserService_Req> REQUESTS = new LinkedHashSet<>();
 
   @Output
-  static ImmutableMap<TestUserService_BatchElem, CompletableFuture<TestUserInfo>> callUserService(
-      ImmutableList<TestUserService_BatchElem> _batches) {
+  static ImmutableMap<TestUserService_BatchItem, CompletableFuture<TestUserInfo>> callUserService(
+      ImmutableCollection<TestUserService_BatchItem> _batchItems) {
     CALL_COUNTER.increment();
-    _batches.stream()
+    _batchItems.stream()
         .map(im -> TestUserService_ImmutReqPojo._builder().userId(im.userId())._build())
         .forEach(REQUESTS::add);
 
     // Make a call to user service and get user info
-    return _batches.stream()
+    return _batchItems.stream()
         .collect(
             toImmutableMap(
                 inputBatch -> inputBatch,
