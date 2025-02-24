@@ -10,7 +10,7 @@ import com.flipkart.krystal.vajram.VajramID;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-public final class OptionalOne2OneDepSpec<T, CV extends Request, DV extends Request<T>>
+public non-sealed class OptionalOne2OneDepSpec<T, CV extends Request, DV extends Request<T>>
     extends One2OneDepSpec<T, CV, DV> implements OptionalFacetSpec<T, CV> {
 
   public OptionalOne2OneDepSpec(

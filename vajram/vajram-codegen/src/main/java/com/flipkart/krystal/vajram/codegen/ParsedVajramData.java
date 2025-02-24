@@ -1,15 +1,17 @@
-package com.flipkart.krystal.vajram.codegen.models;
+package com.flipkart.krystal.vajram.codegen;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.lang.Boolean.TRUE;
 
-import com.flipkart.krystal.vajram.codegen.Utils;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,11 +30,11 @@ public record ParsedVajramData(
     VajramInfo vajramInfo) {
 
   public static Optional<ParsedVajramData> fromVajram(VajramInfo vajramInfo, Utils util) {
-    String packageName = vajramInfo.packageName();
+    String packageName = vajramInfo.lite().packageName();
     for (ExecutableElement method : getAllMethods(vajramInfo.vajramClass())) {
       String errorMessage =
           "Vajram class %s has non-static method %s"
-              .formatted(vajramInfo.vajramId(), method.getSimpleName());
+              .formatted(vajramInfo.lite().vajramId(), method.getSimpleName());
       if ((isOutputLogic(method) || isResolver(method)) && !isStatic(method)) {
         util.error(errorMessage, method);
         throw new VajramValidationException(errorMessage);
@@ -47,21 +49,34 @@ public record ParsedVajramData(
 
   public static void validateNoDuplicateResolvers(
       List<ExecutableElement> methods, VajramInfo vajramInfo, Utils util) {
-    // add comments
-    Map<Integer, Map<Integer, Boolean>> lookUpMap = new HashMap<>();
+    Map<String, Map<String, Boolean>> lookUpMap = new HashMap<>();
     for (ExecutableElement method : methods) {
+      Resolve resolve = method.getAnnotation(Resolve.class);
+      String dep =
+          util.extractFacetName(
+              vajramInfo.lite().vajramId().vajramId(), checkNotNull(resolve).dep(), method);
       @SuppressWarnings("method.invocation")
-      int depId = checkNotNull(method.getAnnotation(Resolve.class)).dep();
-      int[] depInputs = method.getAnnotation(Resolve.class).depInputs();
-      for (int depinput : depInputs) {
-        if (lookUpMap.getOrDefault(depId, Map.of()).getOrDefault(depinput, false)) {
+      String depVajramId =
+          vajramInfo.dependencies().stream()
+              .filter(d -> d.name().equals(dep))
+              .findFirst()
+              .orElseThrow()
+              .depVajramInfo()
+              .vajramId()
+              .vajramId();
+      List<String> depInputNames =
+          Arrays.stream(resolve.depInputs())
+              .map(di -> util.extractFacetName(depVajramId, di, method))
+              .toList();
+      for (String depInputName : depInputNames) {
+        if (TRUE.equals(
+            lookUpMap.computeIfAbsent(dep, k -> new LinkedHashMap<>()).put(depInputName, true))) {
           String errorMessage =
               "Two Resolver resolving same input (%s) for dependency name (%s)"
-                  .formatted(depinput, depId);
+                  .formatted(depInputName, dep);
           util.error(errorMessage, method);
           throw new VajramValidationException(errorMessage);
         }
-        lookUpMap.computeIfAbsent(depId, k -> new HashMap<>()).put(depinput, true);
       }
     }
   }

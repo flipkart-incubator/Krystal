@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello;
 
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.skipFanout;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends_Fac.hellos_i;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends_Fac.hellos_n;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.FanoutDepResponses;
@@ -36,8 +36,8 @@ public abstract class MultiHelloFriends extends ComputeVajram<String> {
   private static final List<Integer> NUMBER_OF_FRIENDS = List.of(1, 2);
 
   @Resolve(
-      dep = hellos_i,
-      depInputs = {HelloFriends_Req.userId_i, HelloFriends_Req.numberOfFriends_i})
+      dep = hellos_n,
+      depInputs = {HelloFriends_Req.userId_n, HelloFriends_Req.numberOfFriends_n})
   static FanoutCommand<Builder> sayHello(List<String> userIds, Optional<Boolean> skip) {
     if (skip.orElse(false)) {
       return skipFanout("skip requested");

@@ -5,13 +5,14 @@ import static com.flipkart.krystal.vajram.VajramID.vajramID;
 import com.flipkart.krystal.data.FacetValuesContainer;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.tags.ElementTags;
-import com.flipkart.krystal.vajram.Annos;
-import com.flipkart.krystal.vajram.ComputeDelegationType;
+import com.flipkart.krystal.vajram.ComputeDelegationMode;
 import com.flipkart.krystal.vajram.ComputeVajram;
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.vajram.annos.OutputLogicDelegationMode.OutputLogicDelegationModeImpl;
+import com.flipkart.krystal.vajram.annos.VajramIdentifier.VajramIdentifierImpl;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
@@ -21,9 +22,12 @@ import com.google.common.collect.ImmutableSet;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -47,7 +51,7 @@ final class Vajrams {
   static ElementTags parseVajramTags(VajramID inferredVajramId, Vajram<?> vajram) {
     return ElementTags.of(
         Arrays.stream(getVajramDefClass(vajram.getClass()).getAnnotations())
-            .map(a -> enrich(a, inferredVajramId, vajram))
+            .flatMap(a -> enrich(a, inferredVajramId, vajram))
             .toList());
   }
 
@@ -89,36 +93,21 @@ final class Vajrams {
             .toList());
   }
 
-  private static Annotation enrich(
+  private static Stream<Annotation> enrich(
       Annotation annotation, VajramID inferredVajramId, Vajram<?> vajram) {
-    if (annotation instanceof VajramDef vajramDef) {
-      if (!vajramDef.id().isEmpty()) {
-        throw new IllegalArgumentException(
-            """
-                Custom vajramIds are not supported. \
-                Please remove the vajramId field from the VajramDef annotation on class %s. \
-                It will be auto-inferred from the class name."""
-                .formatted(inferredVajramId));
-      }
-      if (!vajramDef.computeDelegationType().equals(ComputeDelegationType.DEFAULT)) {
-        throw new IllegalArgumentException(
-            """
-                Please remove the 'computeDelegationType' field from the VajramDef annotation on class %s. \
-                It will be auto-inferred from the class hierarchy."""
-                .formatted(vajram.getClass()));
-      }
-      annotation =
-          Annos.vajramDef(vajramDef, inferredVajramId.vajramId(), getComputeDelegationType(vajram));
+    List<Annotation> inferredAnnos = new ArrayList<>();
+    if (annotation instanceof VajramDef) {
+      inferredAnnos.add(new VajramIdentifierImpl(inferredVajramId.vajramId()));
+      inferredAnnos.add(new OutputLogicDelegationModeImpl(getComputeDelegationType(vajram)));
     }
-
-    return annotation;
+    return Stream.concat(Stream.of(annotation), inferredAnnos.stream());
   }
 
-  private static ComputeDelegationType getComputeDelegationType(Vajram<?> vajram) {
+  private static ComputeDelegationMode getComputeDelegationType(Vajram<?> vajram) {
     if (vajram instanceof ComputeVajram<?>) {
-      return ComputeDelegationType.NO_DELEGATION;
+      return ComputeDelegationMode.NO_DELEGATION;
     } else if (vajram instanceof IOVajram<?>) {
-      return ComputeDelegationType.SYNC_DELEGATION;
+      return ComputeDelegationMode.SYNC_DELEGATION;
     } else {
       throw new IllegalStateException(
           "Unable infer compute delegation type of vajram %s".formatted(vajram.getClass()));

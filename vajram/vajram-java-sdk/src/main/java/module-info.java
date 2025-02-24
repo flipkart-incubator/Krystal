@@ -7,6 +7,7 @@ module flipkart.krystal.vajram {
   exports com.flipkart.krystal.vajram.exception;
   exports com.flipkart.krystal.vajram.utils;
   exports com.flipkart.krystal.vajram.facets.specs;
+  exports com.flipkart.krystal.vajram.annos;
 
   requires com.google.common;
   requires static lombok;

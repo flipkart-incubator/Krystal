@@ -4,7 +4,7 @@ import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
-import static com.flipkart.krystal.vajram.ComputeDelegationType.SYNC_DELEGATION;
+import static com.flipkart.krystal.vajram.ComputeDelegationMode.SYNC_DELEGATION;
 import static com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig.autoRegisterSharedBatchers;
 import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,7 +37,8 @@ import com.flipkart.krystal.krystex.logicdecorators.resilience4j.Resilience4JBul
 import com.flipkart.krystal.krystex.logicdecorators.resilience4j.Resilience4JCircuitBreaker;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.annos.OutputLogicDelegationMode;
+import com.flipkart.krystal.vajram.annos.VajramIdentifier;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
@@ -833,8 +834,8 @@ class KrystexVajramExecutorTest {
               .kryonDefinitionRegistry()
               .get(context.kryonId())
               .tags()
-              .getAnnotationByType(VajramDef.class)
-              .map(v -> v.computeDelegationType() == SYNC_DELEGATION)
+              .getAnnotationByType(OutputLogicDelegationMode.class)
+              .map(v -> v.value() == SYNC_DELEGATION)
               .orElse(false);
         };
     Function<LogicExecutionContext, String> instanceIdCreator =
@@ -843,8 +844,8 @@ class KrystexVajramExecutorTest {
               .kryonDefinitionRegistry()
               .get(context.kryonId())
               .tags()
-              .getAnnotationByType(VajramDef.class)
-              .map(VajramDef::id)
+              .getAnnotationByType(VajramIdentifier.class)
+              .map(VajramIdentifier::value)
               .orElseThrow(() -> new IllegalStateException("Missing VajramDef annotation"));
         };
     return builder

@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram;
 
 import java.util.concurrent.CompletableFuture;
 
-public enum ComputeDelegationType {
+public enum ComputeDelegationMode {
 
   /** Auto-Infer from code */
   DEFAULT,

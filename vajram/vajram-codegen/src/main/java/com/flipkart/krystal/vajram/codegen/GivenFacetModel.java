@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.codegen.models;
+package com.flipkart.krystal.vajram.codegen;
 
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;

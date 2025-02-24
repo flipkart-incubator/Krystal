@@ -71,7 +71,7 @@ class GreetingTest {
   private VajramKryonGraphBuilder graph;
   private ObjectMapper objectMapper;
   private static final String USER_ID = "user@123";
-  private static final String USER_NAME = "Ranchhoddas Shyamakdas Chanchhad";
+  private static final String USER_NAME = "Ranchoddas Shamaldas Chanchad";
   private static final String REQUEST_ID = "greetingRequest1";
   private static final String PACKAGE_PATH = "com.flipkart.krystal.vajram.samples.greeting";
 

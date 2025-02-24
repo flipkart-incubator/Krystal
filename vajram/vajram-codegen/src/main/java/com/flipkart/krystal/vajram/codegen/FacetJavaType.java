@@ -8,8 +8,6 @@ import static com.flipkart.krystal.vajram.codegen.Utils.getFacetsInterfaceName;
 
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.One2OneDepResponse;
-import com.flipkart.krystal.vajram.codegen.models.DependencyModel;
-import com.flipkart.krystal.vajram.codegen.models.FacetGenModel;
 import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
 import com.flipkart.krystal.vajram.facets.FacetValidation;
 import com.flipkart.krystal.vajram.facets.Mandatory;

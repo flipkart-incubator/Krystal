@@ -2,9 +2,8 @@ package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHe
 
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.skipFanout;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello_Fac.friendIds_i;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello_Fac.hellos_i;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello_Fac.skip_i;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello_Fac.friendIds_n;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello_Fac.hellos_n;
 import static java.lang.System.lineSeparator;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
@@ -16,7 +15,6 @@ import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService_Req;
@@ -42,14 +40,14 @@ public abstract class MutualFriendsHello extends ComputeVajram<String> {
     String hellos;
   }
 
-  @Resolve(dep = friendIds_i, depInputs = FriendsService_Req.userId_i)
+  @Resolve(dep = friendIds_n, depInputs = FriendsService_Req.userId_n)
   public static String userIdForFriendService(String userId) {
     return userId;
   }
 
-  @Resolve(dep = hellos_i, depInputs = HelloFriendsV2_Req.userId_i)
+  @Resolve(dep = hellos_n, depInputs = HelloFriendsV2_Req.userId_n)
   public static FanoutCommand<String> userIDForHelloService(
-      @Using(friendIds_i) Set<String> friendIds, @Using(skip_i) Optional<Boolean> skip) {
+      Set<String> friendIds, Optional<Boolean> skip) {
     if (skip.orElse(false)) {
       return skipFanout("skip requested");
     }

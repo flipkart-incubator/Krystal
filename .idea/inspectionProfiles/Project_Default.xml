@@ -1610,6 +1610,7 @@
           <option value="methodref.receiver" />
           <option value="optional.field" />
           <option value="optional.parameter" />
+          <option value="ClassWithTooManyMethods" />
         </list>
       </option>
     </inspection_tool>
@@ -1854,6 +1855,7 @@
       </option>
       <option name="ignoreClassesWithOnlyMain" value="false" />
     </inspection_tool>
+    <inspection_tool class="UvPackageVersionsInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="VarCouldBeVal" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="VarargParameter" enabled="true" level="INFORMATION" enabled_by_default="true" />
     <inspection_tool class="VariableNotUsedInsideIf" enabled="false" level="WARNING" enabled_by_default="false" />

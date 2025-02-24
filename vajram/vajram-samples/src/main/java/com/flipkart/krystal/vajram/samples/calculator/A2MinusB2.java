@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram.samples.calculator;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
-import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.*;
 import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.a_s;
 import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.b_s;
 import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.diff_s;

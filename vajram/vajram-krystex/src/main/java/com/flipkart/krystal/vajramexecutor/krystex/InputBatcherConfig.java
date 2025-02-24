@@ -16,6 +16,7 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.L
 import com.flipkart.krystal.vajram.IOVajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.vajram.annos.VajramIdentifier;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
@@ -141,15 +142,15 @@ public record InputBatcherConfig(
       return new StringBuilder(dependantChainStart.toString());
     } else if (dependantChain instanceof DefaultDependantChain defaultDependantChain) {
       if (defaultDependantChain.dependantChain() instanceof DependantChainStart) {
-        Optional<VajramDef> vajramDef =
+        Optional<VajramIdentifier> vajramIdAnno =
             kryonDefinitionRegistry
                 .get(defaultDependantChain.kryonId())
                 .tags()
-                .getAnnotationByType(VajramDef.class);
-        if (vajramDef.isPresent()) {
+                .getAnnotationByType(VajramIdentifier.class);
+        if (vajramIdAnno.isPresent()) {
           return generateInstanceId(defaultDependantChain.dependantChain(), kryonDefinitionRegistry)
               .append('>')
-              .append(vajramDef.get().id())
+              .append(vajramIdAnno.get().value())
               .append(':')
               .append(defaultDependantChain.dependency());
         } else {

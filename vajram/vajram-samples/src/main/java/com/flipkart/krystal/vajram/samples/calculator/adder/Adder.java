@@ -20,17 +20,28 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
 
+/**
+ * Adds two numbers - {@code numberOne} and {@code numberTwo} and returns the result. While {@code
+ * numberOne} is a mandatory input, {@code numberTwo} is optional and defaults to zero if not set.
+ */
 @VajramDef
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 public abstract class Adder extends IOVajram<Integer> {
   static class _Facets {
+
+    /** The first number to add */
     @Mandatory @Batched @Input int numberOne;
 
+    /** The second number to add. Optional - defaults to zero */
     @Mandatory(ifNotSet = DEFAULT_TO_ZERO)
     @Batched
     @Input
     int numberTwo;
 
+    /**
+     * Flag to indicate if the adder should fail. If set to true, the adder will throw a {@link
+     * RuntimeException}
+     */
     @BatchesGroupedBy
     @Named(FAIL_ADDER_FLAG)
     @Inject

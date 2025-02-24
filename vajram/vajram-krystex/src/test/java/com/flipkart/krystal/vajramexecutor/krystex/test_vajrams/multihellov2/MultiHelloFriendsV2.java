@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2;
 
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2_Fac.hellos_i;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2_Fac.hellos_n;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.FanoutDepResponses;
@@ -32,7 +32,7 @@ public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
     String hellos;
   }
 
-  @Resolve(dep = hellos_i, depInputs = HelloFriendsV2_Req.userId_i)
+  @Resolve(dep = hellos_n, depInputs = HelloFriendsV2_Req.userId_n)
   static FanoutCommand<String> userIdsForHellos(Set<String> userIds, Optional<Boolean> skip) {
     if (skip.orElse(false)) {
       throw new SkippedExecutionException("skip requested");

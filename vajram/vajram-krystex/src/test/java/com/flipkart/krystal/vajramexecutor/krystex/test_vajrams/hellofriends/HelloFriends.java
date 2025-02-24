@@ -4,7 +4,7 @@ import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
-import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Fac.friendInfos_i;
+import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Fac.friendInfos_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Fac.userId_s;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Fac.userInfo_s;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -56,7 +56,7 @@ public abstract class HelloFriends extends ComputeVajram<String> {
                 .asResolver(s -> s.valueOpt().map(String::trim).orElse(null))));
   }
 
-  @Resolve(dep = friendInfos_i, depInputs = TestUserService_Req.userId_i)
+  @Resolve(dep = friendInfos_n, depInputs = TestUserService_Req.userId_n)
   static FanoutCommand<String> userIdsForFriendInfos(
       String userId, Optional<Integer> numberOfFriends) {
     if (numberOfFriends.isPresent()) {

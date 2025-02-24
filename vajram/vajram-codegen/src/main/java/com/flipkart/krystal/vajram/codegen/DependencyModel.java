@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.codegen.models;
+package com.flipkart.krystal.vajram.codegen;
 
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
@@ -14,7 +14,7 @@ public record DependencyModel(
     int id,
     @NonNull String name,
     @NonNull VajramInfoLite vajramInfo,
-    @NonNull VajramInfoLite depVajramInfoLite,
+    @NonNull VajramInfoLite depVajramInfo,
     @NonNull DataType<?> dataType,
     @NonNull String depReqClassQualifiedName,
     boolean canFanout,

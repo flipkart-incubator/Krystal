@@ -1,14 +1,11 @@
 package com.flipkart.krystal.vajram.codegen;
 
-import static com.flipkart.krystal.vajram.codegen.CodegenPhase.IMPLS;
+import static com.flipkart.krystal.vajram.codegen.CodegenPhase.MODELS;
 import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY;
-import static com.flipkart.krystal.vajram.codegen.Utils.getVajramImplClassName;
 import static java.lang.System.lineSeparator;
 import static java.util.stream.Collectors.joining;
 
 import com.google.auto.service.AutoService;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -22,26 +19,26 @@ import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 
-@SupportedAnnotationTypes("com.flipkart.krystal.vajram.VajramDef")
+@SupportedAnnotationTypes("com.flipkart.krystal.vajram.VajramTrait")
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
 @SupportedOptions(COGENGEN_PHASE_KEY)
-public class VajramImplGenProcessor extends AbstractProcessor {
+public class TraitAnnotationProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     Utils util = new Utils(processingEnv, this.getClass());
     String phaseString = processingEnv.getOptions().get(COGENGEN_PHASE_KEY);
     try {
-      if (phaseString == null || !IMPLS.equals(CodegenPhase.valueOf(phaseString))) {
+      if (phaseString == null || !MODELS.equals(CodegenPhase.valueOf(phaseString))) {
         util.note(
-            "Skipping VajramImplGenProcessor since codegen phase is %s"
+            "Skipping VajramTraitAnnotationProcessor since codegen phase is %s"
                 .formatted(String.valueOf(phaseString)));
         return false;
       }
     } catch (IllegalArgumentException e) {
       util.error(
-          ("VajramImplGenProcessor could not parse phase string '%s'. "
+          ("VajramTraitAnnotationProcessor could not parse phase string '%s'. "
                   + "Exactly one of %s must be passed as value to java compiler "
                   + "via the annotation processor argument '-A%s='")
               .formatted(
@@ -50,32 +47,20 @@ public class VajramImplGenProcessor extends AbstractProcessor {
                   COGENGEN_PHASE_KEY),
           null);
     }
-    List<TypeElement> vajramDefinitions = util.getVajramClasses(roundEnv);
+    List<TypeElement> vajramTraits = util.getVajramTraitClasses(roundEnv);
     util.note(
-        "Vajram Defs received by VajramImplGenProcessor: %s"
+        "Vajram Traits received by VajramTraitAnnotationProcessor: %s"
             .formatted(
-                vajramDefinitions.stream()
+                vajramTraits.stream()
                     .map(Objects::toString)
                     .collect(
                         joining(lineSeparator(), '[' + lineSeparator(), lineSeparator() + ']'))));
-    for (TypeElement vajramClass : vajramDefinitions) {
+    for (TypeElement vajramClass : vajramTraits) {
       VajramInfo vajramInfo = util.computeVajramInfo(vajramClass);
+
       VajramCodeGenerator vajramCodeGenerator = util.createCodeGenerator(vajramInfo);
 
-      String className =
-          vajramCodeGenerator.packageName()
-              + '.'
-              + getVajramImplClassName(vajramInfo.lite().vajramId().vajramId());
-      try {
-        util.generateSourceFile(className, vajramCodeGenerator.codeGenVajramImpl(), vajramClass);
-      } catch (Exception e) {
-        StringWriter exception = new StringWriter();
-        e.printStackTrace(new PrintWriter(exception));
-        util.error(
-            "Error while generating file for class %s. Exception: %s"
-                .formatted(className, exception),
-            vajramClass);
-      }
+      vajramCodeGenerator.vajramRequest();
     }
     return false;
   }
