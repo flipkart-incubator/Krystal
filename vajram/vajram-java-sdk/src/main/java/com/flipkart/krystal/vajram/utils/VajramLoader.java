@@ -2,29 +2,29 @@ package com.flipkart.krystal.vajram.utils;
 
 import static java.lang.reflect.Modifier.isFinal;
 
-import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.VajramDef;
 import java.util.List;
 import org.reflections.Reflections;
 
 public final class VajramLoader {
 
-  public static List<? extends Vajram<Object>> loadVajramsFromClassPath(String packagePrefix) {
+  public static List<? extends VajramDef<Object>> loadVajramsFromClassPath(String packagePrefix) {
     return new Reflections(packagePrefix)
-        .getSubTypesOf(Vajram.class).stream()
+        .getSubTypesOf(VajramDef.class).stream()
             .filter(c -> isFinal(c.getModifiers()))
             .map(VajramLoader::initVajram)
             .toList();
   }
 
-  public static Vajram<Object> loadVajramsFromClass(Class<? extends Vajram> clazz) {
-    if (!Vajram.class.isAssignableFrom(clazz)) {
+  public static VajramDef<Object> loadVajramsFromClass(Class<? extends VajramDef> clazz) {
+    if (!VajramDef.class.isAssignableFrom(clazz)) {
       throw new IllegalArgumentException("Provided class is not a Vajram");
     }
-    List<Class<? extends Vajram>> impls =
+    List<Class<? extends VajramDef>> impls =
         new Reflections(clazz.getPackageName())
             .getSubTypesOf(clazz).stream()
                 .filter(subclass -> isFinal(subclass.getModifiers()))
-                .<Class<? extends Vajram>>map(subType -> subType.asSubclass(Vajram.class))
+                .<Class<? extends VajramDef>>map(subType -> subType.asSubclass(VajramDef.class))
                 .toList();
     if (impls.size() > 1) {
       throw new IllegalArgumentException(
@@ -39,7 +39,7 @@ public final class VajramLoader {
   }
 
   @SuppressWarnings("unchecked")
-  private static Vajram<Object> initVajram(Class<? extends Vajram> aClass) {
+  private static VajramDef<Object> initVajram(Class<? extends VajramDef> aClass) {
     if (!isFinal(aClass.getModifiers())) {
       throw new RuntimeException("Provided Vajram impl class should be final");
     }

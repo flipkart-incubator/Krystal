@@ -4,7 +4,7 @@ The Vajram Programming Model
 ## Introduction
 
 The Vajram Programming model is a way to design and write synchronous scatter-gather-like business
-workflows. Apart from the general goals of the Krystal Project, the vajram programming model is
+workflows. Apart from the general goals of the Krystal Project, the vajramDef programming model is
 designed keeping in mind the following goals:
 
 1. Easy self-serve development: The Vajram programming model is designed to allow for multiple
@@ -15,7 +15,7 @@ designed keeping in mind the following goals:
 2. Cross-feature and Cross-application re-usability: The same piece of business logic can be reused
    for different
    requirements within an application and also across different application runtimes.
-3. Minimize the amount of code handwritten by developers: The vajram ecosystem provides extensive
+3. Minimize the amount of code handwritten by developers: The vajramDef ecosystem provides extensive
    code generation tools to generative most of the mundane spaghetti logic which a developer needs
    to write to conform the to the platform interfaces.
 4. Focus on business logic: Every line of code written by a developer should strictly only have the
@@ -28,13 +28,13 @@ designed keeping in mind the following goals:
 
 ### Vajram
 
-The basic building block of a Krystal is a Vajram. A vajram is a function-like unit of work (
+The basic building block of a Krystal is a Vajram. A vajramDef is a function-like unit of work (
 actually a set of functions) that act as a unit of
 [structured concurrency](https://vorpus.org/blog/notes-on-structured-concurrency-or-go-statement-considered-harmful/)
 that allows developers to declare their functional requirement in a way that enables the Krystal
 platform to execute the complete request in the most optimal fashion.
 
-Each vajram is responsible for one well-defined, reusable business logic (possibly
+Each vajramDef is responsible for one well-defined, reusable business logic (possibly
 encapsulating a network call to an API). Each Vajram is identified by its identifier (
 VajramID). This identifier is globally unique and can be used as-is by adding it as a dependency of
 another Vajram.
@@ -47,34 +47,34 @@ Every Vajram is defined by the following properties
       standard data types supported by the platform like string, integer, set etc. or can be a
       custom java object.
     * **Optionality**: Inputs can either be mandatory or optional (optional is the default). If a
-      null value is passed to a mandatory input of a vajram, the vajram is never executed, and an
+      null value is passed to a mandatory input of a vajramDef, the vajramDef is never executed, and an
       exception is thrown instead.
-    * **Needs Batching**: Indicates to the platform that the input needs to be batched before executing this vajram
+    * **Needs Batching**: Indicates to the platform that the input needs to be batched before executing this vajramDef
     * **Docmentation**: Describes this input
 * **Dependencies**:
-    * **Dependency Name**: Every dependency has a name unique within that vajram.
-    * **Dependency Vajram**: The vajram whose output is needed to execute this vajram.
+    * **Dependency Name**: Every dependency has a name unique within that vajramDef.
+    * **Dependency Vajram**: The vajramDef whose output is needed to execute this vajramDef.
     * **Optionality**: Dependencies can either be mandatory or optional (optional is the default).
-      If a mandatory dependency fails, then this vajram automatically fails with the same exception.
-* **Output Type**: This is the datatype of the output of a Vajram. Each vajram has a single
+      If a mandatory dependency fails, then this vajramDef automatically fails with the same exception.
+* **Output Type**: This is the datatype of the output of a Vajram. Each vajramDef has a single
   output type.
 * **Dependency Resolvers**: The responsibility of providing values for the inputs of the
-  dependencies of a vajram lies with that vajram itself. This is done by functions called dependency
+  dependencies of a vajramDef lies with that vajramDef itself. This is done by functions called dependency
   resolvers. For example, Let us say a Vajram V1 has two inputs `i1` and `i2`, and two
   dependencies `D1` and `D2`.And let us say `D1` has one input `a`, and D2 has two inputs `b`
   and `c`. Dependency resolvers in Vajram `V1` are pieces of business logic which take as input some
   subset of the inputs and dependencies of `V1` and output values which are then bound to the inputs
-  of a dependency of `V1`. This means that every dependency of a vajram which has at least one input
+  of a dependency of `V1`. This means that every dependency of a vajramDef which has at least one input
   needs a corresponding resolver defined by `V1`. The dependency `D2` of `V1` has 2 inputs, so the
   resolver defined by `V1` for `D2` outputs a tuple, with value in the tuple corresponding to each
   of the inputs of `D1`.
 
 ```
 // Pseudo-code
-vajram D1(inputs: a)
-vajram D2(inputs: b,c)
+vajramDef D1(inputs: a)
+vajramDef D2(inputs: b,c)
 
-vajram V1(inputs: i1, i2)(dependencies: D1, D2)
+vajramDef V1(inputs: i1, i2)(dependencies: D1, D2)
     resolve D1(a) using i1,i2 -> return i1 + i2;
     resolve D2(b,c) using i1, D1 -> return i1 + D1;
 ```
@@ -91,7 +91,7 @@ vajram V1(inputs: i1, i2)(dependencies: D1, D2)
 
 ```java
 import com.flipkart.userservice.UserServiceVajram;
-import com.flipkart.krystal.vajram.Input;
+import com.flipkart.krystal.vajramDef.Input;
 import jakarta.inject.Inject;
 
 /**
@@ -103,19 +103,19 @@ import jakarta.inject.Inject;
 public abstract class GreetingVajram extends ComputeVajram<String> {
 
   // Static declaration of all the facets (inputs and dependencies) of this Vajram.
-  // This includes inputs provided by clients of this vajram,
-  // dependencies of this vajram, as well as
+  // This includes inputs provided by clients of this vajramDef,
+  // dependencies of this vajramDef, as well as
   // objects like loggers and metrics collectors injected by the runtime.
   static class _Facets {
-    @Input // This is an input and needs to be provided by clients of this vajram.
+    @Input // This is an input and needs to be provided by clients of this vajramDef.
     String userId; // Name of this input is userId and this input is mandatory.
 
-    @Dependency(UserServiceVajram.ID) // This vajram has a dependency on UserServiceVajram
+    @Dependency(UserServiceVajram.ID) // This vajramDef has a dependency on UserServiceVajram
     UserInfo
         userInfo; // UserServiceVajram returns object of type UserInfo and this is a mandatory
                   // dependency
 
-    @Inject // This is an injected input (provided by the runtime instead of the client vajram)
+    @Inject // This is an injected input (provided by the runtime instead of the client vajramDef)
     Logger log; // 'log' is the name of this mandatory input
 
     @Inject // This is an injected input
@@ -163,7 +163,7 @@ public abstract class GreetingVajram extends ComputeVajram<String> {
 
 One of the core tenets of Krystal is to allow for a reactive execution environment to minimize usage
 of resources like
-threads. The vajram (and [krystex kryon](../../krystex/README.md#kryon)) abstractions are designed to
+threads. The vajramDef (and [krystex kryon](../../krystex/README.md#kryon)) abstractions are designed to
 allow for this optimization. By requiring inputs and dependencies to be declared statically, the
 Krystal framework is able to load the complete call graph as a directed acyclic graph (DAG) *
 *without** having to execute any part of the code. This has multiple advantages:
@@ -172,7 +172,7 @@ Krystal framework is able to load the complete call graph as a directed acyclic 
   through the call graph characteristics of the application. IF a new dependency is introduced,
   tooling can load the before and after states of the callgraph and summarize the changes in the
   call graph and warn of potential changes in the performance characteristics of the applicaiton.
-  For example, let's say a resolver which consumes only the inputs of a vajram is changed to consume
+  For example, let's say a resolver which consumes only the inputs of a vajramDef is changed to consume
   a depenency value. This
   in effect converts a parallel dependency to a sequential dependency - this can increase the
   latency of an application. Static declarations make catching such changes very easy.
@@ -184,7 +184,7 @@ Krystal framework is able to load the complete call graph as a directed acyclic 
 
 ### Code Generation
 
-The vajram library heavily used code generation as a mechanism to strike a balance between
+The vajramDef library heavily used code generation as a mechanism to strike a balance between
 conflicing goals:
 
 * Provide developers a type safe mechanism to accss and manipulate domain specific data. Domain
@@ -200,7 +200,7 @@ The only way to fulfill all the above goals (short of creating a new programming
 use code generation in the language of choice (java). This allows developers to code a concise,
 type-safe manner where the code focuses on just expressing the functional requirement.
 
-The code generation corresponding to vajram happens during the build phase and is divided into two
+The code generation corresponding to vajramDef happens during the build phase and is divided into two
 phases:
 
 * Model generation
@@ -208,13 +208,13 @@ phases:
 
 #### Model Generation
 
-Before the vajram code is compiled, the vajram framework (today via build plugins, in future via
+Before the vajramDef code is compiled, the vajramDef framework (today via build plugins, in future via
 annotation
 processing) reads the input and dependency definitions and generates the following models:
 
 * `public` VajramRequest class encapsulates all the inputs which have `CLIENT` as one of their
   input sources. This object is generated so that resolvers of client vajrams can create requests to
-  this vajram in a type safe unambiguous manner. If any inputs are optional, then their getters
+  this vajramDef in a type safe unambiguous manner. If any inputs are optional, then their getters
   return `java.lang.Optional`. This is the only public model class generated in this
   phase. This class also contains a method to convert this functional entity into a framework
   entity - this method is used by the framework.
@@ -233,14 +233,14 @@ processing) reads the input and dependency definitions and generates the followi
 
 #### Impl generation
 
-After the compilation of the (abstract) vajram class written by the developer, a `final` `Impl`
+After the compilation of the (abstract) vajramDef class written by the developer, a `final` `Impl`
 class is generated, which implements the abstract class. The Krystal framework calls methods in this
-class to execute the vajram. This class has all the boilerplate code which converts the framework
-objects into domain objects (without having to use reflection). All the resolvers and the vajram
+class to execute the vajramDef. This class has all the boilerplate code which converts the framework
+objects into domain objects (without having to use reflection). All the resolvers and the vajramDef
 logic method are invoked from this Impl class. Because the impl class is generated post compilation
-by reflectively analysing the vajram class, a lot developer friendly faetures are implemented in the
+by reflectively analysing the vajramDef class, a lot developer friendly faetures are implemented in the
 code generator to allow the developer to write their business logic in varying scenarious without
-having to confirm to any single spec. For example, let us say there is a vajram `V1` which has a
+having to confirm to any single spec. For example, let us say there is a vajramDef `V1` which has a
 resolver that is resolving a `string` input of a dependency :
 
 * The resolver can return a `String` indicating that value to be bound to that input
@@ -259,7 +259,7 @@ other developers.
 
 #### Definition
 
-Input batching is the process of squashing/collapsing/merging multiple independent inputs to a vajram operation so that the vajram can compute outputs to these inputs in an optimal fashion consuming minimum resources like network bandwidth, disk IO etc.
+Input batching is the process of squashing/collapsing/merging multiple independent inputs to a vajramDef operation so that the vajramDef can compute outputs to these inputs in an optimal fashion consuming minimum resources like network bandwidth, disk IO etc.
 
 #### Problems
 
@@ -378,7 +378,7 @@ public interface InputBatcher<BatchableInputs, CommonFacets> extends ConfigListe
 
 Whenever a client of Entity Service requests some data from Entity Service, the Krystal Runtime
 passes on this request
-object to the add method of the input batcher of Entity Service vajram which stores it in memory
+object to the add method of the input batcher of Entity Service vajramDef which stores it in memory
 and in most cases**
 returns an empty list. This is repeated for every other Vajram which depends on Entity Service.
 Every time a new request

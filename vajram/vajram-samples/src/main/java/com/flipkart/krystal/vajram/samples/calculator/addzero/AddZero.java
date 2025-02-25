@@ -7,8 +7,8 @@ import static com.flipkart.krystal.vajram.samples.calculator.addzero.AddZero_Fac
 import static com.flipkart.krystal.vajram.samples.calculator.addzero.AddZero_Fac.sum_s;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
-import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.ComputeVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
@@ -18,9 +18,9 @@ import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
 import com.flipkart.krystal.vajram.samples.calculator.adder.Adder_Req;
 import com.google.common.collect.ImmutableCollection;
 
-@VajramDef
+@Vajram
 @ExternalInvocation(allow = true)
-public abstract class AddZero extends ComputeVajram<Integer> {
+public abstract class AddZero extends ComputeVajramDef<Integer> {
   static class _Facets {
     @Mandatory @Input int number;
 

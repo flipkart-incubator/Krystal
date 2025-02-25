@@ -12,8 +12,8 @@ import static com.flipkart.krystal.vajram.samples.calculator.Formula_Fac.sum_s;
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.except.StackTracelessException;
-import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.ComputeVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
@@ -27,8 +27,8 @@ import com.google.common.collect.ImmutableCollection;
 
 /** a/(p+q) */
 @ExternalInvocation(allow = true)
-@VajramDef
-public abstract class Formula extends ComputeVajram<Integer> {
+@Vajram
+public abstract class Formula extends ComputeVajramDef<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
     @Input int a;

@@ -47,7 +47,7 @@ Krystex is not designed to solve for functional and development-time use cases. 
 
 Because of this design choice, Krystex is not very developer-friendly, and is not supposed to be
 used by application developers directly. It is expected that other
-frameworks (like [vajram](../vajram/README.md)) will create
+frameworks (like [vajramDef](../vajramDef/README.md)) will create
 abstractions over krystex which provide a developer-friendly environment to write application logic,
 and then translate/compile these abstractions into Krystal native entities for runtime execution.
 
@@ -71,8 +71,8 @@ has [inputs](#kryon-input), [dependencies](#kryon-dependency), [resolvers](#depe
 A kryon definition represents the definition of one unit of work in krystex and holds the following
 information
 
-* a kryonId - a unique identifier for every kryon. In a given KryonExecutor, there can only be
-  on instance of a kryon having a given kryonId.
+* a vajramID - a unique identifier for every kryon. In a given KryonExecutor, there can only be
+  on instance of a kryon having a given vajramID.
 * a reference to a stateless logic/function (the unit of work) - called
   the [main logic](#kryon-output-logic) of the kryon
 * references to other kryon definitions which are [dependencies](#kryon-dependency) of this kryon

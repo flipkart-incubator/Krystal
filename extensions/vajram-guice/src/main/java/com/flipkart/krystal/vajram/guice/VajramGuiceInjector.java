@@ -6,9 +6,9 @@ import static com.flipkart.krystal.facets.FacetType.INJECTION;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.except.StackTracelessException;
-import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
-import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.VajramInjectionProvider;
+import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import jakarta.inject.Provider;

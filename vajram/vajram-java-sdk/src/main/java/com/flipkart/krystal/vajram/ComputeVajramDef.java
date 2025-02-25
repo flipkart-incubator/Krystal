@@ -21,13 +21,13 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @param <T> The type of the output of this vajram.
  */
-public abstract non-sealed class ComputeVajram<T> implements Vajram<T> {
+public abstract non-sealed class ComputeVajramDef<T> implements VajramDef<T> {
 
   @Override
   public final ImmutableMap<FacetValues, CompletableFuture<@Nullable T>> execute(
       ImmutableList<FacetValues> facetValuesList) {
     return executeCompute(facetValuesList).entrySet().stream()
-        .collect(toImmutableMap(Entry::getKey, ComputeVajram::toFuture));
+        .collect(toImmutableMap(Entry::getKey, ComputeVajramDef::toFuture));
   }
 
   private static <T> CompletableFuture<@Nullable T> toFuture(Entry<FacetValues, Errable<T>> e) {

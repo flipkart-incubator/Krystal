@@ -5,8 +5,8 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Function.identity;
 
-import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.IOVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
 import com.flipkart.krystal.vajram.facets.Input;
@@ -24,9 +24,9 @@ import java.util.concurrent.atomic.LongAdder;
  * Adds two numbers - {@code numberOne} and {@code numberTwo} and returns the result. While {@code
  * numberOne} is a mandatory input, {@code numberTwo} is optional and defaults to zero if not set.
  */
-@VajramDef
+@Vajram
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
-public abstract class Adder extends IOVajram<Integer> {
+public abstract class Adder extends IOVajramDef<Integer> {
   static class _Facets {
 
     /** The first number to add */

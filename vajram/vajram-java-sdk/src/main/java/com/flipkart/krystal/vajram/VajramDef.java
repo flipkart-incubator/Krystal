@@ -1,23 +1,71 @@
 package com.flipkart.krystal.vajram;
 
-import com.flipkart.krystal.vajram.facets.Dependency;
-import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.facets.resolution.Resolve;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.FacetValuesBuilder;
+import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
+import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import java.util.concurrent.CompletableFuture;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * An annotation on a Vajram class which tells the vajram SDK that this vajram needs to be processed
- * by the Vajram annotation processors to generate model java classes and impl java classes by
- * looking for the relevant annotations on the fields and methods in the vajram. Examples of these
- * annotations are {@link Input}, {@link Dependency}, @{@link Resolve}, @{@link Output}, etc
+ * Vajrams represent the smallest units of work in the Krystal programming paradigm.
  *
- * <p>In a vajram class hierarchy where classA extends classB etc., the simpleClassName of the class
- * which has this annotation will be used as the vajram id .
+ * <p>A vajram models state using immutable-after-set, type safe units of data called Facets. Facets
+ * include:
+ *
+ * <ul>
+ *   <li>Inputs - these need to be provided to execute a vajram
+ *   <li>Dependencies - a vajram can depend on other vajrams. These are called dependencies.
+ *   <li>Output - the final result computed by the vajram
+ *   <li>Fields (To be introduced in the future) - intermediate state computed using other facets
+ * </ul>
+ *
+ * Vajrams model computation a set of functions called logics which consume some facets and compute
+ * other facets. Logics are of three types:
+ *
+ * <ul>
+ *   <li>Resolver logic: These consume other facets and compute the inputs of dependency vajrams
+ *   <li>Output logic: The logic which computes the final output by consuming any of the other
+ *       facets. Output logic is the only logic which is allowed to have side-effects.
+ *   <li>Computer logics: (To be introduced in the future) These consume other facets and compute
+ *       the values of fields.
+ * </ul>
+ *
+ * Vajrams can be of three types based on how soon the output logic returns the final value.
+ *
+ * <ul>
+ *   <li>Now: ({@link ComputeVajramDef}s) These are vajrams which execute the output logic in the
+ *       calling thread itself.
+ *   <li>Soon: ({@link IOVajramDef}s) These are vajrams whose output logics delegate the output
+ *       computation outside the current thread, and expect the final result to be available soon
+ *       (within a few minutes)
+ *   <li>Later:(DelayableVajrams) (To be introduced in the future) These are vajrams whose output
+ *       logics delegate computation to a longrunning process which is not expected to finish
+ *       anytime soon - i.e it might take hours, days or maybe even years for that long running
+ *       process to complete.
+ * </ul>
+ *
+ * @param <T> The return type of the vajram
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface VajramDef {}
+public sealed interface VajramDef<T> extends VajramDefRoot permits ComputeVajramDef, IOVajramDef {
+
+  default ImmutableCollection<? extends SimpleInputResolver> getSimpleInputResolvers() {
+    return ImmutableList.of();
+  }
+
+  default ImmutableCollection<? extends InputResolver> getInputResolvers() {
+    return getSimpleInputResolvers();
+  }
+
+  ImmutableMap<FacetValues, CompletableFuture<@Nullable T>> execute(
+      ImmutableList<FacetValues> inputs);
+
+  ImmutableRequest.Builder newRequestBuilder();
+
+  FacetValuesBuilder facetsFromRequest(Request<?> request);
+}

@@ -1,9 +1,9 @@
-package com.flipkart.krystal.vajram.samples.anandtest;
+package com.flipkart.krystal.vajramDef.samples.anandtest;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.vajram.batching.BatchEnabledFacetValues;
-import com.flipkart.krystal.vajram.facetValues.One2OneDepSpec;
+import com.flipkart.krystal.vajramDef.batching.BatchEnabledFacetValues;
+import com.flipkart.krystal.vajramDef.facetValues.One2OneDepSpec;
 import java.lang.Integer;
 import java.lang.Override;
 import java.lang.String;

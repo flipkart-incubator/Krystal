@@ -2,8 +2,8 @@ package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.IOVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
@@ -17,8 +17,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
 
-@VajramDef
-public abstract class FriendsService extends IOVajram<Set<String>> {
+@Vajram
+public abstract class FriendsService extends IOVajramDef<Set<String>> {
   static class _Facets {
     @Mandatory @Batched @Input String userId;
   }

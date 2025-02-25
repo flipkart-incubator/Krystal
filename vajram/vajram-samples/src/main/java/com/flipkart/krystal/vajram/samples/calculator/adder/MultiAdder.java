@@ -8,6 +8,7 @@ import java.util.List;
 
 /** Adds all the {@code numbers} and returns the result */
 @VajramTrait
+@CallG
 public class MultiAdder implements VajramTraitDef<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {

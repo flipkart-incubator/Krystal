@@ -6,7 +6,7 @@ import static com.flipkart.krystal.vajram.codegen.Utils.getRequestInterfaceName;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
-import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.core.VajramID;
 import com.google.common.collect.ImmutableBiMap;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;

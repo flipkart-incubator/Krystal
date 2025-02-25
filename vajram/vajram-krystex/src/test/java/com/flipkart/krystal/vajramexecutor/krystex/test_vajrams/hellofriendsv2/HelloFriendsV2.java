@@ -10,8 +10,8 @@ import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.ComputeVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
@@ -27,8 +27,8 @@ import java.util.Objects;
 import java.util.Set;
 
 @ExternalInvocation(allow = true)
-@VajramDef
-public abstract class HelloFriendsV2 extends ComputeVajram<String> {
+@Vajram
+public abstract class HelloFriendsV2 extends ComputeVajramDef<String> {
   static class _Facets {
     @Input String userId;
 

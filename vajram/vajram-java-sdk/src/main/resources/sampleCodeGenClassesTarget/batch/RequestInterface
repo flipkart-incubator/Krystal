@@ -1,7 +1,7 @@
-package com.flipkart.krystal.vajram.samples.anandtest;
+package com.flipkart.krystal.vajramDef.samples.anandtest;
 
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.vajram.facetValues.FacetDefinition;
+import com.flipkart.krystal.vajramDef.facetValues.FacetDefinition;
 import java.lang.Integer;
 import java.lang.String;
 import java.lang.SuppressWarnings;

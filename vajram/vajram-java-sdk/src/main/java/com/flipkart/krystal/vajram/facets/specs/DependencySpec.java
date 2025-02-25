@@ -10,7 +10,7 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.tags.ElementTags;
-import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.core.VajramID;
 import com.google.common.collect.ImmutableSet;
 import lombok.Getter;
 

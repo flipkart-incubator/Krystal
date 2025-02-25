@@ -7,8 +7,8 @@ import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdder_Fa
 import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdder_Fac.sum_n;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
-import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.ComputeVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
@@ -20,9 +20,9 @@ import java.util.List;
 import java.util.Optional;
 
 @ExternalInvocation(allow = true)
-@VajramDef
+@Vajram
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
-public abstract class SplitAdder extends ComputeVajram<Integer> {
+public abstract class SplitAdder extends ComputeVajramDef<Integer> {
   static class _Facets {
     @Mandatory @Input List<Integer> numbers;
 

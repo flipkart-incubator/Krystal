@@ -17,4 +17,5 @@ module flipkart.krystal.common {
   exports com.flipkart.krystal.tags;
   exports com.flipkart.krystal.annos;
   exports com.flipkart.krystal.facets.resolution;
+  exports com.flipkart.krystal.core;
 }

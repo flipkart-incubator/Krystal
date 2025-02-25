@@ -8,8 +8,8 @@ import static java.lang.System.lineSeparator;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.ComputeVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
@@ -26,8 +26,8 @@ import java.util.Optional;
 import java.util.Set;
 
 @ExternalInvocation(allow = true)
-@VajramDef
-public abstract class MutualFriendsHello extends ComputeVajram<String> {
+@Vajram
+public abstract class MutualFriendsHello extends ComputeVajramDef<String> {
   static class _Facets {
     @Mandatory @Input String userId;
     @Input boolean skip;

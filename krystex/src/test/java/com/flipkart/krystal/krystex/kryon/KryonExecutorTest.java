@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesMap;
 import com.flipkart.krystal.data.FacetValuesMapBuilder;
@@ -123,12 +124,12 @@ class KryonExecutorTest {
 
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
-            kryonDefinition.kryonId(),
+            kryonDefinition.vajramID(),
             SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> future2 =
         kryonExecutor.executeKryon(
-            kryonDefinition.kryonId(),
+            kryonDefinition.vajramID(),
             SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("req_2").build());
 
@@ -157,13 +158,13 @@ class KryonExecutorTest {
 
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
-            kryonDefinition.kryonId(),
+            kryonDefinition.vajramID(),
             SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     assertThatThrownBy(
             () ->
                 kryonExecutor.executeKryon(
-                    kryonDefinition.kryonId(), SimpleImmutRequest.empty(), null))
+                    kryonDefinition.vajramID(), SimpleImmutRequest.empty(), null))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("executionConfig can not be null");
     kryonExecutor.close();
@@ -190,7 +191,7 @@ class KryonExecutorTest {
 
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
-            kryonDefinition.kryonId(),
+            kryonDefinition.vajramID(),
             SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     kryonExecutor.close();
@@ -204,7 +205,7 @@ class KryonExecutorTest {
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
     String kryonName = "requestExecution_noDependencies_success_nodeName";
     ImmutableSet<SimpleFacet> inputDefs = ImmutableSet.of(input(1), input(2), input(3));
-    KryonId kryonId =
+    VajramID vajramID =
         kryonDefinitionRegistry
             .newKryonDefinition(
                 kryonName,
@@ -224,10 +225,10 @@ class KryonExecutorTest {
                 newCreateNewRequestLogic(kryonName, inputDefs),
                 newFacetsFromRequestLogic(kryonName, inputDefs),
                 ElementTags.of(externalInvocation(true)))
-            .kryonId();
+            .vajramID();
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
-            kryonId,
+            vajramID,
             new SimpleRequestBuilder<>(
                 inputDefs, ImmutableMap.of(1, withValue(1), 2, withValue(2), 3, withValue("3"))),
             KryonExecutionConfig.builder().executionId("r").build());
@@ -271,7 +272,7 @@ class KryonExecutorTest {
                                 .valueOrThrow()
                             + ":computed_value")
                 .kryonLogicId(),
-            ImmutableMap.of(dependency(1), n1.kryonId()),
+            ImmutableMap.of(dependency(1), n1.vajramID()),
             ImmutableMap.of(),
             newCreateNewRequestLogic("n2", emptySet()),
             newFacetsFromRequestLogic("n2", allFacets),
@@ -279,7 +280,7 @@ class KryonExecutorTest {
 
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
-            n2.kryonId(),
+            n2.vajramID(),
             n2.createNewRequest().logic().newRequestBuilder(),
             KryonExecutionConfig.builder().executionId("r1").build());
     kryonExecutor.close();
@@ -319,7 +320,7 @@ class KryonExecutorTest {
                                 .valueOrThrow()
                         + ":l2")
             .kryonLogicId(),
-        ImmutableMap.of(dependency(1), new KryonId(l1Dep)),
+        ImmutableMap.of(dependency(1), new VajramID(l1Dep)),
         ImmutableMap.of(),
         newCreateNewRequestLogic(l2Dep, emptySet()),
         newFacetsFromRequestLogic(l2Dep, allFacets),
@@ -342,7 +343,7 @@ class KryonExecutorTest {
                       + ":l3";
                 })
             .kryonLogicId(),
-        ImmutableMap.of(dependency(1), new KryonId(l2Dep)),
+        ImmutableMap.of(dependency(1), new VajramID(l2Dep)),
         ImmutableMap.of(),
         newCreateNewRequestLogic(l3Dep, emptySet()),
         newFacetsFromRequestLogic(l3Dep, allFacets),
@@ -364,7 +365,7 @@ class KryonExecutorTest {
                                 .valueOrThrow()
                         + ":l4")
             .kryonLogicId(),
-        ImmutableMap.of(dependency(1), new KryonId(l3Dep)),
+        ImmutableMap.of(dependency(1), new VajramID(l3Dep)),
         ImmutableMap.of(),
         newCreateNewRequestLogic(l4Dep, emptySet()),
         newFacetsFromRequestLogic(l4Dep, allFacets),
@@ -388,12 +389,12 @@ class KryonExecutorTest {
                                             .valueOrThrow()
                                     + ":final")
                         .kryonLogicId(),
-                    ImmutableMap.of(dependency(1), new KryonId(l4Dep)),
+                    ImmutableMap.of(dependency(1), new VajramID(l4Dep)),
                     ImmutableMap.of(),
                     newCreateNewRequestLogic(l4Dep, emptySet()),
                     newFacetsFromRequestLogic(l4Dep, allFacets),
                     ElementTags.of(externalInvocation(true)))
-                .kryonId(),
+                .vajramID(),
             SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("r").build());
     kryonExecutor.close();
@@ -403,7 +404,7 @@ class KryonExecutorTest {
   private static LogicDefinition<FacetsFromRequest> newFacetsFromRequestLogic(
       String kryonName, Set<? extends Facet> allFacets) {
     return new LogicDefinition<>(
-        new KryonLogicId(new KryonId(kryonName), kryonName + ":facetsFromRequest"),
+        new KryonLogicId(new VajramID(kryonName), kryonName + ":facetsFromRequest"),
         request ->
             new FacetValuesMapBuilder(
                 (SimpleRequestBuilder<Object>) request._asBuilder(), allFacets));
@@ -413,7 +414,7 @@ class KryonExecutorTest {
   private static LogicDefinition<CreateNewRequest> newCreateNewRequestLogic(
       String kryonName, Set<SimpleFacet> inputDefs) {
     return new LogicDefinition<>(
-        new KryonLogicId(new KryonId(kryonName), kryonName + ":newRequest"),
+        new KryonLogicId(new VajramID(kryonName), kryonName + ":newRequest"),
         () -> new SimpleRequestBuilder(inputDefs));
   }
 
@@ -480,12 +481,12 @@ class KryonExecutorTest {
                             })
                         .kryonLogicId(),
                     ImmutableMap.of(
-                        dependency(1), new KryonId(dep1), dependency(2), new KryonId(dep2)),
+                        dependency(1), new VajramID(dep1), dependency(2), new VajramID(dep2)),
                     ImmutableMap.of(),
                     newCreateNewRequestLogic(kryonName, emptySet()),
                     newFacetsFromRequestLogic(kryonName, allFacets),
                     ElementTags.of(externalInvocation(true)))
-                .kryonId(),
+                .vajramID(),
             SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("r").build());
     kryonExecutor.close();
@@ -514,7 +515,7 @@ class KryonExecutorTest {
                         newCreateNewRequestLogic(kryonName, Set.of()),
                         newFacetsFromRequestLogic(kryonName, Set.of()),
                         emptyTags())
-                    .kryonId(),
+                    .vajramID(),
                 SimpleImmutRequest.empty(),
                 KryonExecutionConfig.builder().executionId("req_1").build()));
   }
@@ -569,7 +570,7 @@ class KryonExecutorTest {
                               });
                     })
                 .kryonLogicId(),
-            ImmutableMap.of(dependency(1), n1.kryonId()),
+            ImmutableMap.of(dependency(1), n1.vajramID()),
             ImmutableMap.of(),
             newCreateNewRequestLogic("n1_logic", emptySet()),
             newFacetsFromRequestLogic("n1_logic", allFacets),
@@ -577,7 +578,7 @@ class KryonExecutorTest {
 
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
-            n2.kryonId(),
+            n2.vajramID(),
             SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("r1").build());
     kryonExecutor.close();
@@ -595,7 +596,7 @@ class KryonExecutorTest {
       String kryonId, Set<? extends Facet> usedFacets, Function<FacetValues, T> logic) {
     ComputeLogicDefinition<T> def =
         new ComputeLogicDefinition<>(
-            new KryonLogicId(new KryonId(kryonId), kryonId),
+            new KryonLogicId(new VajramID(kryonId), kryonId),
             usedFacets,
             inputsList ->
                 inputsList.stream()
@@ -615,7 +616,7 @@ class KryonExecutorTest {
       Function<FacetValues, CompletableFuture<T>> logic) {
     IOLogicDefinition<T> def =
         new IOLogicDefinition<>(
-            new KryonLogicId(new KryonId(kryonId), kryonId),
+            new KryonLogicId(new VajramID(kryonId), kryonId),
             inputs,
             inputsList ->
                 inputsList.stream().collect(toImmutableMap(identity(), logic)).entrySet().stream()

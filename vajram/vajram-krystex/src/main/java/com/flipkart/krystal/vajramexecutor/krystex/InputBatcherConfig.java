@@ -9,13 +9,12 @@ import com.flipkart.krystal.krystex.kryon.DefaultDependantChain;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.DependantChainStart;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
-import com.flipkart.krystal.krystex.kryon.KryonId;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.LogicDecoratorContext;
-import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.vajram.IOVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.annos.VajramIdentifier;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
@@ -112,7 +111,7 @@ public record InputBatcherConfig(
       VajramKryonGraph graph,
       BatchSizeSupplier batchSizeSupplier,
       ImmutableSet<DependantChain> disabledDependantChains) {
-    Map<VajramID, Map<Integer, Set<DependantChain>>> ioNodes =
+    Map<com.flipkart.krystal.core.VajramID, Map<Integer, Set<DependantChain>>> ioNodes =
         getIoVajrams(graph, disabledDependantChains);
     ioNodes.forEach(
         (vajramId, ioNodeMap) -> {
@@ -156,7 +155,7 @@ public record InputBatcherConfig(
         } else {
           throw new NoSuchElementException(
               "Could not find tag %s for kryon %s"
-                  .formatted(VajramDef.class, defaultDependantChain.kryonId()));
+                  .formatted(Vajram.class, defaultDependantChain.kryonId()));
         }
       } else {
         return generateInstanceId(defaultDependantChain.dependantChain(), kryonDefinitionRegistry)
@@ -167,7 +166,8 @@ public record InputBatcherConfig(
     throw new UnsupportedOperationException();
   }
 
-  private static boolean isBatchingNeededForIoVajram(VajramKryonGraph graph, VajramID ioNode) {
+  private static boolean isBatchingNeededForIoVajram(
+      VajramKryonGraph graph, com.flipkart.krystal.core.VajramID ioNode) {
     Optional<VajramDefinition> ioNodeVajram = graph.getVajramDefinition(ioNode);
     if (ioNodeVajram.isPresent()) {
       for (FacetSpec facetSpec : ioNodeVajram.get().facetSpecs()) {
@@ -179,12 +179,13 @@ public record InputBatcherConfig(
     return false;
   }
 
-  private static Map<VajramID, Map<Integer, Set<DependantChain>>> getIoVajrams(
-      VajramKryonGraph graph, ImmutableSet<DependantChain> disabledDependantChains) {
-    Map<VajramID, Map<Integer, Set<DependantChain>>> ioNodes = new HashMap<>();
+  private static Map<com.flipkart.krystal.core.VajramID, Map<Integer, Set<DependantChain>>>
+      getIoVajrams(VajramKryonGraph graph, ImmutableSet<DependantChain> disabledDependantChains) {
+    Map<com.flipkart.krystal.core.VajramID, Map<Integer, Set<DependantChain>>> ioNodes =
+        new HashMap<>();
     for (VajramDefinition rootNode : externallyInvocableVajrams(graph)) {
       DependantChain dependantChain = graph.kryonDefinitionRegistry().getDependantChainsStart();
-      Map<VajramID, Integer> ioNodeDepths = new HashMap<>();
+      Map<com.flipkart.krystal.core.VajramID, Integer> ioNodeDepths = new HashMap<>();
       dfs(rootNode, graph, ioNodes, 0, dependantChain, ioNodeDepths, disabledDependantChains);
     }
     return ioNodes;
@@ -205,15 +206,16 @@ public record InputBatcherConfig(
   private static void dfs(
       VajramDefinition rootNode,
       VajramKryonGraph graph,
-      Map<VajramID, Map<Integer, Set<DependantChain>>> ioNodes,
+      Map<com.flipkart.krystal.core.VajramID, Map<Integer, Set<DependantChain>>> ioNodes,
       int depth,
       DependantChain incomingDepChain,
-      Map<VajramID, Integer> ioNodeDepths,
+      Map<com.flipkart.krystal.core.VajramID, Integer> ioNodeDepths,
       ImmutableSet<DependantChain> disabledDependantChains) {
     // find all the child nodes of rootNode
     // get the order of execution of inputDefinitions
     Map<Facet, List<Facet>> inputDefGraph = new HashMap<>();
-    KryonId kryonId = graph.getKryonId(rootNode.vajramId());
+    VajramID vajramId = rootNode.vajramId();
+    graph.loadKryonSubGraphIfNeeded(vajramId);
     for (Facet inputDef : getOrderedInputDef(rootNode, inputDefGraph)) {
       if (inputDef instanceof DependencySpec<?, ?, ?> dependency) {
         List<ResolverDefinition> resolverDefinition =
@@ -223,7 +225,7 @@ public record InputBatcherConfig(
         if (childNode != null) {
           if (inputDefGraph.get(inputDef) != null) {
             for (Facet inputDef1 : inputDefGraph.get(inputDef)) {
-              VajramID prerequisiteVajramId =
+              com.flipkart.krystal.core.VajramID prerequisiteVajramId =
                   dependencyInputInChildNode(resolverDefinition, inputDef1);
               if (prerequisiteVajramId != null) {
                 graph
@@ -235,9 +237,9 @@ public record InputBatcherConfig(
               }
             }
           }
-          DependantChain dependantChain = incomingDepChain.extend(kryonId, dependency);
+          DependantChain dependantChain = incomingDepChain.extend(vajramId, dependency);
           if (!disabledDependantChains.contains(dependantChain)) {
-            if (childNode.vajram() instanceof IOVajram<?>) {
+            if (childNode.vajramDef() instanceof IOVajramDef<?>) {
               depth = ioNodeDepths.computeIfAbsent(childNode.vajramId(), _v -> 0);
               ioNodes
                   .computeIfAbsent(childNode.vajramId(), k -> new HashMap<>())
@@ -254,7 +256,7 @@ public record InputBatcherConfig(
                 disabledDependantChains);
             if (inputDefGraph.get(inputDef) != null) {
               for (Facet inputDef1 : inputDefGraph.get(inputDef)) {
-                VajramID prerequisiteVajramId =
+                com.flipkart.krystal.core.VajramID prerequisiteVajramId =
                     dependencyInputInChildNode(resolverDefinition, inputDef1);
                 if (prerequisiteVajramId != null
                     && graph.getVajramDefinition(prerequisiteVajramId).isPresent()) {
@@ -270,8 +272,10 @@ public record InputBatcherConfig(
   }
 
   private static void incrementTheLeafIONodeOfTheVajram(
-      VajramDefinition node, VajramKryonGraph graph, Map<VajramID, Integer> ioNodeDepth) {
-    if (node.vajram() instanceof IOVajram<?>) {
+      VajramDefinition node,
+      VajramKryonGraph graph,
+      Map<com.flipkart.krystal.core.VajramID, Integer> ioNodeDepth) {
+    if (node.vajramDef() instanceof IOVajramDef<?>) {
       ioNodeDepth.compute(node.vajramId(), (_vid, depth) -> depth == null ? 0 : depth + 1);
     }
     for (Facet inputDef : node.facetSpecs()) {
@@ -285,8 +289,10 @@ public record InputBatcherConfig(
   }
 
   private static void decrementTheLeafIONodeOfTheVajram(
-      VajramDefinition node, VajramKryonGraph graph, Map<VajramID, Integer> ioNodeDepth) {
-    if (node.vajram() instanceof IOVajram<?>) {
+      VajramDefinition node,
+      VajramKryonGraph graph,
+      Map<com.flipkart.krystal.core.VajramID, Integer> ioNodeDepth) {
+    if (node.vajramDef() instanceof IOVajramDef<?>) {
       ioNodeDepth.compute(node.vajramId(), (_vid, depth) -> depth == null ? 0 : depth - 1);
     }
     for (Facet inputDef : node.facetSpecs()) {
@@ -381,6 +387,6 @@ public record InputBatcherConfig(
 
   @FunctionalInterface
   public interface BatchSizeSupplier {
-    int getBatchSize(VajramID vajramId);
+    int getBatchSize(com.flipkart.krystal.core.VajramID vajramId);
   }
 }

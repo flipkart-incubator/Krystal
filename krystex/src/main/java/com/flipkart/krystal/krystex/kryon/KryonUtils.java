@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
@@ -11,11 +12,11 @@ public final class KryonUtils {
   @SuppressWarnings("FutureReturnValueIgnored")
   static void enqueueOrExecuteCommand(
       Supplier<KryonCommand> commandGenerator,
-      KryonId depKryonId,
+      VajramID depVajramID,
       KryonDefinition kryonDefinition,
       KryonExecutor kryonExecutor) {
     OutputLogicDefinition<Object> depOutputLogic =
-        kryonDefinition.kryonDefinitionRegistry().get(depKryonId).getOutputLogicDefinition();
+        kryonDefinition.kryonDefinitionRegistry().get(depVajramID).getOutputLogicDefinition();
     if (depOutputLogic instanceof IOLogicDefinition<Object>) {
       kryonExecutor.enqueueKryonCommand(commandGenerator);
     } else if (depOutputLogic instanceof ComputeLogicDefinition<Object>) {

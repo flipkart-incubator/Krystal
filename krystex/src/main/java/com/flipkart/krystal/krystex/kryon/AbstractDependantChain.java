@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -10,13 +11,13 @@ public abstract sealed class AbstractDependantChain implements DependantChain
     permits DefaultDependantChain, DependantChainStart {
 
   @EqualsAndHashCode.Exclude @ToString.Exclude
-  private final Map<KryonId, ConcurrentHashMap<Dependency, DependantChain>> dependenciesInternPool =
+  private final Map<VajramID, ConcurrentHashMap<Dependency, DependantChain>> dependenciesInternPool =
       new ConcurrentHashMap<>();
 
   @Override
-  public DependantChain extend(KryonId kryonId, Dependency dependency) {
+  public DependantChain extend(VajramID vajramID, Dependency dependency) {
     return dependenciesInternPool
-        .computeIfAbsent(kryonId, _n -> new ConcurrentHashMap<>())
-        .computeIfAbsent(dependency, depName -> new DefaultDependantChain(kryonId, depName, this));
+        .computeIfAbsent(vajramID, _n -> new ConcurrentHashMap<>())
+        .computeIfAbsent(dependency, depName -> new DefaultDependantChain(vajramID, depName, this));
   }
 }

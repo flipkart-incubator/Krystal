@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
@@ -17,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class KryonDefinitionRegistry {
 
   private final LogicDefinitionRegistry logicDefinitionRegistry;
-  private final Map<KryonId, KryonDefinition> kryonDefinitions = new ConcurrentHashMap<>();
+  private final Map<VajramID, KryonDefinition> kryonDefinitions = new ConcurrentHashMap<>();
   private final DependantChainStart dependantChainStart = new DependantChainStart();
 
   public KryonDefinitionRegistry(LogicDefinitionRegistry logicDefinitionRegistry) {
@@ -28,10 +29,10 @@ public final class KryonDefinitionRegistry {
     return logicDefinitionRegistry;
   }
 
-  public KryonDefinition get(KryonId kryonId) {
-    KryonDefinition kryon = kryonDefinitions.get(kryonId);
+  public KryonDefinition get(VajramID vajramID) {
+    KryonDefinition kryon = kryonDefinitions.get(vajramID);
     if (kryon == null) {
-      throw new IllegalArgumentException("No Kryon with id %s found".formatted(kryonId));
+      throw new IllegalArgumentException("No Kryon with id %s found".formatted(vajramID));
     }
     return kryon;
   }
@@ -40,14 +41,14 @@ public final class KryonDefinitionRegistry {
       String kryonId,
       Set<? extends Facet> facets,
       KryonLogicId outputLogicId,
-      ImmutableMap<Dependency, KryonId> dependencyKryons,
+      ImmutableMap<Dependency, VajramID> dependencyKryons,
       ImmutableMap<ResolverDefinition, Resolver> resolversByDefinition,
       LogicDefinition<CreateNewRequest> createNewRequest,
       LogicDefinition<FacetsFromRequest> facetsFromRequest,
       ElementTags tags) {
     KryonDefinition kryonDefinition =
         new KryonDefinition(
-            new KryonId(kryonId),
+            new VajramID(kryonId),
             facets,
             outputLogicId,
             dependencyKryons,
@@ -56,7 +57,7 @@ public final class KryonDefinitionRegistry {
             facetsFromRequest,
             this,
             tags);
-    kryonDefinitions.put(kryonDefinition.kryonId(), kryonDefinition);
+    kryonDefinitions.put(kryonDefinition.vajramID(), kryonDefinition);
     return kryonDefinition;
   }
 

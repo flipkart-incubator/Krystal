@@ -10,8 +10,8 @@ import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdder_Fa
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.ComputeVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.annos.ConformsToTrait;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
@@ -26,9 +26,9 @@ import java.util.List;
 import java.util.Optional;
 
 @ExternalInvocation(allow = true)
-@VajramDef
+@Vajram
 @ConformsToTrait(withDef = MultiAdder.class)
-public abstract class ChainAdder extends ComputeVajram<Integer> {
+public abstract class ChainAdder extends ComputeVajramDef<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
     @Mandatory @Input List<Integer> numbers;

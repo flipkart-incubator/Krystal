@@ -84,7 +84,7 @@ public class VajramTestHarness {
               new KryonDecoratorConfig(
                   RequestLevelCache.DECORATOR_TYPE,
                   executionContext ->
-                      vajramIdMockData.containsKey(executionContext.kryonId().value()),
+                      vajramIdMockData.containsKey(executionContext.vajramID().value()),
                   executionContext -> RequestLevelCache.DECORATOR_TYPE,
                   kryonExecutionContext -> {
                     return requestLevelCache;

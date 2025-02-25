@@ -1,22 +1,23 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Facet;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class DefaultDependantChain extends AbstractDependantChain {
-  private final KryonId kryonId;
+  private final VajramID vajramID;
   private final Facet dependency;
   private final DependantChain dependantChain;
   private int _hashCodeCache;
 
-  DefaultDependantChain(KryonId kryonId, Facet dependency, DependantChain dependantChain) {
-    this.kryonId = kryonId;
+  DefaultDependantChain(VajramID vajramID, Facet dependency, DependantChain dependantChain) {
+    this.vajramID = vajramID;
     this.dependency = dependency;
     this.dependantChain = dependantChain;
   }
 
-  public KryonId kryonId() {
-    return kryonId;
+  public VajramID kryonId() {
+    return vajramID;
   }
 
   public Facet dependency() {
@@ -42,6 +43,6 @@ public final class DefaultDependantChain extends AbstractDependantChain {
 
   @Override
   public String toString() {
-    return "%s:%s[%s]".formatted(dependantChain, kryonId.value(), dependency());
+    return "%s:%s[%s]".formatted(dependantChain, vajramID.value(), dependency());
   }
 }

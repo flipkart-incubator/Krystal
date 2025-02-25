@@ -832,7 +832,7 @@ class KrystexVajramExecutorTest {
         (context) -> {
           return context
               .kryonDefinitionRegistry()
-              .get(context.kryonId())
+              .get(context.vajramID())
               .tags()
               .getAnnotationByType(OutputLogicDelegationMode.class)
               .map(v -> v.value() == SYNC_DELEGATION)
@@ -842,7 +842,7 @@ class KrystexVajramExecutorTest {
         context -> {
           return context
               .kryonDefinitionRegistry()
-              .get(context.kryonId())
+              .get(context.vajramID())
               .tags()
               .getAnnotationByType(VajramIdentifier.class)
               .map(VajramIdentifier::value)

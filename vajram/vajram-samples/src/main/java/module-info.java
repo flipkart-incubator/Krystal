@@ -1,5 +1,5 @@
-module flipkart.krystal.vajram.vajram_samples {
-  requires flipkart.krystal.vajram;
+module flipkart.krystal.vajramDef.vajram_samples {
+  requires flipkart.krystal.vajramDef;
   requires flipkart.krystal.common;
   requires com.google.common;
   requires static lombok;

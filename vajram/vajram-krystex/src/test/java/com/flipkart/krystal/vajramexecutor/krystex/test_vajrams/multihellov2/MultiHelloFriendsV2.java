@@ -6,8 +6,8 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihell
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.except.SkippedExecutionException;
-import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.ComputeVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
@@ -22,8 +22,8 @@ import java.util.Optional;
 import java.util.Set;
 
 @ExternalInvocation(allow = true)
-@VajramDef
-public abstract class MultiHelloFriendsV2 extends ComputeVajram<String> {
+@Vajram
+public abstract class MultiHelloFriendsV2 extends ComputeVajramDef<String> {
   static class _Facets {
     @Mandatory @Input Set<String> userIds;
     @Input boolean skip;

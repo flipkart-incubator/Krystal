@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
-import static com.flipkart.krystal.vajram.VajramID.vajramID;
+import static com.flipkart.krystal.core.VajramID.vajramID;
 
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
@@ -9,10 +9,10 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.kryondecoration.KryonExecutionContext;
-import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.vajram.exec.VajramExecutor;
+import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
-import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.VajramInjectionProvider;
 import java.util.concurrent.CompletableFuture;
 import lombok.Builder;
 import lombok.NonNull;
@@ -52,7 +52,7 @@ public class KrystexVajramExecutor implements VajramExecutor {
   private static boolean isInjectionNeeded(
       VajramKryonGraph vajramKryonGraph, KryonExecutionContext executionContext) {
     return vajramKryonGraph
-        .getVajramDefinition(vajramID(executionContext.kryonId().value()))
+        .getVajramDefinition(vajramID(executionContext.vajramID().value()))
         .map(v -> v.vajramMetadata().isInputInjectionNeeded())
         .orElse(false);
   }
@@ -70,8 +70,8 @@ public class KrystexVajramExecutor implements VajramExecutor {
 
   public <T> CompletableFuture<@Nullable T> executeWithFacets(
       VajramID vajramId, Request facets, KryonExecutionConfig executionConfig) {
-    return krystalExecutor.executeKryon(
-        vajramKryonGraph.getKryonId(vajramId), facets, executionConfig);
+    vajramKryonGraph.loadKryonSubGraphIfNeeded(vajramId);
+    return krystalExecutor.executeKryon(vajramId, facets, executionConfig);
   }
 
   public KrystalExecutor getKrystalExecutor() {

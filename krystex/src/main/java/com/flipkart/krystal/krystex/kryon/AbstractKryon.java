@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
@@ -17,7 +18,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
     implements Kryon<C, R> permits BatchKryon {
 
   protected final KryonDefinition kryonDefinition;
-  protected final KryonId kryonId;
+  protected final VajramID vajramID;
   protected final KryonExecutor kryonExecutor;
 
   /** decoratorType -> Decorator */
@@ -36,7 +37,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
       LogicDecorationOrdering logicDecorationOrdering,
       RequestIdGenerator requestIdGenerator) {
     this.kryonDefinition = definition;
-    this.kryonId = definition.kryonId();
+    this.vajramID = definition.vajramID();
     this.kryonExecutor = kryonExecutor;
     this.requestScopedDecoratorsSupplier = requestScopedDecoratorsSupplier;
     this.logicDecorationOrdering = logicDecorationOrdering;
@@ -54,7 +55,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
     decorators.putAll(
         requestScopedDecoratorsSupplier.apply(
             new LogicExecutionContext(
-                kryonId,
+                vajramID,
                 outputLogicDefinition.tags(),
                 dependantChain,
                 kryonDefinition.kryonDefinitionRegistry())));

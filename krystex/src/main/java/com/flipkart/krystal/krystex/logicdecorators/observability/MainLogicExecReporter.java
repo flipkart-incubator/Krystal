@@ -17,7 +17,7 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
-import com.flipkart.krystal.krystex.kryon.KryonId;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.google.common.collect.ImmutableMap;
@@ -57,12 +57,12 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
   public OutputLogic<Object> decorateLogic(
       OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
     return facets -> {
-      KryonId kryonId = originalLogicDefinition.kryonLogicId().kryonId();
+      VajramID vajramID = originalLogicDefinition.kryonLogicId().vajramID();
       KryonLogicId kryonLogicId = originalLogicDefinition.kryonLogicId();
       /*
        Report logic start
       */
-      kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facets);
+      kryonExecutionReport.reportMainLogicStart(vajramID, kryonLogicId, facets);
 
       /*
        Execute logic
@@ -76,7 +76,7 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
           .whenComplete(
               (unused, throwable) -> {
                 kryonExecutionReport.reportMainLogicEnd(
-                    kryonId,
+                    vajramID,
                     kryonLogicId,
                     new LogicExecResults(
                         results.entrySet().stream()

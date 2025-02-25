@@ -51,7 +51,7 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
           try {
             LogicExecutionContext logicExecutionContext =
                 new LogicExecutionContext(
-                    kryonDefinition.kryonId(),
+                    kryonDefinition.vajramID(),
                     tags(),
                     dependants,
                     kryonDefinition.kryonDefinitionRegistry());

@@ -5,8 +5,8 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Function.identity;
 
-import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.IOVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
@@ -17,9 +17,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-@VajramDef
+@Vajram
 @SuppressWarnings("initialization.field.uninitialized")
-public abstract class UserService extends IOVajram<UserInfo> {
+public abstract class UserService extends IOVajramDef<UserInfo> {
   static class _Facets {
     @Mandatory @Batched @Input String userId;
     @Input String test;

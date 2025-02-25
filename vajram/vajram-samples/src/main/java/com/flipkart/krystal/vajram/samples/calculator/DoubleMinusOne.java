@@ -13,8 +13,8 @@ import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.RequestResponse;
-import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.ComputeVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
@@ -34,8 +34,8 @@ import java.util.Optional;
  * Takes a list of numbers, doubles each of them, adds them up and then subtracts 1 from the sum.
  */
 @ExternalInvocation(allow = true)
-@VajramDef
-public abstract class DoubleMinusOne extends ComputeVajram<Integer> {
+@Vajram
+public abstract class DoubleMinusOne extends ComputeVajramDef<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
     @Mandatory @Input List<Integer> numbers;

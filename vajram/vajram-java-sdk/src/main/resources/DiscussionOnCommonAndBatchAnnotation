@@ -11,7 +11,7 @@ Discussion on May'24
   annotated with @Batch will be assumed @Common and included in the commonInterface (? to confirm with Ram as this might get confusing along with below point)
 
   There might be facetValues which are not annotated with @Batch or @Common, but are required to compute dependencies before final output logic,
-  they will not be available in the final output logic to the vajram developer
+  they will not be available in the final output logic to the vajramDef developer
 
 
   -----

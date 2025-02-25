@@ -4,6 +4,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.groupingBy;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.FacetType;
@@ -30,10 +31,10 @@ import java.util.function.Function;
  * @param dependencyKryons Map of dependency name to kryonId.
  */
 public record KryonDefinition(
-    KryonId kryonId,
+    VajramID vajramID,
     ImmutableSet<Facet> facets,
     KryonLogicId outputLogicId,
-    ImmutableMap<Dependency, KryonId> dependencyKryons,
+    ImmutableMap<Dependency, VajramID> dependencyKryons,
     ImmutableMap<ResolverDefinition, Resolver> resolversByDefinition,
     LogicDefinition<CreateNewRequest> createNewRequest,
     LogicDefinition<FacetsFromRequest> facetsFromRequest,
@@ -42,17 +43,17 @@ public record KryonDefinition(
     ElementTags tags) {
 
   public KryonDefinition(
-      KryonId kryonId,
+      VajramID vajramID,
       Set<? extends Facet> facets,
       KryonLogicId outputLogicId,
-      ImmutableMap<Dependency, KryonId> dependencyKryons,
+      ImmutableMap<Dependency, VajramID> dependencyKryons,
       ImmutableMap<ResolverDefinition, Resolver> resolversByDefinition,
       LogicDefinition<CreateNewRequest> createNewRequest,
       LogicDefinition<FacetsFromRequest> facetsFromRequest,
       KryonDefinitionRegistry kryonDefinitionRegistry,
       ElementTags tags) {
     this(
-        kryonId,
+        vajramID,
         ImmutableSet.copyOf(facets),
         outputLogicId,
         dependencyKryons,
@@ -107,7 +108,7 @@ public record KryonDefinition(
     private static KryonDefinitionView createView(
         Set<? extends Facet> allFacets,
         ImmutableMap<ResolverDefinition, Resolver> resolversByDefinition,
-        ImmutableMap<Dependency, KryonId> dependencyKryons) {
+        ImmutableMap<Dependency, VajramID> dependencyKryons) {
       ImmutableSet<Dependency> dependencyFacets = dependencyKryons.keySet();
       ImmutableMap<Dependency, ImmutableSet<Resolver>> resolverDefinitionsByDependencies =
           ImmutableMap.copyOf(

@@ -3,8 +3,8 @@ package com.flipkart.krystal.vajram.samples.greeting;
 import static com.flipkart.krystal.vajram.samples.greeting.Greeting_Fac.userInfo_n;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
-import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.ComputeVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
@@ -21,10 +21,10 @@ import java.util.Optional;
  * (as declared by the user in their profile).
  */
 @ExternalInvocation(allow = true)
-@VajramDef
+@Vajram
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 // ComputeVajram means that this Vajram does not directly perform any blocking operations.
-public abstract class Greeting extends ComputeVajram<String> {
+public abstract class Greeting extends ComputeVajramDef<String> {
   static class _Facets {
     @Mandatory @Input String userId;
     @Inject Logger log;

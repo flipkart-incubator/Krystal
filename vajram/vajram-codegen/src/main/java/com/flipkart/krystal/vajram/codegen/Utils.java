@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.codegen;
 
-import static com.flipkart.krystal.vajram.VajramID.vajramID;
+import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_CLASS_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants.QUALIFIED_FACET_SEPERATOR;
 import static com.flipkart.krystal.vajram.codegen.Constants._FACETS_CLASS;
@@ -24,9 +24,9 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.facets.FacetType;
-import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.vajram.VajramTrait;
 import com.flipkart.krystal.vajram.VajramTraitDef;
 import com.flipkart.krystal.vajram.VajramTraitRequest;
@@ -213,7 +213,7 @@ public class Utils {
   }
 
   List<TypeElement> getVajramClasses(RoundEnvironment roundEnv) {
-    return roundEnv.getElementsAnnotatedWith(VajramDef.class).stream()
+    return roundEnv.getElementsAnnotatedWith(Vajram.class).stream()
         .filter(element -> element.getKind() == ElementKind.CLASS)
         .map(executableElement -> (TypeElement) executableElement)
         .toList();
@@ -247,7 +247,7 @@ public class Utils {
 
   public VajramInfo computeVajramInfo(TypeElement vajramClass) {
     VajramInfoLite vajramInfoLite = getVajramInfoLite(vajramClass);
-    boolean isVajram = vajramClass.getAnnotation(VajramDef.class) != null;
+    boolean isVajram = vajramClass.getAnnotation(Vajram.class) != null;
     Optional<Element> facetsClass =
         vajramClass.getEnclosedElements().stream()
             .filter(element -> element.getKind() == ElementKind.CLASS)
@@ -392,7 +392,7 @@ public class Utils {
                     !checkNotNull((QualifiedNameable) typeUtils.asElement(typeMirror))
                         .getQualifiedName()
                         .equals(
-                            getTypeElement(Vajram.class.getName(), processingEnv)
+                            getTypeElement(VajramDef.class.getName(), processingEnv)
                                 .getQualifiedName()));
     TypeMirror vajramOrReqType =
         vajramReqType
@@ -470,18 +470,18 @@ public class Utils {
           facetIdNameMappings,
           conformsToTraitInfo,
           this);
-    } else if (isRawAssignable(vajramOrReqClass.asType(), Vajram.class)
+    } else if (isRawAssignable(vajramOrReqClass.asType(), VajramDef.class)
         || isRawAssignable(vajramOrReqClass.asType(), VajramTraitDef.class)) {
-      VajramDef vajramDef = vajramOrReqClass.getAnnotation(VajramDef.class);
+      Vajram vajram = vajramOrReqClass.getAnnotation(Vajram.class);
       VajramTrait vajramTrait = vajramOrReqClass.getAnnotation(VajramTrait.class);
-      if (vajramDef == null && vajramTrait == null) {
+      if (vajram == null && vajramTrait == null) {
         throw new VajramValidationException(
             "Vajram class %s does not have either @VajramDef or @VajramTrait annotation. This should not happen"
                 .formatted(vajramOrReqClass));
       }
       boolean isTrait = vajramTrait != null;
       TypeMirror responseType =
-          getResponseType(vajramOrReqClass, isTrait ? VajramTraitDef.class : Vajram.class);
+          getResponseType(vajramOrReqClass, isTrait ? VajramTraitDef.class : VajramDef.class);
       TypeElement responseTypeElement =
           checkNotNull((TypeElement) typeUtils.asElement(responseType));
       TypeElement requestType =
@@ -513,7 +513,7 @@ public class Utils {
     } else {
       throw new IllegalArgumentException(
           "Unknown class hierarchy of vajram class %s. Expected %s or %s"
-              .formatted(vajramOrReqClass, Vajram.class, ImmutableRequest.class));
+              .formatted(vajramOrReqClass, VajramDef.class, ImmutableRequest.class));
     }
   }
 
@@ -563,7 +563,7 @@ public class Utils {
   }
 
   private String getVajramReqClassName(TypeElement vajramClass) {
-    if (isRawAssignable(vajramClass.asType(), Vajram.class)) {
+    if (isRawAssignable(vajramClass.asType(), VajramDef.class)) {
       return vajramClass.getQualifiedName().toString() + Constants.REQUEST_SUFFIX;
     } else if (isRawAssignable(vajramClass.asType(), ImmutableRequest.class)) {
       return vajramClass.getQualifiedName().toString();

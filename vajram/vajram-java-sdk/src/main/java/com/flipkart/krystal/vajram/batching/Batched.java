@@ -3,13 +3,13 @@ package com.flipkart.krystal.vajram.batching;
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-import com.flipkart.krystal.vajram.IOVajram;
+import com.flipkart.krystal.vajram.IOVajramDef;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
 /**
  * A facet with this annotation is batched using an {@link InputBatcher} . This annotation can only
- * be used in {@link IOVajram}s. When an facet is marked as batched, the execution runtime invokes
+ * be used in {@link IOVajramDef}s. When an facet is marked as batched, the execution runtime invokes
  * the Output Logic of the IOVajram once for multiple requests by batching them into a collection.
  * This allows application developers to perform delegation operations like network IO, disk IO etc.
  * in an optimal fashion by batching the processing of multiple requests into a single IO operation.

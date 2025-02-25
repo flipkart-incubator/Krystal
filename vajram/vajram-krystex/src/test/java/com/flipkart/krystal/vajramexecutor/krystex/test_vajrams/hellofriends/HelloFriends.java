@@ -12,8 +12,8 @@ import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.ComputeVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
@@ -31,8 +31,8 @@ import java.util.Set;
 import java.util.stream.IntStream;
 
 @ExternalInvocation(allow = true)
-@VajramDef
-public abstract class HelloFriends extends ComputeVajram<String> {
+@Vajram
+public abstract class HelloFriends extends ComputeVajramDef<String> {
   static class _Facets {
     @Mandatory @Input String userId;
 

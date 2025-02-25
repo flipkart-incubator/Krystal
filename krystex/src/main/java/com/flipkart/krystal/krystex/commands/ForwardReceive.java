@@ -2,14 +2,14 @@ package com.flipkart.krystal.krystex.commands;
 
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
-import com.flipkart.krystal.krystex.kryon.KryonId;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import java.util.Set;
 
 public record ForwardReceive(
-    KryonId kryonId,
+    VajramID vajramID,
     ImmutableMap<RequestId, ? extends FacetValues> executableRequests,
     DependantChain dependantChain,
     ImmutableMap<RequestId, String> skippedRequests)

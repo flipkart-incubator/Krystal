@@ -1,35 +1,35 @@
-package com.flipkart.krystal.vajram.codegen;
+package com.flipkart.krystal.vajramDef.codegen;
 
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
-import static com.flipkart.krystal.vajram.codegen.Constants.BATCHES_VAR;
-import static com.flipkart.krystal.vajram.codegen.Constants.BATCH_FACETS_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_FACETS_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.Constants.EMPTY_CODE_BLOCK;
-import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_LIST;
-import static com.flipkart.krystal.vajram.codegen.Constants.FACETVALUES_VAR;
-import static com.flipkart.krystal.vajram.codegen.Constants.FACET_DEFINITIONS_VAR;
-import static com.flipkart.krystal.vajram.codegen.Constants.FACET_NAME_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.Constants.FACET_SPEC_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.Constants.GET_INPUT_RESOLVERS;
-import static com.flipkart.krystal.vajram.codegen.Constants.GET_SIMPLE_INPUT_RESOLVERS;
-import static com.flipkart.krystal.vajram.codegen.Constants.INCOMING_FACETS;
-import static com.flipkart.krystal.vajram.codegen.Constants.METHOD_EXECUTE;
-import static com.flipkart.krystal.vajram.codegen.Constants.METHOD_EXECUTE_COMPUTE;
-import static com.flipkart.krystal.vajram.codegen.Constants.RESOLVER_REQUEST;
-import static com.flipkart.krystal.vajram.codegen.Constants.RESOLVER_REQUESTS;
-import static com.flipkart.krystal.vajram.codegen.Constants.RESOLVER_RESULT;
-import static com.flipkart.krystal.vajram.codegen.Constants.RESOLVER_RESULTS;
-import static com.flipkart.krystal.vajram.codegen.Constants._FACETS_CLASS;
-import static com.flipkart.krystal.vajram.codegen.ParsedVajramData.fromVajram;
-import static com.flipkart.krystal.vajram.codegen.Utils.annotations;
-import static com.flipkart.krystal.vajram.codegen.Utils.getFacetsInterfaceName;
-import static com.flipkart.krystal.vajram.codegen.Utils.getImmutFacetsClassname;
-import static com.flipkart.krystal.vajram.codegen.Utils.getImmutRequestInterfaceName;
-import static com.flipkart.krystal.vajram.codegen.Utils.getImmutRequestPojoName;
-import static com.flipkart.krystal.vajram.codegen.Utils.getRequestInterfaceName;
-import static com.flipkart.krystal.vajram.codegen.Utils.getTypeParameters;
-import static com.flipkart.krystal.vajram.codegen.Utils.getVajramImplClassName;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.BATCHES_VAR;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.BATCH_FACETS_SUFFIX;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.COMMON_FACETS_SUFFIX;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.EMPTY_CODE_BLOCK;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.FACETS_LIST;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.FACETVALUES_VAR;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.FACET_DEFINITIONS_VAR;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.FACET_NAME_SUFFIX;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.FACET_SPEC_SUFFIX;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.GET_INPUT_RESOLVERS;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.GET_SIMPLE_INPUT_RESOLVERS;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.INCOMING_FACETS;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.METHOD_EXECUTE;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.METHOD_EXECUTE_COMPUTE;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.RESOLVER_REQUEST;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.RESOLVER_REQUESTS;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.RESOLVER_RESULT;
+import static com.flipkart.krystal.vajramDef.codegen.Constants.RESOLVER_RESULTS;
+import static com.flipkart.krystal.vajramDef.codegen.Constants._FACETS_CLASS;
+import static com.flipkart.krystal.vajramDef.codegen.ParsedVajramData.fromVajram;
+import static com.flipkart.krystal.vajramDef.codegen.Utils.annotations;
+import static com.flipkart.krystal.vajramDef.codegen.Utils.getFacetsInterfaceName;
+import static com.flipkart.krystal.vajramDef.codegen.Utils.getImmutFacetsClassname;
+import static com.flipkart.krystal.vajramDef.codegen.Utils.getImmutRequestInterfaceName;
+import static com.flipkart.krystal.vajramDef.codegen.Utils.getImmutRequestPojoName;
+import static com.flipkart.krystal.vajramDef.codegen.Utils.getRequestInterfaceName;
+import static com.flipkart.krystal.vajramDef.codegen.Utils.getTypeParameters;
+import static com.flipkart.krystal.vajramDef.codegen.Utils.getVajramImplClassName;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -63,35 +63,35 @@ import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.facets.resolution.ResolutionTarget;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
-import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.VajramID;
-import com.flipkart.krystal.vajram.batching.BatchEnabledFacetValues;
-import com.flipkart.krystal.vajram.batching.BatchEnabledImmutableFacetValues;
-import com.flipkart.krystal.vajram.batching.Batched;
-import com.flipkart.krystal.vajram.batching.BatchedFacets;
-import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
-import com.flipkart.krystal.vajram.exception.VajramValidationException;
-import com.flipkart.krystal.vajram.facets.DependencyCommand;
-import com.flipkart.krystal.vajram.facets.FacetIdNameMapping;
-import com.flipkart.krystal.vajram.facets.FacetValidation;
-import com.flipkart.krystal.vajram.facets.FanoutCommand;
-import com.flipkart.krystal.vajram.facets.One2OneCommand;
-import com.flipkart.krystal.vajram.facets.Using;
-import com.flipkart.krystal.vajram.facets.resolution.AbstractFanoutInputResolver;
-import com.flipkart.krystal.vajram.facets.resolution.AbstractOne2OneInputResolver;
-import com.flipkart.krystal.vajram.facets.resolution.FanoutInputResolver;
-import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
-import com.flipkart.krystal.vajram.facets.resolution.One2OneInputResolver;
-import com.flipkart.krystal.vajram.facets.resolution.Resolve;
-import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
-import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
-import com.flipkart.krystal.vajram.facets.specs.MandatoryFacetDefaultSpec;
-import com.flipkart.krystal.vajram.facets.specs.MandatoryFanoutDepSpec;
-import com.flipkart.krystal.vajram.facets.specs.MandatoryOne2OneDepSpec;
-import com.flipkart.krystal.vajram.facets.specs.OptionalFacetDefaultSpec;
-import com.flipkart.krystal.vajram.facets.specs.OptionalFanoutDepSpec;
-import com.flipkart.krystal.vajram.facets.specs.OptionalOne2OneDepSpec;
+import com.flipkart.krystal.vajramDef.IOVajram;
+import com.flipkart.krystal.vajramDef.vajramDef;
+import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.vajramDef.batching.BatchEnabledFacetValues;
+import com.flipkart.krystal.vajramDef.batching.BatchEnabledImmutableFacetValues;
+import com.flipkart.krystal.vajramDef.batching.Batched;
+import com.flipkart.krystal.vajramDef.batching.BatchedFacets;
+import com.flipkart.krystal.vajramDef.batching.BatchesGroupedBy;
+import com.flipkart.krystal.vajramDef.exception.VajramValidationException;
+import com.flipkart.krystal.vajramDef.facets.DependencyCommand;
+import com.flipkart.krystal.vajramDef.facets.FacetIdNameMapping;
+import com.flipkart.krystal.vajramDef.facets.FacetValidation;
+import com.flipkart.krystal.vajramDef.facets.FanoutCommand;
+import com.flipkart.krystal.vajramDef.facets.One2OneCommand;
+import com.flipkart.krystal.vajramDef.facets.Using;
+import com.flipkart.krystal.vajramDef.facets.resolution.AbstractFanoutInputResolver;
+import com.flipkart.krystal.vajramDef.facets.resolution.AbstractOne2OneInputResolver;
+import com.flipkart.krystal.vajramDef.facets.resolution.FanoutInputResolver;
+import com.flipkart.krystal.vajramDef.facets.resolution.InputResolver;
+import com.flipkart.krystal.vajramDef.facets.resolution.One2OneInputResolver;
+import com.flipkart.krystal.vajramDef.facets.resolution.Resolve;
+import com.flipkart.krystal.vajramDef.facets.specs.FacetSpec;
+import com.flipkart.krystal.vajramDef.facets.specs.InputMirrorSpec;
+import com.flipkart.krystal.vajramDef.facets.specs.MandatoryFacetDefaultSpec;
+import com.flipkart.krystal.vajramDef.facets.specs.MandatoryFanoutDepSpec;
+import com.flipkart.krystal.vajramDef.facets.specs.MandatoryOne2OneDepSpec;
+import com.flipkart.krystal.vajramDef.facets.specs.OptionalFacetDefaultSpec;
+import com.flipkart.krystal.vajramDef.facets.specs.OptionalFanoutDepSpec;
+import com.flipkart.krystal.vajramDef.facets.specs.OptionalOne2OneDepSpec;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -196,7 +196,7 @@ public class VajramCodeGenerator {
 
   /**
    * Method to generate VajramImpl class Input dependencyDef code gen Resolve method code gen Vajram
-   * logic code gen Compute vajram execute IO vajram executeBlocking
+   * logic code gen Compute vajramDef execute IO vajramDef executeBlocking
    *
    * @return Class code as string
    */
@@ -260,7 +260,7 @@ public class VajramCodeGenerator {
                   .addMethods(methodSpecs)
                   .addMethod(
                       MethodSpec.overriding(
-                              util.getMethodToOverride(Vajram.class, "newRequestBuilder", 0))
+                              util.getMethodToOverride(vajramDef.class, "newRequestBuilder", 0))
                           .returns(immutRequestType.nestedClass("Builder"))
                           .addModifiers(PUBLIC)
                           .addStatement("return $T._builder()", immutRequestType)
@@ -415,7 +415,7 @@ public class VajramCodeGenerator {
                   () ->
                       new VajramValidationException(
                           """
-                            Could not load Vajram class for vajram %s.
+                            Could not load Vajram class for vajramDef %s.
                             ParsedVajram Data should never be accessed in model generation phase."""
                               .formatted(currentVajramInfo.lite().vajramId())));
     }
@@ -459,7 +459,7 @@ public class VajramCodeGenerator {
               .<Element>map(GivenFacetModel::facetField)
               .orElse(getParsedVajramData().vajramInfo().vajramClass()));
       throw new VajramValidationException(message);
-    } else { // TODO : Need non batched IO vajram to test this
+    } else { // TODO : Need non batched IO vajramDef to test this
       nonBatchedExecuteMethodBuilder(executeBuilder, false);
     }
     return executeBuilder.build();
@@ -498,7 +498,7 @@ public class VajramCodeGenerator {
       if (!util.isRawAssignable(returnType, CompletableFuture.class)) {
         // TODO: Validate IOVajram response type is CompletableFuture<Type>"
         String errorMessage =
-            "The OutputLogic of non-batched IO vajram %s must return a CompletableFuture"
+            "The OutputLogic of non-batched IO vajramDef %s must return a CompletableFuture"
                 .formatted(vajramName());
         util.error(errorMessage, getParsedVajramData().outputLogic());
         throw new VajramValidationException(errorMessage);
@@ -597,14 +597,14 @@ public class VajramCodeGenerator {
     TypeMirror returnType = outputLogic.getReturnType();
     checkState(
         util.isRawAssignable(util.processingEnv().getTypeUtils().erasure(returnType), Map.class),
-        "A vajram supporting input batching must return map. Vajram: %s",
+        "A vajramDef supporting input batching must return map. Vajram: %s",
         vajramName());
     TypeMirror mapValue = getTypeParameters(returnType).get(1);
     if (!util.isRawAssignable(mapValue, CompletableFuture.class)) {
       String message =
           """
               Batched IO Vajram should return a map whose value type must be `CompletableFuture`.
-              Violating vajram: %s"""
+              Violating vajramDef: %s"""
               .formatted(vajramName());
       util.error(message, outputLogic);
       throw new VajramValidationException(message);
@@ -680,7 +680,7 @@ public class VajramCodeGenerator {
           throw util.errorAndThrow(
               "No facet with the name "
                   + param.getSimpleName()
-                  + " exists in the vajram "
+                  + " exists in the vajramDef "
                   + currentVajramInfo.lite().vajramId(),
               param);
         }
@@ -1081,7 +1081,7 @@ public class VajramCodeGenerator {
             "for($T $L: $L.inputs())", actualReturnType, RESOLVER_RESULT, RESOLVER_RESULTS);
         if (util.isRawAssignable(actualReturnType, ImmutableRequest.Builder.class)) {
           /*
-          TODO: Add validation that this vajram request is of the same type as the request of the dependency Vajram
+          TODO: Add validation that this vajramDef request is of the same type as the request of the dependency Vajram
           */
           methodCodeBuilder.add("$L.add($L._newCopy()", RESOLVER_REQUESTS, RESOLVER_REQUEST);
           for (String depFacetName : depInputNames) {
