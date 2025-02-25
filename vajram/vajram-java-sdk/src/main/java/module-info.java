@@ -1,18 +1,14 @@
 module flipkart.krystal.vajramDef {
-  exports com.flipkart.krystal.vajramDef.facets;
-  exports com.flipkart.krystal.vajramDef.facets.resolution;
-  exports com.flipkart.krystal.vajramDef;
-  exports com.flipkart.krystal.vajramDef.batching;
-  exports com.flipkart.krystal.vajramDef.exec;
-  exports com.flipkart.krystal.vajramDef.exception;
-  exports com.flipkart.krystal.vajramDef.utils;
-  exports com.flipkart.krystal.vajramDef.facets.specs;
-  exports com.flipkart.krystal.vajramDef.annos;
-  exports com.flipkart.krystal.vajramDef.inputinjection;
-  exports com.flipkart.krystal.vajramDef.traitbinding;
-  exports com.flipkart.krystal.vajram;
   exports com.flipkart.krystal.vajram.facets;
+  exports com.flipkart.krystal.vajram.facets.resolution;
+  exports com.flipkart.krystal.vajram;
+  exports com.flipkart.krystal.vajram.batching;
   exports com.flipkart.krystal.vajram.exec;
+  exports com.flipkart.krystal.vajram.exception;
+  exports com.flipkart.krystal.vajram.utils;
+  exports com.flipkart.krystal.vajram.facets.specs;
+  exports com.flipkart.krystal.vajram.annos;
+  exports com.flipkart.krystal.vajram.inputinjection;
   exports com.flipkart.krystal.vajram.traitbinding;
 
   requires com.google.common;
