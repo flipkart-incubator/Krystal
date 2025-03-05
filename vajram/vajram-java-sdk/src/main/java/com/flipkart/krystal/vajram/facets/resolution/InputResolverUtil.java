@@ -30,7 +30,7 @@ import java.util.Set;
 public final class InputResolverUtil {
 
   public static ResolverCommand toResolverCommand(
-      DependencyCommand<ImmutableRequest.Builder> dependencyCommand) {
+      DependencyCommand<ImmutableRequest.Builder<?>> dependencyCommand) {
     if (dependencyCommand.shouldSkip()) {
       return ResolverCommand.skip(dependencyCommand.doc(), dependencyCommand.skipCause());
     }

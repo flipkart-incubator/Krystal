@@ -22,10 +22,10 @@ import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
-import com.flipkart.krystal.vajram.samples.calculator.multiplier.Multiplier;
-import com.flipkart.krystal.vajram.samples.calculator.multiplier.Multiplier_Req;
-import com.flipkart.krystal.vajram.samples.calculator.subtractor.Subtractor;
-import com.flipkart.krystal.vajram.samples.calculator.subtractor.Subtractor_Req;
+import com.flipkart.krystal.vajram.samples.calculator.multiply.Multiply;
+import com.flipkart.krystal.vajram.samples.calculator.multiply.Multiply_Req;
+import com.flipkart.krystal.vajram.samples.calculator.subtract.Subtract;
+import com.flipkart.krystal.vajram.samples.calculator.subtract.Subtract_Req;
 import com.google.common.collect.ImmutableCollection;
 import java.util.List;
 import java.util.Optional;
@@ -41,29 +41,29 @@ public abstract class DoubleMinusOne extends ComputeVajramDef<Integer> {
     @Mandatory @Input List<Integer> numbers;
 
     @Mandatory
-    @Dependency(onVajram = Multiplier.class, canFanout = true)
+    @Dependency(onVajram = Multiply.class, canFanout = true)
     int doubledNumbers;
 
     @Mandatory
-    @Dependency(onVajram = Subtractor.class)
+    @Dependency(onVajram = Subtract.class)
     int result;
   }
 
   @Override
   public ImmutableCollection<SimpleInputResolver> getSimpleInputResolvers() {
     return resolve(
-        dep(doubledNumbers_s, depInput(Multiplier_Req.numberTwo_s).usingValueAsResolver(() -> 2)),
-        dep(result_s, depInput(Subtractor_Req.numberTwo_s).usingValueAsResolver(() -> 1)));
+        dep(doubledNumbers_s, depInput(Multiply_Req.numberTwo_s).usingValueAsResolver(() -> 2)),
+        dep(result_s, depInput(Subtract_Req.numberTwo_s).usingValueAsResolver(() -> 1)));
   }
 
-  @Resolve(dep = doubledNumbers_n, depInputs = Multiplier_Req.numberOne_n)
+  @Resolve(dep = doubledNumbers_n, depInputs = Multiply_Req.numberOne_n)
   static FanoutCommand<Integer> numbersToDouble(List<Integer> numbers) {
     return executeFanoutWith(numbers);
   }
 
-  @Resolve(dep = result_n, depInputs = Subtractor_Req.numberOne_n)
+  @Resolve(dep = result_n, depInputs = Subtract_Req.numberOne_n)
   @SuppressWarnings("methodref.receiver")
-  static int sumOfDoubles(FanoutDepResponses<Multiplier_Req, Integer> doubledNumbers) {
+  static int sumOfDoubles(FanoutDepResponses<Multiply_Req, Integer> doubledNumbers) {
     return doubledNumbers.requestResponsePairs().stream()
         .map(RequestResponse::response)
         .map(Errable::valueOpt)

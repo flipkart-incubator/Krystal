@@ -72,14 +72,11 @@ public class VajramTestHarness {
             .kryonExecutorConfigBuilder()
             .singleThreadExecutor(new SingleThreadExecutor("VajramTestHarness"));
     KryonDecoratorConfig kryonDecoratorConfig =
-        configBuilder
-            .build()
-            .requestScopedKryonDecoratorConfigs()
-            .get(RequestLevelCache.DECORATOR_TYPE);
+        configBuilder.build().kryonDecoratorConfigs().get(RequestLevelCache.DECORATOR_TYPE);
     if (kryonDecoratorConfig == null) {
       kryonExecutorConfigBuilder
           .kryonExecutorConfigBuilder()
-          .requestScopedKryonDecoratorConfig(
+          .kryonDecoratorConfig(
               RequestLevelCache.DECORATOR_TYPE,
               new KryonDecoratorConfig(
                   RequestLevelCache.DECORATOR_TYPE,

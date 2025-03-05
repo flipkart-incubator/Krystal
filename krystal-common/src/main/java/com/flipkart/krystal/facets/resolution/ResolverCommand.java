@@ -9,7 +9,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @FunctionalInterface
 public interface ResolverCommand {
 
-  ImmutableList<? extends ImmutableRequest.Builder> getRequests();
+  ImmutableList<? extends ImmutableRequest.Builder<?>> getRequests();
 
   static SkipDependency skip(String reason) {
     return skip(reason, null);
@@ -20,21 +20,21 @@ public interface ResolverCommand {
   }
 
   static ExecuteDependency executeWithRequests(
-      ImmutableList<? extends ImmutableRequest.@NonNull Builder> inputs) {
+      ImmutableList<? extends ImmutableRequest.@NonNull Builder<?>> inputs) {
     return new ExecuteDependency(inputs);
   }
 
   record SkipDependency(String reason, @Nullable Throwable cause) implements ResolverCommand {
     @Override
-    public ImmutableList<? extends ImmutableRequest.Builder> getRequests() {
+    public ImmutableList<? extends ImmutableRequest.Builder<?>> getRequests() {
       return ImmutableList.of();
     }
   }
 
-  record ExecuteDependency(ImmutableList<? extends ImmutableRequest.Builder> requests)
+  record ExecuteDependency(ImmutableList<? extends ImmutableRequest.Builder<?>> requests)
       implements ResolverCommand {
     @Override
-    public ImmutableList<? extends ImmutableRequest.Builder> getRequests() {
+    public ImmutableList<? extends ImmutableRequest.Builder<?>> getRequests() {
       return requests;
     }
   }

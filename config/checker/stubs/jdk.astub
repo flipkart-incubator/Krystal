@@ -25,8 +25,8 @@ public class Arrays {
 }
 
 public class Objects {
-  @NonNull
-  public static <T> T requireNonNull(T obj);
+  public static <T> @NonNull T requireNonNull(T obj);
+  public static <T> @NonNull T requireNonNull(T obj, String message);
 }
 
 package javax.annotation.processing;

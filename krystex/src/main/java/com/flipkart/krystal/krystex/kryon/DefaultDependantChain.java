@@ -1,31 +1,25 @@
 package com.flipkart.krystal.krystex.kryon;
 
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.facets.Facet;
+import com.flipkart.krystal.facets.Dependency;
+import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class DefaultDependantChain extends AbstractDependantChain {
   private final VajramID vajramID;
-  private final Facet dependency;
-  private final DependantChain dependantChain;
+  @Getter private final Dependency latestDependency;
+  @Getter private final DependantChain incomingDependantChain;
   private int _hashCodeCache;
 
-  DefaultDependantChain(VajramID vajramID, Facet dependency, DependantChain dependantChain) {
+  DefaultDependantChain(
+      VajramID vajramID, Dependency latestDependency, DependantChain incomingDependantChain) {
     this.vajramID = vajramID;
-    this.dependency = dependency;
-    this.dependantChain = dependantChain;
+    this.latestDependency = latestDependency;
+    this.incomingDependantChain = incomingDependantChain;
   }
 
   public VajramID kryonId() {
     return vajramID;
-  }
-
-  public Facet dependency() {
-    return dependency;
-  }
-
-  public DependantChain dependantChain() {
-    return dependantChain;
   }
 
   @Override
@@ -43,6 +37,6 @@ public final class DefaultDependantChain extends AbstractDependantChain {
 
   @Override
   public String toString() {
-    return "%s:%s[%s]".formatted(dependantChain, vajramID.value(), dependency());
+    return "%s:%s[%s]".formatted(incomingDependantChain, vajramID.value(), latestDependency());
   }
 }

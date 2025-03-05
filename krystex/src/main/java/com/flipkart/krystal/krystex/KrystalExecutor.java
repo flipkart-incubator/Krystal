@@ -1,8 +1,8 @@
 package com.flipkart.krystal.krystex;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
-import com.flipkart.krystal.core.VajramID;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 

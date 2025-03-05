@@ -48,18 +48,7 @@ public sealed interface FacetGenModel permits GivenFacetModel, DependencyModel {
   }
 
   @SneakyThrows
-  public default List<? extends AnnotationMirror> getAnnotations() {
-    //    List<Annotation> annotations = new ArrayList<>();
-    //    for (AnnotationMirror annotationMirror : facetField().getAnnotationMirrors()) {
-    //      TypeElement element = (TypeElement) annotationMirror.getAnnotationType().asElement();
-    //      @SuppressWarnings("unchecked")
-    //      Class<? extends Annotation> annotationType =
-    //          (Class<? extends Annotation>) Class.forName(element.toString());
-    //      Annotation annotation = facetField().getAnnotation(annotationType);
-    //      if (annotation != null) {
-    //        annotations.add(annotation);
-    //      }
-    //    }
+  public default List<? extends AnnotationMirror> annotations() {
     return facetField().getAnnotationMirrors();
   }
 }

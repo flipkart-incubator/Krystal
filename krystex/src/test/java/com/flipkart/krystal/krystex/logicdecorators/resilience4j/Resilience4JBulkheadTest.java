@@ -1,6 +1,5 @@
 package com.flipkart.krystal.krystex.logicdecorators.resilience4j;
 
-import static com.flipkart.krystal.annos.ExternalInvocation.ExternalInvocations.externalInvocation;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.testutils.SimpleFacet.input;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
@@ -11,9 +10,11 @@ import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.config.ConfigProvider;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesMapBuilder;
 import com.flipkart.krystal.data.SimpleRequestBuilder;
@@ -28,7 +29,6 @@ import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
-import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
@@ -131,7 +131,7 @@ class Resilience4JBulkheadTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(Set.of(input(1))),
             newFacetsFromRequestLogic(),
-            ElementTags.of(externalInvocation(true)));
+            ElementTags.of(ExternalInvocation.Creator.create(true)));
 
     KryonExecutor executor1 =
         new KryonExecutor(
@@ -229,7 +229,7 @@ class Resilience4JBulkheadTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(inputs),
             newFacetsFromRequestLogic(),
-            ElementTags.of(externalInvocation(true)));
+            ElementTags.of(ExternalInvocation.Creator.create(true)));
 
     KryonExecutor executor1 =
         new KryonExecutor(

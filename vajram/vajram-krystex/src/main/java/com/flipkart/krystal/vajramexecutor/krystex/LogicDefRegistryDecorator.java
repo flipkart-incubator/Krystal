@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
@@ -9,7 +10,6 @@ import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
-import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.resolution.MultiResolver;
 import com.flipkart.krystal.krystex.resolution.ResolverLogic;

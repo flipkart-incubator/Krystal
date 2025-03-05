@@ -1,6 +1,6 @@
 package com.flipkart.krystal.annos;
 
-import java.lang.annotation.Annotation;
+import com.google.auto.value.AutoAnnotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -25,20 +25,12 @@ public @interface ExternalInvocation {
 
   boolean allow();
 
-  final class ExternalInvocations {
+  final class Creator {
 
-    public static ExternalInvocation externalInvocation(boolean allow) {
-      return new ExternalInvocationImpl(allow);
+    public static @AutoAnnotation ExternalInvocation create(boolean allow) {
+      return new AutoAnnotation_ExternalInvocation_Creator_create(allow);
     }
 
-    private record ExternalInvocationImpl(boolean allow) implements ExternalInvocation {
-
-      @Override
-      public Class<? extends Annotation> annotationType() {
-        return ExternalInvocation.class;
-      }
-    }
-
-    private ExternalInvocations() {}
+    private Creator() {}
   }
 }

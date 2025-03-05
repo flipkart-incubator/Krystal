@@ -24,6 +24,9 @@ import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardSend;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
+import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
+import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
+import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationInput;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
@@ -46,6 +49,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
@@ -86,12 +90,14 @@ public final class KryonExecutor implements KrystalExecutor {
           List<OutputLogicDecoratorConfig>>
       requestScopedLogicDecoratorConfigs;
 
+  private final ImmutableMap<String, DependencyDecoratorConfig> dependencyDecoratorConfigs;
+
   private final Map<
           String, // DecoratorType
           Map<
               String, // InstanceId
               OutputLogicDecorator>>
-      requestScopedOutputLogicDecorators = new LinkedHashMap<>();
+      outputLogicDecorators = new LinkedHashMap<>();
 
   private final Map<
           String, // DecoratorType
@@ -99,6 +105,13 @@ public final class KryonExecutor implements KrystalExecutor {
               String, // InstanceId
               KryonDecorator>>
       requestScopedKryonDecorators = new LinkedHashMap<>();
+
+  private final Map<
+          String, // DecoratorType
+          Map<
+              String, // InstanceId
+              DependencyDecorator>>
+      dependencyDecorators = new LinkedHashMap<>();
 
   private final KryonRegistry<?> kryonRegistry = new KryonRegistry<>();
   private final KryonExecutorMetrics kryonMetrics;
@@ -121,12 +134,14 @@ public final class KryonExecutor implements KrystalExecutor {
     this.instanceId = instanceId;
     this.requestScopedLogicDecoratorConfigs =
         ImmutableMap.copyOf(executorConfig.requestScopedLogicDecoratorConfigs());
+    this.dependencyDecoratorConfigs =
+        ImmutableMap.copyOf(executorConfig.dependencyDecoratorConfigs());
     this.kryonMetrics = new KryonExecutorMetrics();
     this.preferredReqGenerator =
         executorConfig.debug() ? new StringReqGenerator() : new IntReqGenerator();
   }
 
-  private ImmutableMap<String, OutputLogicDecorator> getRequestScopedDecorators(
+  private ImmutableMap<String, OutputLogicDecorator> getOutputLogicDecorators(
       LogicExecutionContext logicExecutionContext) {
     VajramID vajramID = logicExecutionContext.vajramID();
     KryonDefinition kryonDefinition = kryonDefinitionRegistry.get(vajramID);
@@ -144,11 +159,11 @@ public final class KryonExecutor implements KrystalExecutor {
               List<OutputLogicDecoratorConfig> decoratorConfigList =
                   new ArrayList<>(entry.getValue());
               for (OutputLogicDecoratorConfig decoratorConfig : decoratorConfigList) {
-                String instanceId =
-                    decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
                 if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
+                  String instanceId =
+                      decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
                   OutputLogicDecorator outputLogicDecorator =
-                      requestScopedOutputLogicDecorators
+                      outputLogicDecorators
                           .computeIfAbsent(decoratorType, t -> new LinkedHashMap<>())
                           .computeIfAbsent(
                               instanceId,
@@ -171,6 +186,25 @@ public final class KryonExecutor implements KrystalExecutor {
     return ImmutableMap.copyOf(decorators);
   }
 
+  private ImmutableMap<String, DependencyDecorator> getDependencyDecorators(
+      DependencyExecutionContext dependencyExecutionContext) {
+    Map<String, DependencyDecorator> decorators = new LinkedHashMap<>();
+    for (Entry<String, DependencyDecoratorConfig> entry : dependencyDecoratorConfigs.entrySet()) {
+      String decoratorType = entry.getKey();
+      DependencyDecoratorConfig decoratorConfig = entry.getValue();
+      if (decoratorConfig.shouldDecorate().test(dependencyExecutionContext)) {
+        String instanceId = decoratorConfig.instanceIdGenerator().apply(dependencyExecutionContext);
+        DependencyDecorator dependencyDecorator =
+            dependencyDecorators
+                .computeIfAbsent(decoratorType, s -> new LinkedHashMap<>())
+                .computeIfAbsent(
+                    instanceId, s -> decoratorConfig.factory().apply(dependencyExecutionContext));
+        decorators.put(decoratorType, dependencyDecorator);
+      }
+    }
+    return ImmutableMap.copyOf(decorators);
+  }
+
   @Override
   @SuppressWarnings("FutureReturnValueIgnored")
   public <T> CompletableFuture<@Nullable T> executeKryon(
@@ -187,7 +221,7 @@ public final class KryonExecutor implements KrystalExecutor {
           .map(ExternalInvocation::allow)
           .orElse(false)) {
         throw new RejectedExecutionException(
-            "External invocation is not allowed for kryonId: " + vajramID);
+            "External invocation is not allowed for vajramId: " + vajramID);
       }
     }
 
@@ -228,7 +262,14 @@ public final class KryonExecutor implements KrystalExecutor {
 
   private void createDependencyKryons(
       VajramID vajramID, DependantChain dependantChain, KryonExecutionConfig executionConfig) {
-    KryonDefinition kryonDefinition = kryonDefinitionRegistry.get(vajramID);
+    Optional<KryonDefinition> kryonDefinitionOpt = kryonDefinitionRegistry.tryGet(vajramID);
+    if (kryonDefinitionOpt.isEmpty()) {
+      // No kryon definition was created for this vajramID. This can happen if the vajram is a
+      // trait. Just return since at runtime, the trait might have been bound to and replaced by a
+      // conformant vajram
+      return;
+    }
+    KryonDefinition kryonDefinition = kryonDefinitionOpt.get();
     // If a dependantChain is disabled, don't create that kryon and its dependency kryons
     if (!union(executorConfig.disabledDependantChains(), executionConfig.disabledDependantChains())
         .contains(dependantChain)) {
@@ -245,15 +286,17 @@ public final class KryonExecutor implements KrystalExecutor {
   }
 
   @SuppressWarnings("unchecked")
-  private void createKryonIfAbsent(VajramID vajramID, KryonDefinition kryonDefinition) {
+  private Kryon<? extends KryonCommand, ? extends KryonResponse> createKryonIfAbsent(
+      VajramID vajramID, KryonDefinition kryonDefinition) {
     KryonRegistry<BatchKryon> batchKryonRegistry = (KryonRegistry<BatchKryon>) kryonRegistry;
-    batchKryonRegistry.createIfAbsent(
+    return batchKryonRegistry.createIfAbsent(
         vajramID,
         _n ->
             new BatchKryon(
                 kryonDefinition,
                 this,
-                this::getRequestScopedDecorators,
+                this::getOutputLogicDecorators,
+                this::getDependencyDecorators,
                 executorConfig.logicDecorationOrdering(),
                 preferredReqGenerator));
   }
@@ -285,7 +328,8 @@ public final class KryonExecutor implements KrystalExecutor {
    * command is originating from the same main thread inside the command queue,thus avoiding the
    * pontentially unnecessary contention in the thread-safe structures inside the command queue.
    */
-  public <T extends KryonResponse> CompletableFuture<T> executeCommand(KryonCommand kryonCommand) {
+  public <R extends KryonResponse> CompletableFuture<R> executeCommand(
+      KryonCommand<R> kryonCommand) {
     if (BREADTH.equals(executorConfig.graphTraversalStrategy())) {
       return enqueueKryonCommand(() -> kryonCommand);
     } else {
@@ -321,7 +365,9 @@ public final class KryonExecutor implements KrystalExecutor {
       }
       VajramID vajramID = kryonCommand.vajramID();
       @SuppressWarnings("unchecked")
-      Kryon<KryonCommand, R> kryon = (Kryon<KryonCommand, R>) kryonRegistry.get(vajramID);
+      Kryon<KryonCommand, R> kryon =
+          (Kryon<KryonCommand, R>)
+              createKryonIfAbsent(vajramID, kryonDefinitionRegistry.get(vajramID));
       for (KryonDecorator kryonDecorator : getSortedKryonDecorators(vajramID, kryonCommand)) {
         @SuppressWarnings("unchecked")
         Kryon<KryonCommand, R> decoratedKryon =
@@ -343,8 +389,9 @@ public final class KryonExecutor implements KrystalExecutor {
     }
   }
 
-  private Set<KryonDecorator> getSortedKryonDecorators(VajramID vajramID, KryonCommand kryonCommand) {
-    Map<String, KryonDecoratorConfig> configs = executorConfig.requestScopedKryonDecoratorConfigs();
+  private Set<KryonDecorator> getSortedKryonDecorators(
+      VajramID vajramID, KryonCommand kryonCommand) {
+    Map<String, KryonDecoratorConfig> configs = executorConfig.kryonDecoratorConfigs();
     KryonExecutionContext executionContext =
         new KryonExecutionContext(vajramID, kryonCommand.dependantChain());
     TreeSet<KryonDecorator> sortedDecorators =
@@ -489,7 +536,7 @@ public final class KryonExecutor implements KrystalExecutor {
                 .whenComplete(
                     (unused, throwable) -> {
                       for (Entry<String, Map<String, OutputLogicDecorator>> decoratorsDetails :
-                          requestScopedOutputLogicDecorators.entrySet()) {
+                          outputLogicDecorators.entrySet()) {
                         Map<String, OutputLogicDecorator> decoratorsDetailsValue =
                             decoratorsDetails.getValue();
                         for (Entry<String, OutputLogicDecorator> decorator :

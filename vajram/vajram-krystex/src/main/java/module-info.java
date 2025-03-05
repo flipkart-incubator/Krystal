@@ -1,11 +1,11 @@
 module flipkart.krystal.vajramexecutor.krystex {
+  requires flipkart.krystal.common;
   requires flipkart.krystal.krystex;
-  requires flipkart.krystal.vajramDef;
+  requires flipkart.krystal.vajram;
   requires com.google.common;
   requires org.checkerframework.checker.qual;
-  requires lombok;
-  requires flipkart.krystal.common;
+  requires java.compiler;
   requires jakarta.inject;
-  requires jdk.compiler;
   requires org.slf4j;
+  requires static lombok;
 }

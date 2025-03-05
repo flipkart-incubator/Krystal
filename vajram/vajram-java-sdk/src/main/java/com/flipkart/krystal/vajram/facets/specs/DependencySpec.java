@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.facets.specs;
 
 import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.DepResponse;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
@@ -10,7 +11,6 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.tags.ElementTags;
-import com.flipkart.krystal.core.VajramID;
 import com.google.common.collect.ImmutableSet;
 import lombok.Getter;
 

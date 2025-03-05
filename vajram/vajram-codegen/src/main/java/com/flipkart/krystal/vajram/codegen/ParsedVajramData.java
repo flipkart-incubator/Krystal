@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.Boolean.TRUE;
 
+import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
@@ -21,30 +22,49 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
 public record ParsedVajramData(
     List<ExecutableElement> resolvers,
-    ExecutableElement outputLogic,
+    @Nullable ExecutableElement outputLogic,
     String packageName,
     VajramInfo vajramInfo) {
 
-  public static Optional<ParsedVajramData> fromVajram(VajramInfo vajramInfo, Utils util) {
+  public static Optional<ParsedVajramData> fromVajramInfo(VajramInfo vajramInfo, Utils util) {
+    validate(vajramInfo, util);
     String packageName = vajramInfo.lite().packageName();
-    for (ExecutableElement method : getAllMethods(vajramInfo.vajramClass())) {
-      String errorMessage =
-          "Vajram class %s has non-static method %s"
-              .formatted(vajramInfo.lite().vajramId(), method.getSimpleName());
-      if ((isOutputLogic(method) || isResolver(method)) && !isStatic(method)) {
-        util.error(errorMessage, method);
-        throw new VajramValidationException(errorMessage);
+    ImmutableList<ExecutableElement> allMethods = getAllMethods(vajramInfo.vajramClass());
+    if (vajramInfo.lite().isTrait()) {
+      if (!allMethods.isEmpty()) {
+        throw util.errorAndThrow("A trait must not have any methods.", vajramInfo.vajramClass());
       }
     }
-
+    for (ExecutableElement method : allMethods) {
+      if ((isOutputLogic(method) || isResolver(method)) && !isStatic(method)) {
+        throw util.errorAndThrow(
+            "Vajram class %s has non-static method %s"
+                .formatted(vajramInfo.lite().vajramId(), method.getSimpleName()),
+            method);
+      }
+    }
+    ExecutableElement outputLogic = null;
     List<ExecutableElement> resolverMethods = new ArrayList<>();
-    ExecutableElement outputLogic =
-        getOutputLogicAndResolverMethods(vajramInfo, resolverMethods, util);
+    if (vajramInfo.lite().isVajram()) {
+      outputLogic = getOutputLogicAndResolverMethods(vajramInfo, resolverMethods, util);
+    }
     return Optional.of(new ParsedVajramData(resolverMethods, outputLogic, packageName, vajramInfo));
+  }
+
+  private static void validate(VajramInfo vajramInfo, Utils util) {
+    if (vajramInfo.lite().isTrait()) {
+      TypeElement typeElement = vajramInfo.lite().vajramOrReqClass();
+      CallGraphDelegationMode callGraphDelegationMode =
+          typeElement.getAnnotation(CallGraphDelegationMode.class);
+      if (callGraphDelegationMode == null) {
+        throw util.errorAndThrow("A trait must specify a @CallGraphDelegationMode.", typeElement);
+      }
+    }
   }
 
   public static void validateNoDuplicateResolvers(

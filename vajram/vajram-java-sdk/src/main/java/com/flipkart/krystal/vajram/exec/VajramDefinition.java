@@ -9,11 +9,11 @@ import static com.flipkart.krystal.vajram.exec.Vajrams.parseVajramTags;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.tags.ElementTags;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
@@ -45,22 +45,24 @@ public final class VajramDefinition {
   private final ImmutableMap<String, FacetSpec> facetsByName;
   private final ImmutableMap<Integer, FacetSpec> facetsById;
 
-  public VajramDefinition(VajramDefRoot<Object> vajramDef) {
-    this.vajramDef = vajramDef;
+  public VajramDefinition(VajramDefRoot<Object> vajramDefRoot) {
+    this.vajramDef = vajramDefRoot;
     this.facetSpecs =
-        vajramDef.facetsFromRequest(vajramDef.newRequestBuilder())._facets().stream()
-            .map(facetDefinition -> (FacetSpec) facetDefinition)
-            .collect(toImmutableSet());
+        vajramDefRoot instanceof VajramDef<?> v
+            ? v.facetsFromRequest(vajramDefRoot.newRequestBuilder())._facets().stream()
+                .map(facetDefinition -> (FacetSpec) facetDefinition)
+                .collect(toImmutableSet())
+            : ImmutableSet.of();
     this.facetsByName =
         facetSpecs.stream().collect(toImmutableMap(Facet::name, Function.identity()));
     this.facetsById = facetSpecs.stream().collect(toImmutableMap(Facet::id, Function.identity()));
-    this.vajramId = parseVajramId(vajramDef);
-    this.vajramDefClass = getVajramDefClass(vajramDef.getClass());
-    this.inputResolvers = parseInputResolvers(vajramDef);
-    this.outputLogicTags = parseOutputLogicTags(vajramDef);
-    this.vajramTags = parseVajramTags(vajramId, vajramDef);
+    this.vajramId = parseVajramId(vajramDefRoot);
+    this.vajramDefClass = getVajramDefClass(vajramDefRoot.getClass());
+    this.inputResolvers = parseInputResolvers(vajramDefRoot);
+    this.outputLogicTags = parseOutputLogicTags(vajramDefRoot);
+    this.vajramTags = parseVajramTags(vajramId, vajramDefRoot);
     this.outputLogicSources =
-        parseOutputLogicSources(vajramDef, facetSpecs, facetsByName, facetsById);
-    this.vajramMetadata = new VajramMetadata(vajramDef, facetSpecs);
+        parseOutputLogicSources(vajramDefRoot, facetSpecs, facetsByName, facetsById);
+    this.vajramMetadata = new VajramMetadata(vajramDefRoot, facetSpecs);
   }
 }

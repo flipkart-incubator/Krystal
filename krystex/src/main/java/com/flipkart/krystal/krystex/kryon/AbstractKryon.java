@@ -1,8 +1,11 @@
 package com.flipkart.krystal.krystex.kryon;
 
 import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
+import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
+import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
@@ -23,8 +26,10 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
 
   /** decoratorType -> Decorator */
   protected final Function<LogicExecutionContext, ImmutableMap<String, OutputLogicDecorator>>
-      requestScopedDecoratorsSupplier;
+      outputLogicDecoratorSuppliers;
 
+  private final Function<DependencyExecutionContext, ImmutableMap<String, DependencyDecorator>>
+      depDecoratorSuppliers;
   protected final LogicDecorationOrdering logicDecorationOrdering;
 
   protected final RequestIdGenerator requestIdGenerator;
@@ -33,18 +38,22 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
       KryonDefinition definition,
       KryonExecutor kryonExecutor,
       Function<LogicExecutionContext, ImmutableMap<String, OutputLogicDecorator>>
-          requestScopedDecoratorsSupplier,
+          outputLogicDecoratorSuppliers,
+      Function<DependencyExecutionContext, ImmutableMap<String, DependencyDecorator>>
+          depDecoratorSuppliers,
       LogicDecorationOrdering logicDecorationOrdering,
       RequestIdGenerator requestIdGenerator) {
     this.kryonDefinition = definition;
     this.vajramID = definition.vajramID();
     this.kryonExecutor = kryonExecutor;
-    this.requestScopedDecoratorsSupplier = requestScopedDecoratorsSupplier;
+    this.outputLogicDecoratorSuppliers = outputLogicDecoratorSuppliers;
+    this.depDecoratorSuppliers = depDecoratorSuppliers;
     this.logicDecorationOrdering = logicDecorationOrdering;
     this.requestIdGenerator = requestIdGenerator;
   }
 
-  protected NavigableSet<OutputLogicDecorator> getSortedDecorators(DependantChain dependantChain) {
+  protected NavigableSet<OutputLogicDecorator> getSortedOutputLogicDecorators(
+      DependantChain dependantChain) {
     OutputLogicDefinition<Object> outputLogicDefinition =
         kryonDefinition.getOutputLogicDefinition();
     Map<String, OutputLogicDecorator> decorators =
@@ -53,7 +62,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
     // If the same decoratorType is configured for session and request scope, request scope
     // overrides session scope.
     decorators.putAll(
-        requestScopedDecoratorsSupplier.apply(
+        outputLogicDecoratorSuppliers.apply(
             new LogicExecutionContext(
                 vajramID,
                 outputLogicDefinition.tags(),
@@ -66,6 +75,28 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
                 // Reverse the ordering so that the ones with the highest index are applied first.
                 .reversed());
     sortedDecorators.addAll(decorators.values());
+    return sortedDecorators;
+  }
+
+  protected NavigableSet<DependencyDecorator> getSortedDependencyDecorators(
+      VajramID depVajramId, DependantChain dependantChain) {
+    // If the same decoratorType is configured for session and request scope, request scope
+    // overrides session scope.
+    TreeSet<DependencyDecorator> sortedDecorators =
+        new TreeSet<>(
+            logicDecorationOrdering
+                .encounterOrder()
+                // Reverse the ordering so that the ones with the highest index are applied first.
+                .reversed());
+    Dependency dependency = dependantChain.latestDependency();
+    if (dependency == null) {
+      return sortedDecorators;
+    }
+    sortedDecorators.addAll(
+        depDecoratorSuppliers
+            .apply(
+                new DependencyExecutionContext(vajramID, dependency, depVajramId, dependantChain))
+            .values());
     return sortedDecorators;
   }
 

@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.facets;
 
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.VajramDefRoot;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
 
@@ -27,7 +27,7 @@ public @interface Dependency {
    * vajram is in the same buildable module as this vajram. In all other cases, please use {@link
    * #withVajramReq()}
    */
-  Class<? extends VajramDef> onVajram() default VajramDef.class;
+  Class<? extends VajramDefRoot> onVajram() default VajramDefRoot.class;
 
   boolean canFanout() default false;
 }

@@ -8,7 +8,7 @@ public enum ComputeDelegationMode {
    * The output logic of the vajram is executed in the same thread as the caller. These vajrams
    * extend from the {@link ComputeVajramDef} class.
    */
-  NO_DELEGATION,
+  NONE,
 
   /**
    * The output logic of the vajram in a seperate thread/thredpool/core/microservice etc. These are
@@ -18,9 +18,8 @@ public enum ComputeDelegationMode {
    * <p>The output logic returns a {@link CompletableFuture} which completes when the result of the
    * delegated computation is ready
    */
-  SYNC_DELEGATION,
+  SYNC,
 
-  /*
-  //Coming soon
-  ASYNC_DELAGATION*/
+  // Coming soon
+  /* ASYNC, */
 }

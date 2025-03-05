@@ -1,6 +1,5 @@
 package com.flipkart.krystal.krystex.caching;
 
-import static com.flipkart.krystal.annos.ExternalInvocation.ExternalInvocations.externalInvocation;
 import static com.flipkart.krystal.data.Errable.computeErrableFrom;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
@@ -11,8 +10,10 @@ import static java.util.Collections.emptySet;
 import static java.util.function.Function.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesMapBuilder;
 import com.flipkart.krystal.data.SimpleImmutRequest;
@@ -30,7 +31,6 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
-import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
@@ -116,7 +116,7 @@ class RequestLevelCacheTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic("kryon", emptySet()),
             newFacetsFromRequestLogic("kryon"),
-            ElementTags.of(List.of(externalInvocation(true))));
+            ElementTags.of(List.of(ExternalInvocation.Creator.create(true))));
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
             kryonDefinition.vajramID(),
@@ -163,7 +163,7 @@ class RequestLevelCacheTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic("kryon", emptySet()),
             newFacetsFromRequestLogic("kryon"),
-            ElementTags.of(List.of(externalInvocation(true))));
+            ElementTags.of(List.of(ExternalInvocation.Creator.create(true))));
 
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
@@ -197,7 +197,7 @@ class RequestLevelCacheTest {
             .graphTraversalStrategy(graphTraversalStrategy);
     if (withCache) {
       configBuilder
-          .requestScopedKryonDecoratorConfig(
+          .kryonDecoratorConfig(
               RequestLevelCache.DECORATOR_TYPE,
               new KryonDecoratorConfig(
                   RequestLevelCache.DECORATOR_TYPE,

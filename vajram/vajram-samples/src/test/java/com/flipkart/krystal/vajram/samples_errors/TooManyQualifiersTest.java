@@ -11,7 +11,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
-import com.flipkart.krystal.vajram.guice.VajramGuiceInjector;
+import com.flipkart.krystal.vajram.guice.inputinjection.VajramGuiceInputInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
@@ -72,7 +72,7 @@ class TooManyQualifiersTest {
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
             .inputInjectionProvider(
-                new VajramGuiceInjector(
+                new VajramGuiceInputInjector(
                     createInjector(
                         binder -> {
                           binder

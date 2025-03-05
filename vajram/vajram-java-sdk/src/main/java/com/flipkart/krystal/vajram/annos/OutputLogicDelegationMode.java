@@ -1,10 +1,10 @@
 package com.flipkart.krystal.vajram.annos;
 
+import com.flipkart.krystal.core.KrystalElement.Vajram;
 import com.flipkart.krystal.vajram.ComputeDelegationMode;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.IOVajramDef;
-import com.flipkart.krystal.vajram.KrystalElement.Vajram;
-import java.lang.annotation.Annotation;
+import com.google.auto.value.AutoAnnotation;
 import java.lang.annotation.Target;
 
 @ApplicableToElements(Vajram.class)
@@ -12,8 +12,8 @@ import java.lang.annotation.Target;
 public @interface OutputLogicDelegationMode {
   /**
    * A vajram which extends {@link ComputeVajramDef} gets the value {@link
-   * ComputeDelegationMode#NO_DELEGATION} and a class which extends {@link IOVajramDef} gets the value
-   * {@link ComputeDelegationMode#SYNC_DELEGATION}
+   * ComputeDelegationMode#NONE} and a class which extends {@link IOVajramDef} gets the value {@link
+   * ComputeDelegationMode#SYNC}
    *
    * <p>Vajram developers are expected to leave this field empty and let the SDK infer the value
    * from the code. Else an error is thrown
@@ -22,12 +22,12 @@ public @interface OutputLogicDelegationMode {
    */
   ComputeDelegationMode value();
 
-  public record OutputLogicDelegationModeImpl(ComputeDelegationMode value)
-      implements OutputLogicDelegationMode {
+  final class Creator {
 
-    @Override
-    public Class<? extends Annotation> annotationType() {
-      return OutputLogicDelegationMode.class;
+    public static @AutoAnnotation OutputLogicDelegationMode create(ComputeDelegationMode value) {
+      return new AutoAnnotation_OutputLogicDelegationMode_Creator_create(value);
     }
+
+    private Creator() {}
   }
 }

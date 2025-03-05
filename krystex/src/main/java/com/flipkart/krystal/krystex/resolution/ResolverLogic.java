@@ -8,5 +8,5 @@ import com.google.common.collect.ImmutableList;
 
 public non-sealed interface ResolverLogic extends Logic {
   ResolverCommand resolve(
-      ImmutableList<? extends ImmutableRequest.Builder> depRequests, FacetValues facetValues);
+      ImmutableList<? extends ImmutableRequest.Builder<?>> depRequests, FacetValues facetValues);
 }

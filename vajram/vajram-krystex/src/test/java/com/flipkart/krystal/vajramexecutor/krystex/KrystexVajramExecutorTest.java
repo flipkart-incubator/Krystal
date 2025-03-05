@@ -4,7 +4,7 @@ import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
-import static com.flipkart.krystal.vajram.ComputeDelegationMode.SYNC_DELEGATION;
+import static com.flipkart.krystal.vajram.ComputeDelegationMode.SYNC;
 import static com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig.autoRegisterSharedBatchers;
 import static java.time.Duration.ofSeconds;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -552,7 +552,7 @@ class KrystexVajramExecutorTest {
             .logicDecorationOrdering(logicDecorationOrdering);
 
     RequestLevelCache requestLevelCache = new RequestLevelCache();
-    kryonExecutorConfigBuilder.requestScopedKryonDecoratorConfig(
+    kryonExecutorConfigBuilder.kryonDecoratorConfig(
         RequestLevelCache.DECORATOR_TYPE,
         new KryonDecoratorConfig(
             RequestLevelCache.DECORATOR_TYPE,
@@ -835,7 +835,7 @@ class KrystexVajramExecutorTest {
               .get(context.vajramID())
               .tags()
               .getAnnotationByType(OutputLogicDelegationMode.class)
-              .map(v -> v.value() == SYNC_DELEGATION)
+              .map(v -> v.value() == SYNC)
               .orElse(false);
         };
     Function<LogicExecutionContext, String> instanceIdCreator =

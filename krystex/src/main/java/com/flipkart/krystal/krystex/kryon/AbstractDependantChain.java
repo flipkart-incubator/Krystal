@@ -11,13 +11,13 @@ public abstract sealed class AbstractDependantChain implements DependantChain
     permits DefaultDependantChain, DependantChainStart {
 
   @EqualsAndHashCode.Exclude @ToString.Exclude
-  private final Map<VajramID, ConcurrentHashMap<Dependency, DependantChain>> dependenciesInternPool =
-      new ConcurrentHashMap<>();
+  private final Map<VajramID, ConcurrentHashMap<Dependency, DependantChain>>
+      dependenciesInternPool = new ConcurrentHashMap<>();
 
   @Override
   public DependantChain extend(VajramID vajramID, Dependency dependency) {
     return dependenciesInternPool
         .computeIfAbsent(vajramID, _n -> new ConcurrentHashMap<>())
-        .computeIfAbsent(dependency, depName -> new DefaultDependantChain(vajramID, depName, this));
+        .computeIfAbsent(dependency, dep -> new DefaultDependantChain(vajramID, dep, this));
   }
 }

@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.annos;
 
 import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
 
-import com.flipkart.krystal.vajram.KrystalElement;
+import com.flipkart.krystal.core.KrystalElement;
 import java.lang.annotation.Target;
 
 @Target(ANNOTATION_TYPE)

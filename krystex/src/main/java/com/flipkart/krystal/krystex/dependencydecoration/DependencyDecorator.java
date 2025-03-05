@@ -1,18 +1,12 @@
 package com.flipkart.krystal.krystex.dependencydecoration;
 
-import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.facets.Dependency;
-import com.flipkart.krystal.krystex.commands.ForwardSend;
-import com.flipkart.krystal.krystex.commands.KryonCommand;
+import com.flipkart.krystal.krystex.Decorator;
+import com.flipkart.krystal.krystex.commands.ClientSideCommand;
 import com.flipkart.krystal.krystex.kryon.KryonResponse;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
-public interface DependencyDecorator {
+public non-sealed interface DependencyDecorator extends Decorator {
 
-  CompletableFuture<KryonResponse> invokeDependency(
-      VajramID clientVajramID,
-      Dependency dependency,
-      Function<KryonCommand, CompletableFuture<KryonResponse>> invocationToDecorate,
-      ForwardSend invocationRequest);
+  <R extends KryonResponse> CompletableFuture<R> invokeDependency(
+      ClientSideCommand<R> kryonCommand, VajramInvocation<R> invocationToDecorate);
 }

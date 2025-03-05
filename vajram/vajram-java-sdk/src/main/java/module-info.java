@@ -1,4 +1,4 @@
-module flipkart.krystal.vajramDef {
+module flipkart.krystal.vajram {
   exports com.flipkart.krystal.vajram.facets;
   exports com.flipkart.krystal.vajram.facets.resolution;
   exports com.flipkart.krystal.vajram;
@@ -9,7 +9,6 @@ module flipkart.krystal.vajramDef {
   exports com.flipkart.krystal.vajram.facets.specs;
   exports com.flipkart.krystal.vajram.annos;
   exports com.flipkart.krystal.vajram.inputinjection;
-  exports com.flipkart.krystal.vajram.traitbinding;
 
   requires com.google.common;
   requires static lombok;
@@ -18,4 +17,6 @@ module flipkart.krystal.vajramDef {
   requires com.google.errorprone.annotations;
   requires flipkart.krystal.common;
   requires static org.slf4j;
+  requires java.compiler;
+  requires auto.value.annotations;
 }

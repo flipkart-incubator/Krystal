@@ -1,8 +1,9 @@
 package com.flipkart.krystal.vajramexecutor.krystex.inputinjection;
 
-import static com.flipkart.krystal.facets.FacetType.INJECTION;
 import static com.flipkart.krystal.core.VajramID.vajramID;
+import static com.flipkart.krystal.facets.FacetType.INJECTION;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesBuilder;
@@ -18,7 +19,7 @@ import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonResponse;
 import com.flipkart.krystal.krystex.request.RequestId;
-import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.facets.specs.DefaultFacetSpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
@@ -27,7 +28,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashSet;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
@@ -61,19 +61,19 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
 
   @Override
   public CompletableFuture<KryonResponse> executeCommand(KryonCommand kryonCommand) {
-    Optional<VajramDefinition> vajramDefinition =
+    VajramDefinition vajramDefinition =
         vajramKryonGraph.getVajramDefinition(vajramID(kryonCommand.vajramID().value()));
-    if (vajramDefinition.isPresent()
-        && vajramDefinition.get().vajramMetadata().isInputInjectionNeeded()) {
+    if (vajramDefinition.vajramMetadata().isInputInjectionNeeded()
+        && vajramDefinition.vajramDef() instanceof VajramDef<?> vajramDef) {
       if (kryonCommand instanceof ForwardReceive forwardBatch) {
-        return injectFacets(forwardBatch, vajramDefinition.get());
+        return injectFacets(forwardBatch, vajramDefinition, vajramDef);
       }
     }
     return kryon.executeCommand(kryonCommand);
   }
 
   private CompletableFuture<KryonResponse> injectFacets(
-      ForwardReceive forwardBatch, VajramDefinition vajramDefinition) {
+      ForwardReceive forwardBatch, VajramDefinition vajramDefinition, VajramDef<?> vajramDef) {
     ImmutableMap<RequestId, ? extends FacetValuesContainer> requestIdToFacets =
         forwardBatch.executableRequests();
 
@@ -93,7 +93,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
       FacetValuesContainer container = entry.getValue();
       FacetValuesBuilder facetsBuilder;
       if (container instanceof Request request) {
-        facetsBuilder = vajramDefinition.vajramDef().facetsFromRequest(request);
+        facetsBuilder = vajramDef.facetsFromRequest(request);
       } else if (container instanceof FacetValues facetValues) {
         facetsBuilder = facetValues._asBuilder();
       } else {

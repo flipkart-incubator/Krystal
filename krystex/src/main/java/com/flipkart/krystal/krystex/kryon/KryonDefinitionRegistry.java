@@ -12,6 +12,7 @@ import com.flipkart.krystal.krystex.resolution.Resolver;
 import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -29,12 +30,16 @@ public final class KryonDefinitionRegistry {
     return logicDefinitionRegistry;
   }
 
+  public Optional<KryonDefinition> tryGet(VajramID vajramID) {
+    return Optional.ofNullable(kryonDefinitions.get(vajramID));
+  }
+
   public KryonDefinition get(VajramID vajramID) {
-    KryonDefinition kryon = kryonDefinitions.get(vajramID);
-    if (kryon == null) {
+    Optional<KryonDefinition> kryon = tryGet(vajramID);
+    if (kryon.isEmpty()) {
       throw new IllegalArgumentException("No Kryon with id %s found".formatted(vajramID));
     }
-    return kryon;
+    return kryon.get();
   }
 
   public KryonDefinition newKryonDefinition(

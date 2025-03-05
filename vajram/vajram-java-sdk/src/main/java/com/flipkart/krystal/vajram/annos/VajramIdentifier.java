@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.annos;
 
-import com.flipkart.krystal.vajram.KrystalElement.Vajram;
-import java.lang.annotation.Annotation;
+import com.flipkart.krystal.core.KrystalElement.Vajram;
+import com.google.auto.value.AutoAnnotation;
 import java.lang.annotation.Documented;
 import java.lang.annotation.Target;
 
@@ -18,11 +18,10 @@ public @interface VajramIdentifier {
    */
   String value();
 
-  public static record VajramIdentifierImpl(String value) implements VajramIdentifier {
+  final class Creator {
 
-    @Override
-    public Class<? extends Annotation> annotationType() {
-      return VajramIdentifier.class;
+    public static @AutoAnnotation VajramIdentifier create(String value) {
+      return new AutoAnnotation_VajramIdentifier_Creator_create(value);
     }
   }
 }

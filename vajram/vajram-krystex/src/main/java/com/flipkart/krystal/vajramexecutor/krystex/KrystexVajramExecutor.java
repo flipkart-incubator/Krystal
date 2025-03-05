@@ -2,17 +2,23 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.krystex.KrystalExecutor;
+import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
+import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.kryondecoration.KryonExecutionContext;
-import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.traits.TraitBindingProvider;
 import com.flipkart.krystal.vajram.exec.VajramExecutor;
+import com.flipkart.krystal.vajram.facets.TraitDependency;
+import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
+import com.flipkart.krystal.vajramexecutor.krystex.traitbinding.TraitBindingDecorator;
 import java.util.concurrent.CompletableFuture;
 import lombok.Builder;
 import lombok.NonNull;
@@ -32,7 +38,7 @@ public class KrystexVajramExecutor implements VajramExecutor {
     if (inputInjectionProvider != null) {
       executorConfig
           .kryonExecutorConfigBuilder()
-          .requestScopedKryonDecoratorConfig(
+          .kryonDecoratorConfig(
               KryonInputInjector.DECORATOR_TYPE,
               new KryonDecoratorConfig(
                   KryonInputInjector.DECORATOR_TYPE,
@@ -42,6 +48,20 @@ public class KrystexVajramExecutor implements VajramExecutor {
                   /* factory= */ decoratorContext ->
                       new KryonInputInjector(vajramKryonGraph, inputInjectionProvider)));
     }
+    TraitBindingProvider traitBindingProvider = executorConfig.traitBindingProvider();
+    if (traitBindingProvider != null) {
+      executorConfig
+          .kryonExecutorConfigBuilder()
+          .dependencyDecoratorConfig(
+              TraitBindingDecorator.DECORATOR_TYPE,
+              new DependencyDecoratorConfig(
+                  TraitBindingDecorator.DECORATOR_TYPE,
+                  dependencyExecutionContext ->
+                      isTraitBindingNeeded(vajramKryonGraph, dependencyExecutionContext),
+                  d -> TraitBindingDecorator.DECORATOR_TYPE,
+                  c -> new TraitBindingDecorator(traitBindingProvider)));
+    }
+
     this.krystalExecutor =
         new KryonExecutor(
             vajramKryonGraph.kryonDefinitionRegistry(),
@@ -52,9 +72,24 @@ public class KrystexVajramExecutor implements VajramExecutor {
   private static boolean isInjectionNeeded(
       VajramKryonGraph vajramKryonGraph, KryonExecutionContext executionContext) {
     return vajramKryonGraph
-        .getVajramDefinition(vajramID(executionContext.vajramID().value()))
-        .map(v -> v.vajramMetadata().isInputInjectionNeeded())
-        .orElse(false);
+        .getVajramDefinition(executionContext.vajramID())
+        .vajramMetadata()
+        .isInputInjectionNeeded();
+  }
+
+  private static boolean isTraitBindingNeeded(
+      VajramKryonGraph vajramKryonGraph, DependencyExecutionContext executionContext) {
+    FacetSpec facetSpec = vajramKryonGraph
+        .getVajramDefinition(executionContext.vajramID())
+        .facetsByName()
+        .get(executionContext.dependency().name());
+    if(facetSpec == null){
+      return false;
+    }
+    return facetSpec
+        .tags()
+        .getAnnotationByType(TraitDependency.class)
+        .isPresent();
   }
 
   @Override

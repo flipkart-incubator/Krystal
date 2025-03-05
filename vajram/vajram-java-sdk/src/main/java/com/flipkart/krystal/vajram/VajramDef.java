@@ -2,7 +2,6 @@ package com.flipkart.krystal.vajram;
 
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesBuilder;
-import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
@@ -52,7 +51,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @param <T> The return type of the vajram
  */
-public sealed interface VajramDef<T> extends VajramDefRoot permits ComputeVajramDef, IOVajramDef {
+public sealed interface VajramDef<T> extends VajramDefRoot<T>
+    permits ComputeVajramDef, IOVajramDef {
 
   default ImmutableCollection<? extends SimpleInputResolver> getSimpleInputResolvers() {
     return ImmutableList.of();
@@ -64,8 +64,6 @@ public sealed interface VajramDef<T> extends VajramDefRoot permits ComputeVajram
 
   ImmutableMap<FacetValues, CompletableFuture<@Nullable T>> execute(
       ImmutableList<FacetValues> inputs);
-
-  ImmutableRequest.Builder newRequestBuilder();
 
   FacetValuesBuilder facetsFromRequest(Request<?> request);
 }

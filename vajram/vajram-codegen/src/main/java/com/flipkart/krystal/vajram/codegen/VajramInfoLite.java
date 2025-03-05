@@ -3,15 +3,19 @@ package com.flipkart.krystal.vajram.codegen;
 import static com.flipkart.krystal.vajram.codegen.Utils.getImmutRequestInterfaceName;
 import static com.flipkart.krystal.vajram.codegen.Utils.getRequestInterfaceName;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
-import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.vajram.VajramTrait;
 import com.google.common.collect.ImmutableBiMap;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import java.util.List;
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.TypeElement;
+import lombok.SneakyThrows;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record VajramInfoLite(
@@ -20,6 +24,7 @@ public record VajramInfoLite(
     String packageName,
     ImmutableBiMap<Integer, String> facetIdNameMapping,
     @Nullable VajramInfoLite conformsToTraitInfo,
+    TypeElement vajramOrReqClass,
     Utils util) {
 
   public ClassName requestInterfaceType() {
@@ -63,5 +68,18 @@ public record VajramInfoLite(
 
   public VajramInfoLite conformsToTraitOrSelf() {
     return conformsToTraitInfo == null ? this : conformsToTraitInfo;
+  }
+
+  @SneakyThrows
+  public List<? extends AnnotationMirror> annotations() {
+    return vajramOrReqClass.getAnnotationMirrors();
+  }
+
+  boolean isTrait() {
+    return vajramOrReqClass.getAnnotation(VajramTrait.class) != null;
+  }
+
+  boolean isVajram() {
+    return !isTrait();
   }
 }

@@ -24,7 +24,7 @@ public final class SimpleOne2OneInputResolver<S, T, CV extends Request<?>, DV ex
 
   @Override
   public ResolverCommand resolve(
-      ImmutableList<? extends ImmutableRequest.Builder> depRequests, FacetValues facetValues) {
+      ImmutableList<? extends ImmutableRequest.Builder<?>> depRequests, FacetValues facetValues) {
     {
       try {
         //noinspection unchecked,rawtypes

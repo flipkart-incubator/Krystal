@@ -2,34 +2,34 @@ package com.flipkart.krystal.vajram.utils;
 
 import static java.lang.reflect.Modifier.isFinal;
 
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.VajramDefRoot;
 import java.util.List;
 import org.reflections.Reflections;
 
 public final class VajramLoader {
 
-  public static List<? extends VajramDef<Object>> loadVajramsFromClassPath(String packagePrefix) {
+  public static List<? extends VajramDefRoot<Object>> loadVajramsFromClassPath(
+      String packagePrefix) {
     return new Reflections(packagePrefix)
-        .getSubTypesOf(VajramDef.class).stream()
+        .getSubTypesOf(VajramDefRoot.class).stream()
             .filter(c -> isFinal(c.getModifiers()))
             .map(VajramLoader::initVajram)
             .toList();
   }
 
-  public static VajramDef<Object> loadVajramsFromClass(Class<? extends VajramDef> clazz) {
-    if (!VajramDef.class.isAssignableFrom(clazz)) {
-      throw new IllegalArgumentException("Provided class is not a Vajram");
-    }
-    List<Class<? extends VajramDef>> impls =
+  public static VajramDefRoot<Object> loadVajramsFromClass(
+      Class<? extends VajramDefRoot<?>> clazz) {
+    List<Class<? extends VajramDefRoot>> impls =
         new Reflections(clazz.getPackageName())
             .getSubTypesOf(clazz).stream()
                 .filter(subclass -> isFinal(subclass.getModifiers()))
-                .<Class<? extends VajramDef>>map(subType -> subType.asSubclass(VajramDef.class))
+                .<Class<? extends VajramDefRoot>>map(
+                    subType -> subType.asSubclass(VajramDefRoot.class))
                 .toList();
     if (impls.size() > 1) {
       throw new IllegalArgumentException(
-          "Multiple Vajram Impl found in the package '%s' of the provided class"
-              .formatted(clazz.getPackageName()));
+          "Multiple Vajram Impl found in the package '%s' of the provided class: %s"
+              .formatted(clazz.getPackageName(), impls));
     } else if (impls.isEmpty()) {
       throw new IllegalArgumentException(
           "No Vajram Impl found in the package '%s' of the provided class"
@@ -39,7 +39,7 @@ public final class VajramLoader {
   }
 
   @SuppressWarnings("unchecked")
-  private static VajramDef<Object> initVajram(Class<? extends VajramDef> aClass) {
+  private static VajramDefRoot<Object> initVajram(Class<? extends VajramDefRoot> aClass) {
     if (!isFinal(aClass.getModifiers())) {
       throw new RuntimeException("Provided Vajram impl class should be final");
     }

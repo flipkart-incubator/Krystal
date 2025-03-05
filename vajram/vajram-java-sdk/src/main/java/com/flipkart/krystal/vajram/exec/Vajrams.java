@@ -2,17 +2,20 @@ package com.flipkart.krystal.vajram.exec;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValuesContainer;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.tags.ElementTags;
 import com.flipkart.krystal.vajram.ComputeDelegationMode;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.IOVajramDef;
-import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.vajram.annos.OutputLogicDelegationMode.OutputLogicDelegationModeImpl;
-import com.flipkart.krystal.vajram.annos.VajramIdentifier.VajramIdentifierImpl;
+import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.VajramDefRoot;
+import com.flipkart.krystal.vajram.VajramTrait;
+import com.flipkart.krystal.vajram.VajramTraitDef;
+import com.flipkart.krystal.vajram.annos.OutputLogicDelegationMode;
+import com.flipkart.krystal.vajram.annos.VajramIdentifier;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
@@ -39,32 +42,35 @@ final class Vajrams {
    * @param aClass the class in whose class hierarcgy the vajram def class is to be searched for.
    */
   @SuppressWarnings("unchecked")
-  static Class<? extends VajramDef<?>> getVajramDefClass(
-      @SuppressWarnings("rawtypes") Class<? extends VajramDef> aClass) {
-    return (Class<? extends VajramDef<?>>) _getVajramDefClass(aClass);
+  static Class<? extends VajramDefRoot<?>> getVajramDefClass(
+      @SuppressWarnings("rawtypes") Class<? extends VajramDefRoot> aClass) {
+    return _getVajramDefClass(aClass);
   }
 
-  static VajramID parseVajramId(VajramDef<?> vajramDef) {
+  static VajramID parseVajramId(VajramDefRoot<?> vajramDef) {
     return vajramID(getVajramDefClass(vajramDef.getClass()).getSimpleName());
   }
 
-  static ElementTags parseVajramTags(VajramID inferredVajramId, VajramDef<?> vajramDef) {
+  static ElementTags parseVajramTags(VajramID inferredVajramId, VajramDefRoot<?> vajramDef) {
     return ElementTags.of(
         Arrays.stream(getVajramDefClass(vajramDef.getClass()).getAnnotations())
             .flatMap(a -> enrich(a, inferredVajramId, vajramDef))
             .toList());
   }
 
-  static ImmutableMap<ResolverDefinition, InputResolver> parseInputResolvers(VajramDef<?> vajramDef) {
-    return vajramDef.getInputResolvers().stream()
-        .collect(ImmutableMap.toImmutableMap(InputResolver::definition, Function.identity()));
+  static ImmutableMap<ResolverDefinition, InputResolver> parseInputResolvers(
+      VajramDefRoot<?> vajramDef) {
+    return vajramDef instanceof VajramDef<?> v
+        ? v.getInputResolvers().stream()
+            .collect(ImmutableMap.toImmutableMap(InputResolver::definition, Function.identity()))
+        : ImmutableMap.of();
   }
 
   private static FacetSpec inferFacetId(
       Parameter parameter,
       ImmutableMap<String, FacetSpec> facetsByName,
       ImmutableMap<Integer, FacetSpec> facetsById,
-      VajramDef<?> vajramDef) {
+      VajramDefRoot<?> vajramDef) {
     return Arrays.stream(parameter.getAnnotations())
         .filter(annotation -> annotation instanceof Using)
         .map(annotation -> (Using) annotation)
@@ -83,60 +89,67 @@ final class Vajrams {
             });
   }
 
-  static ElementTags parseOutputLogicTags(VajramDef<?> vajramDef) {
-    return ElementTags.of(
-        Arrays.stream(getVajramDefClass(vajramDef.getClass()).getDeclaredMethods())
-            .filter(method -> method.getAnnotation(Output.class) != null)
-            .findFirst()
-            .stream()
-            .flatMap(method -> Arrays.stream(method.getAnnotations()))
-            .toList());
+  static ElementTags parseOutputLogicTags(VajramDefRoot<?> vajramDef) {
+    return vajramDef instanceof VajramDef<?> v
+        ? ElementTags.of(
+            Arrays.stream(getVajramDefClass(v.getClass()).getDeclaredMethods())
+                .filter(method -> method.getAnnotation(Output.class) != null)
+                .findFirst()
+                .stream()
+                .flatMap(method -> Arrays.stream(method.getAnnotations()))
+                .toList())
+        : ElementTags.emptyTags();
   }
 
   private static Stream<Annotation> enrich(
-      Annotation annotation, VajramID inferredVajramId, VajramDef<?> vajramDef) {
+      Annotation annotation, VajramID inferredVajramId, VajramDefRoot<?> vajramDefRoot) {
     List<Annotation> inferredAnnos = new ArrayList<>();
-    if (annotation instanceof Vajram) {
-      inferredAnnos.add(new VajramIdentifierImpl(inferredVajramId.vajramId()));
-      inferredAnnos.add(new OutputLogicDelegationModeImpl(getComputeDelegationType(vajramDef)));
+    if (annotation instanceof Vajram && vajramDefRoot instanceof VajramDef<?> vajramDef) {
+      inferredAnnos.add(VajramIdentifier.Creator.create(inferredVajramId.vajramId()));
+      inferredAnnos.add(
+          OutputLogicDelegationMode.Creator.create(getComputeDelegationType(vajramDef)));
     }
     return Stream.concat(Stream.of(annotation), inferredAnnos.stream());
   }
 
   private static ComputeDelegationMode getComputeDelegationType(VajramDef<?> vajramDef) {
     if (vajramDef instanceof ComputeVajramDef<?>) {
-      return ComputeDelegationMode.NO_DELEGATION;
+      return ComputeDelegationMode.NONE;
     } else if (vajramDef instanceof IOVajramDef<?>) {
-      return ComputeDelegationMode.SYNC_DELEGATION;
+      return ComputeDelegationMode.SYNC;
     } else {
       throw new IllegalStateException(
           "Unable infer compute delegation type of vajram %s".formatted(vajramDef.getClass()));
     }
   }
 
-  private static Class<?> _getVajramDefClass(Class<?> aClass) {
-    if (!VajramDef.class.isAssignableFrom(aClass)) {
-      throw new IllegalArgumentException(
-          "VajramDef annotation is not present in the class hierarchy");
+  @SuppressWarnings("unchecked")
+  private static Class<? extends VajramDefRoot<?>> _getVajramDefClass(Class<?> aClass) {
+    if (!VajramDef.class.isAssignableFrom(aClass)
+        && !VajramTraitDef.class.isAssignableFrom(aClass)) {
+      throw new IllegalArgumentException("@Vajram or @VajramTrait annotation missing.");
     }
     Annotation annotation = aClass.getAnnotation(Vajram.class);
+    if (annotation == null) {
+      annotation = aClass.getAnnotation(VajramTrait.class);
+    }
     if (annotation != null) {
-      return aClass;
+      return (Class<? extends VajramDefRoot<?>>) aClass;
     }
     Class<?> superclass = aClass.getSuperclass();
     if (Object.class.equals(superclass) || superclass == null) {
-      throw new IllegalArgumentException();
+      throw new IllegalArgumentException("@Vajram or @VajramTrait annotation missing.");
     }
     return _getVajramDefClass(superclass);
   }
 
   static ImmutableSet<FacetSpec> parseOutputLogicSources(
-      VajramDef<?> vajramDef,
+      VajramDefRoot<?> vajramDefRoot,
       ImmutableSet<FacetSpec> facetSpecs,
       ImmutableMap<String, FacetSpec> facetsByName,
       ImmutableMap<Integer, FacetSpec> facetsById) {
     Optional<Method> outputLogicMethod =
-        Arrays.stream(getVajramDefClass(vajramDef.getClass()).getDeclaredMethods())
+        Arrays.stream(getVajramDefClass(vajramDefRoot.getClass()).getDeclaredMethods())
             .filter(method -> method.getAnnotation(Output.class) != null)
             .findFirst();
     if (outputLogicMethod.isEmpty()) {
@@ -157,7 +170,7 @@ final class Vajrams {
       } else {
         ImmutableSet.Builder<FacetSpec> facetIds = ImmutableSet.builder();
         for (Parameter param : outputLogicParams) {
-          facetIds.add(Vajrams.inferFacetId(param, facetsByName, facetsById, vajramDef));
+          facetIds.add(Vajrams.inferFacetId(param, facetsByName, facetsById, vajramDefRoot));
         }
         return facetIds.build();
       }
