@@ -43,3 +43,5 @@ include 'vajram-guice'
 project(':vajram-guice').projectDir = file('extensions/vajram-guice')
 
 include 'code-coverage-report'
+include 'krystal-visualization'
+
