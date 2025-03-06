@@ -24,6 +24,7 @@ include 'krystex'
 include 'honeycomb'
 include 'vajram'
 include 'krystal-common'
+include 'krystal-visualization'
 
 include 'vajram-samples'
 project(':vajram-samples').projectDir = file('vajram/vajram-samples')
