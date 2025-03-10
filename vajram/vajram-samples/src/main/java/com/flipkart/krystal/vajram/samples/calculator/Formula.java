@@ -12,23 +12,23 @@ import static com.flipkart.krystal.vajram.samples.calculator.Formula_Fac.sum_s;
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.except.StackTracelessException;
-import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.ComputeVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
-import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
-import com.flipkart.krystal.vajram.samples.calculator.adder.Adder_Req;
-import com.flipkart.krystal.vajram.samples.calculator.divider.Divider;
-import com.flipkart.krystal.vajram.samples.calculator.divider.Divider_Req;
+import com.flipkart.krystal.vajram.samples.calculator.add.Add;
+import com.flipkart.krystal.vajram.samples.calculator.add.Add_Req;
+import com.flipkart.krystal.vajram.samples.calculator.divide.Divide;
+import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_Req;
 import com.google.common.collect.ImmutableCollection;
 
 /** a/(p+q) */
 @ExternalInvocation(allow = true)
-@VajramDef
-public abstract class Formula extends ComputeVajram<Integer> {
+@Vajram
+public abstract class Formula extends ComputeVajramDef<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
     @Input int a;
@@ -36,10 +36,10 @@ public abstract class Formula extends ComputeVajram<Integer> {
     @Input int q;
 
     @Mandatory
-    @Dependency(onVajram = Adder.class)
+    @Dependency(onVajram = Add.class)
     int sum;
 
-    @Dependency(onVajram = Divider.class)
+    @Dependency(onVajram = Divide.class)
     int quotient;
   }
 
@@ -49,13 +49,13 @@ public abstract class Formula extends ComputeVajram<Integer> {
         /* sum = adder(numberOne=p, numberTwo=q) */
         dep(
             sum_s,
-            depInput(Adder_Req.numberOne_s).usingAsIs(p_s).asResolver(),
-            depInput(Adder_Req.numberTwo_s).usingAsIs(q_s).asResolver()),
+            depInput(Add_Req.numberOne_s).usingAsIs(p_s).asResolver(),
+            depInput(Add_Req.numberTwo_s).usingAsIs(q_s).asResolver()),
         /* quotient = divider(numerator = a, denominator= sum) */
         dep(
             quotient_s,
-            depInput(Divider_Req.numerator_s).usingAsIs(a_s).asResolver(),
-            depInput(Divider_Req.denominator_s).usingAsIs(sum_s).asResolver()));
+            depInput(Divide_Req.numerator_s).usingAsIs(a_s).asResolver(),
+            depInput(Divide_Req.denominator_s).usingAsIs(sum_s).asResolver()));
   }
 
   @Output

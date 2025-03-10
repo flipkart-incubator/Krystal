@@ -3,7 +3,7 @@
 * Lattice allows developers to make their vajrams available as service APIs which can be invoked remotely with minimal additional code.
 
 # Features
-* Instantly turn a vajram into a service API with a single annotation.
+* Instantly turn a vajramDef into a service API with a single annotation.
 * Pluggable support for standard wire protocols like json and protobuf
 * All wire protocol schemas are auto-generated from Vajram definitions
 * Deep integration with the krystal framework
@@ -42,19 +42,19 @@ public final class MyUsefulService implements LatticeServiceApplication<MyUseful
             // These vajrams include `RemoteVajram`s which are external facing, as they are bound to remotely callable APIs (may be `ComputeVajram`s or `IOVajrams`),
             // and internal `ComputeVajram`s or `IOVajram`s which are direct/indirect dependencies of the above `RemoteVajram`s.
             .loadFromClasspath("com.flipkart.myusefulvajrams", "com.flipkart.myotherusefulvajrams").build();
-    // `putUsefulInfo` is an IO vajram with maxBatchSize 20
+    // `putUsefulInfo` is an IO vajramDef with maxBatchSize 20
     graph.registerInputBatchers(vajramID("putUsefulInfo", InputBatcherConfig.simple(() -> new Batcher<>(20))));
-    // `getUsefulInfo` is an IO vajram with maxBatchSize 100
+    // `getUsefulInfo` is an IO vajramDef with maxBatchSize 100
     graph.registerInputBatchers(vajramID("getUsefulInfo", InputBatcherConfig.shared(() -> new Batcher<>(100)))); 
     return graph;
   } 
 }
 ```
 ## Remote Vajram
-A `RemoteVajram` is a vajram which can be invoked remotely from another process over the network
+A `RemoteVajram` is a vajramDef which can be invoked remotely from another process over the network
 
 ```java
-@RemotelyInvocable // This tells Lattice that this vajram can be bound to a service API.
+@RemotelyInvocable // This tells Lattice that this vajramDef can be bound to a service API.
 @VajramDef
 abstract class GetUsefulData extends ComputeVajram<MyResponse> {
   private static final int DEFAULT_DATA_COUNT = 10;

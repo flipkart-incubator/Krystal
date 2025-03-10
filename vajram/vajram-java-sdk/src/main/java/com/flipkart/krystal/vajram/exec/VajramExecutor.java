@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.exec;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.ImmutableRequest;
-import com.flipkart.krystal.vajram.VajramID;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 

@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.samples.anandtest;
+package com.flipkart.krystal.vajramDef.samples.anandtest;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
@@ -6,9 +6,9 @@ import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.vajram.Generated;
-import com.flipkart.krystal.vajram.batching.BatchEnabledFacetsBuilder;
-import com.flipkart.krystal.vajram.batching.BatchEnabledImmutableFacetValues;
+import com.flipkart.krystal.vajramDef.Generated;
+import com.flipkart.krystal.vajramDef.batching.BatchEnabledFacetsBuilder;
+import com.flipkart.krystal.vajramDef.batching.BatchEnabledImmutableFacetValues;
 import com.google.common.collect.ImmutableMap;
 import java.lang.IllegalArgumentException;
 import java.lang.Integer;
@@ -223,7 +223,7 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
   }
 
   @Generated(
-      by = "com.flipkart.krystal.vajram.codegen.VajramModelGenProcessor"
+      by = "com.flipkart.krystal.vajramDef.codegen.VajramModelGenProcessor"
   )
   @EqualsAndHashCode
   @ToString
@@ -284,7 +284,7 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
     }
 
     @Generated(
-        by = "com.flipkart.krystal.vajram.codegen.VajramModelGenProcessor"
+        by = "com.flipkart.krystal.vajramDef.codegen.VajramModelGenProcessor"
     )
     @ToString
     static final class Builder implements DependencyTestFacets.BatchFacets, FacetsBuilder {
@@ -365,7 +365,7 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
   }
 
   @Generated(
-      by = "com.flipkart.krystal.vajram.codegen.VajramModelGenProcessor"
+      by = "com.flipkart.krystal.vajramDef.codegen.VajramModelGenProcessor"
   )
   @EqualsAndHashCode
   @ToString
@@ -436,7 +436,7 @@ final class DependencyTestImmutableFacets implements BatchableImmutableFacets, D
     }
 
     @Generated(
-        by = "com.flipkart.krystal.vajram.codegen.VajramModelGenProcessor"
+        by = "com.flipkart.krystal.vajramDef.codegen.VajramModelGenProcessor"
     )
     @ToString
     static final class Builder implements DependencyTestFacets.CommonFacets, FacetsBuilder {

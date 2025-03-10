@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
@@ -13,11 +14,12 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class KryonDefinitionRegistry {
 
   private final LogicDefinitionRegistry logicDefinitionRegistry;
-  private final Map<KryonId, KryonDefinition> kryonDefinitions = new ConcurrentHashMap<>();
+  private final Map<VajramID, KryonDefinition> kryonDefinitions = new ConcurrentHashMap<>();
   private final DependantChainStart dependantChainStart = new DependantChainStart();
 
   public KryonDefinitionRegistry(LogicDefinitionRegistry logicDefinitionRegistry) {
@@ -28,26 +30,30 @@ public final class KryonDefinitionRegistry {
     return logicDefinitionRegistry;
   }
 
-  public KryonDefinition get(KryonId kryonId) {
-    KryonDefinition kryon = kryonDefinitions.get(kryonId);
+  public @Nullable KryonDefinition get(VajramID vajramID) {
+    return kryonDefinitions.get(vajramID);
+  }
+
+  public KryonDefinition getOrThrow(VajramID vajramID) {
+    KryonDefinition kryon = get(vajramID);
     if (kryon == null) {
-      throw new IllegalArgumentException("No Kryon with id %s found".formatted(kryonId));
+      throw new IllegalArgumentException("No Kryon with id %s found".formatted(vajramID));
     }
     return kryon;
   }
 
-  public KryonDefinition newKryonDefinition(
+  public VajramKryonDefinition newVajramKryonDefinition(
       String kryonId,
       Set<? extends Facet> facets,
       KryonLogicId outputLogicId,
-      ImmutableMap<Dependency, KryonId> dependencyKryons,
+      ImmutableMap<Dependency, VajramID> dependencyKryons,
       ImmutableMap<ResolverDefinition, Resolver> resolversByDefinition,
       LogicDefinition<CreateNewRequest> createNewRequest,
       LogicDefinition<FacetsFromRequest> facetsFromRequest,
       ElementTags tags) {
-    KryonDefinition kryonDefinition =
-        new KryonDefinition(
-            new KryonId(kryonId),
+    VajramKryonDefinition kryonDefinition =
+        new VajramKryonDefinition(
+            new VajramID(kryonId),
             facets,
             outputLogicId,
             dependencyKryons,
@@ -56,7 +62,18 @@ public final class KryonDefinitionRegistry {
             facetsFromRequest,
             this,
             tags);
-    kryonDefinitions.put(kryonDefinition.kryonId(), kryonDefinition);
+    kryonDefinitions.put(kryonDefinition.vajramID(), kryonDefinition);
+    return kryonDefinition;
+  }
+
+  public TraitKryonDefinition newTraitKryonDefinition(
+      String kryonId,
+      Set<? extends Facet> facets,
+      LogicDefinition<CreateNewRequest> createNewRequest,
+      ElementTags tags) {
+    TraitKryonDefinition kryonDefinition =
+        new TraitKryonDefinition(new VajramID(kryonId), facets, createNewRequest, this, tags);
+    kryonDefinitions.put(kryonDefinition.vajramID(), kryonDefinition);
     return kryonDefinition;
   }
 

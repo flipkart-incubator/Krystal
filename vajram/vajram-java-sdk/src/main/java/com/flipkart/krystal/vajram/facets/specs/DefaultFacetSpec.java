@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.facets.specs;
 
 import static com.flipkart.krystal.data.Errable.errableFrom;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
@@ -27,6 +28,7 @@ public abstract sealed class DefaultFacetSpec<T, CV extends Request>
   public DefaultFacetSpec(
       int id,
       String name,
+      VajramID vajramID,
       DataType<T> type,
       ImmutableSet<FacetType> facetTypes,
       Class<CV> ofVajram,
@@ -35,7 +37,7 @@ public abstract sealed class DefaultFacetSpec<T, CV extends Request>
       ElementTags tags,
       Function<FacetValues, @Nullable T> getFromFacets,
       BiConsumer<FacetValues, @Nullable T> setToFacets) {
-    super(id, name, type, facetTypes, ofVajram, documentation, isBatched, tags);
+    super(id, name, vajramID, type, facetTypes, ofVajram, documentation, isBatched, tags);
     this.getFromFacets = getFromFacets;
     this.setToFacets = setToFacets;
   }

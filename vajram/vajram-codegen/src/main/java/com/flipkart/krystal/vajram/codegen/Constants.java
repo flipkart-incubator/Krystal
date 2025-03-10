@@ -11,7 +11,7 @@ public final class Constants {
   public static final String INPUT_SRC = "inputSrc";
   public static final String VAJRAM_LOGIC_INPUT_ARGS = "outputLogicInputArguments";
   public static final String FACET_DEFINITIONS_VAR = "facetDefinitions";
-  public static final String FACET_ID_SUFFIX = "_i";
+  public static final String FACET_NAME_SUFFIX = "_n";
   public static final String FACET_SPEC_SUFFIX = "_s";
   public static final char DOT_SEPARATOR = '.';
   public static final String RESPONSE = "response";
@@ -34,7 +34,7 @@ public final class Constants {
   public static final String BATCH_FACETS = "BatchFacets";
   public static final String BATCH_FACETS_SUFFIX = "_BatchItem";
   public static final String COMMON_INPUTS = "CommonFacets";
-  public static final String COMMON_FACETS_SUFFIX = "_CommonFacets";
+  public static final String COMMON_FACETS_SUFFIX = "_CommonFac";
   public static final String COMMON_IMMUT_FACETS_CLASS_SUFFIX =
       "Common" + IMMUT_FACETS_CLASS_SUFFIX;
   public static final String FACETVALUES_VAR = "_facetValues";
@@ -50,9 +50,13 @@ public final class Constants {
   public static final String REQUEST_SUFFIX = "_Req";
   public static final String IMMUT_REQUEST_SUFFIX = "_ImmutReq";
   public static final String IMMUT_REQUEST_POJO_SUFFIX = "_ImmutReqPojo";
-  public static final String IMPL_SUFFIX = "Impl";
+  public static final String INPUT_SPECS_CLASS_SUFFIX = "_InputSpecs";
+  public static final String FACET_SPECS_CLASS_SUFFIX = "_FacetSpecs";
+  public static final String SPEC_CLASS_SUFFIX = "_SpecType";
+  public static final String IMPL_SUFFIX = "_Wrpr";
 
   public static final CodeBlock EMPTY_CODE_BLOCK = CodeBlock.builder().build();
+  public static final String QUALIFIED_FACET_SEPERATOR = ":";
 
   private Constants() {}
 }

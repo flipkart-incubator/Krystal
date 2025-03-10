@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.DepResponse;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesBuilder;
@@ -7,7 +8,6 @@ import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.tags.ElementTags;
-import com.flipkart.krystal.vajram.VajramID;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import lombok.Getter;
@@ -30,6 +30,7 @@ public abstract sealed class FanoutDepSpec<T, CV extends Request, DV extends Req
   public FanoutDepSpec(
       int id,
       String name,
+      VajramID vajramID,
       DataType<T> type,
       Class<CV> ofVajram,
       Class<DV> onVajram,
@@ -39,7 +40,7 @@ public abstract sealed class FanoutDepSpec<T, CV extends Request, DV extends Req
       ElementTags tags,
       Function<FacetValues, FanoutDepResponses<DV, T>> getFromFacets,
       BiConsumer<FacetValues, FanoutDepResponses<DV, T>> setToFacets) {
-    super(id, name, type, ofVajram, onVajram, onVajramId, documentation, isBatched, tags);
+    super(id, name, vajramID, type, ofVajram, onVajram, onVajramId, documentation, isBatched, tags);
     this.getFromFacets = getFromFacets;
     this.setToFacets = setToFacets;
   }

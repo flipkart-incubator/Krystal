@@ -1,10 +1,11 @@
 package com.flipkart.krystal.krystex;
 
+import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecoratorCommand;
 
-public sealed interface Decorator permits KryonDecorator, LogicDecorator {
+public sealed interface Decorator permits DependencyDecorator, KryonDecorator, LogicDecorator {
 
   /**
    * The identifier for this object which is used to prevent duplicate kryon decorators decorating

@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram.samples.calculator.addzero;
 import static com.flipkart.krystal.vajram.samples.Util.loadFromClasspath;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
@@ -12,7 +11,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
-import com.flipkart.krystal.vajram.samples.calculator.adder.Adder;
+import com.flipkart.krystal.vajram.samples.calculator.add.Add;
 import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
@@ -40,7 +39,7 @@ class AddZeroTest {
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
     this.executorLease = EXEC_POOL.lease();
-    this.graph = loadFromClasspath(AddZero.class.getPackageName(), Adder.class.getPackageName());
+    this.graph = loadFromClasspath(AddZero.class.getPackageName(), Add.class.getPackageName());
   }
 
   @AfterEach
@@ -53,7 +52,8 @@ class AddZeroTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
-        graph.getVajramId(Adder.class), InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
+        graph.getVajramIdByVajramDefType(Add.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
@@ -63,7 +63,7 @@ class AddZeroTest {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              graph.getVajramId((AddZero.class)),
+              graph.getVajramIdByVajramDefType((AddZero.class)),
               AddZero_ImmutReqPojo._builder().number(5)._build(),
               KryonExecutionConfig.builder().executionId("addZeroTest").build());
     }

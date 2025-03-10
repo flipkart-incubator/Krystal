@@ -5,11 +5,11 @@ import static com.flipkart.krystal.krystex.testutils.SimpleFacet.input;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValuesMap;
 import com.flipkart.krystal.data.SimpleRequestBuilder;
 import com.flipkart.krystal.facets.Facet;
-import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport.LogicExecInfo;
 import com.flipkart.krystal.krystex.testutils.SimpleFacet;
@@ -39,8 +39,8 @@ class DefaultKryonExecutionReportTest {
 
   @Test
   void reportStartAndEnd_success() {
-    KryonId kryonId = new KryonId("kryon_1");
-    KryonLogicId kryonLogicId = new KryonLogicId(kryonId, "kryon_1__logic_1");
+    VajramID vajramID = new VajramID("kryon_1");
+    KryonLogicId kryonLogicId = new KryonLogicId(vajramID, "kryon_1__logic_1");
     Set<SimpleFacet> allInputs = Set.of(input(1));
     ImmutableList<FacetValues> facetValuesList =
         ImmutableList.of(
@@ -52,12 +52,12 @@ class DefaultKryonExecutionReportTest {
                 allInputs));
 
     clock.setInstant(START_TIME);
-    kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetValuesList);
+    kryonExecutionReport.reportMainLogicStart(vajramID, kryonLogicId, facetValuesList);
 
     String result = "r1";
     clock.setInstant(END_TIME);
     kryonExecutionReport.reportMainLogicEnd(
-        kryonId,
+        vajramID,
         kryonLogicId,
         new LogicExecResults(
             facetValuesList.stream()
@@ -68,7 +68,7 @@ class DefaultKryonExecutionReportTest {
     LogicExecInfo logicExecInfo =
         kryonExecutionReport.mainLogicExecInfos().values().stream().findFirst().orElseThrow();
 
-    assertThat(logicExecInfo.kryonId()).isEqualTo(kryonId.value());
+    assertThat(logicExecInfo.kryonId()).isEqualTo(vajramID.value());
     assertThat(logicExecInfo.startTimeMs()).isEqualTo(START_TIME.toEpochMilli());
     assertThat(logicExecInfo.endTimeMs()).isEqualTo(END_TIME.toEpochMilli());
     assertThat(logicExecInfo.result()).isInstanceOf(Map.class);
@@ -108,8 +108,8 @@ class DefaultKryonExecutionReportTest {
 
   @Test
   void reportMainLogicStart_calledTwice_hasNoEffect() {
-    KryonId kryonId = new KryonId("kryon_1");
-    KryonLogicId kryonLogicId = new KryonLogicId(kryonId, "kryon_1__logic_1");
+    VajramID vajramID = new VajramID("kryon_1");
+    KryonLogicId kryonLogicId = new KryonLogicId(vajramID, "kryon_1__logic_1");
     ImmutableList<FacetValues> facetValuesList =
         ImmutableList.of(
             new ImmutableFacetValuesMap(
@@ -120,23 +120,23 @@ class DefaultKryonExecutionReportTest {
                 Set.of(input(2))));
 
     clock.setInstant(START_TIME);
-    kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetValuesList);
+    kryonExecutionReport.reportMainLogicStart(vajramID, kryonLogicId, facetValuesList);
 
     clock.setInstant(END_TIME);
-    kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetValuesList);
+    kryonExecutionReport.reportMainLogicStart(vajramID, kryonLogicId, facetValuesList);
 
     assertThat(kryonExecutionReport.mainLogicExecInfos().size()).isEqualTo(1);
     LogicExecInfo logicExecInfo =
         kryonExecutionReport.mainLogicExecInfos().values().stream().findFirst().orElseThrow();
 
-    assertThat(logicExecInfo.kryonId()).isEqualTo(kryonId.value());
+    assertThat(logicExecInfo.kryonId()).isEqualTo(vajramID.value());
     assertThat(logicExecInfo.startTimeMs()).isEqualTo(START_TIME.toEpochMilli());
   }
 
   @Test
   void reportMainLogicEnd_calledTwice_hasNoEffect() {
-    KryonId kryonId = new KryonId("kryon_1");
-    KryonLogicId kryonLogicId = new KryonLogicId(kryonId, "kryon_1__logic_1");
+    VajramID vajramID = new VajramID("kryon_1");
+    KryonLogicId kryonLogicId = new KryonLogicId(vajramID, "kryon_1__logic_1");
     ImmutableList<FacetValues> facetValuesList =
         ImmutableList.of(
             new ImmutableFacetValuesMap(
@@ -147,12 +147,12 @@ class DefaultKryonExecutionReportTest {
                 Set.of(input(2))));
 
     clock.setInstant(START_TIME);
-    kryonExecutionReport.reportMainLogicStart(kryonId, kryonLogicId, facetValuesList);
+    kryonExecutionReport.reportMainLogicStart(vajramID, kryonLogicId, facetValuesList);
 
     String result = "r1";
     clock.setInstant(END_TIME);
     kryonExecutionReport.reportMainLogicEnd(
-        kryonId,
+        vajramID,
         kryonLogicId,
         new LogicExecResults(
             facetValuesList.stream()
@@ -161,7 +161,7 @@ class DefaultKryonExecutionReportTest {
 
     clock.setInstant(END_TIME.plusMillis(100));
     kryonExecutionReport.reportMainLogicEnd(
-        kryonId,
+        vajramID,
         kryonLogicId,
         new LogicExecResults(
             facetValuesList.stream()
@@ -171,14 +171,14 @@ class DefaultKryonExecutionReportTest {
     LogicExecInfo logicExecInfo =
         kryonExecutionReport.mainLogicExecInfos().values().stream().findFirst().orElseThrow();
 
-    assertThat(logicExecInfo.kryonId()).isEqualTo(kryonId.value());
+    assertThat(logicExecInfo.kryonId()).isEqualTo(vajramID.value());
     assertThat(logicExecInfo.endTimeMs()).isEqualTo(END_TIME.toEpochMilli());
   }
 
   @Test
   void reportMainLogicEnd_calledWithoutCallingStart_hasNoEffect() {
-    KryonId kryonId = new KryonId("kryon_1");
-    KryonLogicId kryonLogicId = new KryonLogicId(kryonId, "kryon_1__logic_1");
+    VajramID vajramID = new VajramID("kryon_1");
+    KryonLogicId kryonLogicId = new KryonLogicId(vajramID, "kryon_1__logic_1");
     ImmutableList<FacetValues> facetValuesList =
         ImmutableList.of(
             new ImmutableFacetValuesMap(
@@ -191,7 +191,7 @@ class DefaultKryonExecutionReportTest {
     clock.setInstant(END_TIME);
     String result = "r1";
     kryonExecutionReport.reportMainLogicEnd(
-        kryonId,
+        vajramID,
         kryonLogicId,
         new LogicExecResults(
             facetValuesList.stream()

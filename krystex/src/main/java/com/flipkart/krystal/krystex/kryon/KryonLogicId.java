@@ -1,6 +1,8 @@
 package com.flipkart.krystal.krystex.kryon;
 
-public record KryonLogicId(KryonId kryonId, String value) {
+import com.flipkart.krystal.core.VajramID;
+
+public record KryonLogicId(VajramID vajramID, String value) {
 
   @Override
   public String toString() {

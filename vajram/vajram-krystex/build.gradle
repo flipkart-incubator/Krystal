@@ -1,5 +1,5 @@
 import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY
-import static com.flipkart.krystal.vajram.codegen.models.CodegenPhase.IMPLS
+import static com.flipkart.krystal.vajram.codegen.CodegenPhase.IMPLS
 
 plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
@@ -11,7 +11,9 @@ dependencies {
     api project(':vajram-java-sdk')
     api project(':krystex')
 
+
     testAnnotationProcessor 'com.flipkart.krystal:vajram-codegen'
+    testAnnotationProcessor project(':krystal-common')
 
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'

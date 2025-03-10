@@ -1,6 +1,5 @@
 package com.flipkart.krystal.krystex.caching;
 
-import static com.flipkart.krystal.annos.ExternalInvocation.ExternalInvocations.externalInvocation;
 import static com.flipkart.krystal.data.Errable.computeErrableFrom;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
@@ -11,8 +10,10 @@ import static java.util.Collections.emptySet;
 import static java.util.function.Function.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesMapBuilder;
 import com.flipkart.krystal.data.SimpleImmutRequest;
@@ -22,7 +23,6 @@ import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
-import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
@@ -30,8 +30,8 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
-import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
+import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
@@ -100,8 +100,8 @@ class RequestLevelCacheTest {
     // Move this to the @BeforeEach method after 5.10 is released.
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy, true);
     LongAdder adder = new LongAdder();
-    KryonDefinition kryonDefinition =
-        kryonDefinitionRegistry.newKryonDefinition(
+    VajramKryonDefinition kryonDefinition =
+        kryonDefinitionRegistry.newVajramKryonDefinition(
             "kryon",
             emptySet(),
             newComputeLogic(
@@ -116,15 +116,15 @@ class RequestLevelCacheTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic("kryon", emptySet()),
             newFacetsFromRequestLogic("kryon"),
-            ElementTags.of(List.of(externalInvocation(true))));
+            ElementTags.of(List.of(ExternalInvocation.Creator.create(true))));
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
-            kryonDefinition.kryonId(),
+            kryonDefinition.vajramID(),
             SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> future2 =
         kryonExecutor.executeKryon(
-            kryonDefinition.kryonId(),
+            kryonDefinition.vajramID(),
             SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("req_2").build());
 
@@ -147,8 +147,8 @@ class RequestLevelCacheTest {
     // Move this to the @BeforeEach method after 5.10 is released.
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy, false);
     LongAdder adder = new LongAdder();
-    KryonDefinition kryonDefinition =
-        kryonDefinitionRegistry.newKryonDefinition(
+    VajramKryonDefinition kryonDefinition =
+        kryonDefinitionRegistry.newVajramKryonDefinition(
             "kryon",
             emptySet(),
             newComputeLogic(
@@ -163,16 +163,16 @@ class RequestLevelCacheTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic("kryon", emptySet()),
             newFacetsFromRequestLogic("kryon"),
-            ElementTags.of(List.of(externalInvocation(true))));
+            ElementTags.of(List.of(ExternalInvocation.Creator.create(true))));
 
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
-            kryonDefinition.kryonId(),
+            kryonDefinition.vajramID(),
             SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> future2 =
         kryonExecutor.executeKryon(
-            kryonDefinition.kryonId(),
+            kryonDefinition.vajramID(),
             SimpleImmutRequest.empty(),
             KryonExecutionConfig.builder().executionId("req_2").build());
 
@@ -197,7 +197,7 @@ class RequestLevelCacheTest {
             .graphTraversalStrategy(graphTraversalStrategy);
     if (withCache) {
       configBuilder
-          .requestScopedKryonDecoratorConfig(
+          .kryonDecoratorConfig(
               RequestLevelCache.DECORATOR_TYPE,
               new KryonDecoratorConfig(
                   RequestLevelCache.DECORATOR_TYPE,
@@ -213,7 +213,7 @@ class RequestLevelCacheTest {
       String kryonId, Set<Facet> inputs, Function<FacetValues, T> logic) {
     ComputeLogicDefinition<T> def =
         new ComputeLogicDefinition<>(
-            new KryonLogicId(new KryonId(kryonId), kryonId),
+            new KryonLogicId(new VajramID(kryonId), kryonId),
             inputs,
             inputsList ->
                 inputsList.stream()
@@ -229,7 +229,7 @@ class RequestLevelCacheTest {
 
   private static LogicDefinition<FacetsFromRequest> newFacetsFromRequestLogic(String kryonName) {
     return new LogicDefinition<>(
-        new KryonLogicId(new KryonId(kryonName), kryonName + ":facetsFromRequest"),
+        new KryonLogicId(new VajramID(kryonName), kryonName + ":facetsFromRequest"),
         request ->
             new FacetValuesMapBuilder(
                 (SimpleRequestBuilder<Object>) request._asBuilder(), Set.of()));
@@ -239,7 +239,7 @@ class RequestLevelCacheTest {
   private static LogicDefinition<CreateNewRequest> newCreateNewRequestLogic(
       String kryonName, Set<SimpleFacet> inputDefs) {
     return new LogicDefinition<>(
-        new KryonLogicId(new KryonId(kryonName), kryonName + ":newRequest"),
+        new KryonLogicId(new VajramID(kryonName), kryonName + ":newRequest"),
         () -> new SimpleRequestBuilder(inputDefs));
   }
 

@@ -24,8 +24,6 @@ public sealed interface FacetSpec<T, CV extends Request> extends Facet
 
   Class<CV> ofVajram();
 
-  ElementTags tags();
-
   /**
    * Returns the default value for the facet based on its configuration. This is useful in cases
    * where a facet is tagged {@link Mandatory} and its {@link

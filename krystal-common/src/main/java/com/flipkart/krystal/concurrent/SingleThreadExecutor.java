@@ -1,10 +1,10 @@
 package com.flipkart.krystal.concurrent;
 
+import static java.lang.Thread.State.TERMINATED;
 import static java.lang.Thread.currentThread;
 import static java.util.concurrent.TimeUnit.DAYS;
 
 import com.google.common.annotations.VisibleForTesting;
-import java.lang.Thread.State;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.ForkJoinWorkerThread;
@@ -17,8 +17,8 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  * A {@link ForkJoinPool} which is guaranteed to have one and exactly one thread. This is useful
  * when there is a need for an eventloop where the event loop thread never blocks.
  *
- * <p>Krystal's default synchronous executor {@code KryonExecutor} uses this class to pass messages
- * for kryon orchestration.
+ * <p>Krystal's default synchronous executor {@code KryonExecutor} relies on this class to pass
+ * messages for kryon orchestration.
  */
 @Slf4j
 public class SingleThreadExecutor extends ForkJoinPool {
@@ -68,6 +68,11 @@ public class SingleThreadExecutor extends ForkJoinPool {
     }
   }
 
+  public boolean isCurrentThreadTheSingleThread() {
+    return currentThread() instanceof ForkJoinWorkerThread forkJoinWorkerThread
+        && forkJoinWorkerThread.getPool() == this;
+  }
+
   @Override
   public void execute(Runnable runnable) {
     if (currentThread() == executionThread()) {
@@ -106,8 +111,7 @@ public class SingleThreadExecutor extends ForkJoinPool {
 
     private synchronized ForkJoinWorkerThread singleThread(ForkJoinPool pool) {
       boolean isTerminated = false;
-      if (singleThread == null
-          || (isTerminated = State.TERMINATED.equals(singleThread.getState()))) {
+      if (singleThread == null || (isTerminated = TERMINATED.equals(singleThread.getState()))) {
         if (isTerminated) {
           log.error(
               """

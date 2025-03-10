@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.AbstractFacet;
@@ -19,6 +20,7 @@ import lombok.Getter;
 public abstract sealed class AbstractFacetSpec<T, CV extends Request> extends AbstractFacet
     implements FacetSpec<T, CV> permits DefaultFacetSpec, DependencySpec {
 
+  private final VajramID vajramID;
   private final DataType<T> type;
   private final boolean isBatched;
   private final Class<CV> ofVajram;
@@ -27,6 +29,7 @@ public abstract sealed class AbstractFacetSpec<T, CV extends Request> extends Ab
   public AbstractFacetSpec(
       int id,
       String name,
+      VajramID vajramID,
       DataType<T> type,
       ImmutableSet<FacetType> facetTypes,
       Class<CV> ofVajram,
@@ -34,9 +37,15 @@ public abstract sealed class AbstractFacetSpec<T, CV extends Request> extends Ab
       boolean isBatched,
       ElementTags tags) {
     super(id, name, facetTypes, documentation);
+    this.vajramID = vajramID;
     this.type = type;
     this.ofVajram = ofVajram;
     this.tags = tags;
     this.isBatched = isBatched;
+  }
+
+  @Override
+  public VajramID vajramID() {
+    return vajramID;
   }
 }

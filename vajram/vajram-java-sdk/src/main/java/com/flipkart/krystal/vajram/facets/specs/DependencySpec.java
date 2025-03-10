@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.facets.specs;
 
 import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.DepResponse;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
@@ -10,7 +11,6 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.tags.ElementTags;
-import com.flipkart.krystal.vajram.VajramID;
 import com.google.common.collect.ImmutableSet;
 import lombok.Getter;
 
@@ -32,6 +32,7 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
   public DependencySpec(
       int id,
       String name,
+      VajramID vajramID,
       DataType<T> dataType,
       Class<CV> ofVajram,
       Class<DV> onVajram,
@@ -40,7 +41,15 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
       boolean isBatched,
       ElementTags tags) {
     super(
-        id, name, dataType, ImmutableSet.of(DEPENDENCY), ofVajram, documentation, isBatched, tags);
+        id,
+        name,
+        vajramID,
+        dataType,
+        ImmutableSet.of(DEPENDENCY),
+        ofVajram,
+        documentation,
+        isBatched,
+        tags);
     this.onVajram = onVajram;
     this.onVajramId = onVajramId;
   }

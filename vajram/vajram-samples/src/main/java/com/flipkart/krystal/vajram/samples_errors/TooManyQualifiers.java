@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.samples_errors;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
-import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.ComputeVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
@@ -13,8 +13,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 @ExternalInvocation(allow = true)
-@VajramDef
-public abstract class TooManyQualifiers extends ComputeVajram<String> {
+@Vajram
+public abstract class TooManyQualifiers extends ComputeVajramDef<String> {
   @Retention(RetentionPolicy.RUNTIME)
   @Qualifier
   public @interface InjectionQualifier {}

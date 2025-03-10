@@ -1,12 +1,11 @@
 package com.flipkart.krystal.vajram.codegen;
 
+import static com.flipkart.krystal.vajram.codegen.CodegenPhase.MODELS;
 import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY;
-import static com.flipkart.krystal.vajram.codegen.models.CodegenPhase.MODELS;
 import static java.lang.System.lineSeparator;
 import static java.util.stream.Collectors.joining;
 
-import com.flipkart.krystal.vajram.codegen.models.CodegenPhase;
-import com.flipkart.krystal.vajram.codegen.models.VajramInfo;
+import com.flipkart.krystal.vajram.Vajram;
 import com.google.auto.service.AutoService;
 import java.util.Arrays;
 import java.util.List;
@@ -21,7 +20,10 @@ import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 
-@SupportedAnnotationTypes("com.flipkart.krystal.vajram.VajramDef")
+@SupportedAnnotationTypes({
+  "com.flipkart.krystal.vajram.Vajram",
+  "com.flipkart.krystal.vajram.VajramTrait"
+})
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
 @SupportedOptions(COGENGEN_PHASE_KEY)
@@ -49,21 +51,23 @@ public class VajramModelGenProcessor extends AbstractProcessor {
                   COGENGEN_PHASE_KEY),
           null);
     }
-    List<TypeElement> vajramDefinitions = util.getVajramClasses(roundEnv);
+    List<TypeElement> vajramRootDefinitions = util.getDefinitionClasses(roundEnv);
     util.note(
-        "Vajram Defs received by VajramModelGenProcessor: %s"
+        "Vajrams and Traits received by VajramModelGenProcessor: %s"
             .formatted(
-                vajramDefinitions.stream()
+                vajramRootDefinitions.stream()
                     .map(Objects::toString)
                     .collect(
                         joining(lineSeparator(), '[' + lineSeparator(), lineSeparator() + ']'))));
-    for (TypeElement vajramClass : vajramDefinitions) {
-      VajramInfo vajramInfo = util.computeVajramInfo(vajramClass);
+    for (TypeElement vajramClass : vajramRootDefinitions) {
+      VajramCodeGenerator vajramCodeGenerator =
+          util.createCodeGenerator(util.computeVajramInfo(vajramClass));
 
-      VajramCodeGenerator vajramCodeGenerator = util.createCodeGenerator(vajramInfo);
+      vajramCodeGenerator.vajramRequest();
 
-      vajramCodeGenerator.codeGenVajramRequest();
-      vajramCodeGenerator.codeGenFacets();
+      if (vajramClass.getAnnotation(Vajram.class) != null) {
+        vajramCodeGenerator.vajramFacets();
+      }
     }
     return false;
   }

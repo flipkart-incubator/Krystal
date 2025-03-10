@@ -1,9 +1,11 @@
 package com.flipkart.krystal.vajram.facets;
 
-import java.lang.annotation.ElementType;
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.TYPE_USE;
+
 import java.lang.annotation.Target;
 
-@Target(ElementType.FIELD)
+@Target({FIELD, TYPE_USE})
 public @interface FacetId {
 
   /**

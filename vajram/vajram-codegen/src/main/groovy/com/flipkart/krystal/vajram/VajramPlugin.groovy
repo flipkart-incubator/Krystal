@@ -5,8 +5,8 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.compile.JavaCompile
 
 import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY
-import static com.flipkart.krystal.vajram.codegen.models.CodegenPhase.IMPLS
-import static com.flipkart.krystal.vajram.codegen.models.CodegenPhase.MODELS
+import static com.flipkart.krystal.vajram.codegen.CodegenPhase.IMPLS
+import static com.flipkart.krystal.vajram.codegen.CodegenPhase.MODELS
 
 class VajramPlugin implements Plugin<Project> {
 

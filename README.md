@@ -9,29 +9,29 @@ Single Bill-Of-Materials artefact with all krystal artefacts versions defined.
 
 1. `com.flipkart.krystal:krystal-common`: Contains all common data models and classes used across
    krystal project
-2. `com.flipkart.krystal:vajram-java-sdk`: Contains the sdk for writing vajrams. Application
+2. `com.flipkart.krystal:vajramDef-java-sdk`: Contains the sdk for writing vajrams. Application
    developers will generally use clasess of this artefact when writing business logic.
-3. `com.flipkart.krystal:vajram-codegen`: Contains the annotation processors and krystal gradle
+3. `com.flipkart.krystal:vajramDef-codegen`: Contains the annotation processors and krystal gradle
    plugin. Developers add this artefact as an annotation processor dependency in their gradle build
    file, and add the `com.flipkart.krystal` plugin to their gradle project.
-    1. The annotation processors generate the vajram models and impls during compilation phase.
+    1. The annotation processors generate the vajramDef models and impls during compilation phase.
     2. The krystal plugin adds `codegenVajramModels` gradle task and adds it as a dependency to
        the `compileJava` task so that models are code generated on every compile. It also configures
        the `codegenVajramModels` task to run the annotation processor which generates the models and
-       the `compileJava` task to generate the vajram impl files using the models generated in the
+       the `compileJava` task to generate the vajramDef impl files using the models generated in the
        previous step. The plugin artefact's coordinates
        are `com.flipkart.krystal:com.flipkart.krystal.gradle.plugin`, but developers generally don't
        have to mention this in their code. Adding `com.flipkart.krystal` plugin will pull this
        artefact
 4. `com.flipkart.krystal:krystex`: (**Kryst**al **Ex**ecutor) Contains the execution engine which
    executes the synchronous orchestration call graph at runtime.
-5. `com.flipkart.krystal:vajram-krystex`: This module acts as a "transpiler" which tranlates
-   the `vajram-java-sdk` based developer-written "vajram"s to runtime-executable "kryon" models
-   which the `krystex` module understands. This allows `vajram` and `krystex` modules to be
-   independant and agnostic of each other. Classes common to both vajram and krystex modules are
+5. `com.flipkart.krystal:vajramDef-krystex`: This module acts as a "transpiler" which tranlates
+   the `vajramDef-java-sdk` based developer-written "vajramDef"s to runtime-executable "kryon" models
+   which the `krystex` module understands. This allows `vajramDef` and `krystex` modules to be
+   independant and agnostic of each other. Classes common to both vajramDef and krystex modules are
    in `krystal-common` module.
-6. `com.flipkart.krystal:vajram-guice`: This module contains a kryon decorator which allows
-   the `@Inject` facetValues in vajrams to be provided by the guice injector. See `vajram-samples` module
+6. `com.flipkart.krystal:vajramDef-guice`: This module contains a kryon decorator which allows
+   the `@Inject` facetValues in vajrams to be provided by the guice injector. See `vajramDef-samples` module
    for how to use this decorator.
 
 ## Preface
@@ -39,7 +39,7 @@ Single Bill-Of-Materials artefact with all krystal artefacts versions defined.
 This README gives a high level view of the krysal project.
 To understand the basics of krystal. It's important to go through two more documents:
 
-* [Vajram README](./vajram/vajram-java-sdk/README.md)
+* [Vajram README](./vajramDef/vajramDef-java-sdk/README.md)
 * [Krystex README](./krystex/README.md)
 
 ## Introduction
@@ -52,11 +52,11 @@ components.
 
 * Vajram: A programming model which allows developers to design and write code for synchronous
   scatter gather business logic in a 'bottom-up' (choreographed) manner.
-* Krystex: A runtime environment which executes synchronous parts of the code written in vajram
+* Krystex: A runtime environment which executes synchronous parts of the code written in vajramDef
   programming model in an optimal way by understanding static dependencies between pieces of code,
   creating a logical Directed-Acyclic-Graph, and executing the DAG with maximal concurrency.
 * Honeycomb: An asynchronous workflow orchestrator which orchestrates the asynchronous parts of
-  worflows written in the vajram programming model.
+  worflows written in the vajramDef programming model.
 
 ## Design Goals
 
@@ -132,24 +132,24 @@ To formatting code in the IDE, use:
 
 Follow the below-mentioned steps for the Krystal version bump -
 
-1. Build and publish vajram-codegen with new version to local maven repo. Ensure the vajram-codegen
+1. Build and publish vajramDef-codegen with new version to local maven repo. Ensure the vajramDef-codegen
    dependencies version should not be updated.
-2. Update the new version in Krystal project build.gradle file and revert the vajram-codegen version
+2. Update the new version in Krystal project build.gradle file and revert the vajramDef-codegen version
    to previous version. Do a complete build and publish to local maven repo.
-3. Update the vajram-codegen to the new version.
+3. Update the vajramDef-codegen to the new version.
 
 Example : Need to update version from 1.6 to 1.7
 
-1. vajram-codegen (build.gradle) update
+1. vajramDef-codegen (build.gradle) update
     - update version from 1.6 to 1.7
     - Build and `gradle publishToMavenLocal` in krystal root directory
 2. krystal (build.gradle) update
     - update version from 1.6 to 1.7
-    - set `classpath 'com.flipkart.krystal:vajram:'+ project.krystal_version` in vajram-codegen's
-      buildscript block to `classpath 'com.flipkart.krystal:vajram:1.6'`
+    - set `classpath 'com.flipkart.krystal:vajramDef:'+ project.krystal_version` in vajramDef-codegen's
+      buildscript block to `classpath 'com.flipkart.krystal:vajramDef:1.6'`
     - Build and `gradle publishToMavenLocal` in krystal root directory
 3. Final update
-    - revert `classpath 'com.flipkart.krystal:vajram:1.6'+ project.krystal_version` in
-      vajram-codegen's buildscript block
-      to `classpath 'com.flipkart.krystal:vajram:'+ project.krystal_version`
+    - revert `classpath 'com.flipkart.krystal:vajramDef:1.6'+ project.krystal_version` in
+      vajramDef-codegen's buildscript block
+      to `classpath 'com.flipkart.krystal:vajramDef:'+ project.krystal_version`
     - Build and `publishToMavenLocal` and `publish` in krystal root directory

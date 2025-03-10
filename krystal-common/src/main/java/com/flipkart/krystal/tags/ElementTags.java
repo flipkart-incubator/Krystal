@@ -1,5 +1,6 @@
 package com.flipkart.krystal.tags;
 
+import com.google.auto.value.AutoAnnotation;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import java.lang.annotation.Annotation;
@@ -7,7 +8,9 @@ import java.lang.annotation.Repeatable;
 import java.lang.reflect.AnnotatedElement;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.EqualsAndHashCode;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -47,6 +50,13 @@ public final class ElementTags {
     this.namedValueTags = namedValueTags.build();
   }
 
+  private ElementTags(
+      Map<Class<? extends Annotation>, Annotation> annotationTags,
+      Map<String, NamedValueTag> namedValueTags) {
+    this.annotationTags = ImmutableMap.copyOf(annotationTags);
+    this.namedValueTags = ImmutableMap.copyOf(namedValueTags);
+  }
+
   public static ElementTags of(Annotation... tags) {
     return new ElementTags(Arrays.asList(tags));
   }
@@ -75,14 +85,23 @@ public final class ElementTags {
     return annotationTags.values();
   }
 
-  public static NamedValueTag namedValueTag(String name, String value) {
-    return new NamedValueTagImpl(name, value);
+  public ElementTags mergeAnnotations(Annotation... annotations) {
+    if (annotations.length == 0) {
+      return this;
+    }
+    return mergeFrom(new ElementTags(Arrays.stream(annotations).toList()));
   }
 
-  private record NamedValueTagImpl(String name, String value) implements NamedValueTag {
-    @Override
-    public Class<? extends Annotation> annotationType() {
-      return NamedValueTag.class;
-    }
+  private ElementTags mergeFrom(ElementTags otherTags) {
+    LinkedHashMap<Class<? extends Annotation>, Annotation> merged =
+        new LinkedHashMap<>(annotationTags);
+    merged.putAll(otherTags.annotationTags);
+    LinkedHashMap<String, NamedValueTag> merged2 = new LinkedHashMap<>(namedValueTags);
+    merged2.putAll(otherTags.namedValueTags);
+    return new ElementTags(merged, merged2);
+  }
+
+  public static @AutoAnnotation NamedValueTag namedValueTag(String name, String value) {
+    return new AutoAnnotation_ElementTags_namedValueTag(name, value);
   }
 }

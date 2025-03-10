@@ -64,7 +64,7 @@ class A2MinusB2Test {
   private static CompletableFuture<Integer> executeVajram(
       VajramKryonGraph graph, KrystexVajramExecutor krystexVajramExecutor, A2MinusB2_Req req) {
     return krystexVajramExecutor.execute(
-        graph.getVajramId(A2MinusB2.class),
+        graph.getVajramIdByVajramDefType(A2MinusB2.class),
         req._build(),
         KryonExecutionConfig.builder().executionId("1").build());
   }

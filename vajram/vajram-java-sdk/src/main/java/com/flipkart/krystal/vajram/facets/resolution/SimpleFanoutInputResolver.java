@@ -32,7 +32,7 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request<?>, DV ext
   }
 
   @Override
-  public ResolverCommand resolve(ImmutableRequest.Builder depRequest, FacetValues facetValues) {
+  public ResolverCommand resolve(ImmutableRequest.Builder<?> depRequest, FacetValues facetValues) {
     {
       try {
         //noinspection unchecked,rawtypes
@@ -48,11 +48,12 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request<?>, DV ext
           } else {
             if (depCommand.inputs().size() == 1) {
               getResolverSpec().targetInput().setToRequest(depRequest, depCommand.inputs().get(0));
-              return executeWithRequests(ImmutableList.of((ImmutableRequest.Builder) depRequest));
+              return executeWithRequests(
+                  ImmutableList.of((ImmutableRequest.Builder<?>) depRequest));
             } else {
               return executeWithRequests(
                   depCommand.inputs().stream()
-                      .<ImmutableRequest.@NonNull Builder>map(
+                      .<ImmutableRequest.@NonNull Builder<?>>map(
                           o -> {
                             var next = depRequest._newCopy();
                             getResolverSpec().targetInput().setToRequest(next, o);

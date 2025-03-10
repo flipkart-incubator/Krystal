@@ -1,8 +1,10 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import lombok.EqualsAndHashCode;
 import lombok.EqualsAndHashCode.CacheStrategy;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * An instance of this class represents the start of a {@link DependantChain}. A {@link
@@ -24,5 +26,10 @@ public final class DependantChainStart extends AbstractDependantChain {
   @Override
   public String toString() {
     return "[Start]";
+  }
+
+  @Override
+  public @Nullable Dependency latestDependency() {
+    return null;
   }
 }

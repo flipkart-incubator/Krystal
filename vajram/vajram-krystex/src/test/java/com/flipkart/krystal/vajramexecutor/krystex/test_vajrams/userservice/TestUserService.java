@@ -5,8 +5,8 @@ import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
-import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.VajramDef;
+import com.flipkart.krystal.vajram.IOVajramDef;
+import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
@@ -21,8 +21,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.LongAdder;
 
 @ExternalInvocation(allow = true)
-@VajramDef
-public abstract class TestUserService extends IOVajram<TestUserInfo> {
+@Vajram
+public abstract class TestUserService extends IOVajramDef<TestUserInfo> {
   static class _Facets {
     @Mandatory @Batched @Input String userId;
   }

@@ -51,7 +51,7 @@ class DoubleMinusOneTest {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              graph.getVajramId(DoubleMinusOne.class),
+              graph.getVajramIdByVajramDefType(DoubleMinusOne.class),
               DoubleMinusOne_ImmutReqPojo._builder().numbers(List.of(1, 2, 3))._build());
     }
     Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(11);
@@ -69,7 +69,7 @@ class DoubleMinusOneTest {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              graph.getVajramId(DoubleMinusOne.class),
+              graph.getVajramIdByVajramDefType(DoubleMinusOne.class),
               DoubleMinusOne_ImmutReqPojo._builder().numbers(List.of(1, 1, 3))._build());
     }
     Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(9);
@@ -87,7 +87,7 @@ class DoubleMinusOneTest {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              graph.getVajramId(DoubleMinusOne.class),
+              graph.getVajramIdByVajramDefType(DoubleMinusOne.class),
               DoubleMinusOne_ImmutReqPojo._builder().numbers(List.of())._build());
     }
     Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(-1);

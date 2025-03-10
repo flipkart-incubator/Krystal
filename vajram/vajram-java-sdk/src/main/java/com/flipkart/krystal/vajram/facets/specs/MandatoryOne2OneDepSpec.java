@@ -1,12 +1,12 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.tags.ElementTags;
-import com.flipkart.krystal.vajram.VajramID;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -16,6 +16,7 @@ public final class MandatoryOne2OneDepSpec<T, CV extends Request, DV extends Req
   public MandatoryOne2OneDepSpec(
       int id,
       String name,
+      VajramID vajramID,
       DataType<T> type,
       Class<CV> ofVajram,
       Class<DV> onVajram,
@@ -28,6 +29,7 @@ public final class MandatoryOne2OneDepSpec<T, CV extends Request, DV extends Req
     super(
         id,
         name,
+        vajramID,
         type,
         ofVajram,
         onVajram,

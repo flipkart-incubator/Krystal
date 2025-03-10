@@ -6,5 +6,6 @@ module flipkart.krystal.vajram.vajram_samples {
   requires java.logging;
   requires org.checkerframework.checker.qual;
   requires jakarta.inject;
-  requires java.compiler;
+  requires jdk.compiler;
+  requires com.google.auto.value.annotations;
 }

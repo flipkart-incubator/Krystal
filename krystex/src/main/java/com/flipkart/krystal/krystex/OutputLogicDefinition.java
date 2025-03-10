@@ -2,8 +2,8 @@ package com.flipkart.krystal.krystex;
 
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
-import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
+import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
@@ -44,14 +44,14 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
       new LinkedHashMap<>();
 
   public ImmutableMap<String, OutputLogicDecorator> getSessionScopedLogicDecorators(
-      KryonDefinition kryonDefinition, DependantChain dependants) {
+      VajramKryonDefinition kryonDefinition, DependantChain dependants) {
     Map<String, OutputLogicDecorator> decorators = new LinkedHashMap<>();
     sessionScopedLogicDecoratorConfigs.forEach(
         (s, decoratorConfig) -> {
           try {
             LogicExecutionContext logicExecutionContext =
                 new LogicExecutionContext(
-                    kryonDefinition.kryonId(),
+                    kryonDefinition.vajramID(),
                     tags(),
                     dependants,
                     kryonDefinition.kryonDefinitionRegistry());

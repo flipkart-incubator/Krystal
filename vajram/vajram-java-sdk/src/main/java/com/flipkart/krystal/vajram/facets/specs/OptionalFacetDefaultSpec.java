@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
@@ -17,6 +18,7 @@ public final class OptionalFacetDefaultSpec<T, CV extends Request> extends Defau
   public OptionalFacetDefaultSpec(
       int id,
       String name,
+      VajramID vajramID,
       DataType<T> type,
       ImmutableSet<FacetType> facetTypes,
       Class<CV> ofVajram,
@@ -28,6 +30,7 @@ public final class OptionalFacetDefaultSpec<T, CV extends Request> extends Defau
     super(
         id,
         name,
+        vajramID,
         type,
         facetTypes,
         ofVajram,

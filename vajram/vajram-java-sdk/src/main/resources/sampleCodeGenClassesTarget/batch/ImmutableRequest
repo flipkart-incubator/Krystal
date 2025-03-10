@@ -1,10 +1,10 @@
-package com.flipkart.krystal.vajram.samples.anandtest;
+package com.flipkart.krystal.vajramDef.samples.anandtest;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.RequestBuilder;
-import com.flipkart.krystal.vajram.Generated;
+import com.flipkart.krystal.vajramDef.Generated;
 import com.google.common.collect.ImmutableMap;
 import java.lang.IllegalArgumentException;
 import java.lang.Integer;
@@ -19,7 +19,7 @@ import lombok.ToString;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Generated(
-    by = "com.flipkart.krystal.vajram.codegen.VajramModelGenProcessor"
+    by = "com.flipkart.krystal.vajramDef.codegen.VajramModelGenProcessor"
 )
 @EqualsAndHashCode
 @ToString
@@ -75,7 +75,7 @@ public final class DependencyTestImmutableRequest implements DependencyTestReque
   }
 
   @Generated(
-      by = "com.flipkart.krystal.vajram.codegen.VajramModelGenProcessor"
+      by = "com.flipkart.krystal.vajramDef.codegen.VajramModelGenProcessor"
   )
   @ToString
   public static final class Builder implements DependencyTestRequest, RequestBuilder<Integer> {

@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.DepResponse;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesBuilder;
@@ -8,7 +9,6 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.tags.ElementTags;
-import com.flipkart.krystal.vajram.VajramID;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import lombok.Getter;
@@ -31,6 +31,7 @@ public abstract sealed class One2OneDepSpec<T, CV extends Request, DV extends Re
   public One2OneDepSpec(
       int id,
       String name,
+      VajramID vajramID,
       DataType<T> type,
       Class<CV> ofVajram,
       Class<DV> onVajram,
@@ -40,7 +41,7 @@ public abstract sealed class One2OneDepSpec<T, CV extends Request, DV extends Re
       ElementTags tags,
       Function<FacetValues, One2OneDepResponse<DV, T>> getFromFacets,
       BiConsumer<FacetValues, RequestResponse<DV, T>> setToFacets) {
-    super(id, name, type, ofVajram, onVajram, onVajramId, documentation, isBatched, tags);
+    super(id, name, vajramID, type, ofVajram, onVajram, onVajramId, documentation, isBatched, tags);
     this.getFromFacets = getFromFacets;
     this.setToFacets = setToFacets;
   }
