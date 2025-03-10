@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.annos;
+package com.flipkart.krystal.annos;
 
 import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
 

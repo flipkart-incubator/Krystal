@@ -16,8 +16,8 @@ import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.Kryon;
-import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonResponse;
+import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
@@ -55,7 +55,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
   }
 
   @Override
-  public KryonDefinition getKryonDefinition() {
+  public VajramKryonDefinition getKryonDefinition() {
     return kryon.getKryonDefinition();
   }
 
@@ -63,8 +63,8 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
   public CompletableFuture<KryonResponse> executeCommand(KryonCommand kryonCommand) {
     VajramDefinition vajramDefinition =
         vajramKryonGraph.getVajramDefinition(vajramID(kryonCommand.vajramID().value()));
-    if (vajramDefinition.vajramMetadata().isInputInjectionNeeded()
-        && vajramDefinition.vajramDef() instanceof VajramDef<?> vajramDef) {
+    if (vajramDefinition.metadata().isInputInjectionNeeded()
+        && vajramDefinition.def() instanceof VajramDef<?> vajramDef) {
       if (kryonCommand instanceof ForwardReceive forwardBatch) {
         return injectFacets(forwardBatch, vajramDefinition, vajramDef);
       }

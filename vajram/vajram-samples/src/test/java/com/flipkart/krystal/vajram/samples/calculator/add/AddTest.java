@@ -31,7 +31,7 @@ class AddTest {
       // Execute the Adder Vajram without passing numberTwo
       future =
           executor.execute(
-              graph.getVajramId(Add.class),
+              graph.getVajramIdByVajramDefType(Add.class),
               Add_ImmutReqPojo._builder().numberOne(5)._build(),
               KryonExecutionConfig.builder().build());
     }

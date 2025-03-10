@@ -97,7 +97,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
   private final Map<DependantChain, Boolean> outputLogicExecuted = new LinkedHashMap<>();
 
   BatchKryon(
-      KryonDefinition kryonDefinition,
+      VajramKryonDefinition kryonDefinition,
       KryonExecutor kryonExecutor,
       Function<LogicExecutionContext, ImmutableMap<String, OutputLogicDecorator>>
           outputLogicDecoratorSuppliers,
@@ -252,9 +252,9 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
       triggerableDependencies.forEach(
           (dep, resolverDefs) -> {
             VajramID depVajramId = kryonDefinition.dependencyKryons().get(dep);
-            Optional<KryonDefinition> depKryonDefinition =
-                kryonDefinition.kryonDefinitionRegistry().tryGet(checkNotNull(depVajramId));
-            if (depKryonDefinition.isEmpty()) {
+            KryonDefinition depKryonDefinition =
+                kryonDefinition.kryonDefinitionRegistry().get(checkNotNull(depVajramId));
+            if (depKryonDefinition == null) {
               commandsByDependency
                   .computeIfAbsent(dep, _k -> new LinkedHashMap<>())
                   .put(
@@ -277,7 +277,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
               fanoutResolverDef = fanoutResolvers.get(0);
             }
             Supplier<ImmutableRequest.Builder<?>> newDepRequestBuilder =
-                () -> depKryonDefinition.get().createNewRequest().logic().newRequestBuilder();
+                () -> depKryonDefinition.createNewRequest().logic().newRequestBuilder();
             ImmutableList<? extends ImmutableRequest.Builder<?>> depRequestBuilders =
                 ImmutableList.of(newDepRequestBuilder.get());
             ResolverCommand resolverCommand = null;
@@ -501,8 +501,6 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
 
           enqueueOrExecuteCommand(
               () -> new CallbackCommand(vajramID, dependency, results, dependantChain),
-              depVajramID,
-              kryonDefinition,
               kryonExecutor);
         });
     flushDependencyIfNeeded(dependency, depVajramID, dependantChain);

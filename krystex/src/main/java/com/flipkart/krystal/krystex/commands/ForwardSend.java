@@ -15,11 +15,11 @@ import java.util.Set;
  * @param vajramID The dependency kryon Id to execute
  * @param executableRequests The request which need to be executed
  * @param dependantChain The dependant chain leading to this invocation
- * @param skippedRequests The requests which have been skipped by some vajram
+ * @param skippedRequests The requests which have been skipped
  */
 public record ForwardSend(
     VajramID vajramID,
-    ImmutableMap<RequestId, ? extends Request> executableRequests,
+    ImmutableMap<RequestId, Request<?>> executableRequests,
     DependantChain dependantChain,
     ImmutableMap<RequestId, String> skippedRequests)
     implements MultiRequestCommand<BatchResponse>, ClientSideCommand<BatchResponse> {

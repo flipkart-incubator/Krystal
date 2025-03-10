@@ -10,5 +10,5 @@ public interface Kryon<C extends KryonCommand, R extends KryonResponse> {
 
   CompletableFuture<R> executeCommand(C kryonCommand);
 
-  KryonDefinition getKryonDefinition();
+  VajramKryonDefinition getKryonDefinition();
 }

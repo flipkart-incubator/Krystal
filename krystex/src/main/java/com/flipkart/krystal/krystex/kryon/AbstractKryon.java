@@ -20,7 +20,7 @@ import java.util.function.Function;
 abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonResponse>
     implements Kryon<C, R> permits BatchKryon {
 
-  protected final KryonDefinition kryonDefinition;
+  protected final VajramKryonDefinition kryonDefinition;
   protected final VajramID vajramID;
   protected final KryonExecutor kryonExecutor;
 
@@ -35,7 +35,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
   protected final RequestIdGenerator requestIdGenerator;
 
   AbstractKryon(
-      KryonDefinition definition,
+      VajramKryonDefinition definition,
       KryonExecutor kryonExecutor,
       Function<LogicExecutionContext, ImmutableMap<String, OutputLogicDecorator>>
           outputLogicDecoratorSuppliers,
@@ -101,7 +101,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
   }
 
   @Override
-  public KryonDefinition getKryonDefinition() {
+  public VajramKryonDefinition getKryonDefinition() {
     return kryonDefinition;
   }
 }

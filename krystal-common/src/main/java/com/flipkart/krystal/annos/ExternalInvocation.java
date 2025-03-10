@@ -19,6 +19,7 @@ import java.lang.annotation.Target;
  * checks and other automated tests and validation which are more relevant to externally invoked
  * vajrams.
  */
+@HasCreator
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface ExternalInvocation {

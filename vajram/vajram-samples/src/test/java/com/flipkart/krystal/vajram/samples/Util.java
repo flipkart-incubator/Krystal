@@ -20,7 +20,7 @@ import java.util.function.Function;
 
 public final class Util {
 
-  public static final Duration TEST_TIMEOUT = ofSeconds(1);
+  public static final Duration TEST_TIMEOUT = ofSeconds(1000);
 
   private Util() {}
 

@@ -23,7 +23,6 @@ import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
-import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
@@ -32,6 +31,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
+import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
@@ -100,8 +100,8 @@ class RequestLevelCacheTest {
     // Move this to the @BeforeEach method after 5.10 is released.
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy, true);
     LongAdder adder = new LongAdder();
-    KryonDefinition kryonDefinition =
-        kryonDefinitionRegistry.newKryonDefinition(
+    VajramKryonDefinition kryonDefinition =
+        kryonDefinitionRegistry.newVajramKryonDefinition(
             "kryon",
             emptySet(),
             newComputeLogic(
@@ -147,8 +147,8 @@ class RequestLevelCacheTest {
     // Move this to the @BeforeEach method after 5.10 is released.
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy, false);
     LongAdder adder = new LongAdder();
-    KryonDefinition kryonDefinition =
-        kryonDefinitionRegistry.newKryonDefinition(
+    VajramKryonDefinition kryonDefinition =
+        kryonDefinitionRegistry.newVajramKryonDefinition(
             "kryon",
             emptySet(),
             newComputeLogic(

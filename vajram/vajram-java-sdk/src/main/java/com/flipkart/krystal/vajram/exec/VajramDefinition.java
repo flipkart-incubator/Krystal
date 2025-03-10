@@ -10,9 +10,11 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.tags.ElementTags;
+import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
@@ -27,16 +29,16 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 public final class VajramDefinition {
 
-  private final VajramDefRoot<Object> vajramDef;
+  private final VajramDefRoot<Object> def;
+  private final Class<? extends VajramDefRoot<?>> defType;
+  private final Class<? extends Request<?>> reqRootType;
 
   private final ImmutableMap<ResolverDefinition, InputResolver> inputResolvers;
 
   private final ElementTags outputLogicTags;
   private final ElementTags vajramTags;
 
-  private final VajramMetadata vajramMetadata;
-
-  private final Class<? extends VajramDefRoot<?>> vajramDefClass;
+  private final VajramMetadata metadata;
 
   private final VajramID vajramId;
   private final ImmutableSet<FacetSpec> outputLogicSources;
@@ -46,7 +48,12 @@ public final class VajramDefinition {
   private final ImmutableMap<Integer, FacetSpec> facetsById;
 
   public VajramDefinition(VajramDefRoot<Object> vajramDefRoot) {
-    this.vajramDef = vajramDefRoot;
+    this.vajramId = parseVajramId(vajramDefRoot);
+
+    this.def = vajramDefRoot;
+    this.defType = getVajramDefClass(vajramDefRoot.getClass());
+    this.reqRootType = vajramDefRoot.requestRoot();
+
     this.facetSpecs =
         vajramDefRoot instanceof VajramDef<?> v
             ? v.facetsFromRequest(vajramDefRoot.newRequestBuilder())._facets().stream()
@@ -56,13 +63,17 @@ public final class VajramDefinition {
     this.facetsByName =
         facetSpecs.stream().collect(toImmutableMap(Facet::name, Function.identity()));
     this.facetsById = facetSpecs.stream().collect(toImmutableMap(Facet::id, Function.identity()));
-    this.vajramId = parseVajramId(vajramDefRoot);
-    this.vajramDefClass = getVajramDefClass(vajramDefRoot.getClass());
-    this.inputResolvers = parseInputResolvers(vajramDefRoot);
+
     this.outputLogicTags = parseOutputLogicTags(vajramDefRoot);
     this.vajramTags = parseVajramTags(vajramId, vajramDefRoot);
     this.outputLogicSources =
         parseOutputLogicSources(vajramDefRoot, facetSpecs, facetsByName, facetsById);
-    this.vajramMetadata = new VajramMetadata(vajramDefRoot, facetSpecs);
+    this.inputResolvers = parseInputResolvers(vajramDefRoot);
+
+    this.metadata = new VajramMetadata(facetSpecs);
+  }
+
+  public boolean isTrait() {
+    return def instanceof TraitDef<Object>;
   }
 }

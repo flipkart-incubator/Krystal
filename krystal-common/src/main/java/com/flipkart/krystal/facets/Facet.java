@@ -1,11 +1,8 @@
 package com.flipkart.krystal.facets;
 
-import static com.flipkart.krystal.tags.ElementTags.emptyTags;
-
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesBuilder;
-import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableSet;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -16,8 +13,4 @@ public interface Facet extends BasicFacetInfo {
   @Nullable FacetValue getFacetValue(FacetValues facetValues);
 
   void setFacetValue(FacetValuesBuilder facets, FacetValue value);
-
-  default ElementTags tags() {
-    return emptyTags();
-  }
 }

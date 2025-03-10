@@ -3,8 +3,9 @@ package com.flipkart.krystal.vajram.annos;
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
+import com.flipkart.krystal.annos.ApplicableToElements;
 import com.flipkart.krystal.core.KrystalElement;
-import com.flipkart.krystal.vajram.VajramTraitDef;
+import com.flipkart.krystal.vajram.TraitDef;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
@@ -16,5 +17,5 @@ import java.lang.annotation.Target;
 @Target(TYPE)
 @ApplicableToElements(KrystalElement.Vajram.class)
 public @interface ConformsToTrait {
-  Class<? extends VajramTraitDef<?>> withDef();
+  Class<? extends TraitDef<?>> withDef();
 }

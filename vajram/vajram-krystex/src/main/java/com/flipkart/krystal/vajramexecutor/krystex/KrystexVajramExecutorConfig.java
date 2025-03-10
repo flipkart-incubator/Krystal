@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
-import com.flipkart.krystal.traits.TraitBindingProvider;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
 import lombok.Builder;
 import lombok.NonNull;
@@ -12,8 +11,7 @@ public record KrystexVajramExecutorConfig(
     String requestId,
     @NonNull @CalledMethods("singleThreadExecutor")
         KryonExecutorConfigBuilder kryonExecutorConfigBuilder,
-    @Nullable VajramInjectionProvider inputInjectionProvider,
-    @Nullable TraitBindingProvider traitBindingProvider) {
+    @Nullable VajramInjectionProvider inputInjectionProvider) {
 
   @Builder
   public KrystexVajramExecutorConfig {}

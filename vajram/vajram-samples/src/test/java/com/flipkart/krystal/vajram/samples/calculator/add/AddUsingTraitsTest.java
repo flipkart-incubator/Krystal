@@ -1,15 +1,21 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
+import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.vajram.guice.traitbinding.TraitBinder;
-import com.flipkart.krystal.vajram.guice.traitbinding.TraitBindingProviderImpl;
+import com.flipkart.krystal.vajram.guice.traitbinding.StaticDispatchPolicyImpl;
 import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
+import static com.flipkart.krystal.vajram.samples.calculator.add.AddUsingTraits_Fac.sum2_s;
+import static com.flipkart.krystal.vajram.samples.calculator.add.AddUsingTraits_Fac.sum3_s;
+import static com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Fac.chainSum_s;
 import com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAddQualifier;
 import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAdderType.CHAIN;
 import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAdderType.SIMPLE;
 import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAdderType.SPLIT;
+import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.splitSum1_s;
+import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.splitSum2_s;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
-import com.flipkart.krystal.traits.TraitBindingProvider;
+import com.google.common.collect.ImmutableSet;
 import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,7 +44,6 @@ class AddUsingTraitsTest {
 
   private VajramKryonGraph graph;
   private Lease<SingleThreadExecutor> executorLease;
-  private TraitBindingProvider traitBindingProvider;
 
   @BeforeAll
   static void beforeAll() throws LeaseUnavailableException {
@@ -58,21 +63,23 @@ class AddUsingTraitsTest {
   @BeforeEach
   void setUp() {
     this.executorLease = EXECUTOR_LEASES[0];
-    this.graph = Util.loadFromClasspath(AddUsingTraits.class.getPackageName()).build();
     TraitBinder traitBinder = new TraitBinder();
     traitBinder
-        .bindTrait(MultiAdd.class)
+        .bindTrait(MultiAdd_Req.class)
         .annotatedWith(MultiAddQualifier.Creator.create(SIMPLE))
-        .to(SimpleAdd.class);
+        .to(SimpleAdd_Req.class);
     traitBinder
-        .bindTrait(MultiAdd.class)
+        .bindTrait(MultiAdd_Req.class)
         .annotatedWith(MultiAddQualifier.Creator.create(CHAIN))
-        .to(ChainAdd.class);
+        .to(ChainAdd_Req.class);
     traitBinder
-        .bindTrait(MultiAdd.class)
+        .bindTrait(MultiAdd_Req.class)
         .annotatedWith(MultiAddQualifier.Creator.create(SPLIT))
-        .to(SplitAdd.class);
-    traitBindingProvider = new TraitBindingProviderImpl(graph, traitBinder);
+        .to(SplitAdd_Req.class);
+    this.graph = Util.loadFromClasspath(AddUsingTraits.class.getPackageName()).build();
+    this.graph.registerTraitDispatchPolicies(
+        new StaticDispatchPolicyImpl(
+            graph, graph.getVajramIdByVajramDefType(MultiAdd.class), traitBinder));
   }
 
   @Test
@@ -134,7 +141,6 @@ class AddUsingTraitsTest {
   private KrystexVajramExecutorConfigBuilder executorConfig() {
     return KrystexVajramExecutorConfig.builder()
         .requestId(REQUEST_ID)
-        .traitBindingProvider(traitBindingProvider)
         .kryonExecutorConfigBuilder(
             KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()));
   }
@@ -179,12 +185,29 @@ class AddUsingTraitsTest {
       List<Integer> numbers3) {
 
     return krystexVajramExecutor.execute(
-        graph.getVajramId(AddUsingTraits.class),
+        graph.getVajramIdByVajramDefType(AddUsingTraits.class),
         AddUsingTraits_ImmutReqPojo._builder()
             .numbers1(numbers1)
             .numbers2(numbers2)
             .numbers3(numbers3)
             ._build(),
-        KryonExecutionConfig.builder().executionId(REQUEST_ID).build());
+        KryonExecutionConfig.builder()
+            .disabledDependantChains(getDisabledDependantChains(graph))
+            .executionId(REQUEST_ID)
+            .build());
+  }
+
+  private static ImmutableSet<DependantChain> getDisabledDependantChains(VajramKryonGraph graph) {
+    String vajramId = graph.getVajramIdByVajramDefType(AddUsingTraits.class).vajramId();
+    return ImmutableSet.of(
+        graph.computeDependantChain(vajramId, sum2_s, chainSum_s, chainSum_s),
+        graph.computeDependantChain(vajramId, sum3_s, splitSum1_s, splitSum1_s, splitSum1_s),
+        graph.computeDependantChain(vajramId, sum3_s, splitSum1_s, splitSum1_s, splitSum2_s),
+        graph.computeDependantChain(vajramId, sum3_s, splitSum1_s, splitSum2_s, splitSum1_s),
+        graph.computeDependantChain(vajramId, sum3_s, splitSum1_s, splitSum2_s, splitSum2_s),
+        graph.computeDependantChain(vajramId, sum3_s, splitSum2_s, splitSum1_s, splitSum1_s),
+        graph.computeDependantChain(vajramId, sum3_s, splitSum2_s, splitSum1_s, splitSum2_s),
+        graph.computeDependantChain(vajramId, sum3_s, splitSum2_s, splitSum2_s, splitSum1_s),
+        graph.computeDependantChain(vajramId, sum3_s, splitSum2_s, splitSum2_s, splitSum2_s));
   }
 }

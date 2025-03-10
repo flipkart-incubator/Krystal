@@ -9,11 +9,11 @@ import com.flipkart.krystal.tags.ElementTags;
 import com.flipkart.krystal.vajram.ComputeDelegationMode;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.IOVajramDef;
+import com.flipkart.krystal.vajram.Trait;
+import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramDefRoot;
-import com.flipkart.krystal.vajram.VajramTrait;
-import com.flipkart.krystal.vajram.VajramTraitDef;
 import com.flipkart.krystal.vajram.annos.OutputLogicDelegationMode;
 import com.flipkart.krystal.vajram.annos.VajramIdentifier;
 import com.flipkart.krystal.vajram.facets.Output;
@@ -125,13 +125,12 @@ final class Vajrams {
 
   @SuppressWarnings("unchecked")
   private static Class<? extends VajramDefRoot<?>> _getVajramDefClass(Class<?> aClass) {
-    if (!VajramDef.class.isAssignableFrom(aClass)
-        && !VajramTraitDef.class.isAssignableFrom(aClass)) {
+    if (!VajramDef.class.isAssignableFrom(aClass) && !TraitDef.class.isAssignableFrom(aClass)) {
       throw new IllegalArgumentException("@Vajram or @VajramTrait annotation missing.");
     }
     Annotation annotation = aClass.getAnnotation(Vajram.class);
     if (annotation == null) {
-      annotation = aClass.getAnnotation(VajramTrait.class);
+      annotation = aClass.getAnnotation(Trait.class);
     }
     if (annotation != null) {
       return (Class<? extends VajramDefRoot<?>>) aClass;

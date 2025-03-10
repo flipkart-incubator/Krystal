@@ -5,7 +5,7 @@ public sealed interface KrystalElement {
 
   record Vajram() implements VajramRoot {}
 
-  record VajramTrait() implements VajramRoot {}
+  record Trait() implements VajramRoot {}
 
   record Facet() implements KrystalElement {}
 

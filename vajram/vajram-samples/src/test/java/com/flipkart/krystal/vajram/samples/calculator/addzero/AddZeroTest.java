@@ -52,7 +52,7 @@ class AddZeroTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
-        graph.getVajramId(Add.class), InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
+        graph.getVajramIdByVajramDefType(Add.class), InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
@@ -62,7 +62,7 @@ class AddZeroTest {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              graph.getVajramId((AddZero.class)),
+              graph.getVajramIdByVajramDefType((AddZero.class)),
               AddZero_ImmutReqPojo._builder().number(5)._build(),
               KryonExecutionConfig.builder().executionId("addZeroTest").build());
     }

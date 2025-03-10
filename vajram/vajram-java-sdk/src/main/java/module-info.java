@@ -18,5 +18,5 @@ module flipkart.krystal.vajram {
   requires flipkart.krystal.common;
   requires static org.slf4j;
   requires java.compiler;
-  requires auto.value.annotations;
+  requires com.google.auto.value.annotations;
 }

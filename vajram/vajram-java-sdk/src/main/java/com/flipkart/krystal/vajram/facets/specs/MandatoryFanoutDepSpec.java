@@ -25,6 +25,7 @@ public final class MandatoryFanoutDepSpec<T, CV extends Request, DV extends Requ
   public MandatoryFanoutDepSpec(
       int id,
       String name,
+      VajramID vajramID,
       DataType<T> type,
       Class<CV> ofVajram,
       Class<DV> onVajram,
@@ -37,6 +38,7 @@ public final class MandatoryFanoutDepSpec<T, CV extends Request, DV extends Requ
     super(
         id,
         name,
+        vajramID,
         type,
         ofVajram,
         onVajram,

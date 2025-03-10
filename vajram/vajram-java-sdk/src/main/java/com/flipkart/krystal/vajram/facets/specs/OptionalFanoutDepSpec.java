@@ -25,6 +25,7 @@ public final class OptionalFanoutDepSpec<T, CV extends Request, DV extends Reque
   public OptionalFanoutDepSpec(
       int id,
       String name,
+      VajramID vajramID,
       DataType<T> type,
       Class<CV> ofVajram,
       Class<DV> onVajram,
@@ -37,6 +38,7 @@ public final class OptionalFanoutDepSpec<T, CV extends Request, DV extends Reque
     super(
         id,
         name,
+        vajramID,
         type,
         ofVajram,
         onVajram,

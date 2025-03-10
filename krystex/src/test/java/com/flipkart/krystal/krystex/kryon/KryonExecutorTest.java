@@ -110,8 +110,8 @@ class KryonExecutorTest {
     // Move this to the @BeforeEach method after 5.10 is released.
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
     String kryonName = "kryon";
-    KryonDefinition kryonDefinition =
-        kryonDefinitionRegistry.newKryonDefinition(
+    VajramKryonDefinition kryonDefinition =
+        kryonDefinitionRegistry.newVajramKryonDefinition(
             kryonName,
             emptySet(),
             newComputeLogic(kryonName, emptySet(), dependencyValues -> "computed_value")
@@ -144,8 +144,8 @@ class KryonExecutorTest {
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
     String kryonName = "kryon";
-    KryonDefinition kryonDefinition =
-        kryonDefinitionRegistry.newKryonDefinition(
+    VajramKryonDefinition kryonDefinition =
+        kryonDefinitionRegistry.newVajramKryonDefinition(
             kryonName,
             emptySet(),
             newComputeLogic(kryonName, emptySet(), dependencyValues -> "computed_value")
@@ -177,8 +177,8 @@ class KryonExecutorTest {
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
     String kryonName = "kryon";
-    KryonDefinition kryonDefinition =
-        kryonDefinitionRegistry.newKryonDefinition(
+    VajramKryonDefinition kryonDefinition =
+        kryonDefinitionRegistry.newVajramKryonDefinition(
             kryonName,
             emptySet(),
             newComputeLogic(kryonName, emptySet(), dependencyValues -> "computed_value")
@@ -207,7 +207,7 @@ class KryonExecutorTest {
     ImmutableSet<SimpleFacet> inputDefs = ImmutableSet.of(input(1), input(2), input(3));
     VajramID vajramID =
         kryonDefinitionRegistry
-            .newKryonDefinition(
+            .newVajramKryonDefinition(
                 kryonName,
                 inputDefs,
                 newComputeLogic(
@@ -242,8 +242,8 @@ class KryonExecutorTest {
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
     String kryonName = "n1";
-    KryonDefinition n1 =
-        kryonDefinitionRegistry.newKryonDefinition(
+    VajramKryonDefinition n1 =
+        kryonDefinitionRegistry.newVajramKryonDefinition(
             kryonName,
             emptySet(),
             newComputeLogic(kryonName, emptySet(), dependencyValues -> "dependency_value")
@@ -255,8 +255,8 @@ class KryonExecutorTest {
             emptyTags());
 
     Set<SimpleDep> allFacets = Set.of(dependency(1));
-    KryonDefinition n2 =
-        kryonDefinitionRegistry.newKryonDefinition(
+    VajramKryonDefinition n2 =
+        kryonDefinitionRegistry.newVajramKryonDefinition(
             "n2",
             allFacets,
             newComputeLogic(
@@ -293,7 +293,7 @@ class KryonExecutorTest {
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
     String l1Dep = "requestExecution_multiLevelDependencies_level1";
-    kryonDefinitionRegistry.newKryonDefinition(
+    kryonDefinitionRegistry.newVajramKryonDefinition(
         l1Dep,
         emptySet(),
         newComputeLogic(l1Dep, emptySet(), facets -> "l1").kryonLogicId(),
@@ -305,7 +305,7 @@ class KryonExecutorTest {
 
     String l2Dep = "requestExecution_multiLevelDependencies_level2";
     Set<SimpleDep> allFacets = Set.of(dependency(1));
-    kryonDefinitionRegistry.newKryonDefinition(
+    kryonDefinitionRegistry.newVajramKryonDefinition(
         l2Dep,
         allFacets,
         newComputeLogic(
@@ -327,7 +327,7 @@ class KryonExecutorTest {
         emptyTags());
 
     String l3Dep = "requestExecution_multiLevelDependencies_level3";
-    kryonDefinitionRegistry.newKryonDefinition(
+    kryonDefinitionRegistry.newVajramKryonDefinition(
         l3Dep,
         allFacets,
         newComputeLogic(
@@ -350,7 +350,7 @@ class KryonExecutorTest {
         emptyTags());
 
     String l4Dep = "requestExecution_multiLevelDependencies_level4";
-    kryonDefinitionRegistry.newKryonDefinition(
+    kryonDefinitionRegistry.newVajramKryonDefinition(
         l4Dep,
         allFacets,
         newComputeLogic(
@@ -374,7 +374,7 @@ class KryonExecutorTest {
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
             kryonDefinitionRegistry
-                .newKryonDefinition(
+                .newVajramKryonDefinition(
                     "requestExecution_multiLevelDependencies_final",
                     allFacets,
                     newComputeLogic(
@@ -425,7 +425,7 @@ class KryonExecutorTest {
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
     String dep1 =
         "executeKryon_dependenciesWithReturnInstantly_executeComputeExecutedExactlyOnce_dep1";
-    kryonDefinitionRegistry.newKryonDefinition(
+    kryonDefinitionRegistry.newVajramKryonDefinition(
         dep1,
         emptySet(),
         newComputeLogic(dep1, emptySet(), dependencyValues -> "l1").kryonLogicId(),
@@ -437,7 +437,7 @@ class KryonExecutorTest {
 
     String dep2 =
         "executeKryon_dependenciesWithReturnInstantly_executeComputeExecutedExactlyOnce_dep2";
-    kryonDefinitionRegistry.newKryonDefinition(
+    kryonDefinitionRegistry.newVajramKryonDefinition(
         dep2,
         emptySet(),
         newComputeLogic(dep2, emptySet(), dependencyValues -> "l2").kryonLogicId(),
@@ -454,7 +454,7 @@ class KryonExecutorTest {
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
             kryonDefinitionRegistry
-                .newKryonDefinition(
+                .newVajramKryonDefinition(
                     kryonName,
                     allFacets,
                     newComputeLogic(
@@ -506,7 +506,7 @@ class KryonExecutorTest {
         () ->
             kryonExecutor.executeKryon(
                 kryonDefinitionRegistry
-                    .newKryonDefinition(
+                    .newVajramKryonDefinition(
                         kryonName,
                         Set.of(),
                         newComputeLogic(kryonName, Set.of(), dependencyValues -> "").kryonLogicId(),
@@ -525,8 +525,8 @@ class KryonExecutorTest {
   void shutdownNow_terminatesPendingWork(
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
-    KryonDefinition n1 =
-        kryonDefinitionRegistry.newKryonDefinition(
+    VajramKryonDefinition n1 =
+        kryonDefinitionRegistry.newVajramKryonDefinition(
             "n1",
             emptySet(),
             newComputeLogic("n1_logic", emptySet(), dependencyValues -> "dependency_value")
@@ -539,8 +539,8 @@ class KryonExecutorTest {
 
     CountDownLatch countDownLatch = new CountDownLatch(1);
     Set<SimpleDep> allFacets = Set.of(dependency(1));
-    KryonDefinition n2 =
-        kryonDefinitionRegistry.newKryonDefinition(
+    VajramKryonDefinition n2 =
+        kryonDefinitionRegistry.newVajramKryonDefinition(
             "n2",
             allFacets,
             newIoLogic(

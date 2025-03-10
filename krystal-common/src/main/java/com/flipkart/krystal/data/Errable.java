@@ -63,7 +63,7 @@ public sealed interface Errable<T> extends FacetValue<T> permits Success, Failur
     return t;
   }
 
-  @SuppressWarnings("optional.parameter")
+  @SuppressWarnings({"optional.parameter", "OptionalUsedAsFieldOrParameterType"})
   static <T> Errable<@NonNull T> of(Optional<T> t) {
     return withValue(t.orElse(null));
   }

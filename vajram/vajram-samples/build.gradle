@@ -9,6 +9,8 @@ dependencies {
     implementation project(':krystal-common')
     implementation project(':vajram-java-sdk')
 
+    annotationProcessor project(':krystal-common')
+
     annotationProcessor 'com.flipkart.krystal:vajram-codegen'
 
     implementation 'jakarta.inject:jakarta.inject-api'

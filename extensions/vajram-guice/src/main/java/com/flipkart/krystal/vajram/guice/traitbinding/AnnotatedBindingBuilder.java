@@ -1,25 +1,24 @@
 package com.flipkart.krystal.vajram.guice.traitbinding;
 
-import com.flipkart.krystal.vajram.VajramTraitDef;
+import com.flipkart.krystal.data.Request;
 import java.lang.annotation.Annotation;
 
-public class AnnotatedBindingBuilder extends LinkedBindingBuilder {
+public class AnnotatedBindingBuilder<T extends Request<?>> extends LinkedBindingBuilder<T> {
 
   private final TraitBinder traitBinder;
-  private final Class<? extends VajramTraitDef<?>> traitDef;
+  private final Class<T> traitDef;
 
-  public AnnotatedBindingBuilder(
-      TraitBinder traitBinder, Class<? extends VajramTraitDef<?>> traitDef) {
+  public AnnotatedBindingBuilder(TraitBinder traitBinder, Class<T> traitDef) {
     super(traitBinder, traitDef);
     this.traitBinder = traitBinder;
     this.traitDef = traitDef;
   }
 
-  public LinkedBindingBuilder annotatedWith(Annotation annotation) {
-    return new LinkedBindingBuilder(traitBinder, traitDef, annotation);
+  public LinkedBindingBuilder<T> annotatedWith(Annotation annotation) {
+    return new LinkedBindingBuilder<>(traitBinder, traitDef, annotation);
   }
 
-  public LinkedBindingBuilder annotatedWith(Class<? extends Annotation> annotation) {
-    return new LinkedBindingBuilder(traitBinder, traitDef, annotation);
+  public LinkedBindingBuilder<T> annotatedWith(Class<? extends Annotation> annotation) {
+    return new LinkedBindingBuilder<>(traitBinder, traitDef, annotation);
   }
 }

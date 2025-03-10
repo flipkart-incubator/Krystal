@@ -24,12 +24,12 @@ import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
-import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
+import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
@@ -122,8 +122,8 @@ class Resilience4JBulkheadTest {
             (logicExecutionContext) -> true,
             logicExecutionContext -> "",
             decoratorContext -> resilience4JBulkhead));
-    KryonDefinition kryonDefinition =
-        kryonDefinitionRegistry.newKryonDefinition(
+    VajramKryonDefinition kryonDefinition =
+        kryonDefinitionRegistry.newVajramKryonDefinition(
             "kryon",
             Set.of(input(1)),
             outputLogicDef.kryonLogicId(),
@@ -220,8 +220,8 @@ class Resilience4JBulkheadTest {
             (logicExecutionContext) -> true,
             logicExecutionContext -> "",
             decoratorContext -> resilience4JBulkhead));
-    KryonDefinition kryonDefinition =
-        kryonDefinitionRegistry.newKryonDefinition(
+    VajramKryonDefinition kryonDefinition =
+        kryonDefinitionRegistry.newVajramKryonDefinition(
             "kryon",
             inputs,
             outputLogic.kryonLogicId(),

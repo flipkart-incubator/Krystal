@@ -2,6 +2,7 @@ package com.flipkart.krystal.facets;
 
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.datatypes.DataType;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -15,4 +16,6 @@ public interface InputMirror extends BasicFacetInfo {
   @Nullable Object getFromRequest(Request request);
 
   void setToRequest(ImmutableRequest.Builder request, @Nullable Object value);
+
+  DataType<?> type();
 }

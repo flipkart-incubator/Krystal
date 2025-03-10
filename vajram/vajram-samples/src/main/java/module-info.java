@@ -1,4 +1,4 @@
-module flipkart.krystal.vajramDef.vajram_samples {
+module flipkart.krystal.vajram.vajram_samples {
   requires flipkart.krystal.vajram;
   requires flipkart.krystal.common;
   requires com.google.common;
@@ -7,5 +7,5 @@ module flipkart.krystal.vajramDef.vajram_samples {
   requires org.checkerframework.checker.qual;
   requires jakarta.inject;
   requires jdk.compiler;
-  requires auto.value.annotations;
+  requires com.google.auto.value.annotations;
 }

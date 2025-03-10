@@ -25,10 +25,10 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.facets.FacetType;
+import com.flipkart.krystal.vajram.Trait;
+import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.VajramTrait;
-import com.flipkart.krystal.vajram.VajramTraitDef;
 import com.flipkart.krystal.vajram.annos.ConformsToTrait;
 import com.flipkart.krystal.vajram.annos.Generated;
 import com.flipkart.krystal.vajram.codegen.DependencyModel.DependencyModelBuilder;
@@ -212,7 +212,7 @@ public class Utils {
   }
 
   List<TypeElement> getDefinitionClasses(RoundEnvironment roundEnv) {
-    return roundEnv.getElementsAnnotatedWithAny(Set.of(Vajram.class, VajramTrait.class)).stream()
+    return roundEnv.getElementsAnnotatedWithAny(Set.of(Vajram.class, Trait.class)).stream()
         .filter(element -> element.getKind() == ElementKind.CLASS)
         .map(executableElement -> (TypeElement) executableElement)
         .toList();
@@ -462,17 +462,17 @@ public class Utils {
           new DeclaredTypeVisitor<@NonNull Object>(this, responseTypeElement)
               .visit(responseTypeMirror);
     } else if (isRawAssignable(vajramOrReqClass.asType(), VajramDef.class)
-        || isRawAssignable(vajramOrReqClass.asType(), VajramTraitDef.class)) {
+        || isRawAssignable(vajramOrReqClass.asType(), TraitDef.class)) {
       Vajram vajram = vajramOrReqClass.getAnnotation(Vajram.class);
-      VajramTrait vajramTrait = vajramOrReqClass.getAnnotation(VajramTrait.class);
-      if (vajram == null && vajramTrait == null) {
+      Trait trait = vajramOrReqClass.getAnnotation(Trait.class);
+      if (vajram == null && trait == null) {
         throw new VajramValidationException(
             "Vajram class %s does not have either @VajramDef or @VajramTrait annotation. This should not happen"
                 .formatted(vajramOrReqClass));
       }
-      boolean isTrait = vajramTrait != null;
+      boolean isTrait = trait != null;
       TypeMirror responseTypeMirror =
-          getResponseType(vajramOrReqClass, isTrait ? VajramTraitDef.class : VajramDef.class);
+          getResponseType(vajramOrReqClass, isTrait ? TraitDef.class : VajramDef.class);
       TypeElement responseTypeElement =
           checkNotNull((TypeElement) typeUtils.asElement(responseTypeMirror));
       TypeElement requestType =
@@ -522,7 +522,7 @@ public class Utils {
                       !checkNotNull((QualifiedNameable) typeUtils.asElement(typeMirror))
                           .getQualifiedName()
                           .equals(
-                              getTypeElement(VajramTraitDef.class.getName(), processingEnv)
+                              getTypeElement(TraitDef.class.getName(), processingEnv)
                                   .getQualifiedName()));
 
       if (traitType.isEmpty()) {
@@ -543,7 +543,7 @@ public class Utils {
 
   private String getVajramReqClassName(TypeElement vajramClass) {
     if (isRawAssignable(vajramClass.asType(), VajramDef.class)
-        || isRawAssignable(vajramClass.asType(), VajramTraitDef.class)) {
+        || isRawAssignable(vajramClass.asType(), TraitDef.class)) {
       return vajramClass.getQualifiedName().toString() + Constants.REQUEST_SUFFIX;
     } else if (isRawAssignable(vajramClass.asType(), Request.class)) {
       return vajramClass.getQualifiedName().toString();

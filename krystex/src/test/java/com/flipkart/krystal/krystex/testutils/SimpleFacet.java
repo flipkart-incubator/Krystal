@@ -3,6 +3,7 @@ package com.flipkart.krystal.krystex.testutils;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
 import static lombok.AccessLevel.PACKAGE;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
@@ -13,6 +14,8 @@ import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.SimpleRequest;
 import com.flipkart.krystal.data.SimpleRequestBuilder;
+import com.flipkart.krystal.datatypes.DataType;
+import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.facets.InputMirror;
@@ -72,5 +75,15 @@ public @NonFinal sealed class SimpleFacet implements Facet, InputMirror permits 
   @Override
   public void setToRequest(Builder request, @Nullable Object value) {
     ((SimpleRequestBuilder<Object>) request)._asMap().put(id(), Errable.withValue(value));
+  }
+
+  @Override
+  public DataType<?> type() {
+    return JavaType.create(Object.class);
+  }
+
+  @Override
+  public VajramID vajramID() {
+    return VajramID.vajramID("testVajram");
   }
 }

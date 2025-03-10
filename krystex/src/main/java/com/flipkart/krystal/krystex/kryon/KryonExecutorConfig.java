@@ -5,21 +5,20 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
+import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
+import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
-import com.flipkart.krystal.traits.TraitBindingProvider;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
-import java.util.Map;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.Singular;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * This is used to configure a particular execution of the Krystal graph.
@@ -34,7 +33,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param kryonDecoratorConfigs The request scoped kryon decorators to be applied
  * @param singleThreadExecutor MANDATORY! This is used as the event loop for the message passing
  *     within this execution.
- * @param traitBindingProvider used to determine the conformant vajrams bound to traits
+ * @param traitDispatchDecorator used to determine the conformant vajrams bound to traits
  * @param debug If true, more human readable names are give to entities - might be memory
  *     ineffecient.
  * @param _riskyOpenAllKryonsForExternalInvocation DO NOT SET THIS TO TRUE IN PRODUCTION CODE - ELSE
@@ -44,13 +43,15 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public record KryonExecutorConfig(
     LogicDecorationOrdering logicDecorationOrdering,
-    Map<String, List<OutputLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs,
+    ImmutableMap<String, List<OutputLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs,
     ImmutableSet<DependantChain> disabledDependantChains,
     KryonExecStrategy kryonExecStrategy,
     GraphTraversalStrategy graphTraversalStrategy,
-    @Singular Map<String, KryonDecoratorConfig> kryonDecoratorConfigs,
+    @Singular ImmutableMap<String, KryonDecoratorConfig> kryonDecoratorConfigs,
     @Singular ImmutableMap<String, DependencyDecoratorConfig> dependencyDecoratorConfigs,
     @NonNull SingleThreadExecutor singleThreadExecutor,
+    TraitDispatchDecorator traitDispatchDecorator,
+    boolean enableFlush,
     boolean debug,
     /******* Risky Flags ********/
     boolean _riskyOpenAllKryonsForExternalInvocation) {
@@ -77,6 +78,9 @@ public record KryonExecutorConfig(
     }
     if (requestScopedLogicDecoratorConfigs == null) {
       requestScopedLogicDecoratorConfigs = ImmutableMap.of();
+    }
+    if (traitDispatchDecorator == null) {
+      traitDispatchDecorator = DependencyDecorator.NO_OP::invokeDependency;
     }
   }
 }

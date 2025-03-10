@@ -5,4 +5,11 @@ import com.flipkart.krystal.krystex.request.RequestId;
 import com.google.common.collect.ImmutableMap;
 
 public record BatchResponse(ImmutableMap<RequestId, Errable<Object>> responses)
-    implements KryonResponse {}
+    implements KryonResponse {
+
+  private static final BatchResponse EMPTY = new BatchResponse(ImmutableMap.of());
+
+  public static BatchResponse empty() {
+    return EMPTY;
+  }
+}

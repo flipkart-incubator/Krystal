@@ -6,7 +6,8 @@ module flipkart.krystal.common {
   requires java.xml;
   requires org.slf4j;
   requires jdk.httpserver;
-  requires auto.value.annotations;
+  requires com.google.auto.value.annotations;
+  requires jakarta.inject;
 
   exports com.flipkart.krystal.data;
   exports com.flipkart.krystal.facets;
@@ -20,4 +21,5 @@ module flipkart.krystal.common {
   exports com.flipkart.krystal.facets.resolution;
   exports com.flipkart.krystal.core;
   exports com.flipkart.krystal.traits;
+  exports com.flipkart.krystal.traits.matchers;
 }

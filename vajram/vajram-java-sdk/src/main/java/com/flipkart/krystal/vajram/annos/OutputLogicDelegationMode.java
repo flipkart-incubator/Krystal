@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.annos;
 
+import com.flipkart.krystal.annos.ApplicableToElements;
+import com.flipkart.krystal.annos.HasCreator;
 import com.flipkart.krystal.core.KrystalElement.Vajram;
 import com.flipkart.krystal.vajram.ComputeDelegationMode;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
@@ -7,6 +9,7 @@ import com.flipkart.krystal.vajram.IOVajramDef;
 import com.google.auto.value.AutoAnnotation;
 import java.lang.annotation.Target;
 
+@HasCreator
 @ApplicableToElements(Vajram.class)
 @Target({}) // App devs cannot use this in code. This is auto computed by the platform
 public @interface OutputLogicDelegationMode {

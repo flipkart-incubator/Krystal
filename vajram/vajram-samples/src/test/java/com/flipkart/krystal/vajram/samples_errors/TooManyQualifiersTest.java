@@ -53,7 +53,7 @@ class TooManyQualifiersTest {
         KrystexVajramExecutor executor = createExecutor(vajramKryonGraph)) {
       result =
           executor.execute(
-              vajramKryonGraph.getVajramId(TooManyQualifiers.class),
+              vajramKryonGraph.getVajramIdByVajramDefType(TooManyQualifiers.class),
               TooManyQualifiers_ImmutReqPojo._builder().input("i1")._build());
     }
     assertThat(result)

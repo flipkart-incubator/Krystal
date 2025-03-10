@@ -16,6 +16,7 @@ public non-sealed class OptionalOne2OneDepSpec<T, CV extends Request, DV extends
   public OptionalOne2OneDepSpec(
       int id,
       String name,
+      VajramID vajramID,
       DataType<T> type,
       Class<CV> ofVajram,
       Class<DV> onVajram,
@@ -28,6 +29,7 @@ public non-sealed class OptionalOne2OneDepSpec<T, CV extends Request, DV extends
     super(
         id,
         name,
+        vajramID,
         type,
         ofVajram,
         onVajram,

@@ -1,13 +1,14 @@
 package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.vajram.codegen.Utils.getImmutRequestInterfaceName;
+import static com.flipkart.krystal.vajram.codegen.Utils.getImmutRequestPojoName;
 import static com.flipkart.krystal.vajram.codegen.Utils.getRequestInterfaceName;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
-import com.flipkart.krystal.vajram.VajramTrait;
+import com.flipkart.krystal.vajram.Trait;
 import com.google.common.collect.ImmutableBiMap;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
@@ -33,6 +34,10 @@ public record VajramInfoLite(
 
   public ClassName immutReqInterfaceType() {
     return ClassName.get(packageName(), getImmutRequestInterfaceName(vajramId().vajramId()));
+  }
+
+  public ClassName immutReqPojoType() {
+    return ClassName.get(packageName(), getImmutRequestPojoName(vajramId().vajramId()));
   }
 
   public TypeName builderInterfaceType() {
@@ -76,7 +81,7 @@ public record VajramInfoLite(
   }
 
   boolean isTrait() {
-    return vajramOrReqClass.getAnnotation(VajramTrait.class) != null;
+    return vajramOrReqClass.getAnnotation(Trait.class) != null;
   }
 
   boolean isVajram() {

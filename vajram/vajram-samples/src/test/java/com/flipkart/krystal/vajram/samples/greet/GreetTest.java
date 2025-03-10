@@ -183,7 +183,7 @@ class GreetTest {
   private static CompletableFuture<String> executeVajram(
       VajramKryonGraph graph, KrystexVajramExecutor krystexVajramExecutor, RequestContext rc) {
     return krystexVajramExecutor.execute(
-        graph.getVajramId((Greet.class)),
+        graph.getVajramIdByVajramDefType((Greet.class)),
         Greet_ImmutReqPojo._builder().userId(rc.userId)._build(),
         KryonExecutionConfig.builder().executionId("req_1").build());
   }

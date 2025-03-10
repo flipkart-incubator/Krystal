@@ -13,8 +13,8 @@ import com.flipkart.krystal.krystex.commands.ForwardReceive;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.Kryon;
-import com.flipkart.krystal.krystex.kryon.KryonDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonResponse;
+import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationInput;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.krystex.request.RequestId;
@@ -61,7 +61,7 @@ public class RequestLevelCache implements KryonDecorator {
     }
 
     @Override
-    public KryonDefinition getKryonDefinition() {
+    public VajramKryonDefinition getKryonDefinition() {
       return kryon.getKryonDefinition();
     }
 
