@@ -1,8 +1,9 @@
 package com.flipkart.krystal.vajram.samples.customer_service;
 
+import static com.flipkart.krystal.vajram.ComputeDelegationMode.NONE;
+
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.traits.UseForDispatch;
-import static com.flipkart.krystal.vajram.ComputeDelegationMode.NONE;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;

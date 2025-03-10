@@ -27,6 +27,7 @@ import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardSend;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
+import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorationInput;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
@@ -506,9 +507,9 @@ public final class KryonExecutor implements KrystalExecutor {
                   kryonId -> {
                     executorConfig
                         .traitDispatchDecorator()
+                        .<FlushResponse>decorateDependency(this::executeCommand)
                         .invokeDependency(
-                            new Flush(kryonId, kryonDefinitionRegistry.getDependantChainsStart()),
-                            this::executeCommand);
+                            new Flush(kryonId, kryonDefinitionRegistry.getDependantChainsStart()));
                   });
         });
   }
@@ -555,6 +556,7 @@ public final class KryonExecutor implements KrystalExecutor {
             batchResponseFuture =
                 executorConfig
                     .traitDispatchDecorator()
+                    .<BatchResponse>decorateDependency(this::executeCommand)
                     .invokeDependency(
                         new ForwardSend(
                             kryonId,
@@ -564,8 +566,7 @@ public final class KryonExecutor implements KrystalExecutor {
                                         KryonExecution::instanceExecutionId,
                                         KryonExecution::request)),
                             kryonDefinitionRegistry.getDependantChainsStart(),
-                            ImmutableMap.of()),
-                        this::executeCommand);
+                            ImmutableMap.of()));
           } catch (Throwable throwable) {
             batchResponseFuture =
                 completedFuture(

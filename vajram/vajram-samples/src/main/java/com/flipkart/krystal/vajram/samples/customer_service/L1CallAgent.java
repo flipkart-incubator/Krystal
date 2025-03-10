@@ -18,6 +18,7 @@ public abstract class L1CallAgent extends ComputeVajramDef<String> {
     @Mandatory @Input InitialCommunication initialCommunication;
     @Mandatory @Input String customerName;
   }
+
   @Output
   static String output(String customerName) {
     return "Hello "

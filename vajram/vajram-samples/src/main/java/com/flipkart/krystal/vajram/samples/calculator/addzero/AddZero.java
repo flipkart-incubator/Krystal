@@ -3,8 +3,6 @@ package com.flipkart.krystal.vajram.samples.calculator.addzero;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
-import com.flipkart.krystal.vajram.samples.calculator.add.Add;
-import com.flipkart.krystal.vajram.samples.calculator.add.Add_Req;
 import static com.flipkart.krystal.vajram.samples.calculator.addzero.AddZero_Fac.number_s;
 import static com.flipkart.krystal.vajram.samples.calculator.addzero.AddZero_Fac.sum_s;
 
@@ -16,6 +14,8 @@ import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
+import com.flipkart.krystal.vajram.samples.calculator.add.Add;
+import com.flipkart.krystal.vajram.samples.calculator.add.Add_Req;
 import com.google.common.collect.ImmutableCollection;
 
 @Vajram

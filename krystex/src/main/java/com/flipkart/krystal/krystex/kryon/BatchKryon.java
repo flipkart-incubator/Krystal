@@ -43,6 +43,7 @@ import com.flipkart.krystal.krystex.commands.ForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardSend;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.commands.MultiRequestCommand;
+import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorationInput;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.dependencydecoration.VajramInvocation;
@@ -440,9 +441,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
 
     VajramInvocation<BatchResponse> kryonResponseVajramInvocation =
         decorateVajramInvocation(
-            extendedDependantChain,
-            depVajramID,
-            kryonCommand -> kryonExecutor.executeCommand(kryonCommand));
+            extendedDependantChain, depVajramID, kryonExecutor::executeCommand);
 
     CompletableFuture<BatchResponse> depResponse =
         kryonResponseVajramInvocation.invokeDependency(
@@ -513,15 +512,13 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
   private <R extends KryonResponse> VajramInvocation<R> decorateVajramInvocation(
       DependantChain dependantChain,
       VajramID depVajramID,
-      VajramInvocation<R> decoratedVajramInvocation) {
+      VajramInvocation<R> invocationToDecorate) {
     for (DependencyDecorator dependencyDecorator :
         getSortedDependencyDecorators(depVajramID, dependantChain)) {
-      VajramInvocation previousDecoratedInvocation = decoratedVajramInvocation;
-      decoratedVajramInvocation =
-          kryonCommand ->
-              dependencyDecorator.invokeDependency(kryonCommand, previousDecoratedInvocation);
+      VajramInvocation previousDecoratedInvocation = invocationToDecorate;
+      invocationToDecorate = dependencyDecorator.decorateDependency(previousDecoratedInvocation);
     }
-    return decoratedVajramInvocation;
+    return invocationToDecorate;
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")

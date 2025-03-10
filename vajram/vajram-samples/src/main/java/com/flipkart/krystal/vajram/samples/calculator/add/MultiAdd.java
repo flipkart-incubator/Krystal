@@ -1,7 +1,8 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
-import com.flipkart.krystal.annos.HasCreator;
 import static com.flipkart.krystal.vajram.ComputeDelegationMode.SYNC;
+
+import com.flipkart.krystal.annos.HasCreator;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;

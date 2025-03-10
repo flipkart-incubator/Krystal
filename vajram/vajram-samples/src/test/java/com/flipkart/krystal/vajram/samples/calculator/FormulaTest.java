@@ -3,12 +3,9 @@ package com.flipkart.krystal.vajram.samples.calculator;
 import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
 import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
-import com.flipkart.krystal.vajram.samples.calculator.add.Add;
 import static com.flipkart.krystal.vajram.samples.calculator.add.Add.FAIL_ADDER_FLAG;
 import static com.flipkart.krystal.vajram.samples.calculator.add.Add.add;
-import com.flipkart.krystal.vajram.samples.calculator.add.Add_ImmutFac;
 import static com.flipkart.krystal.vajram.samples.calculator.divide.Divide.divide;
-import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_ImmutFac;
 import static com.google.inject.Guice.createInjector;
 import static com.google.inject.name.Names.named;
 import static java.time.Duration.ofSeconds;
@@ -36,6 +33,9 @@ import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.guice.inputinjection.VajramGuiceInputInjector;
 import com.flipkart.krystal.vajram.samples.Util;
+import com.flipkart.krystal.vajram.samples.calculator.add.Add;
+import com.flipkart.krystal.vajram.samples.calculator.add.Add_ImmutFac;
+import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_ImmutFac;
 import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
@@ -92,7 +92,8 @@ class FormulaTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
-        graph.getVajramIdByVajramDefType(Add.class), InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
+        graph.getVajramIdByVajramDefType(Add.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
@@ -112,7 +113,8 @@ class FormulaTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
-        graph.getVajramIdByVajramDefType(Add.class), InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
+        graph.getVajramIdByVajramDefType(Add.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
     KrystexVajramExecutorConfig vajramExecutorConfig =
         KrystexVajramExecutorConfig.builder()
             .requestId(REQUEST_ID)
@@ -143,7 +145,8 @@ class FormulaTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
-        graph.getVajramIdByVajramDefType(Add.class), InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
+        graph.getVajramIdByVajramDefType(Add.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
@@ -448,7 +451,8 @@ class FormulaTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
-        graph.getVajramIdByVajramDefType(Add.class), InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
+        graph.getVajramIdByVajramDefType(Add.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
     KrystexVajramExecutorConfig executorConfigBuilder =
         KrystexVajramExecutorConfig.builder()
             .requestId(REQUEST_ID)
@@ -477,7 +481,8 @@ class FormulaTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
-        graph.getVajramIdByVajramDefType(Add.class), InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
+        graph.getVajramIdByVajramDefType(Add.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
     KrystexVajramExecutorConfig kryonExecutorConfigBuilder =
         KrystexVajramExecutorConfig.builder()
             .requestId(REQUEST_ID)
@@ -506,7 +511,8 @@ class FormulaTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
-        graph.getVajramIdByVajramDefType(Add.class), InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
+        graph.getVajramIdByVajramDefType(Add.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
     KrystexVajramExecutorConfig executorConfig =
         KrystexVajramExecutorConfig.builder()
             .requestId(REQUEST_ID)
@@ -535,7 +541,8 @@ class FormulaTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
-        graph.getVajramIdByVajramDefType(Add.class), InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
+        graph.getVajramIdByVajramDefType(Add.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
     KrystexVajramExecutorConfig executorConfig =
         KrystexVajramExecutorConfig.builder()
             .kryonExecutorConfigBuilder(

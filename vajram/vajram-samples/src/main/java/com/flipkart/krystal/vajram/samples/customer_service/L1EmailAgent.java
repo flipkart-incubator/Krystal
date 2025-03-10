@@ -18,12 +18,13 @@ public abstract class L1EmailAgent extends ComputeVajramDef<String> {
     @Mandatory @Input InitialCommunication initialCommunication;
     @Mandatory @Input String customerName;
   }
+
   @Output
   static String output(String customerName) {
     return "Hello "
-           + customerName
-           + "!"
-           + """
+        + customerName
+        + "!"
+        + """
           I am an L1 Agent and I have received your email.
           I will get back to you soon!
           """;

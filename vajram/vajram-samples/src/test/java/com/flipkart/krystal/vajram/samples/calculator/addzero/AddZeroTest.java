@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator.addzero;
 
 import static com.flipkart.krystal.vajram.samples.Util.loadFromClasspath;
-import com.flipkart.krystal.vajram.samples.calculator.add.Add;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -12,6 +11,7 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
+import com.flipkart.krystal.vajram.samples.calculator.add.Add;
 import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
@@ -52,7 +52,8 @@ class AddZeroTest {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
-        graph.getVajramIdByVajramDefType(Add.class), InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
+        graph.getVajramIdByVajramDefType(Add.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()

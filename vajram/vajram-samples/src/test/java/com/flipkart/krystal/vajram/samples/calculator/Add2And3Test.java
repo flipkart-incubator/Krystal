@@ -52,7 +52,8 @@ class Add2And3Test {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              graph.getVajramIdByVajramDefType(Add2And3.class), Add2And3_ImmutReqPojo._builder()._build());
+              graph.getVajramIdByVajramDefType(Add2And3.class),
+              Add2And3_ImmutReqPojo._builder()._build());
     }
     Assertions.assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(5);
   }

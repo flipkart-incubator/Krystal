@@ -80,7 +80,7 @@ public record KryonExecutorConfig(
       requestScopedLogicDecoratorConfigs = ImmutableMap.of();
     }
     if (traitDispatchDecorator == null) {
-      traitDispatchDecorator = DependencyDecorator.NO_OP::invokeDependency;
+      traitDispatchDecorator = DependencyDecorator.NO_OP::decorateDependency;
     }
   }
 }

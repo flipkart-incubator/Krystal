@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
-import com.flipkart.krystal.vajram.annos.ConformsToTrait;
 import static com.flipkart.krystal.vajram.facets.One2OneCommand.executeWith;
 import static com.flipkart.krystal.vajram.facets.One2OneCommand.skipExecution;
 import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.splitSum1_n;
@@ -10,6 +9,7 @@ import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.su
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
+import com.flipkart.krystal.vajram.annos.ConformsToTrait;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;

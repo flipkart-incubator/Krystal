@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.samples.greet;
 
+import static com.flipkart.krystal.vajram.samples.greet.Greet_Fac.userInfo_n;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
@@ -9,7 +10,6 @@ import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
-import static com.flipkart.krystal.vajram.samples.greet.Greet_Fac.userInfo_n;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.lang.System.Logger;

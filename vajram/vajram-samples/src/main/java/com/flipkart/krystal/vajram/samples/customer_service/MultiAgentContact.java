@@ -1,5 +1,11 @@
 package com.flipkart.krystal.vajram.samples.customer_service;
 
+import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
+import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.agentType_n;
+import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.customerName_n;
+import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.initialCommunication_n;
+import static com.flipkart.krystal.vajram.samples.customer_service.MultiAgentContact_Fac.responses_n;
+
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
@@ -8,7 +14,6 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
-import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
@@ -18,16 +23,10 @@ import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.Email;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.InitialCommunication;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.Ticket;
-import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_ImmutReq;
-import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.agentType_n;
-import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.customerName_n;
-import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.initialCommunication_n;
-import static com.flipkart.krystal.vajram.samples.customer_service.MultiAgentContact_Fac.responses_n;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 @Vajram
 @ExternalInvocation(allow = true)

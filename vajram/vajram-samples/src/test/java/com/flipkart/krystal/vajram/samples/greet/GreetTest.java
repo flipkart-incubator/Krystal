@@ -2,7 +2,6 @@ package com.flipkart.krystal.vajram.samples.greet;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.flipkart.krystal.data.Errable.withValue;
-import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
 import static com.google.inject.Guice.createInjector;
 import static java.lang.System.*;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -38,6 +37,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
+import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
