@@ -42,7 +42,7 @@ Examples of vajrams conforming to traits:
 
 Krystal supports two powerful dispatch mechanisms:
 
-### 1. Static Dispatch
+### 1. [Static Dispatch](https://en.wikipedia.org/wiki/Static_dispatch)
 
 Static dispatch uses a dependency injection approach where trait implementations are bound
 statically based on qualifiers.
@@ -61,7 +61,7 @@ in [AddUsingTraits](../vajram/vajram-samples/src/main/java/com/flipkart/krystal/
 and its test
 case [AddUsingTraitsTest](../vajram/vajram-samples/src/test/java/com/flipkart/krystal/vajram/samples/calculator/add/AddUsingTraitsTest.java)
 
-### 2. Dynamic Predicate Dispatch
+### 2. [Dynamic Predicate Dispatch](https://en.wikipedia.org/wiki/Predicate_dispatch)
 
 Dynamic dispatch determines the implementation based on pattern matching against input values at
 runtime.
