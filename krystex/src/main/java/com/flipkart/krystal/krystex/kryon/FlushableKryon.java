@@ -43,7 +43,6 @@ import com.flipkart.krystal.krystex.commands.ForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardSend;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.commands.MultiRequestCommand;
-import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorationInput;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.dependencydecoration.VajramInvocation;
@@ -75,29 +74,50 @@ import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+/**
+ * A flushable kryon works in a single request-single response mode. A given kryon receives one or
+ * more requests in a single {@link ForwardSend} command from a client with a given {@link
+ * DependentChain dependent chain}. A given client kryon cannot send multiple {@link ForwardSend}
+ * commands to another kryon in the same dependent chain. This way a Flushable Kryon is able to keep
+ * track of incoming requests per dependent chain and thus is able to send a {@link Flush} command
+ * to its depdendencies per dependent chain. This "flushing" capability is crucial for achieving
+ * capabilities like optimal batching in {@link
+ * com.flipkart.krystal.vajramexecutor.krystex.InputBatchingDecorator} etc which rely on the fact
+ * that they are able to track the complete super set of active dependent chains and able to
+ * determine accurately when the call graph execution has reached a point where not further requests
+ * can be received.
+ *
+ * <p>This design choice of singleRequest-SingleResponse, as well as flushing means has the
+ * following implication on this class' design:
+ *
+ * <ul>
+ *   <li>The class using {@link CompletableFuture}s for tracking responses
+ *   <li>This class maintains
+ * </ul>
+ */
 @Slf4j
-final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse> {
+final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchResponse> {
 
-  private final Map<DependantChain, Set<Facet>> availableFacetsByDepChain = new LinkedHashMap<>();
+  private final Map<DependentChain, Set<Facet>> availableFacetsByDepChain = new LinkedHashMap<>();
 
-  private final Map<DependantChain, Map<RequestId, FacetValuesBuilder>> facetsCollector =
+  private final Map<DependentChain, Map<RequestId, FacetValuesBuilder>> facetsCollector =
       new LinkedHashMap<>();
 
-  private final Map<DependantChain, ForwardReceive> inputsValueCollector = new LinkedHashMap<>();
+  private final Map<DependentChain, ForwardReceive> inputsValueCollector = new LinkedHashMap<>();
 
   /** A unique Result future for every dependant chain. */
-  private final Map<DependantChain, CompletableFuture<BatchResponse>> resultsByDepChain =
+  private final Map<DependentChain, CompletableFuture<BatchResponse>> resultsByDepChain =
       new LinkedHashMap<>();
 
-  private final Map<DependantChain, Set<Facet>> executedDependencies = new LinkedHashMap<>();
+  private final Map<DependentChain, Set<Facet>> executedDependencies = new LinkedHashMap<>();
 
-  private final Map<DependantChain, Set<RequestId>> requestsByDependantChain =
+  private final Map<DependentChain, Set<RequestId>> requestsByDependantChain =
       new LinkedHashMap<>();
 
-  private final Set<DependantChain> flushedDependantChain = new LinkedHashSet<>();
-  private final Map<DependantChain, Boolean> outputLogicExecuted = new LinkedHashMap<>();
+  private final Set<DependentChain> flushedDependentChain = new LinkedHashSet<>();
+  private final Map<DependentChain, Boolean> outputLogicExecuted = new LinkedHashMap<>();
 
-  BatchKryon(
+  FlushableKryon(
       VajramKryonDefinition kryonDefinition,
       KryonExecutor kryonExecutor,
       Function<LogicExecutionContext, ImmutableMap<String, OutputLogicDecorator>>
@@ -117,16 +137,16 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
 
   @Override
   public void executeCommand(Flush flushCommand) {
-    flushedDependantChain.add(flushCommand.dependantChain());
-    flushAllDependenciesIfNeeded(flushCommand.dependantChain());
-    flushDecoratorsIfNeeded(flushCommand.dependantChain());
+    flushedDependentChain.add(flushCommand.dependentChain());
+    flushAllDependenciesIfNeeded(flushCommand.dependentChain());
+    flushDecoratorsIfNeeded(flushCommand.dependentChain());
   }
 
   @Override
   public CompletableFuture<BatchResponse> executeCommand(MultiRequestCommand kryonCommand) {
-    DependantChain dependantChain = kryonCommand.dependantChain();
+    DependentChain dependentChain = kryonCommand.dependantChain();
     final CompletableFuture<BatchResponse> resultForDepChain =
-        resultsByDepChain.computeIfAbsent(dependantChain, r -> new CompletableFuture<>());
+        resultsByDepChain.computeIfAbsent(dependentChain, r -> new CompletableFuture<>());
     try {
       if (kryonCommand instanceof ForwardReceive forward) {
         if (log.isDebugEnabled()) {
@@ -139,7 +159,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
                         requestId,
                         vajramID,
                         facets,
-                        forward.dependantChain());
+                        forward.dependentChain());
                   });
         }
         collectInputValues(forward);
@@ -154,18 +174,18 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
                         requestId,
                         vajramID,
                         callbackBatch.dependency(),
-                        callbackBatch.dependantChain(),
+                        callbackBatch.dependentChain(),
                         results);
                   });
         }
         collectDependencyValues(callbackBatch);
       }
       triggerDependencies(
-          dependantChain,
-          getTriggerableDependencies(dependantChain, facetsOfCommand(kryonCommand)));
+          dependentChain,
+          getTriggerableDependencies(dependentChain, facetsOfCommand(kryonCommand)));
 
       Optional<CompletableFuture<BatchResponse>> outputLogicFuture =
-          executeOutputLogicIfPossible(dependantChain);
+          executeOutputLogicIfPossible(dependentChain);
       outputLogicFuture.ifPresent(f -> linkFutures(f, resultForDepChain));
     } catch (Throwable e) {
       resultForDepChain.completeExceptionally(e);
@@ -174,9 +194,9 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
   }
 
   private Map<Dependency, ImmutableSet<ResolverDefinition>> getTriggerableDependencies(
-      DependantChain dependantChain, Set<? extends Facet> newFacets) {
-    Set<Facet> availableInputs = availableFacetsByDepChain.getOrDefault(dependantChain, Set.of());
-    Set<Facet> executedDeps = executedDependencies.getOrDefault(dependantChain, Set.of());
+      DependentChain dependentChain, Set<? extends Facet> newFacets) {
+    Set<Facet> availableInputs = availableFacetsByDepChain.getOrDefault(dependentChain, Set.of());
+    Set<Facet> executedDeps = executedDependencies.getOrDefault(dependentChain, Set.of());
 
     return Stream.concat(
             Stream.concat(Stream.of(Optional.<Facet>empty()), newFacets.stream().map(Optional::of))
@@ -212,16 +232,16 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
   }
 
   private void triggerDependencies(
-      DependantChain dependantChain,
+      DependentChain dependentChain,
       Map<Dependency, ImmutableSet<ResolverDefinition>> triggerableDependencies) {
-    ForwardReceive forwardBatch = getForwardCommand(dependantChain);
+    ForwardReceive forwardBatch = getForwardCommand(dependentChain);
     if (log.isDebugEnabled()) {
       log.debug(
           "Exec ids: {}. Computed triggerable dependencies: {} of {} in call path {}",
           forwardBatch.requestIds(),
           triggerableDependencies.keySet(),
           vajramID,
-          forwardBatch.dependantChain());
+          forwardBatch.dependentChain());
     }
     ImmutableMap<RequestId, String> skippedRequests = forwardBatch.skippedRequests();
     ImmutableSet<RequestId> executableRequests = forwardBatch.executableRequests().keySet();
@@ -249,7 +269,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
                 .computeIfAbsent(depName, _k -> new LinkedHashMap<>())
                 .put(Set.of(requestId), executeWithRequests(ImmutableList.of(emptyRequest())));
           });
-      FacetValues facetValues = getFacetsFor(dependantChain, requestId);
+      FacetValues facetValues = getFacetsFor(dependentChain, requestId);
       triggerableDependencies.forEach(
           (dep, resolverDefs) -> {
             VajramID depVajramId = kryonDefinition.dependencyKryons().get(dep);
@@ -339,7 +359,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
     for (var entry : commandsByDependency.entrySet()) {
       Dependency dependency = entry.getKey();
       var resolverCommandsForDep = entry.getValue();
-      triggerDependency(dependency, dependantChain, resolverCommandsForDep);
+      triggerDependency(dependency, dependentChain, resolverCommandsForDep);
     }
   }
 
@@ -357,8 +377,8 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
         kryonDefinition.createNewRequest().logic().newRequestBuilder();
   }
 
-  private ForwardReceive getForwardCommand(DependantChain dependantChain) {
-    ForwardReceive forwardBatch = inputsValueCollector.get(dependantChain);
+  private ForwardReceive getForwardCommand(DependentChain dependentChain) {
+    ForwardReceive forwardBatch = inputsValueCollector.get(dependentChain);
     if (forwardBatch == null) {
       throw new IllegalArgumentException("Missing Forward command. This should not be possible.");
     }
@@ -368,9 +388,9 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
   @SuppressWarnings({"FutureReturnValueIgnored", "unchecked"})
   private void triggerDependency(
       Dependency dependency,
-      DependantChain dependantChain,
+      DependentChain dependentChain,
       Map<Set<RequestId>, ResolverCommand> resolverCommandsByReq) {
-    if (executedDependencies.getOrDefault(dependantChain, Set.of()).contains(dependency)) {
+    if (executedDependencies.getOrDefault(dependentChain, Set.of()).contains(dependency)) {
       return;
     }
     VajramID depVajramID = kryonDefinition.dependencyKryons().get(dependency);
@@ -424,7 +444,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
       }
     }
     executedDependencies
-        .computeIfAbsent(dependantChain, _k -> new LinkedHashSet<>())
+        .computeIfAbsent(dependentChain, _k -> new LinkedHashSet<>())
         .add(dependency);
     if (log.isDebugEnabled()) {
       skipReasonsByReq.forEach(
@@ -437,18 +457,18 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
                 reason);
           });
     }
-    DependantChain extendedDependantChain = dependantChain.extend(vajramID, dependency);
+    DependentChain extendedDependentChain = dependentChain.extend(vajramID, dependency);
 
     VajramInvocation<BatchResponse> kryonResponseVajramInvocation =
         decorateVajramInvocation(
-            extendedDependantChain, depVajramID, kryonExecutor::executeCommand);
+            extendedDependentChain, depVajramID, kryonExecutor::executeCommand);
 
     CompletableFuture<BatchResponse> depResponse =
         kryonResponseVajramInvocation.invokeDependency(
             new ForwardSend(
                 depVajramID,
                 ImmutableMap.copyOf(depRequestsByDepReqId),
-                extendedDependantChain,
+                extendedDependentChain,
                 ImmutableMap.copyOf(skipReasonsByReq)));
 
     depResponse.whenComplete(
@@ -499,22 +519,22 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
                           }));
 
           enqueueOrExecuteCommand(
-              () -> new CallbackCommand(vajramID, dependency, results, dependantChain),
+              () -> new CallbackCommand(vajramID, dependency, results, dependentChain),
               kryonExecutor);
         });
-    flushDependencyIfNeeded(dependency, depVajramID, dependantChain);
+    flushDependencyIfNeeded(dependency, depVajramID, dependentChain);
     if (log.isDebugEnabled()) {
-      logWaitingMessage(dependency, dependantChain, depResponse, depVajramID);
+      logWaitingMessage(dependency, dependentChain, depResponse, depVajramID);
     }
-    flushDependencyIfNeeded(dependency, depVajramID, dependantChain);
+    flushDependencyIfNeeded(dependency, depVajramID, dependentChain);
   }
 
   private <R extends KryonResponse> VajramInvocation<R> decorateVajramInvocation(
-      DependantChain dependantChain,
+      DependentChain dependentChain,
       VajramID depVajramID,
       VajramInvocation<R> invocationToDecorate) {
     for (DependencyDecorator dependencyDecorator :
-        getSortedDependencyDecorators(depVajramID, dependantChain)) {
+        getSortedDependencyDecorators(depVajramID, dependentChain)) {
       VajramInvocation previousDecoratedInvocation = invocationToDecorate;
       invocationToDecorate = dependencyDecorator.decorateDependency(previousDecoratedInvocation);
     }
@@ -524,7 +544,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
   @SuppressWarnings("FutureReturnValueIgnored")
   private void logWaitingMessage(
       Dependency dependency,
-      DependantChain dependantChain,
+      DependentChain dependentChain,
       CompletableFuture<BatchResponse> depResponse,
       VajramID depVajramID) {
     for (int timeout : List.of(5, 10, 15)) {
@@ -539,7 +559,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
                       vajramID,
                       Optional.ofNullable(kryonDefinition.dependencyKryons().get(dependency)),
                       depVajramID,
-                      dependantChain,
+                      dependentChain,
                       timeout,
                       SECONDS);
                 }
@@ -548,32 +568,32 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
   }
 
   private Optional<CompletableFuture<BatchResponse>> executeOutputLogicIfPossible(
-      DependantChain dependantChain) {
+      DependentChain dependentChain) {
 
-    if (outputLogicExecuted.getOrDefault(dependantChain, false)) {
+    if (outputLogicExecuted.getOrDefault(dependentChain, false)) {
       // Output logic aleady executed
       return Optional.empty();
     }
 
-    ForwardReceive forwardCommand = getForwardCommand(dependantChain);
+    ForwardReceive forwardCommand = getForwardCommand(dependentChain);
     // If all the inputs and dependency values needed by the output logic are available, then
     // prepare to run outputLogic
     ImmutableSet<Facet> facetIds = kryonDefinition.getOutputLogicDefinition().usedFacets();
     if (availableFacetsByDepChain
-        .getOrDefault(dependantChain, ImmutableSet.of())
+        .getOrDefault(dependentChain, ImmutableSet.of())
         .containsAll(facetIds)) { // All the inputs of the kryon logic have data present
       if (forwardCommand.shouldSkip()) {
         return Optional.of(
             failedFuture(new SkippedExecutionException(getSkipMessage(forwardCommand))));
       }
       return Optional.of(
-          executeOutputLogic(forwardCommand.executableRequests().keySet(), dependantChain));
+          executeOutputLogic(forwardCommand.executableRequests().keySet(), dependentChain));
     }
     return Optional.empty();
   }
 
   private CompletableFuture<BatchResponse> executeOutputLogic(
-      Set<RequestId> requestIds, DependantChain dependantChain) {
+      Set<RequestId> requestIds, DependentChain dependentChain) {
 
     OutputLogicDefinition<Object> outputLogicDefinition =
         kryonDefinition.getOutputLogicDefinition();
@@ -581,11 +601,11 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
     Map<RequestId, OutputLogicFacets> outputLogicInputs = new LinkedHashMap<>();
 
     for (RequestId requestId : requestIds) {
-      outputLogicInputs.put(requestId, getFacetsForOutputLogic(dependantChain, requestId));
+      outputLogicInputs.put(requestId, getFacetsForOutputLogic(dependentChain, requestId));
     }
     CompletableFuture<BatchResponse> resultForBatch = new CompletableFuture<>();
     Map<RequestId, CompletableFuture<Errable<Object>>> results =
-        executeDecoratedOutputLogic(outputLogicDefinition, outputLogicInputs, dependantChain);
+        executeDecoratedOutputLogic(outputLogicDefinition, outputLogicInputs, dependentChain);
 
     var ignored =
         allOf(results.values().toArray(CompletableFuture[]::new))
@@ -602,17 +622,17 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
                                               .getOrDefault(requestId, new CompletableFuture<>())
                                               .getNow(nil())))));
                 });
-    outputLogicExecuted.put(dependantChain, true);
-    flushDecoratorsIfNeeded(dependantChain);
+    outputLogicExecuted.put(dependentChain, true);
+    flushDecoratorsIfNeeded(dependentChain);
     return resultForBatch;
   }
 
   private Map<RequestId, CompletableFuture<Errable<Object>>> executeDecoratedOutputLogic(
       OutputLogicDefinition<Object> outputLogicDefinition,
       Map<RequestId, OutputLogicFacets> inputs,
-      DependantChain dependantChain) {
+      DependentChain dependentChain) {
     NavigableSet<OutputLogicDecorator> sortedDecorators =
-        getSortedOutputLogicDecorators(dependantChain);
+        getSortedOutputLogicDecorators(dependentChain);
     OutputLogic<Object> logic = outputLogicDefinition.logic()::execute;
 
     for (OutputLogicDecorator outputLogicDecorator : sortedDecorators) {
@@ -639,45 +659,45 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
     return resultsByRequest;
   }
 
-  private void flushAllDependenciesIfNeeded(DependantChain dependantChain) {
+  private void flushAllDependenciesIfNeeded(DependentChain dependentChain) {
     kryonDefinition
         .dependencyKryons()
         .entrySet()
         .forEach(
-            entry -> flushDependencyIfNeeded(entry.getKey(), entry.getValue(), dependantChain));
+            entry -> flushDependencyIfNeeded(entry.getKey(), entry.getValue(), dependentChain));
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")
   private void flushDependencyIfNeeded(
-      Dependency dependency, VajramID depVajramID, DependantChain dependantChain) {
-    if (!flushedDependantChain.contains(dependantChain)) {
+      Dependency dependency, VajramID depVajramID, DependentChain dependentChain) {
+    if (!flushedDependentChain.contains(dependentChain)) {
       return;
     }
-    if (executedDependencies.getOrDefault(dependantChain, Set.of()).contains(dependency)) {
-      DependantChain extendDependantChain = dependantChain.extend(vajramID, dependency);
+    if (executedDependencies.getOrDefault(dependentChain, Set.of()).contains(dependency)) {
+      DependentChain extendDependentChain = dependentChain.extend(vajramID, dependency);
       VajramInvocation<FlushResponse> decoratedVajramInvocation =
           decorateVajramInvocation(
-              extendDependantChain, depVajramID, kryonExecutor::executeCommand);
+              extendDependentChain, depVajramID, kryonExecutor::executeCommand);
       decoratedVajramInvocation.invokeDependency(
           new Flush(
               checkNotNull(
                   kryonDefinition.dependencyKryons().get(dependency),
                   "Could not find KryonId for dependency " + dependency + ". This is a bug"),
-              extendDependantChain));
+              extendDependentChain));
     }
   }
 
-  private void flushDecoratorsIfNeeded(DependantChain dependantChain) {
-    if (!flushedDependantChain.contains(dependantChain)) {
+  private void flushDecoratorsIfNeeded(DependentChain dependentChain) {
+    if (!flushedDependentChain.contains(dependentChain)) {
       return;
     }
-    if (outputLogicExecuted.getOrDefault(dependantChain, false)
-        || getForwardCommand(dependantChain).shouldSkip()) {
+    if (outputLogicExecuted.getOrDefault(dependentChain, false)
+        || getForwardCommand(dependentChain).shouldSkip()) {
       Iterable<OutputLogicDecorator> reverseSortedDecorators =
-          getSortedOutputLogicDecorators(dependantChain)::descendingIterator;
+          getSortedOutputLogicDecorators(dependentChain)::descendingIterator;
       for (OutputLogicDecorator decorator : reverseSortedDecorators) {
         try {
-          decorator.executeCommand(new FlushCommand(dependantChain));
+          decorator.executeCommand(new FlushCommand(dependentChain));
         } catch (Throwable e) {
           log.error(
               """
@@ -692,21 +712,21 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
     }
   }
 
-  private FacetValues getFacetsFor(DependantChain dependantChain, RequestId requestId) {
+  private FacetValues getFacetsFor(DependentChain dependentChain, RequestId requestId) {
     return facetsCollector
-        .getOrDefault(dependantChain, Map.of())
+        .getOrDefault(dependentChain, Map.of())
         .getOrDefault(requestId, emptyFacets());
   }
 
   private OutputLogicFacets getFacetsForOutputLogic(
-      DependantChain dependantChain, RequestId requestId) {
+      DependentChain dependentChain, RequestId requestId) {
     return new OutputLogicFacets(
         facetsCollector
-            .getOrDefault(dependantChain, Map.of())
+            .getOrDefault(dependentChain, Map.of())
             .getOrDefault(
                 requestId,
                 facetsBuilderFromContainer(
-                    getForwardCommand(dependantChain).executableRequests().get(requestId))));
+                    getForwardCommand(dependentChain).executableRequests().get(requestId))));
   }
 
   private FacetValuesBuilder facetsBuilderFromContainer(
@@ -725,23 +745,23 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
 
   private void collectInputValues(ForwardReceive forwardBatch) {
     if (requestsByDependantChain.putIfAbsent(
-            forwardBatch.dependantChain(), forwardBatch.requestIds())
+            forwardBatch.dependentChain(), forwardBatch.requestIds())
         != null) {
       throw new DuplicateRequestException(
           "Duplicate batch request received for dependant chain %s"
-              .formatted(forwardBatch.dependantChain()));
+              .formatted(forwardBatch.dependentChain()));
     }
-    if (inputsValueCollector.putIfAbsent(forwardBatch.dependantChain(), forwardBatch) != null) {
+    if (inputsValueCollector.putIfAbsent(forwardBatch.dependentChain(), forwardBatch) != null) {
       throw new DuplicateRequestException(
           "Duplicate ForwardBatch %s received for kryon %s in dependant chain %s"
               // TODO: Use input names instead of input ids
               .formatted(
-                  inputsValueCollector.get(forwardBatch.dependantChain()),
+                  inputsValueCollector.get(forwardBatch.dependentChain()),
                   vajramID,
-                  forwardBatch.dependantChain()));
+                  forwardBatch.dependentChain()));
     }
     availableFacetsByDepChain
-        .computeIfAbsent(forwardBatch.dependantChain(), _k -> new LinkedHashSet<>())
+        .computeIfAbsent(forwardBatch.dependentChain(), _k -> new LinkedHashSet<>())
         .addAll(facetsOfCommand(forwardBatch));
 
     forwardBatch
@@ -749,7 +769,7 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
         .forEach(
             (requestId, container) -> {
               facetsCollector
-                  .computeIfAbsent(forwardBatch.dependantChain(), _d -> new LinkedHashMap<>())
+                  .computeIfAbsent(forwardBatch.dependentChain(), _d -> new LinkedHashMap<>())
                   .put(requestId, facetsBuilderFromContainer(container));
             });
   }
@@ -771,23 +791,15 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand, BatchResponse>
   private void collectDependencyValues(CallbackCommand callbackBatch) {
     Dependency dependencyId = callbackBatch.dependency();
     availableFacetsByDepChain
-        .computeIfAbsent(callbackBatch.dependantChain(), _k -> new LinkedHashSet<>())
+        .computeIfAbsent(callbackBatch.dependentChain(), _k -> new LinkedHashSet<>())
         .add(dependencyId);
-    //    if (dependencyValuesCollector
-    //            .computeIfAbsent(callbackBatch.dependantChain(), k -> new LinkedHashMap<>())
-    //            .putIfAbsent(dependencyId, callbackBatch)
-    //        != null) {
-    //      throw new DuplicateRequestException(
-    //          "Duplicate data for dependency %s of kryon %s in dependant chain %s"
-    //              .formatted(dependencyId, kryonId, callbackBatch.dependantChain()));
-    //    }
     callbackBatch
         .resultsByRequest()
         .forEach(
             (requestId, depResponse) -> {
               FacetValuesBuilder facetsBuilder =
                   facetsCollector
-                      .computeIfAbsent(callbackBatch.dependantChain(), _d -> new LinkedHashMap<>())
+                      .computeIfAbsent(callbackBatch.dependentChain(), _d -> new LinkedHashMap<>())
                       .get(requestId);
               if (facetsBuilder == null) {
                 // This means this request was skipped. Hence no facet builder is present for this

@@ -13,7 +13,6 @@ import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.commands.ClientSideCommand;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardSend;
-import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorationInput;
 import com.flipkart.krystal.krystex.dependencydecoration.VajramInvocation;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
@@ -131,7 +130,7 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
                   new ForwardSend(
                       dispatchTarget,
                       ImmutableMap.of(),
-                      forwardSend.dependantChain(),
+                      forwardSend.dependentChain(),
                       executabledRequests.keySet().stream()
                           .collect(
                               toImmutableMap(
@@ -147,7 +146,7 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
                   new ForwardSend(
                       dispatchTarget,
                       ImmutableMap.copyOf(requestsForTarget),
-                      forwardSend.dependantChain(),
+                      forwardSend.dependentChain(),
                       ImmutableMap.of());
             }
             dispatchResponses.put(
@@ -190,7 +189,7 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
             CompletableFuture<FlushResponse> flushResponse =
                 (CompletableFuture<FlushResponse>)
                     invocationToDecorate.invokeDependency(
-                        (ClientSideCommand<R>) new Flush(dispatchTarget, flush.dependantChain()));
+                        (ClientSideCommand<R>) new Flush(dispatchTarget, flush.dependentChain()));
             flushResponses.add(flushResponse);
           }
           return (CompletableFuture<R>)
@@ -215,7 +214,7 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
               new ForwardSend(
                   boundVajram,
                   forwardSend.executableRequests(),
-                  forwardSend.dependantChain(),
+                  forwardSend.dependentChain(),
                   forwardSend.skippedRequests());
     } else if (kryonCommand instanceof Flush) {
       commandToDispatch =

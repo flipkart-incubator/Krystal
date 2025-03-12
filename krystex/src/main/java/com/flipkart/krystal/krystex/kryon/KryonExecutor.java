@@ -27,7 +27,6 @@ import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardSend;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
-import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorationInput;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
@@ -127,9 +126,9 @@ public final class KryonExecutor implements KrystalExecutor {
   private final KryonExecutorMetrics kryonMetrics;
   private final Map<RequestId, KryonExecution> allExecutions = new LinkedHashMap<>();
   private final Set<RequestId> unFlushedExecutions = new LinkedHashSet<>();
-  private final Map<VajramID, Set<DependantChain>> dependantChainsPerKryon = new LinkedHashMap<>();
+  private final Map<VajramID, Set<DependentChain>> dependantChainsPerKryon = new LinkedHashMap<>();
   private final RequestIdGenerator preferredReqGenerator;
-  private final Set<DependantChain> depChainsDisabledInAllExecutions = new LinkedHashSet<>();
+  private final Set<DependentChain> depChainsDisabledInAllExecutions = new LinkedHashSet<>();
 
   private volatile boolean closed;
   private boolean shutdownRequested;
@@ -296,9 +295,9 @@ public final class KryonExecutor implements KrystalExecutor {
   }
 
   private void createDependencyKryons(
-      VajramID vajramID, DependantChain dependantChain, KryonExecutionConfig executionConfig) {
-    if (union(executorConfig.disabledDependantChains(), executionConfig.disabledDependantChains())
-        .contains(dependantChain)) {
+      VajramID vajramID, DependentChain dependentChain, KryonExecutionConfig executionConfig) {
+    if (union(executorConfig.disabledDependentChains(), executionConfig.disabledDependentChains())
+        .contains(dependentChain)) {
       // If a dependantChain is disabled, don't create that kryon and its dependency kryons
       return;
     }
@@ -313,7 +312,7 @@ public final class KryonExecutor implements KrystalExecutor {
                 + vajramID
                 + " found but no TraitDispatchPolicy provided in the executorConfig");
       } else if (traitDispatchPolicy instanceof StaticDispatchPolicy staticDispatchPolicy) {
-        Dependency latestDependency = dependantChain.latestDependency();
+        Dependency latestDependency = dependentChain.latestDependency();
         VajramID boundVajram;
         try {
           if (latestDependency != null) {
@@ -343,21 +342,21 @@ public final class KryonExecutor implements KrystalExecutor {
       dependencyKryons.forEach(
           (dependency, depKryonId) ->
               createDependencyKryons(
-                  depKryonId, dependantChain.extend(finalVajramId, dependency), executionConfig));
+                  depKryonId, dependentChain.extend(finalVajramId, dependency), executionConfig));
       dependantChainsPerKryon
           .computeIfAbsent(finalVajramId, _n -> new LinkedHashSet<>())
-          .add(dependantChain);
+          .add(dependentChain);
     }
   }
 
   @SuppressWarnings("unchecked")
   private Kryon<? extends KryonCommand, ? extends KryonResponse> createKryonIfAbsent(
       VajramID vajramID, VajramKryonDefinition kryonDefinition) {
-    KryonRegistry<BatchKryon> batchKryonRegistry = (KryonRegistry<BatchKryon>) kryonRegistry;
+    KryonRegistry<FlushableKryon> batchKryonRegistry = (KryonRegistry<FlushableKryon>) kryonRegistry;
     return batchKryonRegistry.createIfAbsent(
         vajramID,
         _n ->
-            new BatchKryon(
+            new FlushableKryon(
                 kryonDefinition,
                 this,
                 this::getOutputLogicDecorators,
@@ -422,7 +421,7 @@ public final class KryonExecutor implements KrystalExecutor {
                                     .facetsFromRequest()
                                     .logic()
                                     .facetsFromRequest(e.getValue()))),
-                forwardSend.dependantChain(),
+                forwardSend.dependentChain(),
                 forwardSend.skippedRequests()));
       }
       try {
@@ -488,9 +487,9 @@ public final class KryonExecutor implements KrystalExecutor {
     if (shutdownRequested) {
       throw new RejectedExecutionException("Kryon Executor shutdown requested.");
     }
-    DependantChain dependantChain = kryonCommand.dependantChain();
-    if (depChainsDisabledInAllExecutions.contains(dependantChain)) {
-      throw new DisabledDependantChainException(dependantChain);
+    DependentChain dependentChain = kryonCommand.dependantChain();
+    if (depChainsDisabledInAllExecutions.contains(dependentChain)) {
+      throw new DisabledDependentChainException(dependentChain);
     }
   }
 
@@ -516,23 +515,23 @@ public final class KryonExecutor implements KrystalExecutor {
 
   private void computeDisabledDependantChains() {
     depChainsDisabledInAllExecutions.clear();
-    List<ImmutableSet<DependantChain>> disabledDependantChainsPerExecution =
+    List<ImmutableSet<DependentChain>> disabledDependantChainsPerExecution =
         unFlushedExecutions.stream()
             .map(this::getKryonExecution)
             .map(KryonExecution::executionConfig)
-            .map(KryonExecutionConfig::disabledDependantChains)
+            .map(KryonExecutionConfig::disabledDependentChains)
             .toList();
     disabledDependantChainsPerExecution.stream()
         .filter(x -> !x.isEmpty())
         .findAny()
         .ifPresent(depChainsDisabledInAllExecutions::addAll);
-    for (Set<DependantChain> disabledDepChains : disabledDependantChainsPerExecution) {
+    for (Set<DependentChain> disabledDepChains : disabledDependantChainsPerExecution) {
       if (depChainsDisabledInAllExecutions.isEmpty()) {
         break;
       }
       depChainsDisabledInAllExecutions.retainAll(disabledDepChains);
     }
-    depChainsDisabledInAllExecutions.addAll(executorConfig.disabledDependantChains());
+    depChainsDisabledInAllExecutions.addAll(executorConfig.disabledDependentChains());
   }
 
   private KryonExecution getKryonExecution(RequestId requestId) {

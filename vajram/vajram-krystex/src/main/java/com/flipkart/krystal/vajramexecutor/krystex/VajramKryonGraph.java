@@ -29,7 +29,7 @@ import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
-import com.flipkart.krystal.krystex.kryon.DependantChain;
+import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
@@ -201,7 +201,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
   }
 
   /**
-   * Returns a new {@link DependantChain} representing the given strings which are passed in trigger
+   * Returns a new {@link DependentChain} representing the given strings which are passed in trigger
    * order (from [Start] to immediate dependant.)
    *
    * @param firstVajramId The first vajram/kryon in the DependantChain
@@ -209,11 +209,11 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
    * @param subsequentDependencies an array representing the dependency names in the DependantChain
    *     in trigger order
    */
-  public DependantChain computeDependantChain(
+  public DependentChain computeDependantChain(
       String firstVajramId, Dependency firstDependency, Dependency... subsequentDependencies) {
     VajramID firstVajramID = vajramID(firstVajramId);
     loadKryonSubGraphIfNeeded(firstVajramID);
-    DependantChain currentDepChain =
+    DependentChain currentDepChain =
         kryonDefinitionRegistry.getDependantChainsStart().extend(firstVajramID, firstDependency);
     for (Dependency dependency : subsequentDependencies) {
       currentDepChain = currentDepChain.extend(dependency.vajramID(), dependency);

@@ -3,7 +3,7 @@ package com.flipkart.krystal.krystex.commands;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
-import com.flipkart.krystal.krystex.kryon.DependantChain;
+import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.request.RequestId;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -14,13 +14,13 @@ import java.util.Set;
  *
  * @param vajramID The dependency kryon Id to execute
  * @param executableRequests The request which need to be executed
- * @param dependantChain The dependant chain leading to this invocation
+ * @param dependentChain The dependant chain leading to this invocation
  * @param skippedRequests The requests which have been skipped
  */
 public record ForwardSend(
     VajramID vajramID,
     ImmutableMap<RequestId, Request<?>> executableRequests,
-    DependantChain dependantChain,
+    DependentChain dependentChain,
     ImmutableMap<RequestId, String> skippedRequests)
     implements MultiRequestCommand<BatchResponse>, ClientSideCommand<BatchResponse> {
 

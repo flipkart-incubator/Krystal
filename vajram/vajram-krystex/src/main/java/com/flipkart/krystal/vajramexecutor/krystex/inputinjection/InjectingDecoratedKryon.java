@@ -107,7 +107,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
         new ForwardReceive(
             forwardBatch.vajramID(),
             newRequests.build(),
-            forwardBatch.dependantChain(),
+            forwardBatch.dependentChain(),
             forwardBatch.skippedRequests()));
   }
 

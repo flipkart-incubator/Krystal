@@ -104,7 +104,7 @@ public class RequestLevelCache implements KryonDecorator {
               new ForwardReceive(
                   forwardBatch.vajramID(),
                   ImmutableMap.copyOf(cacheMisses),
-                  forwardBatch.dependantChain(),
+                  forwardBatch.dependentChain(),
                   ImmutableMap.copyOf(skippedRequests)));
 
       cacheMissesResponse.whenComplete(
