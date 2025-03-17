@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <meta name="description" content="Static Call Graph Visualization">
+  <title>Static Call Graph Visualization</title>
+  <link rel="stylesheet" href="./static/styles.css">
+  <!-- Preload critical resources -->
+  <link rel="preload" href="https://cdn.skypack.dev/d3@7.8.4" as="script" crossorigin="anonymous">
+  <link rel="preload" href="https://cdn.skypack.dev/d3-dag@1.0.0-1" as="script" crossorigin="anonymous">
+</head>
+<body>
+<!-- Tooltip container for interactive information display -->
+<div id="tooltip" role="tooltip" aria-hidden="true"></div>
+
+<!-- Controls toolbar for manipulating the graph -->
+<header class="controls" role="toolbar" aria-label="Graph controls">
+  <button id="expandAll" aria-label="Expand all nodes">Expand All</button>
+  <button id="contractAll" aria-label="Contract all nodes">Contract All</button>
+  <button id="resetView" aria-label="Reset view to center">Reset View</button>
+  <div class="search-container">
+    <label for="searchInput" class="sr-only">Search nodes</label>
+    <input type="text" id="searchInput" placeholder="Search nodes..." aria-label="Search nodes" />
+    <button id="clearSearchBtn" aria-label="Clear search">Clear</button>
+  </div>
+</header>
+
+<!-- Legend explaining visual elements of the graph -->
+<aside class="legend" aria-label="Graph legend">
+  <h3>Legend</h3>
+  <ul class="legend-list">
+    <li class="legend-item">
+      <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
+        <rect x="5" y="2.5" width="20" height="10" rx="3" ry="3" fill="var(--color-compute)" stroke="var(--color-compute-stroke)" stroke-width="1"></rect>
+      </svg>
+      <div class="legend-text">Compute Vajram</div>
+    </li>
+    <li class="legend-item">
+      <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
+        <rect x="5" y="2.5" width="20" height="10" rx="3" ry="3" fill="var(--color-io)" stroke="var(--color-io-stroke)" stroke-width="1"></rect>
+      </svg>
+      <div class="legend-text">IO Vajram</div>
+    </li>
+    <li class="legend-item">
+      <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
+        <rect x="5" y="2.5" width="20" height="10" rx="3" ry="3" fill="var(--color-abstract)" stroke="var(--color-abstract-stroke)" stroke-width="1"></rect>
+      </svg>
+      <div class="legend-text">Abstract Vajram</div>
+    </li>
+    <li class="legend-item">
+      <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
+        <rect x="5" y="2.5" width="20" height="10" rx="3" ry="3" fill="var(--color-contracted)" stroke="var(--color-contracted-stroke)" stroke-width="1" stroke-dasharray="5,3"></rect>
+      </svg>
+      <div class="legend-text">Contracted Node</div>
+    </li>
+    <li class="legend-item">
+      <svg class="legend-marker" viewBox="0 0 30 20" aria-hidden="true">
+        <rect x="5" y="2.5" width="20" height="10" rx="3" ry="3" fill="var(--color-compute)" stroke="var(--color-compute-stroke)" stroke-width="1" opacity="0.7"></rect>
+        <text x="15" y="17" text-anchor="middle" dominant-baseline="central" fill="var(--color-text-primary)" font-size="5" font-style="italic">(Self)</text>
+      </svg>
+      <div class="legend-text">Self-Referencing Node</div>
+    </li>
+    <li class="legend-item">
+      <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
+        <line x1="5" y1="7.5" x2="25" y2="7.5" stroke="var(--color-link-mandatory)" stroke-width="3.5"></line>
+      </svg>
+      <div class="legend-text">Mandatory Dependency</div>
+    </li>
+    <li class="legend-item">
+      <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
+        <line x1="5" y1="7.5" x2="25" y2="7.5" stroke="var(--color-link-optional)" stroke-width="2" stroke-dasharray="5,3"></line>
+      </svg>
+      <div class="legend-text">Optional Dependency</div>
+    </li>
+    <li class="legend-item">
+      <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
+        <line x1="5" y1="7.5" x2="20" y2="7.5" stroke="var(--color-link-fanout-mandatory)" stroke-width="3.5"></line>
+        <path d="M 20 7.5 L 25 7.5 M 20 5.5 L 22 7.5 L 20 9.5 M 22 5.5 L 24 7.5 L 22 9.5 M 24 5.5 L 26 7.5 L 24 9.5" fill="none" stroke="var(--color-link-fanout-mandatory)" stroke-width="1.8"></path>
+      </svg>
+      <div class="legend-text">Fan-out Dependency</div>
+    </li>
+    <li class="legend-item">
+      <svg class="legend-marker" viewBox="0 0 30 15" aria-hidden="true">
+        <rect x="5" y="2.5" width="20" height="10" fill="var(--color-secondary)" rx="2" ry="2"></rect>
+        <text x="15" y="9.5" text-anchor="middle" dominant-baseline="central" fill="white" font-size="8">→</text>
+      </svg>
+      <div class="legend-text">Input Badge (shows inputs)</div>
+    </li>
+  </ul>
+</aside>
+
+<!-- Main graph visualization container -->
+<main id="graph-container" role="main" aria-label="Vajram dependency graph visualization"></main>
+
+<!-- Screen reader only text for accessibility -->
+<div class="sr-only">
+  This visualization shows a directed graph of Vajram dependencies. Use the controls to expand, contract, 
+  search, or reset the view. Node types include Compute, IO, and Abstract Vajrams, with different colors
+  and connection styles indicating different relationship types.
+</div>
+
+<!-- 
+  IMPORTANT: Data Injection Point
+  The server-side template engine will replace __GRAPH_DATA__ with a properly 
+  serialized JSON object containing the graph nodes and links data.
+  
+  This data structure has two main sections:
+  1. nodes: Array of node objects with properties like id, name, vajramType, etc.
+  2. links: Array of edge objects defining connections between nodes with properties
+     like source, target, mandatory, name, etc.
+
+  The actual replacement happens in the Java controller before serving this page.
+-->
+<script>
+  // The graph data is injected by the server
+  window.graphData = __GRAPH_DATA__;
+</script>
+
+<!-- Accessibility helper class -->
+<style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+</style>
+
+<!-- Main visualization script (uses ES modules) -->
+<script type="module" src="./static/graph.js"></script>
+
+<!-- Fallback for browsers that don't support ES modules -->
+<script nomodule>
+  document.body.innerHTML = '<div style="padding: 2rem; text-align: center;">' +
+    '<h1>Browser Not Supported</h1>' +
+    '<p>This application requires a modern browser that supports JavaScript modules.</p>' +
+    '<p>Please upgrade your browser to view this visualization.</p>' +
+    '</div>';
+</script>
+</body>
+</html>
