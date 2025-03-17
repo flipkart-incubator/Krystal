@@ -18,8 +18,12 @@ import com.flipkart.krystal.visualization.models.Link;
 import com.flipkart.krystal.visualization.models.Node;
 import com.flipkart.krystal.visualization.models.VajramType;
 import com.google.common.collect.ImmutableCollection;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,13 +53,15 @@ public class StaticCallGraphGenerator {
    * reachable from that node is visualized, and the filename is "startVajram.html". If not, the
    * entire graph is visualized and the filename is "StaticCallGraph.html".
    *
+   * <p>The generated HTML is self-contained with all CSS and JavaScript embedded
+   *
    * @param vajramKryonGraph The graph containing all Vajram definitions and their dependencies.
    * @param startVajram The starting node name to filter the graph, or null/empty for the full
    *     graph.
-   * @return A GraphGenerationResult containing the HTML content and filename.
+   * @return A GraphGenerationResult containing the self-contained HTML content and filename.
    * @throws ClassNotFoundException If a required class is not found during processing.
    */
-  public static GraphGenerationResult generateStaticCallGraphHtml(
+  public static GraphGenerationResult generateStaticCallGraphContent(
       VajramKryonGraph vajramKryonGraph, String startVajram) throws ClassNotFoundException {
 
     Graph fullGraph = createGraphData(vajramKryonGraph);
@@ -76,17 +82,35 @@ public class StaticCallGraphGenerator {
 
     String jsonGraph = graphToJson(graphToVisualize);
     String htmlContent = StaticCallGraphHtml.generateStaticCallGraphHtml(jsonGraph);
-    Map<String, String> visualizationResources = getVisualizationResourceFiles();
 
-    return GraphGenerationResult.builder()
-        .html(htmlContent)
-        .fileName(outputFileName)
-        .visualizationResources(visualizationResources)
-        .build();
+    return GraphGenerationResult.builder().html(htmlContent).fileName(outputFileName).build();
   }
 
-  private static Map<String, String> getVisualizationResourceFiles() {
-    return new HashMap<>();
+  /**
+   * Generates a self-contained static call graph HTML file at the specified output path. This
+   * method creates a single HTML file with all CSS and JavaScript embedded, requiring no external
+   * resources.
+   *
+   * @param vajramKryonGraph The graph containing all Vajram definitions and their dependencies
+   * @param startVajram The starting node name to filter the graph, or null/empty for full graph
+   * @param outputPath The directory path where the HTML file should be generated
+   * @throws ClassNotFoundException If a required class is not found during processing
+   * @throws IOException If there's an error writing the file
+   */
+  public static void generateStaticCallGraphFile(
+      VajramKryonGraph vajramKryonGraph, String startVajram, String outputPath)
+      throws ClassNotFoundException, IOException {
+
+    GraphGenerationResult result = generateStaticCallGraphContent(vajramKryonGraph, startVajram);
+
+    Path outputDir = Paths.get(outputPath);
+    Files.createDirectories(outputDir);
+
+    String fileName = result.getFileName();
+    Path htmlFile = outputDir.resolve(fileName);
+    Files.writeString(htmlFile, result.getHtml());
+
+    log.info("Generated self-contained call graph at: {}", htmlFile.toAbsolutePath());
   }
 
   /**
@@ -103,7 +127,7 @@ public class StaticCallGraphGenerator {
 
     Map<VajramID, VajramDefinition> vajramDefinitions = vajramKryonGraph.vajramDefinitions();
 
-    // Create nodes.
+    // Create nodes
     for (Map.Entry<VajramID, VajramDefinition> entry : vajramDefinitions.entrySet()) {
       VajramID vajramId = entry.getKey();
       VajramDefinition definition = entry.getValue();
@@ -130,7 +154,6 @@ public class StaticCallGraphGenerator {
                     Map<String, String> attributes = new HashMap<>();
 
                     for (Method method : annotation.annotationType().getDeclaredMethods()) {
-                      // Annotation attributes are defined as no-arg methods
                       if (method.getParameterCount() == 0
                           && !method.isDefault()
                           && !method.getName().equals("annotationType")
@@ -140,7 +163,6 @@ public class StaticCallGraphGenerator {
                           if (value != null) {
                             Object defaultValue = method.getDefaultValue();
                             if (!value.equals(defaultValue)) {
-                              // Handle arrays
                               if (value.getClass().isArray()) {
                                 attributes.put(method.getName(), formatArrayValue(value));
                               } else {
@@ -173,7 +195,7 @@ public class StaticCallGraphGenerator {
       nodes.add(node);
     }
 
-    // Create links for dependencies.
+    // Create links for dependencies
     for (Map.Entry<VajramID, VajramDefinition> entry : vajramDefinitions.entrySet()) {
       VajramID vajramId = entry.getKey();
       VajramDefinition definition = entry.getValue();
@@ -256,7 +278,7 @@ public class StaticCallGraphGenerator {
    * @return A Graph that contains only the reachable nodes and corresponding links.
    */
   private static Graph filterGraph(Graph fullGraph, String startNodeId) {
-    // Build an adjacency list from source -> list of target node ids.
+    // Build an adjacency list from source -> list of target node ids
     Map<String, List<String>> adj = new HashMap<>();
     fullGraph
         .getLinks()
@@ -265,7 +287,7 @@ public class StaticCallGraphGenerator {
               adj.computeIfAbsent(link.getSource(), k -> new ArrayList<>()).add(link.getTarget());
             });
 
-    // Use DFS to find all reachable nodes starting from startNodeId.
+    // Use DFS to find all reachable nodes starting from startNodeId
     Set<String> reachable = new HashSet<>();
     Deque<String> stack = new ArrayDeque<>();
     stack.push(startNodeId);
@@ -277,7 +299,7 @@ public class StaticCallGraphGenerator {
       }
     }
 
-    // Filter nodes and links based on the reachable set.
+    // Filter nodes and links based on the reachable set
     List<Node> filteredNodes =
         fullGraph.getNodes().stream().filter(node -> reachable.contains(node.getId())).toList();
     List<Link> filteredLinks =
