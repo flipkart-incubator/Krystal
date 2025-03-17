@@ -154,16 +154,12 @@ export class GraphRenderer {
       .attr("d", d => {
         const points = d.path.slice();
         
-        // For source node: Calculate from first point toward second point
         const sourceNode = {x: points[0][0], y: points[0][1]};
         const towardSource = {x: points[1][0], y: points[1][1]};
         
-        // For target node: Calculate from last point toward second-to-last point
         const targetNode = {x: points[points.length-1][0], y: points[points.length-1][1]};
         const towardTarget = {x: points[points.length-2][0], y: points[points.length-2][1]};
         
-        // Calculate start point (at source node surface)
-        // For the source, we want to go FROM the node center TO the next point
         const sourcePoint = getIntersectionPoint(
             sourceNode,
             towardSource,
@@ -171,9 +167,6 @@ export class GraphRenderer {
             CONFIG.nodeHeight
         );
         
-        // Calculate end point (at target node surface)
-        // For the target, we want to go FROM the node center TO the previous point 
-        // (to find where the line enters the node)
         const targetPoint = getIntersectionPoint(
             targetNode,
             towardTarget,
@@ -181,7 +174,6 @@ export class GraphRenderer {
             CONFIG.nodeHeight
         );
         
-        // Replace first and last points with surface points
         points[0] = [sourcePoint.x, sourcePoint.y];
         points[points.length-1] = [targetPoint.x, targetPoint.y];
         
@@ -238,21 +230,16 @@ export class GraphRenderer {
           }
           
           try {
-            // Get the total length of the path
             const pathLength = pathNode.getTotalLength();
             
-            // Position to place the label (middle of path by default)
             const labelPosition = d.totalEdges > 1 ? d.labelPosition : 0.5;
             
-            // Get the point at the specified position along the path
             const point = pathNode.getPointAtLength(pathLength * labelPosition);
             
-            // Position the text at this point
             text
               .attr("x", point.x)
-              .attr("y", point.y - 5); // Small offset above the line
+              .attr("y", point.y - 5);
             
-            // Get text bounding box for background positioning
             const textBBox = element.getBBox();
             const linkId = `${d.sourceId}--${d.targetId}`;
             
@@ -285,15 +272,30 @@ export class GraphRenderer {
           .classed("faded", true);
         const edgeId = d.edgeData.name;
         const linkId = `${d.sourceId}--${d.targetId}`;
-        this.g.selectAll(`path.link[data-edge-id="${edgeId}"][data-source="${d.sourceId}"][data-target="${d.targetId}"]`)
+        
+        const highlightedLink = this.g.selectAll(`path.link[data-edge-id="${edgeId}"][data-source="${d.sourceId}"][data-target="${d.targetId}"]`);
+        const highlightedLabel = this.g.selectAll(`text.link-label[data-edge-id="${edgeId}"][data-link-id="${linkId}"]`);
+        const highlightedBg = this.g.selectAll(`rect.link-label-bg[data-edge-id="${edgeId}"][data-link-id="${linkId}"]`);
+        
+        highlightedLink
           .classed("faded", false)
           .classed("highlighted", true);
-        this.g.selectAll(`text.link-label[data-edge-id="${edgeId}"][data-link-id="${linkId}"]`)
+        highlightedLabel
           .classed("faded", false)
           .classed("highlighted", true);
-        this.g.selectAll(`rect.link-label-bg[data-edge-id="${edgeId}"][data-link-id="${linkId}"]`)
+        highlightedBg
           .classed("faded", false)
           .classed("highlighted", true);
+          
+        highlightedBg.each(function() { 
+          const parent = this.parentNode;
+          parent.appendChild(this); 
+        });
+        highlightedLabel.each(function() { 
+          const parent = this.parentNode;
+          parent.appendChild(this); 
+        });
+        
         this.g.selectAll(`.node[data-id="${d.sourceId}"], .node[data-id="${d.targetId}"]`)
           .classed("faded", false);
       })
@@ -307,10 +309,9 @@ export class GraphRenderer {
     this.g.selectAll("text.link-label, rect.link-label-bg")
       .on("mouseenter", function(event, d) {
         try {
-          const element = this; // Reference to the current DOM element
+          const element = this;
           let sourceId, targetId, edgeName;
           
-          // Helper function to escape CSS selector special characters
           const escapeSelector = (selector) => {
             if (!selector) return "";
             return selector.replace(/[ !"#$%&'()*+,.\/:;<=>?@\[\\\]^`{|}~]/g, '\\$&');
@@ -334,7 +335,6 @@ export class GraphRenderer {
           
           if (!sourceId || !targetId || !edgeName) return;
           
-          // Escape the IDs and names for CSS selectors
           const safeSourceId = escapeSelector(sourceId);
           const safeTargetId = escapeSelector(targetId);
           const safeEdgeName = escapeSelector(edgeName);
@@ -344,20 +344,33 @@ export class GraphRenderer {
           const linkId = `${sourceId}--${targetId}`;
           const safeLinkId = escapeSelector(linkId);
           
-          self.g.selectAll(`path.link[data-edge-id="${safeEdgeName}"][data-source="${safeSourceId}"][data-target="${safeTargetId}"]`)
+          const highlightedLink = self.g.selectAll(`path.link[data-edge-id="${safeEdgeName}"][data-source="${safeSourceId}"][data-target="${safeTargetId}"]`);
+          const highlightedLabel = self.g.selectAll(`text.link-label[data-edge-id="${safeEdgeName}"][data-link-id="${safeLinkId}"]`);
+          const highlightedBg = self.g.selectAll(`rect.link-label-bg[data-edge-id="${safeEdgeName}"][data-link-id="${safeLinkId}"]`);
+          
+          highlightedLink
             .classed("faded", false)
             .classed("highlighted", true);
-          self.g.selectAll(`text.link-label[data-edge-id="${safeEdgeName}"][data-link-id="${safeLinkId}"]`)
+          highlightedLabel
             .classed("faded", false)
             .classed("highlighted", true);
-          self.g.selectAll(`rect.link-label-bg[data-edge-id="${safeEdgeName}"][data-link-id="${safeLinkId}"]`)
+          highlightedBg
             .classed("faded", false)
             .classed("highlighted", true);
+            
+          highlightedBg.each(function() { 
+            const parent = this.parentNode;
+            parent.appendChild(this); 
+          });
+          highlightedLabel.each(function() { 
+            const parent = this.parentNode;
+            parent.appendChild(this); 
+          });
+          
           self.g.selectAll(`.node[data-id="${safeSourceId}"], .node[data-id="${safeTargetId}"]`)
             .classed("faded", false);
         } catch (error) {
           console.error("Error in edge label hover effect:", error);
-          // Reset to normal state in case of error
           self.g.selectAll(".link, .link-label, .link-label-bg, .node")
             .classed("faded", false)
             .classed("highlighted", false);
@@ -599,8 +612,6 @@ export class GraphRenderer {
     d3.select(event ? event.currentTarget : null).classed("selected", true);
     // Remove any existing action buttons
     this.g.selectAll(".node-action-button").remove();
-
-    // Render the new action buttons for this node
     this.renderActionButtons(d);
   }
   
@@ -870,7 +881,7 @@ export class GraphRenderer {
     const scale = Math.min(
       this.windowWidth / boxWidth,
       this.windowHeight / boxHeight
-    ) * CONFIG.resetViewMarginFactor; // Add a little margin
+    ) * CONFIG.resetViewMarginFactor;
     
     // Calculate the transform to center the bounding box
     const centerX = (minX + maxX) / 2;

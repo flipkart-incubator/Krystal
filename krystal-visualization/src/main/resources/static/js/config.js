@@ -2,6 +2,12 @@
 
 // Export the configuration settings
 export const CONFIG = {
+  // Debug settings
+  debug: {
+    enableLogging: false, // Set to true for development, false for production
+    logLevel: 'error'     // 'debug', 'info', 'warn', 'error'
+  },
+  
   // Node dimensions and appearance
   nodeWidth: 100,
   nodeHeight: 60,

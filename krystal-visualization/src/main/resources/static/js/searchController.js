@@ -29,40 +29,32 @@ export class SearchController {
     d3.select("#searchInput").on("blur", null);
     d3.select("#searchInput").on("keydown", null);
     
-    // Instead of removing and recreating the clear button, 
-    // just add an event handler to the existing one from HTML
     d3.select("#clearSearchBtn").on("click", () => {
-      hideTooltip(); // Close any open tooltips
+      hideTooltip();
       d3.select("#searchInput").property("value", "");
       this.svg.classed("searching", false);
       this.g.selectAll(".node").classed("search-match", false);
-      // Update visibility after search is cleared
       this.updateGraphVisibility();
     });
     
-    // Very basic direct search implementation
     d3.select("#searchInput").on("input", (event) => {
       const searchTerm = event.target.value.toLowerCase().trim();
-      const nodeController = this.nodeController; // Capture for use in the each function
+      const nodeController = this.nodeController;
       
-      hideTooltip(); // Close any open tooltips when searching
+      hideTooltip();
       
       if (searchTerm.length < CONFIG.search.minLength) {
-        // Clear search state
         this.svg.classed("searching", false);
-        // Ensure search-match class is removed from all nodes
         this.g.selectAll(".node").classed("search-match", false);
         return;
       }
       
-      // Set the entire SVG as in search mode
       this.svg.classed("searching", true);
       
       // Mark matching vs non-matching nodes
       this.g.selectAll(".node").each(function(d) {
         const node = d3.select(this);
         const nodeText = d.data.name.toLowerCase();
-        // Include "self" in the searchable text for duplicate nodes
         const searchableText = d.data.isDuplicate ? nodeText + " self" : nodeText;
         
         if (searchableText.includes(searchTerm)) {
@@ -76,7 +68,6 @@ export class SearchController {
         }
       });
       
-      // Make sure the display property is updated for any newly visible nodes
       this.updateGraphVisibility();
     });
     
@@ -86,7 +77,7 @@ export class SearchController {
         d3.select("#searchInput").property("value", "");
         this.svg.classed("searching", false);
         this.g.selectAll(".node").classed("search-match", false);
-        this.updateGraphVisibility(); // Make sure to update visibility after clearing search
+        this.updateGraphVisibility();
       }
     });
   }
@@ -95,9 +86,8 @@ export class SearchController {
    * Update graph visibility based on current search and node controller state
    */
   updateGraphVisibility() {
-    const nodeController = this.nodeController; // Capture for use in each function
+    const nodeController = this.nodeController;
     
-    // First pass: update node visibility based on the visibleNodeIds set
     this.g.selectAll("g.node")
       .style("display", d => {
         return nodeController.visibleNodeIds.has(d.data.id) ? 

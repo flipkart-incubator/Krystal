@@ -9,10 +9,8 @@ import { setupInteractionHandlers } from './interactionHandler.js';
 
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-  // The graphData is injected into the HTML template as a global variable.
   const graphData = window.graphData;
   
-  // Process the graph data
   const { allNodes, filteredLinks, dag } = processGraphData(graphData);
   
   // Apply layout to DAG
@@ -27,27 +25,21 @@ document.addEventListener('DOMContentLoaded', () => {
     .append("svg")
     .attr("width", window.innerWidth)
     .attr("height", window.innerHeight);
-  
-  // Create node controller to manage node visibility and expansion state
+
   const nodeController = new NodeController(allNodes, filteredLinks);
   
-  // Create edge paths for visualization
   const uniqueEdgePaths = createEdgePaths(filteredLinks, dag);
   
-  // Create graph renderer
   const graphRenderer = new GraphRenderer(
     svg, dag, allNodes, filteredLinks, uniqueEdgePaths, nodeController
   );
-  
-  // Render edges and nodes
+
   graphRenderer.renderEdges();
   graphRenderer.renderNodes();
   
-  // Set up search controller
   const searchController = new SearchController(
     svg, graphRenderer.getContainer(), nodeController
   );
   
-  // Set up interaction handlers
   setupInteractionHandlers(svg, graphRenderer, nodeController);
 }); 

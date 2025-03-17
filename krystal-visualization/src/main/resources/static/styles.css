@@ -75,6 +75,7 @@
   --transition-fast: 0.2s;
   --transition-normal: 0.3s;
   --transition-slow: 0.5s;
+  --transition-hover: 0.1s;
   
   /* Z-index layers */
   --z-index-base: 1;
@@ -244,6 +245,7 @@ svg {
   rx: var(--radius-sm);
   ry: var(--radius-sm);
   transition: opacity var(--transition-normal), fill var(--transition-normal), stroke var(--transition-normal), stroke-width var(--transition-normal);
+  position: relative;
 }
 
 /* Edge highlight and fading effects */
@@ -259,13 +261,31 @@ svg {
 
 .link.highlighted {
   filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.3));
-  transition: all var(--transition-normal) ease-in-out;
+  transition: all var(--transition-hover) ease-in-out;
 }
 
 .link-label.highlighted, .link-label-bg.highlighted {
-  /* No color change, just slight enhancement for visibility */
   filter: drop-shadow(0px 1px 2px rgba(0,0,0,0.2));
-  transition: all var(--transition-normal) ease-in-out;
+  transition: all var(--transition-hover) ease-in-out;
+}
+
+/* Update these selectors to make highlighted link labels stand out better */
+.link-label-bg.highlighted {
+  fill: var(--color-surface);
+  stroke-width: var(--spacing-xxs);
+  filter: var(--shadow-lg);
+  z-index: var(--z-index-base);
+  rx: var(--radius-md);
+  ry: var(--radius-md);
+}
+
+.link-label.highlighted {
+  font-weight: var(--font-weight-bold);
+  fill: var(--color-text-primary);
+  stroke: var(--color-surface);
+  stroke-width: calc(var(--spacing-xxs) / 4);
+  filter: var(--shadow-md);
+  z-index: calc(var(--z-index-base) + 1);
 }
 
 /* ========== NODES ========== */

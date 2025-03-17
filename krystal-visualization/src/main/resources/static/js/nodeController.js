@@ -19,7 +19,6 @@ export class NodeController {
     
     // Identify nodes with ExternalInvocation annotation and allow=true
     this.allNodes.forEach(node => {
-      // Skip duplicate nodes
       if (node.isDuplicate) return;
       
       if (node.annotationTags && node.annotationTags.length > 0) {
@@ -30,7 +29,6 @@ export class NodeController {
         );
         if (externalInvocationAnnotation) {
           this.externalInvocationAllowedNodes.add(node.id);
-          console.log("Node marked as always visible (ExternalInvocation allow=true):", node.id);
         }
       }
     });
@@ -54,11 +52,9 @@ export class NodeController {
     
     // Identify true source nodes (nodes with no incoming links)
     this.allNodes.forEach(node => {
-      // A true source node has no incoming links in the original graph structure
       const hasTrueIncomingLinks = this.filteredLinks.some(link => link.target === node.id);
       if (!hasTrueIncomingLinks) {
         this.trueSourceNodes.add(node.id);
-        console.log("True source node identified:", node.id);
       }
     });
   }
@@ -68,8 +64,7 @@ export class NodeController {
    * @param {string} nodeId - ID of the node to expand
    */
   expandNode(nodeId) {
-    console.log("Expanding node:", nodeId);
-    hideTooltip(); // Close any open tooltips when expanding nodes
+    hideTooltip();
     this.expandedNodes.add(nodeId);
     this.explicitlyContractedNodes.delete(nodeId);
     this.visibleNodeIds.add(nodeId);
@@ -88,14 +83,11 @@ export class NodeController {
       const directLinkId = `${nodeId}--${targetId}`;
       this.visibleLinkIds.add(directLinkId);
       
-      // Check if this node is a leaf node (has no outgoing connections)
       const isLeafNode = !this.filteredLinks.some(l => l.source === targetId);
       
       if (isLeafNode) { 
-        // Leaf nodes should never appear contracted
         this.explicitlyContractedNodes.delete(targetId); 
       } else {
-        // For non-leaf nodes, check if any of their outgoing edges are hidden
         const hasHiddenOutgoingEdges = this.filteredLinks.some(link => {
           if (link.source === targetId) {
             const linkId = `${link.source}--${link.target}`;
@@ -104,12 +96,10 @@ export class NodeController {
           return false;
         });
         
-        // Only mark as contracted if it has at least one hidden outgoing edge
         if (hasHiddenOutgoingEdges) {
           this.explicitlyContractedNodes.add(targetId);
           this.expandedNodes.delete(targetId);
         } else {
-          // If all outgoing edges are visible, don't mark as contracted
           this.explicitlyContractedNodes.delete(targetId);
         }
       }
@@ -121,7 +111,6 @@ export class NodeController {
    * @param {string} nodeId - ID of the node to contract
    */
   contractNode(nodeId) {
-    console.log("Contracting node:", nodeId);
     hideTooltip();
     this.explicitlyContractedNodes.add(nodeId);
     this.expandedNodes.delete(nodeId);
@@ -146,18 +135,14 @@ export class NodeController {
     while (changed) {
       changed = false;
       
-      // For each link
       this.filteredLinks.forEach(link => {
-        // If source is visible and expanded, and target isn't already added
         if (newVisibleNodes.has(link.source) && 
             this.expandedNodes.has(link.source) && 
             !this.explicitlyContractedNodes.has(link.source) &&
             !newVisibleNodes.has(link.target)) {
           
-          // The linkId for this connection
           const linkId = `${link.source}--${link.target}`;
           
-          // Only add if this link hasn't been explicitly hidden
           if (this.visibleLinkIds.has(linkId)) {
             newVisibleNodes.add(link.target);
             changed = true;
@@ -185,8 +170,6 @@ export class NodeController {
     
     this.visibleLinkIds.clear();
     newVisibleLinks.forEach(id => this.visibleLinkIds.add(id));
-    
-    console.log("Contract complete. Visible nodes:", [...this.visibleNodeIds]);
   }
   
   /**
@@ -208,20 +191,16 @@ export class NodeController {
    */
   contractAll() {
     hideTooltip();
-    // First ensure all external invocation nodes are visible
     this.externalInvocationAllowedNodes.forEach(nodeId => {
       this.visibleNodeIds.add(nodeId);
     });
     
-    // Contract all non-duplicated nodes
     this.allNodes.forEach(node => {
-      // Skip duplicate nodes
       if (!node.isDuplicate) {
         this.contractNode(node.id);
       }
     });
     
-    // Hide all links - we want nodes visible but not their connections
     this.filteredLinks.forEach(link => {
       const linkId = `${link.source}--${link.target}`;
       this.visibleLinkIds.delete(linkId);
