@@ -9,6 +9,7 @@ import lombok.Data;
 public class Node {
   private final String id;
   private final String name;
+  private final VajramType vajramType;
   private final List<Input> inputs;
-  private final List<String> annotationTags;
+  private final List<AnnotationInfo> annotationTags;
 }
