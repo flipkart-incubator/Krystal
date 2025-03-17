@@ -1,0 +1,649 @@
+/* CSS Variables for consistency */
+:root {
+  /* Colors */
+  --color-primary: #4285F4;
+  --color-primary-dark: #3367D6;
+  --color-secondary: #8E44AD;
+  --color-secondary-dark: #6C3483;
+  --color-background: #f8f8f8;
+  --color-surface: #ffffff;
+  --color-surface-translucent: rgba(255, 255, 255, 0.8);
+  --color-text-primary: #333333;
+  --color-text-secondary: #555555;
+  --color-border: #dddddd;
+  --color-error: #d32f2f;
+  --color-highlight: #FF5722;
+  --color-control-light: #f0f0f0;
+  --color-control-light-hover: #e0e0e0;
+  
+  /* Background colors */
+  --color-tooltip-gradient: #f9f4fb;
+  
+  /* Node colors */
+  --color-compute: #5D9CEC;
+  --color-compute-stroke: #4A89DC;
+  --color-io: #4CAF50;
+  --color-io-stroke: #2E7D32;
+  --color-abstract: #9E9E9E;
+  --color-abstract-stroke: #616161;
+  --color-contracted: #FF9800;
+  --color-contracted-stroke: #E65100;
+  --color-duplicate-fill: #C5CAE9;
+  --color-duplicate-stroke: #7986CB;
+  
+  /* Link colors */
+  --color-link-default: #666666;
+  --color-link-mandatory: #444444;
+  --color-link-optional: #777777;
+  --color-link-fanout: #3f51b5;
+  --color-link-fanout-mandatory: #283593;
+  --color-link-fanout-optional: #5c6bc0;
+  
+  /* Spacing */
+  --spacing-xxs: 2px;
+  --spacing-xs: 5px;
+  --spacing-sm: 8px;
+  --spacing-md: 10px;
+  --spacing-lg: 15px;
+  --spacing-xl: 20px;
+  --spacing-xxl: 25px;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.1);
+  --shadow-lg: 0 4px 15px rgba(0,0,0,0.15);
+  --shadow-xl: 0 6px 20px rgba(0,0,0,0.2);
+  
+  /* Border radius */
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  
+  /* Typography */
+  --font-size-xxs: 10px;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
+  --line-height: 1.5;
+  
+  /* Animation */
+  --transition-fast: 0.2s;
+  --transition-normal: 0.3s;
+  --transition-slow: 0.5s;
+  --transition-hover: 0.1s;
+  
+  /* Z-index layers */
+  --z-index-base: 1;
+  --z-index-controls: 100;
+  --z-index-tooltip: 1000;
+  
+  /* Dimensions */
+  --tooltip-width-max: 400px;
+  --tooltip-height-max: 350px;
+  --tooltip-input-height-max: 400px;
+  --legend-width-max: 300px;
+  --badge-width: 20px;
+  
+  /* Tooltip specific */
+  --tooltip-padding-x: 20px;
+  --tooltip-padding-y: 18px;
+}
+
+/* Reset and base styling */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  line-height: var(--line-height);
+}
+
+svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: var(--color-background);
+  shape-rendering: geometricPrecision;
+}
+
+/* ========== CONTROLS ========== */
+.controls {
+  position: absolute;
+  top: var(--spacing-md);
+  left: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  z-index: var(--z-index-controls);
+}
+
+.controls button {
+  margin-right: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: var(--color-primary);
+  color: var(--color-surface);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+}
+
+.controls button:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.controls button:active {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.search-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  margin-top: var(--spacing-md);
+  width: 100%;
+}
+
+.search-container input[type="text"] {
+  flex-grow: 1;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+  margin-right: var(--spacing-xs);
+}
+
+#clearSearchBtn {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-control-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+#clearSearchBtn:hover {
+  background: var(--color-control-light-hover);
+}
+
+/* ========== EDGES & LINKS ========== */
+.link {
+  fill: none;
+  stroke: var(--color-link-default);
+  stroke-width: 2px;
+  filter: drop-shadow(0px 1px 1px rgba(0,0,0,0.2));
+  transition: opacity var(--transition-normal), stroke-width var(--transition-normal), filter var(--transition-normal);
+  pointer-events: visible;
+}
+
+.link:hover {
+  filter: drop-shadow(0px 2px 3px rgba(0,0,0,0.3));
+  stroke-width: 2.5px;
+}
+
+.link.mandatory {
+  stroke: var(--color-link-mandatory);
+  stroke-width: 3.5px;
+}
+
+.link.mandatory:hover {
+  stroke-width: 4px;
+}
+
+.link.optional {
+  stroke: var(--color-link-optional);
+  stroke-width: 2px;
+  stroke-dasharray: 5,3;
+}
+
+.link.optional:hover {
+  stroke-width: 2.5px;
+}
+
+.link.canFanout {
+  stroke: var(--color-link-fanout);
+}
+
+.link.mandatory.canFanout {
+  stroke: var(--color-link-fanout-mandatory);
+}
+
+.link.optional.canFanout {
+  stroke: var(--color-link-fanout-optional);
+}
+
+.link-label {
+  font-size: var(--font-size-xs);
+  fill: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+  paint-order: stroke;
+  stroke: var(--color-surface);
+  stroke-width: 2px;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+  transition: opacity var(--transition-normal), fill var(--transition-normal), transform var(--transition-normal), stroke-width var(--transition-normal);
+}
+
+.link-label-bg {
+  fill: var(--color-surface-translucent, rgba(255, 255, 255, 0.8));
+  rx: var(--radius-sm);
+  ry: var(--radius-sm);
+  transition: opacity var(--transition-normal), fill var(--transition-normal), stroke var(--transition-normal), stroke-width var(--transition-normal);
+  position: relative;
+}
+
+/* Edge highlight and fading effects */
+.link.faded, .link-label.faded, .link-label-bg.faded, .node.faded {
+  opacity: 0.2;
+  transition: opacity var(--transition-normal), stroke-width var(--transition-normal);
+}
+
+.link, .link-label, .link-label-bg, .node {
+  opacity: 1;
+  transition: opacity var(--transition-normal), stroke-width var(--transition-normal), fill var(--transition-normal), transform var(--transition-normal);
+}
+
+.link.highlighted {
+  filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.3));
+  transition: all var(--transition-hover) ease-in-out;
+}
+
+.link-label.highlighted, .link-label-bg.highlighted {
+  filter: drop-shadow(0px 1px 2px rgba(0,0,0,0.2));
+  transition: all var(--transition-hover) ease-in-out;
+}
+
+/* Update these selectors to make highlighted link labels stand out better */
+.link-label-bg.highlighted {
+  fill: var(--color-surface);
+  stroke-width: var(--spacing-xxs);
+  filter: var(--shadow-lg);
+  z-index: var(--z-index-base);
+  rx: var(--radius-md);
+  ry: var(--radius-md);
+}
+
+.link-label.highlighted {
+  font-weight: var(--font-weight-bold);
+  fill: var(--color-text-primary);
+  stroke: var(--color-surface);
+  stroke-width: calc(var(--spacing-xxs) / 4);
+  filter: var(--shadow-md);
+  z-index: calc(var(--z-index-base) + 1);
+}
+
+/* ========== NODES ========== */
+.node {
+  cursor: pointer;
+}
+
+.node .node-shape {
+  fill: var(--color-compute);
+  stroke: var(--color-compute-stroke);
+  stroke-width: 2px;
+  transition: all var(--transition-normal);
+  rx: 6px;
+  ry: 6px;
+}
+
+.node:hover .node-shape {
+  stroke-width: 3px;
+  filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.2));
+}
+
+.node.selected .node-shape {
+  stroke: var(--color-highlight);
+  stroke-width: 3px;
+}
+
+.node.expanded .node-shape {
+  fill: var(--color-compute-stroke);
+}
+
+.node.contracted .node-shape {
+  fill: var(--color-contracted);
+  stroke: var(--color-contracted-stroke);
+  stroke-width: 2.5px;
+  stroke-dasharray: 5,3;
+}
+
+.node.duplicate .node-shape {
+  opacity: 0.5;
+  fill: var(--color-duplicate-fill);
+  stroke: var(--color-duplicate-stroke);
+  stroke-dasharray: 3,2;
+}
+
+.node.duplicate text {
+  opacity: 0.6;
+}
+
+/* Vajram type-specific styling */
+.node.compute .node-shape {
+  fill: var(--color-compute);
+  stroke: var(--color-compute-stroke);
+}
+
+.node.io .node-shape {
+  fill: var(--color-io);
+  stroke: var(--color-io-stroke);
+}
+
+.node.abstract .node-shape {
+  fill: var(--color-abstract);
+  stroke: var(--color-abstract-stroke);
+}
+
+.node.contracted.compute .node-shape {
+  fill: var(--color-contracted);
+  stroke: var(--color-contracted-stroke);
+}
+
+.node.contracted.io .node-shape {
+  fill: var(--color-contracted);
+  stroke: var(--color-contracted-stroke);
+}
+
+.node.contracted.abstract .node-shape {
+  fill: var(--color-contracted);
+  stroke: var(--color-abstract-stroke);
+}
+
+/* Input badge styling */
+.input-badge-container {
+  cursor: pointer;
+  transition: all var(--transition-fast) ease;
+}
+
+.input-badge {
+  filter: drop-shadow(0px 1px 2px rgba(0,0,0,0.2));
+  transition: all var(--transition-fast) ease;
+}
+
+.input-badge-container:hover .input-badge {
+  fill: var(--color-secondary-dark);
+  filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.4));
+}
+
+.input-badge-arrow {
+  pointer-events: none;
+  transition: all var(--transition-fast) ease;
+}
+
+.input-badge-container:hover .input-badge-arrow {
+  fill: var(--color-surface);
+}
+
+/* Node action buttons */
+.node-action-button {
+  pointer-events: bounding-box;
+  transition: all var(--transition-fast) ease;
+}
+
+.node-action-button circle {
+  filter: drop-shadow(0px 1px 2px rgba(0,0,0,0.2));
+  transition: all var(--transition-fast) ease;
+}
+
+.node-action-button:hover circle {
+  stroke-width: 2px;
+  fill: var(--color-primary);
+  stroke: var(--color-primary);
+  filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.4));
+}
+
+.node-action-button:hover text {
+  fill: var(--color-surface);
+}
+
+/* SVG crisper shapes */
+.node-shape, .input-badge, .node-action-button circle {
+  shape-rendering: crispEdges;
+}
+
+/* ========== TOOLTIP ========== */
+#tooltip {
+  position: absolute;
+  background: var(--color-surface);
+  border: none;
+  padding: var(--tooltip-padding-y) var(--tooltip-padding-x);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  opacity: 0;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  max-width: var(--tooltip-width-max);
+  max-height: var(--tooltip-height-max);
+  overflow-y: auto;
+  z-index: var(--z-index-tooltip);
+  transform: translateY(0);
+  transition: opacity var(--transition-fast) ease, transform var(--transition-fast) ease;
+  line-height: var(--line-height);
+}
+
+#tooltip.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Enhanced tooltip for input display */
+#tooltip.input-tooltip {
+  border-left: 4px solid var(--color-secondary);
+  background: linear-gradient(to right, var(--color-tooltip-gradient), var(--color-surface));
+  pointer-events: auto;
+  overflow-y: auto;
+  max-height: var(--tooltip-input-height-max);
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-secondary) var(--color-control-light);
+}
+
+/* Scrollbar styling for webkit browsers */
+#tooltip.input-tooltip::-webkit-scrollbar {
+  width: 8px;
+}
+
+#tooltip.input-tooltip::-webkit-scrollbar-track {
+  background: var(--color-control-light);
+  border-radius: var(--radius-xl);
+}
+
+#tooltip.input-tooltip::-webkit-scrollbar-thumb {
+  background-color: var(--color-secondary);
+  border-radius: var(--radius-xl);
+  border: var(--spacing-xxs) solid var(--color-control-light);
+}
+
+/* Active tooltip (being interacted with) */
+#tooltip.tooltip-active {
+  pointer-events: auto;
+  box-shadow: var(--shadow-xl);
+  border-color: var(--color-secondary);
+}
+
+#tooltip strong {
+  color: var(--color-primary-dark);
+  font-weight: var(--font-weight-bold);
+}
+
+#tooltip .input-item {
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-control-light);
+}
+
+#tooltip .input-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+#tooltip .input-name {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+}
+
+#tooltip .input-mandatory {
+  color: var(--color-error);
+  margin-left: var(--spacing-xs);
+  font-size: var(--font-size-lg);
+}
+
+#tooltip .input-type {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  margin-left: var(--spacing-sm);
+}
+
+.documentation {
+  font-style: italic;
+  color: var(--color-text-secondary);
+  margin-left: var(--spacing-lg);
+  margin-top: var(--spacing-xs);
+  display: block;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-tooltip-gradient);
+  border-left: 3px solid var(--color-secondary);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+/* ========== LEGEND ========== */
+.legend {
+  position: absolute;
+  bottom: var(--spacing-xl);
+  right: var(--spacing-xl);
+  background: var(--color-surface);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  max-width: var(--legend-width-max);
+  z-index: var(--z-index-controls);
+}
+
+.legend h3 {
+  margin-top: 0;
+  margin-bottom: var(--spacing-md);
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+}
+
+.legend-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.legend-item .legend-marker {
+  width: 30px;
+  height: 15px;
+  margin-right: var(--spacing-md);
+}
+
+.legend-item .legend-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ========== SEARCH STATE ========== */
+svg.searching .node:not(.search-match) {
+  opacity: 0.1;
+}
+
+svg.searching .node.search-match .node-shape {
+  filter: drop-shadow(0px 3px 6px rgba(0,0,0,0.5));
+  stroke-width: 3px;
+}
+
+svg.searching .node.search-match text {
+  font-weight: var(--font-weight-bold);
+  fill: var(--color-text-primary);
+  filter: drop-shadow(0px 1px 1px rgba(255,255,255,0.7)); 
+}
+
+svg.searching .node.search-match {
+  filter: brightness(1.1);
+}
+
+svg.searching .link,
+svg.searching .link-label,
+svg.searching .link-label-bg {
+  opacity: 0.1;
+}
+
+/* ========== ACCESSIBILITY ========== */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ========== RESPONSIVE ADJUSTMENTS ========== */
+@media (max-width: 768px) {
+  .controls {
+    padding: var(--spacing-sm);
+  }
+  
+  .controls button {
+    padding: var(--spacing-xs) var(--spacing-md);
+    font-size: var(--font-size-sm);
+  }
+  
+  .legend {
+    max-width: 220px;
+    padding: var(--spacing-md);
+  }
+  
+  #tooltip {
+    max-width: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .legend {
+    bottom: var(--spacing-md);
+    right: var(--spacing-md);
+    max-width: 180px;
+  }
+  
+  .legend-item .legend-text {
+    font-size: var(--font-size-xxs);
+  }
+}
+
+/* Additional specificity for tooltip active state to avoid !important */
+#tooltip.tooltip-active,
+#tooltip.input-tooltip.tooltip-active {
+  pointer-events: auto;
+  box-shadow: var(--shadow-xl);
+  border-color: var(--color-secondary);
+}
