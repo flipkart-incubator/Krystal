@@ -68,7 +68,7 @@ export const CONFIG = {
   text: {
     fontSize: 12,
     fontWeight: 500,
-    selfText: "(Self)",
+    selfText: "(Recursive)",
     selfFontSize: 10,
     fontStyle: "italic",
     lineHeight: 14,

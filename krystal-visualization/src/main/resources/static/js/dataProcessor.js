@@ -10,7 +10,56 @@ export function processGraphData(graphData) {
   const nodes = graphData.nodes;
   const links = graphData.links;
   
-  // Separate self-loops from regular links and create duplicate nodes for self-loops
+  // Build adjacency list for efficient traversal
+  const adjacencyList = {};
+  nodes.forEach(node => {
+    adjacencyList[node.id] = [];
+  });
+  
+  links.forEach(link => {
+    if (adjacencyList[link.source]) {
+      adjacencyList[link.source].push(link.target);
+    }
+  });
+  
+  // Function to detect cycles using DFS
+  function detectRecursion(start) {
+    const visited = new Set();
+    const recursionStack = new Set();
+    const recursiveNodes = new Set();
+    
+    function dfs(nodeId) {
+      visited.add(nodeId);
+      recursionStack.add(nodeId);
+      
+      for (const neighbor of adjacencyList[nodeId] || []) {
+        if (!visited.has(neighbor)) {
+          if (dfs(neighbor)) {
+            recursiveNodes.add(neighbor);
+          }
+        } else if (recursionStack.has(neighbor)) {
+          // Found a cycle, mark the node as recursive
+          recursiveNodes.add(neighbor);
+          return true;
+        }
+      }
+      
+      recursionStack.delete(nodeId);
+      return false;
+    }
+    
+    dfs(start);
+    return recursiveNodes;
+  }
+  
+  // Find all recursive nodes from all starting points
+  const allRecursiveNodes = new Set();
+  nodes.forEach(node => {
+    const recursiveNodes = detectRecursion(node.id);
+    recursiveNodes.forEach(id => allRecursiveNodes.add(id));
+  });
+  
+  // Separate self-loops from regular links and create duplicate nodes for recursive references
   const selfLoops = links.filter(l => l.source === l.target);
   const regularLinks = links.filter(l => l.source !== l.target);
   const duplicatedNodes = [];
@@ -26,6 +75,59 @@ export function processGraphData(graphData) {
       updatedSelfLoopLinks.push({ ...selfLoop, target: duplicateNodeId });
     }
   });
+  
+  // Process nodes that are part of a recursive chain
+  links.forEach((link, index) => {
+    if (link.source !== link.target && allRecursiveNodes.has(link.target)) {
+      const targetNode = nodes.find(n => n.id === link.target);
+      const sourceNode = nodes.find(n => n.id === link.source);
+      
+      // Check if this link creates a recursive dependency (source depends on target through other paths)
+      const path = findPath(adjacencyList, link.target, link.source);
+      if (path && path.length > 0) {
+        // Create duplicate node
+        const duplicateNodeId = `${targetNode.id}_rec_${index}`;
+        const duplicateNode = { ...targetNode, id: duplicateNodeId, isDuplicate: true };
+        duplicatedNodes.push(duplicateNode);
+        
+        // Update link to point to duplicate
+        const linkIndex = regularLinks.findIndex(l => 
+          l.source === link.source && l.target === link.target);
+        if (linkIndex !== -1) {
+          regularLinks[linkIndex] = { ...regularLinks[linkIndex], target: duplicateNodeId };
+        }
+      }
+    }
+  });
+  
+  // Helper function to find a path between two nodes
+  function findPath(adjacencyList, start, end) {
+    const visited = new Set();
+    const path = [];
+    
+    function dfs(current, target) {
+      visited.add(current);
+      path.push(current);
+      
+      if (current === target) {
+        return true;
+      }
+      
+      for (const neighbor of adjacencyList[current] || []) {
+        if (!visited.has(neighbor)) {
+          if (dfs(neighbor, target)) {
+            return true;
+          }
+        }
+      }
+      
+      path.pop();
+      return false;
+    }
+    
+    dfs(start, end);
+    return path;
+  }
 
   const allNodes = [...nodes, ...duplicatedNodes];
   const filteredLinks = regularLinks.concat(updatedSelfLoopLinks);

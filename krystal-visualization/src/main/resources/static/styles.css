@@ -26,8 +26,8 @@
   --color-io-stroke: #2E7D32;
   --color-abstract: #9E9E9E;
   --color-abstract-stroke: #616161;
-  --color-contracted: #FF9800;
-  --color-contracted-stroke: #E65100;
+  --color-collapsed: #FF9800;
+  --color-collapsed-stroke: #E65100;
   --color-duplicate-fill: #C5CAE9;
   --color-duplicate-stroke: #7986CB;
   
@@ -277,6 +277,8 @@ svg {
   z-index: var(--z-index-base);
   rx: var(--radius-md);
   ry: var(--radius-md);
+  padding: 2px;
+  margin: -2px;
 }
 
 .link-label.highlighted {
@@ -316,9 +318,7 @@ svg {
   fill: var(--color-compute-stroke);
 }
 
-.node.contracted .node-shape {
-  fill: var(--color-contracted);
-  stroke: var(--color-contracted-stroke);
+.node.collapsed .node-shape {
   stroke-width: 2.5px;
   stroke-dasharray: 5,3;
 }
@@ -347,21 +347,6 @@ svg {
 
 .node.abstract .node-shape {
   fill: var(--color-abstract);
-  stroke: var(--color-abstract-stroke);
-}
-
-.node.contracted.compute .node-shape {
-  fill: var(--color-contracted);
-  stroke: var(--color-contracted-stroke);
-}
-
-.node.contracted.io .node-shape {
-  fill: var(--color-contracted);
-  stroke: var(--color-contracted-stroke);
-}
-
-.node.contracted.abstract .node-shape {
-  fill: var(--color-contracted);
   stroke: var(--color-abstract-stroke);
 }
 

@@ -96,9 +96,9 @@ export class SearchController {
       .each(function(d) {
         const node = d3.select(this);
         const isLeafNode = nodeController.isLeafNode(d.data.id);
-        const isContracted = nodeController.explicitlyContractedNodes.has(d.data.id) && !isLeafNode;
+        const isCollapsed = nodeController.explicitlyCollapsedNodes.has(d.data.id) && !isLeafNode;
         
-        node.classed("contracted", isContracted);
+        node.classed("collapsed", isCollapsed);
         node.classed("expanded", nodeController.expandedNodes.has(d.data.id));
         node.classed("compute", d.data.vajramType === "COMPUTE");
         node.classed("io", d.data.vajramType === "IO");

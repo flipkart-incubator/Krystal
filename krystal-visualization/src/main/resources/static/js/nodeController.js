@@ -1,4 +1,4 @@
-// nodeController.js - Functions for controlling node expand/contract actions
+// nodeController.js - Functions for controlling node expand/collapse actions
 import { hideTooltip } from './tooltip.js';
 
 // Visibility and state management for nodes and links
@@ -7,10 +7,10 @@ export class NodeController {
     this.allNodes = allNodes;
     this.filteredLinks = filteredLinks;
     
-    // Node visibility and expand/contract state
+    // Node visibility and expand/collapse state
     this.visibleNodeIds = new Set(allNodes.map(n => n.id));
     this.visibleLinkIds = new Set(filteredLinks.map(l => `${l.source}--${l.target}`));
-    this.explicitlyContractedNodes = new Set();
+    this.explicitlyCollapsedNodes = new Set();
     this.expandedNodes = new Set();
     
     // Set to track nodes with ExternalInvocation annotation and allow=true
@@ -22,12 +22,11 @@ export class NodeController {
       if (node.isDuplicate) return;
       
       if (node.annotationTags && node.annotationTags.length > 0) {
-        const externalInvocationAnnotation = node.annotationTags.find(annotation => 
-          annotation.name === "ExternalInvocation" && 
-          annotation.attributes && 
-          annotation.attributes.allow === "true"
+        const hasExternalInvocation = node.annotationTags.some(annotation => 
+          annotation.includes("ExternalInvocation") && 
+          annotation.includes("allow=true")
         );
-        if (externalInvocationAnnotation) {
+        if (hasExternalInvocation) {
           this.externalInvocationAllowedNodes.add(node.id);
         }
       }
@@ -66,7 +65,7 @@ export class NodeController {
   expandNode(nodeId) {
     hideTooltip();
     this.expandedNodes.add(nodeId);
-    this.explicitlyContractedNodes.delete(nodeId);
+    this.explicitlyCollapsedNodes.delete(nodeId);
     this.visibleNodeIds.add(nodeId);
     const connectedTargets = new Set();
     
@@ -86,7 +85,7 @@ export class NodeController {
       const isLeafNode = !this.filteredLinks.some(l => l.source === targetId);
       
       if (isLeafNode) { 
-        this.explicitlyContractedNodes.delete(targetId); 
+        this.explicitlyCollapsedNodes.delete(targetId); 
       } else {
         const hasHiddenOutgoingEdges = this.filteredLinks.some(link => {
           if (link.source === targetId) {
@@ -97,22 +96,22 @@ export class NodeController {
         });
         
         if (hasHiddenOutgoingEdges) {
-          this.explicitlyContractedNodes.add(targetId);
+          this.explicitlyCollapsedNodes.add(targetId);
           this.expandedNodes.delete(targetId);
         } else {
-          this.explicitlyContractedNodes.delete(targetId);
+          this.explicitlyCollapsedNodes.delete(targetId);
         }
       }
     });
   }
   
   /**
-   * Contract a node to hide its connections
-   * @param {string} nodeId - ID of the node to contract
+   * Collapse a node to hide its connections
+   * @param {string} nodeId - ID of the node to collapse
    */
-  contractNode(nodeId) {
+  collapseNode(nodeId) {
     hideTooltip();
-    this.explicitlyContractedNodes.add(nodeId);
+    this.explicitlyCollapsedNodes.add(nodeId);
     this.expandedNodes.delete(nodeId);
     
     // First hide direct outgoing links from this node
@@ -138,7 +137,7 @@ export class NodeController {
       this.filteredLinks.forEach(link => {
         if (newVisibleNodes.has(link.source) && 
             this.expandedNodes.has(link.source) && 
-            !this.explicitlyContractedNodes.has(link.source) &&
+            !this.explicitlyCollapsedNodes.has(link.source) &&
             !newVisibleNodes.has(link.target)) {
           
           const linkId = `${link.source}--${link.target}`;
@@ -157,7 +156,7 @@ export class NodeController {
       if (newVisibleNodes.has(link.source) && 
           newVisibleNodes.has(link.target) && 
           this.expandedNodes.has(link.source) && 
-          !this.explicitlyContractedNodes.has(link.source)) {
+          !this.explicitlyCollapsedNodes.has(link.source)) {
         
         const linkId = `${link.source}--${link.target}`;
         newVisibleLinks.add(linkId);
@@ -178,7 +177,7 @@ export class NodeController {
   expandAll() {
     hideTooltip();
     this.allNodes.forEach(node => { this.visibleNodeIds.add(node.id); });
-    this.explicitlyContractedNodes.clear();
+    this.explicitlyCollapsedNodes.clear();
     this.allNodes.forEach(node => { this.expandedNodes.add(node.id); });
     this.filteredLinks.forEach(link => {
       const linkId = `${link.source}--${link.target}`;
@@ -187,9 +186,9 @@ export class NodeController {
   }
   
   /**
-   * Contract all nodes in the graph
+   * Collapse all nodes in the graph
    */
-  contractAll() {
+  collapseAll() {
     hideTooltip();
     this.externalInvocationAllowedNodes.forEach(nodeId => {
       this.visibleNodeIds.add(nodeId);
@@ -197,7 +196,7 @@ export class NodeController {
     
     this.allNodes.forEach(node => {
       if (!node.isDuplicate) {
-        this.contractNode(node.id);
+        this.collapseNode(node.id);
       }
     });
     
