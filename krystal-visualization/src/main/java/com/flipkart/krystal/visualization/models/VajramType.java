@@ -1,7 +1,7 @@
 package com.flipkart.krystal.visualization.models;
 
 public enum VajramType {
+  UNKNOWN,
   COMPUTE,
-  IO,
-  ABSTRACT
+  IO
 }

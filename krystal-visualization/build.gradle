@@ -3,7 +3,6 @@ description 'Plugin for the visualization layer for Krystal. Includes static cal
 dependencies {
     api project(":vajram")
     api project(":vajram-krystex")
-    api project(":vajram-samples")
 
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 }

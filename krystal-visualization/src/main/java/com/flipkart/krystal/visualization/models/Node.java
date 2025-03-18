@@ -2,14 +2,14 @@ package com.flipkart.krystal.visualization.models;
 
 import java.util.List;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Value;
 
-@Data
+@Value
 @Builder
 public class Node {
   private final String id;
   private final String name;
   private final VajramType vajramType;
   private final List<Input> inputs;
-  private final List<AnnotationInfo> annotationTags;
+  private final List<String> annotationTags;
 }

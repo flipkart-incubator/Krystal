@@ -36,10 +36,10 @@ function setupControlButtons(graphRenderer, nodeController) {
     graphRenderer.updateGraphVisibility();
   });
   
-  // Contract All button
-  d3.select("#contractAll").on("click", () => {
+  // Collapse All button
+  d3.select("#collapseAll").on("click", () => {
     hideTooltip(); // Close any open tooltips
-    nodeController.contractAll();
+    nodeController.collapseAll();
     graphRenderer.updateGraphVisibility();
   });
   

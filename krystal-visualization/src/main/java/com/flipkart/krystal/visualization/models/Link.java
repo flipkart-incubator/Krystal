@@ -1,9 +1,9 @@
 package com.flipkart.krystal.visualization.models;
 
 import lombok.Builder;
-import lombok.Data;
+import lombok.Value;
 
-@Data
+@Value
 @Builder
 public class Link {
   private final String source;

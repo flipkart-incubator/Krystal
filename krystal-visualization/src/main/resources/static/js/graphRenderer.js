@@ -248,10 +248,10 @@ export class GraphRenderer {
               .attr("class", "link-label-bg")
               .attr("data-link-id", linkId)
               .attr("data-edge-id", d.edgeData.name)
-              .attr("x", textBBox.x - 4)
-              .attr("y", textBBox.y - 2)
-              .attr("width", textBBox.width + 8)
-              .attr("height", textBBox.height + 4)
+              .attr("x", textBBox.x - 6)
+              .attr("y", textBBox.y - 3)
+              .attr("width", textBBox.width + 12)
+              .attr("height", textBBox.height + 6)
               .attr("rx", 3)
               .attr("ry", 3);
           } catch (pathError) {
@@ -393,8 +393,8 @@ export class GraphRenderer {
       .attr("class", d => {
         let className = "node";
         const isLeafNode = this.nodeController.isLeafNode(d.data.id);
-        if (this.nodeController.explicitlyContractedNodes.has(d.data.id) && !isLeafNode) {
-          className += " contracted";
+        if (this.nodeController.explicitlyCollapsedNodes.has(d.data.id) && !isLeafNode) {
+          className += " collapsed";
         }
         if (this.nodeController.expandedNodes.has(d.data.id)) {
           className += " expanded";
@@ -626,9 +626,9 @@ export class GraphRenderer {
     
     if (hasOutgoingLinks) {
       const isExpanded = this.nodeController.expandedNodes.has(d.data.id);
-      // Use "-" for expanded (contract action) and "+" for collapsed (expand action)
+      // Use "-" for expanded (collapse action) and "+" for collapsed (expand action)
       const label = isExpanded ? "-" : "+";
-      const action = isExpanded ? "contract" : "expand";
+      const action = isExpanded ? "collapse" : "expand";
       positions.push({
         x: d.x,
         y: d.y - CONFIG.nodeHeight/2 - 25,
@@ -652,19 +652,11 @@ export class GraphRenderer {
         .on("click", event => {
           event.stopPropagation();
           if (pos.action === "info") {
-            let info = `<strong>Node: ${d.data.name}</strong><br/><br/>`;
+            let info = `<strong>Vajram: ${d.data.name}</strong><br/><br/>`;
             if (d.data.annotationTags && d.data.annotationTags.length > 0) {
               info += `<strong>Tags:</strong><br/><ul>`;
               d.data.annotationTags.forEach(annotation => {
-                info += `<li><strong>${annotation.name}</strong>`;
-                if (annotation.attributes && Object.keys(annotation.attributes).length > 0) {
-                  info += `<ul>`;
-                  Object.entries(annotation.attributes).forEach(([key, value]) => {
-                    info += `<li><strong>${key}:</strong> ${value}</li>`;
-                  });
-                  info += `</ul>`;
-                }
-                info += `</li>`;
+                info += `<li>${annotation}</li>`;
               });
               info += `</ul>`;
             }
@@ -672,8 +664,8 @@ export class GraphRenderer {
           } else if (pos.action === "expand") {
             this.nodeController.expandNode(d.data.id);
             this.updateGraphVisibility();
-          } else if (pos.action === "contract") {
-            this.nodeController.contractNode(d.data.id);
+          } else if (pos.action === "collapse") {
+            this.nodeController.collapseNode(d.data.id);
             this.updateGraphVisibility();
           }
         });
@@ -773,9 +765,9 @@ export class GraphRenderer {
       .each((d) => {
         const node = this.g.select(`.node[data-id="${d.data.id}"]`);
         const isLeafNode = this.nodeController.isLeafNode(d.data.id);
-        const isContracted = this.nodeController.explicitlyContractedNodes.has(d.data.id) && !isLeafNode;
+        const isCollapsed = this.nodeController.explicitlyCollapsedNodes.has(d.data.id) && !isLeafNode;
         
-        node.classed("contracted", isContracted);
+        node.classed("collapsed", isCollapsed);
         node.classed("expanded", this.nodeController.expandedNodes.has(d.data.id));
         node.classed("compute", d.data.vajramType === "COMPUTE");
         node.classed("io", d.data.vajramType === "IO");

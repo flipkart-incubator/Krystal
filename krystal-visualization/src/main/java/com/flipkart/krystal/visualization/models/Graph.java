@@ -2,9 +2,9 @@ package com.flipkart.krystal.visualization.models;
 
 import java.util.List;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Value;
 
-@Data
+@Value
 @Builder
 public class Graph {
   private final List<Node> nodes;

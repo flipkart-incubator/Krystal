@@ -1,11 +1,10 @@
 package com.flipkart.krystal.visualization.models;
 
 import lombok.Builder;
-import lombok.Data;
+import lombok.Value;
 
-@Data
+@Value
 @Builder
 public class GraphGenerationResult {
   private final String html;
-  private final String fileName;
 }
