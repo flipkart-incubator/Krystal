@@ -62,7 +62,6 @@ export class GraphRenderer {
     // Recalculate unique edge paths using the updated dag
     this.uniqueEdgePaths = createEdgePaths(this.filteredLinks, this.dag);
 
-
     // Create marker definitions and container group
     this.createDefs();
     

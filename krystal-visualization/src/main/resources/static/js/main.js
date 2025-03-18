@@ -1,6 +1,7 @@
 // main.js - Entry point for the graph visualization
 import * as d3 from "https://cdn.skypack.dev/d3@7.8.4";
 import * as d3dag from "https://cdn.skypack.dev/d3-dag@1.0.0-1";
+import { CONFIG } from './config.js';
 import { processGraphData, createEdgePaths } from './dataProcessor.js';
 import { NodeController } from './nodeController.js';
 import { GraphRenderer } from './graphRenderer.js';
@@ -15,8 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Apply layout to DAG
   const sugiyama = d3dag.sugiyama()
-    .nodeSize([60, 60])
-    .gap([80, 120]);
+    .nodeSize(CONFIG.layout.nodeSize)
+    .gap(CONFIG.layout.gap);
   
   const { width, height } = sugiyama(dag);
   
