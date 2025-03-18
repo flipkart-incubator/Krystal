@@ -75,7 +75,7 @@ public class SingleThreadExecutor extends ForkJoinPool {
 
   @Override
   public void execute(Runnable runnable) {
-    if (currentThread() == executionThread()) {
+    if (isCurrentThreadTheSingleThread()) {
       runnable.run();
     } else {
       super.execute(runnable);

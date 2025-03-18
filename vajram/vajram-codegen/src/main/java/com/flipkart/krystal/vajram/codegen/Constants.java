@@ -10,7 +10,6 @@ public final class Constants {
   public static final String RESOLVABLE_INPUTS = "resolvableInputs";
   public static final String INPUT_SRC = "inputSrc";
   public static final String VAJRAM_LOGIC_INPUT_ARGS = "outputLogicInputArguments";
-  public static final String FACET_DEFINITIONS_VAR = "facetDefinitions";
   public static final String FACET_NAME_SUFFIX = "_n";
   public static final String FACET_SPEC_SUFFIX = "_s";
   public static final char DOT_SEPARATOR = '.';

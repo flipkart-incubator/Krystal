@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.dependencydecoration;
 
-import com.flipkart.krystal.krystex.kryon.KryonResponse;
+import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 
-public record DependencyDecorationInput<R extends KryonResponse>(
+public record DependencyDecorationInput<R extends KryonCommandResponse>(
     VajramInvocation<R> invocationToDecorate) {}

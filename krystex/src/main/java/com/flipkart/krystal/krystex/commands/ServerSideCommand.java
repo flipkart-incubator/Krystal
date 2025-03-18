@@ -1,7 +1,7 @@
 package com.flipkart.krystal.krystex.commands;
 
-import com.flipkart.krystal.krystex.kryon.KryonResponse;
+import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 
 /** A Server-side manifestation of a Kryon command. */
-public sealed interface ServerSideCommand<R extends KryonResponse> extends KryonCommand<R>
-    permits Flush, ForwardReceive {}
+public sealed interface ServerSideCommand<R extends KryonCommandResponse> extends KryonCommand<R>
+    permits Flush, ForwardReceive, StreamClose, StreamInitiateReceive {}
