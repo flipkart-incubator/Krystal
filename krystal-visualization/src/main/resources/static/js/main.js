@@ -12,6 +12,12 @@ import { setupInteractionHandlers } from './interactionHandler.js';
 document.addEventListener('DOMContentLoaded', () => {
   const graphData = window.graphData;
   
+  // Check if the graph has nodes
+  if (!graphData.nodes || graphData.nodes.length === 0) {
+    document.getElementById('emptyStateMessage').classList.add('visible');
+    return;
+  }
+  
   const { allNodes, filteredLinks, dag } = processGraphData(graphData);
   
   // Apply layout to DAG

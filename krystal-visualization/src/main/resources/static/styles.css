@@ -238,6 +238,7 @@ svg {
   stroke-linecap: butt;
   stroke-linejoin: miter;
   transition: opacity var(--transition-normal), fill var(--transition-normal), transform var(--transition-normal), stroke-width var(--transition-normal);
+  pointer-events: visible;
 }
 
 .link-label-bg {
@@ -275,8 +276,8 @@ svg {
   stroke-width: var(--spacing-xxs);
   filter: var(--shadow-lg);
   z-index: var(--z-index-base);
-  rx: var(--radius-md);
-  ry: var(--radius-md);
+  rx: calc(var(--radius-sm) * 1.2);
+  ry: calc(var(--radius-sm) * 1.2);
   padding: 2px;
   margin: -2px;
 }
@@ -287,7 +288,7 @@ svg {
   stroke: var(--color-surface);
   stroke-width: calc(var(--spacing-xxs) / 4);
   filter: var(--shadow-md);
-  z-index: calc(var(--z-index-base) + 1);
+  z-index: calc(var(--z-index-base) + 2);
 }
 
 /* ========== NODES ========== */
@@ -631,4 +632,41 @@ svg.searching .link-label-bg {
   pointer-events: auto;
   box-shadow: var(--shadow-xl);
   border-color: var(--color-secondary);
+}
+
+/* Empty state message */
+.empty-state-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: var(--font-size-lg);
+  color: var(--color-text-secondary);
+  background-color: var(--color-surface);
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+  max-width: 400px;
+  z-index: var(--z-index-base);
+  display: none;
+}
+
+.empty-state-message.visible {
+  display: block;
+}
+
+/* Highlighted elements */
+.link.highlighted {
+  filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.3));
+  transition: all var(--transition-hover) ease-in-out;
+}
+
+.link-label.highlighted {
+  font-weight: var(--font-weight-bold);
+  fill: var(--color-text-primary);
+  stroke: var(--color-surface);
+  stroke-width: calc(var(--spacing-xxs) / 4);
+  filter: var(--shadow-md);
+  z-index: calc(var(--z-index-base) + 2);
 }

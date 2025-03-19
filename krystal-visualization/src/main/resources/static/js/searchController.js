@@ -55,13 +55,32 @@ export class SearchController {
       this.g.selectAll(".node").each(function(d) {
         const node = d3.select(this);
         const nodeText = d.data.name.toLowerCase();
-        const searchableText = d.data.isDuplicate ? nodeText + " self" : nodeText;
+        const searchableText = d.data.isDuplicate ? nodeText + " recursive" : nodeText;
         
         if (searchableText.includes(searchTerm)) {
           node.classed("search-match", true);
-          // Make sure matching nodes are visible in case they were hidden
+          
+          // Only make nodes visible if they have a visible parent or are root nodes
           if (d.data.id) {
-            nodeController.visibleNodeIds.add(d.data.id);
+            // Check if this is a root node or has a visible parent
+            const isRootNode = nodeController.trueSourceNodes.has(d.data.id);
+            const isExternalInvocation = nodeController.externalInvocationAllowedNodes.has(d.data.id);
+            let hasVisibleParent = false;
+            
+            // Check if any parent is visible and expanded
+            nodeController.filteredLinks.forEach(link => {
+              if (link.target === d.data.id && 
+                  nodeController.visibleNodeIds.has(link.source) &&
+                  nodeController.expandedNodes.has(link.source) &&
+                  !nodeController.explicitlyCollapsedNodes.has(link.source)) {
+                hasVisibleParent = true;
+              }
+            });
+            
+            // Only make visible if it's a root node, external invocation, or has a visible parent
+            if (isRootNode || isExternalInvocation || hasVisibleParent) {
+              nodeController.visibleNodeIds.add(d.data.id);
+            }
           }
         } else {
           node.classed("search-match", false);

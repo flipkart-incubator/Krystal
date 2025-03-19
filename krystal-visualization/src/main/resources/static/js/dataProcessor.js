@@ -17,7 +17,7 @@ export function processGraphData(graphData) {
   });
   
   links.forEach(link => {
-    if (adjacencyList[link.source]) {
+    if (adjacencyList[link.source] && adjacencyList[link.target] !== undefined) {
       adjacencyList[link.source].push(link.target);
     }
   });
