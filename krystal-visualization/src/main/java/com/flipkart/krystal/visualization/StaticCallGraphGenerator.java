@@ -42,15 +42,14 @@ public class StaticCallGraphGenerator {
    * filename.
    *
    * <p>If the provided startVajram (a node name) exists in the graph, then only the subgraph
-   * reachable from that node is visualized, and the filename is "startVajram.html". If not, the
-   * entire graph is visualized and the filename is "StaticCallGraph.html".
+   * reachable from that node is visualized. If not, the entire graph is visualized.
    *
    * <p>The generated HTML is self-contained with all CSS and JavaScript embedded
    *
    * @param vajramKryonGraph The graph containing all Vajram definitions and their dependencies.
    * @param startVajram The starting node name to filter the graph, or null/empty for the full
    *     graph.
-   * @return A GraphGenerationResult containing the self-contained HTML content and filename.
+   * @return A GraphGenerationResult containing the self-contained HTML content.
    * @throws ClassNotFoundException If a required class is not found during processing.
    */
   public static GraphGenerationResult generateStaticCallGraphContent(

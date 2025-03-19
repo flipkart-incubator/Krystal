@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.samples;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.visualization.StaticCallGraphGenerator;
@@ -23,28 +23,45 @@ class StaticCallGraphTest {
       String htmlContent = result.getHtml();
 
       // Check if the HTML contains the main Vajram name
-      assertTrue(
-          htmlContent.contains("A2MinusB2"), "HTML should contain the A2MinusB2 Vajram name");
+      assertThat(htmlContent)
+          .as("HTML should contain the A2MinusB2 Vajram name")
+          .contains("A2MinusB2");
 
-      assertTrue(
-          htmlContent.contains("Subtractor"), "HTML should contain Subtractor as a dependency");
-      assertTrue(
-          htmlContent.contains("Multiplier"), "HTML should contain Multiplier as a dependency");
+      assertThat(htmlContent)
+          .as("HTML should contain Subtractor as a dependency")
+          .contains("Subtractor");
+
+      assertThat(htmlContent)
+          .as("HTML should contain Multiplier as a dependency")
+          .contains("Multiplier");
+
+      // Verify that a non-existent Vajram is not present in the HTML
+      assertThat(htmlContent)
+          .as("HTML should not contain NonExistentVajram")
+          .doesNotContain("NonExistentVajram");
 
       // Check for UI elements and functionality in the HTML
-      assertTrue(
-          htmlContent.contains("search-container"), "HTML should contain search functionality");
-      assertTrue(
-          htmlContent.contains("collapseAll"), "HTML should contain Collapse All functionality");
-      assertTrue(htmlContent.contains("expandAll"), "HTML should contain Expand All functionality");
+      assertThat(htmlContent)
+          .as("HTML should contain search functionality")
+          .contains("search-container");
+
+      assertThat(htmlContent)
+          .as("HTML should contain Collapse All functionality")
+          .contains("collapseAll");
+
+      assertThat(htmlContent)
+          .as("HTML should contain Expand All functionality")
+          .contains("expandAll");
 
       // Check for node type indicators
-      assertTrue(htmlContent.contains("COMPUTE"), "HTML should indicate COMPUTE type Vajrams");
-      assertTrue(htmlContent.contains("IO"), "HTML should indicate IO type Vajrams");
+      assertThat(htmlContent).as("HTML should indicate COMPUTE type Vajrams").contains("COMPUTE");
+
+      assertThat(htmlContent).as("HTML should indicate IO type Vajrams").contains("IO");
 
       // Check for SVG and graph rendering elements
-      assertTrue(htmlContent.contains("<svg"), "HTML should contain SVG elements for the graph");
-      assertTrue(htmlContent.contains("zoom"), "HTML should support zoom functionality");
+      assertThat(htmlContent).as("HTML should contain SVG elements for the graph").contains("<svg");
+
+      assertThat(htmlContent).as("HTML should support zoom functionality").contains("zoom");
     }
   }
 
@@ -63,25 +80,59 @@ class StaticCallGraphTest {
       String htmlContent = result.getHtml();
 
       // Check that all expected Vajrams are present
-      assertTrue(htmlContent.contains("A2MinusB2"), "Complete graph should contain A2MinusB2");
-      assertTrue(htmlContent.contains("Add2And3"), "Complete graph should contain Add2And3");
-      assertTrue(htmlContent.contains("AddZero"), "Complete graph should contain AddZero");
-      assertTrue(htmlContent.contains("ChainAdder"), "Complete graph should contain ChainAdder");
+      assertThat(htmlContent).as("Complete graph should contain A2MinusB2").contains("A2MinusB2");
+
+      assertThat(htmlContent).as("Complete graph should contain Add2And3").contains("Add2And3");
+
+      assertThat(htmlContent).as("Complete graph should contain AddZero").contains("AddZero");
+
+      assertThat(htmlContent).as("Complete graph should contain ChainAdder").contains("ChainAdder");
 
       // Check for UI functionality in the HTML
-      assertTrue(
-          htmlContent.contains("interactionHandler"), "HTML should contain interaction handling");
-      assertTrue(
-          htmlContent.contains("nodeController"),
-          "HTML should contain node controller functionality");
-      assertTrue(
-          htmlContent.contains("searchController"),
-          "HTML should contain search controller functionality");
+      assertThat(htmlContent)
+          .as("HTML should contain interaction handling")
+          .contains("interactionHandler");
+
+      assertThat(htmlContent)
+          .as("HTML should contain node controller functionality")
+          .contains("nodeController");
+
+      assertThat(htmlContent)
+          .as("HTML should contain search controller functionality")
+          .contains("searchController");
 
       // Check for information display
-      assertTrue(
-          htmlContent.contains("tooltip"),
-          "HTML should contain tooltip functionality for node details");
+      assertThat(htmlContent)
+          .as("HTML should contain tooltip functionality for node details")
+          .contains("tooltip");
+    }
+  }
+
+  @Test
+  void testEmptyGraphShowsNoVajramsMessage() throws Exception {
+
+    try (VajramKryonGraph emptyGraph = VajramKryonGraph.builder().build()) {
+
+      // Generate static call graph for the empty graph
+      GraphGenerationResult result =
+          StaticCallGraphGenerator.generateStaticCallGraphContent(emptyGraph, null);
+
+      String htmlContent = result.getHtml();
+
+      // Verify the HTML contains the empty state message
+      assertThat(htmlContent)
+          .as("HTML should contain empty state message element")
+          .contains("id=\"emptyStateMessage\"");
+
+      // Verify the empty state message text
+      assertThat(htmlContent)
+          .as("HTML should contain 'No Vajrams found' message")
+          .contains("No Vajrams found in this graph");
+
+      // Verify that the graph data object should be empty
+      assertThat(htmlContent)
+          .as("HTML should contain an empty nodes array in the graphData")
+          .contains("graphData = {\"nodes\":[],\"links\":[]}");
     }
   }
 }

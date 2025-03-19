@@ -26,6 +26,10 @@ export class GraphRenderer {
     this.uniqueEdgePaths = uniqueEdgePaths;
     this.nodeController = nodeController;
     
+    // Store references for z-ordering
+    this.nodeGroup = null;
+    this.linkGroup = null;
+    
     // Store a reference to this instance for use in callbacks
     const self = this;
     // Use a non-enumerable property to avoid serialization issues
@@ -71,6 +75,33 @@ export class GraphRenderer {
     
     // Set up zoom
     this.setupZoom();
+
+    // Use a non-enumerable property to avoid serialization issues
+    Object.defineProperty(this, "_restoreLinkBackgrounds", {
+      enumerable: false,
+      value: () => {
+        // Find all label text and restore original background widths
+        this.g.selectAll("text.link-label").each(function() {
+          const textNode = this;
+          const parentNode = this.parentNode;
+          const linkId = d3.select(this).attr("data-link-id");
+          const edgeId = d3.select(this).attr("data-edge-id");
+          
+          if (!linkId || !edgeId) return;
+          
+          const bgRect = d3.select(parentNode).select(`rect.link-label-bg[data-edge-id="${edgeId}"][data-link-id="${linkId}"]`);
+          if (!bgRect.empty()) {
+            // Get the current text bbox (now that it's not bold anymore)
+            const bbox = textNode.getBBox();
+            
+            // Center the rectangle around the text
+            const newWidth = bbox.width + 12;
+            bgRect.attr("x", bbox.x - 6)
+                 .attr("width", newWidth);
+          }
+        });
+      }
+    });
   }
   
   /**
@@ -141,8 +172,11 @@ export class GraphRenderer {
     const lineGenerator = this.createLineGenerator();
     const self = this; // Store reference to GraphRenderer instance
     
+    // Create a group for all links
+    this.linkGroup = this.g.append("g").attr("class", "links-container");
+    
     // Draw edges
-    this.g.selectAll("path.link")
+    this.linkGroup.selectAll("path.link")
       .data(this.uniqueEdgePaths)
       .join("path")
       .attr("class", d => {
@@ -285,14 +319,41 @@ export class GraphRenderer {
         highlightedBg
           .classed("faded", false)
           .classed("highlighted", true);
+        
+        // Adjust background width based on bold text
+        highlightedLabel.each(function() {
+          const labelElement = d3.select(this);
+          const textNode = this;
+          const bgRect = d3.select(this.parentNode).select(`rect.link-label-bg[data-edge-id="${edgeId}"][data-link-id="${linkId}"]`);
           
-        highlightedBg.each(function() { 
-          const parent = this.parentNode;
-          parent.appendChild(this); 
+          // Make a copy of the text element's bounding box before it becomes bold
+          const originalBBox = textNode.getBBox();
+          const originalWidth = originalBBox.width;
+          const originalX = parseFloat(bgRect.attr("x"));
+          
+          // Add additional padding for when text becomes bold
+          const paddingFactor = 1.2; // 20% extra width for bold text
+          const newWidth = (originalWidth * paddingFactor) + 12;
+          const widthDifference = newWidth - parseFloat(bgRect.attr("width"));
+          
+          // Adjust both position and width to expand from the center
+          bgRect.attr("x", originalX - (widthDifference / 2))
+               .attr("width", newWidth);
         });
-        highlightedLabel.each(function() { 
+        
+        // Store original positions
+        highlightedBg.each(function() {
+          const el = d3.select(this);
           const parent = this.parentNode;
-          parent.appendChild(this); 
+          const nextSibling = this.nextSibling;
+          el.attr("data-original-next-sibling-id", nextSibling ? nextSibling.id || "" : "");
+          parent.appendChild(this); // Move background to front
+        });
+        
+        // Move text labels to front AFTER backgrounds to keep them on top
+        highlightedLabel.each(function() {
+          const parent = this.parentNode;
+          parent.appendChild(this); // Move text to very front
         });
         
         this.g.selectAll(`.node[data-id="${d.sourceId}"], .node[data-id="${d.targetId}"]`)
@@ -302,6 +363,12 @@ export class GraphRenderer {
         this.g.selectAll(".link, .link-label, .link-label-bg, .node")
           .classed("faded", false)
           .classed("highlighted", false);
+        
+        // Restore the original background widths
+        this._restoreLinkBackgrounds();
+        
+        // Restore proper z-ordering
+        this.restoreZOrder();
       });
     
     // Add hover effects for edge labels
@@ -357,13 +424,40 @@ export class GraphRenderer {
             .classed("faded", false)
             .classed("highlighted", true);
             
-          highlightedBg.each(function() { 
-            const parent = this.parentNode;
-            parent.appendChild(this); 
+          // Adjust background width based on bold text
+          highlightedLabel.each(function() {
+            const labelElement = d3.select(this);
+            const textNode = this;
+            const bgRect = d3.select(this.parentNode).select(`rect.link-label-bg[data-edge-id="${safeEdgeName}"][data-link-id="${safeLinkId}"]`);
+            
+            // Make a copy of the text element's bounding box before it becomes bold
+            const originalBBox = textNode.getBBox();
+            const originalWidth = originalBBox.width;
+            const originalX = parseFloat(bgRect.attr("x"));
+            
+            // Add additional padding for when text becomes bold
+            const paddingFactor = 1.2; // 20% extra width for bold text
+            const newWidth = (originalWidth * paddingFactor) + 12;
+            const widthDifference = newWidth - parseFloat(bgRect.attr("width"));
+            
+            // Adjust both position and width to expand from the center
+            bgRect.attr("x", originalX - (widthDifference / 2))
+                 .attr("width", newWidth);
           });
-          highlightedLabel.each(function() { 
+            
+          // Store original positions
+          highlightedBg.each(function() {
+            const el = d3.select(this);
             const parent = this.parentNode;
-            parent.appendChild(this); 
+            const nextSibling = this.nextSibling;
+            el.attr("data-original-next-sibling-id", nextSibling ? nextSibling.id || "" : "");
+            parent.appendChild(this); // Move background to front
+          });
+          
+          // Move text labels to front AFTER backgrounds to keep them on top
+          highlightedLabel.each(function() {
+            const parent = this.parentNode;
+            parent.appendChild(this); // Move text to very front
           });
           
           self.g.selectAll(`.node[data-id="${safeSourceId}"], .node[data-id="${safeTargetId}"]`)
@@ -379,6 +473,12 @@ export class GraphRenderer {
         this.g.selectAll(".link, .link-label, .link-label-bg, .node")
           .classed("faded", false)
           .classed("highlighted", false);
+        
+        // Restore the original background widths
+        this._restoreLinkBackgrounds();
+        
+        // Restore proper z-ordering
+        this.restoreZOrder();
       });
   }
   
@@ -386,8 +486,11 @@ export class GraphRenderer {
    * Render nodes with their labels and input badges
    */
   renderNodes() {
+    // Create a group for all nodes
+    this.nodeGroup = this.g.append("g").attr("class", "nodes-container");
+    
     // Create node groups
-    const nodeG = this.g.selectAll("g.node")
+    const nodeG = this.nodeGroup.selectAll("g.node")
       .data(this.dag.nodes())
       .join("g")
       .attr("class", d => {
@@ -579,12 +682,49 @@ export class GraphRenderer {
       
       connectedEdges.forEach(item => {
         item.edge.classed("faded", false).classed("highlighted", true);
-        this.g.selectAll(`text.link-label[data-edge-id="${item.edgeId}"][data-link-id="${item.linkId}"]`)
+        
+        // Highlight the label and background
+        const highlightedLabel = this.g.selectAll(`text.link-label[data-edge-id="${item.edgeId}"][data-link-id="${item.linkId}"]`)
           .classed("faded", false)
           .classed("highlighted", true);
-        this.g.selectAll(`rect.link-label-bg[data-edge-id="${item.edgeId}"][data-link-id="${item.linkId}"]`)
+          
+        const highlightedBg = this.g.selectAll(`rect.link-label-bg[data-edge-id="${item.edgeId}"][data-link-id="${item.linkId}"]`)
           .classed("faded", false)
           .classed("highlighted", true);
+        
+        // Adjust background width based on bold text
+        highlightedLabel.each(function() {
+          const textNode = this;
+          const bgRect = d3.select(this.parentNode).select(`rect.link-label-bg[data-edge-id="${item.edgeId}"][data-link-id="${item.linkId}"]`);
+          
+          if (bgRect.empty()) return;
+          
+          // Make a copy of the text element's bounding box before it becomes bold
+          const originalBBox = textNode.getBBox();
+          const originalWidth = originalBBox.width;
+          const originalX = parseFloat(bgRect.attr("x"));
+          
+          // Add additional padding for when text becomes bold
+          const paddingFactor = 1.2; // 20% extra width for bold text
+          const newWidth = (originalWidth * paddingFactor) + 12;
+          const widthDifference = newWidth - parseFloat(bgRect.attr("width"));
+          
+          // Adjust both position and width to expand from the center
+          bgRect.attr("x", originalX - (widthDifference / 2))
+               .attr("width", newWidth);
+        });
+        
+        // Move backgrounds to front
+        highlightedBg.each(function() {
+          const parent = this.parentNode;
+          parent.appendChild(this); // Move background to front
+        });
+        
+        // Move text labels to front AFTER backgrounds to keep them on top
+        highlightedLabel.each(function() {
+          const parent = this.parentNode;
+          parent.appendChild(this); // Move text to very front
+        });
       });
       
       connectedNodes.forEach(id => {
@@ -596,6 +736,30 @@ export class GraphRenderer {
       this.g.selectAll(".link, .link-label, .link-label-bg, .node")
         .classed("faded", false)
         .classed("highlighted", false);
+      
+      // Restore the original background widths
+      this._restoreLinkBackgrounds();
+      
+      // Restore proper z-ordering
+      this.restoreZOrder();
+      
+      // Find all label text and restore original background widths
+      this.g.selectAll("text.link-label").each(function() {
+        const textNode = this;
+        const parentNode = this.parentNode;
+        const linkId = d3.select(this).attr("data-link-id");
+        const edgeId = d3.select(this).attr("data-edge-id");
+        
+        if (!linkId || !edgeId) return;
+        
+        const bgRect = d3.select(parentNode).select(`rect.link-label-bg[data-edge-id="${edgeId}"][data-link-id="${linkId}"]`);
+        if (!bgRect.empty()) {
+          // Get the current text bbox (now that it's not bold anymore)
+          const bbox = textNode.getBBox();
+          // Restore the original width
+          bgRect.attr("width", bbox.width + 12);
+        }
+      });
     });
   }
   
@@ -795,7 +959,12 @@ export class GraphRenderer {
     this.g.selectAll("[data-link-id]").each(function(d) {
       const element = d3.select(this);
       const linkId = element.attr("data-link-id");
-      const [sourceId, targetId] = linkId.split("--");
+      if (!linkId) return;
+      
+      const parts = linkId.split("--");
+      if (parts.length !== 2) return;
+      
+      const [sourceId, targetId] = parts;
       
       element.style("display", 
         self.nodeController.visibleLinkIds.has(linkId) && 
@@ -903,5 +1072,43 @@ export class GraphRenderer {
    */
   getContainer() {
     return this.g;
+  }
+  
+  /**
+   * Restore the proper z-order of elements with correct layering:
+   * 1. Edges (bottom)
+   * 2. Edge label backgrounds
+   * 3. Edge label text
+   * 4. Nodes (top)
+   * 5. Node buttons (very top)
+   */
+  restoreZOrder() {
+    if (this.linkGroup && this.nodeGroup) {
+      const container = this.linkGroup.node().parentNode;
+      
+      // 1. First ensure link group (edges) is at the bottom
+      container.appendChild(this.linkGroup.node());
+      
+      // 2. Move all label backgrounds above edges but below text
+      this.g.selectAll("rect.link-label-bg").each(function() {
+        const parent = this.parentNode;
+        parent.appendChild(this);
+      });
+      
+      // 3. Move all label text above backgrounds
+      this.g.selectAll("text.link-label").each(function() {
+        const parent = this.parentNode;
+        parent.appendChild(this);
+      });
+      
+      // 4. Move node group on top of edges and labels
+      container.appendChild(this.nodeGroup.node());
+      
+      // 5. Ensure node buttons are at the very top
+      this.g.selectAll(".node-action-button").each(function() {
+        const parent = this.parentNode;
+        parent.appendChild(this);
+      });
+    }
   }
 } 
