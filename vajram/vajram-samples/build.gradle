@@ -8,6 +8,7 @@ version project.krystal_version
 dependencies {
     implementation project(':krystal-common')
     implementation project(':vajram')
+    implementation project(':krystal-visualization')
 
     annotationProcessor 'com.flipkart.krystal:vajram-codegen'
 
