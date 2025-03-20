@@ -101,7 +101,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * </ul>
  */
 @Slf4j
-final class StreamingKryon extends AbstractKryon<MultiRequestCommand, BatchResponse> {
+final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchResponse> {
 
   private final Map<DependentChain, Set<Facet>> availableFacetsByDepChain = new LinkedHashMap<>();
 
@@ -122,7 +122,7 @@ final class StreamingKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
   private final Set<DependentChain> flushedDependentChain = new LinkedHashSet<>();
   private final Map<DependentChain, Boolean> outputLogicExecuted = new LinkedHashMap<>();
 
-  StreamingKryon(
+  FlushableKryon(
       VajramKryonDefinition kryonDefinition,
       KryonExecutor kryonExecutor,
       Function<LogicExecutionContext, ImmutableMap<String, OutputLogicDecorator>>
