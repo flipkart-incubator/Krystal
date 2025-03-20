@@ -23,6 +23,7 @@ rootProject.name = 'krystal'
 include 'krystex'
 include 'honeycomb'
 include 'krystal-common'
+include 'krystal-visualization'
 
 include 'vajram-java-sdk'
 project(':vajram-java-sdk').projectDir = file('vajram/vajram-java-sdk')

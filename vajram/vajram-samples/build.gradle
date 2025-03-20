@@ -8,6 +8,7 @@ version project.krystal_version
 dependencies {
     implementation project(':krystal-common')
     implementation project(':vajram-java-sdk')
+    implementation project(':krystal-visualization')
 
     annotationProcessor project(':krystal-common')
 
