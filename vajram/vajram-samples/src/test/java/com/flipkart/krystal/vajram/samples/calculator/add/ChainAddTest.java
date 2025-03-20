@@ -63,7 +63,7 @@ class ChainAddTest {
   @BeforeEach
   void setUp() throws LeaseUnavailableException {
     Add.CALL_COUNTER.reset();
-    this.graph = VajramKryonGraph.builder().loadClass(ChainAdd.class).loadClass(Add.class).build();
+    this.graph = VajramKryonGraph.builder().loadClasses(ChainAdd.class, Add.class).build();
     this.executorLease = EXEC_POOL.lease();
     this.objectMapper =
         new ObjectMapper()

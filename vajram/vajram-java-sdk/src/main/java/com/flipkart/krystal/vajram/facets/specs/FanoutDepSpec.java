@@ -30,7 +30,7 @@ public abstract sealed class FanoutDepSpec<T, CV extends Request, DV extends Req
   public FanoutDepSpec(
       int id,
       String name,
-      VajramID vajramID,
+      VajramID ofVajramID,
       DataType<T> type,
       Class<CV> ofVajram,
       Class<DV> onVajram,
@@ -40,7 +40,8 @@ public abstract sealed class FanoutDepSpec<T, CV extends Request, DV extends Req
       ElementTags tags,
       Function<FacetValues, FanoutDepResponses<DV, T>> getFromFacets,
       BiConsumer<FacetValues, FanoutDepResponses<DV, T>> setToFacets) {
-    super(id, name, vajramID, type, ofVajram, onVajram, onVajramId, documentation, isBatched, tags);
+    super(
+        id, name, ofVajramID, type, ofVajram, onVajram, onVajramId, documentation, isBatched, tags);
     this.getFromFacets = getFromFacets;
     this.setToFacets = setToFacets;
   }

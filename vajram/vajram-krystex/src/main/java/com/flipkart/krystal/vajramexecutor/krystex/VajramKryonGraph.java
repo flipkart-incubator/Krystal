@@ -200,6 +200,14 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
             .collect(toImmutableMap(TraitDispatchPolicy::traitID, identity()));
   }
 
+  public @Nullable TraitDispatchPolicy getTraitDispatchPolicy(VajramID traitID) {
+    VajramDefinition traitDef = getVajramDefinition(traitID);
+    if (!traitDef.isTrait()) {
+      throw new IllegalArgumentException("Trait with id %s not found".formatted(traitID));
+    }
+    return traitDispatchPolicies.get(traitID);
+  }
+
   /**
    * Returns a new {@link DependantChain} representing the given strings which are passed in trigger
    * order (from [Start] to immediate dependant.)
@@ -216,7 +224,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     DependantChain currentDepChain =
         kryonDefinitionRegistry.getDependantChainsStart().extend(firstVajramID, firstDependency);
     for (Dependency dependency : subsequentDependencies) {
-      currentDepChain = currentDepChain.extend(dependency.vajramID(), dependency);
+      currentDepChain = currentDepChain.extend(dependency.ofVajramID(), dependency);
     }
     return currentDepChain;
   }
@@ -554,8 +562,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       return this;
     }
 
-    public VajramKryonGraphBuilder loadClass(Class<? extends VajramDefRoot<?>> clazz) {
-      classes.add(clazz);
+    @SafeVarargs
+    public final VajramKryonGraphBuilder loadClasses(Class<? extends VajramDefRoot<?>>... classes) {
+      this.classes.addAll(Arrays.asList(classes));
       return this;
     }
 

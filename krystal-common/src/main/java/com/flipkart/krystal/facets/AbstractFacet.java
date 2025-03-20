@@ -1,5 +1,6 @@
 package com.flipkart.krystal.facets;
 
+import com.flipkart.krystal.core.VajramID;
 import com.google.common.collect.ImmutableSet;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -10,6 +11,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public abstract class AbstractFacet implements Facet {
   private final int id;
   private final String name;
+  private final VajramID ofVajramID;
   private final ImmutableSet<FacetType> facetTypes;
   private final String documentation;
 

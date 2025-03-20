@@ -12,7 +12,7 @@ public interface BasicFacetInfo {
 
   String documentation();
 
-  VajramID vajramID();
+  VajramID ofVajramID();
 
   default ElementTags tags() {
     return emptyTags();

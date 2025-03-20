@@ -91,6 +91,7 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
 
         knownModule('com.flipkart.krystal:vajram-java-sdk', 'flipkart.krystal.vajram')
         knownModule('com.flipkart.krystal:krystal-common', 'flipkart.krystal.common')
+        knownModule('com.flipkart.krystal:krystal-visualization', 'flipkart.krystal.visualization')
     }
 
     dependencies {

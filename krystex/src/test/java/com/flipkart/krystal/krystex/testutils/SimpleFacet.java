@@ -83,7 +83,7 @@ public @NonFinal sealed class SimpleFacet implements Facet, InputMirror permits 
   }
 
   @Override
-  public VajramID vajramID() {
+  public VajramID ofVajramID() {
     return VajramID.vajramID("testVajram");
   }
 }

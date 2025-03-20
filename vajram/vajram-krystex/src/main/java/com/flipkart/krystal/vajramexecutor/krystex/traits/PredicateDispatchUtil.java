@@ -12,6 +12,7 @@ import com.flipkart.krystal.traits.UseForDispatch;
 import com.flipkart.krystal.traits.matchers.InputValueMatcher;
 import com.flipkart.krystal.vajram.TraitRequestRoot;
 import com.flipkart.krystal.vajram.VajramRequestRoot;
+import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableMap;
 import java.util.Arrays;
@@ -20,7 +21,7 @@ import lombok.AllArgsConstructor;
 import lombok.Value;
 
 public class PredicateDispatchUtil {
-  public static <T extends Request<?>> InputDispatcherBuilder dispatchTrait(
+  public static <T extends Request<?>> InputDispatcherBuilder<T> dispatchTrait(
       Class<T> traitReq, VajramKryonGraph graph) {
     checkArgument(
         traitReq.getAnnotation(TraitRequestRoot.class) != null,
@@ -29,11 +30,11 @@ public class PredicateDispatchUtil {
   }
 
   public static <T extends Request<?>> DispatchCaseBuilder<T> when(
-      InputMirror input, InputValueMatcher inputValueMatcher) {
+      InputMirrorSpec<?, T> input, InputValueMatcher inputValueMatcher) {
     checkArgument(
         input.tags().getAnnotationByType(UseForDispatch.class).isPresent(),
         "Only the trait Inputs annotated as @UseForDispatch can be used for dynamic dispatching");
-    return new DispatchCaseBuilder(ImmutableMap.of(input, inputValueMatcher));
+    return new DispatchCaseBuilder<>(ImmutableMap.of(input, inputValueMatcher));
   }
 
   @AllArgsConstructor(access = PRIVATE)
@@ -42,7 +43,9 @@ public class PredicateDispatchUtil {
     private final Class<T> traitReq;
     private final VajramKryonGraph graph;
 
-    public PredicateDynamicDispatchPolicy conditionally(DispatchCaseFinal<T>... dispatchCases) {
+    @SafeVarargs
+    public final PredicateDynamicDispatchPolicy conditionally(
+        DispatchCaseFinal<T>... dispatchCases) {
       return new PredicateDynamicDispatchPolicy(
           graph.getVajramIdByVajramReqType(traitReq),
           Arrays.stream(dispatchCases)
@@ -65,7 +68,7 @@ public class PredicateDispatchUtil {
           "Facet " + input + " already has a type check in this case");
       LinkedHashMap<InputMirror, InputValueMatcher> newMap = new LinkedHashMap<>(facetPredicates);
       newMap.put(input, dataType);
-      return new DispatchCaseBuilder(ImmutableMap.copyOf(newMap));
+      return new DispatchCaseBuilder<>(ImmutableMap.copyOf(newMap));
     }
 
     public DispatchCaseFinal<T> to(Class<? extends T> dispatchTarget) {

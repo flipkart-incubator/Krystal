@@ -17,7 +17,7 @@ class AddTest {
   @Test
   void withOutNumberTwo_usesPlatformDefaultValue_success() {
     // Create a VajramKryonGraph and KrystexVajramExecutor
-    VajramKryonGraph graph = VajramKryonGraph.builder().loadClass(Add.class).build();
+    VajramKryonGraph graph = VajramKryonGraph.builder().loadClasses(Add.class).build();
     KrystexVajramExecutorConfig config =
         KrystexVajramExecutorConfig.builder()
             .requestId("adderTest")

@@ -13,7 +13,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputMirrorSpec<T, CV extends Request> implements InputMirror {
 
-  @Getter private final VajramID vajramID;
+  @Getter private final VajramID ofVajramID;
   @Getter private final DataType<T> type;
   @Getter private final Class<CV> ofVajram;
   @Getter private final int id;
@@ -26,7 +26,7 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
   public InputMirrorSpec(
       int id,
       String name,
-      VajramID vajramID,
+      VajramID ofVajramID,
       DataType<T> type,
       Class<CV> ofVajram,
       String documentation,
@@ -35,7 +35,7 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
       BiConsumer<ImmutableRequest.Builder, @Nullable T> setToRequest) {
     this.id = id;
     this.name = name;
-    this.vajramID = vajramID;
+    this.ofVajramID = ofVajramID;
     this.type = type;
     this.ofVajram = ofVajram;
     this.documentation = documentation;

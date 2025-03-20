@@ -31,7 +31,7 @@ public abstract sealed class One2OneDepSpec<T, CV extends Request, DV extends Re
   public One2OneDepSpec(
       int id,
       String name,
-      VajramID vajramID,
+      VajramID ofVajramID,
       DataType<T> type,
       Class<CV> ofVajram,
       Class<DV> onVajram,
@@ -41,7 +41,8 @@ public abstract sealed class One2OneDepSpec<T, CV extends Request, DV extends Re
       ElementTags tags,
       Function<FacetValues, One2OneDepResponse<DV, T>> getFromFacets,
       BiConsumer<FacetValues, RequestResponse<DV, T>> setToFacets) {
-    super(id, name, vajramID, type, ofVajram, onVajram, onVajramId, documentation, isBatched, tags);
+    super(
+        id, name, ofVajramID, type, ofVajram, onVajram, onVajramId, documentation, isBatched, tags);
     this.getFromFacets = getFromFacets;
     this.setToFacets = setToFacets;
   }
