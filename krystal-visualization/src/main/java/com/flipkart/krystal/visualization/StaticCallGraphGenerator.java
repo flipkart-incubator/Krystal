@@ -1,14 +1,19 @@
 package com.flipkart.krystal.visualization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.flipkart.krystal.vajram.ComputeVajram;
-import com.flipkart.krystal.vajram.IOVajram;
-import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.VajramID;
+import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.facets.InputMirror;
+import com.flipkart.krystal.traits.StaticDispatchPolicy;
+import com.flipkart.krystal.traits.TraitDispatchPolicy;
+import com.flipkart.krystal.vajram.ComputeVajramDef;
+import com.flipkart.krystal.vajram.IOVajramDef;
+import com.flipkart.krystal.vajram.TraitDef;
+import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
-import com.flipkart.krystal.vajram.facets.DependencyDef;
-import com.flipkart.krystal.vajram.facets.InputDef;
-import com.flipkart.krystal.vajram.facets.VajramFacetDefinition;
+import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.vajram.facets.Mandatory.IfNotSet;
+import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
+import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.visualization.models.Graph;
 import com.flipkart.krystal.visualization.models.GraphGenerationResult;
@@ -61,12 +66,12 @@ public class StaticCallGraphGenerator {
 
     if (startVajram != null && !startVajram.isBlank()) {
       Node startNode =
-          fullGraph.getNodes().stream()
-              .filter(node -> node.getName().equals(startVajram))
+          fullGraph.nodes().stream()
+              .filter(node -> node.name().equals(startVajram))
               .findFirst()
               .orElse(null);
       if (startNode != null) {
-        graphToVisualize = filterGraph(fullGraph, startNode.getId());
+        graphToVisualize = filterGraph(fullGraph, startNode.id());
       } else {
         throw new IllegalArgumentException("Start vajram: " + startVajram + " does not exist");
       }
@@ -98,31 +103,35 @@ public class StaticCallGraphGenerator {
       VajramDefinition definition = entry.getValue();
 
       List<Input> inputs = new ArrayList<>();
-      for (VajramFacetDefinition facet : definition.vajram().getFacetDefinitions()) {
-        if (facet instanceof InputDef<?> inputDef) {
-          inputs.add(
-              Input.builder()
-                  .name(inputDef.name())
-                  .type(inputDef.type().javaReflectType().getTypeName())
-                  .isMandatory(inputDef.isMandatory())
-                  .documentation(inputDef.documentation())
-                  .build());
-        }
+      for (InputMirror facet : definition.inputMirrors()) {
+        inputs.add(
+            Input.builder()
+                .name(facet.name())
+                .type(facet.type().javaReflectType().getTypeName())
+                .isMandatory(
+                    facet
+                        .tags()
+                        .getAnnotationByType(Mandatory.class)
+                        .map(Mandatory::ifNotSet)
+                        .map(IfNotSet::usePlatformDefault)
+                        .orElse(false))
+                .documentation(facet.documentation())
+                .build());
       }
 
       ImmutableCollection<Annotation> annotations = definition.vajramTags().annotations();
 
       List<String> annotationStringList = annotations.stream().map(Annotation::toString).toList();
 
-      VajramType vajramType = getVajramType(definition.vajram());
+      VajramType vajramType = getVajramType(definition.def());
       if (vajramType == VajramType.UNKNOWN) {
-        throw new IllegalArgumentException("Unknown vajram type for: " + definition.vajram());
+        throw new IllegalArgumentException("Unknown vajram type for: " + definition.def());
       }
 
       Node node =
           Node.builder()
               .id(vajramId.vajramId())
-              .name(definition.vajramDefClass().getSimpleName())
+              .name(definition.defType().getSimpleName())
               .vajramType(vajramType)
               .inputs(inputs)
               .annotationTags(annotationStringList)
@@ -136,19 +145,41 @@ public class StaticCallGraphGenerator {
       VajramID vajramId = entry.getKey();
       VajramDefinition definition = entry.getValue();
 
-      for (VajramFacetDefinition facet : definition.vajram().getFacetDefinitions()) {
-        if (facet instanceof DependencyDef<?> dependencyDef) {
-          VajramID dependencyId = (VajramID) dependencyDef.dataAccessSpec();
+      for (FacetSpec<?, ?> facet : definition.facetSpecs()) {
+        if (facet instanceof DependencySpec<?, ?, ?> dependencySpec) {
+          VajramID dependencyId = dependencySpec.onVajramId();
           if (vajramDefinitions.containsKey(vajramId)
               && vajramDefinitions.containsKey(dependencyId)) {
             Link link =
                 Link.builder()
                     .source(vajramId.vajramId())
                     .target(dependencyId.vajramId())
-                    .name(dependencyDef.name())
-                    .isMandatory(dependencyDef.isMandatory())
-                    .canFanout(dependencyDef.canFanout())
-                    .documentation(dependencyDef.documentation())
+                    .name(facet.name())
+                    .isMandatory(facet.isMandatory())
+                    .canFanout(facet.canFanout())
+                    .documentation(facet.documentation())
+                    .build();
+            links.add(link);
+          }
+        }
+      }
+      // Create links from trait to its conforming dispatch targets
+      if (definition.isTrait()) {
+        TraitDispatchPolicy traitDispatchPolicy = vajramKryonGraph.getTraitDispatchPolicy(vajramId);
+        if (traitDispatchPolicy != null) {
+          ImmutableCollection<VajramID> conformingVajrams = traitDispatchPolicy.dispatchTargets();
+          for (VajramID conformant : conformingVajrams) {
+            Link link =
+                Link.builder()
+                    .source(vajramId.vajramId())
+                    .target(conformant.vajramId())
+                    .name(
+                        traitDispatchPolicy instanceof StaticDispatchPolicy
+                            ? "<static dispatch>"
+                            : "<dynamic dispatch>")
+                    .isMandatory(false)
+                    .canFanout(false)
+                    .documentation("Trait dispatch")
                     .build();
             links.add(link);
           }
@@ -159,12 +190,15 @@ public class StaticCallGraphGenerator {
     return Graph.builder().nodes(nodes).links(links).build();
   }
 
-  private static VajramType getVajramType(Vajram<?> vajram) {
+  private static VajramType getVajramType(VajramDefRoot<Object> vajram) {
     VajramType vajramType;
-    if (vajram instanceof ComputeVajram) {
+    if (vajram instanceof ComputeVajramDef<Object>) {
       vajramType = VajramType.COMPUTE;
-    } else if (vajram instanceof IOVajram) {
+    } else if (vajram instanceof IOVajramDef<Object>) {
       vajramType = VajramType.IO;
+    } else if (vajram instanceof TraitDef<Object>) {
+      // TODO: https://github.com/flipkart-incubator/Krystal/issues/355
+      vajramType = VajramType.COMPUTE;
     } else {
       vajramType = VajramType.UNKNOWN;
     }
@@ -197,11 +231,9 @@ public class StaticCallGraphGenerator {
     // Build an adjacency list from source -> list of target node ids
     Map<String, List<String>> adj = new HashMap<>();
     fullGraph
-        .getLinks()
+        .links()
         .forEach(
-            link -> {
-              adj.computeIfAbsent(link.getSource(), k -> new ArrayList<>()).add(link.getTarget());
-            });
+            link -> adj.computeIfAbsent(link.source(), k -> new ArrayList<>()).add(link.target()));
 
     // Use DFS to find all reachable nodes starting from startNodeId
     Set<String> reachable = new HashSet<>();
@@ -217,12 +249,10 @@ public class StaticCallGraphGenerator {
 
     // Filter nodes and links based on the reachable set
     List<Node> filteredNodes =
-        fullGraph.getNodes().stream().filter(node -> reachable.contains(node.getId())).toList();
+        fullGraph.nodes().stream().filter(node -> reachable.contains(node.id())).toList();
     List<Link> filteredLinks =
-        fullGraph.getLinks().stream()
-            .filter(
-                link ->
-                    reachable.contains(link.getSource()) && reachable.contains(link.getTarget()))
+        fullGraph.links().stream()
+            .filter(link -> reachable.contains(link.source()) && reachable.contains(link.target()))
             .toList();
 
     return Graph.builder().nodes(filteredNodes).links(filteredLinks).build();

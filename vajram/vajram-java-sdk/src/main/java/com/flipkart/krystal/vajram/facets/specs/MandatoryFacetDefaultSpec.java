@@ -24,7 +24,7 @@ public final class MandatoryFacetDefaultSpec<T, CV extends Request> extends Defa
   public MandatoryFacetDefaultSpec(
       int id,
       String name,
-      VajramID vajramID,
+      VajramID ofVajramID,
       DataType<T> type,
       ImmutableSet<FacetType> facetTypes,
       Class<CV> ofVajram,
@@ -36,7 +36,7 @@ public final class MandatoryFacetDefaultSpec<T, CV extends Request> extends Defa
     super(
         id,
         name,
-        vajramID,
+        ofVajramID,
         type,
         facetTypes,
         ofVajram,

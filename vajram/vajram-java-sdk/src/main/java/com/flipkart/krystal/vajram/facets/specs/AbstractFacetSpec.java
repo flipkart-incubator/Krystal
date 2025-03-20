@@ -20,7 +20,6 @@ import lombok.Getter;
 public abstract sealed class AbstractFacetSpec<T, CV extends Request> extends AbstractFacet
     implements FacetSpec<T, CV> permits DefaultFacetSpec, DependencySpec {
 
-  private final VajramID vajramID;
   private final DataType<T> type;
   private final boolean isBatched;
   private final Class<CV> ofVajram;
@@ -29,23 +28,17 @@ public abstract sealed class AbstractFacetSpec<T, CV extends Request> extends Ab
   public AbstractFacetSpec(
       int id,
       String name,
-      VajramID vajramID,
+      VajramID ofVajramID,
       DataType<T> type,
       ImmutableSet<FacetType> facetTypes,
       Class<CV> ofVajram,
       String documentation,
       boolean isBatched,
       ElementTags tags) {
-    super(id, name, facetTypes, documentation);
-    this.vajramID = vajramID;
+    super(id, name, ofVajramID, facetTypes, documentation);
     this.type = type;
     this.ofVajram = ofVajram;
     this.tags = tags;
     this.isBatched = isBatched;
-  }
-
-  @Override
-  public VajramID vajramID() {
-    return vajramID;
   }
 }

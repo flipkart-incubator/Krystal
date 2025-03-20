@@ -32,7 +32,7 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
   public DependencySpec(
       int id,
       String name,
-      VajramID vajramID,
+      VajramID ofVajramID,
       DataType<T> dataType,
       Class<CV> ofVajram,
       Class<DV> onVajram,
@@ -43,7 +43,7 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
     super(
         id,
         name,
-        vajramID,
+        ofVajramID,
         dataType,
         ImmutableSet.of(DEPENDENCY),
         ofVajram,

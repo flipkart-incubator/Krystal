@@ -12,6 +12,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.Facet;
+import com.flipkart.krystal.facets.InputMirror;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.tags.ElementTags;
 import com.flipkart.krystal.vajram.TraitDef;
@@ -44,6 +45,7 @@ public final class VajramDefinition {
   private final ImmutableSet<FacetSpec> outputLogicSources;
 
   private final ImmutableSet<FacetSpec> facetSpecs;
+  private final ImmutableSet<InputMirror> inputMirrors;
   private final ImmutableMap<String, FacetSpec> facetsByName;
   private final ImmutableMap<Integer, FacetSpec> facetsById;
 
@@ -60,6 +62,7 @@ public final class VajramDefinition {
                 .map(facetDefinition -> (FacetSpec) facetDefinition)
                 .collect(toImmutableSet())
             : ImmutableSet.of();
+    this.inputMirrors = ImmutableSet.copyOf(vajramDefRoot.newRequestBuilder()._facets());
     this.facetsByName =
         facetSpecs.stream().collect(toImmutableMap(Facet::name, Function.identity()));
     this.facetsById = facetSpecs.stream().collect(toImmutableMap(Facet::id, Function.identity()));

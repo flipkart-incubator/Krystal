@@ -13,7 +13,6 @@ import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.commands.ClientSideCommand;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardSend;
-import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorationInput;
 import com.flipkart.krystal.krystex.dependencydecoration.VajramInvocation;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
@@ -205,8 +204,8 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
     };
   }
 
-  private static <R extends KryonResponse>
-      @Nullable ClientSideCommand<R> transformCommandForDispatch(
+  private static <R extends KryonResponse> @Nullable
+      ClientSideCommand<R> transformCommandForDispatch(
           ClientSideCommand<R> kryonCommand, VajramID boundVajram) {
     ClientSideCommand<R> commandToDispatch = null;
     if (kryonCommand instanceof ForwardSend forwardSend) {

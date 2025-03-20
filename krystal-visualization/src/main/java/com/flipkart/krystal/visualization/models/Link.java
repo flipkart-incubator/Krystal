@@ -1,15 +1,16 @@
 package com.flipkart.krystal.visualization.models;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Value;
 
 @Value
 @Builder
 public class Link {
-  private final String source;
-  private final String target;
-  private final String name;
-  private final boolean isMandatory;
-  private final boolean canFanout;
-  private final String documentation;
+  @JsonProperty private final String source;
+  @JsonProperty private final String target;
+  @JsonProperty private final String name;
+  @JsonProperty private final boolean isMandatory;
+  @JsonProperty private final boolean canFanout;
+  @JsonProperty private final String documentation;
 }
