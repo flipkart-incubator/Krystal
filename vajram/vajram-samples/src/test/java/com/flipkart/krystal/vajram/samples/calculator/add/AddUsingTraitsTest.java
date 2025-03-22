@@ -192,7 +192,7 @@ class AddUsingTraitsTest {
             .numbers3(numbers3)
             ._build(),
         KryonExecutionConfig.builder()
-            .disabledDependantChains(getDisabledDependantChains(graph))
+            .disabledDependentChains(getDisabledDependantChains(graph))
             .executionId(REQUEST_ID)
             .build());
   }

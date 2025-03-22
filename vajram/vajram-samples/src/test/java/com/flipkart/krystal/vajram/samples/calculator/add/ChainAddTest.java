@@ -121,7 +121,7 @@ class ChainAddTest {
               graph.getVajramIdByVajramDefType(ChainAdd.class),
               ChainAdd_ImmutReqPojo._builder().numbers(List.of())._build(),
               KryonExecutionConfig.builder()
-                  .disabledDependantChains(getDisabledDependantChains(graph))
+                  .disabledDependentChains(getDisabledDependantChains(graph))
                   .build());
     }
     assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(0);
@@ -281,7 +281,7 @@ class ChainAddTest {
         KryonExecutionConfig.builder()
             .executionId(String.valueOf(multiplier))
             // Tests whether execution level disabled dependant chains is working
-            .disabledDependantChains(getDisabledDependantChains(graph))
+            .disabledDependentChains(getDisabledDependantChains(graph))
             .build());
   }
 

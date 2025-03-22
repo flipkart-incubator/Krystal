@@ -9,7 +9,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings("NonBooleanMethodNameMayNotStartWithQuestion")
 public sealed interface InputValueMatcher
     permits AnythingMatcher, EnumMatcher, StringMatcher, TypeMatcher {
-  abstract boolean matches(@Nullable Object inputValue);
+  boolean matches(@Nullable Object inputValue);
 
   static InputValueMatcher isInstanceOf(Class<?> type) {
     return new TypeMatcher(type);

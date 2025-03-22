@@ -261,8 +261,6 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
    * before this step, this method will throw an exception.
    *
    * @param vajramId The id of the vajram to execute.
-   * @return {@link VajramID} of the {@link VajramKryonDefinition} corresponding to this given
-   *     vajramId
    */
   void loadKryonSubGraphIfNeeded(VajramID vajramId) {
     if (vajramExecutables.contains(vajramId)) {

@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajramexecutor.krystex.traits;
 
 import static com.flipkart.krystal.traits.matchers.InputValueMatcher.isAnyValue;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 import com.flipkart.krystal.core.VajramID;
@@ -13,10 +13,10 @@ import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.commands.ClientSideCommand;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardSend;
+import com.flipkart.krystal.krystex.commands.VoidResponse;
 import com.flipkart.krystal.krystex.dependencydecoration.VajramInvocation;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
-import com.flipkart.krystal.krystex.commands.VoidResponse;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.request.InvocationId;
 import com.flipkart.krystal.traits.PredicateDynamicDispatchPolicy;
@@ -54,6 +54,7 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
   }
 
   @Override
+  @SuppressWarnings("FutureReturnValueIgnored")
   public <R extends KryonCommandResponse> VajramInvocation<R> decorateDependency(
       VajramInvocation<R> invocationToDecorate) {
     return kryonCommand -> {
@@ -86,13 +87,15 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
                 .collect(toSet());
         ImmutableList<DispatchCase> dispatchCases = dynamicPolicy.dispatchCases();
         if (kryonCommand instanceof ForwardSend forwardSend) {
-          ImmutableMap<InvocationId, ? extends Request<?>> executabledRequests =
+          ImmutableMap<InvocationId, ? extends Request<?>> originalExecutableRequests =
               forwardSend.executableRequests();
+          ImmutableMap<InvocationId, String> originalSkippedInvocations =
+              forwardSend.skippedInvocations();
           Map<VajramID, Map<InvocationId, Request<?>>> dispatchRequests = new LinkedHashMap<>();
           Map<VajramID, CompletableFuture<BatchResponse>> dispatchResponses = new LinkedHashMap<>();
           Set<InvocationId> orphanedRequests = new LinkedHashSet<>();
           for (Entry<InvocationId, ? extends Request<?>> requestEntry :
-              executabledRequests.entrySet()) {
+              originalExecutableRequests.entrySet()) {
             InvocationId invocationId = requestEntry.getKey();
             Request<?> originalRequest = requestEntry.getValue();
             boolean dispatchTargetNotFound = true;
@@ -121,42 +124,59 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
             }
           }
           ImmutableList<VajramID> dispatchTargets = dynamicPolicy.dispatchTargets();
+          ImmutableMap<InvocationId, String> requestsToSkip =
+              ImmutableMap.<InvocationId, String>builder()
+                  .putAll(originalSkippedInvocations)
+                  .putAll(
+                      orphanedRequests.stream()
+                          .collect(
+                              toMap(
+                                  identity(),
+                                  _r ->
+                                      "The request did not match any of the configured dynamic dispatch targets of trait: "
+                                          + traitId)))
+                  .build();
           for (VajramID dispatchTarget : dispatchTargets) {
             Map<InvocationId, Request<?>> requestsForTarget =
                 dispatchRequests.getOrDefault(dispatchTarget, Map.of());
             ClientSideCommand<BatchResponse> commandToDispatch;
             if (requestsForTarget.isEmpty()) {
+              Map<InvocationId, String> skipRequests = new LinkedHashMap<>();
+              skipRequests.putAll(
+                  originalExecutableRequests.keySet().stream()
+                      .collect(
+                          toMap(
+                              identity(),
+                              _r ->
+                                  "None of the requests to trait "
+                                      + traitId
+                                      + " matched "
+                                      + dispatchTarget
+                                      + " via dynamic predicate dispatch")));
+              skipRequests.putAll(requestsToSkip);
+
               commandToDispatch =
                   new ForwardSend(
                       dispatchTarget,
                       ImmutableMap.of(),
                       forwardSend.dependentChain(),
-                      executabledRequests.keySet().stream()
-                          .collect(
-                              toImmutableMap(
-                                  identity(),
-                                  _r ->
-                                      "None of the requests to trait "
-                                          + traitId
-                                          + " matched "
-                                          + dispatchTarget
-                                          + " via dynamic predicate dispatch")));
+                      ImmutableMap.copyOf(skipRequests));
             } else {
               commandToDispatch =
                   new ForwardSend(
                       dispatchTarget,
                       ImmutableMap.copyOf(requestsForTarget),
                       forwardSend.dependentChain(),
-                      ImmutableMap.of());
+                      requestsToSkip);
             }
-            dispatchResponses.put(
-                dispatchTarget,
+            @SuppressWarnings("unchecked")
+            CompletableFuture<BatchResponse> depResponse =
                 (CompletableFuture<BatchResponse>)
-                    invocationToDecorate.invokeDependency(
-                        (ClientSideCommand<R>) commandToDispatch));
+                    invocationToDecorate.invokeDependency((ClientSideCommand<R>) commandToDispatch);
+            dispatchResponses.put(dispatchTarget, depResponse);
           }
           CompletableFuture<BatchResponse> mergedResponse = new CompletableFuture<>();
-          allOf(dispatchResponses.values().stream().toArray(CompletableFuture[]::new))
+          allOf(dispatchResponses.values().toArray(CompletableFuture[]::new))
               .whenComplete(
                   (unused, throwable) -> {
                     Map<InvocationId, Errable<Object>> mergedResults = new LinkedHashMap<>();
@@ -182,19 +202,25 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
                     }
                     mergedResponse.complete(new BatchResponse(ImmutableMap.copyOf(mergedResults)));
                   });
-          return (CompletableFuture<R>) mergedResponse;
+          @SuppressWarnings("unchecked")
+          CompletableFuture<R> castMergedResponse = (CompletableFuture<R>) mergedResponse;
+          return castMergedResponse;
         } else if (kryonCommand instanceof Flush flush) {
           List<CompletableFuture<VoidResponse>> flushResponses = new ArrayList<>();
           for (VajramID dispatchTarget : dynamicPolicy.dispatchTargets()) {
+            @SuppressWarnings("unchecked")
             CompletableFuture<VoidResponse> flushResponse =
                 (CompletableFuture<VoidResponse>)
                     invocationToDecorate.invokeDependency(
                         (ClientSideCommand<R>) new Flush(dispatchTarget, flush.dependentChain()));
             flushResponses.add(flushResponse);
           }
-          return (CompletableFuture<R>)
-              allOf(flushResponses.toArray(CompletableFuture[]::new))
-                  .handle((unused, throwable) -> VoidResponse.getInstance());
+          @SuppressWarnings("unchecked")
+          CompletableFuture<R> flushResponse =
+              (CompletableFuture<R>)
+                  allOf(flushResponses.toArray(CompletableFuture[]::new))
+                      .handle((unused, throwable) -> VoidResponse.getInstance());
+          return flushResponse;
         } else {
           throw new IllegalStateException("Unknown command type: " + kryonCommand);
         }
@@ -204,8 +230,9 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
     };
   }
 
-  private static <R extends KryonCommandResponse>
-      @Nullable ClientSideCommand<R> transformCommandForDispatch(
+  @SuppressWarnings("unchecked")
+  private static <R extends KryonCommandResponse> @Nullable
+      ClientSideCommand<R> transformCommandForDispatch(
           ClientSideCommand<R> kryonCommand, VajramID boundVajram) {
     ClientSideCommand<R> commandToDispatch = null;
     if (kryonCommand instanceof ForwardSend forwardSend) {

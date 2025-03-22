@@ -5,7 +5,6 @@ import static com.flipkart.krystal.data.Errable.nil;
 import static com.flipkart.krystal.data.Errable.withError;
 import static com.flipkart.krystal.facets.resolution.ResolverCommand.executeWithRequests;
 import static com.flipkart.krystal.facets.resolution.ResolverCommand.skip;
-import com.flipkart.krystal.krystex.commands.VoidResponse;
 import static com.flipkart.krystal.krystex.kryon.KryonUtils.enqueueOrExecuteCommand;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -44,6 +43,7 @@ import com.flipkart.krystal.krystex.commands.ForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardSend;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.commands.MultiRequestCommand;
+import com.flipkart.krystal.krystex.commands.VoidResponse;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.dependencydecoration.VajramInvocation;
@@ -540,7 +540,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
       VajramInvocation<R> invocationToDecorate) {
     for (DependencyDecorator dependencyDecorator :
         getSortedDependencyDecorators(depVajramID, dependentChain)) {
-      VajramInvocation previousDecoratedInvocation = invocationToDecorate;
+      VajramInvocation<R> previousDecoratedInvocation = invocationToDecorate;
       invocationToDecorate = dependencyDecorator.decorateDependency(previousDecoratedInvocation);
     }
     return invocationToDecorate;

@@ -7,7 +7,7 @@ import java.util.function.Supplier;
 public final class KryonUtils {
 
   static CompletableFuture<?> enqueueOrExecuteCommand(
-      Supplier<KryonCommand> commandGenerator, KryonExecutor kryonExecutor) {
+      Supplier<KryonCommand<?>> commandGenerator, KryonExecutor kryonExecutor) {
     if (kryonExecutor.commandQueue().isCurrentThreadTheSingleThread()) {
       return kryonExecutor.executeCommand(commandGenerator.get());
     } else {

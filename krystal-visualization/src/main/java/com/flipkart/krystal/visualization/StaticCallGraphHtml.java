@@ -85,7 +85,7 @@ public class StaticCallGraphHtml {
         String filePath = entry.getValue();
 
         String jsContent = loadResourceContent(filePath);
-        jsContent = processJsContent(jsContent, placeholder);
+        jsContent = processJsContent(jsContent);
 
         template = template.replace(placeholder, jsContent);
       }
@@ -101,10 +101,9 @@ public class StaticCallGraphHtml {
    * adjusts exports.
    *
    * @param jsContent The JavaScript content to process
-   * @param placeholder The placeholder this content is for, used to apply specific processing
    * @return The processed JavaScript content
    */
-  private static String processJsContent(String jsContent, String placeholder) {
+  private static String processJsContent(String jsContent) {
     // Remove ES module imports since they're now handled in the template
     String processed =
         JS_FILE_IMPORT

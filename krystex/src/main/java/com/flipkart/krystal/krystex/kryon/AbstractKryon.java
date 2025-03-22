@@ -18,7 +18,7 @@ import java.util.TreeSet;
 import java.util.function.Function;
 
 abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonCommandResponse>
-    implements Kryon<C, R> permits FlushableKryon, StreamingKryon {
+    implements Kryon<C, R> permits FlushableKryon {
 
   protected final VajramKryonDefinition kryonDefinition;
   protected final VajramID vajramID;

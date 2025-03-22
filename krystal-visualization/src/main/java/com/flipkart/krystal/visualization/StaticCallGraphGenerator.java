@@ -11,7 +11,6 @@ import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.facets.Mandatory;
-import com.flipkart.krystal.vajram.facets.Mandatory.IfNotSet;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;

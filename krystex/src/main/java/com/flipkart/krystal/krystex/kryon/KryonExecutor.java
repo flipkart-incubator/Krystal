@@ -2,7 +2,6 @@ package com.flipkart.krystal.krystex.kryon;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.concurrent.Futures.propagateCancellation;
-import com.flipkart.krystal.krystex.commands.VoidResponse;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -28,6 +27,7 @@ import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardSend;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
+import com.flipkart.krystal.krystex.commands.VoidResponse;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
@@ -221,9 +221,7 @@ public final class KryonExecutor implements KrystalExecutor {
     return ImmutableMap.copyOf(decorators);
   }
 
-  public void subscribe(VajramID subscriber, Dependency dep) {
-
-  }
+  public void subscribe(VajramID subscriber, Dependency dep) {}
 
   private ImmutableMap<String, DependencyDecorator> getDependencyDecorators(
       DependencyExecutionContext dependencyExecutionContext) {
@@ -446,7 +444,8 @@ public final class KryonExecutor implements KrystalExecutor {
         Kryon<KryonCommand, R> decoratedKryon =
             (Kryon<KryonCommand, R>)
                 kryonDecorator.decorateKryon(
-                    new KryonDecorationInput((Kryon<KryonCommand, KryonCommandResponse>) kryon, this));
+                    new KryonDecorationInput(
+                        (Kryon<KryonCommand, KryonCommandResponse>) kryon, this));
         kryon = decoratedKryon;
       }
       if (kryonCommand instanceof Flush flush) {
