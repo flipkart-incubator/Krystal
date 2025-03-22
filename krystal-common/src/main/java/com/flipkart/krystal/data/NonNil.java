@@ -18,7 +18,7 @@ public final class NonNil<T> implements Success<T> {
 
   private @MonotonicNonNull CompletableFuture<@Nullable T> c;
 
-  @SuppressWarnings("optional.field")
+  @SuppressWarnings({"optional.field", "OptionalUsedAsFieldOrParameterType"})
   private Optional<@NonNull T> o = Optional.empty();
 
   public NonNil(@NonNull T value) {
@@ -33,5 +33,10 @@ public final class NonNil<T> implements Success<T> {
   @Override
   public Optional<@NonNull T> valueOpt() {
     return o.isPresent() ? o : (o = Optional.of(value));
+  }
+
+  @Override
+  public @NonNull T valueOrThrow() {
+    return value;
   }
 }
