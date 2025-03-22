@@ -19,7 +19,7 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.krystex.kryon.DependantChain;
+import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
@@ -341,7 +341,7 @@ class SplitAddTest {
     return builder;
   }
 
-  private static ImmutableSet<DependantChain> disabledDepChains(VajramKryonGraph graph) {
+  private static ImmutableSet<DependentChain> disabledDepChains(VajramKryonGraph graph) {
     String splitAdderId = graph.getVajramIdByVajramDefType(SplitAdd.class).vajramId();
     return ImmutableSet.of(
         graph.computeDependantChain(

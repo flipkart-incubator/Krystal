@@ -17,8 +17,8 @@ import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.function.Function;
 
-abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonResponse>
-    implements Kryon<C, R> permits BatchKryon {
+abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonCommandResponse>
+    implements Kryon<C, R> permits FlushableKryon, StreamingKryon {
 
   protected final VajramKryonDefinition kryonDefinition;
   protected final VajramID vajramID;
@@ -53,12 +53,12 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
   }
 
   protected NavigableSet<OutputLogicDecorator> getSortedOutputLogicDecorators(
-      DependantChain dependantChain) {
+      DependentChain dependentChain) {
     OutputLogicDefinition<Object> outputLogicDefinition =
         kryonDefinition.getOutputLogicDefinition();
     Map<String, OutputLogicDecorator> decorators =
         new LinkedHashMap<>(
-            outputLogicDefinition.getSessionScopedLogicDecorators(kryonDefinition, dependantChain));
+            outputLogicDefinition.getSessionScopedLogicDecorators(kryonDefinition, dependentChain));
     // If the same decoratorType is configured for session and request scope, request scope
     // overrides session scope.
     decorators.putAll(
@@ -66,7 +66,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
             new LogicExecutionContext(
                 vajramID,
                 outputLogicDefinition.tags(),
-                dependantChain,
+                dependentChain,
                 kryonDefinition.kryonDefinitionRegistry())));
     TreeSet<OutputLogicDecorator> sortedDecorators =
         new TreeSet<>(
@@ -79,7 +79,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
   }
 
   protected NavigableSet<DependencyDecorator> getSortedDependencyDecorators(
-      VajramID depVajramId, DependantChain dependantChain) {
+      VajramID depVajramId, DependentChain dependentChain) {
     // If the same decoratorType is configured for session and request scope, request scope
     // overrides session scope.
     TreeSet<DependencyDecorator> sortedDecorators =
@@ -88,14 +88,14 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
                 .encounterOrder()
                 // Reverse the ordering so that the ones with the highest index are applied first.
                 .reversed());
-    Dependency dependency = dependantChain.latestDependency();
+    Dependency dependency = dependentChain.latestDependency();
     if (dependency == null) {
       return sortedDecorators;
     }
     sortedDecorators.addAll(
         depDecoratorSuppliers
             .apply(
-                new DependencyExecutionContext(vajramID, dependency, depVajramId, dependantChain))
+                new DependencyExecutionContext(vajramID, dependency, depVajramId, dependentChain))
             .values());
     return sortedDecorators;
   }

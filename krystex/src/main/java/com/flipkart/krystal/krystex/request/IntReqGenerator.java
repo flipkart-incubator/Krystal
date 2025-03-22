@@ -6,12 +6,12 @@ public class IntReqGenerator implements RequestIdGenerator {
   private int nextCounter = 0;
 
   @Override
-  public RequestId newSubRequest(RequestId parent, Supplier<String> suffix) {
-    return new RequestId(nextCounter++);
+  public InvocationId newSubRequest(InvocationId parent, Supplier<String> suffix) {
+    return new InvocationId(nextCounter++);
   }
 
   @Override
-  public RequestId newRequest(Object seed) {
-    return new RequestId(nextCounter++);
+  public InvocationId newRequest(Object seed) {
+    return new InvocationId(nextCounter++);
   }
 }

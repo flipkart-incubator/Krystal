@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.krystex.kryon.DependantChain;
+import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
@@ -197,7 +197,7 @@ class AddUsingTraitsTest {
             .build());
   }
 
-  private static ImmutableSet<DependantChain> getDisabledDependantChains(VajramKryonGraph graph) {
+  private static ImmutableSet<DependentChain> getDisabledDependantChains(VajramKryonGraph graph) {
     String vajramId = graph.getVajramIdByVajramDefType(AddUsingTraits.class).vajramId();
     return ImmutableSet.of(
         graph.computeDependantChain(vajramId, sum2_s, chainSum_s, chainSum_s),

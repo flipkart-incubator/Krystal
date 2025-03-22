@@ -33,7 +33,7 @@ public abstract class Add extends IOVajramDef<Integer> {
     /** The first number to add */
     @Mandatory @Batched @Input int numberOne;
 
-    /** The second number to add. Optional - defaults to zero */
+    /** The second number to add */
     @Mandatory(ifNotSet = DEFAULT_TO_ZERO)
     @Batched
     @Input
