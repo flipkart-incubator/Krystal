@@ -109,11 +109,10 @@ public class StaticCallGraphGenerator {
                 .name(facet.name())
                 .type(facet.type().javaReflectType().getTypeName())
                 .isMandatory(
-                    facet
+                    !facet
                         .tags()
                         .getAnnotationByType(Mandatory.class)
-                        .map(Mandatory::ifNotSet)
-                        .map(IfNotSet::usePlatformDefault)
+                        .map(mandatory -> mandatory.ifNotSet().usePlatformDefault())
                         .orElse(false))
                 .documentation(facet.documentation())
                 .build());
