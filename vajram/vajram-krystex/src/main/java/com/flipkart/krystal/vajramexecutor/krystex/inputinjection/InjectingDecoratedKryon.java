@@ -16,9 +16,9 @@ import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.Kryon;
-import com.flipkart.krystal.krystex.kryon.KryonResponse;
+import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
-import com.flipkart.krystal.krystex.request.RequestId;
+import com.flipkart.krystal.krystex.request.InvocationId;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.facets.specs.DefaultFacetSpec;
@@ -34,14 +34,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
-class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
+class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandResponse> {
 
-  private final Kryon<KryonCommand, KryonResponse> kryon;
+  private final Kryon<KryonCommand, KryonCommandResponse> kryon;
   private final VajramKryonGraph vajramKryonGraph;
   private final @Nullable VajramInjectionProvider injectionProvider;
 
   InjectingDecoratedKryon(
-      Kryon<KryonCommand, KryonResponse> kryon,
+      Kryon<KryonCommand, KryonCommandResponse> kryon,
       VajramKryonGraph vajramKryonGraph,
       @Nullable VajramInjectionProvider injectionProvider) {
     this.kryon = kryon;
@@ -60,7 +60,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
   }
 
   @Override
-  public CompletableFuture<KryonResponse> executeCommand(KryonCommand kryonCommand) {
+  public CompletableFuture<KryonCommandResponse> executeCommand(KryonCommand kryonCommand) {
     VajramDefinition vajramDefinition =
         vajramKryonGraph.getVajramDefinition(vajramID(kryonCommand.vajramID().value()));
     if (vajramDefinition.metadata().isInputInjectionNeeded()
@@ -72,12 +72,12 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
     return kryon.executeCommand(kryonCommand);
   }
 
-  private CompletableFuture<KryonResponse> injectFacets(
+  private CompletableFuture<KryonCommandResponse> injectFacets(
       ForwardReceive forwardBatch, VajramDefinition vajramDefinition, VajramDef<?> vajramDef) {
-    ImmutableMap<RequestId, ? extends FacetValuesContainer> requestIdToFacets =
+    ImmutableMap<InvocationId, ? extends FacetValuesContainer> requestIdToFacets =
         forwardBatch.executableRequests();
 
-    ImmutableMap.Builder<RequestId, FacetValuesBuilder> newRequests = ImmutableMap.builder();
+    ImmutableMap.Builder<InvocationId, FacetValuesBuilder> newRequests = ImmutableMap.builder();
     Set<FacetSpec<?, ?>> injectableFacets = new LinkedHashSet<>();
     vajramDefinition
         .facetSpecs()
@@ -88,8 +88,8 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
               }
             });
 
-    for (Entry<RequestId, ? extends FacetValuesContainer> entry : requestIdToFacets.entrySet()) {
-      RequestId requestId = entry.getKey();
+    for (Entry<InvocationId, ? extends FacetValuesContainer> entry : requestIdToFacets.entrySet()) {
+      InvocationId invocationId = entry.getKey();
       FacetValuesContainer container = entry.getValue();
       FacetValuesBuilder facetsBuilder;
       if (container instanceof Request request) {
@@ -101,13 +101,13 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
             "Unknown facet container type " + container.getClass());
       }
       newRequests.put(
-          requestId, injectFacetsOfVajram(vajramDefinition, injectableFacets, facetsBuilder));
+          invocationId, injectFacetsOfVajram(vajramDefinition, injectableFacets, facetsBuilder));
     }
     return kryon.executeCommand(
         new ForwardReceive(
             forwardBatch.vajramID(),
             newRequests.build(),
-            forwardBatch.dependantChain(),
+            forwardBatch.dependentChain(),
             forwardBatch.skippedRequests()));
   }
 

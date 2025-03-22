@@ -8,7 +8,6 @@ import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_FACETS_SUFFIX
 import static com.flipkart.krystal.vajram.codegen.Constants.EMPTY_CODE_BLOCK;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_LIST;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACETVALUES_VAR;
-import static com.flipkart.krystal.vajram.codegen.Constants.FACET_DEFINITIONS_VAR;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACET_NAME_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACET_SPEC_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.Constants.GET_INPUT_RESOLVERS;
@@ -63,7 +62,6 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.JavaType;
-import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.facets.resolution.ResolutionTarget;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
@@ -211,14 +209,7 @@ public class VajramCodeGenerator {
   public String codeGenVajramWrapper() {
     initParsedVajramData();
     final TypeSpec.Builder vajramWrprClass =
-        util.classBuilder(getVajramImplClassName(vajramName()))
-            .addField(
-                FieldSpec.builder(
-                        ParameterizedTypeName.get(ImmutableList.class, Facet.class)
-                            .annotated(AnnotationSpec.builder(Nullable.class).build()),
-                        FACET_DEFINITIONS_VAR)
-                    .addModifiers(PRIVATE)
-                    .build());
+        util.classBuilder(getVajramImplClassName(vajramName()));
     List<MethodSpec> methodSpecs = new ArrayList<>();
     // Add superclass
     vajramWrprClass

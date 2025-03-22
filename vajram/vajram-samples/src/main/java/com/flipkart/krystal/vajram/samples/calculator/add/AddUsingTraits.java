@@ -9,9 +9,9 @@ import static com.flipkart.krystal.vajram.samples.calculator.add.AddUsingTraits_
 import static com.flipkart.krystal.vajram.samples.calculator.add.AddUsingTraits_Fac.sum1_s;
 import static com.flipkart.krystal.vajram.samples.calculator.add.AddUsingTraits_Fac.sum2_s;
 import static com.flipkart.krystal.vajram.samples.calculator.add.AddUsingTraits_Fac.sum3_s;
-import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAdderType.CHAIN;
-import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAdderType.SIMPLE;
-import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAdderType.SPLIT;
+import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAddType.CHAIN;
+import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAddType.SIMPLE;
+import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAddType.SPLIT;
 
 import com.flipkart.krystal.annos.ExternalInvocation;
 import com.flipkart.krystal.vajram.ComputeVajramDef;

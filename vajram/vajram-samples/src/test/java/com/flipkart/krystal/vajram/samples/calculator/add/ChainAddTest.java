@@ -18,7 +18,7 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.krystex.kryon.DependantChain;
+import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
@@ -121,7 +121,7 @@ class ChainAddTest {
               graph.getVajramIdByVajramDefType(ChainAdd.class),
               ChainAdd_ImmutReqPojo._builder().numbers(List.of())._build(),
               KryonExecutionConfig.builder()
-                  .disabledDependantChains(getDisabledDependantChains(graph))
+                  .disabledDependentChains(getDisabledDependantChains(graph))
                   .build());
     }
     assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(0);
@@ -281,7 +281,7 @@ class ChainAddTest {
         KryonExecutionConfig.builder()
             .executionId(String.valueOf(multiplier))
             // Tests whether execution level disabled dependant chains is working
-            .disabledDependantChains(getDisabledDependantChains(graph))
+            .disabledDependentChains(getDisabledDependantChains(graph))
             .build());
   }
 
@@ -331,7 +331,7 @@ class ChainAddTest {
     return completedFuture(a + b);
   }
 
-  private static ImmutableSet<DependantChain> getDisabledDependantChains(VajramKryonGraph graph) {
+  private static ImmutableSet<DependentChain> getDisabledDependantChains(VajramKryonGraph graph) {
     return ImmutableSet.of(
         graph.computeDependantChain(
             graph.getVajramIdByVajramDefType(ChainAdd.class).vajramId(),

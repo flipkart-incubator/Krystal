@@ -4,7 +4,7 @@ import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import java.util.concurrent.CompletableFuture;
 
-public interface Kryon<C extends KryonCommand, R extends KryonResponse> {
+public interface Kryon<C extends KryonCommand, R extends KryonCommandResponse> {
 
   void executeCommand(Flush flushCommand);
 

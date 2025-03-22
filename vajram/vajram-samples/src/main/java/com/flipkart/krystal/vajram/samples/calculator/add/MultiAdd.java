@@ -25,7 +25,7 @@ public abstract class MultiAdd implements TraitDef<Integer> {
     @Mandatory @Input List<Integer> numbers;
   }
 
-  public enum MultiAdderType {
+  public enum MultiAddType {
     SIMPLE,
     CHAIN,
     SPLIT,
@@ -36,10 +36,10 @@ public abstract class MultiAdd implements TraitDef<Integer> {
   @Retention(RetentionPolicy.RUNTIME)
   @Target(ElementType.FIELD)
   public @interface MultiAddQualifier {
-    MultiAdderType value();
+    MultiAddType value();
 
-    public final class Creator {
-      public static @AutoAnnotation MultiAddQualifier create(MultiAdderType value) {
+    final class Creator {
+      public static @AutoAnnotation MultiAddQualifier create(MultiAddType value) {
         return new AutoAnnotation_MultiAdd_MultiAddQualifier_Creator_create(value);
       }
 

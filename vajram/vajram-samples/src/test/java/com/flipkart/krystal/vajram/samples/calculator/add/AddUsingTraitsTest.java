@@ -4,9 +4,9 @@ import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
 import static com.flipkart.krystal.vajram.samples.calculator.add.AddUsingTraits_Fac.sum2_s;
 import static com.flipkart.krystal.vajram.samples.calculator.add.AddUsingTraits_Fac.sum3_s;
 import static com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Fac.chainSum_s;
-import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAdderType.CHAIN;
-import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAdderType.SIMPLE;
-import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAdderType.SPLIT;
+import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAddType.CHAIN;
+import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAddType.SIMPLE;
+import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAddType.SPLIT;
 import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.splitSum1_s;
 import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.splitSum2_s;
 import static java.util.Arrays.asList;
@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.krystex.kryon.DependantChain;
+import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
@@ -192,12 +192,12 @@ class AddUsingTraitsTest {
             .numbers3(numbers3)
             ._build(),
         KryonExecutionConfig.builder()
-            .disabledDependantChains(getDisabledDependantChains(graph))
+            .disabledDependentChains(getDisabledDependantChains(graph))
             .executionId(REQUEST_ID)
             .build());
   }
 
-  private static ImmutableSet<DependantChain> getDisabledDependantChains(VajramKryonGraph graph) {
+  private static ImmutableSet<DependentChain> getDisabledDependantChains(VajramKryonGraph graph) {
     String vajramId = graph.getVajramIdByVajramDefType(AddUsingTraits.class).vajramId();
     return ImmutableSet.of(
         graph.computeDependantChain(vajramId, sum2_s, chainSum_s, chainSum_s),

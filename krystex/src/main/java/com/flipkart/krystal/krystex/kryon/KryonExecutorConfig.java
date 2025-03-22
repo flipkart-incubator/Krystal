@@ -25,7 +25,7 @@ import lombok.Singular;
  *
  * @param logicDecorationOrdering The ordering of logic decorators to be applied
  * @param requestScopedLogicDecoratorConfigs The request scoped logic decorators to be applied
- * @param disabledDependantChains Invocation originating for these dependant chains will be blocked.
+ * @param disabledDependentChains Invocation originating for these dependant chains will be blocked.
  *     Useful for avoid graph size explosion in case of recursive dependencies
  * @param kryonExecStrategy Currently on BATCH is supported. More might be added in future
  * @param graphTraversalStrategy DEPTH is more performant and memory efficient. BREADTH is sometimes
@@ -44,7 +44,7 @@ import lombok.Singular;
 public record KryonExecutorConfig(
     LogicDecorationOrdering logicDecorationOrdering,
     ImmutableMap<String, List<OutputLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs,
-    ImmutableSet<DependantChain> disabledDependantChains,
+    ImmutableSet<DependentChain> disabledDependentChains,
     KryonExecStrategy kryonExecStrategy,
     GraphTraversalStrategy graphTraversalStrategy,
     @Singular ImmutableMap<String, KryonDecoratorConfig> kryonDecoratorConfigs,
@@ -70,8 +70,8 @@ public record KryonExecutorConfig(
     if (dependencyDecoratorConfigs == null) {
       dependencyDecoratorConfigs = ImmutableMap.of();
     }
-    if (disabledDependantChains == null) {
-      disabledDependantChains = ImmutableSet.of();
+    if (disabledDependentChains == null) {
+      disabledDependentChains = ImmutableSet.of();
     }
     if (logicDecorationOrdering == null) {
       logicDecorationOrdering = LogicDecorationOrdering.none();

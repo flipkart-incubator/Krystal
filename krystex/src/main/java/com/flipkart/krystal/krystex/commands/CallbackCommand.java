@@ -6,8 +6,8 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
-import com.flipkart.krystal.krystex.kryon.DependantChain;
-import com.flipkart.krystal.krystex.request.RequestId;
+import com.flipkart.krystal.krystex.kryon.DependentChain;
+import com.flipkart.krystal.krystex.request.InvocationId;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
@@ -15,12 +15,12 @@ import java.util.Set;
 public record CallbackCommand(
     VajramID vajramID,
     Dependency dependency,
-    ImmutableMap<RequestId, DepResponse<Request<Object>, Object>> resultsByRequest,
-    DependantChain dependantChain)
+    ImmutableMap<InvocationId, DepResponse<Request<Object>, Object>> resultsByRequest,
+    DependentChain dependentChain)
     implements MultiRequestCommand<BatchResponse> {
 
   @Override
-  public ImmutableSet<RequestId> requestIds() {
+  public ImmutableSet<InvocationId> requestIds() {
     return resultsByRequest().keySet();
   }
 

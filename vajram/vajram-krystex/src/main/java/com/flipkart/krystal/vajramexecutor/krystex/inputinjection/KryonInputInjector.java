@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajramexecutor.krystex.inputinjection;
 
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.Kryon;
-import com.flipkart.krystal.krystex.kryon.KryonResponse;
+import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationInput;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
@@ -32,7 +32,8 @@ public final class KryonInputInjector implements KryonDecorator {
   }
 
   @Override
-  public Kryon<KryonCommand, KryonResponse> decorateKryon(KryonDecorationInput decorationInput) {
+  public Kryon<KryonCommand, KryonCommandResponse> decorateKryon(
+      KryonDecorationInput decorationInput) {
     return new InjectingDecoratedKryon(decorationInput.kryon(), vajramKryonGraph, inputInjector);
   }
 }

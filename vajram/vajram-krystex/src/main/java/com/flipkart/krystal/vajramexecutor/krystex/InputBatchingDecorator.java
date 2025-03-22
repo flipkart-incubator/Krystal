@@ -13,7 +13,7 @@ import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
-import com.flipkart.krystal.krystex.kryon.DependantChain;
+import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.logicdecoration.FlushCommand;
 import com.flipkart.krystal.krystex.logicdecoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.logicdecoration.LogicDecoratorCommand;
@@ -40,16 +40,16 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
 
   private final String instanceId;
   private final InputBatcher inputBatcher;
-  private final Predicate<DependantChain> isApplicableToDependantChain;
+  private final Predicate<DependentChain> isApplicableToDependantChain;
   private final Map<ImmutableFacetValues, CompletableFuture<@Nullable Object>> futureCache =
       new LinkedHashMap<>();
-  private ImmutableSet<DependantChain> activeDependantChains = ImmutableSet.of();
-  private final Set<DependantChain> flushedDependantChains = new LinkedHashSet<>();
+  private ImmutableSet<DependentChain> activeDependentChains = ImmutableSet.of();
+  private final Set<DependentChain> flushedDependentChains = new LinkedHashSet<>();
 
   public InputBatchingDecorator(
       String instanceId,
       InputBatcher inputBatcher,
-      Predicate<DependantChain> isApplicableToDependantChain) {
+      Predicate<DependentChain> isApplicableToDependantChain) {
     this.instanceId = instanceId;
     this.inputBatcher = inputBatcher;
     this.isApplicableToDependantChain = isApplicableToDependantChain;
@@ -103,16 +103,16 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
   @Override
   public void executeCommand(LogicDecoratorCommand logicDecoratorCommand) {
     if (logicDecoratorCommand instanceof InitiateActiveDepChains initiateActiveDepChains) {
-      LinkedHashSet<DependantChain> allActiveDepChains =
+      LinkedHashSet<DependentChain> allActiveDepChains =
           new LinkedHashSet<>(initiateActiveDepChains.dependantsChains());
       // Retain only the ones which are applicable for this input batching decorator
       allActiveDepChains.removeIf(isApplicableToDependantChain.negate());
-      this.activeDependantChains = ImmutableSet.copyOf(allActiveDepChains);
+      this.activeDependentChains = ImmutableSet.copyOf(allActiveDepChains);
     } else if (logicDecoratorCommand instanceof FlushCommand flushCommand) {
-      flushedDependantChains.add(flushCommand.dependantsChain());
-      if (flushedDependantChains.containsAll(activeDependantChains)) {
+      flushedDependentChains.add(flushCommand.dependantsChain());
+      if (flushedDependentChains.containsAll(activeDependentChains)) {
         inputBatcher.batch();
-        flushedDependantChains.clear();
+        flushedDependentChains.clear();
       }
     }
   }

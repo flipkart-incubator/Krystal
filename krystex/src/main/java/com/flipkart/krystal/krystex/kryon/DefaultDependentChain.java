@@ -5,17 +5,17 @@ import com.flipkart.krystal.facets.Dependency;
 import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public final class DefaultDependantChain extends AbstractDependantChain {
+public final class DefaultDependentChain extends AbstractDependentChain {
   private final VajramID vajramID;
   @Getter private final Dependency latestDependency;
-  @Getter private final DependantChain incomingDependantChain;
+  @Getter private final DependentChain incomingDependentChain;
   private int _hashCodeCache;
 
-  DefaultDependantChain(
-      VajramID vajramID, Dependency latestDependency, DependantChain incomingDependantChain) {
+  DefaultDependentChain(
+      VajramID vajramID, Dependency latestDependency, DependentChain incomingDependentChain) {
     this.vajramID = vajramID;
     this.latestDependency = latestDependency;
-    this.incomingDependantChain = incomingDependantChain;
+    this.incomingDependentChain = incomingDependentChain;
   }
 
   public VajramID kryonId() {
@@ -37,6 +37,6 @@ public final class DefaultDependantChain extends AbstractDependantChain {
 
   @Override
   public String toString() {
-    return "%s:%s[%s]".formatted(incomingDependantChain, vajramID.value(), latestDependency());
+    return "%s:%s[%s]".formatted(incomingDependentChain, vajramID.value(), latestDependency());
   }
 }
