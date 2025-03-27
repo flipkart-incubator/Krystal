@@ -24,7 +24,8 @@ public final class SimpleOne2OneInputResolver<S, T, CV extends Request<?>, DV ex
 
   @Override
   public ResolverCommand resolve(
-      ImmutableList<? extends ImmutableRequest.Builder<?>> depRequests, FacetValues facetValues) {
+      ImmutableList<? extends ImmutableRequest.Builder<?>> _depRequests,
+      FacetValues _rawFacetValues) {
     {
       try {
         //noinspection unchecked,rawtypes
@@ -33,16 +34,16 @@ public final class SimpleOne2OneInputResolver<S, T, CV extends Request<?>, DV ex
                 getResolverSpec().sources(),
                 getResolverSpec().transformer(),
                 getResolverSpec().skipConditions(),
-                facetValues);
+                _rawFacetValues);
         if (depCommand instanceof One2OneCommand<T> one2OneCommand) {
           ResolverCommand command;
           if (depCommand.shouldSkip()) {
             command = skip(one2OneCommand.doc(), one2OneCommand.skipCause());
           } else {
-            for (ImmutableRequest.Builder depRequest : depRequests) {
+            for (ImmutableRequest.Builder depRequest : _depRequests) {
               getResolverSpec().targetInput().setToRequest(depRequest, one2OneCommand.input());
             }
-            command = executeWithRequests(depRequests);
+            command = executeWithRequests(_depRequests);
           }
           return command;
         } else {

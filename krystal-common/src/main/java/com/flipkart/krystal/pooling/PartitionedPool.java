@@ -70,7 +70,7 @@ class PartitionedPool<T> implements Iterable<PooledObject<T>> {
   }
 
   /**
-   * Returrns he total number of objects in the pool including both available and unavailable
+   * Returns the total number of objects in the pool including both available and unavailable
    * objects
    */
   public int totalCount() {
@@ -199,7 +199,7 @@ class PartitionedPool<T> implements Iterable<PooledObject<T>> {
   }
 
   @Override
-  public UnmodifiableIterator<PooledObject<T>> iterator() {
+  public @NonNull UnmodifiableIterator<PooledObject<T>> iterator() {
     return ImmutableList.copyOf(partitionedList).iterator();
   }
 

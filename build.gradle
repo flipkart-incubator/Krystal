@@ -169,7 +169,7 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
     }
 
     compileJava {
-        options.compilerArgs += '-Xlint:unchecked'
+        options.compilerArgs += ['-Xlint:unchecked', '-parameters']
         options.deprecation = true
     }
 

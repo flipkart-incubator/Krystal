@@ -2,6 +2,7 @@ package com.flipkart.krystal.data;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import lombok.EqualsAndHashCode;
@@ -25,6 +26,11 @@ final class Nil<T> implements Success<T> {
   @Override
   public Optional<@NonNull T> valueOpt() {
     return Optional.empty();
+  }
+
+  @Override
+  public @NonNull T valueOrThrow() {
+    throw new NoSuchElementException("Trying to access value from Nil");
   }
 
   @SuppressWarnings("unchecked")

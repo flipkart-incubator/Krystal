@@ -841,7 +841,15 @@ public class Utils {
                 element.getSimpleName().contentEquals(methodName)
                     && element.getParameters().size() == paramCount)
         .findAny()
-        .orElseThrow();
+        .orElseThrow(
+            () ->
+                new IllegalArgumentException(
+                    "Could not find method '"
+                        + methodName
+                        + "' with param count '"
+                        + paramCount
+                        + "' in class "
+                        + clazz));
   }
 
   FacetJavaType getReturnType(FacetGenModel facet, CodeGenParams codeGenParams) {

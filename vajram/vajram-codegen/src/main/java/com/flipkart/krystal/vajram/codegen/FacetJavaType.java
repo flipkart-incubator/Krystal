@@ -2,8 +2,8 @@ package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.facets.FacetType.INPUT;
 import static com.flipkart.krystal.vajram.codegen.Constants.EMPTY_CODE_BLOCK;
-import static com.flipkart.krystal.vajram.codegen.Constants.FACETVALUES_VAR;
 import static com.flipkart.krystal.vajram.codegen.Constants.FACET_SPEC_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.Constants.FACET_VALUES_VAR;
 import static com.flipkart.krystal.vajram.codegen.Utils.getFacetsInterfaceName;
 
 import com.flipkart.krystal.data.FanoutDepResponses;
@@ -29,7 +29,7 @@ abstract sealed class FacetJavaType {
 
   CodeBlock fieldGetterCode(FacetGenModel facet, CodeGenParams codeGenParams) {
     if (codeGenParams.isFacetsSubset()) {
-      return CodeBlock.of("return this.$L.$L()", FACETVALUES_VAR, facet.name());
+      return CodeBlock.of("return this.$L.$L()", FACET_VALUES_VAR, facet.name());
     }
     final boolean facetInCurrentClass =
         (codeGenParams.isRequest()
@@ -112,12 +112,12 @@ abstract sealed class FacetJavaType {
               return $T.validateMandatoryFacet(this.$L.$L(), $S, $S)
               """,
               FacetValidation.class,
-              FACETVALUES_VAR,
+              FACET_VALUES_VAR,
               facet.name(),
               facet.vajramInfo().vajramId().vajramId(),
               facet.name());
         } else {
-          return CodeBlock.of("return this.$L.$L()", FACETVALUES_VAR, facet.name());
+          return CodeBlock.of("return this.$L.$L()", FACET_VALUES_VAR, facet.name());
         }
       }
       return super.fieldGetterCode(facet, codeGenParams);
@@ -166,7 +166,7 @@ abstract sealed class FacetJavaType {
     CodeBlock fieldGetterCode(FacetGenModel facet, CodeGenParams codeGenParams) {
       if (codeGenParams.isSubsetBatch()) {
         return CodeBlock.of(
-            "return $T.ofNullable(this.$L.$L())", Optional.class, FACETVALUES_VAR, facet.name());
+            "return $T.ofNullable(this.$L.$L())", Optional.class, FACET_VALUES_VAR, facet.name());
       }
       return super.fieldGetterCode(facet, codeGenParams);
     }

@@ -5,5 +5,5 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
 
 public non-sealed interface FanoutInputResolver extends InputResolver {
-  ResolverCommand resolve(ImmutableRequest.Builder<?> depRequest, FacetValues facetValues);
+  ResolverCommand resolve(ImmutableRequest.Builder<?> _depRequest, FacetValues _rawFacetValues);
 }
