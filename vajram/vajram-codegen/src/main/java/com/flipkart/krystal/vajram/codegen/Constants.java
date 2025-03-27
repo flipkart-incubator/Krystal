@@ -36,7 +36,7 @@ public final class Constants {
   public static final String COMMON_FACETS_SUFFIX = "_CommonFac";
   public static final String COMMON_IMMUT_FACETS_CLASS_SUFFIX =
       "Common" + IMMUT_FACETS_CLASS_SUFFIX;
-  public static final String FACETVALUES_VAR = "_facetValues";
+  public static final String FACET_VALUES_VAR = "_facetValues";
   public static final String RESOLVER_REQUESTS = "_resolverRequests";
   public static final String RESOLVER_REQUEST = "_resolverRequest";
   public static final String RESOLVER_RESULTS = "_resolverResults";

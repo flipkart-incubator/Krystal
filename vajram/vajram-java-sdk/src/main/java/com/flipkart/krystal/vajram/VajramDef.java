@@ -63,7 +63,7 @@ public sealed interface VajramDef<T> extends VajramDefRoot<T>
   }
 
   ImmutableMap<FacetValues, CompletableFuture<@Nullable T>> execute(
-      ImmutableList<FacetValues> inputs);
+      ImmutableList<FacetValues> _facetValuesList);
 
   FacetValuesBuilder facetsFromRequest(Request<?> request);
 }

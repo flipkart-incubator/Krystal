@@ -1,18 +1,6 @@
 <component name="InspectionProjectProfileManager">
   <profile version="1.0">
     <option name="myName" value="Project Default" />
-    <option name="myName" value="Project Default" />
-    <option name="scopesOrder">
-      <list>
-        <option value="Vajrams" />
-        <option value="All Changed Files" />
-        <option value="Open Files" />
-        <option value="Production" />
-        <option value="Project Files" />
-        <option value="Scratches and Consoles" />
-        <option value="Tests" />
-      </list>
-    </option>
     <inspection_tool class="AbsoluteImport" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="ActorMutableStateInspection" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="AnonymousClassComplexity" enabled="true" level="WARNING" enabled_by_default="true">
@@ -509,6 +497,7 @@
           <option value="optional.parameter" />
           <option value="ClassWithTooManyMethods" />
           <option value="OptionalUsedAsFieldOrParameterType" />
+          <option value="Convert2MethodRef" />
         </list>
       </option>
     </inspection_tool>

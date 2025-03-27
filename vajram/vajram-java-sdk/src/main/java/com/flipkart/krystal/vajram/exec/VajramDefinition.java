@@ -54,7 +54,7 @@ public final class VajramDefinition {
 
     this.def = vajramDefRoot;
     this.defType = getVajramDefClass(vajramDefRoot.getClass());
-    this.reqRootType = vajramDefRoot.requestRoot();
+    this.reqRootType = vajramDefRoot.requestRootType();
 
     this.facetSpecs =
         vajramDefRoot instanceof VajramDef<?> v
