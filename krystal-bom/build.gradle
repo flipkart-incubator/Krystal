@@ -10,6 +10,7 @@ dependencies {
         api 'com.flipkart.krystal:krystal-common:' + project.krystal_version
         api 'com.flipkart.krystal:vajram-krystex:' + project.krystal_version
         api 'com.flipkart.krystal:vajram-guice:' + project.krystal_version
+        api 'com.flipkart.krystal:krystal-visualization:' + project.krystal_version
     }
 }
 
