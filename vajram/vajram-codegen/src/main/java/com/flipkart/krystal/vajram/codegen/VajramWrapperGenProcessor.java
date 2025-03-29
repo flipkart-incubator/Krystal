@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.codegen;
 
-import static com.flipkart.krystal.vajram.codegen.CodegenPhase.IMPLS;
+import static com.flipkart.krystal.vajram.codegen.CodegenPhase.WRAPPERS;
 import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY;
 import static com.flipkart.krystal.vajram.codegen.Utils.getVajramImplClassName;
 import static java.lang.System.lineSeparator;
@@ -36,7 +36,7 @@ public class VajramWrapperGenProcessor extends AbstractProcessor {
     Utils util = new Utils(processingEnv, this.getClass());
     String phaseString = processingEnv.getOptions().get(COGENGEN_PHASE_KEY);
     try {
-      if (phaseString == null || !IMPLS.equals(CodegenPhase.valueOf(phaseString))) {
+      if (phaseString == null || !WRAPPERS.equals(CodegenPhase.valueOf(phaseString))) {
         util.note(
             "Skipping VajramWrapperGenProcessor since codegen phase is %s"
                 .formatted(String.valueOf(phaseString)));

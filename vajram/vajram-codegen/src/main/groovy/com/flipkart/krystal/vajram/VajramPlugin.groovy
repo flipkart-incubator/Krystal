@@ -5,7 +5,7 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.compile.JavaCompile
 
 import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY
-import static com.flipkart.krystal.vajram.codegen.CodegenPhase.IMPLS
+import static com.flipkart.krystal.vajram.codegen.CodegenPhase.WRAPPERS
 import static com.flipkart.krystal.vajram.codegen.CodegenPhase.MODELS
 
 class VajramPlugin implements Plugin<Project> {
@@ -41,6 +41,7 @@ class VajramPlugin implements Plugin<Project> {
                     srcDirs = [testSrcDir, testModelsGenDir, testImplsGenDir]
                 }
             }
+
         }
 
         project.tasks.register('codeGenVajramModels', JavaCompile) {
@@ -66,8 +67,8 @@ class VajramPlugin implements Plugin<Project> {
 
             options.compilerArgs += [
 
-                    // So that vajram impls are generated during compilation
-                    '-A' + COGENGEN_PHASE_KEY + '=' + IMPLS,
+                    // So that vajram wrappers are generated during compilation
+                    '-A' + COGENGEN_PHASE_KEY + '=' + WRAPPERS,
 
                     // So that @Resolver method param names can be read at runtime
                     // in case @Using annotation has not been used on the parameters
