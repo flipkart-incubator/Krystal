@@ -4,7 +4,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.compile.JavaCompile
 
-import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY
+import static com.flipkart.krystal.vajram.codegen.common.Constants.CODEGEN_PHASE_KEY
 import static com.flipkart.krystal.vajram.codegen.CodegenPhase.WRAPPERS
 import static com.flipkart.krystal.vajram.codegen.CodegenPhase.MODELS
 
@@ -59,7 +59,7 @@ class VajramPlugin implements Plugin<Project> {
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileJava.options.annotationProcessorPath
             options.generatedSourceOutputDirectory.fileValue(project.file(mainModelsGenDir))
-            options.compilerArgs += ['-proc:only', '-A' + COGENGEN_PHASE_KEY + '=' + MODELS]
+            options.compilerArgs += ['-proc:only', '-A' + CODEGEN_PHASE_KEY + '=' + MODELS]
         }
 
         project.tasks.named('compileJava', JavaCompile).configure {
@@ -68,7 +68,7 @@ class VajramPlugin implements Plugin<Project> {
             options.compilerArgs += [
 
                     // So that vajram wrappers are generated during compilation
-                    '-A' + COGENGEN_PHASE_KEY + '=' + WRAPPERS,
+                    '-A' + CODEGEN_PHASE_KEY + '=' + WRAPPERS,
 
                     // So that @Resolver method param names can be read at runtime
                     // in case @Using annotation has not been used on the parameters
@@ -92,7 +92,7 @@ class VajramPlugin implements Plugin<Project> {
             //For lombok processing of EqualsAndHashCode
             options.annotationProcessorPath = project.tasks.compileTestJava.options.annotationProcessorPath
             options.generatedSourceOutputDirectory.fileValue(project.file(testModelsGenDir))
-            options.compilerArgs += ['-proc:only', '-A' + COGENGEN_PHASE_KEY + '=' + MODELS]
+            options.compilerArgs += ['-proc:only', '-A' + CODEGEN_PHASE_KEY + '=' + MODELS]
         }
 
         project.tasks.named("jar").configure { it.dependsOn("compileJava") }

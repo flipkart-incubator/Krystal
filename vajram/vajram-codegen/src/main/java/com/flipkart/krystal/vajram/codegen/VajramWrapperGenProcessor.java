@@ -1,11 +1,13 @@
 package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.vajram.codegen.CodegenPhase.WRAPPERS;
-import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY;
-import static com.flipkart.krystal.vajram.codegen.Utils.getVajramImplClassName;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.CODEGEN_PHASE_KEY;
+import static com.flipkart.krystal.vajram.codegen.common.Utils.getVajramImplClassName;
 import static java.lang.System.lineSeparator;
 import static java.util.stream.Collectors.joining;
 
+import com.flipkart.krystal.vajram.codegen.common.Utils;
+import com.flipkart.krystal.vajram.codegen.common.VajramInfo;
 import com.google.auto.service.AutoService;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -28,13 +30,13 @@ import javax.lang.model.element.TypeElement;
 })
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)
-@SupportedOptions(COGENGEN_PHASE_KEY)
+@SupportedOptions(CODEGEN_PHASE_KEY)
 public class VajramWrapperGenProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     Utils util = new Utils(processingEnv, this.getClass());
-    String phaseString = processingEnv.getOptions().get(COGENGEN_PHASE_KEY);
+    String phaseString = processingEnv.getOptions().get(CODEGEN_PHASE_KEY);
     try {
       if (phaseString == null || !WRAPPERS.equals(CodegenPhase.valueOf(phaseString))) {
         util.note(
@@ -50,12 +52,12 @@ public class VajramWrapperGenProcessor extends AbstractProcessor {
               .formatted(
                   String.valueOf(phaseString),
                   Arrays.toString(CodegenPhase.values()),
-                  COGENGEN_PHASE_KEY),
+                  CODEGEN_PHASE_KEY),
           null);
     }
     List<TypeElement> vajramDefinitions = util.getDefinitionClasses(roundEnv);
     util.note(
-        "Vajram Defs received by VajramWrapperGenProcessor: %s"
+        "VajramDefs received by VajramWrapperGenProcessor: %s"
             .formatted(
                 vajramDefinitions.stream()
                     .map(Objects::toString)
@@ -63,10 +65,10 @@ public class VajramWrapperGenProcessor extends AbstractProcessor {
                         joining(lineSeparator(), '[' + lineSeparator(), lineSeparator() + ']'))));
     for (TypeElement vajramClass : vajramDefinitions) {
       VajramInfo vajramInfo = util.computeVajramInfo(vajramClass);
-      VajramCodeGenerator vajramCodeGenerator = util.createCodeGenerator(vajramInfo);
+      VajramCodeGenerator vajramCodeGenerator = new VajramCodeGenerator(vajramInfo, util);
 
       String className =
-          vajramCodeGenerator.packageName()
+          vajramInfo.lite().packageName()
               + '.'
               + getVajramImplClassName(vajramInfo.lite().vajramId().vajramId());
       try {

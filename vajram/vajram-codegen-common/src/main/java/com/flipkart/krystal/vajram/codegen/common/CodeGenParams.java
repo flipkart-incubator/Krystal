@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.codegen;
+package com.flipkart.krystal.vajram.codegen.common;
 
 /**
  * Used to specify the type of class being generated
@@ -15,7 +15,7 @@ package com.flipkart.krystal.vajram.codegen;
  *     interface
  */
 @lombok.Builder(toBuilder = true)
-record CodeGenParams(
+public record CodeGenParams(
     boolean isBuilder,
     boolean isRequest,
     boolean wrapsRequest,

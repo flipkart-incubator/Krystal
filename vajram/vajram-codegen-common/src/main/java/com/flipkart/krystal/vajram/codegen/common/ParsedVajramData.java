@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.codegen;
+package com.flipkart.krystal.vajram.codegen.common;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;

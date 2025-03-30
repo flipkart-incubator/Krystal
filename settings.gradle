@@ -20,29 +20,20 @@ dependencyResolutionManagement {
 
 rootProject.name = 'krystal'
 
+include 'krystal-bom'
+
 include 'krystex'
 include 'honeycomb'
 include 'krystal-common'
 include 'krystal-visualization'
 
-include 'vajram-java-sdk'
-project(':vajram-java-sdk').projectDir = file('vajram/vajram-java-sdk')
+include 'vajram:vajram-java-sdk'
+include 'vajram:vajram-samples'
+include 'vajram:vajram-codegen'
+include 'vajram:vajram-codegen-common'
+include 'vajram:vajram-krystex'
+include 'vajram:vajram-lang'
 
-include 'vajram-samples'
-project(':vajram-samples').projectDir = file('vajram/vajram-samples')
-
-include 'vajram-codegen'
-project(':vajram-codegen').projectDir = file('vajram/vajram-codegen')
-
-include 'vajram-krystex'
-project(':vajram-krystex').projectDir = file('vajram/vajram-krystex')
-
-include 'vajram-lang'
-project(':vajram-lang').projectDir = file('vajram/vajram-lang')
-
-include 'krystal-bom'
-
-include 'vajram-guice'
-project(':vajram-guice').projectDir = file('extensions/vajram-guice')
+include 'extensions:vajram-guice'
 
 include 'code-coverage-report'

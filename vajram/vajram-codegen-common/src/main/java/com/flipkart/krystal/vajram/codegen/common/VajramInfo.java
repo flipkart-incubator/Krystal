@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.codegen;
+package com.flipkart.krystal.vajram.codegen.common;
 
 import static com.flipkart.krystal.facets.FacetType.INPUT;
 

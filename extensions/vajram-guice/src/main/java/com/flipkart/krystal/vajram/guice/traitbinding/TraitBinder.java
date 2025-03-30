@@ -9,13 +9,14 @@ import jakarta.inject.Qualifier;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A TraitBinder can be used to bind concrete vajrams to traits. The bindings can be unqualified,
  * meaning the binding applies to when a dependency does not have a qualifying annotation (an
  * annotation which itself has the {@link Qualifier} annotation on its type), or the bindings can be
- * qualified by an annotation type (used as a catch-all for all depdendencies which has that
+ * qualified by an annotation type (used as a catch-all for all dependencies which has that
  * annotation on the dependency facet), or the bindings can be qualified by an annotation instance
  * (used when a dependency has that exact annotation instance with given annotation parameters on
  * the dependency facet).
@@ -27,7 +28,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public final class TraitBinder {
 
-  @Getter private final List<TraitBinding> traitBindings = new ArrayList<>();
+  @Getter private final List<TraitBinding<?, ?>> traitBindings = new ArrayList<>();
   @Getter private final @Nullable Binder guiceBinder;
 
   public TraitBinder() {
@@ -39,7 +40,7 @@ public final class TraitBinder {
    * also bind them in the guice binder so that injecting an object of the trait request type is
    * injected, the corresponding vajram's request is injected.
    */
-  public TraitBinder(Binder guiceBinder) {
+  public TraitBinder(@NonNull Binder guiceBinder) {
     this.guiceBinder = guiceBinder;
   }
 
@@ -51,6 +52,6 @@ public final class TraitBinder {
     checkArgument(
         traitReq.getAnnotation(TraitRequestRoot.class) != null,
         "Only Vajram Trait Request Interface can be bound");
-    return new AnnotatedBindingBuilder(this, traitReq);
+    return new AnnotatedBindingBuilder<>(this, traitReq);
   }
 }

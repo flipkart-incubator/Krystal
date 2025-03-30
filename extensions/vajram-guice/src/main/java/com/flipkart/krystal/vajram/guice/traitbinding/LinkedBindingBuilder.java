@@ -37,6 +37,6 @@ public class LinkedBindingBuilder<T extends Request<?>> {
     if (guiceBinder != null) {
       guiceBinder.bind(key).to(vajramReqType);
     }
-    traitBinder.addBinding(new TraitBinding(key, vajramReqType));
+    traitBinder.addBinding(new TraitBinding<>(key, vajramReqType));
   }
 }

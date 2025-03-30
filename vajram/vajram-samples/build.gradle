@@ -7,7 +7,7 @@ version project.krystal_version
 
 dependencies {
     implementation project(':krystal-common')
-    implementation project(':vajram-java-sdk')
+    implementation project(':vajram:vajram-java-sdk')
     implementation project(':krystal-visualization')
 
     annotationProcessor project(':krystal-common')
@@ -17,9 +17,9 @@ dependencies {
     implementation 'jakarta.inject:jakarta.inject-api'
     implementation 'org.checkerframework:checker-qual'
 
-    testImplementation project(':vajram-krystex')
+    testImplementation project(':vajram:vajram-krystex')
 
-    testImplementation project(':vajram-guice')
+    testImplementation project(':extensions:vajram-guice')
 
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'

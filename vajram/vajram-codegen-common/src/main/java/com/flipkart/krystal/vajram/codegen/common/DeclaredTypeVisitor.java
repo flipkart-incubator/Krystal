@@ -1,6 +1,6 @@
-package com.flipkart.krystal.vajram.codegen;
+package com.flipkart.krystal.vajram.codegen.common;
 
-import static com.flipkart.krystal.vajram.codegen.Utils.getDisallowedMessage;
+import static com.flipkart.krystal.vajram.codegen.common.Utils.getDisallowedMessage;
 
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;

@@ -1,18 +1,17 @@
-package com.flipkart.krystal.vajram.codegen;
+package com.flipkart.krystal.vajram.codegen.common;
 
 import static com.flipkart.krystal.vajram.utils.Constants.IMMUT_FACETS_CLASS_SUFFIX;
 
 import com.squareup.javapoet.CodeBlock;
 
 public final class Constants {
-  public static final String COGENGEN_PHASE_KEY = "krystal.vajram.codegen.phase";
+  public static final String CODEGEN_PHASE_KEY = "krystal.vajram.codegen.phase";
   public static final String DEP_RESP = "depResp";
   public static final String RESOLVABLE_INPUTS = "resolvableInputs";
   public static final String INPUT_SRC = "inputSrc";
   public static final String VAJRAM_LOGIC_INPUT_ARGS = "outputLogicInputArguments";
   public static final String FACET_NAME_SUFFIX = "_n";
   public static final String FACET_SPEC_SUFFIX = "_s";
-  public static final char DOT_SEPARATOR = '.';
   public static final String RESPONSE = "response";
   public static final String VARIABLE = "variable";
   public static final String DEP_RESPONSE = "depResponse";
@@ -43,12 +42,13 @@ public final class Constants {
   public static final String RESOLVER_RESULT = "_resolverResult";
   public static final String INCOMING_FACETS = "_incomingFacets";
   public static final String BATCHES_VAR = "_batchItems";
-  public static final String DEP_REQ_PARAM = "dependecyRequest";
   public static final String _FACETS_CLASS = "_Facets";
   public static final String FACETS_FIELDS_VAR = "facetsFields";
   public static final String REQUEST_SUFFIX = "_Req";
   public static final String IMMUT_REQUEST_SUFFIX = "_ImmutReq";
   public static final String IMMUT_REQUEST_POJO_SUFFIX = "_ImmutReqPojo";
+  public static final String IMMUT_REQUEST_PROTO_SUFFIX = "_ImmutReqProto";
+  public static final String PROTO_FILE_SUFFIX = "_Req.proto";
   public static final String INPUT_SPECS_CLASS_SUFFIX = "_InputSpecs";
   public static final String FACET_SPECS_CLASS_SUFFIX = "_FacetSpecs";
   public static final String SPEC_CLASS_SUFFIX = "_SpecType";

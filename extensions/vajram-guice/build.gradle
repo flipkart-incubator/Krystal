@@ -1,6 +1,6 @@
 dependencies {
-    api project(':vajram-java-sdk')
-    api project(':vajram-krystex')
+    api project(':vajram:vajram-java-sdk')
+    api project(':vajram:vajram-krystex')
     api 'com.google.inject:guice'
 }
 

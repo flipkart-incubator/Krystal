@@ -1,8 +1,8 @@
-package com.flipkart.krystal.vajram.codegen;
+package com.flipkart.krystal.vajram.codegen.common;
 
-import static com.flipkart.krystal.vajram.codegen.Utils.getImmutRequestInterfaceName;
-import static com.flipkart.krystal.vajram.codegen.Utils.getImmutRequestPojoName;
-import static com.flipkart.krystal.vajram.codegen.Utils.getRequestInterfaceName;
+import static com.flipkart.krystal.vajram.codegen.common.Utils.getImmutRequestInterfaceName;
+import static com.flipkart.krystal.vajram.codegen.common.Utils.getImmutRequestPojoName;
+import static com.flipkart.krystal.vajram.codegen.common.Utils.getRequestInterfaceName;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.ImmutableRequest;
@@ -80,11 +80,11 @@ public record VajramInfoLite(
     return vajramOrReqClass.getAnnotationMirrors();
   }
 
-  boolean isTrait() {
+  public boolean isTrait() {
     return vajramOrReqClass.getAnnotation(Trait.class) != null;
   }
 
-  boolean isVajram() {
+  public boolean isVajram() {
     return !isTrait();
   }
 }

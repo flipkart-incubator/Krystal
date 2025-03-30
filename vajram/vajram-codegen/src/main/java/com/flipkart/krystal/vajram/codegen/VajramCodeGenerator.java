@@ -2,32 +2,34 @@ package com.flipkart.krystal.vajram.codegen;
 
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
-import static com.flipkart.krystal.vajram.codegen.Constants.BATCHES_VAR;
-import static com.flipkart.krystal.vajram.codegen.Constants.BATCH_FACETS_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.Constants.COMMON_FACETS_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.Constants.EMPTY_CODE_BLOCK;
-import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_LIST;
-import static com.flipkart.krystal.vajram.codegen.Constants.FACET_NAME_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.Constants.FACET_SPEC_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.Constants.FACET_VALUES_VAR;
-import static com.flipkart.krystal.vajram.codegen.Constants.GET_INPUT_RESOLVERS;
-import static com.flipkart.krystal.vajram.codegen.Constants.GET_SIMPLE_INPUT_RESOLVERS;
-import static com.flipkart.krystal.vajram.codegen.Constants.INCOMING_FACETS;
-import static com.flipkart.krystal.vajram.codegen.Constants.METHOD_EXECUTE;
-import static com.flipkart.krystal.vajram.codegen.Constants.RESOLVER_REQUEST;
-import static com.flipkart.krystal.vajram.codegen.Constants.RESOLVER_REQUESTS;
-import static com.flipkart.krystal.vajram.codegen.Constants.RESOLVER_RESULT;
-import static com.flipkart.krystal.vajram.codegen.Constants.RESOLVER_RESULTS;
-import static com.flipkart.krystal.vajram.codegen.Constants._FACETS_CLASS;
-import static com.flipkart.krystal.vajram.codegen.ParsedVajramData.fromVajramInfo;
-import static com.flipkart.krystal.vajram.codegen.Utils.annotations;
-import static com.flipkart.krystal.vajram.codegen.Utils.getFacetsInterfaceName;
-import static com.flipkart.krystal.vajram.codegen.Utils.getImmutFacetsClassname;
-import static com.flipkart.krystal.vajram.codegen.Utils.getImmutRequestInterfaceName;
-import static com.flipkart.krystal.vajram.codegen.Utils.getImmutRequestPojoName;
-import static com.flipkart.krystal.vajram.codegen.Utils.getRequestInterfaceName;
-import static com.flipkart.krystal.vajram.codegen.Utils.getTypeParameters;
-import static com.flipkart.krystal.vajram.codegen.Utils.getVajramImplClassName;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.BATCHES_VAR;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.BATCH_FACETS_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.COMMON_FACETS_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.EMPTY_CODE_BLOCK;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.FACETS_LIST;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.FACET_NAME_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.FACET_SPEC_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.FACET_VALUES_VAR;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.GET_INPUT_RESOLVERS;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.GET_SIMPLE_INPUT_RESOLVERS;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.INCOMING_FACETS;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.METHOD_EXECUTE;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.RESOLVER_REQUEST;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.RESOLVER_REQUESTS;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.RESOLVER_RESULT;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.RESOLVER_RESULTS;
+import static com.flipkart.krystal.vajram.codegen.common.Constants._FACETS_CLASS;
+import static com.flipkart.krystal.vajram.codegen.common.ParsedVajramData.fromVajramInfo;
+import static com.flipkart.krystal.vajram.codegen.common.Utils.annotations;
+import static com.flipkart.krystal.vajram.codegen.common.Utils.getFacetsInterfaceName;
+import static com.flipkart.krystal.vajram.codegen.common.Utils.getImmutFacetsClassname;
+import static com.flipkart.krystal.vajram.codegen.common.Utils.getImmutRequestInterfaceName;
+import static com.flipkart.krystal.vajram.codegen.common.Utils.getImmutRequestPojoName;
+import static com.flipkart.krystal.vajram.codegen.common.Utils.getRequestInterfaceName;
+import static com.flipkart.krystal.vajram.codegen.common.Utils.getTypeParameters;
+import static com.flipkart.krystal.vajram.codegen.common.Utils.getVajramImplClassName;
+import static com.flipkart.krystal.vajram.codegen.common.Utils.recordAnnotations;
+import static com.flipkart.krystal.vajram.codegen.common.Utils.toClassName;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -60,6 +62,7 @@ import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.facets.resolution.ResolutionTarget;
@@ -75,11 +78,28 @@ import com.flipkart.krystal.vajram.batching.BatchEnabledImmutableFacetValues;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
+import com.flipkart.krystal.vajram.codegen.common.CodeGenParams;
+import com.flipkart.krystal.vajram.codegen.common.Constants;
+import com.flipkart.krystal.vajram.codegen.common.DependencyModel;
+import com.flipkart.krystal.vajram.codegen.common.FacetGenModel;
+import com.flipkart.krystal.vajram.codegen.common.FacetJavaType;
+import com.flipkart.krystal.vajram.codegen.common.FacetJavaType.Actual;
+import com.flipkart.krystal.vajram.codegen.common.FacetJavaType.Boxed;
+import com.flipkart.krystal.vajram.codegen.common.FacetJavaType.FanoutResponses;
+import com.flipkart.krystal.vajram.codegen.common.FacetJavaType.One2OneResponse;
+import com.flipkart.krystal.vajram.codegen.common.FacetJavaType.OptionalType;
+import com.flipkart.krystal.vajram.codegen.common.GivenFacetModel;
+import com.flipkart.krystal.vajram.codegen.common.ParsedVajramData;
+import com.flipkart.krystal.vajram.codegen.common.TypeAndName;
+import com.flipkart.krystal.vajram.codegen.common.Utils;
+import com.flipkart.krystal.vajram.codegen.common.VajramInfo;
+import com.flipkart.krystal.vajram.codegen.common.VajramInfoLite;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.FacetIdNameMapping;
 import com.flipkart.krystal.vajram.facets.FacetValidation;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
+import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.One2OneCommand;
 import com.flipkart.krystal.vajram.facets.resolution.AbstractFanoutInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.AbstractOne2OneInputResolver;
@@ -142,7 +162,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Slf4j
 public class VajramCodeGenerator {
 
-  @Getter private final String packageName;
+  private final String packageName;
   private final VajramInfo currentVajramInfo;
 
   private final Map<Integer, FacetGenModel> facetModels;
@@ -907,15 +927,14 @@ public class VajramCodeGenerator {
         ifBlockBuilder.addStatement(
             depValueAccessorCode,
             ParameterizedTypeName.get(
-                ClassName.get(FanoutDepResponses.class),
-                Utils.toClassName(requestClass),
-                boxedDepType),
+                ClassName.get(FanoutDepResponses.class), toClassName(requestClass), boxedDepType),
             variableName,
             FACET_VALUES_VAR,
             usingFacetName);
       } else {
         // This means the dependency being consumed used is not a fanout dependency
-        String depValueAccessorCode = """
+        String depValueAccessorCode =
+            """
               $1T $2L =
                 $3L.$4L()""";
         if (usingFacetDef.isMandatory()) {
@@ -1172,6 +1191,9 @@ public class VajramCodeGenerator {
             .filter(facetDef -> facetDef.facetTypes().contains(INPUT))
             .toList();
 
+    // Generate Protocol Buffer schema file
+    //    generateProtoSchema(inputs);
+
     TypeSpec.Builder requestInterface =
         util.interfaceBuilder(requestInterfaceType.simpleName())
             .addModifiers(PUBLIC)
@@ -1317,6 +1339,9 @@ public class VajramCodeGenerator {
             .build()
             .toString(),
         currentVajramInfo.vajramClass());
+
+    // Generate Protocol Buffer implementation of the immutable request interface
+    //    generateProtoImplementation(immutReqInterfaceType, inputs);
   }
 
   private void facetsClassMembers(
@@ -1339,7 +1364,7 @@ public class VajramCodeGenerator {
                   AnnotationSpec.builder(ToString.class)
                       .addMember("doNotUseGetters", "true")
                       .build())
-              : Utils.recordAnnotations());
+              : recordAnnotations());
       if (codeGenParams.wrapsRequest()) {
         ClassName requestOrBuilderType =
             codeGenParams.isBuilder() ? immutRequestType.nestedClass("Builder") : immutRequestType;
@@ -1469,7 +1494,7 @@ public class VajramCodeGenerator {
       TypeSpec.Builder clazz, FacetGenModel facet, CodeGenParams codeGenParams) {
     MethodSpec.Builder method;
     FacetJavaType fieldType = util.getFacetFieldType(facet);
-    FacetJavaType returnType = util.getReturnType(facet, codeGenParams);
+    FacetJavaType returnType = getReturnType(facet, codeGenParams);
     // Non-dependency facet (Example: GivenFacet)
     method =
         methodBuilder(facet.name())
@@ -1486,6 +1511,26 @@ public class VajramCodeGenerator {
       method.addModifiers(ABSTRACT);
     }
     clazz.addMethod(method.build());
+  }
+
+  private FacetJavaType getReturnType(FacetGenModel facet, CodeGenParams codeGenParams) {
+    if (facet instanceof DependencyModel dep) {
+      if (dep.canFanout()) {
+        return new FanoutResponses(util);
+      } else {
+        return new One2OneResponse(util);
+      }
+    } else {
+      boolean devAccessible = codeGenParams.isDevAccessible() && codeGenParams.isLocal();
+      Mandatory mandatoryAnno = facet.facetField().getAnnotation(Mandatory.class);
+      if (mandatoryAnno != null
+          && (mandatoryAnno.ifNotSet().usePlatformDefault() || devAccessible)) {
+        return new Actual(util);
+      } else if (devAccessible) {
+        return new OptionalType(util);
+      }
+      return new Boxed(util);
+    }
   }
 
   private ImmutableList<MethodSpec> facetContainerMethods(
@@ -1679,7 +1724,7 @@ public class VajramCodeGenerator {
           .build()
           .writeTo(writer);
       util.generateSourceFile(
-          packageName() + '.' + getFacetsInterfaceName(vajramName()),
+          packageName + '.' + getFacetsInterfaceName(vajramName()),
           writer.toString(),
           currentVajramInfo.vajramClass());
     } catch (IOException e) {
@@ -1720,7 +1765,7 @@ public class VajramCodeGenerator {
           .build()
           .writeTo(writer);
       util.generateSourceFile(
-          packageName() + '.' + getImmutFacetsClassname(vajramName()),
+          packageName + '.' + getImmutFacetsClassname(vajramName()),
           writer.toString(),
           currentVajramInfo.vajramClass());
     } catch (IOException e) {
@@ -1770,7 +1815,7 @@ public class VajramCodeGenerator {
     for (FacetGenModel facet : batchedFacets) {
       CodeGenParams codeGenParams =
           CodeGenParams.builder().isSubsetBatch(true).withImpl(true).build();
-      FacetJavaType returnType = util.getReturnType(facet, codeGenParams);
+      FacetJavaType returnType = getReturnType(facet, codeGenParams);
       MethodSpec.Builder getter =
           methodBuilder(facet.name())
               .returns(
@@ -1813,7 +1858,7 @@ public class VajramCodeGenerator {
     for (FacetGenModel facet : commonFacets) {
       CodeGenParams codeGenParams =
           CodeGenParams.builder().isSubsetCommon(true).withImpl(true).build();
-      FacetJavaType returnType = util.getReturnType(facet, codeGenParams);
+      FacetJavaType returnType = getReturnType(facet, codeGenParams);
       MethodSpec.Builder getter =
           methodBuilder(facet.name())
               .returns(
@@ -1829,28 +1874,28 @@ public class VajramCodeGenerator {
 
     util.generateSourceFile(
         batchImmutFacetsType.canonicalName(),
-        JavaFile.builder(packageName(), batchImmutFacetsClass.build()).build().toString(),
+        JavaFile.builder(packageName, batchImmutFacetsClass.build()).build().toString(),
         currentVajramInfo.vajramClass());
     util.generateSourceFile(
         commonImmutFacetsType.canonicalName(),
-        JavaFile.builder(packageName(), commonImmutFacetsClass.build()).build().toString(),
+        JavaFile.builder(packageName, commonImmutFacetsClass.build()).build().toString(),
         currentVajramInfo.vajramClass());
   }
 
   private ClassName getFacetsInterfaceType() {
-    return ClassName.get(packageName(), getFacetsInterfaceName(vajramName()));
+    return ClassName.get(packageName, getFacetsInterfaceName(vajramName()));
   }
 
   private ClassName getRequestInterfaceType() {
-    return ClassName.get(packageName(), getRequestInterfaceName(vajramName()));
+    return ClassName.get(packageName, getRequestInterfaceName(vajramName()));
   }
 
   private ClassName getBatchFacetsClassName() {
-    return ClassName.get(packageName(), vajramName() + BATCH_FACETS_SUFFIX);
+    return ClassName.get(packageName, vajramName() + BATCH_FACETS_SUFFIX);
   }
 
   private ClassName getCommonFacetsClassName() {
-    return ClassName.get(packageName(), vajramName() + COMMON_FACETS_SUFFIX);
+    return ClassName.get(packageName, vajramName() + COMMON_FACETS_SUFFIX);
   }
 
   private void codegenBatchableFacets(
@@ -1945,9 +1990,11 @@ public class VajramCodeGenerator {
         }
         initializerCodeBlock.add(String.join(",", params) + "),", args.toArray());
       }
-      initializerCodeBlock.add("""
+      initializerCodeBlock.add(
+          """
               $T.class,
-            """, vajramReqClass);
+            """,
+          vajramReqClass);
       if (facet instanceof DependencyModel vajramDepDef) {
         ClassName depReqClass = ClassName.bestGuess(vajramDepDef.depReqClassQualifiedName());
         initializerCodeBlock.add(
@@ -2033,9 +2080,9 @@ public class VajramCodeGenerator {
                         ? CodeBlock.of("$T.Creator.create()", TraitDependency.class)
                         : EMPTY_CODE_BLOCK)
                 .build(),
-            ClassName.get(packageName(), getFacetsInterfaceName(vajramName())),
+            ClassName.get(packageName, getFacetsInterfaceName(vajramName())),
             facet.name(),
-            ClassName.get(packageName(), getImmutFacetsClassname(vajramName()), "Builder"),
+            ClassName.get(packageName, getImmutFacetsClassname(vajramName()), "Builder"),
             facet.name());
       }
       specFields.add(
@@ -2096,5 +2143,223 @@ public class VajramCodeGenerator {
 
   private String vajramName() {
     return currentVajramInfo.lite().vajramId().vajramId();
+  }
+
+  /**
+   * Generates a Protocol Buffer schema file for the vajram request.
+   *
+   * @param inputs The list of input facets for the vajram
+   */
+  private void generateProtoSchema(List<GivenFacetModel> inputs) {
+    StringBuilder protoBuilder = new StringBuilder();
+    String vajramName = vajramName();
+
+    // Add proto syntax and package declaration
+    protoBuilder.append("syntax = \"proto3\";\n\n");
+    protoBuilder.append("package ").append(packageName).append(";\n\n");
+
+    // Add message definition
+    protoBuilder.append("message ").append(vajramName).append("Request {\n");
+
+    // Add fields for each input
+    int fieldNumber = 1;
+    for (GivenFacetModel input : inputs) {
+      String protoType = getProtoType(input.dataType());
+      String fieldName = input.name();
+
+      // Add field definition
+      protoBuilder
+          .append("  ")
+          .append(protoType)
+          .append(" ")
+          .append(fieldName)
+          .append(" = ")
+          .append(fieldNumber)
+          .append(";\n");
+
+      fieldNumber++;
+    }
+
+    // Close message definition
+    protoBuilder.append("}\n");
+
+    // Write proto file
+    String protoFileName = Utils.getProtoFileName(vajramName);
+    util.generateSourceFile(
+        protoFileName, protoBuilder.toString(), currentVajramInfo.vajramClass());
+  }
+
+  /**
+   * Maps Java types to Protocol Buffer types.
+   *
+   * @param dataType The data type to map
+   * @return The corresponding Protocol Buffer type
+   */
+  private String getProtoType(DataType<?> dataType) {
+    try {
+      String canonicalName = dataType.toString();
+
+      if (canonicalName.contains(String.class.getSimpleName())) {
+        return "string";
+      } else if (canonicalName.contains(Integer.class.getSimpleName())
+          || canonicalName.contains("int")) {
+        return "int32";
+      } else if (canonicalName.contains(Long.class.getSimpleName())
+          || canonicalName.contains("long")) {
+        return "int64";
+      } else if (canonicalName.contains(Float.class.getSimpleName())
+          || canonicalName.contains("float")) {
+        return "float";
+      } else if (canonicalName.contains(Double.class.getSimpleName())
+          || canonicalName.contains("double")) {
+        return "double";
+      } else if (canonicalName.contains(Boolean.class.getSimpleName())
+          || canonicalName.contains("boolean")) {
+        return "bool";
+      } else if (canonicalName.contains("byte[]")) {
+        return "bytes";
+      } else {
+        // For complex types, we'll use a message reference
+        // This is a simplification - in a real implementation, we would need to handle
+        // complex types properly by generating nested messages or importing other proto files
+        return "bytes";
+      }
+    } catch (Exception e) {
+      // Default to bytes for any type we can't determine
+      return "bytes";
+    }
+  }
+
+  /**
+   * Generates a Protocol Buffer implementation of the immutable request interface. This
+   * implementation allows vajrams to invoke each other across processes over a network.
+   *
+   * @param immutReqInterfaceType The immutable request interface type
+   * @param inputs The list of input facets for the vajram
+   */
+  private void generateProtoImplementation(
+      ClassName immutReqInterfaceType, List<GivenFacetModel> inputs) {
+    String vajramName = vajramName();
+    ClassName protoImplType =
+        ClassName.get(packageName, Utils.getImmutRequestProtoName(vajramName));
+
+    // Create the Protocol Buffer implementation class
+    TypeSpec.Builder protoImpl =
+        util.classBuilder(protoImplType.simpleName())
+            .addModifiers(PUBLIC, FINAL)
+            .addSuperinterface(immutReqInterfaceType);
+
+    // Add fields for serialized data and deserialized data
+    protoImpl.addField(FieldSpec.builder(byte[].class, "serializedData", PRIVATE, FINAL).build());
+    protoImpl.addField(FieldSpec.builder(Object.class, "deserializedData", PRIVATE).build());
+
+    // Add constructor that takes serialized data
+    protoImpl.addMethod(
+        constructorBuilder()
+            .addModifiers(PUBLIC)
+            .addParameter(byte[].class, "serializedData")
+            .addStatement("this.serializedData = serializedData")
+            .build());
+
+    // Add constructor that takes the regular immutable request
+    protoImpl.addMethod(
+        constructorBuilder()
+            .addModifiers(PUBLIC)
+            .addParameter(immutReqInterfaceType, "request")
+            .addCode("// Serialize the request to Protocol Buffer format\n")
+            .addStatement("this.serializedData = serializeRequest(request)")
+            .build());
+
+    // Add method to serialize a request
+    protoImpl.addMethod(
+        methodBuilder("serializeRequest")
+            .addModifiers(PRIVATE)
+            .returns(byte[].class)
+            .addParameter(immutReqInterfaceType, "request")
+            .addCode("// This is a placeholder implementation. In a real implementation,\n")
+            .addCode("// we would use the Protocol Buffers library to serialize the request.\n")
+            .addCode("try {\n")
+            .addCode("  // Create a builder for the Protocol Buffer message\n")
+            .addCode("  // Set all the fields from the request\n")
+            .addCode("  // Build and serialize the message\n")
+            .addCode("  // For now, we'll just use Java serialization as a placeholder\n")
+            .addCode(
+                "  java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();\n")
+            .addCode("  java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(baos);\n")
+            .addCode("  oos.writeObject(request);\n")
+            .addCode("  oos.close();\n")
+            .addCode("  return baos.toByteArray();\n")
+            .addCode("} catch (Exception e) {\n")
+            .addCode("  throw new RuntimeException(\"Failed to serialize request\", e);\n")
+            .addCode("}\n")
+            .build());
+
+    // Add method to deserialize the data
+    protoImpl.addMethod(
+        methodBuilder("deserializeData")
+            .addModifiers(PRIVATE)
+            .returns(Object.class)
+            .addCode("if (deserializedData == null) {\n")
+            .addCode("  // This is a placeholder implementation. In a real implementation,\n")
+            .addCode("  // we would use the Protocol Buffers library to deserialize the data.\n")
+            .addCode("  try {\n")
+            .addCode("    // Parse the Protocol Buffer message from the serialized data\n")
+            .addCode("    // For now, we'll just use Java deserialization as a placeholder\n")
+            .addCode(
+                "    java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(serializedData);\n")
+            .addCode("    java.io.ObjectInputStream ois = new java.io.ObjectInputStream(bais);\n")
+            .addCode("    deserializedData = ois.readObject();\n")
+            .addCode("    ois.close();\n")
+            .addCode("  } catch (Exception e) {\n")
+            .addCode("    throw new RuntimeException(\"Failed to deserialize data\", e);\n")
+            .addCode("  }\n")
+            .addCode("}\n")
+            .addCode("return deserializedData;\n")
+            .build());
+
+    // Add getter methods for each input
+    for (GivenFacetModel input : inputs) {
+      String inputName = input.name();
+      TypeName inputType = TypeName.get(input.dataType().javaModelType(util.processingEnv()));
+
+      protoImpl.addMethod(
+          methodBuilder(inputName)
+              .addAnnotation(Override.class)
+              .addModifiers(PUBLIC)
+              .returns(inputType)
+              .addCode("// Get the value from the deserialized data\n")
+              .addStatement(
+                  "return (($T) deserializeData()).$L()", immutReqInterfaceType, inputName)
+              .build());
+    }
+
+    // Add the _build method required by the ImmutableRequest interface
+    protoImpl.addMethod(
+        methodBuilder("_build")
+            .addAnnotation(Override.class)
+            .addModifiers(PUBLIC)
+            .returns(immutReqInterfaceType)
+            .addStatement("return this")
+            .build());
+
+    // Add the _asBuilder method required by the ImmutableRequest interface
+    protoImpl.addMethod(
+        methodBuilder("_asBuilder")
+            .addAnnotation(Override.class)
+            .addModifiers(PUBLIC)
+            .returns(
+                ClassName.get(
+                    immutReqInterfaceType.packageName(),
+                    immutReqInterfaceType.simpleName(),
+                    "Builder"))
+            .addCode("// Create a builder from the deserialized data\n")
+            .addStatement("return (($T) deserializeData())._asBuilder()", immutReqInterfaceType)
+            .build());
+
+    // Generate the source file
+    util.generateSourceFile(
+        protoImplType.canonicalName(),
+        JavaFile.builder(packageName, protoImpl.build()).build().toString(),
+        currentVajramInfo.vajramClass());
   }
 }

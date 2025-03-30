@@ -1,0 +1,30 @@
+group 'com.flipkart.krystal'
+version project.krystal_version
+description
+'''Common utility code for Krystal code generation.'''
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':vajram:vajram-java-sdk')
+    implementation 'com.squareup:javapoet'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.flipkart.krystal'
+            artifactId = project.name
+            version = project.krystal_version
+            from components.java
+        }
+    }
+}
+
+if (!fast_compile) {
+    checkerFramework {
+        extraJavacArgs += ['-AresolveReflection',]
+    }
+}

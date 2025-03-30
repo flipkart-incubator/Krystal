@@ -1,8 +1,8 @@
 description 'Plugin for the visualization layer for Krystal. Includes static call graph visualizations.'
 
 dependencies {
-    api project(':vajram-java-sdk')
-    api project(':vajram-krystex')
+    api project(':vajram:vajram-java-sdk')
+    api project(':vajram:vajram-krystex')
 
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 }

@@ -1,9 +1,6 @@
-package com.flipkart.krystal.vajram.codegen;
+package com.flipkart.krystal.vajram.codegen.common;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
-import static com.flipkart.krystal.vajram.codegen.Constants.FACETS_CLASS_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.Constants.QUALIFIED_FACET_SEPERATOR;
-import static com.flipkart.krystal.vajram.codegen.Constants._FACETS_CLASS;
 import static com.flipkart.krystal.vajram.utils.Constants.IMMUT_FACETS_CLASS_SUFFIX;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
@@ -31,20 +28,18 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.annos.ConformsToTrait;
 import com.flipkart.krystal.vajram.annos.Generated;
-import com.flipkart.krystal.vajram.codegen.DependencyModel.DependencyModelBuilder;
-import com.flipkart.krystal.vajram.codegen.FacetJavaType.Actual;
-import com.flipkart.krystal.vajram.codegen.FacetJavaType.Boxed;
-import com.flipkart.krystal.vajram.codegen.FacetJavaType.FanoutResponses;
-import com.flipkart.krystal.vajram.codegen.FacetJavaType.One2OneResponse;
-import com.flipkart.krystal.vajram.codegen.FacetJavaType.OptionalType;
-import com.flipkart.krystal.vajram.codegen.GivenFacetModel.GivenFacetModelBuilder;
+import com.flipkart.krystal.vajram.codegen.common.DependencyModel.DependencyModelBuilder;
+import com.flipkart.krystal.vajram.codegen.common.FacetJavaType.Actual;
+import com.flipkart.krystal.vajram.codegen.common.FacetJavaType.Boxed;
+import com.flipkart.krystal.vajram.codegen.common.FacetJavaType.FanoutResponses;
+import com.flipkart.krystal.vajram.codegen.common.FacetJavaType.One2OneResponse;
+import com.flipkart.krystal.vajram.codegen.common.GivenFacetModel.GivenFacetModelBuilder;
 import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
 import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FacetId;
 import com.flipkart.krystal.vajram.facets.FacetIdNameMapping;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.ReservedFacets;
 import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.google.common.base.Splitter;
@@ -125,7 +120,7 @@ public class Utils {
                   + " is not an allowed facet type as this can cause undesired behaviour.")
           .build();
   public static final Splitter QUALIFIED_FACET_SPLITTER =
-      Splitter.onPattern(QUALIFIED_FACET_SEPERATOR);
+      Splitter.onPattern(Constants.QUALIFIED_FACET_SEPERATOR);
 
   @Getter private final ProcessingEnvironment processingEnv;
   private final Types typeUtils;
@@ -139,19 +134,19 @@ public class Utils {
     this.generator = generator;
   }
 
-  static ClassName toClassName(String depReqClassName) {
+  public static ClassName toClassName(String depReqClassName) {
     int lastDotIndex = depReqClassName.lastIndexOf('.');
     return ClassName.get(
         depReqClassName.substring(0, lastDotIndex), depReqClassName.substring(lastDotIndex + 1));
   }
 
-  static List<AnnotationSpec> recordAnnotations() {
+  public static List<AnnotationSpec> recordAnnotations() {
     return List.of(
         AnnotationSpec.builder(EqualsAndHashCode.class).build(),
         AnnotationSpec.builder(ToString.class).addMember("doNotUseGetters", "true").build());
   }
 
-  static List<AnnotationSpec> annotations(Class<?>... annotations) {
+  public static List<AnnotationSpec> annotations(Class<?>... annotations) {
     return stream(annotations).map(aClass -> AnnotationSpec.builder(aClass).build()).toList();
   }
 
@@ -211,18 +206,14 @@ public class Utils {
     return parts.get(1);
   }
 
-  List<TypeElement> getDefinitionClasses(RoundEnvironment roundEnv) {
+  public List<TypeElement> getDefinitionClasses(RoundEnvironment roundEnv) {
     return roundEnv.getElementsAnnotatedWithAny(Set.of(Vajram.class, Trait.class)).stream()
         .filter(element -> element.getKind() == ElementKind.CLASS)
         .map(executableElement -> (TypeElement) executableElement)
         .toList();
   }
 
-  VajramCodeGenerator createCodeGenerator(VajramInfo vajramInfo) {
-    return new VajramCodeGenerator(vajramInfo, this);
-  }
-
-  void generateSourceFile(String className, String code, TypeElement vajramDefinition) {
+  public void generateSourceFile(String className, String code, TypeElement vajramDefinition) {
     try {
       JavaFileObject requestFile =
           processingEnv.getFiler().createSourceFile(className, vajramDefinition);
@@ -243,7 +234,7 @@ public class Utils {
     Optional<Element> facetsClass =
         vajramClass.getEnclosedElements().stream()
             .filter(element -> element.getKind() == ElementKind.CLASS)
-            .filter(element -> element.getSimpleName().contentEquals(_FACETS_CLASS))
+            .filter(element -> element.getSimpleName().contentEquals(Constants._FACETS_CLASS))
             .findFirst()
             .map(element -> typeUtils.asElement(element.asType()));
     Set<Integer> reservedFacets =
@@ -611,7 +602,7 @@ public class Utils {
     throw new RuntimeException();
   }
 
-  void note(CharSequence message) {
+  public void note(CharSequence message) {
     if (DEBUG) {
       processingEnv
           .getMessager()
@@ -645,12 +636,20 @@ public class Utils {
     return vajramName + Constants.IMMUT_REQUEST_POJO_SUFFIX;
   }
 
+  public static String getImmutRequestProtoName(String vajramName) {
+    return vajramName + Constants.IMMUT_REQUEST_PROTO_SUFFIX;
+  }
+
+  public static String getProtoFileName(String vajramName) {
+    return vajramName + Constants.PROTO_FILE_SUFFIX;
+  }
+
   public static String getVajramImplClassName(String vajramId) {
     return vajramId + Constants.IMPL_SUFFIX;
   }
 
   public static String getFacetsInterfaceName(String vajramName) {
-    return vajramName + FACETS_CLASS_SUFFIX;
+    return vajramName + Constants.FACETS_CLASS_SUFFIX;
   }
 
   public static String getImmutFacetsClassname(String vajramName) {
@@ -767,7 +766,7 @@ public class Utils {
     return addDefaultAnnotations(interfaceBuilder);
   }
 
-  TypeAndName box(TypeAndName javaType, AnnotationSpec... annotationSpecs) {
+  public TypeAndName box(TypeAndName javaType, AnnotationSpec... annotationSpecs) {
     List<AnnotationSpec> annotationSpecList =
         Streams.concat(javaType.annotationSpecs().stream(), stream(annotationSpecs))
             .distinct()
@@ -811,11 +810,11 @@ public class Utils {
         TypeName.get(javaModelType).annotated(typeAnnotations), javaModelType, typeAnnotations);
   }
 
-  TypeAndName getTypeName(DataType<?> dataType) {
+  public TypeAndName getTypeName(DataType<?> dataType) {
     return getTypeName(dataType, List.of());
   }
 
-  DataType<?> getDataType(FacetGenModel abstractInput) {
+  public DataType<?> getDataType(FacetGenModel abstractInput) {
     if (abstractInput instanceof GivenFacetModel facetDef) {
       return facetDef.dataType();
     } else if (abstractInput instanceof DependencyModel dep) {
@@ -827,7 +826,7 @@ public class Utils {
   }
 
   @SuppressWarnings("method.invocation")
-  ExecutableElement getMethodToOverride(Class<?> clazz, String methodName, int paramCount) {
+  public ExecutableElement getMethodToOverride(Class<?> clazz, String methodName, int paramCount) {
     return checkNotNull(
             processingEnv()
                 .getElementUtils()
@@ -852,27 +851,7 @@ public class Utils {
                         + clazz));
   }
 
-  FacetJavaType getReturnType(FacetGenModel facet, CodeGenParams codeGenParams) {
-    if (facet instanceof DependencyModel dep) {
-      if (dep.canFanout()) {
-        return new FanoutResponses(this);
-      } else {
-        return new One2OneResponse(this);
-      }
-    } else {
-      boolean devAccessible = codeGenParams.isDevAccessible() && codeGenParams.isLocal();
-      Mandatory mandatoryAnno = facet.facetField().getAnnotation(Mandatory.class);
-      if (mandatoryAnno != null
-          && (mandatoryAnno.ifNotSet().usePlatformDefault() || devAccessible)) {
-        return new Actual(this);
-      } else if (devAccessible) {
-        return new OptionalType(this);
-      }
-      return new Boxed(this);
-    }
-  }
-
-  FacetJavaType getFacetFieldType(FacetGenModel facet) {
+  public FacetJavaType getFacetFieldType(FacetGenModel facet) {
     if (facet instanceof DependencyModel dep) {
       if (dep.canFanout()) {
         // Fanout dependency
@@ -887,11 +866,11 @@ public class Utils {
     }
   }
 
-  TypeName wrapWithFacetValueClass(DependencyModel dep) {
+  public TypeName wrapWithFacetValueClass(DependencyModel dep) {
     return dep.canFanout() ? responsesType(dep) : responseType(dep);
   }
 
-  String getJavaTypeCreationCode(
+  public String getJavaTypeCreationCode(
       JavaType<?> javaType, List<TypeName> collectClassNames, VariableElement facetField) {
     TypeMirror typeMirror = javaType.javaModelType(processingEnv);
     collectClassNames.add(ClassName.get(JavaType.class));

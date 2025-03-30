@@ -1,10 +1,10 @@
-package com.flipkart.krystal.vajram.codegen;
+package com.flipkart.krystal.vajram.codegen.common;
 
 import static com.flipkart.krystal.facets.FacetType.INPUT;
-import static com.flipkart.krystal.vajram.codegen.Constants.EMPTY_CODE_BLOCK;
-import static com.flipkart.krystal.vajram.codegen.Constants.FACET_SPEC_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.Constants.FACET_VALUES_VAR;
-import static com.flipkart.krystal.vajram.codegen.Utils.getFacetsInterfaceName;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.EMPTY_CODE_BLOCK;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.FACET_SPEC_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.Constants.FACET_VALUES_VAR;
+import static com.flipkart.krystal.vajram.codegen.common.Utils.getFacetsInterfaceName;
 
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.One2OneDepResponse;
@@ -17,7 +17,7 @@ import com.squareup.javapoet.TypeName;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-abstract sealed class FacetJavaType {
+public abstract sealed class FacetJavaType {
 
   protected final Utils util;
 
@@ -25,9 +25,10 @@ abstract sealed class FacetJavaType {
     this.util = util;
   }
 
-  abstract TypeName javaTypeName(FacetGenModel facet);
+  public abstract TypeName javaTypeName(FacetGenModel facet);
 
-  CodeBlock fieldGetterCode(FacetGenModel facet, CodeGenParams codeGenParams) {
+  public CodeBlock fieldGetterCode(
+      FacetGenModel facet, com.flipkart.krystal.vajram.codegen.common.CodeGenParams codeGenParams) {
     if (codeGenParams.isFacetsSubset()) {
       return CodeBlock.of("return this.$L.$L()", FACET_VALUES_VAR, facet.name());
     }
@@ -44,7 +45,7 @@ abstract sealed class FacetJavaType {
     throw new UnsupportedOperationException("This should not happen. " + this);
   }
 
-  CodeBlock fieldInitializer(FacetGenModel facet) {
+  public CodeBlock fieldInitializer(FacetGenModel facet) {
     return CodeBlock.of(
         "$T.$L.getPlatformDefaultValue()",
         ClassName.get(
@@ -53,11 +54,11 @@ abstract sealed class FacetJavaType {
         facet.name() + FACET_SPEC_SUFFIX);
   }
 
-  Class<?>[] typeAnnotations(FacetGenModel facet, CodeGenParams codeGenParams) {
+  public Class<?>[] typeAnnotations(FacetGenModel facet, CodeGenParams codeGenParams) {
     return new Class[] {};
   }
 
-  static final class Actual extends FacetJavaType {
+  public static final class Actual extends FacetJavaType {
 
     public Actual(Utils utils) {
       super(utils);
@@ -69,7 +70,7 @@ abstract sealed class FacetJavaType {
     }
 
     @Override
-    CodeBlock fieldInitializer(FacetGenModel facet) {
+    public CodeBlock fieldInitializer(FacetGenModel facet) {
       Mandatory mandatory = facet.facetField().getAnnotation(Mandatory.class);
       if (mandatory != null && mandatory.ifNotSet().usePlatformDefault()) {
         if (facet.dataType().hasPlatformDefaultValue(util.processingEnv())) {
@@ -93,7 +94,7 @@ abstract sealed class FacetJavaType {
     }
 
     @Override
-    Class<?>[] typeAnnotations(FacetGenModel facet, CodeGenParams codeGenParams) {
+    public Class<?>[] typeAnnotations(FacetGenModel facet, CodeGenParams codeGenParams) {
       if (!(facet instanceof DependencyModel)
           && !javaTypeName(facet).isPrimitive()
           && !codeGenParams.isSubsetBatch()) {
@@ -103,7 +104,7 @@ abstract sealed class FacetJavaType {
     }
 
     @Override
-    CodeBlock fieldGetterCode(FacetGenModel facet, CodeGenParams codeGenParams) {
+    public CodeBlock fieldGetterCode(FacetGenModel facet, CodeGenParams codeGenParams) {
       if (codeGenParams.isSubsetBatch()) {
         Mandatory mandatory = facet.facetField().getAnnotation(Mandatory.class);
         if (mandatory != null && !mandatory.ifNotSet().usePlatformDefault()) {
@@ -124,46 +125,46 @@ abstract sealed class FacetJavaType {
     }
   }
 
-  static final class Boxed extends FacetJavaType {
+  public static final class Boxed extends FacetJavaType {
 
     public Boxed(Utils utils) {
       super(utils);
     }
 
     @Override
-    TypeName javaTypeName(FacetGenModel facet) {
+    public TypeName javaTypeName(FacetGenModel facet) {
       return util.box(util.getTypeName(util.getDataType(facet))).typeName();
     }
 
     @Override
-    Class<?>[] typeAnnotations(FacetGenModel facet, CodeGenParams codeGenParams) {
+    public Class<?>[] typeAnnotations(FacetGenModel facet, CodeGenParams codeGenParams) {
       return new Class<?>[] {Nullable.class};
     }
 
     @Override
-    CodeBlock fieldInitializer(FacetGenModel facet) {
+    public CodeBlock fieldInitializer(FacetGenModel facet) {
       return CodeBlock.of("null");
     }
   }
 
-  static final class OptionalType extends FacetJavaType {
+  public static final class OptionalType extends FacetJavaType {
 
     public OptionalType(Utils utils) {
       super(utils);
     }
 
     @Override
-    TypeName javaTypeName(FacetGenModel facet) {
+    public TypeName javaTypeName(FacetGenModel facet) {
       return util.optional(util.box(util.getTypeName(util.getDataType(facet))));
     }
 
     @Override
-    CodeBlock fieldInitializer(FacetGenModel facet) {
+    public CodeBlock fieldInitializer(FacetGenModel facet) {
       return CodeBlock.of("$T.empty()", Optional.class);
     }
 
     @Override
-    CodeBlock fieldGetterCode(FacetGenModel facet, CodeGenParams codeGenParams) {
+    public CodeBlock fieldGetterCode(FacetGenModel facet, CodeGenParams codeGenParams) {
       if (codeGenParams.isSubsetBatch()) {
         return CodeBlock.of(
             "return $T.ofNullable(this.$L.$L())", Optional.class, FACET_VALUES_VAR, facet.name());
@@ -172,36 +173,36 @@ abstract sealed class FacetJavaType {
     }
   }
 
-  static final class One2OneResponse extends FacetJavaType {
+  public static final class One2OneResponse extends FacetJavaType {
 
     public One2OneResponse(Utils util) {
       super(util);
     }
 
     @Override
-    TypeName javaTypeName(FacetGenModel facet) {
+    public TypeName javaTypeName(FacetGenModel facet) {
       return util.responseType((DependencyModel) facet);
     }
 
     @Override
-    CodeBlock fieldInitializer(FacetGenModel facet) {
+    public CodeBlock fieldInitializer(FacetGenModel facet) {
       return CodeBlock.of("$T.noRequest()", One2OneDepResponse.class);
     }
   }
 
-  static final class FanoutResponses extends FacetJavaType {
+  public static final class FanoutResponses extends FacetJavaType {
 
     public FanoutResponses(Utils util) {
       super(util);
     }
 
     @Override
-    TypeName javaTypeName(FacetGenModel facet) {
+    public TypeName javaTypeName(FacetGenModel facet) {
       return util.responsesType((DependencyModel) facet);
     }
 
     @Override
-    CodeBlock fieldInitializer(FacetGenModel facet) {
+    public CodeBlock fieldInitializer(FacetGenModel facet) {
       return CodeBlock.of("$T.empty()", FanoutDepResponses.class);
     }
   }

@@ -1,6 +1,5 @@
 import static com.flipkart.krystal.vajram.codegen.CodegenPhase.WRAPPERS
-import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY
-import static com.flipkart.krystal.vajram.codegen.CodegenPhase.IMPLS
+import static com.flipkart.krystal.vajram.codegen.common.Constants.CODEGEN_PHASE_KEY
 
 plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
@@ -9,7 +8,7 @@ plugins {
 description 'An implementation of a vajram executor powered by the Krystex module.'
 
 dependencies {
-    api project(':vajram-java-sdk')
+    api project(':vajram:vajram-java-sdk')
     api project(':krystex')
 
     testAnnotationProcessor 'com.flipkart.krystal:vajram-codegen'
@@ -71,7 +70,7 @@ compileTestJava {
         options.compilerArgs += [
                 '--module-path', classpath.asPath,
                 '--patch-module', "$moduleName=" + files(sourceSets.test.java.srcDirs).asPath,
-                '-A' + COGENGEN_PHASE_KEY + '=' + WRAPPERS,
+                '-A' + CODEGEN_PHASE_KEY + '=' + WRAPPERS,
                 '-parameters'
         ]
     }
