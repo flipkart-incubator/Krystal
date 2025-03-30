@@ -1,5 +1,5 @@
-import static com.flipkart.krystal.vajram.codegen.CodegenPhase.WRAPPERS
-import static com.flipkart.krystal.vajram.codegen.common.Constants.CODEGEN_PHASE_KEY
+import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.WRAPPERS
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.CODEGEN_PHASE_KEY
 
 plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
@@ -13,6 +13,7 @@ dependencies {
 
     testAnnotationProcessor 'com.flipkart.krystal:vajram-codegen'
     testAnnotationProcessor project(':krystal-common')
+    testAnnotationProcessor project(':vajram:vajram-codegen-common')
 
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
@@ -51,9 +52,9 @@ afterEvaluate {
  * This is needed only when there are vajrams written in the 'test' directory of the project - which is the case in vajram-krystex.
  * This issue doesn't arise in traditional modules where vajrams are written in 'main' directory.
  *
- * To circumvent this, the krystal gradle plugin does not make `compileTestJava` dependend on `testCodeGenVajramModels`.
- * If any project has vajrams in the test directory, then that project will have to explicitly make `compileTestJava` dependend on `testCodeGenVajramModels`
- * and add custome jvm arguments as done below, so that compilation of test code succeeds.
+ * To circumvent this, the krystal gradle plugin does not make `compileTestJava` dependent on `testCodeGenVajramModels`.
+ * If any project has vajrams in the test directory, then that project will have to explicitly make `compileTestJava` dependent on `testCodeGenVajramModels`
+ * and add custom jvm arguments as done below, so that compilation of test code succeeds.
  */
 tasks.named('testCodeGenVajramModels', JavaCompile).configure {
     doFirst {

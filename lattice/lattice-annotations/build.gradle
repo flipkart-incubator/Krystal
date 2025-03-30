@@ -1,0 +1,16 @@
+description 'Annotations related to lattice framework'
+
+dependencies {
+    implementation project(':krystal-common')
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.flipkart.krystal'
+            artifactId = project.name
+            version = project.krystal_version
+            from components.java
+        }
+    }
+}

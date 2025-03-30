@@ -10,7 +10,6 @@ buildscript {
 
 plugins {
     id 'java-gradle-plugin'
-    id 'groovy'
 }
 
 group 'com.flipkart.krystal'
@@ -24,12 +23,9 @@ gradlePlugin {
     plugins {
         simplePlugin {
             id = 'com.flipkart.krystal'
-            implementationClass = 'com.flipkart.krystal.vajram.VajramPlugin'
+            implementationClass = 'com.flipkart.krystal.vajram.plugin.VajramPlugin'
         }
     }
-}
-if (!fast_compile) {
-    tasks.named('spotlessJava').configure { mustRunAfter('compileGroovy') }
 }
 
 dependencies {

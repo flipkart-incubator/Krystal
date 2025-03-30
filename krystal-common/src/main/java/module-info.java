@@ -22,4 +22,5 @@ module flipkart.krystal.common {
   exports com.flipkart.krystal.core;
   exports com.flipkart.krystal.traits;
   exports com.flipkart.krystal.traits.matchers;
+  exports com.flipkart.krystal.serial;
 }

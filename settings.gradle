@@ -7,16 +7,14 @@ pluginManagement {
     }
 }
 
-
 dependencyResolutionManagement {
     repositories {
-        mavenLocal()
         mavenCentral()
+        mavenLocal()
         maven { url 'https://clojars.org/repo' }
         gradlePluginPortal()
     }
 }
-
 
 rootProject.name = 'krystal'
 
@@ -34,6 +32,12 @@ include 'vajram:vajram-codegen-common'
 include 'vajram:vajram-krystex'
 include 'vajram:vajram-lang'
 
+include 'lattice:lattice-core'
+include 'lattice:lattice-annotations'
+include 'lattice:extensions:lattice-protobuf-codegen'
+
 include 'extensions:vajram-guice'
+include 'extensions:krystal-protobuf'
 
 include 'code-coverage-report'
+
