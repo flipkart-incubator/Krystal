@@ -5,15 +5,12 @@ import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.WRA
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.common.base.Preconditions;
 import java.io.File;
 import java.util.List;
-import org.gradle.api.NonNullApi;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.SourceSetContainer;
-import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.compile.JavaCompile;
 
 public class VajramPlugin implements Plugin<Project> {
@@ -54,25 +51,14 @@ public class VajramPlugin implements Plugin<Project> {
       File mainImplsGenDir,
       File testModelsGenDir,
       File testImplsGenDir) {
-    JavaPluginExtension javaPlugin =
-        checkNotNull(project.getExtensions().findByType(JavaPluginExtension.class));
-    SourceSetContainer sourceSets = javaPlugin.getSourceSets();
-    sourceSets
-        .getByName("main")
-        .getJava()
-        .getSrcDirs()
-        .addAll(List.of(mainModelsGenDir, mainImplsGenDir));
-
-    sourceSets
-        .getByName("test")
-        .getJava()
-        .getSrcDirs()
-        .addAll(List.of(testModelsGenDir, testImplsGenDir));
+    SourceSetContainer sourceSets =
+        checkNotNull(project.getExtensions().findByType(JavaPluginExtension.class)).getSourceSets();
+    sourceSets.getByName("main").getJava().srcDir(mainModelsGenDir).srcDir(mainImplsGenDir);
+    sourceSets.getByName("test").getJava().srcDir(testModelsGenDir).srcDir(testImplsGenDir);
   }
 
-  private static TaskProvider<JavaCompile> registerCodeGenVajramModels(
-      Project project, File mainModelsGenDir) {
-    return project
+  private static void registerCodeGenVajramModels(Project project, File mainModelsGenDir) {
+    project
         .getTasks()
         .register(
             "codeGenVajramModels",
@@ -140,9 +126,8 @@ public class VajramPlugin implements Plugin<Project> {
             });
   }
 
-  private static TaskProvider<JavaCompile> registerTestCodeGenVajramModels(
-      Project project, File testModelsGenDir) {
-    return project
+  private static void registerTestCodeGenVajramModels(Project project, File testModelsGenDir) {
+    project
         .getTasks()
         .register(
             "testCodeGenVajramModels",

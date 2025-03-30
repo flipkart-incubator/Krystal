@@ -2,7 +2,7 @@ pluginManagement {
     repositories {
         mavenLocal()
         mavenCentral()
-        maven { url 'https://clojars.org/repo' }
+        maven { url = 'https://clojars.org/repo' }
         gradlePluginPortal()
     }
 }
@@ -11,7 +11,7 @@ dependencyResolutionManagement {
     repositories {
         mavenCentral()
         mavenLocal()
-        maven { url 'https://clojars.org/repo' }
+        maven { url = 'https://clojars.org/repo' }
         gradlePluginPortal()
     }
 }

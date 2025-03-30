@@ -5,7 +5,7 @@ plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
 }
 
-description 'An implementation of a vajram executor powered by the Krystex module.'
+description = 'An implementation of a vajram executor powered by the Krystex module.'
 
 dependencies {
     api project(':vajram:vajram-java-sdk')

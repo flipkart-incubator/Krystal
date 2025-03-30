@@ -211,6 +211,7 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
     this.codegenPhase = creationContext.codegenPhase();
   }
 
+  @Override
   public void generate() {
     if (CodegenPhase.MODELS.equals(codegenPhase)) {
       vajramRequest();
@@ -396,8 +397,6 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
   /**
    * Method to generate VajramImpl class Input dependencyDef code gen Resolve method code gen Vajram
    * logic code gen Compute vajramDef execute IO vajramDef executeBlocking
-   *
-   * @return Class code as string
    */
   public void vajramWrapper() {
     initParsedVajramData();
@@ -1136,8 +1135,7 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
             usingFacetName);
       } else {
         // This means the dependency being consumed used is not a fanout dependency
-        String depValueAccessorCode =
-            """
+        String depValueAccessorCode = """
               $1T $2L =
                 $3L.$4L()""";
         if (usingFacetDef.isMandatory()) {
@@ -2023,11 +2021,9 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
         }
         initializerCodeBlock.add(String.join(",", params) + "),", args.toArray());
       }
-      initializerCodeBlock.add(
-          """
+      initializerCodeBlock.add("""
               $T.class,
-            """,
-          vajramReqClass);
+            """, vajramReqClass);
       if (facet instanceof DependencyModel vajramDepDef) {
         ClassName depReqClass = ClassName.bestGuess(vajramDepDef.depReqClassQualifiedName());
         initializerCodeBlock.add(

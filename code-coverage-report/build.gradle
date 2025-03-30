@@ -10,8 +10,8 @@ dependencies {
 
 reporting {
     reports {
-        testCodeCoverageReport(JacocoCoverageReport) { // <.>
-            testType = TestSuiteType.UNIT_TEST
+        testCodeCoverageReport(JacocoCoverageReport) {
+            it.testSuiteName = "test"
         }
     }
 }

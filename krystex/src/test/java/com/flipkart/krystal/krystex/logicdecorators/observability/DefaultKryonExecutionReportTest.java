@@ -7,11 +7,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.data.ImmutableFacetValuesMap;
 import com.flipkart.krystal.data.SimpleRequestBuilder;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport.LogicExecInfo;
+import com.flipkart.krystal.krystex.testutils.ImmutableFacetValuesMap;
 import com.flipkart.krystal.krystex.testutils.SimpleFacet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;

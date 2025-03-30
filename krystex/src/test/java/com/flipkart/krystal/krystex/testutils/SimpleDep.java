@@ -4,7 +4,6 @@ import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
 
 import com.flipkart.krystal.data.DepResponse;
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.data.FacetValuesMapBuilder;
 import com.flipkart.krystal.facets.Dependency;
 
 public final class SimpleDep extends SimpleFacet implements Dependency {

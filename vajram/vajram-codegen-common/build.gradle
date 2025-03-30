@@ -1,11 +1,5 @@
-group 'com.flipkart.krystal'
-version project.krystal_version
-description
-'''Common utility code for Krystal code generation.'''
-
-repositories {
-    mavenCentral()
-}
+description =
+        '''Common utility code for Krystal code generation.'''
 
 dependencies {
     implementation project(':vajram:vajram-java-sdk')

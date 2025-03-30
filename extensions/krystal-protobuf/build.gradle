@@ -1,4 +1,4 @@
-description 'Enables support for protocol buffers in Krystal'
+description = 'Enables support for protocol buffers in Krystal'
 
 dependencies {
     implementation project(':krystal-common')

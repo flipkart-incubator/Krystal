@@ -1,4 +1,4 @@
-description 'Annotations related to lattice framework'
+description = 'Annotations related to lattice framework'
 
 dependencies {
     implementation project(':krystal-common')

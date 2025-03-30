@@ -50,6 +50,7 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
                   Arrays.toString(CodegenPhase.values()),
                   CODEGEN_PHASE_KEY),
           null);
+      return false;
     }
     CodegenPhase codegenPhase = CodegenPhase.valueOf(phaseString);
     List<TypeElement> vajramDefinitions = util.getDefinitionClasses(roundEnv);

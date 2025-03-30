@@ -1,4 +1,4 @@
-description 'Enables support for protocol buffers in lattice'
+description = 'Enables support for protocol buffers in lattice'
 
 dependencies {
     implementation project(':krystal-common')

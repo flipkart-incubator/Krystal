@@ -2,8 +2,8 @@ plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
 }
 
-group 'com.flipkart'
-version project.krystal_version
+group = 'com.flipkart'
+version = project.krystal_version
 
 dependencies {
     implementation project(':krystal-common')

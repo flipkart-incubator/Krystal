@@ -1,5 +1,11 @@
-package com.flipkart.krystal.data;
+package com.flipkart.krystal.krystex.testutils;
 
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.FacetValue;
+import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.data.ImmutableFacetValues;
+import com.flipkart.krystal.data.SimpleImmutRequest;
+import com.flipkart.krystal.data.SimpleRequestBuilder;
 import com.flipkart.krystal.facets.Facet;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;

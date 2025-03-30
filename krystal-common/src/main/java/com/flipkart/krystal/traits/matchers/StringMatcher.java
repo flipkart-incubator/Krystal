@@ -5,7 +5,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 final class StringMatcher implements InputValueMatcher {
 
-  @NonNull private final String stringValue;
+  private @NonNull final String stringValue;
 
   public StringMatcher(@NonNull String stringValue) {
     this.stringValue = stringValue;

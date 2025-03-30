@@ -27,8 +27,7 @@ public abstract sealed class FacetJavaType {
 
   public abstract TypeName javaTypeName(FacetGenModel facet);
 
-  public CodeBlock fieldGetterCode(
-      FacetGenModel facet, CodeGenParams codeGenParams) {
+  public CodeBlock fieldGetterCode(FacetGenModel facet, CodeGenParams codeGenParams) {
     if (codeGenParams.isFacetsSubset()) {
       return CodeBlock.of("return this.$L.$L()", FACET_VALUES_VAR, facet.name());
     }

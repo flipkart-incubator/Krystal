@@ -8,20 +8,20 @@ ext {
     clojarspassword = project.properties['clojarspassword'] ?: ""
     krystal_version = '9.0.0-SNAPSHOT'
     //Use this during development time to fasten compilation by disabling heavy compiler plugins
-    fast_compile = true
+    fast_compile = false
 }
 
 subprojects {
     apply plugin: 'maven-publish'
     apply plugin: 'idea'
 
-    group 'com.flipkart.krystal'
-    version project.krystal_version
+    group = 'com.flipkart.krystal'
+    version = project.krystal_version
 
     publishing {
         repositories {
             maven {
-                url "https://clojars.org/repo"
+                url = "https://clojars.org/repo"
                 credentials {
                     username = rootProject.ext.clojarsusername
                     password = rootProject.ext.clojarspassword
@@ -64,9 +64,9 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
         module('aopalliance:aopalliance', 'aopalliance')
         module('javax.cache:cache-api', 'javax.cache.api')
         module('org.javassist:javassist', 'javassist')
-        module('gradle-api-8.7.jar', 'gradle.api')
-        module('gradle-installation-beacon-8.7.jar', 'gradle.installation.beacon')
-        module('gradle-test-kit-8.7.jar', 'gradle.test.kit')
+        module('gradle-api-8.13.jar', 'gradle.api')
+        module('gradle-installation-beacon-8.13.jar', 'gradle.installation.beacon')
+        module('gradle-test-kit-8.13.jar', 'gradle.test.kit')
         module('org.antlr:ST4', 'org.antlr.antlr.ST4')
         module('org.abego.treelayout:org.abego.treelayout.core', 'org.abego.treelayout.core')
         module('org.antlr:antlr-runtime', 'org.antlr.antlr.runtime')

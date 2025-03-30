@@ -12,10 +12,9 @@ plugins {
     id 'java-gradle-plugin'
 }
 
-group 'com.flipkart.krystal'
-version project.krystal_version
-description
-'''Gradle plugin for projects using the Krystal framework. 
+group = 'com.flipkart.krystal'
+version = project.krystal_version
+description = '''Gradle plugin for projects using the Krystal framework. 
 Includes Vajram code generator and validator. 
 Tasks from this plugin are added under the group "Krystal"'''
 
