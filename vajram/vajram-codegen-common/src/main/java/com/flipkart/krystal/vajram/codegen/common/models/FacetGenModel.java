@@ -5,7 +5,9 @@ import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
 import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.vajram.facets.Mandatory.IfNotSet;
 import com.google.common.collect.ImmutableSet;
+import java.lang.annotation.Annotation;
 import java.util.List;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.VariableElement;
@@ -25,16 +27,13 @@ public sealed interface FacetGenModel permits GivenFacetModel, DependencyModel {
 
   DataType<?> dataType();
 
-  default boolean isOptional() {
-    return !isMandatory();
-  }
-
   default boolean isGiven() {
     return false;
   }
 
-  default boolean isMandatory() {
-    return facetField().getAnnotation(Mandatory.class) != null;
+  default boolean isMandatoryOnServer() {
+    Mandatory mandatory = facetField().getAnnotation(Mandatory.class);
+    return mandatory != null && !mandatory.ifNotSet().equals(IfNotSet.MAY_FAIL_CONDITIONALLY);
   }
 
   @Nullable String documentation();
@@ -48,7 +47,7 @@ public sealed interface FacetGenModel permits GivenFacetModel, DependencyModel {
   }
 
   @SneakyThrows
-  public default List<? extends AnnotationMirror> annotations() {
+  default List<? extends AnnotationMirror> annotations() {
     return facetField().getAnnotationMirrors();
   }
 }

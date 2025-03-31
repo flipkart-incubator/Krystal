@@ -35,7 +35,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class JavaType<T> implements DataType<T> {
 
   /** the fully qualified name of the class, i.e. pck.outer.inner */
-  private final String canonicalClassName;
+  @Getter private final String canonicalClassName;
 
   private @MonotonicNonNull String packageName;
   private @MonotonicNonNull String simpleName;
@@ -101,10 +101,6 @@ public final class JavaType<T> implements DataType<T> {
     } else {
       return new JavaType<>(canonicalClassName, typeParameters);
     }
-  }
-
-  public String canonicalClassName() {
-    return canonicalClassName;
   }
 
   public Optional<String> packageName() {

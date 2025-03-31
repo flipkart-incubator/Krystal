@@ -28,6 +28,7 @@
       <item index="4" class="java.lang.String" itemvalue="jakarta.inject.Inject" />
       <item index="5" class="java.lang.String" itemvalue="java.beans.ConstructorProperties" />
     </list>
+    <pattern value="com.flipkart.krystal.vajram.plugin.VajramPlugin" />
     <writeAnnotations>
       <writeAnnotation name="com.flipkart.krystal.vajram.Input" />
       <writeAnnotation name="com.flipkart.krystal.vajram.Dependency" />

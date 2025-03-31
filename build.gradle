@@ -8,7 +8,9 @@ ext {
     clojarspassword = project.properties['clojarspassword'] ?: ""
     krystal_version = '9.0.0-SNAPSHOT'
     //Use this during development time to fasten compilation by disabling heavy compiler plugins
-    fast_compile = false
+    fast_compile = true
+
+    protobuf_version = '4.30.2'
 }
 
 subprojects {
@@ -48,6 +50,88 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
     if (!fast_compile) {
         apply plugin: 'com.flipkart.java.code.standard'
     }
+
+    dependencies {
+        implementation 'com.google.guava:guava'
+        implementation 'org.slf4j:slf4j-api'
+        implementation 'jakarta.inject:jakarta.inject-api'
+
+        compileOnly 'org.projectlombok:lombok'
+        annotationProcessor 'org.projectlombok:lombok'
+
+        testImplementation 'org.junit.jupiter:junit-jupiter-api'
+        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+        testImplementation 'org.junit.jupiter:junit-jupiter-params'
+        testImplementation 'org.assertj:assertj-core'
+
+        compileOnly 'com.google.auto.value:auto-value-annotations'
+        annotationProcessor 'com.google.auto.value:auto-value'
+
+        testCompileOnly 'org.projectlombok:lombok'
+        testAnnotationProcessor 'org.projectlombok:lombok'
+
+        api platform('org.junit:junit-bom:5.10.1')
+        api platform('org.assertj:assertj-bom:3.25.2')
+        api platform('io.github.resilience4j:resilience4j-bom:2.2.0')
+        api platform('com.google.inject:guice-bom:7.0.0')
+        api platform('org.slf4j:slf4j-bom:2.0.13')
+        api platform('com.fasterxml.jackson:jackson-bom:2.18.3')
+
+        constraints {
+
+            implementation 'org.yaml:snakeyaml:2.2'
+
+            implementation 'com.google.guava:guava:33.0.0-jre'
+            implementation 'org.slf4j:slf4j-api:2.0.11'
+            implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
+            implementation 'org.reflections:reflections:0.10.2'
+            implementation 'com.squareup:javapoet:1.13.0'
+            implementation 'commons-cli:commons-cli:1.6.0'
+            annotationProcessor 'com.google.guava:failureaccess:1.0.2'
+            testAnnotationProcessor 'com.google.guava:failureaccess:1.0.2'
+
+            implementation "com.google.protobuf:protobuf-java:$protobuf_version"
+
+            implementation 'com.google.j2objc:j2objc-annotations:3.0.0'
+            annotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
+            testImplementation 'com.google.j2objc:j2objc-annotations:3.0.0'
+            testAnnotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
+
+            implementation 'com.google.auto.service:auto-service:1.1.1'
+            annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
+
+            compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
+            annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
+
+            annotationProcessor "com.flipkart.krystal:vajram-codegen:$krystal_version"
+            testAnnotationProcessor "com.flipkart.krystal:vajram-codegen:$krystal_version"
+
+            annotationProcessor "com.flipkart.krystal:lattice-protobuf-codegen:$krystal_version"
+            testAnnotationProcessor "com.flipkart.krystal:lattice-protobuf-codegen:$krystal_version"
+
+            String lombok_version = '1.18.36'
+            implementation "org.projectlombok:lombok:$lombok_version"
+            annotationProcessor "org.projectlombok:lombok:$lombok_version"
+            testAnnotationProcessor "org.projectlombok:lombok:$lombok_version"
+        }
+    }
+
+    if (!fast_compile) {
+        checkerFramework {
+            excludeTests = true
+        }
+    }
+
+    java {
+        withSourcesJar()
+    }
+
+    compileJava {
+        options.compilerArgs += ['-Xlint:unchecked', '-parameters']
+        options.deprecation = true
+    }
+
+    tasks.named('sourcesJar').configure { mustRunAfter('compileJava') }
 
     //We need to dynamically add module info to old jars which have not yet modularized and do not have "Automatic-Module-Name" in their MANIFEST.MF
     extraJavaModuleInfo {
@@ -94,87 +178,6 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
         knownModule('com.flipkart.krystal:vajram-codegen-common', 'flipkart.krystal.vajram.codegen.common')
         knownModule('com.flipkart.krystal:krystal-visualization', 'flipkart.krystal.visualization')
     }
-
-    dependencies {
-        implementation 'com.google.guava:guava'
-        implementation 'org.slf4j:slf4j-api'
-        implementation 'jakarta.inject:jakarta.inject-api'
-
-        compileOnly 'org.projectlombok:lombok'
-        annotationProcessor 'org.projectlombok:lombok'
-
-        testImplementation 'org.junit.jupiter:junit-jupiter-api'
-        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
-        testImplementation 'org.junit.jupiter:junit-jupiter-params'
-        testImplementation 'org.assertj:assertj-core'
-
-        compileOnly 'com.google.auto.value:auto-value-annotations'
-        annotationProcessor 'com.google.auto.value:auto-value'
-
-        testCompileOnly 'org.projectlombok:lombok'
-        testAnnotationProcessor 'org.projectlombok:lombok'
-
-        api platform('org.junit:junit-bom:5.10.1')
-        api platform('org.assertj:assertj-bom:3.25.2')
-        api platform('io.github.resilience4j:resilience4j-bom:2.2.0')
-        api platform('com.google.inject:guice-bom:7.0.0')
-        api platform('org.slf4j:slf4j-bom:2.0.13')
-        constraints {
-            def jackson_version = '2.14.3'
-            implementation 'com.fasterxml.jackson.core:jackson-annotations:' + jackson_version
-            implementation 'com.fasterxml.jackson.core:jackson-databind:' + jackson_version
-            implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:' + jackson_version
-            implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:' + jackson_version
-            implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:' + jackson_version
-
-            implementation 'org.yaml:snakeyaml:2.2'
-
-            implementation 'com.google.guava:guava:33.0.0-jre'
-            implementation 'org.slf4j:slf4j-api:2.0.11'
-            implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
-            implementation 'org.reflections:reflections:0.10.2'
-            implementation 'com.squareup:javapoet:1.13.0'
-            implementation 'commons-cli:commons-cli:1.6.0'
-            annotationProcessor 'com.google.guava:failureaccess:1.0.2'
-            testAnnotationProcessor 'com.google.guava:failureaccess:1.0.2'
-
-            implementation 'com.google.j2objc:j2objc-annotations:3.0.0'
-            annotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
-            testImplementation 'com.google.j2objc:j2objc-annotations:3.0.0'
-            testAnnotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
-
-            implementation 'com.google.auto.service:auto-service:1.1.1'
-            annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
-
-            compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
-            annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
-
-            annotationProcessor 'com.flipkart.krystal:vajram-codegen:' + krystal_version
-            testAnnotationProcessor 'com.flipkart.krystal:vajram-codegen:' + krystal_version
-
-            String lombok_version = '1.18.36'
-            implementation 'org.projectlombok:lombok:' + lombok_version
-            annotationProcessor 'org.projectlombok:lombok:' + lombok_version
-            testAnnotationProcessor 'org.projectlombok:lombok:' + lombok_version
-        }
-    }
-
-    if (!fast_compile) {
-        checkerFramework {
-            excludeTests = true
-        }
-    }
-
-    java {
-        withSourcesJar()
-    }
-
-    compileJava {
-        options.compilerArgs += ['-Xlint:unchecked', '-parameters']
-        options.deprecation = true
-    }
-
-    tasks.named('sourcesJar').configure { mustRunAfter('compileJava') }
 }
 
 gradle.taskGraph.whenReady { taskGraph ->

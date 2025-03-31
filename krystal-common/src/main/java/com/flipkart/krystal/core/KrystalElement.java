@@ -1,7 +1,7 @@
 package com.flipkart.krystal.core;
 
 public sealed interface KrystalElement {
-  public sealed interface VajramRoot extends KrystalElement {}
+  sealed interface VajramRoot extends KrystalElement {}
 
   record Vajram() implements VajramRoot {}
 

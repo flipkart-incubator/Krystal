@@ -19,17 +19,34 @@ public @interface Mandatory {
 
   IfNotSet ifNotSet() default IfNotSet.FAIL;
 
+  /**
+   * Specify the condition under which the facet is mandatory. This must be set if only if {@link
+   * #ifNotSet()} is set to {@link IfNotSet#MAY_FAIL_CONDITIONALLY}. In all other cases, this value
+   * is auto-inferred as "ALWAYS" or "NEVER" depending on the value of {@link #ifNotSet()}.
+   */
+  String mandatoryWhen() default "";
+
   /** The behavior to follow if the facet value is not set. */
-  public static enum IfNotSet {
+  enum IfNotSet {
     /** The vajram should fail if the facet value is not set. This is the default behavior. */
     @ApplicableToTypes(all = true)
     FAIL(false),
 
     /**
+     * Specifies that the facet is mandatory but only in specific conditions - in other conditions,
+     * its optional. This is different from the cases where the facet is always Optional(depicted by
+     * omitting this annotation) or the facet is strictly mandatory meaning missing value value will
+     * instantly fail the vajram execution (depicted by using @Mandatory(ifNotSet = FAIL) which is
+     * the same as @Mandatory).
+     */
+    @ApplicableToTypes(all = true)
+    MAY_FAIL_CONDITIONALLY(false),
+
+    /**
      * The vajram should use the default value "false" if a mandatory boolean facet value is not
      * set.
      */
-    @ApplicableToTypes(Boolean.class)
+    @ApplicableToTypes({Boolean.class, boolean.class})
     DEFAULT_TO_FALSE(true),
 
     /**
@@ -37,12 +54,12 @@ public @interface Mandatory {
      * float, double) facet value is not set.
      */
     @ApplicableToTypes({
-      Byte.class,
-      Short.class,
-      Integer.class,
-      Long.class,
-      Float.class,
-      Double.class
+      Byte.class, byte.class,
+      Short.class, short.class,
+      Integer.class, int.class,
+      Long.class, long.class,
+      Float.class, float.class,
+      Double.class, double.class
     })
     DEFAULT_TO_ZERO(true),
 
@@ -59,6 +76,10 @@ public @interface Mandatory {
       this.usePlatformDefault = usePlatformDefault;
     }
 
+    /**
+     * Returns true if the platform default value should be used for the facet with this ifNotSet
+     * strategy.
+     */
     public boolean usePlatformDefault() {
       return usePlatformDefault;
     }

@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.codegen;
+package com.flipkart.krystal.vajram.codegen.processor;
 
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
@@ -30,6 +30,7 @@ import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getTypePar
 import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getVajramImplClassName;
 import static com.flipkart.krystal.vajram.codegen.common.models.Utils.recordAnnotations;
 import static com.flipkart.krystal.vajram.codegen.common.models.Utils.toClassName;
+import static com.flipkart.krystal.vajram.facets.Mandatory.IfNotSet.MAY_FAIL_CONDITIONALLY;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -62,7 +63,6 @@ import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.facets.resolution.ResolutionTarget;
@@ -98,7 +98,6 @@ import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfoLite;
 import com.flipkart.krystal.vajram.codegen.common.spi.CodeGeneratorCreationContext;
 import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGenerator;
-import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.FacetIdNameMapping;
 import com.flipkart.krystal.vajram.facets.FacetValidation;
@@ -176,6 +175,7 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
   private final CodegenPhase codegenPhase;
   private @MonotonicNonNull ParsedVajramData parsedVajramData;
   private final Utils util;
+  private final String vajramName;
 
   public DefaultVajramCodeGenerator(CodeGeneratorCreationContext creationContext) {
     this.currentVajramInfo = creationContext.vajramInfo();
@@ -209,6 +209,7 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
         creationContext.vajramInfo().dependencies().stream()
             .collect(toMap(DependencyModel::id, DependencyModel::canFanout));
     this.codegenPhase = creationContext.codegenPhase();
+    this.vajramName = currentVajramInfo.vajramName();
   }
 
   @Override
@@ -231,9 +232,6 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
         currentVajramInfo.givenFacets().stream()
             .filter(facetDef -> facetDef.facetTypes().contains(INPUT))
             .toList();
-
-    // Generate Protocol Buffer schema file
-    //    generateProtoSchema(inputs);
 
     TypeSpec.Builder requestInterface =
         util.interfaceBuilder(requestInterfaceType.simpleName())
@@ -273,7 +271,7 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
         CodeGenParams.builder().isRequest(true).isBuilder(true).build());
 
     ClassName immutRequestPojoType =
-        ClassName.get(packageName, getImmutRequestPojoName(vajramName()));
+        ClassName.get(packageName, getImmutRequestPojoName(vajramName));
     ClassName pojoRequestBuilderType = immutRequestPojoType.nestedClass("Builder");
 
     TypeSpec.Builder immutRequestPojo =
@@ -380,9 +378,6 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
             .build()
             .toString(),
         currentVajramInfo.vajramClass());
-
-    // Generate Protocol Buffer implementation of the immutable request interface
-    //    generateProtoImplementation(immutReqInterfaceType, inputs);
   }
 
   public void vajramFacets() {
@@ -401,7 +396,7 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
   public void vajramWrapper() {
     initParsedVajramData();
     final TypeSpec.Builder vajramWrapperClass =
-        util.classBuilder(getVajramImplClassName(vajramName()));
+        util.classBuilder(getVajramImplClassName(vajramName));
     List<MethodSpec> methodSpecs = new ArrayList<>();
     // Add superclass
     vajramWrapperClass
@@ -410,8 +405,8 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
         .build();
 
     ClassName requestInterfaceType = getRequestInterfaceType();
-    ClassName immutRequestType = ClassName.get(packageName, getImmutRequestPojoName(vajramName()));
-    ClassName immutFacetsType = ClassName.get(packageName, getImmutFacetsClassname(vajramName()));
+    ClassName immutRequestType = ClassName.get(packageName, getImmutRequestPojoName(vajramName));
+    ClassName immutFacetsType = ClassName.get(packageName, getImmutFacetsClassname(vajramName));
 
     if (currentVajramInfo.lite().isVajram()) {
       // Map of all the resolved dependencies to the methods resolving them
@@ -419,7 +414,7 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
       for (ExecutableElement resolver : getParsedVajramData().resolvers()) {
         String dependency =
             util.extractFacetName(
-                vajramName(), checkNotNull(resolver.getAnnotation(Resolve.class)).dep(), resolver);
+                vajramName, checkNotNull(resolver.getAnnotation(Resolve.class)).dep(), resolver);
         resolverMap.computeIfAbsent(dependency, _k -> new ArrayList<>()).add(resolver);
       }
 
@@ -512,9 +507,7 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
     String paramName = parameter.getSimpleName().toString();
     FacetGenModel facetGenModel = facetModelsByName.get(paramName);
     if (facetGenModel == null) {
-      String message = "Unknown facet with name %s".formatted(paramName);
-      util.error(message, parameter);
-      throw new VajramValidationException(message);
+      throw util.errorAndThrow("Unknown facet with name %s".formatted(paramName), parameter);
     }
     return facetGenModel.id();
   }
@@ -541,7 +534,7 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
       resolverMap
           .computeIfAbsent(
               util.extractFacetName(
-                  vajramName(),
+                  vajramName,
                   requireNonNull(resolver.getAnnotation(Resolve.class)).dep(),
                   resolver),
               _k -> new ArrayList<>())
@@ -647,11 +640,12 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
           fromVajramInfo(currentVajramInfo, util)
               .orElseThrow(
                   () ->
-                      new VajramValidationException(
+                      util.errorAndThrow(
                           """
                             Could not load Vajram class for vajramDef %s.
                             ParsedVajram Data should never be accessed in model generation phase."""
-                              .formatted(currentVajramInfo.lite().vajramId())));
+                              .formatted(currentVajramInfo.lite().vajramId()),
+                          currentVajramInfo.vajramClass()));
     }
     return parsedVajramData;
   }
@@ -680,15 +674,13 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
                     ParameterizedTypeName.get(
                         ClassName.get(CompletableFuture.class), vajramResponseType.box())));
     if (needsBatching) {
-      String message = "Batching is not supported in ComputeVajrams";
-      util.error(
-          message,
+      throw util.errorAndThrow(
+          "Batching is not supported in ComputeVajrams",
           getParsedVajramData().vajramInfo().givenFacets().stream()
               .filter(GivenFacetModel::isBatched)
               .findAny()
               .<Element>map(GivenFacetModel::facetField)
               .orElse(getParsedVajramData().vajramInfo().vajramClass()));
-      throw new VajramValidationException(message);
     } else { // TODO : Need non batched IO vajramDef to test this
       nonBatchedExecuteMethodBuilder(executeBuilder, false);
     }
@@ -730,11 +722,10 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
       TypeMirror returnType = outputLogic.getReturnType();
       if (!util.isRawAssignable(returnType, CompletableFuture.class)) {
         // TODO: Validate IOVajram response type is CompletableFuture<Type>"
-        String errorMessage =
+        throw util.errorAndThrow(
             "The OutputLogic of non-batched IO vajramDef %s must return a CompletableFuture"
-                .formatted(vajramName());
-        util.error(errorMessage, outputLogic);
-        throw new VajramValidationException(errorMessage);
+                .formatted(vajramName),
+            outputLogic);
       }
 
       returnBuilder.add("\nreturn $L(\n", outputLogic.getSimpleName());
@@ -768,10 +759,9 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
       throw new AssertionError("Cannot happen");
     }
     if (facetGenModel.isBatched()) {
-      String message =
-          "Cannot use batch facet '%s' as direct input param for output logic".formatted(facetId);
-      util.error(message, param);
-      throw new VajramValidationException(message);
+      throw util.errorAndThrow(
+          "Cannot use batch facet '%s' as direct input param for output logic".formatted(facetId),
+          param);
     } else {
       outputLogicParamsCode.add("$L");
       outputLogicParamsCodeArgs.add(facetGenModel.name());
@@ -832,16 +822,15 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
     checkState(
         util.isRawAssignable(util.processingEnv().getTypeUtils().erasure(returnType), Map.class),
         "A vajramDef supporting input batching must return map. Vajram: %s",
-        vajramName());
+        vajramName);
     TypeMirror mapValue = getTypeParameters(returnType).get(1);
     if (!util.isRawAssignable(mapValue, CompletableFuture.class)) {
-      String message =
+      throw util.errorAndThrow(
           """
-              Batched IO Vajram should return a map whose value type must be `CompletableFuture`.
-              Violating vajramDef: %s"""
-              .formatted(vajramName());
-      util.error(message, outputLogic);
-      throw new VajramValidationException(message);
+          Batched IO Vajram should return a map whose value type must be `CompletableFuture`.
+          Violating vajramDef: %s"""
+              .formatted(vajramName),
+          outputLogic);
     }
     String batchingExecutePrepareParams =
         """
@@ -860,8 +849,7 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
     valueMap.put("facetValues", ClassName.get(FacetValues.class));
     valueMap.put("facetValuesList", FACETS_LIST);
     valueMap.put("facetsVar", FACET_VALUES_VAR);
-    valueMap.put(
-        "facetsInterface", ClassName.get(packageName, getFacetsInterfaceName(vajramName())));
+    valueMap.put("facetsInterface", ClassName.get(packageName, getFacetsInterfaceName(vajramName)));
     valueMap.put("inputBatching", batchableInputs);
     valueMap.put("commonInput", commonFacets);
     valueMap.put("facetJavaType", vajramResponseType);
@@ -967,13 +955,11 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
     Resolve resolve =
         checkNotNull(
             method.getAnnotation(Resolve.class), "Resolver method must have 'Resolve' annotation");
-    String depName = util.extractFacetName(vajramName(), resolve.dep(), method);
+    String depName = util.extractFacetName(vajramName, resolve.dep(), method);
     FacetGenModel facetGenModel = checkNotNull(facetModelsByName.get(depName));
 
     if (!(facetGenModel instanceof DependencyModel dependencyModel)) {
-      String message = "No facet definition found for " + facetGenModel.name();
-      util.error(message, method);
-      throw new VajramValidationException(message);
+      throw util.errorAndThrow("No facet definition found for " + facetGenModel.name(), method);
     }
     VajramID depVajramName = dependencyModel.depVajramInfo().vajramId();
     String depRequestPackage = dependencyModel.depReqPackageName();
@@ -1036,15 +1022,12 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
       String variable = usingFacetModel.name();
       TypeMirror parameterTypeMirror = parameter.asType();
       final TypeName parameterType = TypeName.get(parameterTypeMirror);
-      if (givenFacetModel.isMandatory()) {
+      if (givenFacetModel.isMandatoryOnServer()) {
         if (!util.processingEnv().getTypeUtils().isAssignable(facetType, parameterTypeMirror)) {
-          String message =
-              String.format(
-                  "Incorrect facet type being consumed. Expected '%s', found '%s'"
-                      .formatted(facetType, parameterType),
-                  usingFacetModel.name());
-          util.error(message, parameter);
-          throw new VajramValidationException(message);
+          throw util.errorAndThrow(
+              "Incorrect facet type being consumed. Expected '%s', found '%s'"
+                  .formatted(facetType, parameterType),
+              parameter);
         }
         codeBuilder.add(
             CodeBlock.builder()
@@ -1068,16 +1051,14 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
                     usingFacetModel.name())
                 .build());
       } else {
-        String message =
+        throw util.errorAndThrow(
             String.format(
-                "Optional dependency %s must have type as Optional", usingFacetModel.name());
-        util.error(message, parameter);
-        throw new VajramValidationException(message);
+                "Optional dependency %s must have type as Optional", usingFacetModel.name()),
+            parameter);
       }
     } else {
-      String message = "No facetDef resolver found for " + usingFacetModel.name();
-      util.error(message, parameter);
-      throw new VajramValidationException(message);
+      throw util.errorAndThrow(
+          "No facetDef resolver found for " + usingFacetModel.name(), parameter);
     }
   }
 
@@ -1117,13 +1098,12 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
         }
         if (typeMismatch) {
           // the parameter data type must be RequestResponse<Req, Resp>
-          String message =
+          throw util.errorAndThrow(
               """
-                The fanout dependency ('%s') can be consumed only via the FanoutDepResponses<ReqType,RespType> class. \
-                Found '%s' instead"""
-                  .formatted(dependencyModel.name(), parameterType);
-          util.error(message, parameter);
-          throw new VajramValidationException(message);
+              The fanout dependency ('%s') can be consumed only via the FanoutDepResponses<ReqType,RespType> class. \
+              Found '%s' instead"""
+                  .formatted(dependencyModel.name(), parameterType),
+              parameter);
         }
         String depValueAccessorCode = "$T $L = $L.$L()";
         ifBlockBuilder.addStatement(
@@ -1135,10 +1115,11 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
             usingFacetName);
       } else {
         // This means the dependency being consumed used is not a fanout dependency
-        String depValueAccessorCode = """
+        String depValueAccessorCode =
+            """
               $1T $2L =
                 $3L.$4L()""";
-        if (usingFacetDef.isMandatory()) {
+        if (usingFacetDef.isMandatoryOnServer()) {
           if (unboxedDepType.equals(TypeName.get(parameterType))) {
             // This means this dependencyDef being consumed is a non fanout mandatory dependency and
             // the dev has requested the value directly. So we extract the only value from
@@ -1152,11 +1133,10 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
           } else {
             // This means the dependency being consumed is mandatory, but the type of the parameter
             // is not matching the type of the facet
-            String message =
+            throw util.errorAndThrow(
                 "A resolver must consume a mandatory dependency directly using its type (%s). Found '%s' instead"
-                    .formatted(unboxedDepType, parameterType);
-            util.error(message, parameter);
-            throw new VajramValidationException(message);
+                    .formatted(unboxedDepType, parameterType),
+                parameter);
           }
         } else {
           // dependency is optional then accept only errable and optional in resolver
@@ -1192,12 +1172,11 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
                 FACET_VALUES_VAR,
                 usingFacetName);
           } else {
-            String message =
+            throw util.errorAndThrow(
                 ("A resolver ('%s') must not access an optional dependency ('%s') directly."
                         + "Use Optional<>, Errable<>, or DependencyResponse<> instead")
-                    .formatted(logicName, usingFacetName);
-            util.error(message, parameter);
-            throw new VajramValidationException(message);
+                    .formatted(logicName, usingFacetName),
+                parameter);
           }
         }
       }
@@ -1289,13 +1268,12 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
       } else if (util.isRawAssignable(returnType, FanoutCommand.class)) {
         // TODO : add missing validations if any (??)
         if (!dependencyModel.canFanout()) {
-          String message =
+          throw util.errorAndThrow(
               """
               Dependency '%s' is not a fanout dependency, yet the resolver method returns a MultiExecute command.\
-               This is not allowed. Return a SingleExecute command, a single value, or mark the dependency as `canFanout = true`."""
-                  .formatted(dependencyModel.name());
-          util.error(message, resolverMethod);
-          throw new VajramValidationException(message);
+              This is not allowed. Return a SingleExecute command, a single value, or mark the dependency as `canFanout = true`."""
+                  .formatted(dependencyModel.name()),
+              resolverMethod);
         }
         methodCodeBuilder.addStatement(
             "var $L = new $T()",
@@ -1561,15 +1539,37 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
         return new One2OneResponse(util);
       }
     } else {
-      boolean devAccessible = codeGenParams.isDevAccessible() && codeGenParams.isLocal();
-      Mandatory mandatoryAnno = facet.facetField().getAnnotation(Mandatory.class);
-      if (mandatoryAnno != null
-          && (mandatoryAnno.ifNotSet().usePlatformDefault() || devAccessible)) {
-        return new Actual(util);
-      } else if (devAccessible) {
-        return new OptionalType(util);
+      boolean localDevAccessible = codeGenParams.isDevAccessible() && codeGenParams.isLocal();
+      Mandatory mandatory = facet.facetField().getAnnotation(Mandatory.class);
+      if (mandatory != null) {
+        if (mandatory.ifNotSet().usePlatformDefault()) {
+          // Since we default to platform defaults, facet value can never be null, so return type is
+          // the actual type
+          return new Actual(util);
+        } else if (localDevAccessible) {
+          if (mandatory.ifNotSet().equals(MAY_FAIL_CONDITIONALLY)) {
+            // Since this is conditionally mandatory, we need to return an optional so that
+            // developers can inspect the state of the optional and throw exception according to
+            // their business logic
+            return new OptionalType(util);
+          } else {
+            // This means the facet is strictly mandatory. Se can should return the actual type to
+            // developers after doing necessary checks and throwing exceptions
+            return new Actual(util);
+          }
+        } else {
+          // This means facet is either strictly or conditionally mandatory, and  the class is not
+          // accessed by devs directly. So  we can return the boxed type which covers both the cases
+          return new Boxed(util);
+        }
+      } else {
+        // This means the facet is strictly optional
+        if (localDevAccessible) {
+          return new OptionalType(util);
+        } else {
+          return new Boxed(util);
+        }
       }
-      return new Boxed(util);
     }
   }
 
@@ -1672,11 +1672,10 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
     List<FacetGenModel> allFacets = currentVajramInfo.facetStream().toList();
 
     ClassName facetsType = getFacetsInterfaceType();
-    ClassName immutableFacetsType =
-        ClassName.get(packageName, getImmutFacetsClassname(vajramName()));
+    ClassName immutableFacetsType = ClassName.get(packageName, getImmutFacetsClassname(vajramName));
 
     TypeSpec.Builder facetsInterface =
-        util.interfaceBuilder(getFacetsInterfaceName(vajramName()))
+        util.interfaceBuilder(getFacetsInterfaceName(vajramName))
             .addModifiers(PUBLIC)
             .addSuperinterface(
                 doInputsNeedBatching ? BatchEnabledFacetValues.class : FacetValues.class);
@@ -1688,7 +1687,7 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
                 facetsInterface, facet, CodeGenParams.builder().wrapsRequest(true).build()));
 
     TypeSpec.Builder immutFacetsClass =
-        util.classBuilder(getImmutFacetsClassname(vajramName()))
+        util.classBuilder(getImmutFacetsClassname(vajramName))
             .addModifiers(PUBLIC, FINAL)
             .addSuperinterface(facetsType)
             .addSuperinterface(
@@ -1755,7 +1754,7 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
           .build()
           .writeTo(writer);
       util.generateSourceFile(
-          packageName + '.' + getFacetsInterfaceName(vajramName()),
+          packageName + '.' + getFacetsInterfaceName(vajramName),
           writer.toString(),
           currentVajramInfo.vajramClass());
     } catch (IOException e) {
@@ -1796,7 +1795,7 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
           .build()
           .writeTo(writer);
       util.generateSourceFile(
-          packageName + '.' + getImmutFacetsClassname(vajramName()),
+          packageName + '.' + getImmutFacetsClassname(vajramName),
           writer.toString(),
           currentVajramInfo.vajramClass());
     } catch (IOException e) {
@@ -1806,8 +1805,7 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
 
   private void batchFacetsClasses() {
     ClassName allFacetsType = getFacetsInterfaceType();
-    ClassName allImmutFacetsType =
-        ClassName.get(packageName, getImmutFacetsClassname(vajramName()));
+    ClassName allImmutFacetsType = ClassName.get(packageName, getImmutFacetsClassname(vajramName));
     ClassName batchImmutFacetsType = getBatchFacetsClassName();
     ClassName commonImmutFacetsType = getCommonFacetsClassName();
 
@@ -1914,19 +1912,19 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
   }
 
   private ClassName getFacetsInterfaceType() {
-    return ClassName.get(packageName, getFacetsInterfaceName(vajramName()));
+    return ClassName.get(packageName, getFacetsInterfaceName(vajramName));
   }
 
   private ClassName getRequestInterfaceType() {
-    return ClassName.get(packageName, getRequestInterfaceName(vajramName()));
+    return ClassName.get(packageName, getRequestInterfaceName(vajramName));
   }
 
   private ClassName getBatchFacetsClassName() {
-    return ClassName.get(packageName, vajramName() + BATCH_FACETS_SUFFIX);
+    return ClassName.get(packageName, vajramName + BATCH_FACETS_SUFFIX);
   }
 
   private ClassName getCommonFacetsClassName() {
-    return ClassName.get(packageName, vajramName() + COMMON_FACETS_SUFFIX);
+    return ClassName.get(packageName, vajramName + COMMON_FACETS_SUFFIX);
   }
 
   private void codegenBatchableFacets(
@@ -1963,7 +1961,7 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
       FieldSpec facetIdField =
           FieldSpec.builder(String.class, facet.name() + FACET_NAME_SUFFIX)
               .addModifiers(PUBLIC, STATIC, FINAL)
-              .initializer("$S", vajramName() + Constants.QUALIFIED_FACET_SEPERATOR + facet.name())
+              .initializer("$S", vajramName + Constants.QUALIFIED_FACET_SEPERATOR + facet.name())
               .addJavadoc(facetDoc != null ? CodeBlock.of(facetDoc) : EMPTY_CODE_BLOCK)
               .build();
 
@@ -1978,13 +1976,13 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
                   ? InputMirrorSpec.class
                   : facet instanceof DependencyModel vajramDepDef
                       ? vajramDepDef.canFanout()
-                          ? vajramDepDef.isMandatory()
+                          ? vajramDepDef.isMandatoryOnServer()
                               ? MandatoryFanoutDepSpec.class
                               : OptionalFanoutDepSpec.class
-                          : vajramDepDef.isMandatory()
+                          : vajramDepDef.isMandatoryOnServer()
                               ? MandatoryOne2OneDepSpec.class
                               : OptionalOne2OneDepSpec.class
-                      : facet.isMandatory()
+                      : facet.isMandatoryOnServer()
                           ? MandatoryFacetDefaultSpec.class
                           : OptionalFacetDefaultSpec.class);
       List<TypeName> collectClassNames = new ArrayList<>();
@@ -2001,7 +1999,7 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
               facet.id(),
               facet.name(),
               VajramID.class,
-              vajramName())
+              vajramName)
           .add(
               util.getJavaTypeCreationCode(
                       (JavaType<?>) facet.dataType(), collectClassNames, facet.facetField())
@@ -2021,9 +2019,11 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
         }
         initializerCodeBlock.add(String.join(",", params) + "),", args.toArray());
       }
-      initializerCodeBlock.add("""
+      initializerCodeBlock.add(
+          """
               $T.class,
-            """, vajramReqClass);
+            """,
+          vajramReqClass);
       if (facet instanceof DependencyModel vajramDepDef) {
         ClassName depReqClass = ClassName.bestGuess(vajramDepDef.depReqClassQualifiedName());
         initializerCodeBlock.add(
@@ -2109,9 +2109,9 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
                         ? CodeBlock.of("$T.Creator.create()", TraitDependency.class)
                         : EMPTY_CODE_BLOCK)
                 .build(),
-            ClassName.get(packageName, getFacetsInterfaceName(vajramName())),
+            ClassName.get(packageName, getFacetsInterfaceName(vajramName)),
             facet.name(),
-            ClassName.get(packageName, getImmutFacetsClassname(vajramName()), "Builder"),
+            ClassName.get(packageName, getImmutFacetsClassname(vajramName), "Builder"),
             facet.name());
       }
       specFields.add(
@@ -2168,227 +2168,5 @@ public class DefaultVajramCodeGenerator implements VajramCodeGenerator {
 
   ImmutableSet<Integer> getResolverSources(ExecutableElement resolve) {
     return resolve.getParameters().stream().map(this::inferFacetId).collect(toImmutableSet());
-  }
-
-  private String vajramName() {
-    return currentVajramInfo.lite().vajramId().vajramId();
-  }
-
-  /**
-   * Generates a Protocol Buffer schema file for the vajram request.
-   *
-   * @param inputs The list of input facets for the vajram
-   */
-  private void generateProtoSchema(List<GivenFacetModel> inputs) {
-    StringBuilder protoBuilder = new StringBuilder();
-    String vajramName = vajramName();
-
-    // Add proto syntax and package declaration
-    protoBuilder.append("syntax = \"proto3\";\n\n");
-    protoBuilder.append("package ").append(packageName).append(";\n\n");
-
-    // Add message definition
-    protoBuilder.append("message ").append(vajramName).append("Request {\n");
-
-    // Add fields for each input
-    int fieldNumber = 1;
-    for (GivenFacetModel input : inputs) {
-      String protoType = getProtoType(input.dataType());
-      String fieldName = input.name();
-
-      // Add field definition
-      protoBuilder
-          .append("  ")
-          .append(protoType)
-          .append(" ")
-          .append(fieldName)
-          .append(" = ")
-          .append(fieldNumber)
-          .append(";\n");
-
-      fieldNumber++;
-    }
-
-    // Close message definition
-    protoBuilder.append("}\n");
-
-    // Write proto file
-    String protoFileName = Utils.getProtoFileName(vajramName);
-    util.generateSourceFile(
-        protoFileName, protoBuilder.toString(), currentVajramInfo.vajramClass());
-  }
-
-  /**
-   * Maps Java types to Protocol Buffer types.
-   *
-   * @param dataType The data type to map
-   * @return The corresponding Protocol Buffer type
-   */
-  private String getProtoType(DataType<?> dataType) {
-    try {
-      String canonicalName = dataType.toString();
-
-      if (canonicalName.contains(String.class.getSimpleName())) {
-        return "string";
-      } else if (canonicalName.contains(Integer.class.getSimpleName())
-          || canonicalName.contains("int")) {
-        return "int32";
-      } else if (canonicalName.contains(Long.class.getSimpleName())
-          || canonicalName.contains("long")) {
-        return "int64";
-      } else if (canonicalName.contains(Float.class.getSimpleName())
-          || canonicalName.contains("float")) {
-        return "float";
-      } else if (canonicalName.contains(Double.class.getSimpleName())
-          || canonicalName.contains("double")) {
-        return "double";
-      } else if (canonicalName.contains(Boolean.class.getSimpleName())
-          || canonicalName.contains("boolean")) {
-        return "bool";
-      } else if (canonicalName.contains("byte[]")) {
-        return "bytes";
-      } else {
-        // For complex types, we'll use a message reference
-        // This is a simplification - in a real implementation, we would need to handle
-        // complex types properly by generating nested messages or importing other proto files
-        return "bytes";
-      }
-    } catch (Exception e) {
-      // Default to bytes for any type we can't determine
-      return "bytes";
-    }
-  }
-
-  /**
-   * Generates a Protocol Buffer implementation of the immutable request interface. This
-   * implementation allows vajrams to invoke each other across processes over a network.
-   *
-   * @param immutReqInterfaceType The immutable request interface type
-   * @param inputs The list of input facets for the vajram
-   */
-  private void generateProtoImplementation(
-      ClassName immutReqInterfaceType, List<GivenFacetModel> inputs) {
-    String vajramName = vajramName();
-    ClassName protoImplType =
-        ClassName.get(packageName, Utils.getImmutRequestProtoName(vajramName));
-
-    // Create the Protocol Buffer implementation class
-    TypeSpec.Builder protoImpl =
-        util.classBuilder(protoImplType.simpleName())
-            .addModifiers(PUBLIC, FINAL)
-            .addSuperinterface(immutReqInterfaceType);
-
-    // Add fields for serialized data and deserialized data
-    protoImpl.addField(FieldSpec.builder(byte[].class, "serializedData", PRIVATE, FINAL).build());
-    protoImpl.addField(FieldSpec.builder(Object.class, "deserializedData", PRIVATE).build());
-
-    // Add constructor that takes serialized data
-    protoImpl.addMethod(
-        constructorBuilder()
-            .addModifiers(PUBLIC)
-            .addParameter(byte[].class, "serializedData")
-            .addStatement("this.serializedData = serializedData")
-            .build());
-
-    // Add constructor that takes the regular immutable request
-    protoImpl.addMethod(
-        constructorBuilder()
-            .addModifiers(PUBLIC)
-            .addParameter(immutReqInterfaceType, "request")
-            .addCode("// Serialize the request to Protocol Buffer format\n")
-            .addStatement("this.serializedData = serializeRequest(request)")
-            .build());
-
-    // Add method to serialize a request
-    protoImpl.addMethod(
-        methodBuilder("serializeRequest")
-            .addModifiers(PRIVATE)
-            .returns(byte[].class)
-            .addParameter(immutReqInterfaceType, "request")
-            .addCode("// This is a placeholder implementation. In a real implementation,\n")
-            .addCode("// we would use the Protocol Buffers library to serialize the request.\n")
-            .addCode("try {\n")
-            .addCode("  // Create a builder for the Protocol Buffer message\n")
-            .addCode("  // Set all the fields from the request\n")
-            .addCode("  // Build and serialize the message\n")
-            .addCode("  // For now, we'll just use Java serialization as a placeholder\n")
-            .addCode(
-                "  java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();\n")
-            .addCode("  java.io.ObjectOutputStream oos = new java.io.ObjectOutputStream(baos);\n")
-            .addCode("  oos.writeObject(request);\n")
-            .addCode("  oos.close();\n")
-            .addCode("  return baos.toByteArray();\n")
-            .addCode("} catch (Exception e) {\n")
-            .addCode("  throw new RuntimeException(\"Failed to serialize request\", e);\n")
-            .addCode("}\n")
-            .build());
-
-    // Add method to deserialize the data
-    protoImpl.addMethod(
-        methodBuilder("deserializeData")
-            .addModifiers(PRIVATE)
-            .returns(Object.class)
-            .addCode("if (deserializedData == null) {\n")
-            .addCode("  // This is a placeholder implementation. In a real implementation,\n")
-            .addCode("  // we would use the Protocol Buffers library to deserialize the data.\n")
-            .addCode("  try {\n")
-            .addCode("    // Parse the Protocol Buffer message from the serialized data\n")
-            .addCode("    // For now, we'll just use Java deserialization as a placeholder\n")
-            .addCode(
-                "    java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(serializedData);\n")
-            .addCode("    java.io.ObjectInputStream ois = new java.io.ObjectInputStream(bais);\n")
-            .addCode("    deserializedData = ois.readObject();\n")
-            .addCode("    ois.close();\n")
-            .addCode("  } catch (Exception e) {\n")
-            .addCode("    throw new RuntimeException(\"Failed to deserialize data\", e);\n")
-            .addCode("  }\n")
-            .addCode("}\n")
-            .addCode("return deserializedData;\n")
-            .build());
-
-    // Add getter methods for each input
-    for (GivenFacetModel input : inputs) {
-      String inputName = input.name();
-      TypeName inputType = TypeName.get(input.dataType().javaModelType(util.processingEnv()));
-
-      protoImpl.addMethod(
-          methodBuilder(inputName)
-              .addAnnotation(Override.class)
-              .addModifiers(PUBLIC)
-              .returns(inputType)
-              .addCode("// Get the value from the deserialized data\n")
-              .addStatement(
-                  "return (($T) deserializeData()).$L()", immutReqInterfaceType, inputName)
-              .build());
-    }
-
-    // Add the _build method required by the ImmutableRequest interface
-    protoImpl.addMethod(
-        methodBuilder("_build")
-            .addAnnotation(Override.class)
-            .addModifiers(PUBLIC)
-            .returns(immutReqInterfaceType)
-            .addStatement("return this")
-            .build());
-
-    // Add the _asBuilder method required by the ImmutableRequest interface
-    protoImpl.addMethod(
-        methodBuilder("_asBuilder")
-            .addAnnotation(Override.class)
-            .addModifiers(PUBLIC)
-            .returns(
-                ClassName.get(
-                    immutReqInterfaceType.packageName(),
-                    immutReqInterfaceType.simpleName(),
-                    "Builder"))
-            .addCode("// Create a builder from the deserialized data\n")
-            .addStatement("return (($T) deserializeData())._asBuilder()", immutReqInterfaceType)
-            .build());
-
-    // Generate the source file
-    util.generateSourceFile(
-        protoImplType.canonicalName(),
-        JavaFile.builder(packageName, protoImpl.build()).build().toString(),
-        currentVajramInfo.vajramClass());
   }
 }

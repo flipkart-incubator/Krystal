@@ -1,14 +1,4 @@
 module flipkart.krystal.common {
-  requires com.google.common;
-  requires static lombok;
-  requires org.checkerframework.checker.qual;
-  requires java.compiler;
-  requires java.xml;
-  requires org.slf4j;
-  requires jdk.httpserver;
-  requires com.google.auto.value.annotations;
-  requires jakarta.inject;
-
   exports com.flipkart.krystal.data;
   exports com.flipkart.krystal.facets;
   exports com.flipkart.krystal.datatypes;
@@ -23,4 +13,14 @@ module flipkart.krystal.common {
   exports com.flipkart.krystal.traits;
   exports com.flipkart.krystal.traits.matchers;
   exports com.flipkart.krystal.serial;
+
+  requires com.google.common;
+  requires org.checkerframework.checker.qual;
+  requires java.compiler;
+  requires java.xml;
+  requires org.slf4j;
+  requires jdk.httpserver;
+  requires com.google.auto.value.annotations;
+  requires jakarta.inject;
+  requires static lombok;
 }

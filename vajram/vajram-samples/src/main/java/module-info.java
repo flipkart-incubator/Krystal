@@ -1,6 +1,5 @@
 module flipkart.krystal.vajram.vajram_samples {
   requires flipkart.krystal.vajram;
-  requires flipkart.krystal.common;
   requires com.google.common;
   requires static lombok;
   requires java.logging;
@@ -8,4 +7,7 @@ module flipkart.krystal.vajram.vajram_samples {
   requires jakarta.inject;
   requires jdk.compiler;
   requires com.google.auto.value.annotations;
+  requires flipkart.krystal.lattice.annotations;
+  requires flipkart.krystal.extensions.protobuf;
+  requires com.google.protobuf;
 }

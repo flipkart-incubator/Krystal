@@ -10,13 +10,13 @@ module flipkart.krystal.vajram {
   exports com.flipkart.krystal.vajram.annos;
   exports com.flipkart.krystal.vajram.inputinjection;
 
-  requires com.google.common;
-  requires static lombok;
-  requires org.reflections;
-  requires transitive org.checkerframework.checker.qual;
-  requires com.google.errorprone.annotations;
   requires transitive flipkart.krystal.common;
-  requires static org.slf4j;
+  requires com.google.common;
+  requires org.reflections;
+  requires org.checkerframework.checker.qual;
+  requires com.google.errorprone.annotations;
   requires java.compiler;
   requires com.google.auto.value.annotations;
+  requires static lombok;
+  requires static org.slf4j;
 }

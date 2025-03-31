@@ -11,11 +11,11 @@ dependencies {
 reporting {
     reports {
         testCodeCoverageReport(JacocoCoverageReport) {
-            it.testSuiteName = "test"
+            it.testSuiteName = 'test'
         }
     }
 }
 
 tasks.named('check') {
-    dependsOn tasks.named('testCodeCoverageReport', JacocoReport) // <.>
+    dependsOn tasks.named('testCodeCoverageReport', JacocoReport)
 }

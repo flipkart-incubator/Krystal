@@ -2,7 +2,7 @@ description =
         '''Common utility code for Krystal code generation.'''
 
 dependencies {
-    implementation project(':vajram:vajram-java-sdk')
+    api project(':vajram:vajram-java-sdk')
     implementation 'com.squareup:javapoet'
 }
 

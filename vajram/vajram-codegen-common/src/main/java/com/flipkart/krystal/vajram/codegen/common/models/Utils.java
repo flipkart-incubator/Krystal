@@ -35,7 +35,6 @@ import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType.FanoutRes
 import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType.One2OneResponse;
 import com.flipkart.krystal.vajram.codegen.common.models.GivenFacetModel.GivenFacetModelBuilder;
 import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
-import com.flipkart.krystal.vajram.exception.VajramValidationException;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FacetId;
 import com.flipkart.krystal.vajram.facets.FacetIdNameMapping;
@@ -636,14 +635,6 @@ public class Utils {
     return vajramName + Constants.IMMUT_REQUEST_POJO_SUFFIX;
   }
 
-  public static String getImmutRequestProtoName(String vajramName) {
-    return vajramName + Constants.IMMUT_REQUEST_PROTO_SUFFIX;
-  }
-
-  public static String getProtoFileName(String vajramName) {
-    return vajramName + Constants.PROTO_FILE_SUFFIX;
-  }
-
   public static String getVajramImplClassName(String vajramId) {
     return vajramId + Constants.IMPL_SUFFIX;
   }
@@ -689,6 +680,17 @@ public class Utils {
           }
         },
         null);
+  }
+
+  public boolean isSameType(TypeMirror a, Class<?> b) {
+    return processingEnv
+        .getTypeUtils()
+        .isSameType(
+            a, processingEnv().getElementUtils().getTypeElement(b.getCanonicalName()).asType());
+  }
+
+  public boolean isSameType(TypeMirror a, TypeMirror b) {
+    return processingEnv().getTypeUtils().isSameType(a, b);
   }
 
   /**
@@ -859,7 +861,7 @@ public class Utils {
       } else {
         return new One2OneResponse(this);
       }
-    } else if (facet.isMandatory()) {
+    } else if (facet.isMandatoryOnServer()) {
       return new Actual(this);
     } else {
       return new Boxed(this);

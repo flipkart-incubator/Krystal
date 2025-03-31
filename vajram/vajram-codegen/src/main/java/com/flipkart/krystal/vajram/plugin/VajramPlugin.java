@@ -3,8 +3,10 @@ package com.flipkart.krystal.vajram.plugin;
 import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.MODELS;
 import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.WRAPPERS;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.VAJRAM_MODELS_GEN_DIR_NAME;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.flipkart.krystal.vajram.codegen.common.models.Constants;
 import java.io.File;
 import java.util.List;
 import org.gradle.api.Plugin;
@@ -21,7 +23,7 @@ public class VajramPlugin implements Plugin<Project> {
   // outputs separate -
   // This enables better caching and to deterministically reuse previous build's outputs
   static final String VAJRAM_MODELS_GEN_DIR =
-      "/generated/sources/annotationProcessor/vajramModels/java";
+      "/generated/sources/" + VAJRAM_MODELS_GEN_DIR_NAME + "/java";
 
   static final String MAIN_SRC_DIR = "src/main/java";
   static final String TEST_SRC_DIR = "src/test/java";
@@ -73,7 +75,7 @@ public class VajramPlugin implements Plugin<Project> {
               // This means the destinationDirectory property
               // is not used by this step.
               // We reassign the `destinationDirectory` to a dummy empty directory so that the
-              // destination directory doesnot clash
+              // destination directory does not clash
               // with the full compile step. This is so that gradle caching works optimally - gradle
               // doesn't cache outputs of tasks
               // which share output directories with other tasks -

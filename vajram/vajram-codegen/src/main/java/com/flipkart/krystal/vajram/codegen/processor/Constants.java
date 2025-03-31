@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.codegen;
+package com.flipkart.krystal.vajram.codegen.processor;
 
 import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGeneratorProvider;
 

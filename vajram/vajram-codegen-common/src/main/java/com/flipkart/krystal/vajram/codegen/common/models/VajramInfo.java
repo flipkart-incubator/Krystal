@@ -34,4 +34,8 @@ public record VajramInfo(
   public TypeElement vajramClass() {
     return lite.vajramOrReqClass();
   }
+
+  public String vajramName() {
+    return lite().vajramId().vajramId();
+  }
 }

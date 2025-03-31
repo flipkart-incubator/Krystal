@@ -47,8 +47,7 @@ public final class Constants {
   public static final String REQUEST_SUFFIX = "_Req";
   public static final String IMMUT_REQUEST_SUFFIX = "_ImmutReq";
   public static final String IMMUT_REQUEST_POJO_SUFFIX = "_ImmutReqPojo";
-  public static final String IMMUT_REQUEST_PROTO_SUFFIX = "_ImmutReqProto";
-  public static final String PROTO_FILE_SUFFIX = "_Req.proto";
+
   public static final String INPUT_SPECS_CLASS_SUFFIX = "_InputSpecs";
   public static final String FACET_SPECS_CLASS_SUFFIX = "_FacetSpecs";
   public static final String SPEC_CLASS_SUFFIX = "_SpecType";
@@ -56,6 +55,7 @@ public final class Constants {
 
   public static final CodeBlock EMPTY_CODE_BLOCK = CodeBlock.builder().build();
   public static final String QUALIFIED_FACET_SEPERATOR = ":";
+  public static final String VAJRAM_MODELS_GEN_DIR_NAME = "vajramModels";
 
   private Constants() {}
 }
