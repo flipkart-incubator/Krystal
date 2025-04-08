@@ -9,16 +9,15 @@ import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.
 import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.result_n;
 import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.result_s;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.data.IfNoValue;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.data.IfNoValue;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
@@ -33,13 +32,11 @@ import java.util.Optional;
 /**
  * Takes a list of numbers, doubles each of them, adds them up and then subtracts 1 from the sum.
  */
-@ExternallyInvocable
 @Vajram
 public abstract class DoubleMinusOne extends ComputeVajramDef<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
-    @IfNoValue
-    @Input List<Integer> numbers;
+    @IfNoValue @Input List<Integer> numbers;
 
     @IfNoValue
     @Dependency(onVajram = Multiply.class, canFanout = true)
