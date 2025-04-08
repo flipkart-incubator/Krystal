@@ -33,7 +33,6 @@ import java.util.Optional;
 /**
  * Takes a list of numbers, doubles each of them, adds them up and then subtracts 1 from the sum.
  */
-@ExternalInvocation(allow = true)
 @Vajram
 public abstract class DoubleMinusOne extends ComputeVajramDef<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
