@@ -178,14 +178,16 @@ public final class KryonExecutor implements KrystalExecutor {
       throw new RejectedExecutionException("KryonExecutor is already closed");
     }
     checkArgument(executionConfig != null, "executionConfig can not be null");
-    if (!kryonDefinitionRegistry
-        .get(kryonId)
-        .tags()
-        .getAnnotationByType(ExternalInvocation.class)
-        .map(ExternalInvocation::allow)
-        .orElse(false)) {
-      throw new RejectedExecutionException(
-          "External invocation is not allowed for kryonId: " + kryonId);
+    if (!executorConfig._riskyOpenAllKryonsForExternalInvocation()) {
+      if (!kryonDefinitionRegistry
+          .get(kryonId)
+          .tags()
+          .getAnnotationByType(ExternalInvocation.class)
+          .map(ExternalInvocation::allow)
+          .orElse(false)) {
+        throw new RejectedExecutionException(
+            "External invocation is not allowed for kryonId: " + kryonId);
+      }
     }
 
     String executionId = executionConfig.executionId();
