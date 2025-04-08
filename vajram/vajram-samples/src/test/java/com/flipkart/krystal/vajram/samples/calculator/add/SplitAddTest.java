@@ -342,7 +342,7 @@ class SplitAddTest {
   }
 
   private static ImmutableSet<DependentChain> disabledDepChains(VajramKryonGraph graph) {
-    String splitAdderId = graph.getVajramIdByVajramDefType(SplitAdd.class).vajramId();
+    String splitAdderId = graph.getVajramIdByVajramDefType(SplitAdd.class).id();
     return ImmutableSet.of(
         graph.computeDependantChain(
             splitAdderId, splitSum1_s, splitSum1_s, splitSum1_s, splitSum1_s, splitSum1_s),

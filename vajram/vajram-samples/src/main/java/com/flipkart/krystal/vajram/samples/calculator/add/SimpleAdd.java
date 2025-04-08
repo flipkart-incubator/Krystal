@@ -4,7 +4,7 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.annos.ConformsToTrait;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.data.IfNoValue;
 import com.flipkart.krystal.vajram.facets.Output;
 import java.util.List;
 
@@ -14,7 +14,8 @@ import java.util.List;
 public abstract class SimpleAdd extends ComputeVajramDef<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
-    @Mandatory @Input List<Integer> numbers;
+    @IfNoValue
+    @Input List<Integer> numbers;
   }
 
   @Output

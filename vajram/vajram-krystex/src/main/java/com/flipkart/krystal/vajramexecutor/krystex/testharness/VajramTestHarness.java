@@ -1,8 +1,5 @@
 package com.flipkart.krystal.vajramexecutor.krystex.testharness;
 
-import static com.flipkart.krystal.vajram.utils.Constants.IMMUT_FACETS_CLASS_SUFFIX;
-
-import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.ImmutableRequest;
@@ -19,7 +16,7 @@ import java.util.Objects;
  * Test harness is a collection of software/test data used by developers for unit testing. It is
  * responsible for test drivers and stubs. In the context of Vajrams, VajramTestHarness is
  * responsible for preparing the krystex executor for test by providing the necessary stubbing
- * capability for all the dependancy Vajrams of the given dependant Vajram in test.
+ * capability for all the dependency Vajrams of the given dependant Vajram in test.
  */
 public class VajramTestHarness {
 
@@ -42,17 +39,15 @@ public class VajramTestHarness {
   }
 
   @SuppressWarnings("unchecked")
-  public <T> VajramTestHarness withMock(ImmutableFacetValues facets, Errable<T> response) {
-    String requestName = facets.getClass().getSimpleName();
-    int index = requestName.lastIndexOf(IMMUT_FACETS_CLASS_SUFFIX);
-    String vajramId = requestName.substring(0, index);
+  public <T> VajramTestHarness withMock(ImmutableFacetValues request, Errable<T> response) {
+    String vajramId = request._vajramID().id();
     Map<ImmutableFacetValues, Errable<Object>> mockDataMap = this.vajramIdMockData.get(vajramId);
     if (Objects.isNull(mockDataMap)) {
-      this.vajramIdMockData.put(vajramId, Map.of(facets, (Errable<Object>) response));
+      this.vajramIdMockData.put(vajramId, Map.of(request, (Errable<Object>) response));
     } else {
-      Errable<Object> errable = mockDataMap.get((ImmutableRequest) facets);
+      Errable<Object> errable = mockDataMap.get(request);
       if (Objects.isNull(errable)) {
-        mockDataMap.put(facets, (Errable<Object>) response);
+        mockDataMap.put(request, (Errable<Object>) response);
         this.vajramIdMockData.put(vajramId, mockDataMap);
       }
     }
@@ -61,16 +56,13 @@ public class VajramTestHarness {
 
   public KrystexVajramExecutorConfig buildConfig() {
     vajramIdMockData.forEach(
-        (s, vajramRequestErrableMap) -> {
-          vajramRequestErrableMap.forEach(
-              (objectVajramRequest, objectErrable) -> {
-                requestLevelCache.primeCache(s, objectVajramRequest, objectErrable.toFuture());
-              });
-        });
+        (s, vajramRequestErrableMap) ->
+            vajramRequestErrableMap.forEach(
+                (objectVajramRequest, objectErrable) ->
+                    requestLevelCache.primeCache(
+                        s, objectVajramRequest, objectErrable.toFuture())));
     KryonExecutorConfigBuilder configBuilder =
-        kryonExecutorConfigBuilder
-            .kryonExecutorConfigBuilder()
-            .singleThreadExecutor(new SingleThreadExecutor("VajramTestHarness"));
+        kryonExecutorConfigBuilder.kryonExecutorConfigBuilder();
     KryonDecoratorConfig kryonDecoratorConfig =
         configBuilder.build().kryonDecoratorConfigs().get(RequestLevelCache.DECORATOR_TYPE);
     if (kryonDecoratorConfig == null) {
@@ -81,11 +73,9 @@ public class VajramTestHarness {
               new KryonDecoratorConfig(
                   RequestLevelCache.DECORATOR_TYPE,
                   executionContext ->
-                      vajramIdMockData.containsKey(executionContext.vajramID().value()),
+                      vajramIdMockData.containsKey(executionContext.vajramID().id()),
                   executionContext -> RequestLevelCache.DECORATOR_TYPE,
-                  kryonExecutionContext -> {
-                    return requestLevelCache;
-                  }));
+                  kryonExecutionContext -> requestLevelCache));
     }
     return kryonExecutorConfigBuilder;
   }

@@ -43,6 +43,8 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
 import com.google.inject.AbstractModule;
+import com.google.protobuf.InvalidProtocolBufferException;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.LongAdder;
@@ -106,6 +108,35 @@ class FormulaTest {
     }
     assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(4);
     assertThat(Add.CALL_COUNTER.sum()).isEqualTo(1);
+  }
+
+  @Test
+  void formula_protoRequest_success() throws InvalidProtocolBufferException {
+    CompletableFuture<Integer> future;
+    VajramKryonGraph graph = this.graph.build();
+    graph.registerInputBatchers(
+        graph.getVajramIdByVajramDefType(Add.class),
+        InputBatcherConfig.simple(() -> new InputBatcherImpl(100)));
+    Formula_ImmutReqProto vajramRequest =
+        Formula_ImmutReqProto._builder().a(1000).p(20).q(5).test((byte) 90)._build();
+    try (KrystexVajramExecutor krystexVajramExecutor =
+        graph.createExecutor(
+            KrystexVajramExecutorConfig.builder()
+                .requestId(REQUEST_ID)
+                .kryonExecutorConfigBuilder(
+                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                .build())) {
+      future =
+          krystexVajramExecutor.execute(
+              graph.getVajramIdByVajramDefType((Formula.class)),
+              vajramRequest,
+              KryonExecutionConfig.builder().executionId("formulaTest_proto").build());
+    }
+    assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(40);
+    assertThat(Add.CALL_COUNTER.sum()).isEqualTo(1);
+    assertThat(Formula_Req_Msg.parseFrom(vajramRequest._serialize()))
+        .isEqualTo(vajramRequest._proto());
+    System.out.println(Arrays.toString(vajramRequest._serialize()));
   }
 
   @Test

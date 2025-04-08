@@ -4,12 +4,12 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.data.IfNoValue;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
@@ -20,11 +20,12 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.LongAdder;
 
-@ExternalInvocation(allow = true)
+@ExternallyInvocable
 @Vajram
 public abstract class TestUserService extends IOVajramDef<TestUserInfo> {
   static class _Facets {
-    @Mandatory @Batched @Input String userId;
+    @IfNoValue
+    @Batched @Input String userId;
   }
 
   private static final ScheduledExecutorService LATENCY_INDUCER =

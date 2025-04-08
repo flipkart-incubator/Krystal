@@ -1,10 +1,10 @@
 package com.flipkart.krystal.vajram.samples_errors;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.data.IfNoValue;
 import com.flipkart.krystal.vajram.facets.Output;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -12,7 +12,7 @@ import jakarta.inject.Qualifier;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
-@ExternalInvocation(allow = true)
+@ExternallyInvocable
 @Vajram
 public abstract class TooManyQualifiers extends ComputeVajramDef<String> {
   @Retention(RetentionPolicy.RUNTIME)
@@ -21,9 +21,9 @@ public abstract class TooManyQualifiers extends ComputeVajramDef<String> {
 
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
-    @Mandatory @Input String input;
+    @IfNoValue @Input String input;
 
-    @Mandatory
+    @IfNoValue
     @Inject
     @Named("toInject")
     @InjectionQualifier

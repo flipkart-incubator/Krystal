@@ -6,7 +6,6 @@ import static com.flipkart.krystal.vajram.codegen.common.models.Constants.CODEGE
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.VAJRAM_MODELS_GEN_DIR_NAME;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.flipkart.krystal.vajram.codegen.common.models.Constants;
 import java.io.File;
 import java.util.List;
 import org.gradle.api.Plugin;

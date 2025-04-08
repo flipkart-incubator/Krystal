@@ -56,6 +56,7 @@ public final class Constants {
   public static final CodeBlock EMPTY_CODE_BLOCK = CodeBlock.builder().build();
   public static final String QUALIFIED_FACET_SEPERATOR = ":";
   public static final String VAJRAM_MODELS_GEN_DIR_NAME = "vajramModels";
+  public static final String VAJRAM_ID_CONSTANT_NAME = "_VAJRAM_ID";
 
   private Constants() {}
 }

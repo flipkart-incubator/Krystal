@@ -29,7 +29,7 @@ public record GivenFacetModel(
       ImmutableSet.copyOf(EnumSet.of(FacetType.INPUT, FacetType.INJECTION));
 
   public GivenFacetModel {
-    if (!facetTypes.stream().allMatch(ALLOWED_FACET_TYPES::contains)) {
+    if (!ALLOWED_FACET_TYPES.containsAll(facetTypes)) {
       throw new IllegalArgumentException(
           "Allowed Facet types: " + ALLOWED_FACET_TYPES + ". Found: " + facetTypes);
     }

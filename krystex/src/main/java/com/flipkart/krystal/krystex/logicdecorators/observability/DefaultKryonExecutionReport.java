@@ -117,7 +117,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
       VajramID vajramID, ImmutableList<ImmutableMap<Facet, String>> inputs) {
     @Override
     public String toString() {
-      return "%s(%s)".formatted(vajramID.value(), inputs);
+      return "%s(%s)".formatted(vajramID.id(), inputs);
     }
   }
 
@@ -236,7 +236,7 @@ public final class DefaultKryonExecutionReport implements KryonExecutionReport {
         long startTimeMs) {
       this.startTimeMs = startTimeMs;
       ImmutableList<ImmutableMap<Facet, Object>> dependencyResults;
-      this.kryonId = vajramID.value();
+      this.kryonId = vajramID.id();
       this.inputsList =
           inputList.stream()
               .map(facets -> kryonExecutionReport.extractAndConvertFacets(facets))

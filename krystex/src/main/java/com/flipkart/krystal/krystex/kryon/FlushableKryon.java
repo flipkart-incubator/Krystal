@@ -298,7 +298,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
             if (fanoutResolvers.size() > 1) {
               throw new IllegalStateException(
                   "Multiple fanout resolvers found for dependency %s of vajram %s. This is not supported."
-                      .formatted(dep, vajramID.value()));
+                      .formatted(dep, vajramID.id()));
             } else if (fanoutResolvers.size() == 1) {
               fanoutResolverDef = fanoutResolvers.get(0);
             }

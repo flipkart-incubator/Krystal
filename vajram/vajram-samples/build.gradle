@@ -26,10 +26,10 @@ dependencies {
     implementation project(':vajram:vajram-java-sdk')
     implementation project(':krystal-visualization')
     implementation project(':lattice:lattice-annotations')
-    implementation project(':extensions:krystal-protobuf')
+    implementation project(':vajram:extensions:protobuf:vajram-protobuf3')
 
     annotationProcessor project(':krystal-common')
-    annotationProcessor 'com.flipkart.krystal:lattice-protobuf-codegen'
+    annotationProcessor 'com.flipkart.krystal:vajram-protobuf-codegen'
     annotationProcessor 'com.flipkart.krystal:vajram-codegen'
 
     implementation 'com.google.protobuf:protobuf-java'
@@ -39,7 +39,7 @@ dependencies {
 
     testImplementation project(':vajram:vajram-krystex')
 
-    testImplementation project(':extensions:vajram-guice')
+    testImplementation project(':vajram:extensions:guice:vajram-guice')
 
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'

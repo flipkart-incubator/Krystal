@@ -6,8 +6,8 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.tags.ElementTags;
-import com.flipkart.krystal.vajram.facets.Mandatory;
-import com.flipkart.krystal.vajram.facets.Mandatory.IfNotSet;
+import com.flipkart.krystal.data.IfNoValue;
+import com.flipkart.krystal.data.IfNoValue.Strategy;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -51,17 +51,17 @@ public final class MandatoryFacetDefaultSpec<T, CV extends Request> extends Defa
   @SuppressWarnings("unchecked")
   public @NonNull T getPlatformDefaultValue() throws UnsupportedOperationException {
     if (platformDefaultValue == null) {
-      Optional<Mandatory> mandatoryOpt = tags().getAnnotationByType(Mandatory.class);
+      Optional<IfNoValue> mandatoryOpt = tags().getAnnotationByType(IfNoValue.class);
       if (mandatoryOpt.isPresent()) {
-        IfNotSet ifNotSet = mandatoryOpt.get().ifNotSet();
-        if (!ifNotSet.usePlatformDefault()) {
+        Strategy ifNoValueStrategy = mandatoryOpt.get().then();
+        if (!ifNoValueStrategy.usePlatformDefault()) {
           throw new UnsupportedOperationException(
               "The @Mandatory facet '"
-                  + name()
-                  + "' is configured with ifNotSet strategy: "
-                  + ifNotSet
-                  + " which returns 'false' for usePlatformDefault(). Hence, platform default value is "
-                  + "not supported. This method should not have been called. This seems to be krystal platform bug.");
+              + name()
+              + "' is configured with ifNotSet strategy: "
+              + ifNoValueStrategy
+              + " which returns 'false' for usePlatformDefault(). Hence, platform default value is "
+              + "not supported. This method should not have been called. This seems to be krystal platform bug.");
         } else {
           try {
             platformDefaultValue = type().getPlatformDefaultValue();

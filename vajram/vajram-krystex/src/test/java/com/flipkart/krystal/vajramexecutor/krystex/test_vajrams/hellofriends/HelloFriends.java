@@ -10,14 +10,14 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofrie
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.data.IfNoValue;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
@@ -30,15 +30,16 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.IntStream;
 
-@ExternalInvocation(allow = true)
+@ExternallyInvocable
 @Vajram
 public abstract class HelloFriends extends ComputeVajramDef<String> {
   static class _Facets {
-    @Mandatory @Input String userId;
+    @IfNoValue
+    @Input String userId;
 
     @Input int numberOfFriends;
 
-    @Mandatory
+    @IfNoValue
     @Dependency(onVajram = TestUserService.class)
     TestUserInfo userInfo;
 

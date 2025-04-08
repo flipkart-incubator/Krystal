@@ -7,6 +7,9 @@ import static java.util.concurrent.CompletableFuture.allOf;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.ImmutableFacetValues;
+import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
@@ -44,7 +47,7 @@ public class RequestLevelCache implements KryonDecorator {
   }
 
   public void primeCache(
-      String kryonId, FacetValues request, CompletableFuture<@Nullable Object> data) {
+      String kryonId, ImmutableFacetValues request, CompletableFuture<@Nullable Object> data) {
     cache.put(new CacheKey(new VajramID(kryonId), request._build()), data);
   }
 
@@ -124,14 +127,14 @@ public class RequestLevelCache implements KryonDecorator {
                   });
             } else if (throwable != null) {
               cacheMisses.forEach(
-                  (requestId, response) -> {
-                    newCacheEntries
-                        .computeIfAbsent(requestId, _r -> new CompletableFuture<@Nullable Object>())
-                        .completeExceptionally(throwable);
-                  });
+                  (requestId, response) ->
+                      newCacheEntries
+                          .computeIfAbsent(
+                              requestId, _r -> new CompletableFuture<@Nullable Object>())
+                          .completeExceptionally(throwable));
             } else {
               RuntimeException e =
-                  new RuntimeException("Exepecting BatchResponse. Found " + kryonResponse);
+                  new RuntimeException("Expecting BatchResponse. Found " + kryonResponse);
               log.error("", e);
               throw e;
             }
@@ -146,19 +149,18 @@ public class RequestLevelCache implements KryonDecorator {
       }
       allOf(allFuturesArray)
           .whenComplete(
-              (unused, throwable) -> {
-                finalResponse.complete(
-                    new BatchResponse(
-                        allFutures.stream()
-                            .collect(
-                                toImmutableMap(
-                                    Entry::getKey,
-                                    entry ->
-                                        entry
-                                            .getValue()
-                                            .handle(Errable::errableFrom)
-                                            .getNow(UNKNOWN_ERROR)))));
-              });
+              (unused, throwable) ->
+                  finalResponse.complete(
+                      new BatchResponse(
+                          allFutures.stream()
+                              .collect(
+                                  toImmutableMap(
+                                      Entry::getKey,
+                                      entry ->
+                                          entry
+                                              .getValue()
+                                              .handle(Errable::errableFrom)
+                                              .getNow(UNKNOWN_ERROR))))));
       return finalResponse;
     }
   }

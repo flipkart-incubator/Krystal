@@ -3,7 +3,7 @@ package com.flipkart.krystal.krystex.kryon;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
@@ -39,7 +39,7 @@ import lombok.Singular;
  * @param _riskyOpenAllKryonsForExternalInvocation DO NOT SET THIS TO TRUE IN PRODUCTION CODE - ELSE
  *     NEW VERSIONS OF CODE CAN BREAK BACKWARD COMPATIBILITY. {@code true} if all vajrams are
  *     allowed to be invoked from outside the krystal graph intead of only allowing vajrams tagged
- *     with @{@link ExternalInvocation}(allow=true)
+ *     with @{@link ExternallyInvocable}(allow=true)
  */
 public record KryonExecutorConfig(
     LogicDecorationOrdering logicDecorationOrdering,

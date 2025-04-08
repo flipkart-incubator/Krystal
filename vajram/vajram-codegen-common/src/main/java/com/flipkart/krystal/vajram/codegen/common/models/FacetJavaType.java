@@ -10,7 +10,7 @@ import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
 import com.flipkart.krystal.vajram.facets.FacetValidation;
-import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.data.IfNoValue;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.TypeName;
@@ -49,7 +49,7 @@ public abstract sealed class FacetJavaType {
         "$T.$L.getPlatformDefaultValue()",
         ClassName.get(
             facet.vajramInfo().packageName(),
-            getFacetsInterfaceName(facet.vajramInfo().vajramId().vajramId())),
+            getFacetsInterfaceName(facet.vajramInfo().vajramId().id())),
         facet.name() + FACET_SPEC_SUFFIX);
   }
 
@@ -70,14 +70,14 @@ public abstract sealed class FacetJavaType {
 
     @Override
     public CodeBlock fieldInitializer(FacetGenModel facet) {
-      Mandatory mandatory = facet.facetField().getAnnotation(Mandatory.class);
-      if (mandatory != null && mandatory.ifNotSet().usePlatformDefault()) {
+      IfNoValue ifNoValue = facet.facetField().getAnnotation(IfNoValue.class);
+      if (ifNoValue != null && ifNoValue.then().usePlatformDefault()) {
         if (facet.dataType().hasPlatformDefaultValue(util.processingEnv())) {
           return CodeBlock.of(
               "$T.$L.getPlatformDefaultValue()",
               ClassName.get(
                   facet.vajramInfo().packageName(),
-                  getFacetsInterfaceName(facet.vajramInfo().vajramId().vajramId())),
+                  getFacetsInterfaceName(facet.vajramInfo().vajramId().id())),
               facet.name() + FACET_SPEC_SUFFIX);
         } else {
           throw new VajramDefinitionException(
@@ -105,8 +105,8 @@ public abstract sealed class FacetJavaType {
     @Override
     public CodeBlock fieldGetterCode(FacetGenModel facet, CodeGenParams codeGenParams) {
       if (codeGenParams.isSubsetBatch()) {
-        Mandatory mandatory = facet.facetField().getAnnotation(Mandatory.class);
-        if (mandatory != null && !mandatory.ifNotSet().usePlatformDefault()) {
+        IfNoValue ifNoValue = facet.facetField().getAnnotation(IfNoValue.class);
+        if (ifNoValue != null && !ifNoValue.then().usePlatformDefault()) {
           return CodeBlock.of(
               """
               return $T.validateMandatoryFacet(this.$L.$L(), $S, $S)
@@ -114,7 +114,7 @@ public abstract sealed class FacetJavaType {
               FacetValidation.class,
               FACET_VALUES_VAR,
               facet.name(),
-              facet.vajramInfo().vajramId().vajramId(),
+              facet.vajramInfo().vajramId().id(),
               facet.name());
         } else {
           return CodeBlock.of("return this.$L.$L()", FACET_VALUES_VAR, facet.name());

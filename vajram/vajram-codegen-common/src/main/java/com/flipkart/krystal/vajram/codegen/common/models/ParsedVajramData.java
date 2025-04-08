@@ -73,7 +73,7 @@ public record ParsedVajramData(
       Resolve resolve = method.getAnnotation(Resolve.class);
       String dep =
           util.extractFacetName(
-              vajramInfo.lite().vajramId().vajramId(), checkNotNull(resolve).dep(), method);
+              vajramInfo.lite().vajramId().id(), checkNotNull(resolve).dep(), method);
       @SuppressWarnings("method.invocation")
       String depVajramId =
           vajramInfo.dependencies().stream()
@@ -82,7 +82,7 @@ public record ParsedVajramData(
               .orElseThrow()
               .depVajramInfo()
               .vajramId()
-              .vajramId();
+              .id();
       List<String> depInputNames =
           Arrays.stream(resolve.depInputs())
               .map(di -> util.extractFacetName(depVajramId, di, method))

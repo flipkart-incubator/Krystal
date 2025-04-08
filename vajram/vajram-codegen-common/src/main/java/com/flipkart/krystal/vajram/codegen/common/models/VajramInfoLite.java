@@ -29,15 +29,15 @@ public record VajramInfoLite(
     Utils util) {
 
   public ClassName requestInterfaceType() {
-    return ClassName.get(packageName(), getRequestInterfaceName(vajramId().vajramId()));
+    return ClassName.get(packageName(), getRequestInterfaceName(vajramId().id()));
   }
 
   public ClassName immutReqInterfaceType() {
-    return ClassName.get(packageName(), getImmutRequestInterfaceName(vajramId().vajramId()));
+    return ClassName.get(packageName(), getImmutRequestInterfaceName(vajramId().id()));
   }
 
   public ClassName immutReqPojoType() {
-    return ClassName.get(packageName(), getImmutRequestPojoName(vajramId().vajramId()));
+    return ClassName.get(packageName(), getImmutRequestPojoName(vajramId().id()));
   }
 
   public TypeName builderInterfaceType() {

@@ -1,19 +1,20 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.data.IfNoValue;
 import com.flipkart.krystal.vajram.facets.Output;
 import java.util.Optional;
 import java.util.concurrent.atomic.LongAdder;
 
-@ExternalInvocation(allow = true)
+@ExternallyInvocable
 @Vajram
 public abstract class Hello extends ComputeVajramDef<String> {
   static class _Facets {
-    @Mandatory @Input String name;
+    @IfNoValue
+    @Input String name;
     @Input String greeting;
   }
 

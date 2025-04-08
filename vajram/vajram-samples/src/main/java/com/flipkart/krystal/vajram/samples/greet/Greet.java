@@ -2,12 +2,12 @@ package com.flipkart.krystal.vajram.samples.greet;
 
 import static com.flipkart.krystal.vajram.samples.greet.Greet_Fac.userInfo_n;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.data.IfNoValue;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import jakarta.inject.Inject;
@@ -20,16 +20,17 @@ import java.util.Optional;
  * Given a userId, this Vajram composes and returns a 'Hello!' greeting addressing the user by name
  * (as declared by the user in their profile).
  */
-@ExternalInvocation(allow = true)
+@ExternallyInvocable
 @Vajram
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 // ComputeVajram means that this Vajram does not directly perform any blocking operations.
 public abstract class Greet extends ComputeVajramDef<String> {
   static class _Facets {
-    @Mandatory @Input String userId;
+    @IfNoValue
+    @Input String userId;
     @Inject Logger log;
 
-    @Mandatory
+    @IfNoValue
     @Inject
     @Named("analytics_sink")
     AnalyticsEventSink analyticsEventSink;

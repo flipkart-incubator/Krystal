@@ -6,7 +6,8 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.tags.ElementTags;
-import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.data.IfNoValue;
+import com.flipkart.krystal.data.IfNoValue.Strategy;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.concurrent.Callable;
@@ -26,8 +27,8 @@ public sealed interface FacetSpec<T, CV extends Request> extends Facet
 
   /**
    * Returns the default value for the facet based on its configuration. This is useful in cases
-   * where a facet is tagged {@link Mandatory} and its {@link
-   * Mandatory.IfNotSet#usePlatformDefault()} returns true. The platform must assign a default value
+   * where a facet is tagged {@link IfNoValue} and its {@link
+   * Strategy#usePlatformDefault()} returns true. The platform must assign a default value
    * to the facet instead of failing. Which default value to use is returned by this method.
    *
    * @throws UnsupportedOperationException if this facet's configuration does not allow using a

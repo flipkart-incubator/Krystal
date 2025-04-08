@@ -35,93 +35,73 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class JavaType<T> implements DataType<T> {
 
   /** the fully qualified name of the class, i.e. pck.outer.inner */
-  @Getter private final String canonicalClassName;
+  @Getter private final @lombok.NonNull String canonicalClassName;
 
-  private @MonotonicNonNull String packageName;
-  private @MonotonicNonNull String simpleName;
-  private ImmutableList<String> enclosingClasses = ImmutableList.of();
   @Getter private final ImmutableList<DataType<?>> typeParameters;
+
+  /** Number of array dimensions if this type is an array, 0 otherwise */
+  @Getter private final int numberOfArrayDimensions;
 
   private @MonotonicNonNull Type clazz;
 
-  JavaType(Class<?> clazz, List<? extends DataType<?>> typeParams) {
-    this(
-        Optional.ofNullable(clazz.getPackage()).map(Package::getName),
-        clazz.getSimpleName(),
-        getEnclosingClasses(clazz),
-        typeParams);
-    this.clazz = clazz;
-  }
-
-  @SuppressWarnings({
-    "UnnecessaryTypeArgument",
-    "optional.parameter"
-  }) // -> To prevent Null checker errors
-  private JavaType(
-      Optional<String> packageName,
-      String simpleName,
-      List<String> enclosingClasses,
-      List<? extends DataType<?>> typeParameters) {
-    this(
-        Stream.of(packageName.stream(), enclosingClasses.stream(), Stream.of(simpleName))
-            .flatMap(identity())
-            .filter(Objects::nonNull)
-            .collect(Collectors.joining(".")),
-        typeParameters);
-    this.packageName = packageName.orElse(null);
-    this.simpleName = simpleName;
-    this.enclosingClasses = ImmutableList.copyOf(enclosingClasses);
-  }
-
-  private JavaType(String canonicalClassName, List<? extends DataType<?>> typeParameters) {
-    this.canonicalClassName = canonicalClassName;
-    this.typeParameters = ImmutableList.copyOf(typeParameters);
-  }
-
-  public static <T> JavaType<T> create(Class<T> clazz) {
-    return create(clazz, ImmutableList.of());
-  }
-
   @SuppressWarnings("unchecked")
-  public static <T> JavaType<T> create(Class<?> clazz, List<DataType<?>> typeParams) {
+  public static <T> JavaType<@NonNull T> create(Class<?> clazz, DataType<?>... typeParams) {
     String canonicalClassName = clazz.getCanonicalName();
     if (canonicalClassName != null && dataTypeMappings.containsKey(canonicalClassName)) {
-      return (JavaType<T>) dataTypeMappings.get(canonicalClassName).apply(typeParams);
+      return (JavaType<@NonNull T>) dataTypeMappings.get(canonicalClassName).apply(typeParams);
     } else {
-      return new JavaType<T>(clazz, typeParams);
+      return new JavaType<>(clazz, typeParams);
     }
   }
 
   @SuppressWarnings("unchecked")
-  public static <T> JavaType<T> create(
-      String canonicalClassName, List<? extends DataType<?>> typeParameters) {
+  public static <T> JavaType<T> create(String canonicalClassName, DataType<?>... typeParameters) {
     if (dataTypeMappings.containsKey(canonicalClassName)) {
-      //noinspection unchecked
+      // noinspection unchecked
       return (JavaType<T>) dataTypeMappings.get(canonicalClassName).apply(typeParameters);
     } else {
       return new JavaType<>(canonicalClassName, typeParameters);
     }
   }
 
-  public Optional<String> packageName() {
-    return Optional.ofNullable(packageName);
+  JavaType(Class<?> clazz, DataType<?>... typeParameters) {
+    this(
+        Stream.of(
+                Optional.ofNullable(clazz.getPackage()).map(Package::getName).stream(),
+                getEnclosingClasses(clazz).stream(),
+                Stream.of(clazz.getSimpleName()))
+            .flatMap(identity())
+            .filter(Objects::nonNull)
+            .collect(Collectors.joining(".")),
+        clazz,
+        typeParameters);
   }
 
-  public Optional<String> simpleName() {
-    return Optional.ofNullable(simpleName);
+  private JavaType(String canonicalClassName, DataType<?>... typeParameters) {
+    this(canonicalClassName, null, typeParameters);
   }
 
-  public ImmutableList<String> enclosingClasses() {
-    return enclosingClasses;
+  private JavaType(
+      @NonNull String canonicalClassName, @Nullable Class<?> clazz, DataType<?>... typeParameters) {
+    this.clazz = clazz;
+    this.typeParameters = ImmutableList.copyOf(typeParameters);
+    this.canonicalClassName = canonicalClassName;
+
+    // Detect if the canonical class name represents an array and count dimensions
+    int dimensions = 0;
+    if (canonicalClassName.endsWith("[]")) {
+      String temp = canonicalClassName;
+      while (temp.endsWith("[]")) {
+        dimensions++;
+        temp = temp.substring(0, temp.length() - 2);
+      }
+    }
+    this.numberOfArrayDimensions = dimensions;
   }
 
   @Override
   public Type javaReflectType() throws ClassNotFoundException {
     if (clazz == null) {
-      if (!enclosingClasses.isEmpty()) {
-        throw new UnsupportedOperationException(
-            "Cannot load java type of an enclosed class - only top level classes supported");
-      }
       @SuppressWarnings("unchecked")
       Class<T> type =
           (Class<T>) checkNotNull(this.getClass().getClassLoader()).loadClass(canonicalClassName());
@@ -131,7 +111,7 @@ public final class JavaType<T> implements DataType<T> {
         Type javaReflectType = typeParameter.javaReflectType();
         list.add(javaReflectType);
       }
-      //noinspection ZeroLengthArrayAllocation
+      // noinspection ZeroLengthArrayAllocation
       this.clazz = getJavaType(type, list.toArray(new Type[0]));
     }
     return clazz;
@@ -139,11 +119,9 @@ public final class JavaType<T> implements DataType<T> {
 
   @Override
   public TypeMirror javaModelType(ProcessingEnvironment processingEnv) {
-    if (this.clazz != null) {
-      TypeKind typeKind = typeKindMappings.get(this.clazz);
-      if (typeKind != null && typeKind.isPrimitive()) {
-        return processingEnv.getTypeUtils().getPrimitiveType(typeKind);
-      }
+    TypeKind typeKind = typeKindMappings.get(canonicalClassName);
+    if (typeKind != null && typeKind.isPrimitive()) {
+      return processingEnv.getTypeUtils().getPrimitiveType(typeKind);
     }
     TypeElement typeElement = processingEnv.getElementUtils().getTypeElement(canonicalClassName);
     if (typeElement == null) {
@@ -195,6 +173,11 @@ public final class JavaType<T> implements DataType<T> {
   @Override
   public boolean hasPlatformDefaultValue(ProcessingEnvironment processingEnv) {
     return TypeUtils.hasPlatformDefaultValue(javaModelType(processingEnv));
+  }
+
+  @Override
+  public DataType<T> getRawType() {
+    return JavaType.create(canonicalClassName());
   }
 
   @SuppressWarnings("unchecked")

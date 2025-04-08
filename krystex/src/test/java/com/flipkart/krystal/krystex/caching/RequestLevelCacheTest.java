@@ -10,13 +10,13 @@ import static java.util.Collections.emptySet;
 import static java.util.function.Function.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.data.SimpleImmutRequest;
-import com.flipkart.krystal.data.SimpleRequestBuilder;
+import com.flipkart.krystal.krystex.testutils.SimpleImmutRequest;
+import com.flipkart.krystal.krystex.testutils.SimpleRequestBuilder;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinition;
@@ -116,7 +116,7 @@ class RequestLevelCacheTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic("kryon", emptySet()),
             newFacetsFromRequestLogic("kryon"),
-            ElementTags.of(List.of(ExternalInvocation.Creator.create(true))));
+            ElementTags.of(List.of(ExternallyInvocable.Creator.create())));
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
             kryonDefinition.vajramID(),
@@ -163,7 +163,7 @@ class RequestLevelCacheTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic("kryon", emptySet()),
             newFacetsFromRequestLogic("kryon"),
-            ElementTags.of(List.of(ExternalInvocation.Creator.create(true))));
+            ElementTags.of(List.of(ExternallyInvocable.Creator.create())));
 
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(

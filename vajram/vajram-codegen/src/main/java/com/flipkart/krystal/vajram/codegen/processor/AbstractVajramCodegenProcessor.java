@@ -1,14 +1,14 @@
 package com.flipkart.krystal.vajram.codegen.processor;
 
-import static com.flipkart.krystal.vajram.codegen.processor.Constants.DEFAULT_CODE_GENERATOR_PROVIDER;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
+import static com.flipkart.krystal.vajram.codegen.processor.Constants.DEFAULT_VAJRAM_CODEGEN_PROVIDER;
 import static java.lang.System.lineSeparator;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.vajram.codegen.common.models.Utils;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramValidationException;
-import com.flipkart.krystal.vajram.codegen.common.spi.CodeGeneratorCreationContext;
+import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGenContext;
 import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGeneratorProvider;
 import com.google.common.collect.Iterables;
 import java.util.Arrays;
@@ -66,14 +66,14 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
     Iterable<VajramCodeGeneratorProvider> codeGeneratorProviders =
         Iterables.concat(
             // Start with the default code generator
-            List.of(DEFAULT_CODE_GENERATOR_PROVIDER),
+            List.of(DEFAULT_VAJRAM_CODEGEN_PROVIDER),
             // Load custom vajram code generator providers
             ServiceLoader.load(
                 VajramCodeGeneratorProvider.class, this.getClass().getClassLoader()));
 
     for (TypeElement vajramClass : vajramDefinitions) {
-      CodeGeneratorCreationContext creationContext =
-          new CodeGeneratorCreationContext(util.computeVajramInfo(vajramClass), util, codegenPhase);
+      VajramCodeGenContext creationContext =
+          new VajramCodeGenContext(util.computeVajramInfo(vajramClass), util, codegenPhase);
       for (VajramCodeGeneratorProvider customCodeGeneratorProvider : codeGeneratorProviders) {
         try {
           customCodeGeneratorProvider.create(creationContext).generate();

@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram.exec;
 import static com.flipkart.krystal.core.VajramID.vajramID;
 
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.data.FacetValuesContainer;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.tags.ElementTags;
 import com.flipkart.krystal.vajram.ComputeDelegationMode;
@@ -17,7 +16,6 @@ import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.annos.OutputLogicDelegationMode;
 import com.flipkart.krystal.vajram.annos.VajramIdentifier;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.facets.Using;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.google.common.collect.ImmutableMap;
@@ -69,24 +67,14 @@ final class Vajrams {
   private static FacetSpec inferFacetId(
       Parameter parameter,
       ImmutableMap<String, FacetSpec> facetsByName,
-      ImmutableMap<Integer, FacetSpec> facetsById,
       VajramDefRoot<?> vajramDef) {
-    return Arrays.stream(parameter.getAnnotations())
-        .filter(annotation -> annotation instanceof Using)
-        .map(annotation -> (Using) annotation)
-        .findAny()
-        .map(Using::value)
-        .map(integer -> facetsById.get(integer))
-        .orElseGet(
-            () -> {
-              FacetSpec facetSpec = facetsByName.get(parameter.getName());
-              if (facetSpec == null) {
-                throw new IllegalArgumentException(
-                    "Unable to infer facet id for parameter %s of vajram %s"
-                        .formatted(parameter.getName(), vajramDef.getClass()));
-              }
-              return facetSpec;
-            });
+    FacetSpec facetSpec = facetsByName.get(parameter.getName());
+    if (facetSpec == null) {
+      throw new IllegalArgumentException(
+          "Unable to infer facet id for parameter %s of vajram %s"
+              .formatted(parameter.getName(), vajramDef.getClass()));
+    }
+    return facetSpec;
   }
 
   static ElementTags parseOutputLogicTags(VajramDefRoot<?> vajramDef) {
@@ -105,7 +93,7 @@ final class Vajrams {
       Annotation annotation, VajramID inferredVajramId, VajramDefRoot<?> vajramDefRoot) {
     List<Annotation> inferredAnnos = new ArrayList<>();
     if (annotation instanceof Vajram && vajramDefRoot instanceof VajramDef<?> vajramDef) {
-      inferredAnnos.add(VajramIdentifier.Creator.create(inferredVajramId.vajramId()));
+      inferredAnnos.add(VajramIdentifier.Creator.create(inferredVajramId.id()));
       inferredAnnos.add(
           OutputLogicDelegationMode.Creator.create(getComputeDelegationType(vajramDef)));
     }
@@ -145,8 +133,7 @@ final class Vajrams {
   static ImmutableSet<FacetSpec> parseOutputLogicSources(
       VajramDefRoot<?> vajramDefRoot,
       ImmutableSet<FacetSpec> facetSpecs,
-      ImmutableMap<String, FacetSpec> facetsByName,
-      ImmutableMap<Integer, FacetSpec> facetsById) {
+      ImmutableMap<String, FacetSpec> facetsByName) {
     Optional<Method> outputLogicMethod =
         Arrays.stream(getVajramDefClass(vajramDefRoot.getClass()).getDeclaredMethods())
             .filter(method -> method.getAnnotation(Output.class) != null)
@@ -159,22 +146,13 @@ final class Vajrams {
       // This is a vajram which doesn't have batched facets. So we can infer the output logic's
       // sources from the parameters
       Parameter[] outputLogicParams = outputLogicMethod.get().getParameters();
-      if (outputLogicParams.length == 1
-          && FacetValuesContainer.class.isAssignableFrom(outputLogicParams[0].getType())) {
-        /*
-         This means the output logic is consuming the auto-generated Facets class which implies it
-         consumes all the facets
-        */
-        return facetSpecs;
-      } else {
-        ImmutableSet.Builder<FacetSpec> facetIds = ImmutableSet.builder();
-        for (Parameter param : outputLogicParams) {
-          facetIds.add(Vajrams.inferFacetId(param, facetsByName, facetsById, vajramDefRoot));
-        }
-        return facetIds.build();
+      ImmutableSet.Builder<FacetSpec> facetIds = ImmutableSet.builder();
+      for (Parameter param : outputLogicParams) {
+        facetIds.add(Vajrams.inferFacetId(param, facetsByName, vajramDefRoot));
       }
+      return facetIds.build();
     } else {
-      // The output logic consumes all facets
+      //  The output logic consumes all facets
       return facetSpecs;
     }
   }

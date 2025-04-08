@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
-import static com.flipkart.krystal.vajram.facets.Mandatory.IfNotSet.DEFAULT_TO_ZERO;
+import static com.flipkart.krystal.data.IfNoValue.Strategy.DEFAULT_TO_ZERO;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Function.identity;
@@ -10,7 +10,7 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.data.IfNoValue;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.google.common.collect.ImmutableCollection;
 import jakarta.inject.Inject;
@@ -31,10 +31,11 @@ public abstract class Add extends IOVajramDef<Integer> {
   static class _Facets {
 
     /** The first number to add */
-    @Mandatory @Batched @Input int numberOne;
+    @IfNoValue
+    @Batched @Input int numberOne;
 
     /** The second number to add */
-    @Mandatory(ifNotSet = DEFAULT_TO_ZERO)
+    @IfNoValue(then = DEFAULT_TO_ZERO)
     @Batched
     @Input
     int numberTwo;

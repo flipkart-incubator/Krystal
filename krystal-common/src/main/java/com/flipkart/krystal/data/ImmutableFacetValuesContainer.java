@@ -1,3 +1,3 @@
 package com.flipkart.krystal.data;
 
-public interface ImmutableFacetValuesContainer extends FacetValuesContainer {}
+public non-sealed interface ImmutableFacetValuesContainer extends FacetValuesContainer {}

@@ -10,13 +10,13 @@ import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.data.SimpleRequestBuilder;
+import com.flipkart.krystal.krystex.testutils.SimpleRequestBuilder;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.InputMirror;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
@@ -108,10 +108,10 @@ class Resilience4JBulkheadTest {
           @Override
           public <T> Optional<T> getConfig(String key) {
             return switch (key) {
-              case "bulkhead_restrictsConcurrency.bulkhead.max_concurrency" -> (Optional<T>)
-                  Optional.of(2);
-              case "bulkhead_restrictsConcurrency.bulkhead.enabled" -> (Optional<T>)
-                  Optional.of(true);
+              case "bulkhead_restrictsConcurrency.bulkhead.max_concurrency" ->
+                  (Optional<T>) Optional.of(2);
+              case "bulkhead_restrictsConcurrency.bulkhead.enabled" ->
+                  (Optional<T>) Optional.of(true);
               default -> Optional.empty();
             };
           }
@@ -131,7 +131,7 @@ class Resilience4JBulkheadTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(Set.of(input(1))),
             newFacetsFromRequestLogic(),
-            ElementTags.of(ExternalInvocation.Creator.create(true)));
+            ElementTags.of(ExternallyInvocable.Creator.create()));
 
     KryonExecutor executor1 =
         new KryonExecutor(
@@ -203,13 +203,12 @@ class Resilience4JBulkheadTest {
           @Override
           public <T> Optional<T> getConfig(String key) {
             return switch (key) {
-              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.max_concurrency" -> (Optional<
-                      T>)
-                  Optional.of(2);
-              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.enabled" -> (Optional<T>)
-                  Optional.of(true);
-              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.type" -> (Optional<T>)
-                  Optional.of("THREADPOOL");
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.max_concurrency" ->
+                  (Optional<T>) Optional.of(2);
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.enabled" ->
+                  (Optional<T>) Optional.of(true);
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.type" ->
+                  (Optional<T>) Optional.of("THREADPOOL");
               default -> Optional.empty();
             };
           }
@@ -229,7 +228,7 @@ class Resilience4JBulkheadTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(inputs),
             newFacetsFromRequestLogic(),
-            ElementTags.of(ExternalInvocation.Creator.create(true)));
+            ElementTags.of(ExternallyInvocable.Creator.create()));
 
     KryonExecutor executor1 =
         new KryonExecutor(
@@ -283,7 +282,7 @@ class Resilience4JBulkheadTest {
       Set<? extends Facet> usedFacets,
       Function<FacetValues, CompletableFuture<T>> logic) {
     IOLogicDefinition<T> def =
-        new IOLogicDefinition<T>(
+        new IOLogicDefinition<>(
             new KryonLogicId(new VajramID(kryonId), kryonId + ":asyncLogic"),
             usedFacets,
             inputsList ->
@@ -294,6 +293,7 @@ class Resilience4JBulkheadTest {
     return def;
   }
 
+  @SuppressWarnings("unchecked")
   @NonNull
   private static LogicDefinition<FacetsFromRequest> newFacetsFromRequestLogic() {
     return new LogicDefinition<>(
@@ -308,6 +308,6 @@ class Resilience4JBulkheadTest {
       Set<? extends InputMirror> inputs) {
     return new LogicDefinition<>(
         new KryonLogicId(new VajramID("kryon"), "kryon:newRequest"),
-        () -> new SimpleRequestBuilder(inputs));
+        () -> new SimpleRequestBuilder<>(inputs));
   }
 }

@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajram.annos;
 import static java.lang.annotation.ElementType.TYPE;
 
 import com.flipkart.krystal.annos.ApplicableToElements;
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.core.KrystalElement.VajramRoot;
 import com.flipkart.krystal.vajram.ComputeDelegationMode;
 import java.lang.annotation.Documented;
@@ -27,7 +27,7 @@ import java.lang.annotation.Target;
  * <p>Since bumping up the CallGraphDelegationMode from {@link ComputeDelegationMode#NONE
  * NO_DELEGATION} to {@link ComputeDelegationMode#SYNC SYNC_DELEGATION} can be backward incompatible
  * especially from the perspective of code which invokes vajrams from outside the Krystal Graph,
- * Vajrams which have the @{@link ExternalInvocation#allow}{@code == true} MUST explicitly specify
+ * Vajrams which have the @{@link ExternallyInvocable#enable}{@code == true} MUST explicitly specify
  * their CallGraphDelegationMode as part of their contractual obligation to invokers of the Krystal
  * Graph. Tools can catch vialations in backward compatibility in such cases.
  *

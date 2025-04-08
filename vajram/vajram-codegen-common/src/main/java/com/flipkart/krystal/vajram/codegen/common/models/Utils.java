@@ -1,11 +1,11 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
+import static com.flipkart.krystal.data.IfNoValue.Strategy.MAY_FAIL_CONDITIONALLY;
 import static com.flipkart.krystal.vajram.utils.Constants.IMMUT_FACETS_CLASS_SUFFIX;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.squareup.javapoet.CodeBlock.joining;
 import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 import static java.util.Arrays.stream;
@@ -33,21 +33,20 @@ import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType.Actual;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType.Boxed;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType.FanoutResponses;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType.One2OneResponse;
+import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType.OptionalType;
 import com.flipkart.krystal.vajram.codegen.common.models.GivenFacetModel.GivenFacetModelBuilder;
 import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FacetId;
 import com.flipkart.krystal.vajram.facets.FacetIdNameMapping;
+import com.flipkart.krystal.data.IfNoValue;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.ReservedFacets;
 import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.google.common.base.Splitter;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import com.google.common.primitives.Primitives;
 import com.squareup.javapoet.AnnotationSpec;
@@ -60,6 +59,8 @@ import jakarta.inject.Inject;
 import java.io.PrintWriter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -68,11 +69,12 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.Element;
@@ -83,6 +85,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypeException;
+import javax.lang.model.type.MirroredTypesException;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
@@ -90,7 +93,9 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleTypeVisitor14;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic.Kind;
+import javax.tools.FileObject;
 import javax.tools.JavaFileObject;
+import javax.tools.StandardLocation;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -103,6 +108,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class Utils {
 
   private static final boolean DEBUG = false;
+
   private static final ImmutableMap<Class<?>, String> DISALLOWED_SUPERTYPES_AT_TOP_LEVEL =
       ImmutableMap.<Class<?>, String>builder()
           .put(
@@ -186,6 +192,29 @@ public class Utils {
     return typeElement;
   }
 
+  public FacetJavaType getReturnType(FacetGenModel facet, CodeGenParams codeGenParams) {
+    if (facet instanceof DependencyModel dep) {
+      if (dep.canFanout()) {
+        return new FanoutResponses(this);
+      } else {
+        return new One2OneResponse(this);
+      }
+    } else {
+      boolean localDevAccessible = codeGenParams.isDevAccessible() && codeGenParams.isLocal();
+      if (localDevAccessible) {
+        IfNoValue ifNoValue = facet.facetField().getAnnotation(IfNoValue.class);
+        // Developers should not deal with boxed types. So we need to return the actual type or
+        // an Optional wrapper as needed
+        if (ifNoValue != null && !ifNoValue.then().equals(MAY_FAIL_CONDITIONALLY)) {
+          return new Actual(this);
+        }
+        // This means the facet is either conditionally or always optional
+        return new OptionalType(this);
+      }
+      return new Boxed(this);
+    }
+  }
+
   public String extractFacetName(
       String vajramId, String qualifiedFacet, ExecutableElement resolverMethod) {
     List<String> parts = QUALIFIED_FACET_SPLITTER.splitToList(qualifiedFacet);
@@ -236,14 +265,6 @@ public class Utils {
             .filter(element -> element.getSimpleName().contentEquals(Constants._FACETS_CLASS))
             .findFirst()
             .map(element -> typeUtils.asElement(element.asType()));
-    Set<Integer> reservedFacets =
-        facetsClass
-            .map(f -> f.getAnnotation(ReservedFacets.class))
-            .map(ReservedFacets::ids)
-            .map(IntStream::of)
-            .map(IntStream::boxed)
-            .map(integerStream -> integerStream.collect(toImmutableSet()))
-            .orElse(ImmutableSet.of());
     List<VariableElement> fields =
         ElementFilter.fieldsIn(facetsClass.map(Element::getEnclosedElements).orElse(List.of()));
     BiMap<String, Integer> givenIdsByName = HashBiMap.create();
@@ -253,10 +274,7 @@ public class Utils {
       if (i.isPresent()) {
         int givenId = i.get();
         String facetName = field.getSimpleName().toString();
-        if (reservedFacets.contains(givenId)) {
-          throw errorAndThrow(
-              "Facet %s cannot use the reserved facet id %d".formatted(facetName, givenId), field);
-        } else if (givenIdsByName.inverse().containsKey(givenId)) {
+        if (givenIdsByName.inverse().containsKey(givenId)) {
           throw errorAndThrow(
               "FacetId %d is already assigned to Facet %s"
                   .formatted(
@@ -267,7 +285,7 @@ public class Utils {
         }
       }
     }
-    Set<Integer> takenFacetIds = Sets.union(reservedFacets, givenIdsByName.values());
+    Set<Integer> takenFacetIds = givenIdsByName.values();
     List<VariableElement> inputFields =
         fields.stream()
             .filter(
@@ -542,12 +560,21 @@ public class Utils {
     }
   }
 
-  Optional<TypeMirror> getTypeFromAnnotationMember(Supplier<Class<?>> runnable) {
+  Optional<TypeMirror> getTypeFromAnnotationMember(Supplier<Class<?>> supplier) {
     try {
-      var ignored = runnable.get();
-      throw new AssertionError();
+      var ignored = supplier.get();
+      throw new AssertionError("Expected supplier to throw error");
     } catch (MirroredTypeException mte) {
       return Optional.ofNullable(mte.getTypeMirror());
+    }
+  }
+
+  public List<? extends TypeMirror> getTypesFromAnnotationMember(Supplier<Class<?>[]> supplier) {
+    try {
+      var ignored = supplier.get();
+      return List.of();
+    } catch (MirroredTypesException mte) {
+      return mte.getTypeMirrors();
     }
   }
 
@@ -686,7 +713,13 @@ public class Utils {
     return processingEnv
         .getTypeUtils()
         .isSameType(
-            a, processingEnv().getElementUtils().getTypeElement(b.getCanonicalName()).asType());
+            a,
+            checkNotNull(
+                    processingEnv()
+                        .getElementUtils()
+                        .getTypeElement(checkNotNull(b.getCanonicalName())),
+                    "TypeElement not found for: " + b.getCanonicalName())
+                .asType());
   }
 
   public boolean isSameType(TypeMirror a, TypeMirror b) {
@@ -728,17 +761,21 @@ public class Utils {
   }
 
   private TypeSpec.Builder addDefaultAnnotations(TypeSpec.Builder classBuilder) {
-    return classBuilder
-        .addAnnotation(
-            AnnotationSpec.builder(SuppressWarnings.class)
-                .addMember(
-                    "value",
-                    List.of(
-                            CodeBlock.of("$S", "unchecked"),
-                            CodeBlock.of("$S", "ClassReferencesSubclass"))
-                        .stream()
-                        .collect(joining(",", "{", "}")))
-                .build())
+    classBuilder.addAnnotation(
+        AnnotationSpec.builder(SuppressWarnings.class)
+            .addMember(
+                "value",
+                Stream.of(
+                        CodeBlock.of("$S", "unchecked"),
+                        CodeBlock.of("$S", "ClassReferencesSubclass"))
+                    .collect(joining(",", "{", "}")))
+            .build());
+    addGeneratedAnnotations(classBuilder);
+    return classBuilder;
+  }
+
+  public void addGeneratedAnnotations(TypeSpec.Builder classBuilder) {
+    classBuilder
         .addAnnotation(
             AnnotationSpec.builder(Generated.class)
                 .addMember("by", "$S", generator.getName())
@@ -861,15 +898,9 @@ public class Utils {
       } else {
         return new One2OneResponse(this);
       }
-    } else if (facet.isMandatoryOnServer()) {
-      return new Actual(this);
     } else {
       return new Boxed(this);
     }
-  }
-
-  public TypeName wrapWithFacetValueClass(DependencyModel dep) {
-    return dep.canFanout() ? responsesType(dep) : responseType(dep);
   }
 
   public String getJavaTypeCreationCode(
@@ -881,8 +912,7 @@ public class Utils {
       return "$T.create($T.class)";
     } else {
       collectClassNames.add(TypeName.get(processingEnv.getTypeUtils().erasure(typeMirror)));
-      collectClassNames.add(ClassName.get(List.class));
-      return "$T.create($T.class, $T.of("
+      return "$T.create($T.class, "
           + javaType.typeParameters().stream()
               .map(
                   dataType -> {
@@ -894,7 +924,33 @@ public class Utils {
                     }
                   })
               .collect(Collectors.joining(","))
-          + "))";
+          + ")";
     }
+  }
+
+  /**
+   * @param codeGenElement the element for which code gen is being done
+   * @return the source output path
+   */
+  public Path detectSourceOutputPath(Element codeGenElement) {
+    Path sourcePath;
+    try {
+
+      // Create a dummy file to get the location
+      FileObject dummyFile =
+          processingEnv()
+              .getFiler()
+              .createResource(
+                  StandardLocation.SOURCE_OUTPUT,
+                  "",
+                  new Random().nextInt() + "_dummy_detect_source_path.txt");
+      sourcePath = Paths.get(dummyFile.toUri());
+      dummyFile.delete();
+    } catch (Exception e) {
+      throw errorAndThrow(
+          "Could not detect source output directory because dummy_detect_source_path.txt could not be created",
+          codeGenElement);
+    }
+    return sourcePath;
   }
 }

@@ -1,5 +1,14 @@
 package com.flipkart.krystal.datatypes;
 
+import static com.flipkart.krystal.datatypes.JavaTypes.BOOLEAN;
+import static com.flipkart.krystal.datatypes.JavaTypes.BYTE;
+import static com.flipkart.krystal.datatypes.JavaTypes.CHAR;
+import static com.flipkart.krystal.datatypes.JavaTypes.DOUBLE;
+import static com.flipkart.krystal.datatypes.JavaTypes.FLOAT;
+import static com.flipkart.krystal.datatypes.JavaTypes.INT;
+import static com.flipkart.krystal.datatypes.JavaTypes.LONG;
+import static com.flipkart.krystal.datatypes.JavaTypes.SHORT;
+import static com.flipkart.krystal.datatypes.JavaTypes.STRING;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ImmutableList;
@@ -21,55 +30,60 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class TypeUtils {
 
-  static final Map<String, Function<List<? extends DataType<?>>, JavaType<?>>> dataTypeMappings =
+  static final Map<String, Function<DataType<?>[], JavaType<?>>> dataTypeMappings =
       new LinkedHashMap<>();
 
-  static final Map<Type, TypeKind> typeKindMappings = new LinkedHashMap<>();
+  static final Map<String, TypeKind> typeKindMappings = new LinkedHashMap<>();
 
   static final Set<Class<?>> NON_PRIMITIVE_CLASSES_WITH_PLATFORM_DEFAULTS =
       Set.of(String.class, List.class, Map.class);
 
   static {
-    dataTypeMappings.put(
-        boolean.class.getName(), _unused -> new JavaType<>(boolean.class, ImmutableList.of()));
-    dataTypeMappings.put(
-        Boolean.class.getName(), _unused -> new JavaType<>(boolean.class, ImmutableList.of()));
-    typeKindMappings.put(boolean.class, TypeKind.BOOLEAN);
-    typeKindMappings.put(Boolean.class, TypeKind.BOOLEAN);
+    dataTypeMappings.put(boolean.class.getName(), _unused -> BOOLEAN);
+    dataTypeMappings.put(Boolean.class.getName(), _unused -> BOOLEAN);
+    typeKindMappings.put(boolean.class.getCanonicalName(), TypeKind.BOOLEAN);
+    typeKindMappings.put(Boolean.class.getCanonicalName(), TypeKind.BOOLEAN);
+
+    dataTypeMappings.put(int.class.getName(), _unused -> INT);
+    dataTypeMappings.put(Integer.class.getName(), _unused -> INT);
+    typeKindMappings.put(int.class.getCanonicalName(), TypeKind.INT);
+    typeKindMappings.put(Integer.class.getCanonicalName(), TypeKind.INT);
+
+    dataTypeMappings.put(byte.class.getName(), _unused -> BYTE);
+    dataTypeMappings.put(Byte.class.getName(), _unused -> BYTE);
+    typeKindMappings.put(byte.class.getCanonicalName(), TypeKind.BYTE);
+    typeKindMappings.put(Byte.class.getCanonicalName(), TypeKind.BYTE);
+
+    dataTypeMappings.put(short.class.getName(), _unused -> SHORT);
+    dataTypeMappings.put(Short.class.getName(), _unused -> SHORT);
+    typeKindMappings.put(short.class.getCanonicalName(), TypeKind.SHORT);
+    typeKindMappings.put(Short.class.getCanonicalName(), TypeKind.SHORT);
+
+    dataTypeMappings.put(long.class.getName(), _unused -> LONG);
+    dataTypeMappings.put(Long.class.getName(), _unused -> LONG);
+    typeKindMappings.put(long.class.getCanonicalName(), TypeKind.LONG);
+    typeKindMappings.put(Long.class.getCanonicalName(), TypeKind.LONG);
+
+    dataTypeMappings.put(char.class.getName(), _unused -> CHAR);
+    dataTypeMappings.put(Character.class.getName(), _unused -> CHAR);
+    typeKindMappings.put(char.class.getCanonicalName(), TypeKind.CHAR);
+    typeKindMappings.put(Character.class.getCanonicalName(), TypeKind.CHAR);
+
+    dataTypeMappings.put(char.class.getName(), _unused -> FLOAT);
+    dataTypeMappings.put(Character.class.getName(), _unused -> FLOAT);
+    typeKindMappings.put(float.class.getCanonicalName(), TypeKind.FLOAT);
+    typeKindMappings.put(Float.class.getCanonicalName(), TypeKind.FLOAT);
+
+    dataTypeMappings.put(char.class.getName(), _unused -> DOUBLE);
+    dataTypeMappings.put(Character.class.getName(), _unused -> DOUBLE);
+    typeKindMappings.put(double.class.getCanonicalName(), TypeKind.DOUBLE);
+    typeKindMappings.put(Double.class.getCanonicalName(), TypeKind.DOUBLE);
+
+    dataTypeMappings.put(String.class.getName(), _unused -> STRING);
 
     dataTypeMappings.put(
-        int.class.getName(), _unused -> new JavaType<>(int.class, ImmutableList.of()));
-    dataTypeMappings.put(
-        Integer.class.getName(), _unused -> new JavaType<>(int.class, ImmutableList.of()));
-    typeKindMappings.put(int.class, TypeKind.INT);
-    typeKindMappings.put(Integer.class, TypeKind.INT);
-
-    dataTypeMappings.put(
-        String.class.getName(), _unused -> new JavaType<>(String.class, ImmutableList.of()));
-    dataTypeMappings.put(
-        List.class.getName(),
-        typeParams -> new JavaType<>(List.class, ImmutableList.of(typeParams.get(0))));
-    dataTypeMappings.put(
-        Set.class.getName(),
-        typeParams -> new JavaType<>(Set.class, ImmutableList.of(typeParams.get(0))));
-
-    typeKindMappings.put(byte.class, TypeKind.BYTE);
-    typeKindMappings.put(Byte.class, TypeKind.BYTE);
-
-    typeKindMappings.put(short.class, TypeKind.SHORT);
-    typeKindMappings.put(Short.class, TypeKind.SHORT);
-
-    typeKindMappings.put(long.class, TypeKind.LONG);
-    typeKindMappings.put(Long.class, TypeKind.LONG);
-
-    typeKindMappings.put(char.class, TypeKind.CHAR);
-    typeKindMappings.put(Character.class, TypeKind.CHAR);
-
-    typeKindMappings.put(float.class, TypeKind.FLOAT);
-    typeKindMappings.put(Float.class, TypeKind.FLOAT);
-
-    typeKindMappings.put(double.class, TypeKind.DOUBLE);
-    typeKindMappings.put(Double.class, TypeKind.DOUBLE);
+        List.class.getName(), typeParams -> new JavaType<>(List.class, typeParams));
+    dataTypeMappings.put(Set.class.getName(), typeParams -> new JavaType<>(Set.class, typeParams));
   }
 
   static Type getJavaType(Type rawType, Type... typeParameters) {

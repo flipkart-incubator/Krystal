@@ -33,11 +33,12 @@ include 'vajram:vajram-krystex'
 include 'vajram:vajram-lang'
 
 include 'lattice:lattice-core'
+include 'lattice:lattice-samples'
 include 'lattice:lattice-annotations'
-include 'lattice:extensions:lattice-protobuf-codegen'
-
-include 'extensions:vajram-guice'
-include 'extensions:krystal-protobuf'
 
 include 'code-coverage-report'
 
+include 'vajram:extensions:guice:vajram-guice'
+
+include 'vajram:extensions:protobuf:vajram-protobuf-codegen'
+include 'vajram:extensions:protobuf:vajram-protobuf3'

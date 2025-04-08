@@ -313,7 +313,7 @@ class KrystexVajramExecutorTest {
         .withCauseExactlyInstanceOf(MandatoryFacetsMissingException.class)
         .withMessageContaining(
             "Vajram v<"
-                + graph.getVajramIdByVajramDefType(Hello.class).vajramId()
+                + graph.getVajramIdByVajramDefType(Hello.class).id()
                 + "> did not receive these mandatory inputs: [ 'name'");
   }
 

@@ -6,9 +6,7 @@ import static java.lang.annotation.RetentionPolicy.SOURCE;
 
 import com.flipkart.krystal.annos.ApplicableToElements;
 import com.flipkart.krystal.core.KrystalElement.Facet;
-import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**

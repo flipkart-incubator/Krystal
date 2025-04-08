@@ -36,6 +36,6 @@ public record VajramInfo(
   }
 
   public String vajramName() {
-    return lite().vajramId().vajramId();
+    return lite().vajramId().id();
   }
 }

@@ -1,19 +1,20 @@
 package com.flipkart.krystal.vajram.samples.calculator.multiply;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.data.IfNoValue;
 import com.flipkart.krystal.vajram.facets.Output;
 import java.util.Optional;
 
-@ExternalInvocation(allow = true)
+@ExternallyInvocable
 @Vajram
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 public abstract class Multiply extends ComputeVajramDef<Integer> {
   static class _Facets {
-    @Mandatory @Input int numberOne;
+    @IfNoValue
+    @Input int numberOne;
     @Input int numberTwo;
   }
 

@@ -1,5 +1,6 @@
 package com.flipkart.krystal.data;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.BasicFacetInfo;
 import com.google.common.collect.ImmutableSet;
 
@@ -8,8 +9,12 @@ import com.google.common.collect.ImmutableSet;
  * is intended for use by the krystal platform code generator. Developers must not implement/extend
  * this interface - this can lead to unexpected behaviour.
  */
-public interface FacetValuesContainer {
+public sealed interface FacetValuesContainer
+    permits FacetValues, FacetValuesContainerBuilder, ImmutableFacetValuesContainer, Request {
 
   /** Returns the basic facet infos of the facets whose values this container contains */
   ImmutableSet<? extends BasicFacetInfo> _facets();
+
+  /** Returns the ID of the vajram to which the {@link #_facets()} belong */
+  VajramID _vajramID();
 }

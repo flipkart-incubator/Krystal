@@ -20,13 +20,13 @@ import javax.lang.model.type.UnionType;
 import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.AbstractTypeVisitor14;
 
-class DeclaredTypeVisitor<T> extends AbstractTypeVisitor14<DataType<T>, Void> {
+public class DeclaredTypeVisitor<T> extends AbstractTypeVisitor14<DataType<T>, Void> {
 
   private final ProcessingEnvironment processingEnv;
   private final Utils util;
   private final Element element;
 
-  DeclaredTypeVisitor(Utils util, Element element) {
+  public DeclaredTypeVisitor(Utils util, Element element) {
     this.util = util;
     this.processingEnv = util.processingEnv();
     this.element = element;
@@ -39,17 +39,18 @@ class DeclaredTypeVisitor<T> extends AbstractTypeVisitor14<DataType<T>, Void> {
       util.error(disallowedMessage, element);
     }
     return JavaType.create(
-        t.asElement().toString(), t.getTypeArguments().stream().map(this::visit).toList());
+        t.asElement().toString(),
+        t.getTypeArguments().stream().map(this::visit).toArray(DataType<?>[]::new));
   }
 
   @Override
   public DataType<T> visitPrimitive(PrimitiveType t, Void unused) {
-    return JavaType.create(t.toString(), List.of());
+    return JavaType.create(t.toString());
   }
 
   @Override
   public DataType<T> visitArray(ArrayType t, Void unused) {
-    throw uoe();
+    throw uoe("Array types are not supported by Krystal. Use collections instead.");
   }
 
   @Override
@@ -92,6 +93,9 @@ class DeclaredTypeVisitor<T> extends AbstractTypeVisitor14<DataType<T>, Void> {
     throw uoe();
   }
 
+  private static UnsupportedOperationException uoe(String message) {
+    return new UnsupportedOperationException(message);
+  }
   private static UnsupportedOperationException uoe() {
     return new UnsupportedOperationException();
   }

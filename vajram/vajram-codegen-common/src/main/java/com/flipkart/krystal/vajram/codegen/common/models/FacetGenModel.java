@@ -4,10 +4,9 @@ import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
-import com.flipkart.krystal.vajram.facets.Mandatory;
-import com.flipkart.krystal.vajram.facets.Mandatory.IfNotSet;
+import com.flipkart.krystal.data.IfNoValue;
+import com.flipkart.krystal.data.IfNoValue.Strategy;
 import com.google.common.collect.ImmutableSet;
-import java.lang.annotation.Annotation;
 import java.util.List;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.VariableElement;
@@ -32,8 +31,8 @@ public sealed interface FacetGenModel permits GivenFacetModel, DependencyModel {
   }
 
   default boolean isMandatoryOnServer() {
-    Mandatory mandatory = facetField().getAnnotation(Mandatory.class);
-    return mandatory != null && !mandatory.ifNotSet().equals(IfNotSet.MAY_FAIL_CONDITIONALLY);
+    IfNoValue ifNoValue = facetField().getAnnotation(IfNoValue.class);
+    return ifNoValue != null && !ifNoValue.then().equals(Strategy.MAY_FAIL_CONDITIONALLY);
   }
 
   @Nullable String documentation();

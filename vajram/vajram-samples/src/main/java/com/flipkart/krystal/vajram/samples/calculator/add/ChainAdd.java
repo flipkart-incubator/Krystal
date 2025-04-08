@@ -7,7 +7,7 @@ import static com.flipkart.krystal.vajram.facets.One2OneCommand.skipExecution;
 import static com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Fac.chainSum_n;
 import static com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Fac.sum_n;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
@@ -16,7 +16,7 @@ import com.flipkart.krystal.vajram.annos.ConformsToTrait;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.data.IfNoValue;
 import com.flipkart.krystal.vajram.facets.One2OneCommand;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
@@ -25,13 +25,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-@ExternalInvocation(allow = true)
+@ExternallyInvocable
 @Vajram
 @ConformsToTrait(withDef = MultiAdd.class)
 public abstract class ChainAdd extends ComputeVajramDef<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Facets {
-    @Mandatory @Input List<Integer> numbers;
+    @IfNoValue
+    @Input List<Integer> numbers;
 
     @Dependency(onVajram = ChainAdd.class, canFanout = true)
     int chainSum;

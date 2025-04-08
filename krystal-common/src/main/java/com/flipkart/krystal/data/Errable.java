@@ -72,7 +72,7 @@ public sealed interface Errable<T> extends FacetValue<T> permits Success, Failur
   static <T> Errable<@NonNull T> of(@Nullable Object t) {
     if (t instanceof Errable<?>) {
       if (t instanceof NonNil<?> success) {
-        return of((T) success.value());
+        return of(success.value());
       } else {
         return (Errable<@NonNull T>) t;
       }
@@ -115,7 +115,7 @@ public sealed interface Errable<T> extends FacetValue<T> permits Success, Failur
         if (error != null) {
           throw illegalState();
         } else {
-          return errableFrom((T) valueOpt.get(), null);
+          return errableFrom(valueOpt.get(), null);
         }
       } else if (error != null) {
         return withError(error);

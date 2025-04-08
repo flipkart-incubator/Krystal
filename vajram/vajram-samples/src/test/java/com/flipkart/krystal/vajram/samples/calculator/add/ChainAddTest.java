@@ -334,7 +334,7 @@ class ChainAddTest {
   private static ImmutableSet<DependentChain> getDisabledDependantChains(VajramKryonGraph graph) {
     return ImmutableSet.of(
         graph.computeDependantChain(
-            graph.getVajramIdByVajramDefType(ChainAdd.class).vajramId(),
+            graph.getVajramIdByVajramDefType(ChainAdd.class).id(),
             chainSum_s,
             chainSum_s,
             chainSum_s,

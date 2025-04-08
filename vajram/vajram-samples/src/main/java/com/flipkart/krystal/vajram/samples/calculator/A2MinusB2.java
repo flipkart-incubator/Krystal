@@ -9,12 +9,12 @@ import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.diff_
 import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.twoA_s;
 import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.twoB_s;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.data.IfNoValue;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.multiply.Multiply;
@@ -24,23 +24,25 @@ import com.flipkart.krystal.vajram.samples.calculator.subtract.Subtract_Req;
 import com.google.common.collect.ImmutableCollection;
 
 /** Computes a*2 - b*2 */
-@ExternalInvocation(allow = true)
+@ExternallyInvocable
 @Vajram
 public abstract class A2MinusB2 extends ComputeVajramDef<Integer> {
   static class _Facets {
-    @Mandatory @Input int a;
-    @Mandatory @Input int b;
+    @IfNoValue
+    @Input int a;
+    @IfNoValue
+    @Input int b;
 
     /** The value of facet {@code a} multiplied by {@code 2} */
-    @Mandatory
+    @IfNoValue
     @Dependency(onVajram = Multiply.class)
     int twoA;
 
-    @Mandatory
+    @IfNoValue
     @Dependency(onVajram = Multiply.class)
     int twoB;
 
-    @Mandatory
+    @IfNoValue
     @Dependency(onVajram = Subtract.class)
     int diff;
   }

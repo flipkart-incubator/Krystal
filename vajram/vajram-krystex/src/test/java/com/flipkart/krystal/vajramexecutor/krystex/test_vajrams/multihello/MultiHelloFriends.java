@@ -4,14 +4,14 @@ import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.skipFanout;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends_Fac.hellos_n;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.data.IfNoValue;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends;
@@ -22,11 +22,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-@ExternalInvocation(allow = true)
+@ExternallyInvocable
 @Vajram
 public abstract class MultiHelloFriends extends ComputeVajramDef<String> {
   static class _Facets {
-    @Mandatory @Input List<String> userIds;
+    @IfNoValue
+    @Input List<String> userIds;
     @Input boolean skip;
 
     @Dependency(onVajram = HelloFriends.class, canFanout = true)

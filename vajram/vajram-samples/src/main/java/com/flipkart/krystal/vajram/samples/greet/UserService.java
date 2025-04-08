@@ -9,7 +9,7 @@ import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.data.IfNoValue;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.google.common.collect.ImmutableCollection;
 import java.util.Collection;
@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class UserService extends IOVajramDef<UserInfo> {
   static class _Facets {
-    @Mandatory @Batched @Input String userId;
+    @IfNoValue @Batched @Input String userId;
     @Input String test;
   }
 
