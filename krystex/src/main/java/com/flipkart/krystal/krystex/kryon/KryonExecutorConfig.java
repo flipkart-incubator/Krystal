@@ -25,7 +25,9 @@ public record KryonExecutorConfig(
     GraphTraversalStrategy graphTraversalStrategy,
     @Singular Map<String, KryonDecoratorConfig> requestScopedKryonDecoratorConfigs,
     @NonNull SingleThreadExecutor singleThreadExecutor,
-    boolean debug) {
+    boolean debug,
+    /******* Risky Flags ********/
+    boolean _riskyOpenAllKryonsForExternalInvocation) {
 
   @Builder(toBuilder = true)
   public KryonExecutorConfig {
