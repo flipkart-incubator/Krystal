@@ -179,7 +179,8 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
           allOf(dispatchResponses.values().toArray(CompletableFuture[]::new))
               .whenComplete(
                   (unused, throwable) -> {
-                    Map<InvocationId, Errable<Object>> mergedResults = new LinkedHashMap<>();
+                    Map<InvocationId, Errable<@Nullable Object>> mergedResults =
+                        new LinkedHashMap<>();
                     for (Entry<VajramID, CompletableFuture<BatchResponse>> dispatchResponseEntry :
                         dispatchResponses.entrySet()) {
                       VajramID dispatchTarget = dispatchResponseEntry.getKey();
@@ -231,8 +232,8 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
   }
 
   @SuppressWarnings("unchecked")
-  private static <R extends KryonCommandResponse> @Nullable
-      ClientSideCommand<R> transformCommandForDispatch(
+  private static <R extends KryonCommandResponse>
+      @Nullable ClientSideCommand<R> transformCommandForDispatch(
           ClientSideCommand<R> kryonCommand, VajramID boundVajram) {
     ClientSideCommand<R> commandToDispatch = null;
     if (kryonCommand instanceof ForwardSend forwardSend) {

@@ -1,47 +1,43 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
+import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.MODELS;
+import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.SCHEMAS;
+import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getIfNoValue;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_FILE_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_MSG_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_OUTER_CLASS_SUFFIX;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.javaPackageToProtoPackageName;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramModelsProto3SchemaGen.getProtobufType;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramModelsProto3SchemaGen.isProtoTypeMap;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramModelsProto3SchemaGen.isProtoTypeRepeated;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramModelsProto3SchemaGen.isProtoTypeScalar;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.createOutputDirectory;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.getProtobufType;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeMap;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.nio.file.Files.createDirectories;
 import static javax.lang.model.element.ElementKind.INTERFACE;
 
-import com.flipkart.krystal.data.IfNoValue;
-import com.flipkart.krystal.data.IfNoValue.Strategy;
+import com.flipkart.krystal.data.IfNull.IfNullThen;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.serial.SerialId;
-import com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.vajram.codegen.common.models.DeclaredTypeVisitor;
 import com.flipkart.krystal.vajram.codegen.common.models.Utils;
 import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.vajram.codegen.common.spi.ModelsCodeGenContext;
+import com.flipkart.krystal.vajram.protobuf3.codegen.types.OptionalFieldType;
+import com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoFieldType;
 import com.google.common.base.Splitter;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.TypeMirror;
-import javax.tools.FileObject;
-import javax.tools.StandardLocation;
 import lombok.extern.slf4j.Slf4j;
 
 /** Code generator which generates protobuf schema for models derived from a ModelRoot interface. */
@@ -66,7 +62,7 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
   }
 
   private boolean isApplicable() {
-    if (!CodegenPhase.MODELS.equals(codeGenContext.codegenPhase())) {
+    if (!MODELS.equals(codeGenContext.codegenPhase())) {
       util.note("Skipping protobuf codegen since current phase is not MODELS");
       return false;
     }
@@ -114,7 +110,7 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
 
     try {
       // Create output directory if it doesn't exist
-      Path outputDir = createOutputDirectory();
+      Path outputDir = createOutputDirectory(util.detectSourceOutputPath(modelRootType), util);
 
       // Generate proto file content
       String protoContent = generateProtoFileContent(modelRootType, packageName);
@@ -131,53 +127,6 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
           String.format(
               "Error generating protobuf schema for %s: %s", modelRootName, e.getMessage()),
           modelRootType);
-    }
-  }
-
-  private Path createOutputDirectory() throws IOException {
-    try {
-
-      // Get the location where generated source files should be placed
-      Path currentDir = util.detectSourceOutputPath(codeGenContext.modelRootType()).getParent();
-      // Navigate to find the 'java' directory to create a parallel 'protobuf'
-      // directory
-      // Ex: "/generated/sources/annotationProcessor/java/main" becomes
-      // "/generated/sources/annotationProcessor/protobuf/main"
-
-      // Keep track of the path components we traverse
-      List<String> pathComponents = new ArrayList<>();
-      Path javaDir = null;
-
-      while (currentDir != null && currentDir.getFileName() != null) {
-        if (currentDir.getFileName().toString().equals("java")) {
-          javaDir = currentDir;
-          break;
-        }
-        // Add directory name to the beginning of our list (we're going up)
-        pathComponents.add(0, currentDir.getFileName().toString());
-        currentDir = currentDir.getParent();
-      }
-
-      if (javaDir == null) {
-        throw util.errorAndThrow("Failed to find 'java' directory in the source path", null);
-      }
-
-      // Create a parallel 'protobuf' directory at the same level as 'java'
-      Path protoRootDir = checkNotNull(javaDir.getParent()).resolve("protobuf");
-
-      // Reconstruct the subdirectory structure
-      Path rootDir = protoRootDir;
-      for (String component : pathComponents) {
-        rootDir = rootDir.resolve(component);
-      }
-
-      // Create protobuf output directory
-      createDirectories(rootDir);
-      log.info("Created protobuf output directory at: {}", rootDir);
-      return rootDir;
-    } catch (IOException e) {
-      log.error("Error creating output directory", e);
-      throw e;
     }
   }
 
@@ -200,10 +149,7 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
     // Add syntax, package, and options
     protoBuilder.append("syntax = \"proto3\";\n\n");
 
-    protoBuilder
-        .append("package ")
-        .append(javaPackageToProtoPackageName(packageName))
-        .append(";\n\n");
+    protoBuilder.append("package ").append(packageName).append(";\n\n");
 
     protoBuilder.append("option java_package = \"").append(packageName).append("\";\n");
     protoBuilder.append("option java_multiple_files = true;\n");
@@ -254,44 +200,28 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
       }
 
       // Get the return type and convert it to a DataType
-      TypeMirror returnType = method.getReturnType();
-      DataType<?> dataType = new DeclaredTypeVisitor<>(util, method).visit(returnType);
+      DataType<?> dataType = new DeclaredTypeVisitor<>(util, method).visit(method.getReturnType());
 
-      String fieldType = getProtobufType(dataType, util);
-      String fieldName = method.getSimpleName().toString();
-
-      // Check if the method has the @IfNoValue annotation (equivalent to @Mandatory)
-      IfNoValue ifNoValue = method.getAnnotation(IfNoValue.class);
       boolean isOptional = true; // Default to optional for proto3
 
       // In proto3, the 'optional' keyword is needed for all primitive types to check
       // presence. This includes numeric types, booleans, strings, bytes, and enums.
-      if (ifNoValue != null) {
-        // Field has @IfNoValue annotation
-        Strategy ifNoValueStrategy = ifNoValue.then();
 
-        TypeMirror rawType =
-            util.processingEnv()
-                .getTypeUtils()
-                .erasure(dataType.javaModelType(util.processingEnv()));
-        boolean isRepeated = util.isRawAssignable(rawType, List.class);
-        boolean isMap = util.isRawAssignable(rawType, Map.class);
-        if (!ifNoValueStrategy.usePlatformDefault() && (isRepeated || isMap)) {
-          // Proto3 cannot enforce mandatory fields with FAIL strategy for repeated and
-          // map fields
-          throw util.errorAndThrow(
-              String.format(
-                  "Method '%s' in Model Root '%s' is a %s field, and has @IfNoValue(then=%s) which is not supported in protobuf3. "
-                      + "Use a different IfNoValue strategy or remove @IfNoValue annotation.",
-                  method.getSimpleName(),
-                  modelRootName,
-                  isRepeated ? "repeated" : "map",
-                  ifNoValueStrategy),
-              method);
-        } else if (ifNoValueStrategy.usePlatformDefault()) {
-          // If the strategy allows defaulting, we can make it a required field in proto3
-          isOptional = false;
-        }
+      IfNullThen ifNullThen = getIfNoValue(method).value();
+
+      boolean isRepeated = isProtoTypeRepeated(dataType);
+      boolean isMap = isProtoTypeMap(dataType);
+      if ((isRepeated || isMap) && !ifNullThen.usePlatformDefault()) {
+        // Proto3 always defaults repeated and map fields to default values
+        throw util.errorAndThrow(
+            String.format(
+                "Method '%s' in Model Root '%s' is a %s field, and has @IfNoValue(then=%s) which is not supported in protobuf3. "
+                    + "Use a different IfNoValue strategy.",
+                method.getSimpleName(), modelRootName, isRepeated ? "repeated" : "map", ifNullThen),
+            method);
+      } else if (ifNullThen.usePlatformDefault()) {
+        // If the strategy allows defaulting, we can make it a required field in proto3
+        isOptional = false;
       }
 
       // Add documentation as comments if available
@@ -307,21 +237,19 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
 
       protoBuilder.append("  ");
 
+      ProtoFieldType protobufType = getProtobufType(dataType, util, method);
+
       // Add 'optional' keyword if needed
       // Note: repeated and map fields don't need the optional keyword
-      if (isOptional
-          && isProtoTypeScalar(dataType)
-          && !isProtoTypeRepeated(dataType)
-          && !isProtoTypeMap(dataType)) {
-        protoBuilder.append("optional ");
+      if (isOptional && !(protobufType instanceof OptionalFieldType)) {
+        protobufType = new OptionalFieldType(protobufType, util, method);
       }
-
       // For repeated and map fields, the 'repeated' or 'map<>' prefix is already included in
       // fieldType
       protoBuilder
-          .append(fieldType)
+          .append(protobufType.typeInProtoFile())
           .append(" ")
-          .append(fieldName)
+          .append(method.getSimpleName().toString())
           .append(" = ")
           .append(fieldNumber)
           .append(";\n");

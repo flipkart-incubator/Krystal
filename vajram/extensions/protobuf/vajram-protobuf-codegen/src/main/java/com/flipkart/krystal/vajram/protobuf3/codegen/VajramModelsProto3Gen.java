@@ -3,10 +3,11 @@ package com.flipkart.krystal.vajram.protobuf3.codegen;
 import static com.flipkart.krystal.datatypes.JavaTypes.BYTE;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.VAJRAM_REQ_PROTO_MSG_SUFFIX;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramModelsProto3SchemaGen.isProto3Applicable;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramModelsProto3SchemaGen.isProtoTypeMap;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramModelsProto3SchemaGen.isProtoTypeRepeated;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramModelsProto3SchemaGen.validate;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.capitalize;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProto3Applicable;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeMap;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.validateProtobufCompatibility;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
@@ -17,13 +18,13 @@ import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.codegen.common.models.CodeGenParams;
 import com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase;
-import com.flipkart.krystal.vajram.codegen.common.models.GivenFacetModel;
+import com.flipkart.krystal.vajram.codegen.common.models.DefaultFacetModel;
 import com.flipkart.krystal.vajram.codegen.common.models.Utils;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramValidationException;
 import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGenContext;
 import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
-import com.flipkart.krystal.data.IfNoValue;
+import com.flipkart.krystal.data.IfNull;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
@@ -55,16 +56,16 @@ class VajramModelsProto3Gen implements CodeGenerator {
     if (!_isApplicable(creationContext, util)) {
       return;
     }
-    validate(creationContext, util);
+    validateProtobufCompatibility(creationContext.vajramInfo(), util);
     generateProtoImplementation(creationContext.vajramInfo());
   }
 
   private static boolean _isApplicable(VajramCodeGenContext creationContext, Utils util) {
-    if (!CodegenPhase.WRAPPERS.equals(creationContext.codegenPhase())) {
+    if (!CodegenPhase.FINAL.equals(creationContext.codegenPhase())) {
       util.note("Skipping protobuf codegen since current phase is not MODELS");
       return false;
     }
-    return isProto3Applicable(creationContext, util);
+    return isProto3Applicable(creationContext.vajramInfo(), util);
   }
 
   private void generateProtoImplementation(VajramInfo vajramInfo) {
@@ -92,7 +93,7 @@ class VajramModelsProto3Gen implements CodeGenerator {
     String protoMsgClassName = vajramName + VAJRAM_REQ_PROTO_MSG_SUFFIX;
 
     // Get the list of input facets
-    List<GivenFacetModel> inputFacets =
+    List<DefaultFacetModel> inputFacets =
         vajramInfo.givenFacets().stream()
             .filter(f -> f.facetTypes().contains(INPUT))
             .collect(Collectors.toList());
@@ -205,7 +206,7 @@ class VajramModelsProto3Gen implements CodeGenerator {
     classBuilder.addMethod(getProtoMsgBuilder.build());
 
     // Add getters for all input facets
-    for (GivenFacetModel facet : inputFacets) {
+    for (DefaultFacetModel facet : inputFacets) {
       String facetName = facet.name();
 
       MethodSpec.Builder getterBuilder =
@@ -268,7 +269,7 @@ class VajramModelsProto3Gen implements CodeGenerator {
     return classBuilder.build();
   }
 
-  private void addGetterCode(Builder getterBuilder, GivenFacetModel facet) {
+  private void addGetterCode(Builder getterBuilder, DefaultFacetModel facet) {
     DataType<?> dataType = facet.dataType();
 
     if (isProtoTypeRepeated(dataType)) {
@@ -315,7 +316,7 @@ class VajramModelsProto3Gen implements CodeGenerator {
       String protoClassName,
       String protoMsgClassName,
       String immutReqInterfaceName,
-      List<GivenFacetModel> inputFacets) {
+      List<DefaultFacetModel> inputFacets) {
 
     ClassName immutableProtoType = ClassName.get(packageName, protoClassName);
 
@@ -381,7 +382,7 @@ class VajramModelsProto3Gen implements CodeGenerator {
             .build());
 
     // Add getters and setters for all input facets
-    for (GivenFacetModel facet : inputFacets) {
+    for (DefaultFacetModel facet : inputFacets) {
       String facetName = facet.name();
 
       // Add getter method
@@ -478,7 +479,7 @@ class VajramModelsProto3Gen implements CodeGenerator {
         .build();
   }
 
-  private static boolean needsPresenceCheckInModels(GivenFacetModel facet) {
+  private static boolean needsPresenceCheckInModels(DefaultFacetModel facet) {
     DataType<Object> dataType = facet.dataType();
     if (isProtoTypeRepeated(dataType)) {
       return false;
@@ -486,12 +487,8 @@ class VajramModelsProto3Gen implements CodeGenerator {
     if (isProtoTypeMap(dataType)) {
       return false;
     }
-    IfNoValue ifNoValue = facet.facetField().getAnnotation(IfNoValue.class);
-    return ifNoValue == null || !ifNoValue.then().usePlatformDefault();
-  }
-
-  private String capitalize(String str) {
-    return str.isEmpty() ? str : Character.toUpperCase(str.charAt(0)) + str.substring(1);
+    IfNull ifNull = facet.facetField().getAnnotation(IfNull.class);
+    return ifNull == null || !ifNull.value().usePlatformDefault();
   }
 
   /**
@@ -500,7 +497,7 @@ class VajramModelsProto3Gen implements CodeGenerator {
    * @param facet The facet to check
    * @return true if the facet's data type is byte or Byte, false otherwise
    */
-  private boolean isByteType(GivenFacetModel facet) {
+  private boolean isByteType(DefaultFacetModel facet) {
     return facet.dataType().equals(BYTE);
   }
 }

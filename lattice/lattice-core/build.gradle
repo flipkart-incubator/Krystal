@@ -1,3 +1,6 @@
+dependencies {
+    implementation project(':krystal-common')
+}
 publishing {
     publications {
         maven(MavenPublication) {

@@ -10,7 +10,7 @@ import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
-import com.flipkart.krystal.data.IfNoValue;
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
@@ -110,8 +110,8 @@ public class StaticCallGraphGenerator {
                 .isMandatory(
                     !facet
                         .tags()
-                        .getAnnotationByType(IfNoValue.class)
-                        .map(mandatory -> mandatory.then().usePlatformDefault())
+                        .getAnnotationByType(IfNull.class)
+                        .map(mandatory -> mandatory.value().usePlatformDefault())
                         .orElse(false))
                 .documentation(facet.documentation())
                 .build());

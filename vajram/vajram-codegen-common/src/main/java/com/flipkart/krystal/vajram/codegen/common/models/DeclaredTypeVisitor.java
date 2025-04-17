@@ -1,12 +1,11 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
-import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getDisallowedMessage;
-
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
-import java.util.List;
+import com.google.common.collect.ImmutableMap;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.type.ArrayType;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.ErrorType;
@@ -22,30 +21,41 @@ import javax.lang.model.util.AbstractTypeVisitor14;
 
 public class DeclaredTypeVisitor<T> extends AbstractTypeVisitor14<DataType<T>, Void> {
 
-  private final ProcessingEnvironment processingEnv;
   private final Utils util;
   private final Element element;
+  private final ImmutableMap<Class<?>, String> disallowedTypes;
 
   public DeclaredTypeVisitor(Utils util, Element element) {
+    this(util, element, ImmutableMap.of());
+  }
+
+  public DeclaredTypeVisitor(
+      Utils util, Element element, ImmutableMap<Class<?>, String> disallowedTypes) {
     this.util = util;
-    this.processingEnv = util.processingEnv();
     this.element = element;
+    this.disallowedTypes = disallowedTypes;
   }
 
   @Override
   public DataType<T> visitDeclared(DeclaredType t, Void inputDef) {
-    String disallowedMessage = getDisallowedMessage(t, processingEnv);
+    String disallowedMessage = util.getDisallowedMessage(t, disallowedTypes);
     if (disallowedMessage != null) {
       util.error(disallowedMessage, element);
     }
-    return JavaType.create(
-        t.asElement().toString(),
-        t.getTypeArguments().stream().map(this::visit).toArray(DataType<?>[]::new));
+    Element elementOfType = t.asElement();
+    if (elementOfType instanceof QualifiedNameable qualifiedNameable) {
+      return JavaType.create(
+          qualifiedNameable.getQualifiedName().toString(),
+          t.getTypeArguments().stream().map(this::visit).toArray(DataType<?>[]::new));
+    }
+    throw util.errorAndThrow("Could not infer data type for type " + elementOfType, element);
   }
 
   @Override
   public DataType<T> visitPrimitive(PrimitiveType t, Void unused) {
-    return JavaType.create(t.toString());
+    PrimitiveType withoutAnnotations =
+        util.processingEnv().getTypeUtils().getPrimitiveType(t.getKind());
+    return JavaType.create(withoutAnnotations.toString());
   }
 
   @Override
@@ -96,6 +106,7 @@ public class DeclaredTypeVisitor<T> extends AbstractTypeVisitor14<DataType<T>, V
   private static UnsupportedOperationException uoe(String message) {
     return new UnsupportedOperationException(message);
   }
+
   private static UnsupportedOperationException uoe() {
     return new UnsupportedOperationException();
   }

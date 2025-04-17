@@ -7,7 +7,10 @@ import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.vajram.codegen.common.models.Utils;
+import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramValidationException;
+import com.flipkart.krystal.vajram.codegen.common.spi.AllVajramCodeGenContext;
+import com.flipkart.krystal.vajram.codegen.common.spi.AllVajramsCodeGeneratorProvider;
 import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGenContext;
 import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGeneratorProvider;
 import com.google.common.collect.Iterables;
@@ -21,7 +24,7 @@ import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.TypeElement;
 
 abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
-    permits VajramModelGenProcessor, VajramWrapperGenProcessor {
+    permits VajramModelGenProcessor, VajramSchemaGenProcessor, VajramWrapperGenProcessor {
 
   private final CodegenPhase codegenPhase;
 
@@ -63,7 +66,7 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
                     .collect(
                         joining(lineSeparator(), '[' + lineSeparator(), lineSeparator() + ']'))));
 
-    Iterable<VajramCodeGeneratorProvider> codeGeneratorProviders =
+    Iterable<VajramCodeGeneratorProvider> vajramCodeGeneratorProviders =
         Iterables.concat(
             // Start with the default code generator
             List.of(DEFAULT_VAJRAM_CODEGEN_PROVIDER),
@@ -71,10 +74,11 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
             ServiceLoader.load(
                 VajramCodeGeneratorProvider.class, this.getClass().getClassLoader()));
 
-    for (TypeElement vajramClass : vajramDefinitions) {
+    List<VajramInfo> vajramInfos = vajramDefinitions.stream().map(util::computeVajramInfo).toList();
+    for (VajramInfo vajramInfo : vajramInfos) {
       VajramCodeGenContext creationContext =
-          new VajramCodeGenContext(util.computeVajramInfo(vajramClass), util, codegenPhase);
-      for (VajramCodeGeneratorProvider customCodeGeneratorProvider : codeGeneratorProviders) {
+          new VajramCodeGenContext(vajramInfo, util, codegenPhase);
+      for (VajramCodeGeneratorProvider customCodeGeneratorProvider : vajramCodeGeneratorProviders) {
         try {
           customCodeGeneratorProvider.create(creationContext).generate();
         } catch (VajramValidationException e) {
@@ -82,6 +86,15 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
         }
       }
     }
+
+    Iterable<AllVajramsCodeGeneratorProvider> allVajramCodeGeneratorProviders =
+        ServiceLoader.load(AllVajramsCodeGeneratorProvider.class, this.getClass().getClassLoader());
+    for (AllVajramsCodeGeneratorProvider allVajramCodeGen : allVajramCodeGeneratorProviders) {
+      allVajramCodeGen
+          .create(new AllVajramCodeGenContext(vajramInfos, util, codegenPhase))
+          .generate();
+    }
+
     return false;
   }
 }

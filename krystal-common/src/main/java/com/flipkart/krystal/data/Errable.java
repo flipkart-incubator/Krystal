@@ -1,5 +1,6 @@
 package com.flipkart.krystal.data;
 
+import com.flipkart.krystal.data.FacetValue.SingleFacetValue;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.except.ThrowingCallable;
 import java.util.NoSuchElementException;
@@ -9,7 +10,8 @@ import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public sealed interface Errable<T> extends FacetValue<T> permits Success, Failure {
+public sealed interface Errable<T> extends FacetValue<T>, SingleFacetValue<T>
+    permits Success, Failure {
 
   /**
    * Returns a {@link CompletableFuture} which is completed exceptionally with the error if this is
@@ -55,26 +57,31 @@ public sealed interface Errable<T> extends FacetValue<T> permits Success, Failur
    */
   T valueOrThrow();
 
+  @Override
+  default Errable<T> singleValue() {
+    return this;
+  }
+
   /* ***********************************************************************************************/
   /* ************************************** Static utilities ***************************************/
   /* ***********************************************************************************************/
 
-  static <T> Errable<@NonNull T> of(Errable<@NonNull T> t) {
+  static <T> Errable<T> of(Errable<T> t) {
     return t;
   }
 
   @SuppressWarnings({"optional.parameter", "OptionalUsedAsFieldOrParameterType"})
-  static <T> Errable<@NonNull T> of(Optional<T> t) {
+  static <T> Errable<T> of(Optional<T> t) {
     return withValue(t.orElse(null));
   }
 
   @SuppressWarnings("unchecked")
-  static <T> Errable<@NonNull T> of(@Nullable Object t) {
+  static <T> Errable<T> of(@Nullable Object t) {
     if (t instanceof Errable<?>) {
       if (t instanceof NonNil<?> success) {
         return of(success.value());
       } else {
-        return (Errable<@NonNull T>) t;
+        return (Errable<T>) t;
       }
     } else if (t instanceof Optional<?> o) {
       return of(((Optional<T>) o).orElse(null));
@@ -83,19 +90,19 @@ public sealed interface Errable<T> extends FacetValue<T> permits Success, Failur
     }
   }
 
-  static <T> Errable<@NonNull T> nil() {
+  static <T> Errable<T> nil() {
     return Success.nil();
   }
 
-  static <T> Errable<@NonNull T> withValue(@Nullable T t) {
+  static <T> Errable<T> withValue(@Nullable T t) {
     return t != null ? new NonNil<>(t) : nil();
   }
 
-  static <T> Errable<@NonNull T> withError(Throwable t) {
+  static <T> Errable<T> withError(Throwable t) {
     return new Failure<>(t);
   }
 
-  static <T> Errable<@NonNull T> errableFrom(ThrowingCallable<@Nullable T> valueProvider) {
+  static <T> Errable<T> errableFrom(ThrowingCallable<@Nullable T> valueProvider) {
     try {
       return withValue(valueProvider.call());
     } catch (Throwable e) {
@@ -109,7 +116,7 @@ public sealed interface Errable<T> extends FacetValue<T> permits Success, Failur
   }
 
   @SuppressWarnings("unchecked")
-  static <T> Errable<@NonNull T> errableFrom(@Nullable Object value, @Nullable Throwable error) {
+  static <T> Errable<T> errableFrom(@Nullable Object value, @Nullable Throwable error) {
     if (value instanceof Optional<?> valueOpt) {
       if (valueOpt.isPresent()) {
         if (error != null) {
@@ -126,7 +133,7 @@ public sealed interface Errable<T> extends FacetValue<T> permits Success, Failur
       if (error != null) {
         throw illegalState();
       } else {
-        return (Errable<@NonNull T>) withValue(value);
+        return (Errable<T>) withValue(value);
       }
     } else if (error != null) {
       return withError(error);

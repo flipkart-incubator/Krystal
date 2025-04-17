@@ -25,6 +25,7 @@ import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.FacetValuesContainer;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.except.SkippedExecutionException;
@@ -72,7 +73,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -377,9 +377,20 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
   }
 
   @SuppressWarnings("unchecked")
-  private ImmutableRequest.Builder<Object> emptyRequest() {
-    return (ImmutableRequest.Builder<Object>)
+  private ImmutableRequest.Builder<@Nullable Object> emptyRequest() {
+    return (Builder<@Nullable Object>)
         kryonDefinition.createNewRequest().logic().newRequestBuilder();
+  }
+
+  @SuppressWarnings("unchecked")
+  private Builder<@Nullable Object> emptyRequestForVajram(VajramID depVajramID) {
+    return (Builder<@Nullable Object>)
+        kryonDefinition
+            .kryonDefinitionRegistry()
+            .getOrThrow(depVajramID)
+            .createNewRequest()
+            .logic()
+            .newRequestBuilder();
   }
 
   private ForwardReceive getForwardCommand(DependentChain dependentChain) {
@@ -417,11 +428,11 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
         InvocationId depReqId =
             requestIdGenerator.newSubRequest(
                 incomingReqIds.iterator().next(), () -> "%s[skip]".formatted(dependency));
-        incomingReqIds.forEach(
-            incomingReqId ->
-                depReqsByIncomingReq
-                    .computeIfAbsent(incomingReqId, _k -> new LinkedHashSet<>())
-                    .add(depReqId));
+//        incomingReqIds.forEach(
+//            incomingReqId ->
+//                depReqsByIncomingReq
+//                    .computeIfAbsent(incomingReqId, _k -> new LinkedHashSet<>())
+//                    .add(depReqId));
         skipReasonsByReq.put(depReqId, skipDependency.reason());
       } else {
         int count = 0;
@@ -453,14 +464,13 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
         .add(dependency);
     if (log.isDebugEnabled()) {
       skipReasonsByReq.forEach(
-          (execId, reason) -> {
-            log.debug(
-                "Exec Ids: {}. Dependency {} of {} will be skipped due to reason {}",
-                execId,
-                Optional.ofNullable(kryonDefinition.dependencyKryons().get(dependency)),
-                vajramID,
-                reason);
-          });
+          (execId, reason) ->
+              log.debug(
+                  "Exec Ids: {}. Dependency {} of {} will be skipped due to reason {}",
+                  execId,
+                  Optional.ofNullable(kryonDefinition.dependencyKryons().get(dependency)),
+                  vajramID,
+                  reason));
     }
     DependentChain extendedDependentChain = dependentChain.extend(vajramID, dependency);
 
@@ -481,47 +491,55 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
           Set<InvocationId> invocationIds =
               resolverCommandsByReq.keySet().stream().flatMap(Collection::stream).collect(toSet());
 
-          ImmutableMap<InvocationId, DepResponse<Request<Object>, Object>> results =
-              invocationIds.stream()
-                  .collect(
-                      toImmutableMap(
-                          identity(),
-                          requestId -> {
-                            if (throwable != null) {
-                              RequestResponse<Request<Object>, Object> fail =
-                                  new RequestResponse<>(emptyRequest(), withError(throwable));
-                              if (dependency.canFanout()) {
-                                return new FanoutDepResponses<>(ImmutableList.of(fail));
-                              } else {
-                                return fail;
-                              }
-                            } else {
-                              Set<InvocationId> depReqIds =
-                                  depReqsByIncomingReq.getOrDefault(requestId, Set.of());
-                              var collect =
-                                  depReqIds.stream()
-                                      .map(
-                                          depReqId -> {
-                                            return new RequestResponse<>(
-                                                (Request<Object>)
-                                                    depRequestsByDepReqId.getOrDefault(
-                                                        depReqId, emptyRequest()._build()),
-                                                batchResponse
-                                                    .responses()
-                                                    .getOrDefault(depReqId, nil()));
-                                          })
-                                      .collect(toImmutableList());
-                              if (dependency.canFanout()) {
-                                return new FanoutDepResponses<>(collect);
-                              } else if (collect.size() == 1) {
-                                return collect.get(0);
-                              } else {
-                                throw new AssertionError(
-                                    "Expected exactly one response for one2one dependency %s, but got %s"
-                                        .formatted(dependency, collect));
-                              }
-                            }
-                          }));
+          ImmutableMap<InvocationId, DepResponse<Request<@Nullable Object>, @Nullable Object>>
+              results =
+                  invocationIds.stream()
+                      .collect(
+                          toImmutableMap(
+                              identity(),
+                              requestId -> {
+                                if (throwable != null) {
+                                  RequestResponse<Request<@Nullable Object>, @Nullable Object>
+                                      fail =
+                                          new RequestResponse<>(
+                                              emptyRequestForVajram(depVajramID)._build(),
+                                              withError(throwable));
+                                  if (dependency.canFanout()) {
+                                    return new FanoutDepResponses<>(ImmutableList.of(fail));
+                                  } else {
+                                    return fail;
+                                  }
+                                } else {
+                                  Set<InvocationId> depReqIds =
+                                      depReqsByIncomingReq.getOrDefault(requestId, Set.of());
+                                  ImmutableList<
+                                          RequestResponse<
+                                              Request<@Nullable Object>, @Nullable Object>>
+                                      collect =
+                                          depReqIds.stream()
+                                              .map(
+                                                  depReqId ->
+                                                      new RequestResponse<>(
+                                                          (Request<@Nullable Object>)
+                                                              depRequestsByDepReqId.getOrDefault(
+                                                                  depReqId,
+                                                                  emptyRequestForVajram(depVajramID)
+                                                                      ._build()),
+                                                          batchResponse
+                                                              .responses()
+                                                              .getOrDefault(depReqId, nil())))
+                                              .collect(toImmutableList());
+                                  if (dependency.canFanout()) {
+                                    return new FanoutDepResponses<>(collect);
+                                  } else if (collect.size() == 1) {
+                                    return collect.get(0);
+                                  } else {
+                                    throw new AssertionError(
+                                        "Expected exactly one response for one2one dependency %s, but got %s"
+                                            .formatted(dependency, collect));
+                                  }
+                                }
+                              }));
 
           enqueueOrExecuteCommand(
               () -> new CallbackCommand(vajramID, dependency, results, dependentChain),
@@ -609,7 +627,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
       outputLogicInputs.put(invocationId, getFacetsForOutputLogic(dependentChain, invocationId));
     }
     CompletableFuture<BatchResponse> resultForBatch = new CompletableFuture<>();
-    Map<InvocationId, CompletableFuture<Errable<Object>>> results =
+    Map<InvocationId, CompletableFuture<Errable<@Nullable Object>>> results =
         executeDecoratedOutputLogic(outputLogicDefinition, outputLogicInputs, dependentChain);
 
     var ignored =
@@ -632,10 +650,11 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
     return resultForBatch;
   }
 
-  private Map<InvocationId, CompletableFuture<Errable<Object>>> executeDecoratedOutputLogic(
-      OutputLogicDefinition<Object> outputLogicDefinition,
-      Map<InvocationId, OutputLogicFacets> inputs,
-      DependentChain dependentChain) {
+  private Map<InvocationId, CompletableFuture<Errable<@Nullable Object>>>
+      executeDecoratedOutputLogic(
+          OutputLogicDefinition<Object> outputLogicDefinition,
+          Map<InvocationId, OutputLogicFacets> inputs,
+          DependentChain dependentChain) {
     NavigableSet<OutputLogicDecorator> sortedDecorators =
         getSortedOutputLogicDecorators(dependentChain);
     OutputLogic<Object> logic = outputLogicDefinition.logic()::execute;
@@ -644,7 +663,8 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
       logic = outputLogicDecorator.decorateLogic(logic, outputLogicDefinition);
     }
     OutputLogic<Object> finalLogic = logic;
-    Map<InvocationId, CompletableFuture<Errable<Object>>> resultsByRequest = new LinkedHashMap<>();
+    Map<InvocationId, CompletableFuture<Errable<@Nullable Object>>> resultsByRequest =
+        new LinkedHashMap<>();
     inputs.forEach(
         (requestId, outputLogicFacets) -> {
           CompletableFuture<@Nullable Object> result;
@@ -658,8 +678,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
           } catch (Throwable e) {
             result = failedFuture(e);
           }
-          resultsByRequest.put(
-              requestId, result.<Errable<@NonNull Object>>handle(Errable::errableFrom));
+          resultsByRequest.put(requestId, result.handle(Errable::errableFrom));
         });
     return resultsByRequest;
   }
@@ -667,9 +686,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
   private void flushAllDependenciesIfNeeded(DependentChain dependentChain) {
     kryonDefinition
         .dependencyKryons()
-        .entrySet()
-        .forEach(
-            entry -> flushDependencyIfNeeded(entry.getKey(), entry.getValue(), dependentChain));
+        .forEach((key, value) -> flushDependencyIfNeeded(key, value, dependentChain));
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")

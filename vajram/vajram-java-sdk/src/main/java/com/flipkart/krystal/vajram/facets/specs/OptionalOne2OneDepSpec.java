@@ -7,11 +7,12 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.tags.ElementTags;
+import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 public non-sealed class OptionalOne2OneDepSpec<T, CV extends Request, DV extends Request<T>>
-    extends One2OneDepSpec<T, CV, DV> implements OptionalFacetSpec<T, CV> {
+    extends One2OneDepSpec<T, CV, DV> implements OptionalSingleValueFacetSpec<T, CV> {
 
   public OptionalOne2OneDepSpec(
       int id,
@@ -23,7 +24,7 @@ public non-sealed class OptionalOne2OneDepSpec<T, CV extends Request, DV extends
       VajramID onVajramId,
       String documentation,
       boolean isBatched,
-      ElementTags tags,
+      Callable<ElementTags> tagsParser,
       Function<FacetValues, One2OneDepResponse<DV, T>> getFromFacets,
       BiConsumer<FacetValues, RequestResponse<DV, T>> setToFacets) {
     super(
@@ -36,7 +37,7 @@ public non-sealed class OptionalOne2OneDepSpec<T, CV extends Request, DV extends
         onVajramId,
         documentation,
         isBatched,
-        tags,
+        tagsParser,
         getFromFacets,
         setToFacets);
   }

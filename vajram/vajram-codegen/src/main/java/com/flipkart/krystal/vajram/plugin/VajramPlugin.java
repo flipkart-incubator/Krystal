@@ -1,7 +1,8 @@
 package com.flipkart.krystal.vajram.plugin;
 
 import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.MODELS;
-import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.WRAPPERS;
+import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.FINAL;
+import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.SCHEMAS;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.VAJRAM_MODELS_GEN_DIR_NAME;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -24,12 +25,16 @@ public class VajramPlugin implements Plugin<Project> {
   static final String VAJRAM_MODELS_GEN_DIR =
       "/generated/sources/" + VAJRAM_MODELS_GEN_DIR_NAME + "/java";
 
+  static final String VAJRAM_SCHEMAS_GEN_DIR = "/generated/sources/vajramSchemas";
+
   static final String MAIN_SRC_DIR = "src/main/java";
   static final String TEST_SRC_DIR = "src/test/java";
 
   @Override
   public void apply(Project project) {
 
+    var mainSchemaGenDir =
+        new File(getBuildDir(project).getPath() + VAJRAM_SCHEMAS_GEN_DIR + "/main");
     var mainModelsGenDir =
         new File(getBuildDir(project).getPath() + VAJRAM_MODELS_GEN_DIR + "/main");
     var mainImplsGenDir = new File(getBuildDir(project).getPath() + SRC_GEN_DIR + "/main");
@@ -40,6 +45,7 @@ public class VajramPlugin implements Plugin<Project> {
 
     addSourceSets(project, mainModelsGenDir, mainImplsGenDir, testModelsGenDir, testImplsGenDir);
     registerCodeGenVajramModels(project, mainModelsGenDir);
+//    registerCodeGenVajramSchemas(project, mainSchemaGenDir);
     configureCompileJava(project);
     registerTestCodeGenVajramModels(project, testModelsGenDir);
 
@@ -58,6 +64,52 @@ public class VajramPlugin implements Plugin<Project> {
     sourceSets.getByName("test").getJava().srcDir(testModelsGenDir).srcDir(testImplsGenDir);
   }
 
+  private static void registerCodeGenVajramSchemas(Project project, File mainSchemaGenDir) {
+    project
+        .getTasks()
+        .register(
+            "codeGenVajramSchemas",
+            JavaCompile.class,
+            task -> {
+
+              // Compile the generatedCode
+              task.setGroup("krystal");
+              task.source(VajramPlugin.MAIN_SRC_DIR);
+              task.setClasspath(project.getConfigurations().getByName("compileClasspath"));
+              // This is a 'proc:only' compile step. Which means, no .class files are generated.
+              // This means the destinationDirectory property
+              // is not used by this step.
+              // We reassign the `destinationDirectory` to a dummy empty directory so that the
+              // destination directory does not clash
+              // with the full compile step. This is so that gradle caching works optimally - gradle
+              // doesn't cache outputs of tasks
+              // which share output directories with other tasks -
+              // See:
+              // https://docs.gradle.org/current/userguide/build_cache_concepts.html#concepts_overlapping_outputs
+              task.getDestinationDirectory()
+                  .set(
+                      project
+                          .getObjects()
+                          .directoryProperty()
+                          .fileValue(getBuildDir(project).toPath().resolve(EMPTY_DIR).toFile()));
+              // For lombok processing of EqualsAndHashCode
+              task.getOptions()
+                  .setAnnotationProcessorPath(
+                      project
+                          .getTasks()
+                          .named("compileJava", JavaCompile.class)
+                          .get()
+                          .getOptions()
+                          .getAnnotationProcessorPath());
+              task.getOptions()
+                  .getGeneratedSourceOutputDirectory()
+                  .fileValue(project.file(mainSchemaGenDir));
+              task.getOptions()
+                  .getCompilerArgs()
+                  .addAll(List.of("-proc:only", "-A" + CODEGEN_PHASE_KEY + '=' + SCHEMAS));
+            });
+  }
+
   private static void registerCodeGenVajramModels(Project project, File mainModelsGenDir) {
     project
         .getTasks()
@@ -65,6 +117,7 @@ public class VajramPlugin implements Plugin<Project> {
             "codeGenVajramModels",
             JavaCompile.class,
             task -> {
+//              task.dependsOn("codeGenVajramSchemas");
 
               // Compile the generatedCode
               task.setGroup("krystal");
@@ -118,7 +171,7 @@ public class VajramPlugin implements Plugin<Project> {
                       List.of(
 
                           // So that vajram wrappers are generated during compilation
-                          "-A" + CODEGEN_PHASE_KEY + '=' + WRAPPERS,
+                          "-A" + CODEGEN_PHASE_KEY + '=' + FINAL,
 
                           // So that @Resolver method param names can be read at runtime
                           // in case @Using annotation has not been used on the parameters

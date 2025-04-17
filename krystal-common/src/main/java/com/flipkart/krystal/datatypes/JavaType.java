@@ -86,6 +86,9 @@ public final class JavaType<T> implements DataType<T> {
     this.clazz = clazz;
     this.typeParameters = ImmutableList.copyOf(typeParameters);
     this.canonicalClassName = canonicalClassName;
+    if (canonicalClassName.startsWith("@")) {
+      throw new UnsupportedOperationException("Annotations not supported : " + canonicalClassName);
+    }
 
     // Detect if the canonical class name represents an array and count dimensions
     int dimensions = 0;
@@ -176,7 +179,7 @@ public final class JavaType<T> implements DataType<T> {
   }
 
   @Override
-  public DataType<T> getRawType() {
+  public DataType<T> rawType() {
     return JavaType.create(canonicalClassName());
   }
 
@@ -203,10 +206,11 @@ public final class JavaType<T> implements DataType<T> {
 
   @Override
   public String toString() {
-    try {
-      return javaReflectType().toString();
-    } catch (ClassNotFoundException e) {
-      return super.toString();
-    }
+    return canonicalClassName()
+        + (typeParameters.isEmpty()
+            ? ""
+            : "< "
+                + typeParameters.stream().map(Objects::toString).collect(Collectors.joining(", "))
+                + ">");
   }
 }

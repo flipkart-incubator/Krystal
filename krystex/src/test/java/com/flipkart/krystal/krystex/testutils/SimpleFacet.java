@@ -68,6 +68,7 @@ public @NonFinal sealed class SimpleFacet implements Facet, InputMirror permits 
     return ((SimpleRequest) request)._asMap().get(id());
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public void setToRequest(Builder request, @Nullable Object value) {
     ((SimpleRequestBuilder<Object>) request)._asMap().put(id(), Errable.withValue(value));

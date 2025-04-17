@@ -10,7 +10,7 @@ public interface Facet extends BasicFacetInfo {
 
   ImmutableSet<FacetType> facetTypes();
 
-  @Nullable FacetValue getFacetValue(FacetValues facetValues);
+  FacetValue<?> getFacetValue(FacetValues facetValues);
 
-  void setFacetValue(FacetValuesBuilder facets, FacetValue value);
+  void setFacetValue(FacetValuesBuilder facets, FacetValue<?> value);
 }

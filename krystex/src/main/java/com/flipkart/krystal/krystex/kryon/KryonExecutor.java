@@ -587,10 +587,11 @@ public final class KryonExecutor implements KrystalExecutor {
                       if (throwable != null) {
                         kryonExecution.future().completeExceptionally(throwable);
                       } else {
-                        Errable<Object> result =
-                            responses.getOrDefault(
-                                kryonExecution.instanceExecutionId(), Errable.nil());
-                        linkFutures(result.toFuture(), kryonExecution.future());
+                        linkFutures(
+                            responses
+                                .getOrDefault(kryonExecution.instanceExecutionId(), Errable.nil())
+                                .toFuture(),
+                            kryonExecution.future());
                       }
                     }
                   });

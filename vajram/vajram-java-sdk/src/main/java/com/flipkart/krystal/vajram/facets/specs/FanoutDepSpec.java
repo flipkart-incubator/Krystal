@@ -8,6 +8,7 @@ import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.tags.ElementTags;
+import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import lombok.Getter;
@@ -21,7 +22,7 @@ import lombok.Getter;
  * @param <DV> The dependency vajram
  */
 @Getter
-public abstract sealed class FanoutDepSpec<T, CV extends Request, DV extends Request<T>>
+public abstract sealed class FanoutDepSpec<T, CV extends Request<?>, DV extends Request<T>>
     extends DependencySpec<T, CV, DV> permits MandatoryFanoutDepSpec, OptionalFanoutDepSpec {
 
   private final Function<FacetValues, FanoutDepResponses<DV, T>> getFromFacets;
@@ -37,11 +38,20 @@ public abstract sealed class FanoutDepSpec<T, CV extends Request, DV extends Req
       VajramID onVajramId,
       String documentation,
       boolean isBatched,
-      ElementTags tags,
+      Callable<ElementTags> tagsParser,
       Function<FacetValues, FanoutDepResponses<DV, T>> getFromFacets,
       BiConsumer<FacetValues, FanoutDepResponses<DV, T>> setToFacets) {
     super(
-        id, name, ofVajramID, type, ofVajram, onVajram, onVajramId, documentation, isBatched, tags);
+        id,
+        name,
+        ofVajramID,
+        type,
+        ofVajram,
+        onVajram,
+        onVajramId,
+        documentation,
+        isBatched,
+        tagsParser);
     this.getFromFacets = getFromFacets;
     this.setToFacets = setToFacets;
   }
@@ -65,7 +75,7 @@ public abstract sealed class FanoutDepSpec<T, CV extends Request, DV extends Req
 
   @SuppressWarnings({"MethodOverloadsMethodOfSuperclass", "unchecked"})
   public void setFacetValue(FacetValuesBuilder facets, FanoutDepResponses<DV, T> value) {
-    setToFacets.accept(facets, (FanoutDepResponses<DV, T>) value);
+    setToFacets.accept(facets, value);
   }
 
   @Override

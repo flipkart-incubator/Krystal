@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
+import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.One2OneCommand.executeWith;
 import static com.flipkart.krystal.vajram.facets.One2OneCommand.skipExecution;
 import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.splitSum1_n;
@@ -12,7 +13,7 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.annos.ConformsToTrait;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.data.IfNoValue;
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.facets.One2OneCommand;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
@@ -25,10 +26,12 @@ import java.util.Optional;
 @ConformsToTrait(withDef = MultiAdd.class)
 @SuppressWarnings({"optional.parameter", "initialization.field.uninitialized"})
 public abstract class SplitAdd extends ComputeVajramDef<Integer> {
-  static class _Facets {
-    @IfNoValue
-    @Input List<Integer> numbers;
+  static class _Inputs {
+    @IfNull(FAIL)
+    List<Integer> numbers;
+  }
 
+  static class _InternalFacets {
     @Dependency(onVajram = SplitAdd.class)
     int splitSum1;
 

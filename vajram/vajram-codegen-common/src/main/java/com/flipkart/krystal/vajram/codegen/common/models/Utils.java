@@ -1,7 +1,9 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
-import static com.flipkart.krystal.data.IfNoValue.Strategy.MAY_FAIL_CONDITIONALLY;
+import static com.flipkart.krystal.data.IfNull.IfNullThen.MAY_FAIL_CONDITIONALLY;
+import static com.flipkart.krystal.facets.FacetType.INJECTION;
+import static com.flipkart.krystal.facets.FacetType.INPUT;
 import static com.flipkart.krystal.vajram.utils.Constants.IMMUT_FACETS_CLASS_SUFFIX;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
@@ -16,6 +18,7 @@ import static java.util.stream.Collectors.joining;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
@@ -28,19 +31,16 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.annos.ConformsToTrait;
 import com.flipkart.krystal.vajram.annos.Generated;
+import com.flipkart.krystal.vajram.codegen.common.models.DefaultFacetModel.DefaultFacetModelBuilder;
 import com.flipkart.krystal.vajram.codegen.common.models.DependencyModel.DependencyModelBuilder;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType.Actual;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType.Boxed;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType.FanoutResponses;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType.One2OneResponse;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType.OptionalType;
-import com.flipkart.krystal.vajram.codegen.common.models.GivenFacetModel.GivenFacetModelBuilder;
 import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
 import com.flipkart.krystal.vajram.facets.Dependency;
-import com.flipkart.krystal.vajram.facets.FacetId;
 import com.flipkart.krystal.vajram.facets.FacetIdNameMapping;
-import com.flipkart.krystal.data.IfNoValue;
-import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.google.common.base.Splitter;
 import com.google.common.collect.BiMap;
@@ -77,6 +77,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -109,7 +110,7 @@ public class Utils {
 
   private static final boolean DEBUG = false;
 
-  private static final ImmutableMap<Class<?>, String> DISALLOWED_SUPERTYPES_AT_TOP_LEVEL =
+  private static final ImmutableMap<Class<?>, String> DISALLOWED_FACET_TYPES =
       ImmutableMap.<Class<?>, String>builder()
           .put(
               Optional.class,
@@ -155,12 +156,51 @@ public class Utils {
     return stream(annotations).map(aClass -> AnnotationSpec.builder(aClass).build()).toList();
   }
 
-  static @Nullable String getDisallowedMessage(
-      TypeMirror type, ProcessingEnvironment processingEnv) {
-    return DISALLOWED_SUPERTYPES_AT_TOP_LEVEL.entrySet().stream()
+  public static @NonNull IfNull getIfNoValue(ExecutableElement method) {
+    // Check if the method has the @IfNoValue annotation
+    IfNull ifNull = method.getAnnotation(IfNull.class);
+    if (ifNull == null) {
+      ifNull = IfNull.Creator.createDefault();
+    }
+    return ifNull;
+  }
+
+  public boolean isNullable(TypeMirror typeMirror) {
+    return typeMirror.getAnnotationMirrors().stream()
+        .map(AnnotationMirror::getAnnotationType)
+        .map(DeclaredType::asElement)
+        .filter(type -> type instanceof QualifiedNameable)
+        .map(type -> (QualifiedNameable) type)
+        .anyMatch(
+            element -> element.getQualifiedName().contentEquals(Nullable.class.getCanonicalName()));
+  }
+
+  public boolean isOptional(TypeMirror returnType) {
+    return isRawAssignable(returnType, Optional.class);
+  }
+
+  public TypeMirror getOptionalInnerType(TypeMirror optionalType) {
+    if (!isOptional(optionalType)) {
+      throw new IllegalArgumentException("Type %s is not Optional".formatted(optionalType));
+    }
+
+    if (optionalType instanceof DeclaredType declaredType) {
+      if (!declaredType.getTypeArguments().isEmpty()) {
+        return declaredType.getTypeArguments().get(0);
+      }
+    }
+
+    return requireNonNull(
+            processingEnv().getElementUtils().getTypeElement(Optional.class.getCanonicalName()))
+        .asType();
+  }
+
+  @Nullable String getDisallowedMessage(
+      TypeMirror type, ImmutableMap<Class<?>, String> disallowedTypes) {
+    return disallowedTypes.entrySet().stream()
         .<@Nullable String>map(
             e -> {
-              if (isRawAssignable(type, e.getKey(), processingEnv)) {
+              if (isRawAssignable(type, e.getKey(), processingEnv())) {
                 return e.getValue();
               } else {
                 return null;
@@ -202,10 +242,10 @@ public class Utils {
     } else {
       boolean localDevAccessible = codeGenParams.isDevAccessible() && codeGenParams.isLocal();
       if (localDevAccessible) {
-        IfNoValue ifNoValue = facet.facetField().getAnnotation(IfNoValue.class);
+        IfNull ifNull = facet.facetField().getAnnotation(IfNull.class);
         // Developers should not deal with boxed types. So we need to return the actual type or
         // an Optional wrapper as needed
-        if (ifNoValue != null && !ifNoValue.then().equals(MAY_FAIL_CONDITIONALLY)) {
+        if (ifNull != null && !ifNull.value().equals(MAY_FAIL_CONDITIONALLY)) {
           return new Actual(this);
         }
         // This means the facet is either conditionally or always optional
@@ -258,56 +298,56 @@ public class Utils {
 
   public VajramInfo computeVajramInfo(TypeElement vajramClass) {
     VajramInfoLite vajramInfoLite = getVajramInfoLite(vajramClass);
-    boolean isVajram = vajramClass.getAnnotation(Vajram.class) != null;
-    Optional<Element> facetsClass =
+    Optional<Element> inputsClass =
         vajramClass.getEnclosedElements().stream()
             .filter(element -> element.getKind() == ElementKind.CLASS)
-            .filter(element -> element.getSimpleName().contentEquals(Constants._FACETS_CLASS))
+            .filter(element -> element.getSimpleName().contentEquals(Constants._INPUTS_CLASS))
             .findFirst()
             .map(element -> typeUtils.asElement(element.asType()));
-    List<VariableElement> fields =
-        ElementFilter.fieldsIn(facetsClass.map(Element::getEnclosedElements).orElse(List.of()));
+    Optional<Element> internalFacetsClass =
+        vajramClass.getEnclosedElements().stream()
+            .filter(element -> element.getKind() == ElementKind.CLASS)
+            .filter(
+                element -> element.getSimpleName().contentEquals(Constants._INTERNAL_FACETS_CLASS))
+            .findFirst()
+            .map(element -> typeUtils.asElement(element.asType()));
     BiMap<String, Integer> givenIdsByName = HashBiMap.create();
-    for (VariableElement field : fields) {
-      Optional<Integer> i =
-          Optional.ofNullable(field.getAnnotation(FacetId.class)).map(FacetId::value);
-      if (i.isPresent()) {
-        int givenId = i.get();
-        String facetName = field.getSimpleName().toString();
-        if (givenIdsByName.inverse().containsKey(givenId)) {
-          throw errorAndThrow(
-              "FacetId %d is already assigned to Facet %s"
-                  .formatted(
-                      givenId, givenIdsByName.inverse().getOrDefault(givenId, "unknown facet")),
-              field);
-        } else {
-          givenIdsByName.put(facetName, givenId);
-        }
-      }
-    }
     Set<Integer> takenFacetIds = givenIdsByName.values();
     List<VariableElement> inputFields =
-        fields.stream()
-            .filter(
-                variableElement ->
-                    variableElement.getAnnotation(Input.class) != null
-                        || (isVajram && variableElement.getAnnotation(Inject.class) != null))
-            .toList();
+        ElementFilter.fieldsIn(inputsClass.map(Element::getEnclosedElements).orElse(List.of()));
+    List<VariableElement> internalFacetFields =
+        ElementFilter.fieldsIn(
+            internalFacetsClass.map(Element::getEnclosedElements).orElse(List.of()));
     List<VariableElement> dependencyFields =
-        isVajram
-            ? fields.stream()
-                .filter(variableElement -> variableElement.getAnnotation(Dependency.class) != null)
-                .toList()
-            : List.of();
+        internalFacetFields.stream()
+            .filter(variableElement -> variableElement.getAnnotation(Dependency.class) != null)
+            .toList();
     AtomicInteger nextFacetId = new AtomicInteger(1);
     VajramInfo vajramInfo =
         new VajramInfo(
             vajramInfoLite,
-            inputFields.stream()
-                .map(
-                    inputField ->
-                        toInputModel(
-                            inputField, givenIdsByName, takenFacetIds, nextFacetId, vajramInfoLite))
+            Streams.concat(
+                    inputFields.stream()
+                        .map(
+                            inputField ->
+                                toGivenFacetModel(
+                                    inputField,
+                                    true,
+                                    givenIdsByName,
+                                    takenFacetIds,
+                                    nextFacetId,
+                                    vajramInfoLite)),
+                    internalFacetFields.stream()
+                        .map(
+                            internalField ->
+                                toGivenFacetModel(
+                                    internalField,
+                                    false,
+                                    givenIdsByName,
+                                    takenFacetIds,
+                                    nextFacetId,
+                                    vajramInfoLite))
+                        .filter(facet -> facet.facetTypes().contains(INJECTION)))
                 .collect(toImmutableList()),
             dependencyFields.stream()
                 .map(
@@ -323,34 +363,38 @@ public class Utils {
     return vajramInfo;
   }
 
-  private GivenFacetModel toInputModel(
-      VariableElement inputField,
+  private DefaultFacetModel toGivenFacetModel(
+      VariableElement facetField,
+      boolean isInput,
       BiMap<String, Integer> givenIdsByName,
       Set<Integer> takenFacetIds,
       AtomicInteger nextFacetId,
       VajramInfoLite vajramInfoLite) {
-    GivenFacetModelBuilder inputBuilder = GivenFacetModel.builder().facetField(inputField);
-    String facetName = inputField.getSimpleName().toString();
-    inputBuilder.id(
+    DefaultFacetModelBuilder facetBuilder = DefaultFacetModel.builder().facetField(facetField);
+    DefaultFacetModel.builder().facetField(facetField);
+    String facetName = facetField.getSimpleName().toString();
+    facetBuilder.id(
         requireNonNullElseGet(
             givenIdsByName.get(facetName),
             () -> getNextAvailableFacetId(takenFacetIds, nextFacetId)));
-    inputBuilder.name(facetName);
-    inputBuilder.documentation(elementUtils.getDocComment(inputField));
+    facetBuilder.name(facetName);
+    facetBuilder.documentation(elementUtils.getDocComment(facetField));
     DataType<Object> dataType =
-        inputField.asType().accept(new DeclaredTypeVisitor<>(this, inputField), null);
-    inputBuilder.dataType(dataType);
+        facetField
+            .asType()
+            .accept(new DeclaredTypeVisitor<>(this, facetField, DISALLOWED_FACET_TYPES), null);
+    facetBuilder.dataType(dataType);
     EnumSet<FacetType> facetTypes = EnumSet.noneOf(FacetType.class);
-    if (inputField.getAnnotation(Input.class) != null) {
+    if (isInput) {
       facetTypes.add(FacetType.INPUT);
     }
-    if (inputField.getAnnotation(Inject.class) != null) {
+    if (facetField.getAnnotation(Inject.class) != null) {
       facetTypes.add(FacetType.INJECTION);
     }
-    GivenFacetModel givenFacetModel =
-        inputBuilder.facetTypes(facetTypes).vajramInfo(vajramInfoLite).build();
-    givenIdsByName.putIfAbsent(facetName, givenFacetModel.id());
-    return givenFacetModel;
+    DefaultFacetModel facetModel =
+        facetBuilder.facetTypes(facetTypes).vajramInfo(vajramInfoLite).build();
+    givenIdsByName.putIfAbsent(facetName, facetModel.id());
+    return facetModel;
   }
 
   private static int getNextAvailableFacetId(
@@ -414,7 +458,8 @@ public class Utils {
           depField);
     } else {
       DataType<?> declaredDataType =
-          new DeclaredTypeVisitor<@NonNull Object>(this, depField).visit(depField.asType());
+          new DeclaredTypeVisitor<@NonNull Object>(this, depField, DISALLOWED_FACET_TYPES)
+              .visit(depField.asType());
       TypeElement vajramOrReqElement =
           checkNotNull((TypeElement) processingEnv.getTypeUtils().asElement(vajramOrReqType));
       VajramInfoLite depVajramInfoLite = getVajramInfoLite(vajramOrReqElement);
@@ -467,7 +512,8 @@ public class Utils {
               vajramClassSimpleName.substring(
                   0, vajramClassSimpleName.length() - Constants.REQUEST_SUFFIX.length()));
       responseType =
-          new DeclaredTypeVisitor<@NonNull Object>(this, responseTypeElement)
+          new DeclaredTypeVisitor<@NonNull Object>(
+                  this, responseTypeElement, DISALLOWED_FACET_TYPES)
               .visit(responseTypeMirror);
     } else if (isRawAssignable(vajramOrReqClass.asType(), VajramDef.class)
         || isRawAssignable(vajramOrReqClass.asType(), TraitDef.class)) {
@@ -501,7 +547,8 @@ public class Utils {
       }
       vajramId = vajramID(vajramClassSimpleName);
       responseType =
-          new DeclaredTypeVisitor<@NonNull Object>(this, responseTypeElement)
+          new DeclaredTypeVisitor<@NonNull Object>(
+                  this, responseTypeElement, DISALLOWED_FACET_TYPES)
               .visit(responseTypeMirror);
     } else {
       throw new IllegalArgumentException(
@@ -709,21 +756,18 @@ public class Utils {
         null);
   }
 
-  public boolean isSameType(TypeMirror a, Class<?> b) {
+  public boolean isSameRawType(TypeMirror a, Class<?> b) {
     return processingEnv
         .getTypeUtils()
         .isSameType(
-            a,
-            checkNotNull(
-                    processingEnv()
-                        .getElementUtils()
-                        .getTypeElement(checkNotNull(b.getCanonicalName())),
-                    "TypeElement not found for: " + b.getCanonicalName())
-                .asType());
-  }
-
-  public boolean isSameType(TypeMirror a, TypeMirror b) {
-    return processingEnv().getTypeUtils().isSameType(a, b);
+            typeUtils.erasure(a),
+            typeUtils.erasure(
+                checkNotNull(
+                        processingEnv()
+                            .getElementUtils()
+                            .getTypeElement(checkNotNull(b.getCanonicalName())),
+                        "TypeElement not found for: " + b.getCanonicalName())
+                    .asType()));
   }
 
   /**
@@ -854,7 +898,7 @@ public class Utils {
   }
 
   public DataType<?> getDataType(FacetGenModel abstractInput) {
-    if (abstractInput instanceof GivenFacetModel facetDef) {
+    if (abstractInput instanceof DefaultFacetModel facetDef) {
       return facetDef.dataType();
     } else if (abstractInput instanceof DependencyModel dep) {
       return dep.dataType();
@@ -932,10 +976,9 @@ public class Utils {
    * @param codeGenElement the element for which code gen is being done
    * @return the source output path
    */
-  public Path detectSourceOutputPath(Element codeGenElement) {
+  public Path detectSourceOutputPath(@Nullable Element codeGenElement) {
     Path sourcePath;
     try {
-
       // Create a dummy file to get the location
       FileObject dummyFile =
           processingEnv()
@@ -951,6 +994,6 @@ public class Utils {
           "Could not detect source output directory because dummy_detect_source_path.txt could not be created",
           codeGenElement);
     }
-    return sourcePath;
+    return requireNonNull(sourcePath.getParent());
   }
 }

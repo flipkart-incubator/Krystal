@@ -17,7 +17,6 @@ public final class Constants {
   public static final String DEP_RESPONSE = "depResponse";
   public static final String SKIPPED_EXCEPTION = "skippedException";
   public static final String ILLEGAL_ARGUMENT = "illegalArgument";
-  public static final String STACKTRACELESS_ARGUMENT = "stacktracelessArgument";
   public static final String REQUEST = "request";
   public static final String RESPONSES_SUFFIX = "Responses";
   public static final String METHOD_GET_FACETS_CONVERTOR = "getBatchFacetsConvertor";
@@ -42,7 +41,8 @@ public final class Constants {
   public static final String RESOLVER_RESULT = "_resolverResult";
   public static final String INCOMING_FACETS = "_incomingFacets";
   public static final String BATCHES_VAR = "_batchItems";
-  public static final String _FACETS_CLASS = "_Facets";
+  public static final String _INPUTS_CLASS = "_Inputs";
+  public static final String _INTERNAL_FACETS_CLASS = "_InternalFacets";
   public static final String FACETS_FIELDS_VAR = "facetsFields";
   public static final String REQUEST_SUFFIX = "_Req";
   public static final String IMMUT_REQUEST_SUFFIX = "_ImmutReq";
@@ -50,7 +50,6 @@ public final class Constants {
 
   public static final String INPUT_SPECS_CLASS_SUFFIX = "_InputSpecs";
   public static final String FACET_SPECS_CLASS_SUFFIX = "_FacetSpecs";
-  public static final String SPEC_CLASS_SUFFIX = "_SpecType";
   public static final String IMPL_SUFFIX = "_Wrpr";
 
   public static final CodeBlock EMPTY_CODE_BLOCK = CodeBlock.builder().build();

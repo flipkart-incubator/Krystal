@@ -12,6 +12,7 @@ import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableSet;
+import java.util.concurrent.Callable;
 import lombok.Getter;
 
 /**
@@ -39,7 +40,7 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
       VajramID onVajramId,
       String documentation,
       boolean isBatched,
-      ElementTags tags) {
+      Callable<ElementTags> tagsParser) {
     super(
         id,
         name,
@@ -49,7 +50,7 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
         ofVajram,
         documentation,
         isBatched,
-        tags);
+        tagsParser);
     this.onVajram = onVajram;
     this.onVajramId = onVajramId;
   }

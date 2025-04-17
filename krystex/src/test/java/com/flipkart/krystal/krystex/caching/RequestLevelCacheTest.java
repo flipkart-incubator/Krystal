@@ -120,12 +120,12 @@ class RequestLevelCacheTest {
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
             kryonDefinition.vajramID(),
-            SimpleImmutRequest.empty(),
+            SimpleImmutRequest.empty(kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> future2 =
         kryonExecutor.executeKryon(
             kryonDefinition.vajramID(),
-            SimpleImmutRequest.empty(),
+            SimpleImmutRequest.empty(kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_2").build());
 
     kryonExecutor.close();
@@ -168,12 +168,12 @@ class RequestLevelCacheTest {
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
             kryonDefinition.vajramID(),
-            SimpleImmutRequest.empty(),
+            SimpleImmutRequest.empty(kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> future2 =
         kryonExecutor.executeKryon(
             kryonDefinition.vajramID(),
-            SimpleImmutRequest.empty(),
+            SimpleImmutRequest.empty(kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_2").build());
 
     kryonExecutor.close();
@@ -228,19 +228,21 @@ class RequestLevelCacheTest {
   }
 
   private static LogicDefinition<FacetsFromRequest> newFacetsFromRequestLogic(String kryonName) {
+    VajramID vajramID = new VajramID(kryonName);
     return new LogicDefinition<>(
-        new KryonLogicId(new VajramID(kryonName), kryonName + ":facetsFromRequest"),
+        new KryonLogicId(vajramID, kryonName + ":facetsFromRequest"),
         request ->
             new FacetValuesMapBuilder(
-                (SimpleRequestBuilder<Object>) request._asBuilder(), Set.of()));
+                (SimpleRequestBuilder<Object>) request._asBuilder(), Set.of(), vajramID));
   }
 
   @NonNull
   private static LogicDefinition<CreateNewRequest> newCreateNewRequestLogic(
       String kryonName, Set<SimpleFacet> inputDefs) {
+    VajramID vajramID = new VajramID(kryonName);
     return new LogicDefinition<>(
-        new KryonLogicId(new VajramID(kryonName), kryonName + ":newRequest"),
-        () -> new SimpleRequestBuilder(inputDefs));
+        new KryonLogicId(vajramID, kryonName + ":newRequest"),
+        () -> new SimpleRequestBuilder(inputDefs, vajramID));
   }
 
   public static Stream<Arguments> executorConfigsToTest() {

@@ -11,34 +11,39 @@ import lombok.ToString;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+/**
+ * @param <R> The type of the request
+ * @param <T> The response type of the dependency vajram
+ */
 @ToString(onlyExplicitlyIncluded = true)
 public final class FanoutDepResponses<R extends Request<T>, T> implements DepResponse<R, T> {
 
-  private static final FanoutDepResponses EMPTY = new FanoutDepResponses<>(ImmutableList.of());
+  private static final FanoutDepResponses<?, ?> EMPTY =
+      new FanoutDepResponses<>(ImmutableList.of());
 
   @SuppressWarnings("unchecked")
   public static <R extends Request<T>, T> FanoutDepResponses<R, T> empty() {
-    return EMPTY;
+    return (FanoutDepResponses<R, T>) EMPTY;
   }
 
   @ToString.Include @Getter
   private final ImmutableCollection<RequestResponse<R, T>> requestResponsePairs;
 
-  private @MonotonicNonNull ImmutableMap<ImmutableRequest<T>, Errable<@NonNull T>> responsesAsMap;
+  private @MonotonicNonNull ImmutableMap<ImmutableRequest<T>, Errable<T>> responsesAsMap;
 
   public FanoutDepResponses(ImmutableList<RequestResponse<R, T>> requestResponsePairs) {
     this.requestResponsePairs = requestResponsePairs;
   }
 
-  public Errable<@NonNull T> getForRequest(Request<T> request) {
+  public Errable<T> getForRequest(Request<T> request) {
     if (responsesAsMap == null) {
       responsesAsMap = asMap();
     }
     return responsesAsMap.getOrDefault(request._build(), nil());
   }
 
-  private ImmutableMap<ImmutableRequest<T>, Errable<@NonNull T>> asMap() {
+  private ImmutableMap<ImmutableRequest<T>, Errable<T>> asMap() {
     return requestResponsePairs().stream()
-        .collect(toImmutableMap(t -> t.request()._build(), o -> o.response()));
+        .collect(toImmutableMap(t -> t.request()._build(), RequestResponse::response));
   }
 }

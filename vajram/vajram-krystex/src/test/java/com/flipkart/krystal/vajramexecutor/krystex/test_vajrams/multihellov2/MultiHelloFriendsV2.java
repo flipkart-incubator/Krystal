@@ -1,17 +1,18 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2;
 
+import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2_Fac.hellos_n;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.data.IfNoValue;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
@@ -24,11 +25,14 @@ import java.util.Set;
 @ExternallyInvocable
 @Vajram
 public abstract class MultiHelloFriendsV2 extends ComputeVajramDef<String> {
-  static class _Facets {
-    @IfNoValue
-    @Input Set<String> userIds;
-    @Input boolean skip;
+  static class _Inputs {
+    @IfNull(FAIL)
+    Set<String> userIds;
 
+    boolean skip;
+  }
+
+  static class _InternalFacets {
     @Dependency(onVajram = HelloFriendsV2.class, canFanout = true)
     String hellos;
   }

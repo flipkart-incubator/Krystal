@@ -6,8 +6,5 @@ module flipkart.krystal.vajram.vajram_samples {
   requires jakarta.inject;
   requires jdk.compiler;
   requires com.google.auto.value.annotations;
-  requires flipkart.krystal.lattice.annotations;
-  requires com.google.protobuf;
-  requires flipkart.krystal.vajram.extensions.protobuf;
   requires static lombok;
 }

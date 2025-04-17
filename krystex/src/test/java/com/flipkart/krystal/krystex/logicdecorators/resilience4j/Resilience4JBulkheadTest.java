@@ -141,7 +141,8 @@ class Resilience4JBulkheadTest {
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         executor1.executeKryon(
             kryonDefinition.vajramID(),
-            new SimpleRequestBuilder<>(Set.of(input(1)), ImmutableMap.of(1, withValue(1))),
+            new SimpleRequestBuilder<>(
+                Set.of(input(1)), ImmutableMap.of(1, withValue(1)), kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_1").build());
     KryonExecutor executor2 =
         new KryonExecutor(
@@ -151,7 +152,8 @@ class Resilience4JBulkheadTest {
     CompletableFuture<Object> call2BeforeBulkheadExhaustion =
         executor2.executeKryon(
             kryonDefinition.vajramID(),
-            new SimpleRequestBuilder<>(Set.of(input(1)), ImmutableMap.of(1, withValue(2))),
+            new SimpleRequestBuilder<>(
+                Set.of(input(1)), ImmutableMap.of(1, withValue(2)), kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_2").build());
     KryonExecutor executor3 =
         new KryonExecutor(
@@ -161,7 +163,8 @@ class Resilience4JBulkheadTest {
     CompletableFuture<Object> callAfterBulkheadExhaustion =
         executor3.executeKryon(
             kryonDefinition.vajramID(),
-            new SimpleRequestBuilder<>(Set.of(input(1)), ImmutableMap.of(1, withValue(3))),
+            new SimpleRequestBuilder<>(
+                Set.of(input(1)), ImmutableMap.of(1, withValue(3)), kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_3").build());
     executor1.close();
     executor2.close();
@@ -238,7 +241,8 @@ class Resilience4JBulkheadTest {
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         executor1.executeKryon(
             kryonDefinition.vajramID(),
-            new SimpleRequestBuilder<>(inputs, ImmutableMap.of(1, withValue(1))),
+            new SimpleRequestBuilder<>(
+                inputs, ImmutableMap.of(1, withValue(1)), kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_1").build());
     KryonExecutor executor2 =
         new KryonExecutor(
@@ -248,7 +252,8 @@ class Resilience4JBulkheadTest {
     CompletableFuture<Object> call2BeforeBulkheadExhaustion =
         executor2.executeKryon(
             kryonDefinition.vajramID(),
-            new SimpleRequestBuilder<>(inputs, ImmutableMap.of(1, withValue(2))),
+            new SimpleRequestBuilder<>(
+                inputs, ImmutableMap.of(1, withValue(2)), kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_2").build());
     KryonExecutor executor3 =
         new KryonExecutor(
@@ -258,7 +263,8 @@ class Resilience4JBulkheadTest {
     CompletableFuture<Object> callAfterBulkheadExhaustion =
         executor3.executeKryon(
             kryonDefinition.vajramID(),
-            new SimpleRequestBuilder<>(inputs, ImmutableMap.of(1, withValue(3))),
+            new SimpleRequestBuilder<>(
+                inputs, ImmutableMap.of(1, withValue(3)), kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_3").build());
     executor1.close();
     executor2.close();
@@ -282,7 +288,7 @@ class Resilience4JBulkheadTest {
       Set<? extends Facet> usedFacets,
       Function<FacetValues, CompletableFuture<T>> logic) {
     IOLogicDefinition<T> def =
-        new IOLogicDefinition<>(
+        new IOLogicDefinition<T>(
             new KryonLogicId(new VajramID(kryonId), kryonId + ":asyncLogic"),
             usedFacets,
             inputsList ->
@@ -296,18 +302,20 @@ class Resilience4JBulkheadTest {
   @SuppressWarnings("unchecked")
   @NonNull
   private static LogicDefinition<FacetsFromRequest> newFacetsFromRequestLogic() {
+    VajramID vajramID = new VajramID("kryon");
     return new LogicDefinition<>(
-        new KryonLogicId(new VajramID("kryon"), "kryon:facetsFromRequest"),
+        new KryonLogicId(vajramID, "kryon:facetsFromRequest"),
         request ->
             new FacetValuesMapBuilder(
-                (SimpleRequestBuilder<Object>) request._asBuilder(), Set.of()));
+                (SimpleRequestBuilder<Object>) request._asBuilder(), Set.of(), vajramID));
   }
 
   @NonNull
   private static LogicDefinition<CreateNewRequest> newCreateNewRequestLogic(
       Set<? extends InputMirror> inputs) {
+    VajramID vajramID = new VajramID("kryon");
     return new LogicDefinition<>(
-        new KryonLogicId(new VajramID("kryon"), "kryon:newRequest"),
-        () -> new SimpleRequestBuilder<>(inputs));
+        new KryonLogicId(vajramID, "kryon:newRequest"),
+        () -> new SimpleRequestBuilder<>(inputs, vajramID));
   }
 }

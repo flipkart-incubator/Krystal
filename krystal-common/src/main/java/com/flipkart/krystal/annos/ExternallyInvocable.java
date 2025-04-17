@@ -1,10 +1,12 @@
 package com.flipkart.krystal.annos;
 
 import com.google.auto.value.AutoAnnotation;
+import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.Map;
 
 /**
  * Alows vajram developers to indicate whether the vajram has been designed for direct invocation
@@ -19,7 +21,6 @@ import java.lang.annotation.Target;
  * checks and other automated tests and validation which are more relevant to externally invoked
  * vajrams.
  */
-@HasCreator
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface ExternallyInvocable {

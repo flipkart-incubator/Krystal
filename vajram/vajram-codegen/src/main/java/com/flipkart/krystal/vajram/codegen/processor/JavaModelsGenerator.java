@@ -1,6 +1,11 @@
 package com.flipkart.krystal.vajram.codegen.processor;
 
+import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+import static com.flipkart.krystal.data.IfNull.IfNullThen.MAY_FAIL_CONDITIONALLY;
+import static com.flipkart.krystal.data.IfNull.IfNullThen.WILL_NEVER_FAIL;
+import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getIfNoValue;
 import static com.flipkart.krystal.vajram.codegen.processor.VajramCodeGenerator.validateIfNoValueStrategyApplicability;
+import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.DEFAULT;
 import static javax.lang.model.element.Modifier.FINAL;
@@ -10,7 +15,8 @@ import static javax.lang.model.element.Modifier.STATIC;
 
 // Note: Using direct class references to model framework interfaces instead of imports
 // since the actual package paths may differ across environments
-import com.flipkart.krystal.data.IfNoValue;
+import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfNull.IfNullThen;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.model.ImmutableModel;
 import com.flipkart.krystal.model.Model;
@@ -23,6 +29,7 @@ import com.flipkart.krystal.vajram.codegen.common.models.DeclaredTypeVisitor;
 import com.flipkart.krystal.vajram.codegen.common.models.Utils;
 import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.vajram.codegen.common.spi.ModelsCodeGenContext;
+import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
@@ -32,13 +39,13 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -94,7 +101,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *       and all setters accept nulls. This class has a package private no arg constructor, and a
  *       package private all args constructor. The class implements the {@link Model#_build()}
  *       method which calls the all arg constructor of the pojo class. The builder class respects
- *       the @ {@link IfNoValue} annotation and does necessary validations before calling the pojo
+ *       the @ {@link IfNull} annotation and does necessary validations before calling the pojo
  *       constructor. implements {@link Model#_newCopy()} in which it creates a new Builder and sets
  *       all the values.
  * </ul>
@@ -110,9 +117,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class JavaModelsGenerator implements CodeGenerator {
 
   private final ModelsCodeGenContext codeGenContext;
+  private final Utils util;
 
   public JavaModelsGenerator(ModelsCodeGenContext codeGenContext) {
     this.codeGenContext = codeGenContext;
+    util = codeGenContext.util();
   }
 
   /**
@@ -157,8 +166,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     // Generate the POJO class if PlainJavaObject is supported
     if (isPlainJavaObjectSupported(modelRootType, util)) {
       TypeSpec immutablePojo =
-          generateImmutablePojo(
-              modelRootType, modelMethods, immutableModelName, immutablePojoName, util);
+          generateImmutablePojo(modelMethods, immutableModelName, immutablePojoName);
       writeJavaFile(packageName, immutablePojo, modelRootType, util);
     }
 
@@ -192,7 +200,8 @@ public final class JavaModelsGenerator implements CodeGenerator {
     boolean extendsModel = false;
     for (TypeMirror superInterface : modelRootType.getInterfaces()) {
       TypeElement superElement =
-          (TypeElement) util.processingEnv().getTypeUtils().asElement(superInterface);
+          requireNonNull(
+              (TypeElement) util.processingEnv().getTypeUtils().asElement(superInterface));
       if (superElement.getQualifiedName().contentEquals(Model.class.getCanonicalName())) {
         extendsModel = true;
         break;
@@ -253,7 +262,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
           "Model root methods must not return arrays. Use List instead.", method);
     }
 
-    DataType<Object> dataType = new DeclaredTypeVisitor<>(util, method).visit(returnType);
+    DataType<?> dataType = new DeclaredTypeVisitor<>(util, method).visit(returnType);
 
     validateIfNoValueStrategyApplicability(method, dataType, util);
   }
@@ -305,13 +314,15 @@ public final class JavaModelsGenerator implements CodeGenerator {
     List<MethodSpec> methods = new ArrayList<>();
 
     for (ExecutableElement method : modelMethods) {
+      // Validate optional fields
+      validateOptionalField(method);
       String methodName = method.getSimpleName().toString();
-      TypeName returnType = TypeName.get(method.getReturnType());
 
+      TypeMirror returnType = method.getReturnType();
       methods.add(
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC, ABSTRACT)
-              .addParameter(returnType, methodName)
+              .addParameter(getParameterType(returnType), methodName)
               .returns(ClassName.get("", "Builder"))
               .build());
     }
@@ -328,26 +339,46 @@ public final class JavaModelsGenerator implements CodeGenerator {
   /**
    * Generates the immutable POJO class that implements the immutable interface.
    *
-   * @param modelRootType The type element representing the model root
    * @param modelMethods The methods from the model root
    * @param immutableModelName The name of the immutable interface
    * @param immutablePojoName The name for the immutable POJO
-   * @param util Utilities for code generation
    * @return TypeSpec for the immutable POJO
    */
   private TypeSpec generateImmutablePojo(
-      TypeElement modelRootType,
-      List<ExecutableElement> modelMethods,
-      String immutableModelName,
-      String immutablePojoName,
-      Utils util) {
+      List<ExecutableElement> modelMethods, String immutableModelName, String immutablePojoName) {
 
     // Create fields for the POJO class
     List<FieldSpec> fields = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
-      TypeName fieldType = getFieldType(method.getReturnType());
+      TypeName fieldType;
 
+      // If the return type is Optional<T>, use T as the field type instead of Optional<T>
+      if (util.isOptional(method.getReturnType())) {
+        TypeMirror innerType = util.getOptionalInnerType(method.getReturnType());
+        // Box primitive types
+        if (innerType.getKind().isPrimitive()) {
+          fieldType = TypeName.get(innerType).box();
+        } else {
+          fieldType = TypeName.get(innerType);
+        }
+      } else {
+        // Check if the method has @IfNoValue and is primitive
+        IfNull ifNull = getIfNoValue(method);
+        if (method.getReturnType().getKind().isPrimitive()
+            && (ifNull.value() == MAY_FAIL_CONDITIONALLY || ifNull.value() == WILL_NEVER_FAIL)) {
+          fieldType = TypeName.get(method.getReturnType()).box();
+        } else {
+          fieldType = TypeName.get(method.getReturnType());
+        }
+      }
+
+      // Add @Nullable annotation for Optional types or methods with @Nullable annotation
+      if (util.isOptional(method.getReturnType()) || util.isNullable(method.getReturnType())) {
+        // Add @Nullable as a type annotation
+        fieldType =
+            fieldType.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
+      }
       fields.add(FieldSpec.builder(fieldType, fieldName, PRIVATE, FINAL).build());
     }
 
@@ -356,22 +387,12 @@ public final class JavaModelsGenerator implements CodeGenerator {
 
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
-      TypeName paramType = getParameterType(method.getReturnType());
-      TypeName fieldType = getFieldType(method.getReturnType());
 
-      ParameterSpec.Builder paramBuilder = ParameterSpec.builder(paramType, fieldName);
-      if (isOptionalReturnType(method.getReturnType())) {
-        paramBuilder.addAnnotation(Nullable.class);
-      }
+      constructorBuilder.addParameter(
+          ParameterSpec.builder(getParameterType(method.getReturnType()), fieldName).build());
 
-      constructorBuilder.addParameter(paramBuilder.build());
-
-      if (isOptionalReturnType(method.getReturnType())) {
-        constructorBuilder.addStatement(
-            "this.$N = $T.ofNullable($N)", fieldName, Optional.class, fieldName);
-      } else {
-        constructorBuilder.addStatement("this.$N = $N", fieldName, fieldName);
-      }
+      // For all field types, just assign the parameter directly
+      constructorBuilder.addStatement("this.$N = $N", fieldName, fieldName);
     }
 
     // Create getter methods for the POJO class
@@ -380,13 +401,20 @@ public final class JavaModelsGenerator implements CodeGenerator {
       String methodName = method.getSimpleName().toString();
       TypeName returnType = TypeName.get(method.getReturnType());
 
-      methods.add(
+      MethodSpec.Builder methodBuilder =
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC)
               .addAnnotation(Override.class)
-              .returns(returnType)
-              .addStatement("return $N", methodName)
-              .build());
+              .returns(returnType);
+
+      // If the return type is Optional<T>, wrap the field in Optional.ofNullable()
+      if (util.isOptional(method.getReturnType())) {
+        methodBuilder.addStatement("return $T.ofNullable($N)", Optional.class, methodName);
+      } else {
+        methodBuilder.addStatement("return $N", methodName);
+      }
+
+      methods.add(methodBuilder.build());
     }
 
     // Create _asBuilder method to return a new Builder instance with all fields
@@ -465,9 +493,36 @@ public final class JavaModelsGenerator implements CodeGenerator {
     List<FieldSpec> fields = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
-      TypeName fieldType = getParameterType(method.getReturnType());
+      TypeName fieldType;
 
-      fields.add(FieldSpec.builder(fieldType, fieldName, PRIVATE).build());
+      // If the return type is Optional<T>, use T as the field type
+      if (util.isOptional(method.getReturnType())) {
+        TypeMirror innerType = util.getOptionalInnerType(method.getReturnType());
+        // Box primitive types
+        if (innerType.getKind().isPrimitive()) {
+          fieldType = TypeName.get(innerType).box();
+        } else {
+          fieldType = TypeName.get(innerType);
+        }
+      } else {
+        // Box primitive types for methods with @IfNoValue(then = FAIL) or with platform defaults
+        if (method.getReturnType().getKind().isPrimitive()) {
+          // Box primitive types for methods with @IfNoValue(then = FAIL) or platform defaults
+          fieldType = TypeName.get(method.getReturnType()).box();
+        } else {
+          fieldType = TypeName.get(method.getReturnType());
+        }
+      }
+
+      // Add @Nullable annotation for Optional types or methods with @Nullable annotation
+      if (util.isOptional(method.getReturnType()) || util.isNullable(method.getReturnType())) {
+        // Add @Nullable as a type annotation
+        TypeName annotatedType =
+            fieldType.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
+        fields.add(FieldSpec.builder(annotatedType, fieldName, PRIVATE).build());
+      } else {
+        fields.add(FieldSpec.builder(fieldType, fieldName, PRIVATE).build());
+      }
     }
 
     // Create no-arg constructor
@@ -477,12 +532,11 @@ public final class JavaModelsGenerator implements CodeGenerator {
     List<MethodSpec> setterMethods = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
       String methodName = method.getSimpleName().toString();
-      TypeName paramType = getParameterType(method.getReturnType());
 
       setterMethods.add(
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC)
-              .addParameter(paramType, methodName)
+              .addParameter(getParameterType(method.getReturnType()), methodName)
               .returns(ClassName.get("", "Builder"))
               .addStatement("this.$N = $N", methodName, methodName)
               .addStatement("return this")
@@ -494,7 +548,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     MethodSpec.Builder buildMethodBuilder =
         MethodSpec.methodBuilder("_build")
             .addModifiers(PUBLIC)
-            .returns(ClassName.get("", immutableModelName))
+            .returns(ClassName.get("", immutablePojoName))
             .addAnnotation(Override.class);
 
     // Validate fields based on IfNoValue annotation strategies
@@ -536,15 +590,18 @@ public final class JavaModelsGenerator implements CodeGenerator {
       }
 
       // Get the IfNoValue annotation directly
-      IfNoValue ifNoValue = method.getAnnotation(IfNoValue.class);
+      IfNull ifNull = getIfNoValue(method);
 
       // If IfNoValue annotation was found, handle according to strategy
-      if (ifNoValue != null) {
-        // Get the strategy directly from the annotation
-        IfNoValue.Strategy strategy = ifNoValue.then();
+      // Get the strategy directly from the annotation
+      IfNullThen ifNullThen = ifNull.value();
+
+      // Only generate null check if validation is needed or error needs to be thrown
+      if (ifNullThen != IfNullThen.MAY_FAIL_CONDITIONALLY
+          && ifNullThen != IfNullThen.WILL_NEVER_FAIL) {
         buildMethodBuilder.beginControlFlow("if (this.$N == null)", fieldName);
 
-        switch (strategy) {
+        switch (ifNullThen) {
           case FAIL:
             // FAIL strategy - throw exception when value is null
             buildMethodBuilder.addStatement(
@@ -575,15 +632,17 @@ public final class JavaModelsGenerator implements CodeGenerator {
               buildMethodBuilder.addStatement("this.$N = null", fieldName);
             }
             break;
-          case MAY_FAIL_CONDITIONALLY:
-            // MAY_FAIL_CONDITIONALLY strategy - this would require more complex logic
-            // Since conditional logic would be defined elsewhere, we default to null here
-            buildMethodBuilder.addComment(
-                "MAY_FAIL_CONDITIONALLY strategy detected - conditional logic should be handled separately");
-            buildMethodBuilder.addStatement("// No default handling for conditional strategy");
+          default:
+            throw new AssertionError("Unexpected IfNoValueThen = " + ifNullThen);
         }
 
         buildMethodBuilder.endControlFlow();
+      } else {
+        // MAY_FAIL_CONDITIONALLY strategy - this would require more complex logic
+        // Since conditional logic would be defined elsewhere, we don't generate null check
+        buildMethodBuilder.addComment(
+            "MAY_FAIL_CONDITIONALLY strategy detected - conditional logic should be handled separately");
+        buildMethodBuilder.addStatement("// No default handling for conditional strategy");
       }
     }
 
@@ -650,52 +709,61 @@ public final class JavaModelsGenerator implements CodeGenerator {
     return modelProtocols.stream()
         .map(typeMirror -> util.processingEnv().getTypeUtils().asElement(typeMirror))
         .filter(elem -> elem instanceof QualifiedNameable)
-        .map(element -> ((QualifiedNameable) element).getQualifiedName().toString())
+        .map(element -> requireNonNull((QualifiedNameable) element).getQualifiedName().toString())
         .anyMatch(PlainJavaObject.class.getCanonicalName()::equals);
-  }
-
-  /**
-   * Determines the field type for a method return type, handling Optional types.
-   *
-   * @param returnType The return type of the method
-   * @return The appropriate field type
-   */
-  private TypeName getFieldType(TypeMirror returnType) {
-    if (isOptionalReturnType(returnType)) {
-      return TypeName.get(returnType); // Keep Optional as is for fields
-    }
-    return TypeName.get(returnType);
   }
 
   /**
    * Determines the parameter type for a method return type, handling Optional types.
    *
-   * @param returnType The return type of the method
+   * @param specifiedType The return type of the method
    * @return The appropriate parameter type
    */
-  private TypeName getParameterType(TypeMirror returnType) {
-    if (isOptionalReturnType(returnType)) {
+  private TypeName getParameterType(TypeMirror specifiedType) {
+    TypeMirror inferredType = specifiedType;
+    if (util.isOptional(specifiedType)) {
       // For Optional<T>, use T as the parameter type
-      DeclaredType declaredType = (DeclaredType) returnType;
-      return TypeName.get(declaredType.getTypeArguments().get(0));
+      inferredType = util.getOptionalInnerType(specifiedType);
     }
-    return TypeName.get(returnType);
+    TypeName typeName = TypeName.get(inferredType);
+    if (typeName.isPrimitive()) {
+      typeName = typeName.box();
+    }
+    // Add @Nullable annotation for Optional types or methods with @Nullable annotation
+    if (util.isOptional(specifiedType) || util.isNullable(specifiedType)) {
+      // Add @Nullable as a type annotation
+      typeName = typeName.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
+    }
+    return typeName;
   }
 
   /**
-   * Checks if a type is an Optional.
-   *
-   * @param type The type to check
-   * @return True if the type is an Optional, false otherwise
+   * Validates that conditionally optional fields are not primitive types and are properly
+   * annotated. Fields with @IfNoValue(then=MAY_FAIL_CONDITIONALLY) must not be primitive types and
+   * must be either Optional or annotated with @Nullable.
    */
-  private boolean isOptionalReturnType(TypeMirror type) {
-    if (type.getKind() != TypeKind.DECLARED) {
-      return false;
-    }
+  private void validateOptionalField(ExecutableElement method) {
+    IfNull ifNull = getIfNoValue(method);
+    if (ifNull.value() == MAY_FAIL_CONDITIONALLY) {
+      // Check if the return type is primitive
+      TypeMirror returnType = method.getReturnType();
+      if (returnType.getKind().isPrimitive()) {
+        util.error(
+            "An optional field cannot be a primitive type. Use Optional<> or @Nullable boxed type instead",
+            method);
+      }
 
-    DeclaredType declaredType = (DeclaredType) type;
-    Element element = declaredType.asElement();
-    return element.toString().equals(Optional.class.getName());
+      // Check if the return type has @Nullable or is an Optional
+      if (!util.isOptional(returnType) && !util.isNullable(returnType)) {
+        util.error(
+            "Field '%s' with @IfNoValue(then=MAY_FAIL_CONDITIONALLY) must be an Optional or annotated with %s: "
+                .formatted(method.getSimpleName(), Nullable.class.getCanonicalName()),
+            method);
+      }
+    } else if (ifNull.value() == FAIL) {
+      // For FAIL strategy, we don't need to validate anything specific here
+      // The code generation will handle boxing primitive types for these fields
+    }
   }
 
   /**

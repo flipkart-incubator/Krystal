@@ -9,15 +9,16 @@ import javax.lang.model.element.TypeElement;
 
 public record VajramInfo(
     VajramInfoLite lite,
-    ImmutableList<GivenFacetModel> givenFacets,
+    ImmutableList<DefaultFacetModel> givenFacets,
     ImmutableList<DependencyModel> dependencies) {
 
   public VajramInfo {
     if (lite.isTrait()) {
-      for (GivenFacetModel givenFacet : givenFacets) {
-        if (!givenFacet.facetTypes().equals(Set.of(INPUT))) {
+      for (DefaultFacetModel defaultFacet : givenFacets) {
+        if (!defaultFacet.facetTypes().equals(Set.of(INPUT))) {
           throw lite.util()
-              .errorAndThrow("Only INPUT facets are supported in Traits", givenFacet.facetField());
+              .errorAndThrow(
+                  "Only INPUT facets are supported in Traits", defaultFacet.facetField());
         }
       }
       if (!dependencies.isEmpty()) {

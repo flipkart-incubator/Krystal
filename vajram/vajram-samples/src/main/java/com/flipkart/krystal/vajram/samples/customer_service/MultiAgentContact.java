@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.samples.customer_service;
 
+import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.agentType_n;
 import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.customerName_n;
@@ -9,13 +10,13 @@ import static com.flipkart.krystal.vajram.samples.customer_service.MultiAgentCon
 import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.data.IfNoValue;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.AgentType;
@@ -30,15 +31,18 @@ import java.util.function.Function;
 
 @Vajram
 @ExternallyInvocable
+@SuppressWarnings("initialization.field.uninitialized")
 abstract class MultiAgentContact extends ComputeVajramDef<List<String>> {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Facets {
-    @IfNoValue
-    @Input String name;
-    @IfNoValue
-    @Input String communication;
+  static class _Inputs {
+    @IfNull(FAIL)
+    String name;
 
-    @IfNoValue
+    @IfNull(FAIL)
+    String communication;
+  }
+
+  static class _InternalFacets {
+    @IfNull(FAIL)
     @Dependency(onVajram = CustomerServiceAgent.class, canFanout = true)
     String responses;
   }

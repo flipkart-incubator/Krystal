@@ -1,31 +1,31 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.datatypes.JavaTypes.BYTE;
+import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getIfNoValue;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_MSG_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ModelsProto3SchemaGen.validateModelType;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramModelsProto3SchemaGen.isProtoTypeMap;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramModelsProto3SchemaGen.isProtoTypeRepeated;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeMap;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
-import static javax.lang.model.element.ElementKind.INTERFACE;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
+import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfNull.IfNullThen;
 import com.flipkart.krystal.datatypes.DataType;
-import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.serial.SerializableModel;
-import com.flipkart.krystal.vajram.codegen.common.models.CodeGenParams;
 import com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.vajram.codegen.common.models.DeclaredTypeVisitor;
 import com.flipkart.krystal.vajram.codegen.common.models.Utils;
 import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.vajram.codegen.common.spi.ModelsCodeGenContext;
-import com.flipkart.krystal.data.IfNoValue;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
@@ -33,7 +33,6 @@ import com.squareup.javapoet.MethodSpec.Builder;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-
 import java.util.ArrayList;
 import java.util.List;
 import javax.lang.model.element.Element;
@@ -41,7 +40,6 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
-
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -79,8 +77,8 @@ public class ModelsProto3Gen implements CodeGenerator {
   }
 
   private boolean isApplicable() {
-    if (!CodegenPhase.WRAPPERS.equals(codeGenContext.codegenPhase())) {
-      util.note("Skipping protobuf codegen since current phase is not WRAPPERS");
+    if (!CodegenPhase.FINAL.equals(codeGenContext.codegenPhase())) {
+      util.note("Skipping protobuf codegen since current phase is not FINAL");
       return false;
     }
 
@@ -249,7 +247,15 @@ public class ModelsProto3Gen implements CodeGenerator {
       MethodSpec.Builder getterBuilder =
           MethodSpec.methodBuilder(methodName).addAnnotation(Override.class).addModifiers(PUBLIC);
 
-      getterBuilder.returns(typeName.annotated(AnnotationSpec.builder(Nullable.class).build()));
+      // Only add @Nullable annotation if the field needs presence check, is not FAIL,
+      // and the return type is not Optional
+      if (needsPresenceCheckInModels(method)
+          && !isMandatoryField(method)
+          && !util.isOptional(returnType)) {
+        getterBuilder.returns(typeName.annotated(AnnotationSpec.builder(Nullable.class).build()));
+      } else {
+        getterBuilder.returns(typeName);
+      }
 
       addGetterCode(getterBuilder, method, dataType, methodName);
 
@@ -305,42 +311,66 @@ public class ModelsProto3Gen implements CodeGenerator {
 
   private void addGetterCode(
       Builder getterBuilder, ExecutableElement method, DataType<?> dataType, String methodName) {
+
     if (isProtoTypeRepeated(dataType)) {
       // For repeated fields, use getXList() method
-      getterBuilder.addStatement("return _proto().get$LList()", capitalize(methodName));
+      getterBuilder.addStatement(
+          "return _proto().get$LList()", ProtoGenUtils.capitalize(methodName));
       return;
     }
 
     if (isProtoTypeMap(dataType)) {
       // For map fields, use getXMap() method
-      getterBuilder.addStatement("return _proto().get$LMap()", capitalize(methodName));
+      getterBuilder.addStatement(
+          "return _proto().get$LMap()", ProtoGenUtils.capitalize(methodName));
       return;
     }
+    boolean isOptionalReturnType = util.isOptional(method.getReturnType());
 
     // Return null for fields which can be inspected for presence/absence of value
     if (needsPresenceCheckInModels(method)) {
-      getterBuilder.addCode(
-          """
+      CodeBlock protoPresenceCheck =
+          CodeBlock.of(
+              """
               if (!_proto().has$L()){
+              """,
+              ProtoGenUtils.capitalize(methodName));
+
+      // Add validation for mandatory fields
+      if (isMandatoryField(method)) {
+        getterBuilder
+            .addCode(protoPresenceCheck)
+            .addCode(
+                """
+                throw new IllegalStateException("Field $L is mandatory but has no value");
+              }
+              """,
+                methodName);
+      } else if (isOptionalReturnType) {
+        getterBuilder
+            .addCode(protoPresenceCheck)
+            .addCode(
+                """
+                return Optional.empty();
+              }
+              """);
+      } else {
+        getterBuilder
+            .addCode(protoPresenceCheck)
+            .addCode(
+                """
                 return null;
-              }""",
-          capitalize(methodName));
+              }
+              """);
+      }
     }
 
     // Get the value from the proto message
-    // Special handling for byte/Byte types to convert from ByteString to byte/Byte
-    if (isByteType(dataType)) {
-      getterBuilder.addCode(
-          """
-              if (_proto().get$L().isEmpty()) {
-                return null;
-              }
-              return _proto().get$L().byteAt(0);
-              """,
-          capitalize(methodName),
-          capitalize(methodName));
+    if (isOptionalReturnType) {
+      getterBuilder.addStatement(
+          "return Optional.of(_proto().get$L())", ProtoGenUtils.capitalize(methodName));
     } else {
-      getterBuilder.addStatement("return _proto().get$L()", capitalize(methodName));
+      getterBuilder.addStatement("return _proto().get$L()", ProtoGenUtils.capitalize(methodName));
     }
   }
 
@@ -419,7 +449,22 @@ public class ModelsProto3Gen implements CodeGenerator {
       String methodName = method.getSimpleName().toString();
       TypeMirror returnType = method.getReturnType();
       DataType<?> dataType = new DeclaredTypeVisitor<>(util, method).visit(returnType);
-      TypeName typeName = TypeName.get(returnType);
+
+      // Check if the return type is Optional
+      boolean isOptionalReturnType = util.isOptional(returnType);
+      TypeName typeName;
+
+      if (isOptionalReturnType) {
+        // Use the inner type for the parameter if the return type is Optional
+        TypeMirror innerType = util.getOptionalInnerType(returnType);
+        typeName = TypeName.get(innerType);
+      } else {
+        typeName = TypeName.get(returnType);
+      }
+
+      if (typeName.isPrimitive()) {
+        typeName = typeName.box();
+      }
 
       // Add setter method
       MethodSpec.Builder setterBuilder =
@@ -443,9 +488,9 @@ public class ModelsProto3Gen implements CodeGenerator {
                   }
                   _proto.addAll$L($L);
                 """,
-            capitalize(methodName),
+            ProtoGenUtils.capitalize(methodName),
             methodName,
-            capitalize(methodName),
+            ProtoGenUtils.capitalize(methodName),
             methodName);
       } else if (isProtoTypeMap(dataType)) {
         // For map fields, use clear and putAll pattern
@@ -457,9 +502,9 @@ public class ModelsProto3Gen implements CodeGenerator {
                   }
                   _proto.putAll$L($L);
                 """,
-            capitalize(methodName),
+            ProtoGenUtils.capitalize(methodName),
             methodName,
-            capitalize(methodName),
+            ProtoGenUtils.capitalize(methodName),
             methodName);
       } else {
         // For regular fields
@@ -471,13 +516,13 @@ public class ModelsProto3Gen implements CodeGenerator {
                   }
                 """,
             methodName,
-            capitalize(methodName));
+            ProtoGenUtils.capitalize(methodName));
 
         setterBuilder.addStatement(
-            isByteType(dataType)
+            dataType.equals(BYTE)
                 ? "_proto.set$L(com.google.protobuf.ByteString.copyFrom(new byte[]{$L}))"
                 : "_proto.set$L($L)",
-            capitalize(methodName),
+            ProtoGenUtils.capitalize(methodName),
             methodName);
       }
 
@@ -523,22 +568,22 @@ public class ModelsProto3Gen implements CodeGenerator {
     return modelMethods;
   }
 
+  /**
+   * Checks if a field needs presence check in the models. Fields with @IfNoValue(then=FAIL)
+   * or @IfNoValue(then=MAY_FAIL_CONDITIONALLY) need presence check.
+   */
   private static boolean needsPresenceCheckInModels(ExecutableElement method) {
-    IfNoValue ifNoValue = method.getAnnotation(IfNoValue.class);
-    return ifNoValue == null || !ifNoValue.then().usePlatformDefault();
-  }
+    IfNull ifNull = getIfNoValue(method);
 
-  private String capitalize(String str) {
-    return str.isEmpty() ? str : Character.toUpperCase(str.charAt(0)) + str.substring(1);
+    // For FAIL and MAY_FAIL_CONDITIONALLY, we need presence check
+    return ifNull.value() == IfNullThen.FAIL || ifNull.value() == IfNullThen.MAY_FAIL_CONDITIONALLY;
   }
 
   /**
-   * Checks if the data type is byte or Byte
-   *
-   * @param dataType The data type to check
-   * @return true if the data type is byte or Byte, false otherwise
+   * Checks if a field should be treated as mandatory. Fields with @IfNoValue(then=FAIL) are treated
+   * as mandatory.
    */
-  private boolean isByteType(DataType<?> dataType) {
-    return dataType.equals(BYTE);
+  private static boolean isMandatoryField(ExecutableElement method) {
+    return getIfNoValue(method).value() == IfNullThen.FAIL;
   }
 }

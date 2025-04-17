@@ -579,9 +579,9 @@
     <inspection_tool class="YAMLUnresolvedAlias" enabled="false" level="ERROR" enabled_by_default="false" />
     <inspection_tool class="groupsTestNG" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="unused" enabled="true" level="WARNING" enabled_by_default="true" field="packageLocal" method="packageLocal" checkParameterExcludingHierarchy="false">
-      <scope name="Vajrams" level="WARNING" enabled="false" field="packageLocal" method="packageLocal" checkParameterExcludingHierarchy="false">
+      <scope name="Vajrams" level="WARNING" enabled="true" editorAttributes="NOT_USED_ELEMENT_ATTRIBUTES" inner_class="packageLocal" field="packageLocal" method="packageLocal" INNER_CLASS="false" checkParameterExcludingHierarchy="false">
         <option name="LOCAL_VARIABLE" value="true" />
-        <option name="FIELD" value="true" />
+        <option name="FIELD" value="false" />
         <option name="METHOD" value="true" />
         <option name="CLASS" value="true" />
         <option name="PARAMETER" value="true" />

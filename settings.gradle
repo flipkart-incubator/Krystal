@@ -18,6 +18,7 @@ dependencyResolutionManagement {
 
 rootProject.name = 'krystal'
 
+include 'code-coverage-report'
 include 'krystal-bom'
 
 include 'krystex'
@@ -34,11 +35,10 @@ include 'vajram:vajram-lang'
 
 include 'lattice:lattice-core'
 include 'lattice:lattice-samples'
-include 'lattice:lattice-annotations'
-
-include 'code-coverage-report'
 
 include 'vajram:extensions:guice:vajram-guice'
-
 include 'vajram:extensions:protobuf:vajram-protobuf-codegen'
 include 'vajram:extensions:protobuf:vajram-protobuf3'
+
+include 'lattice:extensions:grpc:lattice-grpc-codegen'
+//include 'lattice:extensions:guice:lattice-guice'

@@ -9,6 +9,7 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.tags.ElementTags;
+import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import lombok.Getter;
@@ -38,11 +39,20 @@ public abstract sealed class One2OneDepSpec<T, CV extends Request, DV extends Re
       VajramID onVajramId,
       String documentation,
       boolean isBatched,
-      ElementTags tags,
+      Callable<ElementTags> tagsParser,
       Function<FacetValues, One2OneDepResponse<DV, T>> getFromFacets,
       BiConsumer<FacetValues, RequestResponse<DV, T>> setToFacets) {
     super(
-        id, name, ofVajramID, type, ofVajram, onVajram, onVajramId, documentation, isBatched, tags);
+        id,
+        name,
+        ofVajramID,
+        type,
+        ofVajram,
+        onVajram,
+        onVajramId,
+        documentation,
+        isBatched,
+        tagsParser);
     this.getFromFacets = getFromFacets;
     this.setToFacets = setToFacets;
   }

@@ -39,7 +39,7 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request<?>, DV ext
         //noinspection unchecked,rawtypes
         DependencyCommand<T> depCommand =
             _resolutionHelper(
-                getResolverSpec().sources(),
+                getResolverSpec().source(),
                 getResolverSpec().transformer(),
                 getResolverSpec().skipConditions(),
                 _rawFacetValues);

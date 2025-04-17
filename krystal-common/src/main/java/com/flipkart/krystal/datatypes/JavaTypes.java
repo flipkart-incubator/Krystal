@@ -39,8 +39,11 @@ public final class JavaTypes {
   /** JavaType for the raw {@link List} (without any type parameters) */
   public static final JavaType<List> LIST_RAW = new JavaType<>(List.class);
 
-  /** JavaType for the raw {@link Map} (without any type parameters)  */
+  /** JavaType for the raw {@link Map} (without any type parameters) */
   public static final JavaType<Map> MAP_RAW = new JavaType<>(Map.class);
+
+  /** JavaType for the {@link Object} */
+  public static final JavaType<Object> OBJECT = new JavaType<>(Object.class);
 
   private JavaTypes() {}
 }

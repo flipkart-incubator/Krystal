@@ -4,7 +4,7 @@ dependencies {
     implementation project(':krystal-common')
     implementation project(':vajram:extensions:protobuf:vajram-protobuf3')
     implementation project(':vajram:vajram-codegen-common')
-    implementation project(':lattice:lattice-annotations')
+    implementation project(':lattice:lattice-core')
 
     implementation('com.google.protobuf:protobuf-java')
     implementation 'com.squareup:javapoet'

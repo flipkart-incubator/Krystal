@@ -7,13 +7,14 @@ import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableSet;
+import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class OptionalFacetDefaultSpec<T, CV extends Request> extends DefaultFacetSpec<T, CV>
-    implements OptionalFacetSpec<T, CV> {
+    implements OptionalSingleValueFacetSpec<T, CV> {
 
   public OptionalFacetDefaultSpec(
       int id,
@@ -24,7 +25,7 @@ public final class OptionalFacetDefaultSpec<T, CV extends Request> extends Defau
       Class<CV> ofVajram,
       String documentation,
       boolean isBatched,
-      ElementTags tags,
+      Callable<ElementTags> tagsParser,
       Function<FacetValues, @Nullable T> getFromFacets,
       BiConsumer<FacetValues, @Nullable T> setToFacets) {
     super(
@@ -36,7 +37,7 @@ public final class OptionalFacetDefaultSpec<T, CV extends Request> extends Defau
         ofVajram,
         documentation,
         isBatched,
-        tags,
+        tagsParser,
         getFromFacets,
         setToFacets);
   }

@@ -12,7 +12,7 @@ import javax.lang.model.SourceVersion;
 
 @SupportedAnnotationTypes({
   "com.flipkart.krystal.vajram.Vajram",
-  "com.flipkart.krystal.vajram.VajramTrait"
+  "com.flipkart.krystal.vajram.Trait"
 })
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)

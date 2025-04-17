@@ -1,9 +1,10 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
+import com.flipkart.krystal.vajram.facets.specs.FanoutDepSpec;
 import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
-import com.google.common.collect.ImmutableSet;
+import com.flipkart.krystal.vajram.facets.specs.MandatorySingleValueFacetSpec;
+import com.flipkart.krystal.vajram.facets.specs.OptionalSingleValueFacetSpec;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
@@ -11,14 +12,14 @@ import java.util.function.Supplier;
 /**
  * The stage which can be used to further specify the fanout resolver of the given targetInput
  *
- * @param <I> The data type of the input being resolved.
+ * @param <T> The data type of the input being resolved.
  * @param <DV> The dependency whose input is being resolved.
  */
-public final class ResolveFanoutStage<I, DV extends Request> {
+public final class ResolveFanoutStage<T, DV extends Request<?>> {
 
-  private final InputMirrorSpec<I, DV> targetInput;
+  private final InputMirrorSpec<T, DV> targetInput;
 
-  ResolveFanoutStage(InputMirrorSpec<I, DV> targetInput) {
+  ResolveFanoutStage(InputMirrorSpec<T, DV> targetInput) {
     this.targetInput = targetInput;
   }
 
@@ -30,14 +31,25 @@ public final class ResolveFanoutStage<I, DV extends Request> {
    * @return The resultant {@link SimpleInputResolverSpec}
    * @param <CV> The current vajram which is doing the resolution
    */
-  public <CV extends Request> SimpleInputResolverSpec<I, CV, DV> usingValuesAsResolver(
-      Supplier<? extends Collection<? extends I>> with) {
+  public <CV extends Request> SimpleInputResolverSpec<T, CV, DV> usingValuesAsResolver(
+      Supplier<? extends Collection<? extends T>> with) {
     return new SimpleInputResolverSpec<>(
-        targetInput, ImmutableSet.of(), List.of(), new Transformer.Fanout(o -> with.get()));
+        targetInput, null, List.of(), new Transformer.None2Many(with::get));
   }
 
-  public <S, CV extends Request> TransformFanoutResolverStage<S, I, CV, DV> using(
-      FacetSpec<S, CV> sourceInput) {
-    return new TransformFanoutResolverStage<>(targetInput, sourceInput);
+  public <S, CV extends Request> OptionalSingleValTransformFanoutResolverStage<S, T, CV, DV> using(
+      OptionalSingleValueFacetSpec<S, CV> sourceInput) {
+    return new OptionalSingleValTransformFanoutResolverStage<>(targetInput, sourceInput);
+  }
+
+  public <S, CV extends Request> MandatorySingleValTransformFanoutResolverStage<S, T, CV, DV> using(
+      MandatorySingleValueFacetSpec<S, CV> sourceInput) {
+    return new MandatorySingleValTransformFanoutResolverStage<>(targetInput, sourceInput);
+  }
+
+  public <S, CV extends Request<?>, SDV extends Request<S>>
+      MultiValTransformFanoutResolverStage<S, T, CV, DV, SDV> using(
+          FanoutDepSpec<S, CV, SDV> sourceInput) {
+    return new MultiValTransformFanoutResolverStage<>(targetInput, sourceInput);
   }
 }

@@ -7,10 +7,10 @@ import static com.flipkart.krystal.vajram.codegen.common.models.Constants.FACET_
 import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getFacetsInterfaceName;
 
 import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
 import com.flipkart.krystal.vajram.facets.FacetValidation;
-import com.flipkart.krystal.data.IfNoValue;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.TypeName;
@@ -70,8 +70,8 @@ public abstract sealed class FacetJavaType {
 
     @Override
     public CodeBlock fieldInitializer(FacetGenModel facet) {
-      IfNoValue ifNoValue = facet.facetField().getAnnotation(IfNoValue.class);
-      if (ifNoValue != null && ifNoValue.then().usePlatformDefault()) {
+      IfNull ifNull = facet.facetField().getAnnotation(IfNull.class);
+      if (ifNull != null && ifNull.value().usePlatformDefault()) {
         if (facet.dataType().hasPlatformDefaultValue(util.processingEnv())) {
           return CodeBlock.of(
               "$T.$L.getPlatformDefaultValue()",
@@ -105,8 +105,8 @@ public abstract sealed class FacetJavaType {
     @Override
     public CodeBlock fieldGetterCode(FacetGenModel facet, CodeGenParams codeGenParams) {
       if (codeGenParams.isSubsetBatch()) {
-        IfNoValue ifNoValue = facet.facetField().getAnnotation(IfNoValue.class);
-        if (ifNoValue != null && !ifNoValue.then().usePlatformDefault()) {
+        IfNull ifNull = facet.facetField().getAnnotation(IfNull.class);
+        if (ifNull != null && !ifNull.value().usePlatformDefault()) {
           return CodeBlock.of(
               """
               return $T.validateMandatoryFacet(this.$L.$L(), $S, $S)

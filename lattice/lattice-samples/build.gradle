@@ -24,8 +24,11 @@ tasks.named('generateProto').configure { mustRunAfter('codeGenVajramModels') }
 dependencies {
     implementation project(':krystal-common')
     implementation project(':vajram:vajram-java-sdk')
-    implementation project(':lattice:lattice-annotations')
     implementation project(':vajram:extensions:protobuf:vajram-protobuf3')
+//    implementation project(':lattice:extensions:guice:lattice-guice')
+    implementation project(':lattice:lattice-core')
+
+    implementation 'com.google.inject:guice'
 
     annotationProcessor project(':krystal-common')
     annotationProcessor 'com.flipkart.krystal:vajram-protobuf-codegen'

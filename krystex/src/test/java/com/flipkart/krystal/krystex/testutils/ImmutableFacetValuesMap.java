@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.testutils;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FanoutDepResponses;
@@ -15,21 +16,24 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableFacetValues {
 
   private final SimpleImmutRequest<Object> request;
-  @Getter private ImmutableSet<? extends Facet> _facets;
+  @Getter private final ImmutableSet<? extends Facet> _facets;
   private final ImmutableMap<Integer, FacetValue> otherFacets;
+  @Getter private final VajramID _vajramID;
 
   public ImmutableFacetValuesMap(
-      SimpleRequestBuilder<Object> request, Set<? extends Facet> _facets) {
-    this(request, _facets, ImmutableMap.of());
+      SimpleRequestBuilder<Object> request, Set<? extends Facet> _facets, VajramID vajramID) {
+    this(request, _facets, ImmutableMap.of(), vajramID);
   }
 
   public ImmutableFacetValuesMap(
       SimpleRequestBuilder<Object> request,
       Set<? extends Facet> _facets,
-      ImmutableMap<Integer, FacetValue> otherFacets) {
+      ImmutableMap<Integer, FacetValue> otherFacets,
+      VajramID vajramID) {
     this.request = request._build();
     this._facets = ImmutableSet.copyOf(_facets);
     this.otherFacets = otherFacets;
+    this._vajramID = vajramID;
   }
 
   public FacetValue _get(int facetId) {
@@ -38,7 +42,7 @@ public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableF
       if (v != null) {
         return v;
       } else {
-        throw new AssertionError("This should not be possible sinve _hasValue is true");
+        throw new AssertionError("This should not be possible since _hasValue is true");
       }
     }
     return otherFacets.getOrDefault(facetId, Errable.nil());
@@ -63,7 +67,7 @@ public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableF
   public FanoutDepResponses _getDepResponses(int facetId) {
     FacetValue datum = otherFacets.getOrDefault(facetId, Errable.nil());
     if (datum instanceof FanoutDepResponses errable) {
-      return (FanoutDepResponses) errable;
+      return errable;
     } else {
       throw new IllegalArgumentException("%s is not of type Responses".formatted(facetId));
     }
@@ -83,7 +87,7 @@ public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableF
 
   @Override
   public FacetValuesMapBuilder _asBuilder() {
-    return new FacetValuesMapBuilder(request._asBuilder(), _facets, otherFacets);
+    return new FacetValuesMapBuilder(request._asBuilder(), _facets, otherFacets, _vajramID);
   }
 
   @Override

@@ -4,8 +4,8 @@ import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
-import com.flipkart.krystal.data.IfNoValue;
-import com.flipkart.krystal.data.IfNoValue.Strategy;
+import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfNull.IfNullThen;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import javax.lang.model.element.AnnotationMirror;
@@ -13,7 +13,7 @@ import javax.lang.model.element.VariableElement;
 import lombok.SneakyThrows;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public sealed interface FacetGenModel permits GivenFacetModel, DependencyModel {
+public sealed interface FacetGenModel permits DefaultFacetModel, DependencyModel {
   int id();
 
   String name();
@@ -31,8 +31,8 @@ public sealed interface FacetGenModel permits GivenFacetModel, DependencyModel {
   }
 
   default boolean isMandatoryOnServer() {
-    IfNoValue ifNoValue = facetField().getAnnotation(IfNoValue.class);
-    return ifNoValue != null && !ifNoValue.then().equals(Strategy.MAY_FAIL_CONDITIONALLY);
+    IfNull ifNull = facetField().getAnnotation(IfNull.class);
+    return ifNull != null && !ifNull.value().equals(IfNullThen.MAY_FAIL_CONDITIONALLY);
   }
 
   @Nullable String documentation();

@@ -79,7 +79,7 @@ public sealed interface DataType<T> permits JavaType {
    * Returns the raw type of this data type. For example, if this represents a {@link List}<{@link
    * String}>,this will return {@link List}
    */
-  DataType<T> getRawType();
+  DataType<T> rawType();
 
   ImmutableList<DataType<?>> typeParameters();
 }

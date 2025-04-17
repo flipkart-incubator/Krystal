@@ -9,7 +9,7 @@ import com.google.auto.service.AutoService;
 public class VajramModelsProto3SchemaGenProvider implements VajramCodeGeneratorProvider {
 
   @Override
-  public CodeGenerator create(VajramCodeGenContext creationContext) {
-    return new VajramModelsProto3SchemaGen(creationContext);
+  public CodeGenerator create(VajramCodeGenContext codeGenContext) {
+    return new VajramModelsProto3SchemaGen(codeGenContext);
   }
 }

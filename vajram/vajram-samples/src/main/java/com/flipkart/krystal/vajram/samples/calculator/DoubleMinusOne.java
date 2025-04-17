@@ -1,17 +1,20 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
+import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
+import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInputFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
 import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.doubledNumbers_n;
 import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.doubledNumbers_s;
+import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.numbers_s;
 import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.result_n;
 import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.result_s;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.data.IfNoValue;
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -35,14 +38,17 @@ import java.util.Optional;
 @Vajram
 public abstract class DoubleMinusOne extends ComputeVajramDef<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
-  static class _Facets {
-    @IfNoValue @Input List<Integer> numbers;
+  static class _Inputs {
+    @IfNull(FAIL)
+    List<Integer> numbers;
+  }
 
-    @IfNoValue
+  static class _InternalFacets {
+    @IfNull(FAIL)
     @Dependency(onVajram = Multiply.class, canFanout = true)
     int doubledNumbers;
 
-    @IfNoValue
+    @IfNull(FAIL)
     @Dependency(onVajram = Subtract.class)
     int result;
   }
@@ -50,24 +56,26 @@ public abstract class DoubleMinusOne extends ComputeVajramDef<Integer> {
   @Override
   public ImmutableCollection<SimpleInputResolver> getSimpleInputResolvers() {
     return resolve(
-        dep(doubledNumbers_s, depInput(Multiply_Req.numberTwo_s).usingValueAsResolver(() -> 2)),
-        dep(result_s, depInput(Subtract_Req.numberTwo_s).usingValueAsResolver(() -> 1)));
-  }
-
-  @Resolve(dep = doubledNumbers_n, depInputs = Multiply_Req.numberOne_n)
-  static FanoutCommand<Integer> numbersToDouble(List<Integer> numbers) {
-    return executeFanoutWith(numbers);
-  }
-
-  @Resolve(dep = result_n, depInputs = Subtract_Req.numberOne_n)
-  @SuppressWarnings("methodref.receiver")
-  static int sumOfDoubles(FanoutDepResponses<Multiply_Req, Integer> doubledNumbers) {
-    return doubledNumbers.requestResponsePairs().stream()
-        .map(RequestResponse::response)
-        .map(Errable::valueOpt)
-        .map(Optional::orElseThrow)
-        .mapToInt(Integer::intValue)
-        .sum();
+        dep(
+            doubledNumbers_s,
+            depInputFanout(Multiply_Req.numberOne_s)
+                .using(numbers_s)
+                .asResolver(numbers -> numbers),
+            depInput(Multiply_Req.numberTwo_s).usingValueAsResolver(() -> 2)),
+        dep(
+            result_s,
+            depInput(Subtract_Req.numberOne_s)
+                .using(doubledNumbers_s)
+                .asResolver(
+                    doubledNumbers ->
+                        doubledNumbers.requestResponsePairs().stream()
+                            .map(RequestResponse::response)
+                            .map(Errable::valueOpt)
+                            .filter(Optional::isPresent)
+                            .map(Optional::get)
+                            .mapToInt(Integer::intValue)
+                            .sum()),
+            depInput(Subtract_Req.numberTwo_s).usingValueAsResolver(() -> 1)));
   }
 
   @Output

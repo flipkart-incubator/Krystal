@@ -2,6 +2,7 @@ package com.flipkart.krystal.krystex.testutils;
 
 import static com.flipkart.krystal.data.Errable.nil;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.ImmutableRequest.Builder;
@@ -20,15 +21,18 @@ public final class SimpleRequestBuilder<T> implements Builder<T> {
 
   private final ImmutableSet<? extends InputMirror> _facets;
   private final Map<Integer, Errable<Object>> _data;
+  private final VajramID _vajramID;
 
-  public SimpleRequestBuilder(Set<? extends InputMirror> _facets) {
-    this(_facets, new LinkedHashMap<>());
+  public SimpleRequestBuilder(Set<? extends InputMirror> _facets, VajramID vajramID) {
+    this(_facets, new LinkedHashMap<>(), vajramID);
+    ;
   }
 
   public SimpleRequestBuilder(
-      Set<? extends InputMirror> _facets, Map<Integer, Errable<Object>> data) {
+      Set<? extends InputMirror> _facets, Map<Integer, Errable<Object>> data, VajramID vajramID) {
     this._facets = ImmutableSet.copyOf(_facets);
     this._data = data;
+    this._vajramID = vajramID;
   }
 
   public Errable<Object> _get(int facetId) {
@@ -50,7 +54,7 @@ public final class SimpleRequestBuilder<T> implements Builder<T> {
 
   @Override
   public SimpleImmutRequest<T> _build() {
-    return new SimpleImmutRequest<>(_data);
+    return new SimpleImmutRequest<>(_data, _vajramID);
   }
 
   @SuppressWarnings("unchecked")
@@ -68,7 +72,7 @@ public final class SimpleRequestBuilder<T> implements Builder<T> {
 
   @Override
   public SimpleRequestBuilder<T> _newCopy() {
-    return new SimpleRequestBuilder<>(_facets, new LinkedHashMap<>(_data));
+    return new SimpleRequestBuilder<>(_facets, new LinkedHashMap<>(_data), _vajramID);
   }
 
   @Override

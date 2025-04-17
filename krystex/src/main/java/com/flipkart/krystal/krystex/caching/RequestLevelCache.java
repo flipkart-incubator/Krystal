@@ -35,7 +35,7 @@ public class RequestLevelCache implements KryonDecorator {
 
   public static final String DECORATOR_TYPE = RequestLevelCache.class.getName();
 
-  private static final Errable<Object> UNKNOWN_ERROR =
+  private static final Errable<@Nullable Object> UNKNOWN_ERROR =
       Errable.withError(new StackTracelessException("Unknown error in request cache"));
 
   private final Map<CacheKey, CompletableFuture<@Nullable Object>> cache = new LinkedHashMap<>();
@@ -116,7 +116,8 @@ public class RequestLevelCache implements KryonDecorator {
       cacheMissesResponse.whenComplete(
           (kryonResponse, throwable) -> {
             if (kryonResponse instanceof BatchResponse batchResponse) {
-              ImmutableMap<InvocationId, Errable<Object>> responses = batchResponse.responses();
+              ImmutableMap<InvocationId, Errable<@Nullable Object>> responses =
+                  batchResponse.responses();
               responses.forEach(
                   (requestId, response) -> {
                     CompletableFuture<@Nullable Object> future = response.toFuture();

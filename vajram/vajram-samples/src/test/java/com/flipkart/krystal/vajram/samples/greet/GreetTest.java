@@ -196,6 +196,7 @@ class GreetTest {
             .requestId(REQUEST_ID)
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
+                    .singleThreadExecutor(executorLease.get())
                     .kryonExecStrategy(KryonExecStrategy.BATCH)
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH));
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
@@ -208,7 +209,7 @@ class GreetTest {
                             .build(),
                         requestLevelCache)
                     .withMock(
-                        UserService_ImmutFac._builder().userId(USER_ID)._build(),
+                        UserService_ImmutFacPojo._builder().userId(USER_ID)._build(),
                         withValue(new UserInfo(USER_ID, USER_NAME)))
                     .buildConfig())) {
       future = executeVajram(vajramKryonGraph, krystexVajramExecutor, requestContext);
@@ -224,6 +225,7 @@ class GreetTest {
             .requestId(REQUEST_ID)
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
+                    .singleThreadExecutor(executorLease.get())
                     .kryonExecStrategy(KryonExecStrategy.BATCH)
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH));
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
@@ -236,7 +238,7 @@ class GreetTest {
                             .build(),
                         requestLevelCache)
                     .withMock(
-                        UserService_ImmutFac._builder().userId(USER_ID)._build(),
+                        UserService_ImmutFacPojo._builder().userId(USER_ID)._build(),
                         Errable.withError(new IOException("Request Timeout")))
                     .buildConfig())) {
       future = executeVajram(vajramKryonGraph, krystexVajramExecutor, requestContext);

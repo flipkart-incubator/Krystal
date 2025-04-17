@@ -1,7 +1,5 @@
 package com.flipkart.krystal.vajram.codegen.processor;
 
-import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.MODELS;
-import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.WRAPPERS;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
 import static com.flipkart.krystal.vajram.codegen.processor.Constants.DEFAULT_MODELS_CODEGEN_PROVIDER;
 import static java.lang.System.lineSeparator;
@@ -41,11 +39,13 @@ public final class ModelGenProcessor extends AbstractProcessor {
     Utils util = new Utils(processingEnv, this.getClass());
     String phaseString = processingEnv.getOptions().get(CODEGEN_PHASE_KEY);
 
+    if (phaseString == null) {
+      util.note("Skipping %s since codegen phase is null".formatted(getClass().getSimpleName()));
+      return false;
+    }
+    CodegenPhase codegenPhase;
     try {
-      if (phaseString == null) {
-        util.note("Skipping %s since codegen phase is null".formatted(getClass().getSimpleName()));
-        return false;
-      }
+      codegenPhase = CodegenPhase.valueOf(phaseString);
     } catch (IllegalArgumentException e) {
       util.error(
           ("%s could not parse phase string '%s'. "
@@ -59,7 +59,6 @@ public final class ModelGenProcessor extends AbstractProcessor {
           null);
       return false;
     }
-    CodegenPhase codegenPhase = CodegenPhase.valueOf(phaseString);
     List<TypeElement> modelRoots =
         roundEnv.getElementsAnnotatedWith(ModelRoot.class).stream()
             .filter(element -> element.getKind() == ElementKind.INTERFACE)

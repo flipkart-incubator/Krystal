@@ -29,9 +29,11 @@ import java.util.Set;
 @ExternallyInvocable
 @Vajram
 public abstract class HelloFriendsV2 extends ComputeVajramDef<String> {
-  static class _Facets {
-    @Input String userId;
+  static class _Inputs {
+    String userId;
+  }
 
+  static class _InternalFacets {
     @Dependency(onVajram = FriendsService.class)
     Set<String> friendIds;
 

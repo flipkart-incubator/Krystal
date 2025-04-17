@@ -1,4 +1,4 @@
-package com.flipkart.krystal.lattice.samples.proto3;
+package com.flipkart.krystal.lattice.samples.proto3.sampleProtoService;
 
 import static java.util.Arrays.stream;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -10,7 +10,8 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
-import com.flipkart.krystal.lattice.samples.proto3.models.Proto3LatticeSampleResponse;
+import com.flipkart.krystal.lattice.samples.proto3.sampleProtoService.Proto3LatticeSampleResponse;
+import com.flipkart.krystal.lattice.samples.proto3.sampleProtoService.Proto3LatticeSample;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -67,8 +68,8 @@ class Proto3LatticeSampleTest {
             .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
             .inputWithDefaultValue(300)
-            .optionalByteInput((byte) 10)
-            .mandatoryByteInput((byte) 20)
+            .optionalLongInput(10L)
+            .mandatoryLongInput(20L)
             .optionalByteString(ByteString.copyFromUtf8("test"))
             ._build();
 
@@ -94,8 +95,8 @@ class Proto3LatticeSampleTest {
     assertThat(output.string()).contains("mandatoryInput: 100");
     assertThat(output.string()).contains("conditionallyMandatoryInput: Optional[200]");
     assertThat(output.string()).contains("inputWithDefaultValue: 300");
-    assertThat(output.string()).contains("optionalByteInput: Optional[10]");
-    assertThat(output.string()).contains("mandatoryByteInput: 20");
+    assertThat(output.string()).contains("optionalLongInput: Optional[10]");
+    assertThat(output.string()).contains("mandatoryLongInput: 20");
     assertThat(output.string()).contains("optionalByteString: Optional[test]");
   }
 
@@ -107,7 +108,7 @@ class Proto3LatticeSampleTest {
             .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
             .inputWithDefaultValue(300)
-            .mandatoryByteInput((byte) 20)
+            .mandatoryLongInput(20L)
             ._build();
 
     // Execute the vajram
@@ -131,8 +132,8 @@ class Proto3LatticeSampleTest {
     assertThat(output.string()).contains("optionalInput: Optional.empty");
     assertThat(output.string()).contains("mandatoryInput: 100");
     assertThat(output.string()).contains("inputWithDefaultValue: 300");
-    assertThat(output.string()).contains("optionalByteInput: Optional.empty");
-    assertThat(output.string()).contains("mandatoryByteInput: 20");
+    assertThat(output.string()).contains("optionalLongInput: Optional.empty");
+    assertThat(output.string()).contains("mandatoryLongInput: 20");
     assertThat(output.string()).contains("optionalByteString: ");
   }
 
@@ -143,7 +144,7 @@ class Proto3LatticeSampleTest {
         Proto3LatticeSample_ImmutReqProto._builder()
             .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
-            .mandatoryByteInput((byte) 20)
+            .mandatoryLongInput(20L)
             ._build();
 
     // Execute the vajram
@@ -175,7 +176,7 @@ class Proto3LatticeSampleTest {
             // Missing mandatoryInput
             .conditionallyMandatoryInput(200)
             .inputWithDefaultValue(300)
-            .mandatoryByteInput((byte) 20)
+            .mandatoryLongInput(20L)
             ._build();
 
     CompletableFuture<Proto3LatticeSampleResponse> result;
@@ -228,7 +229,7 @@ class Proto3LatticeSampleTest {
     assertThatThrownBy(result::get)
         .isInstanceOf(ExecutionException.class)
         .hasCauseInstanceOf(MandatoryFacetsMissingException.class)
-        .hasMessageContaining("mandatoryByteInput");
+        .hasMessageContaining("mandatoryLongInput");
   }
 
   @Test
@@ -238,11 +239,14 @@ class Proto3LatticeSampleTest {
         Proto3LatticeSample_ImmutReqProto._builder()
             .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
-            .mandatoryByteInput((byte) 20)
+            .mandatoryLongInput(20L)
             ._build();
 
-    Proto3LatticeSampleResponse mockedOutput = new Proto3LatticeSampleResponse("$$ This is a mocked response $$");
-
+    Proto3LatticeSampleResponse mockedOutput =
+        Proto3LatticeSampleResponse_ImmutPojo._builder()
+            .string("$$ This is a mocked response $$")
+            .mandatoryInt(1)
+            ._build();
     // Execute the vajram with a mocked response
     CompletableFuture<Proto3LatticeSampleResponse> result;
     try (KrystexVajramExecutor executor =
@@ -281,7 +285,7 @@ class Proto3LatticeSampleTest {
             .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
             .inputWithDefaultValue(300)
-            .mandatoryByteInput((byte) 20)
+            .mandatoryLongInput(20L)
             .optionalByteString(byteString)
             ._build();
 

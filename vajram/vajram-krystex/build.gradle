@@ -1,4 +1,4 @@
-import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.WRAPPERS
+import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.FINAL
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.CODEGEN_PHASE_KEY
 
 plugins {
@@ -71,7 +71,7 @@ compileTestJava {
         options.compilerArgs += [
                 '--module-path', classpath.asPath,
                 '--patch-module', "$moduleName=" + files(sourceSets.test.java.srcDirs).asPath,
-                '-A' + CODEGEN_PHASE_KEY + '=' + WRAPPERS,
+                '-A' + CODEGEN_PHASE_KEY + '=' + FINAL,
                 '-parameters'
         ]
     }

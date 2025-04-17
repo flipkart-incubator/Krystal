@@ -11,12 +11,12 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @EqualsAndHashCode(of = "error")
-public final class Failure<T> implements Errable<@NonNull T> {
+public final class Failure<T> implements Errable<T> {
   private final Throwable error;
 
   private @MonotonicNonNull CompletableFuture<@Nullable T> c;
 
-  @SuppressWarnings("optional.field")
+  @SuppressWarnings({"optional.field", "OptionalUsedAsFieldOrParameterType"})
   private Optional<Throwable> o = Optional.empty();
 
   public Failure(Throwable error) {

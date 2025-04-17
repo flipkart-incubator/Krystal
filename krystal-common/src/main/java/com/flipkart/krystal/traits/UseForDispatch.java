@@ -4,7 +4,6 @@ import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import com.flipkart.krystal.annos.ApplicableToElements;
-import com.flipkart.krystal.annos.HasCreator;
 import com.flipkart.krystal.core.KrystalElement.Facet;
 import com.google.auto.value.AutoAnnotation;
 import java.lang.annotation.Documented;
@@ -19,7 +18,6 @@ import java.lang.annotation.Target;
  * @see PredicateDynamicDispatchPolicy
  */
 @ApplicableToElements(Facet.class)
-@HasCreator
 @Documented
 @Retention(RUNTIME)
 @Target(FIELD)

@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.testutils;
 
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValuesBuilder;
@@ -22,20 +23,24 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesBuilder {
 
   private final SimpleRequestBuilder<Object> request;
-  @Getter private ImmutableSet<? extends Facet> _facets;
+  @Getter private final ImmutableSet<? extends Facet> _facets;
   private final Map<Integer, FacetValue> otherFacetValues;
+  @Getter private final VajramID _vajramID;
 
-  public FacetValuesMapBuilder(SimpleRequestBuilder<Object> request, Set<? extends Facet> _facets) {
-    this(request, _facets, ImmutableMap.of());
+  public FacetValuesMapBuilder(
+      SimpleRequestBuilder<Object> request, Set<? extends Facet> _facets, VajramID vajramID) {
+    this(request, _facets, ImmutableMap.of(), vajramID);
   }
 
   FacetValuesMapBuilder(
       SimpleRequestBuilder<Object> request,
       Set<? extends Facet> _facets,
-      Map<Integer, ? extends FacetValue> otherFacetValues) {
+      Map<Integer, ? extends FacetValue> otherFacetValues,
+      VajramID vajramID) {
     this.request = request._asBuilder();
     this._facets = ImmutableSet.copyOf(_facets);
     this.otherFacetValues = new LinkedHashMap<>(otherFacetValues);
+    this._vajramID = vajramID;
   }
 
   public FacetValue _get(int facetId) {
@@ -69,14 +74,13 @@ public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesB
   public FanoutDepResponses _getDepResponses(int facetId) {
     FacetValue datum = otherFacetValues.getOrDefault(facetId, Errable.nil());
     if (datum instanceof FanoutDepResponses fanoutDepResponses) {
-      return (FanoutDepResponses) fanoutDepResponses;
+      return fanoutDepResponses;
     } else if (datum instanceof RequestResponse requestResponse) {
-      return new FanoutDepResponses(ImmutableList.of((RequestResponse) requestResponse));
+      return new FanoutDepResponses(ImmutableList.of(requestResponse));
     } else if (datum instanceof One2OneDepResponse.NoRequest noRequest) {
       return new FanoutDepResponses(
           ImmutableList.of(
-              new RequestResponse(
-                  SimpleImmutRequest.empty(), (Errable<Object>) noRequest.response())));
+              new RequestResponse(SimpleImmutRequest.empty(_vajramID), noRequest.response())));
     } else {
       throw new IllegalArgumentException("%s is not of type Responses".formatted(facetId));
     }
@@ -96,19 +100,21 @@ public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesB
 
   @Override
   public ImmutableFacetValuesMap _build() {
-    return new ImmutableFacetValuesMap(request, _facets, ImmutableMap.copyOf(otherFacetValues));
+    return new ImmutableFacetValuesMap(
+        request, _facets, ImmutableMap.copyOf(otherFacetValues), _vajramID);
   }
 
   @Override
   public FacetValuesMapBuilder _newCopy() {
-    return new FacetValuesMapBuilder(request, _facets, new LinkedHashMap<>(otherFacetValues));
+    return new FacetValuesMapBuilder(
+        request, _facets, new LinkedHashMap<>(otherFacetValues), _vajramID);
   }
 
   public FacetValuesMapBuilder _set(int facetId, FacetValue value) {
     if (this._hasValue(facetId)) {
       throw new IllegalModificationException();
     }
-    otherFacetValues.put(facetId, (FacetValue) value);
+    otherFacetValues.put(facetId, value);
     return this;
   }
 
@@ -116,7 +122,8 @@ public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesB
   public boolean equals(final @Nullable Object o) {
     if (o == this) return true;
     if (!(o instanceof FacetValuesMap other)) return false;
-    return Objects.equals(this._asMap(), other._asMap());
+    return Objects.equals(this._asMap(), other._asMap())
+        && Objects.equals(this._vajramID, other._vajramID());
   }
 
   @Override
