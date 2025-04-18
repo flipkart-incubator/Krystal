@@ -41,6 +41,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Slf4j
 public class StaticCallGraphGenerator {
 
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
   /**
    * Generates a static call graph from a VajramKryonGraph and returns the HTML content and
    * filename.
@@ -211,8 +213,7 @@ public class StaticCallGraphGenerator {
    */
   private static String graphToJson(Graph graph) {
     try {
-      ObjectMapper objectMapper = new ObjectMapper();
-      return objectMapper.writeValueAsString(graph);
+      return OBJECT_MAPPER.writeValueAsString(graph);
     } catch (Exception e) {
       throw new RuntimeException("Error converting graph data to JSON", e);
     }
