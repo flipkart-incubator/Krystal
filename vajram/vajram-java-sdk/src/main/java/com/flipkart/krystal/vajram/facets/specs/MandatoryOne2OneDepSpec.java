@@ -4,14 +4,14 @@ import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.tags.ElementTags;
+import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 public final class MandatoryOne2OneDepSpec<T, CV extends Request, DV extends Request<T>>
-    extends One2OneDepSpec<T, CV, DV> implements MandatoryFacetSpec<T, CV> {
+    extends One2OneDepSpec<T, CV, DV> implements MandatorySingleValueFacetSpec<T, CV> {
 
   public MandatoryOne2OneDepSpec(
       int id,
@@ -23,9 +23,9 @@ public final class MandatoryOne2OneDepSpec<T, CV extends Request, DV extends Req
       VajramID onVajramId,
       String documentation,
       boolean isBatched,
-      ElementTags tags,
-      Function<FacetValues, One2OneDepResponse<DV, T>> getFromFacets,
-      BiConsumer<FacetValues, RequestResponse<DV, T>> setToFacets) {
+      Callable<ElementTags> tagsParser,
+      Function<FacetValues, One2OneDepResponse<T, DV>> getFromFacets,
+      BiConsumer<FacetValues, One2OneDepResponse<T, DV>> setToFacets) {
     super(
         id,
         name,
@@ -36,7 +36,7 @@ public final class MandatoryOne2OneDepSpec<T, CV extends Request, DV extends Req
         onVajramId,
         documentation,
         isBatched,
-        tags,
+        tagsParser,
         getFromFacets,
         setToFacets);
   }

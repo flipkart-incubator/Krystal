@@ -1,13 +1,13 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
+import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
 import static com.flipkart.krystal.vajram.ComputeDelegationMode.SYNC;
 
-import com.flipkart.krystal.annos.HasCreator;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.data.IfNull;
 import com.google.auto.value.AutoAnnotation;
 import jakarta.inject.Qualifier;
 import java.lang.annotation.ElementType;
@@ -21,8 +21,9 @@ import java.util.List;
 @CallGraphDelegationMode(SYNC)
 public abstract class MultiAdd implements TraitDef<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
-  static class _Facets {
-    @Mandatory @Input List<Integer> numbers;
+  static class _Inputs {
+    @IfNull(FAIL)
+    List<Integer> numbers;
   }
 
   public enum MultiAddType {
@@ -31,7 +32,6 @@ public abstract class MultiAdd implements TraitDef<Integer> {
     SPLIT,
   }
 
-  @HasCreator
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
   @Target(ElementType.FIELD)

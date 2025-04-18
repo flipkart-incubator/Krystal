@@ -1,20 +1,24 @@
 package com.flipkart.krystal.vajram.samples.calculator.subtract;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+
+import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import java.util.Optional;
 
-@ExternalInvocation(allow = true)
+@ExternallyInvocable
 @Vajram
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 public abstract class Subtract extends ComputeVajramDef<Integer> {
-  static class _Facets {
-    @Mandatory @Input int numberOne;
-    @Input int numberTwo;
+  static class _Inputs {
+    @IfNull(FAIL)
+    int numberOne;
+
+    int numberTwo;
   }
 
   @Output

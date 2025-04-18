@@ -2,35 +2,25 @@ package com.flipkart.krystal.vajram.facets.resolution;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
+import com.flipkart.krystal.vajram.facets.specs.FanoutDepSpec;
 import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
-import com.google.common.collect.ImmutableSet;
+import com.flipkart.krystal.vajram.facets.specs.MandatorySingleValueFacetSpec;
+import com.flipkart.krystal.vajram.facets.specs.OptionalSingleValueFacetSpec;
 import java.util.List;
 import java.util.function.Supplier;
 
 /**
  * The stage which can be used to further specify the non-fanout resolver of the given targetInput
  *
- * @param <I> The data type of the input being resolved.
+ * @param <T> The data type of the target input being resolved.
  * @param <DV> The dependency whose input is being resolved.
+ * @param <R> The data type of the dependency output
  */
-public final class ResolveStage<I, DV extends Request> {
-  private final InputMirrorSpec<I, DV> targetInput;
+public final class ResolveStage<T, R, DV extends Request<R>> {
+  private final InputMirrorSpec<T, DV> targetInput;
 
-  ResolveStage(InputMirrorSpec<I, DV> targetInput) {
+  ResolveStage(InputMirrorSpec<T, DV> targetInput) {
     this.targetInput = targetInput;
-  }
-
-  /**
-   * Use the value of the source input as-is, without any transformation. If the source input is
-   * {@link Errable#nil()}, then the resolved value will also be {@link Errable#nil()}. This is
-   * possible only if the dataType of the sourceInput and the target input are same.
-   *
-   * @see #using(FacetSpec)
-   * @param sourceInput the spec of the source input being used for resolution
-   */
-  public <CV extends Request> AsIsResolverStage<I, CV, DV> usingAsIs(FacetSpec<I, CV> sourceInput) {
-    return new AsIsResolverStage<>(targetInput, sourceInput);
   }
 
   /**
@@ -41,10 +31,39 @@ public final class ResolveStage<I, DV extends Request> {
    * @return The resultant {@link SimpleInputResolverSpec}
    * @param <CV> The current vajram which is doing the resolution
    */
-  public <CV extends Request> SimpleInputResolverSpec<I, CV, DV> usingValueAsResolver(
-      Supplier<I> with) {
+  public <CV extends Request> SimpleInputResolverSpec<T, CV, DV> usingValueAsResolver(
+      Supplier<T> with) {
     return new SimpleInputResolverSpec<>(
-        targetInput, ImmutableSet.of(), List.of(), new Transformer.One2One(o -> with.get()));
+        targetInput, null, List.of(), new Transformer.None2One(with::get));
+  }
+
+  /**
+   * Use the value of the source input as-is, without any transformation. If the source input is
+   * {@link Errable#nil()}, then the resolved value will also be {@link Errable#nil()}. This is
+   * possible only if the dataType of the sourceInput and the target input are same.
+   *
+   * @see #using(OptionalSingleValueFacetSpec)
+   * @see #using(MandatorySingleValueFacetSpec)
+   * @see #using(FanoutDepSpec)
+   * @param sourceInput the spec of the source input being used for resolution
+   */
+  public <CV extends Request> OptionalAsIsResolverStage<T, CV, DV> usingAsIs(
+      OptionalSingleValueFacetSpec<T, CV> sourceInput) {
+    return new OptionalAsIsResolverStage<>(targetInput, sourceInput);
+  }
+
+  /**
+   * Use the value of the source input as-is, without any transformation. This is possible only if
+   * the dataType of the sourceInput and the target input are same.
+   *
+   * @see #using(OptionalSingleValueFacetSpec)
+   * @see #using(MandatorySingleValueFacetSpec)
+   * @see #using(FanoutDepSpec)
+   * @param sourceInput the spec of the source input being used for resolution
+   */
+  public <CV extends Request> MandatoryAsIsResolverStage<T, CV, DV> usingAsIs(
+      MandatorySingleValueFacetSpec<T, CV> sourceInput) {
+    return new MandatoryAsIsResolverStage<>(targetInput, sourceInput);
   }
 
   /**
@@ -53,8 +72,30 @@ public final class ResolveStage<I, DV extends Request> {
    * @param sourceInput the spec of the source input whose value is used to resolve the dependency
    *     input.
    */
-  public <S, CV extends Request> TransformResolverStage<S, I, CV, DV> using(
-      FacetSpec<S, CV> sourceInput) {
-    return new TransformResolverStage<>(targetInput, sourceInput);
+  public <S, CV extends Request> OptionalSingleValTransformResolverStage<S, T, CV, DV> using(
+      OptionalSingleValueFacetSpec<S, CV> sourceInput) {
+    return new OptionalSingleValTransformResolverStage<>(targetInput, sourceInput);
+  }
+
+  /**
+   * Use the value of the source input and transform it to compute the resolved value.
+   *
+   * @param sourceInput the spec of the source input whose value is used to resolve the dependency
+   *     input.
+   */
+  public <S, CV extends Request> MandatorySingleValTransformResolverStage<S, T, CV, DV> using(
+      MandatorySingleValueFacetSpec<S, CV> sourceInput) {
+    return new MandatorySingleValTransformResolverStage<>(targetInput, sourceInput);
+  }
+
+  /**
+   * Use the value of the source input and transform it to compute the resolved value.
+   *
+   * @param sourceInput the spec of the source input whose value is used to resolve the dependency
+   *     input.
+   */
+  public <S, CV extends Request<?>> MultiValTransformResolverStage<S, T, CV, R, DV> using(
+      FanoutDepSpec<S, CV, ?> sourceInput) {
+    return new MultiValTransformResolverStage<>(targetInput, sourceInput);
   }
 }

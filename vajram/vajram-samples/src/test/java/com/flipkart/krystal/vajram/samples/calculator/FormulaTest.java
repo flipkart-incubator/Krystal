@@ -34,8 +34,10 @@ import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajram.guice.inputinjection.VajramGuiceInputInjector;
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add;
-import com.flipkart.krystal.vajram.samples.calculator.add.Add_ImmutFac;
-import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_ImmutFac;
+import com.flipkart.krystal.vajram.samples.calculator.add.Add_ImmutFacPojo;
+import com.flipkart.krystal.vajram.samples.calculator.add.Add_ImmutFacPojo;
+import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_ImmutFacPojo;
+import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_ImmutFacPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
@@ -58,7 +60,10 @@ import org.junit.jupiter.params.provider.ValueSource;
 class FormulaTest {
 
   public static final int MAX_THREADS = Runtime.getRuntime().availableProcessors();
+
+  @SuppressWarnings("unchecked")
   private static final Lease<SingleThreadExecutor>[] EXECUTOR_LEASES = new Lease[MAX_THREADS];
+
   private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll
@@ -121,6 +126,7 @@ class FormulaTest {
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
                     .kryonExecStrategy(KryonExecStrategy.BATCH)
+                    .singleThreadExecutor(executorLease.get())
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
             .build();
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 0, 0, REQUEST_ID);
@@ -128,7 +134,7 @@ class FormulaTest {
         graph.createExecutor(
             VajramTestHarness.prepareForTest(vajramExecutorConfig, requestLevelCache)
                 .withMock(
-                    Add_ImmutFac._builder().numberOne(0).numberTwo(0)._build(),
+                    Add_ImmutFacPojo._builder().numberOne(0).numberTwo(0)._build(),
                     Errable.withValue(0))
                 .buildConfig())) {
       future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
@@ -173,7 +179,7 @@ class FormulaTest {
   @ParameterizedTest
   @ValueSource(ints = {1, 2, 4, 6, 8}) // test with different values of parallelism
   void parallelExecuteVajrams_success(int parallellism) {
-    // This number must be divisible by parallellism. Else this test case will fail because we
+    // This number must be divisible by parallelism. Else this test case will fail because we
     // won't be able to cleanly divide this total executionsCount equally to the executors.
     int executionsCount = 216;
     SingleThreadExecutor[] executors = getExecutors(parallellism);
@@ -464,10 +470,10 @@ class FormulaTest {
         graph.createExecutor(
             VajramTestHarness.prepareForTest(executorConfigBuilder, requestLevelCache)
                 .withMock(
-                    Add_ImmutFac._builder().numberOne(20).numberTwo(5)._build(),
+                    Add_ImmutFacPojo._builder().numberOne(20).numberTwo(5)._build(),
                     Errable.withValue(25))
                 .withMock(
-                    Divide_ImmutFac._builder().numerator(100).denominator(25)._build(),
+                    Divide_ImmutFacPojo._builder().numerator(100).denominator(25)._build(),
                     Errable.withValue(4))
                 .buildConfig())) {
       future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
@@ -497,7 +503,7 @@ class FormulaTest {
         graph.createExecutor(
             VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder, requestLevelCache)
                 .withMock(
-                    Add_ImmutFac._builder().numberOne(20).numberTwo(5)._build(),
+                    Add_ImmutFacPojo._builder().numberOne(20).numberTwo(5)._build(),
                     Errable.withValue(25))
                 .buildConfig())) {
       future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
@@ -527,7 +533,7 @@ class FormulaTest {
         graph.createExecutor(
             VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
                 .withMock(
-                    Divide_ImmutFac._builder().numerator(100).denominator(25)._build(),
+                    Divide_ImmutFacPojo._builder().numerator(100).denominator(25)._build(),
                     Errable.withValue(4))
                 .buildConfig())) {
       future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
@@ -556,7 +562,7 @@ class FormulaTest {
         graph.createExecutor(
             VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
                 .withMock(
-                    Add_ImmutFac._builder().numberOne(0).numberTwo(0)._build(),
+                    Add_ImmutFacPojo._builder().numberOne(0).numberTwo(0)._build(),
                     Errable.withValue(0))
                 .buildConfig())) {
       future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);

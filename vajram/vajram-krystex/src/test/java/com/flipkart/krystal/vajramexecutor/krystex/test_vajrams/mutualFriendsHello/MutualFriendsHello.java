@@ -1,19 +1,19 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello;
 
+import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.skipFanout;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello_Fac.friendIds_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello_Fac.hellos_n;
 import static java.lang.System.lineSeparator;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
-import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService;
@@ -25,14 +25,18 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-@ExternalInvocation(allow = true)
+@ExternallyInvocable
 @Vajram
 public abstract class MutualFriendsHello extends ComputeVajramDef<String> {
-  static class _Facets {
-    @Mandatory @Input String userId;
-    @Input boolean skip;
+  static class _Inputs {
+    @IfNull(FAIL)
+    String userId;
 
-    @Mandatory
+    boolean skip;
+  }
+
+  static class _InternalFacets {
+    @IfNull(FAIL)
     @Dependency(onVajram = FriendsService.class)
     Set<String> friendIds;
 
@@ -55,7 +59,7 @@ public abstract class MutualFriendsHello extends ComputeVajramDef<String> {
   }
 
   @Output
-  static String sayHelloToMutualFriends(FanoutDepResponses<HelloFriendsV2_Req, String> hellos) {
+  static String sayHelloToMutualFriends(FanoutDepResponses<String, HelloFriendsV2_Req> hellos) {
     List<String> result = new ArrayList<>();
     for (var response : hellos.requestResponsePairs()) {
       response.response().valueOpt().ifPresent(result::add);

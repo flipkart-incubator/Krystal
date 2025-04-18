@@ -1,14 +1,29 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
+import static com.flipkart.krystal.facets.FacetUtils.computePlatformDefaultValue;
+import static com.flipkart.krystal.tags.ElementTags.emptyTags;
+
 import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfNull.IfNullThen;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
+import com.flipkart.krystal.facets.FacetUtils;
 import com.flipkart.krystal.facets.InputMirror;
 import com.flipkart.krystal.tags.ElementTags;
+import com.google.common.base.Suppliers;
+import com.google.common.util.concurrent.Callables;
+import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.SneakyThrows;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputMirrorSpec<T, CV extends Request> implements InputMirror {
@@ -19,9 +34,11 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
   @Getter private final int id;
   @Getter private final String name;
   @Getter private final String documentation;
-  @Getter private final ElementTags tags;
+  private @MonotonicNonNull ElementTags tags;
   private final Function<Request, @Nullable T> getFromRequest;
   private final BiConsumer<ImmutableRequest.Builder, @Nullable T> setToRequest;
+  private final Callable<ElementTags> tagsParser;
+  private @MonotonicNonNull T platformDefaultValue;
 
   public InputMirrorSpec(
       int id,
@@ -30,7 +47,7 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
       DataType<T> type,
       Class<CV> ofVajram,
       String documentation,
-      ElementTags tags,
+      Callable<ElementTags> tagsParser,
       Function<Request, @Nullable T> getFromRequest,
       BiConsumer<ImmutableRequest.Builder, @Nullable T> setToRequest) {
     this.id = id;
@@ -39,7 +56,7 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
     this.type = type;
     this.ofVajram = ofVajram;
     this.documentation = documentation;
-    this.tags = tags;
+    this.tagsParser = tagsParser;
     this.getFromRequest = getFromRequest;
     this.setToRequest = setToRequest;
   }
@@ -58,5 +75,26 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
   @Override
   public String toString() {
     return "InputMirror(id=" + id + ", name=" + name + ", doc=" + documentation + ')';
+  }
+
+  @SneakyThrows
+  @Override
+  public ElementTags tags() {
+    if (tags == null) {
+      try {
+        tags = tagsParser.call();
+      } catch (Exception e) {
+        tags = emptyTags();
+      }
+    }
+    return tags;
+  }
+
+  @SuppressWarnings("unchecked")
+  public @NonNull T getPlatformDefaultValue() throws UnsupportedOperationException {
+    if (platformDefaultValue == null) {
+      platformDefaultValue = computePlatformDefaultValue(this, type);
+    }
+    return platformDefaultValue;
   }
 }

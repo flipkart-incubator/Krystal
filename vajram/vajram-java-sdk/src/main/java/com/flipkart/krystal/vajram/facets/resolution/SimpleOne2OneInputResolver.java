@@ -31,7 +31,7 @@ public final class SimpleOne2OneInputResolver<S, T, CV extends Request<?>, DV ex
         //noinspection unchecked,rawtypes
         DependencyCommand<T> depCommand =
             _resolutionHelper(
-                getResolverSpec().sources(),
+                getResolverSpec().source(),
                 getResolverSpec().transformer(),
                 getResolverSpec().skipConditions(),
                 _rawFacetValues);

@@ -10,13 +10,11 @@ buildscript {
 
 plugins {
     id 'java-gradle-plugin'
-    id 'groovy'
 }
 
-group 'com.flipkart.krystal'
-version project.krystal_version
-description
-'''Gradle plugin for projects using the Krystal framework. 
+group = 'com.flipkart.krystal'
+version = project.krystal_version
+description = '''Gradle plugin for projects using the Krystal framework. 
 Includes Vajram code generator and validator. 
 Tasks from this plugin are added under the group "Krystal"'''
 
@@ -24,16 +22,14 @@ gradlePlugin {
     plugins {
         simplePlugin {
             id = 'com.flipkart.krystal'
-            implementationClass = 'com.flipkart.krystal.vajram.VajramPlugin'
+            implementationClass = 'com.flipkart.krystal.vajram.plugin.VajramPlugin'
         }
     }
 }
-if (!fast_compile) {
-    tasks.named('spotlessJava').configure { mustRunAfter('compileGroovy') }
-}
 
 dependencies {
-    api project(':vajram-java-sdk')
+    api project(':vajram:vajram-java-sdk')
+    implementation project(':vajram:vajram-codegen-common')
     implementation 'com.squareup:javapoet'
     implementation 'commons-cli:commons-cli'
     implementation 'org.projectlombok:lombok'
@@ -41,6 +37,7 @@ dependencies {
     compileOnly 'com.google.auto.service:auto-service'
     annotationProcessor 'com.google.auto.service:auto-service'
 }
+
 if (!fast_compile) {
     checkerFramework {
         extraJavacArgs += ['-AresolveReflection',]

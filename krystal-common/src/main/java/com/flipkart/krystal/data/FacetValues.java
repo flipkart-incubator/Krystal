@@ -1,6 +1,7 @@
 package com.flipkart.krystal.data;
 
 import com.flipkart.krystal.facets.Facet;
+import com.flipkart.krystal.model.Model;
 import com.google.common.collect.ImmutableSet;
 
 /** An facets object contains some or all the facet values of a given Vajram/Kryon. */

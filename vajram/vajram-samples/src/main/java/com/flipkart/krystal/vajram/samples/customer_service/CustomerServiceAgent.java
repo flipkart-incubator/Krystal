@@ -1,14 +1,15 @@
 package com.flipkart.krystal.vajram.samples.customer_service;
 
+import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
 import static com.flipkart.krystal.vajram.ComputeDelegationMode.NONE;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.traits.UseForDispatch;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
 
 /**
  * Sample trait demonstrating dynamic predicate dispatch capability of krystal
@@ -17,13 +18,21 @@ import com.flipkart.krystal.vajram.facets.Mandatory;
  */
 @Trait
 @CallGraphDelegationMode(NONE)
-@ExternalInvocation(allow = true)
+@ExternallyInvocable
 public abstract class CustomerServiceAgent implements TraitDef<String> {
   @SuppressWarnings("initialization.field.uninitialized")
-  static class _Facets {
-    @Mandatory @UseForDispatch @Input AgentType agentType;
-    @Mandatory @UseForDispatch @Input InitialCommunication initialCommunication;
-    @Mandatory @UseForDispatch @Input String customerName;
+  static class _Inputs {
+    @IfNull(FAIL)
+    @UseForDispatch
+    AgentType agentType;
+
+    @IfNull(FAIL)
+    @UseForDispatch
+    InitialCommunication initialCommunication;
+
+    @IfNull(FAIL)
+    @UseForDispatch
+    String customerName;
   }
 
   public enum AgentType {

@@ -154,7 +154,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     if (vajramDefinition.isTrait()) {
       throw new VajramDefinitionException(
           "Cannot register input Batchers for vajramId %s since it is a Trait. Cannot register input batchers for traits"
-              .formatted(vajramID.vajramId()));
+              .formatted(vajramID.id()));
     }
     VajramKryonDefinition vajramKryonDefinition =
         (VajramKryonDefinition) kryonDefinitionRegistry.getOrThrow(vajramID);
@@ -164,7 +164,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     if (!(vajramDef instanceof IOVajramDef<?>)) {
       throw new VajramDefinitionException(
           "Cannot register input Batchers for vajram %s since it is not an IOVajram"
-              .formatted(vajramID.vajramId()));
+              .formatted(vajramID.id()));
     }
     List<OutputLogicDecoratorConfig> outputLogicDecoratorConfigList = new ArrayList<>();
     for (InputBatcherConfig inputBatcherConfig : inputBatcherConfigs) {
@@ -296,7 +296,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
               vajramDefRoot::newRequestBuilder);
       if (vajramDefinition.isTrait()) {
         kryonDefinitionRegistry.newTraitKryonDefinition(
-            vajramId.value(), facets, createNewRequest, vajramDefinition.vajramTags());
+            vajramId.id(), facets, createNewRequest, vajramDefinition.vajramTags());
       } else if (vajramDefRoot instanceof VajramDef<Object> vajramDef) {
         InputResolverCreationResult inputResolverCreationResult =
             createKryonLogicsForInputResolvers(vajramDefinition);
@@ -305,7 +305,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
         OutputLogicDefinition<?> outputLogicDefinition =
             createKryonOutputLogic(vajramId, vajramDefinition, vajramDef);
         kryonDefinitionRegistry.newVajramKryonDefinition(
-            vajramId.value(),
+            vajramId.id(),
             facets,
             outputLogicDefinition.kryonLogicId(),
             depIdToProviderKryon,
@@ -354,10 +354,10 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
 
           ImmutableSet<? extends Facet> sources = inputResolver.definition().sources();
           ImmutableCollection<FacetSpec> requiredInputs =
-              facetDefinitions.stream().filter(e -> sources.contains(e)).collect(toImmutableList());
+              facetDefinitions.stream().filter(sources::contains).collect(toImmutableList());
           LogicDefinition<ResolverLogic> inputResolverLogic =
               logicRegistryDecorator.newResolverLogic(
-                  vajramId.vajramId(),
+                  vajramId.id(),
                   "%s:dep(%s):inputResolver(%s)"
                       .formatted(
                           vajramId,
@@ -378,7 +378,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                         if (depRequests.size() != 1) {
                           throw new IllegalStateException(
                               "The vajram "
-                                  + vajramId.vajramId()
+                                  + vajramId.id()
                                   + " can have at most one fanout resolver");
                         }
                         resolverCommand = fanoutInputResolver.resolve(depRequests.get(0), facets);
@@ -418,11 +418,12 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       } else if (facetValue instanceof One2OneDepResponse<?, ?> depResponse) {
         value = depResponse.response();
       } else if (facetValue instanceof FanoutDepResponses<?, ?> fanoutDepResponses) {
-        if (fanoutDepResponses.requestResponsePairs().stream()
-            .allMatch(reqResp -> reqResp.response().valueOpt().isEmpty())) {
+        if (!fanoutDepResponses.requestResponsePairs().isEmpty()
+            && fanoutDepResponses.requestResponsePairs().stream()
+                .allMatch(reqResp -> reqResp.response().valueOpt().isEmpty())) {
           missingMandatoryValues.put(
               mandatoryFacet.name(),
-              new MandatoryFacetMissingException(vajramID.vajramId(), mandatoryFacet.name()));
+              new MandatoryFacetMissingException(vajramID.id(), mandatoryFacet.name()));
         }
         continue;
       } else {
@@ -434,7 +435,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       } else {
         try {
           validateMandatoryFacet(
-              value.valueOpt().orElse(null), vajramID.vajramId(), mandatoryFacet.name());
+              value.valueOpt().orElse(null), vajramID.id(), mandatoryFacet.name());
         } catch (Throwable e) {
           missingMandatoryValues.put(mandatoryFacet.name(), e);
         }

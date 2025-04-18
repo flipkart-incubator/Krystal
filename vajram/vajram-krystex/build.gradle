@@ -1,18 +1,19 @@
-import static com.flipkart.krystal.vajram.codegen.Constants.COGENGEN_PHASE_KEY
-import static com.flipkart.krystal.vajram.codegen.CodegenPhase.IMPLS
+import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.FINAL
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.CODEGEN_PHASE_KEY
 
 plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
 }
 
-description 'An implementation of a vajram executor powered by the Krystex module.'
+description = 'An implementation of a vajram executor powered by the Krystex module.'
 
 dependencies {
-    api project(':vajram-java-sdk')
+    api project(':vajram:vajram-java-sdk')
     api project(':krystex')
 
     testAnnotationProcessor 'com.flipkart.krystal:vajram-codegen'
     testAnnotationProcessor project(':krystal-common')
+    testAnnotationProcessor project(':vajram:vajram-codegen-common')
 
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
@@ -51,9 +52,9 @@ afterEvaluate {
  * This is needed only when there are vajrams written in the 'test' directory of the project - which is the case in vajram-krystex.
  * This issue doesn't arise in traditional modules where vajrams are written in 'main' directory.
  *
- * To circumvent this, the krystal gradle plugin does not make `compileTestJava` dependend on `testCodeGenVajramModels`.
- * If any project has vajrams in the test directory, then that project will have to explicitly make `compileTestJava` dependend on `testCodeGenVajramModels`
- * and add custome jvm arguments as done below, so that compilation of test code succeeds.
+ * To circumvent this, the krystal gradle plugin does not make `compileTestJava` dependent on `testCodeGenVajramModels`.
+ * If any project has vajrams in the test directory, then that project will have to explicitly make `compileTestJava` dependent on `testCodeGenVajramModels`
+ * and add custom jvm arguments as done below, so that compilation of test code succeeds.
  */
 tasks.named('testCodeGenVajramModels', JavaCompile).configure {
     doFirst {
@@ -70,7 +71,7 @@ compileTestJava {
         options.compilerArgs += [
                 '--module-path', classpath.asPath,
                 '--patch-module', "$moduleName=" + files(sourceSets.test.java.srcDirs).asPath,
-                '-A' + COGENGEN_PHASE_KEY + '=' + IMPLS,
+                '-A' + CODEGEN_PHASE_KEY + '=' + FINAL,
                 '-parameters'
         ]
     }

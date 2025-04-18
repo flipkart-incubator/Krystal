@@ -6,6 +6,7 @@ import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.tags.ElementTags;
+import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import lombok.Getter;
@@ -19,7 +20,7 @@ import lombok.Getter;
  * @param <DV> The dependency vajram
  */
 @Getter
-public final class OptionalFanoutDepSpec<T, CV extends Request, DV extends Request<T>>
+public final class OptionalFanoutDepSpec<T, CV extends Request<?>, DV extends Request<T>>
     extends FanoutDepSpec<T, CV, DV> implements OptionalFacetSpec<T, CV> {
 
   public OptionalFanoutDepSpec(
@@ -32,9 +33,9 @@ public final class OptionalFanoutDepSpec<T, CV extends Request, DV extends Reque
       VajramID onVajramId,
       String documentation,
       boolean isBatched,
-      ElementTags tags,
-      Function<FacetValues, FanoutDepResponses<DV, T>> getFromFacets,
-      BiConsumer<FacetValues, FanoutDepResponses<DV, T>> setToFacets) {
+      Callable<ElementTags> tagsParser,
+      Function<FacetValues, FanoutDepResponses<T, DV>> getFromFacets,
+      BiConsumer<FacetValues, FanoutDepResponses<T, DV>> setToFacets) {
     super(
         id,
         name,
@@ -45,7 +46,7 @@ public final class OptionalFanoutDepSpec<T, CV extends Request, DV extends Reque
         onVajramId,
         documentation,
         isBatched,
-        tags,
+        tagsParser,
         getFromFacets,
         setToFacets);
   }

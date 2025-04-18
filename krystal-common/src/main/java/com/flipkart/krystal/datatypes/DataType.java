@@ -1,6 +1,8 @@
 package com.flipkart.krystal.datatypes;
 
+import com.google.common.collect.ImmutableList;
 import java.lang.reflect.Type;
+import java.util.List;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -16,6 +18,8 @@ public sealed interface DataType<T> permits JavaType {
   Type javaReflectType() throws ClassNotFoundException;
 
   TypeMirror javaModelType(ProcessingEnvironment processingEnv);
+
+  String canonicalClassName();
 
   /**
    * Returns the default value for this data type. This is useful in case the developer has marked
@@ -63,12 +67,19 @@ public sealed interface DataType<T> permits JavaType {
    *     ClassNotFoundException}
    * @throws IllegalArgumentException if the datatype does not have a platform default value.
    */
-  @NonNull
-  T getPlatformDefaultValue() throws ClassNotFoundException, IllegalArgumentException;
+  @NonNull T getPlatformDefaultValue() throws ClassNotFoundException, IllegalArgumentException;
 
   /**
    * Returns true if the datatype has a platform default value. Generally true for scalars,
    * collections/arrays, maps and strings.
    */
   boolean hasPlatformDefaultValue(ProcessingEnvironment processingEnv);
+
+  /**
+   * Returns the raw type of this data type. For example, if this represents a {@link List}<{@link
+   * String}>,this will return {@link List}
+   */
+  DataType<T> rawType();
+
+  ImmutableList<DataType<?>> typeParameters();
 }

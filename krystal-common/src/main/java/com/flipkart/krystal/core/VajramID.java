@@ -1,7 +1,7 @@
 package com.flipkart.krystal.core;
 
 // @jdk.internal.ValueBased
-public record VajramID(String vajramId) {
+public record VajramID(String id) {
 
   public static VajramID vajramID(String id) {
     return new VajramID(id);
@@ -9,10 +9,10 @@ public record VajramID(String vajramId) {
 
   @Override
   public String toString() {
-    return "v<%s>".formatted(vajramId());
+    return "v<%s>".formatted(id());
   }
 
-  public String value() {
-    return vajramId;
+  public String vajramId() {
+    return id;
   }
 }

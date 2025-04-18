@@ -1,21 +1,21 @@
 package com.flipkart.krystal.vajram.samples.customer_service;
 
+import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.agentType_n;
 import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.customerName_n;
 import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.initialCommunication_n;
 import static com.flipkart.krystal.vajram.samples.customer_service.MultiAgentContact_Fac.responses_n;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
-import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.AgentType;
@@ -28,15 +28,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
+@SuppressWarnings("initialization.field.uninitialized")
+@ExternallyInvocable
 @Vajram
-@ExternalInvocation(allow = true)
 abstract class MultiAgentContact extends ComputeVajramDef<List<String>> {
-  @SuppressWarnings("initialization.field.uninitialized")
-  static class _Facets {
-    @Mandatory @Input String name;
-    @Mandatory @Input String communication;
+  static class _Inputs {
+    @IfNull(FAIL)
+    String name;
 
-    @Mandatory
+    @IfNull(FAIL)
+    String communication;
+  }
+
+  static class _InternalFacets {
+    @IfNull(FAIL)
     @Dependency(onVajram = CustomerServiceAgent.class, canFanout = true)
     String responses;
   }
@@ -62,7 +67,7 @@ abstract class MultiAgentContact extends ComputeVajramDef<List<String>> {
   }
 
   @Output
-  static List<String> output(FanoutDepResponses<CustomerServiceAgent_Req, String> responses) {
+  static List<String> output(FanoutDepResponses<String, CustomerServiceAgent_Req> responses) {
     return ImmutableList.copyOf(
         responses.requestResponsePairs().stream()
             .map(RequestResponse::response)

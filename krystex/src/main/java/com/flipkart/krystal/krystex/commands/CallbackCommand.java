@@ -11,16 +11,17 @@ import com.flipkart.krystal.krystex.request.InvocationId;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record CallbackCommand(
     VajramID vajramID,
     Dependency dependency,
-    ImmutableMap<InvocationId, DepResponse<Request<Object>, Object>> resultsByRequest,
+    ImmutableMap<InvocationId, DepResponse<@Nullable Object, Request<@Nullable Object>>> resultsByRequest,
     DependentChain dependentChain)
     implements MultiRequestCommand<BatchResponse> {
 
   @Override
-  public ImmutableSet<InvocationId> requestIds() {
+  public ImmutableSet<InvocationId> invocationIds() {
     return resultsByRequest().keySet();
   }
 

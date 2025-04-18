@@ -1,5 +1,7 @@
 package com.flipkart.krystal.data;
 
+import com.flipkart.krystal.model.ImmutableModel;
+
 public interface ImmutableFacetValues
     extends FacetValues, ImmutableFacetValuesContainer, ImmutableModel {
 

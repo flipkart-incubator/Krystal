@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
@@ -123,7 +123,7 @@ public record InputBatcherConfig(
               inputModulatorConfigs[inputModulatorIndex++] =
                   InputBatcherConfig.sharedBatcher(
                       () -> new InputBatcherImpl(batchSizeSupplier.getBatchSize(vajramId)),
-                      vajramId.vajramId(),
+                      vajramId.id(),
                       depChains.toArray(DependentChain[]::new));
             }
             graph.registerInputBatchers(vajramId, inputModulatorConfigs);
@@ -193,13 +193,7 @@ public record InputBatcherConfig(
 
   private static Iterable<VajramDefinition> externallyInvocableVajrams(VajramKryonGraph graph) {
     return graph.vajramDefinitions().values().stream()
-        .filter(
-            v -> {
-              return v.vajramTags()
-                  .getAnnotationByType(ExternalInvocation.class)
-                  .map(ExternalInvocation::allow)
-                  .orElse(false);
-            })
+        .filter(v -> v.vajramTags().getAnnotationByType(ExternallyInvocable.class).isPresent())
         .toList();
   }
 

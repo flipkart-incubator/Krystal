@@ -10,7 +10,7 @@ import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
-import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
@@ -110,8 +110,8 @@ public class StaticCallGraphGenerator {
                 .isMandatory(
                     !facet
                         .tags()
-                        .getAnnotationByType(Mandatory.class)
-                        .map(mandatory -> mandatory.ifNotSet().usePlatformDefault())
+                        .getAnnotationByType(IfNull.class)
+                        .map(mandatory -> mandatory.value().usePlatformDefault())
                         .orElse(false))
                 .documentation(facet.documentation())
                 .build());
@@ -128,7 +128,7 @@ public class StaticCallGraphGenerator {
 
       Node node =
           Node.builder()
-              .id(vajramId.vajramId())
+              .id(vajramId.id())
               .name(definition.defType().getSimpleName())
               .vajramType(vajramType)
               .inputs(inputs)
@@ -150,8 +150,8 @@ public class StaticCallGraphGenerator {
               && vajramDefinitions.containsKey(dependencyId)) {
             Link link =
                 Link.builder()
-                    .source(vajramId.vajramId())
-                    .target(dependencyId.vajramId())
+                    .source(vajramId.id())
+                    .target(dependencyId.id())
                     .name(facet.name())
                     .isMandatory(facet.isMandatory())
                     .canFanout(facet.canFanout())
@@ -169,8 +169,8 @@ public class StaticCallGraphGenerator {
           for (VajramID conformant : conformingVajrams) {
             Link link =
                 Link.builder()
-                    .source(vajramId.vajramId())
-                    .target(conformant.vajramId())
+                    .source(vajramId.id())
+                    .target(conformant.id())
                     .name(
                         traitDispatchPolicy instanceof StaticDispatchPolicy
                             ? "<static dispatch>"

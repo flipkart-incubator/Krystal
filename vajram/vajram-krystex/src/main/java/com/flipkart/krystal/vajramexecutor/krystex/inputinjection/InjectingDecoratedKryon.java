@@ -62,7 +62,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
   @Override
   public CompletableFuture<KryonCommandResponse> executeCommand(KryonCommand kryonCommand) {
     VajramDefinition vajramDefinition =
-        vajramKryonGraph.getVajramDefinition(vajramID(kryonCommand.vajramID().value()));
+        vajramKryonGraph.getVajramDefinition(vajramID(kryonCommand.vajramID().id()));
     if (vajramDefinition.metadata().isInputInjectionNeeded()
         && vajramDefinition.def() instanceof VajramDef<?> vajramDef) {
       if (kryonCommand instanceof ForwardReceive forwardBatch) {
@@ -75,7 +75,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
   private CompletableFuture<KryonCommandResponse> injectFacets(
       ForwardReceive forwardBatch, VajramDefinition vajramDefinition, VajramDef<?> vajramDef) {
     ImmutableMap<InvocationId, ? extends FacetValuesContainer> requestIdToFacets =
-        forwardBatch.executableRequests();
+        forwardBatch.executableInvocations();
 
     ImmutableMap.Builder<InvocationId, FacetValuesBuilder> newRequests = ImmutableMap.builder();
     Set<FacetSpec<?, ?>> injectableFacets = new LinkedHashSet<>();
@@ -108,7 +108,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
             forwardBatch.vajramID(),
             newRequests.build(),
             forwardBatch.dependentChain(),
-            forwardBatch.skippedRequests()));
+            forwardBatch.invocationsToSkip()));
   }
 
   private FacetValuesBuilder injectFacetsOfVajram(
@@ -131,7 +131,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
         log.error(
             "Could not inject input {} of vajram {}",
             facetSpec,
-            kryon.getKryonDefinition().vajramID().value(),
+            kryon.getKryonDefinition().vajramID().id(),
             f.error());
       }
     }
@@ -146,7 +146,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
       log.error(
           "Cannot inject input {} of vajram {}",
           facetDef,
-          kryon.getKryonDefinition().vajramID().value(),
+          kryon.getKryonDefinition().vajramID().id(),
           exception);
       return Errable.withError(exception);
     }
@@ -155,7 +155,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
     } catch (Throwable e) {
       String message =
           "Could not inject input %s of vajram %s"
-              .formatted(facetDef, kryon.getKryonDefinition().vajramID().value());
+              .formatted(facetDef, kryon.getKryonDefinition().vajramID().id());
       log.error(message, e);
       return Errable.withError(e);
     }

@@ -9,8 +9,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * A pool which leases objects randomly instead of fairly. This makes this pool more performant than
- * a {@link FairMultiLeasePool}
+ * A pool which leases objects randomly instead of fairly.
  *
  * @param <T> The type of the object being pooled
  */
@@ -128,14 +127,14 @@ public class RandomMultiLeasePool<T extends @NonNull Object> implements MultiLea
     private final Consumer<PartitionedPool.PooledObject<T>> closeLogic;
 
     private LeaseImpl(
-        PartitionedPool.PooledObject<T> pooledObject,
+        PartitionedPool.@NonNull PooledObject<T> pooledObject,
         Consumer<PartitionedPool.PooledObject<T>> closeLogic) {
       this.pooledObject = pooledObject;
       this.closeLogic = closeLogic;
     }
 
     @Override
-    public T get() {
+    public @NonNull T get() {
       if (pooledObject == null) {
         throw new IllegalStateException("Lease already released");
       }

@@ -1,0 +1,48 @@
+plugins {
+    id 'com.flipkart.krystal' version "${krystal_version}"
+    id 'com.google.protobuf' version '0.9.4'
+}
+
+sourceSets {
+    main {
+        proto {
+            srcDir 'build/generated/sources/vajramModels/protobuf/main'
+        }
+    }
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${protobuf_version}"
+    }
+}
+
+tasks.named('extractIncludeProto').configure { mustRunAfter('codeGenVajramModels') }
+tasks.named('extractProto').configure { mustRunAfter('codeGenVajramModels') }
+tasks.named('generateProto').configure { mustRunAfter('codeGenVajramModels') }
+
+dependencies {
+    implementation project(':krystal-common')
+    implementation project(':vajram:vajram-java-sdk')
+    implementation project(':vajram:extensions:protobuf:vajram-protobuf3')
+//    implementation project(':lattice:extensions:guice:lattice-guice')
+    implementation project(':lattice:lattice-core')
+
+    implementation 'com.google.inject:guice'
+
+    annotationProcessor project(':krystal-common')
+    annotationProcessor 'com.flipkart.krystal:vajram-protobuf-codegen'
+    annotationProcessor 'com.flipkart.krystal:vajram-codegen'
+
+    implementation 'com.google.protobuf:protobuf-java'
+
+    implementation 'jakarta.inject:jakarta.inject-api'
+    implementation 'org.checkerframework:checker-qual'
+
+    testImplementation project(':vajram:vajram-krystex')
+    testImplementation project(':vajram:extensions:guice:vajram-guice')
+}
+
+if (!fast_compile) {
+    tasks.named("spotlessJava").configure { dependsOn("codeGenVajramModels") }
+}

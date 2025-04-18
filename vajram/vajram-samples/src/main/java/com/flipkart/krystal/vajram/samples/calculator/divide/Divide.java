@@ -1,18 +1,22 @@
 package com.flipkart.krystal.vajram.samples.calculator.divide;
 
+import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import java.util.Optional;
 
 @Vajram
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 public abstract class Divide extends ComputeVajramDef<Integer> {
-  static class _Facets {
-    @Mandatory @Input int numerator;
-    @Input int denominator;
+  static class _Inputs {
+    @IfNull(FAIL)
+    int numerator;
+
+    int denominator;
   }
 
   @Output

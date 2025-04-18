@@ -43,12 +43,7 @@ public final class InputResolvers {
       List<? extends SimpleInputResolver> dep(
           DependencySpec<T, CV, DV> dependency,
           SimpleInputResolverSpec<?, CV, DV>... resolverStages) {
-    return stream(resolverStages)
-        .map(
-            spec -> {
-              return toResolver(dependency, spec);
-            })
-        .toList();
+    return stream(resolverStages).map(spec -> toResolver(dependency, spec)).toList();
   }
 
   /**
@@ -59,8 +54,8 @@ public final class InputResolvers {
    * @param <T> The data type of the input
    * @param <DV> The dependency whose input is being resolved.
    */
-  public static <T, DV extends Request> ResolveStage<T, DV> depInput(
-      InputMirrorSpec<T, DV> depInput) {
+  public static <I, T, DV extends Request<T>> ResolveStage<I, T, DV> depInput(
+      InputMirrorSpec<I, DV> depInput) {
     return new ResolveStage<>(depInput);
   }
 
@@ -73,7 +68,7 @@ public final class InputResolvers {
    * @param <T> The data type of the input being resolved.
    * @param <DV> The dependency whose input is being resolved.
    */
-  public static <T, DV extends Request> ResolveFanoutStage<T, DV> depInputFanout(
+  public static <T, DV extends Request<?>> ResolveFanoutStage<T, DV> depInputFanout(
       InputMirrorSpec<T, DV> depInput) {
     return new ResolveFanoutStage<>(depInput);
   }

@@ -1,20 +1,24 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+
+import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import java.util.Optional;
 import java.util.concurrent.atomic.LongAdder;
 
-@ExternalInvocation(allow = true)
+@ExternallyInvocable
 @Vajram
 public abstract class Hello extends ComputeVajramDef<String> {
-  static class _Facets {
-    @Mandatory @Input String name;
-    @Input String greeting;
+  static class _Inputs {
+    @IfNull(FAIL)
+    String name;
+
+    String greeting;
   }
 
   public static final LongAdder CALL_COUNTER = new LongAdder();

@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.samples.greet;
 
+import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -8,8 +9,7 @@ import static java.util.function.Function.identity;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;
-import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.google.common.collect.ImmutableCollection;
 import java.util.Collection;
@@ -20,9 +20,11 @@ import java.util.stream.Collectors;
 @Vajram
 @SuppressWarnings("initialization.field.uninitialized")
 public abstract class UserService extends IOVajramDef<UserInfo> {
-  static class _Facets {
-    @Mandatory @Batched @Input String userId;
-    @Input String test;
+
+  static class _Inputs {
+    @IfNull(value = FAIL)
+    @Batched
+    String userId;
   }
 
   @Output

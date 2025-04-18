@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
+import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
@@ -13,12 +14,12 @@ import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiA
 import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAddType.SIMPLE;
 import static com.flipkart.krystal.vajram.samples.calculator.add.MultiAdd.MultiAddType.SPLIT;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.add.AddUsingTraits.ThreeSums;
@@ -28,15 +29,23 @@ import java.util.List;
 import java.util.Optional;
 
 /** Adds three lists of numbers in three different ways and then returns those sums */
-@ExternalInvocation(allow = true)
-@Vajram
 @SuppressWarnings("optional.parameter")
+@ExternallyInvocable
+@Vajram
 public abstract class AddUsingTraits extends ComputeVajramDef<ThreeSums> {
   @SuppressWarnings("initialization.field.uninitialized")
-  static class _Facets {
-    @Mandatory @Input List<Integer> numbers1;
-    @Mandatory @Input List<Integer> numbers2;
-    @Mandatory @Input List<Integer> numbers3;
+  static class _Inputs {
+    @IfNull(FAIL)
+    List<Integer> numbers1;
+
+    @IfNull(FAIL)
+    List<Integer> numbers2;
+
+    @IfNull(FAIL)
+    List<Integer> numbers3;
+  }
+
+  static class _InternalFacets {
 
     @Dependency(onVajram = MultiAdd.class)
     @MultiAddQualifier(SIMPLE)

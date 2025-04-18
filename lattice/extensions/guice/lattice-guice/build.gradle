@@ -1,0 +1,14 @@
+dependencies {
+    implementation project(':lattice:lattice-core')
+    implementation 'com.google.inject:guice'
+}
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.flipkart.krystal'
+            artifactId = project.name
+            version = project.krystal_version
+            from components.java
+        }
+    }
+}

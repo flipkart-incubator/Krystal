@@ -69,14 +69,13 @@ public final class VajramDefinition {
 
     this.outputLogicTags = parseOutputLogicTags(vajramDefRoot);
     this.vajramTags = parseVajramTags(vajramId, vajramDefRoot);
-    this.outputLogicSources =
-        parseOutputLogicSources(vajramDefRoot, facetSpecs, facetsByName, facetsById);
+    this.outputLogicSources = parseOutputLogicSources(vajramDefRoot, facetSpecs, facetsByName);
     this.inputResolvers = parseInputResolvers(vajramDefRoot);
 
     this.metadata = new VajramMetadata(facetSpecs);
   }
 
   public boolean isTrait() {
-    return def instanceof TraitDef<Object>;
+    return def instanceof TraitDef<?>;
   }
 }

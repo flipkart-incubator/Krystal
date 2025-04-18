@@ -4,7 +4,7 @@ import com.flipkart.krystal.data.Request;
 
 /** Spec of a facet which is optional */
 public sealed interface OptionalFacetSpec<T, CV extends Request> extends FacetSpec<T, CV>
-    permits OptionalFacetDefaultSpec, OptionalFanoutDepSpec, OptionalOne2OneDepSpec {
+    permits OptionalFanoutDepSpec, OptionalSingleValueFacetSpec {
 
   @Override
   default boolean isMandatory() {

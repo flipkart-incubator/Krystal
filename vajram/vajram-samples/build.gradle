@@ -2,24 +2,18 @@ plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
 }
 
-group 'com.flipkart'
-version project.krystal_version
-
 dependencies {
     implementation project(':krystal-common')
-    implementation project(':vajram-java-sdk')
+    implementation project(':vajram:vajram-java-sdk')
     implementation project(':krystal-visualization')
-
-    annotationProcessor project(':krystal-common')
 
     annotationProcessor 'com.flipkart.krystal:vajram-codegen'
 
     implementation 'jakarta.inject:jakarta.inject-api'
     implementation 'org.checkerframework:checker-qual'
 
-    testImplementation project(':vajram-krystex')
-
-    testImplementation project(':vajram-guice')
+    testImplementation project(':vajram:vajram-krystex')
+    testImplementation project(':vajram:extensions:guice:vajram-guice')
 
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'

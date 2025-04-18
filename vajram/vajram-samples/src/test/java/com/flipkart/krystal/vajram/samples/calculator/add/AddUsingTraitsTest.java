@@ -116,7 +116,7 @@ class AddUsingTraitsTest {
   @Test
   void addUsingTraits_withEmptyLists() {
     // Setup test data with empty lists
-    List<Integer> emptyList = asList();
+    List<Integer> emptyList = List.of();
 
     CompletableFuture<ThreeSums> future;
 
@@ -198,7 +198,7 @@ class AddUsingTraitsTest {
   }
 
   private static ImmutableSet<DependentChain> getDisabledDependantChains(VajramKryonGraph graph) {
-    String vajramId = graph.getVajramIdByVajramDefType(AddUsingTraits.class).vajramId();
+    String vajramId = graph.getVajramIdByVajramDefType(AddUsingTraits.class).id();
     return ImmutableSet.of(
         graph.computeDependantChain(vajramId, sum2_s, chainSum_s, chainSum_s),
         graph.computeDependantChain(vajramId, sum3_s, splitSum1_s, splitSum1_s, splitSum1_s),

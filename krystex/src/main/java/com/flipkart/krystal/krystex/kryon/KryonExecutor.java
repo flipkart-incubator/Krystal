@@ -14,7 +14,7 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.groupingBy;
 import static lombok.AccessLevel.PACKAGE;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.annos.TraitDependency;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.core.VajramID;
@@ -221,8 +221,6 @@ public final class KryonExecutor implements KrystalExecutor {
     return ImmutableMap.copyOf(decorators);
   }
 
-  public void subscribe(VajramID subscriber, Dependency dep) {}
-
   private ImmutableMap<String, DependencyDecorator> getDependencyDecorators(
       DependencyExecutionContext dependencyExecutionContext) {
     Map<String, DependencyDecorator> decorators = new LinkedHashMap<>();
@@ -251,12 +249,11 @@ public final class KryonExecutor implements KrystalExecutor {
     }
     checkArgument(executionConfig != null, "executionConfig can not be null");
     if (!executorConfig._riskyOpenAllKryonsForExternalInvocation()) {
-      if (!kryonDefinitionRegistry
+      if (kryonDefinitionRegistry
           .getOrThrow(vajramID)
           .tags()
-          .getAnnotationByType(ExternalInvocation.class)
-          .map(ExternalInvocation::allow)
-          .orElse(false)) {
+          .getAnnotationByType(ExternallyInvocable.class)
+          .isEmpty()) {
         throw new RejectedExecutionException(
             "External invocation is not allowed for vajramId: " + vajramID);
       }
@@ -269,7 +266,7 @@ public final class KryonExecutor implements KrystalExecutor {
 
     //noinspection RedundantCast: This is to avoid nullChecker failing compilation.
     return enqueueCommand(
-            // Perform all datastructure manipulations in the command queue to avoid multi-thread
+            // Perform all data-structure manipulations in the command queue to avoid multi-thread
             // access
             (Supplier<CompletableFuture<@Nullable T>>)
                 () -> {
@@ -286,7 +283,7 @@ public final class KryonExecutor implements KrystalExecutor {
                     allExecutions.put(
                         invocationId,
                         new KryonExecution(
-                            vajramID, invocationId, (Request) facets, executionConfig, future));
+                            vajramID, invocationId, facets, executionConfig, future));
                     unFlushedExecutions.add(invocationId);
                   }
 
@@ -374,7 +371,7 @@ public final class KryonExecutor implements KrystalExecutor {
    * be called in threads other than the main thread of this KryonExecutor.(for example IO reactor
    * threads). When a non-blocking IO call is made by a kryon, a callback is added to the resulting
    * CompletableFuture which generates an ExecuteWithDependency command for its dependents. That is
-   * when this method is used - ensuring that all further processing of the kryonCammand happens in
+   * when this method is used - ensuring that all further processing of the kryonCommand happens in
    * the main thread.
    */
   @SuppressWarnings("FutureReturnValueIgnored")
@@ -394,7 +391,7 @@ public final class KryonExecutor implements KrystalExecutor {
    * <p>When using {@link GraphTraversalStrategy#DEPTH}, this is a more optimal version of {@link
    * #enqueueKryonCommand(Supplier)} as it bypasses the command queue for the special case that the
    * command is originating from the same main thread inside the command queue,thus avoiding the
-   * pontentially unnecessary contention in the thread-safe structures inside the command queue.
+   * potentially unnecessary contention in the thread-safe structures inside the command queue.
    */
   public <R extends KryonCommandResponse> CompletableFuture<R> executeCommand(
       KryonCommand<R> kryonCommand) {
@@ -508,13 +505,13 @@ public final class KryonExecutor implements KrystalExecutor {
               .map(requestId -> getKryonExecution(requestId).vajramID())
               .distinct()
               .forEach(
-                  kryonId -> {
-                    executorConfig
-                        .traitDispatchDecorator()
-                        .<VoidResponse>decorateDependency(this::executeCommand)
-                        .invokeDependency(
-                            new Flush(kryonId, kryonDefinitionRegistry.getDependantChainsStart()));
-                  });
+                  kryonId ->
+                      executorConfig
+                          .traitDispatchDecorator()
+                          .<VoidResponse>decorateDependency(this::executeCommand)
+                          .invokeDependency(
+                              new Flush(
+                                  kryonId, kryonDefinitionRegistry.getDependantChainsStart())));
         });
   }
 
@@ -566,9 +563,10 @@ public final class KryonExecutor implements KrystalExecutor {
                             kryonId,
                             kryonExecutions.stream()
                                 .collect(
-                                    toImmutableMap(
-                                        KryonExecution::instanceExecutionId,
-                                        KryonExecution::request)),
+                                    ImmutableMap
+                                        .<KryonExecution, InvocationId, Request<?>>toImmutableMap(
+                                            KryonExecution::instanceExecutionId,
+                                            KryonExecution::request)),
                             kryonDefinitionRegistry.getDependantChainsStart(),
                             ImmutableMap.of()));
           } catch (Throwable throwable) {
@@ -589,10 +587,11 @@ public final class KryonExecutor implements KrystalExecutor {
                       if (throwable != null) {
                         kryonExecution.future().completeExceptionally(throwable);
                       } else {
-                        Errable<Object> result =
-                            responses.getOrDefault(
-                                kryonExecution.instanceExecutionId(), Errable.nil());
-                        linkFutures(result.toFuture(), kryonExecution.future());
+                        linkFutures(
+                            responses
+                                .getOrDefault(kryonExecution.instanceExecutionId(), Errable.nil())
+                                .toFuture(),
+                            kryonExecution.future());
                       }
                     }
                   });

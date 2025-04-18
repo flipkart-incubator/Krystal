@@ -313,7 +313,7 @@ class KrystexVajramExecutorTest {
         .withCauseExactlyInstanceOf(MandatoryFacetsMissingException.class)
         .withMessageContaining(
             "Vajram v<"
-                + graph.getVajramIdByVajramDefType(Hello.class).vajramId()
+                + graph.getVajramIdByVajramDefType(Hello.class).id()
                 + "> did not receive these mandatory inputs: [ 'name'");
   }
 
@@ -405,6 +405,7 @@ class KrystexVajramExecutorTest {
       GraphTraversalStrategy graphTraversalStrategy) throws Exception {
     graph =
         loadFromClasspath(
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.audit",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello")
@@ -461,6 +462,7 @@ class KrystexVajramExecutorTest {
       GraphTraversalStrategy graphTraversalStrategy, TestInfo testInfo) {
     graph =
         loadFromClasspath(
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.audit",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello")
@@ -505,6 +507,7 @@ class KrystexVajramExecutorTest {
       GraphTraversalStrategy graphTraversalStrategy, TestInfo testInfo) {
     graph =
         loadFromClasspath(
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.audit",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello")
@@ -560,9 +563,7 @@ class KrystexVajramExecutorTest {
             RequestLevelCache.DECORATOR_TYPE,
             executionContext -> true,
             executionContext -> RequestLevelCache.DECORATOR_TYPE,
-            kryonDecoratorContext -> {
-              return requestLevelCache;
-            }));
+            kryonDecoratorContext -> requestLevelCache));
 
     return KrystexVajramExecutorConfig.builder()
         .kryonExecutorConfigBuilder(
@@ -575,6 +576,7 @@ class KrystexVajramExecutorTest {
       GraphTraversalStrategy graphTraversalStrategy, TestInfo testInfo) {
     graph =
         loadFromClasspath(
+                "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.audit",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice",
                 "com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends",
@@ -831,25 +833,23 @@ class KrystexVajramExecutorTest {
     VajramKryonGraphBuilder builder = VajramKryonGraph.builder();
     Arrays.stream(packagePrefixes).forEach(builder::loadFromPackage);
     Predicate<LogicExecutionContext> isIOVajram =
-        (context) -> {
-          return context
-              .kryonDefinitionRegistry()
-              .getOrThrow(context.vajramID())
-              .tags()
-              .getAnnotationByType(OutputLogicDelegationMode.class)
-              .map(v -> v.value() == SYNC)
-              .orElse(false);
-        };
+        (context) ->
+            context
+                .kryonDefinitionRegistry()
+                .getOrThrow(context.vajramID())
+                .tags()
+                .getAnnotationByType(OutputLogicDelegationMode.class)
+                .map(v -> v.value() == SYNC)
+                .orElse(false);
     Function<LogicExecutionContext, String> instanceIdCreator =
-        context -> {
-          return context
-              .kryonDefinitionRegistry()
-              .getOrThrow(context.vajramID())
-              .tags()
-              .getAnnotationByType(VajramIdentifier.class)
-              .map(VajramIdentifier::value)
-              .orElseThrow(() -> new IllegalStateException("Missing VajramDef annotation"));
-        };
+        context ->
+            context
+                .kryonDefinitionRegistry()
+                .getOrThrow(context.vajramID())
+                .tags()
+                .getAnnotationByType(VajramIdentifier.class)
+                .map(VajramIdentifier::value)
+                .orElseThrow(() -> new IllegalStateException("Missing VajramDef annotation"));
     return builder
         .decorateOutputLogicForSession(
             new OutputLogicDecoratorConfig(

@@ -11,17 +11,17 @@ import java.util.Set;
 
 public record ForwardReceive(
     VajramID vajramID,
-    ImmutableMap<InvocationId, ? extends FacetValues> executableRequests,
+    ImmutableMap<InvocationId, ? extends FacetValues> executableInvocations,
     DependentChain dependentChain,
-    ImmutableMap<InvocationId, String> skippedRequests)
+    ImmutableMap<InvocationId, String> invocationsToSkip)
     implements MultiRequestCommand<KryonCommandResponse>, ServerSideCommand<KryonCommandResponse> {
 
   @Override
-  public Set<InvocationId> requestIds() {
-    return Sets.union(executableRequests().keySet(), skippedRequests().keySet());
+  public Set<InvocationId> invocationIds() {
+    return Sets.union(executableInvocations().keySet(), invocationsToSkip().keySet());
   }
 
   public boolean shouldSkip() {
-    return executableRequests.isEmpty();
+    return executableInvocations.isEmpty();
   }
 }

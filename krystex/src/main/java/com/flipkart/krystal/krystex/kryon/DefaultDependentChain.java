@@ -37,6 +37,6 @@ public final class DefaultDependentChain extends AbstractDependentChain {
 
   @Override
   public String toString() {
-    return "%s:%s[%s]".formatted(incomingDependentChain, vajramID.value(), latestDependency());
+    return "%s:%s[%s]".formatted(incomingDependentChain, vajramID.id(), latestDependency());
   }
 }

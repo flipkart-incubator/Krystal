@@ -12,6 +12,7 @@ import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableSet;
+import java.util.concurrent.Callable;
 import lombok.Getter;
 
 /**
@@ -39,7 +40,7 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
       VajramID onVajramId,
       String documentation,
       boolean isBatched,
-      ElementTags tags) {
+      Callable<ElementTags> tagsParser) {
     super(
         id,
         name,
@@ -49,24 +50,24 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
         ofVajram,
         documentation,
         isBatched,
-        tags);
+        tagsParser);
     this.onVajram = onVajram;
     this.onVajramId = onVajramId;
   }
 
   @Override
   @SuppressWarnings("unchecked")
-  public final void setFacetValue(FacetValuesBuilder facets, FacetValue value) {
+  public final void setFacetValue(FacetValuesBuilder facets, FacetValue<?> value) {
     if (value instanceof DepResponse depResponse) {
-      setFacetValue(facets, (DepResponse<DV, T>) depResponse);
+      setFacetValue(facets, (DepResponse<T, DV>) depResponse);
     } else {
       throw new RuntimeException(
           "Dependency expects facet value of type DepResponse. Found " + value.getClass());
     }
   }
 
-  protected abstract void setFacetValue(FacetValuesBuilder facets, DepResponse<DV, T> depResponse);
+  protected abstract void setFacetValue(FacetValuesBuilder facets, DepResponse<T, DV> depResponse);
 
   @Override
-  public abstract DepResponse getFacetValue(FacetValues facetValues);
+  public abstract DepResponse<T, DV> getFacetValue(FacetValues facetValues);
 }

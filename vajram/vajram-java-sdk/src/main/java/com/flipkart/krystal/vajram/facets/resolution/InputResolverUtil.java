@@ -7,25 +7,20 @@ import static java.util.Optional.ofNullable;
 import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableRequest;
-import com.flipkart.krystal.data.NonNil;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.One2OneCommand;
-import com.flipkart.krystal.vajram.facets.specs.DefaultFacetSpec;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
-import com.flipkart.krystal.vajram.facets.specs.FanoutDepSpec;
-import com.flipkart.krystal.vajram.facets.specs.One2OneDepSpec;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputResolverUtil {
 
@@ -54,49 +49,31 @@ public final class InputResolverUtil {
 
   @SuppressWarnings("rawtypes")
   static <T> DependencyCommand<T> _resolutionHelper(
-      Set<? extends FacetSpec<?, ?>> sourceInputs,
+      @Nullable FacetSpec<?, ?> sourceFacet,
       Transformer transformer,
       List<? extends SkipPredicate> skipPredicates,
       FacetValues facetValues) {
-    boolean fanout = transformer instanceof Transformer.Fanout;
-    List<Errable<?>> inputValues = new ArrayList<>();
-    for (FacetSpec sourceInput : sourceInputs) {
-      final Errable<?> inputValue;
-      if (sourceInput instanceof One2OneDepSpec<?, ?, ?> depSpec) {
-        inputValue = depSpec.getFacetValue(facetValues).response();
-      } else if (sourceInput instanceof FanoutDepSpec<?, ?, ?> depSpec) {
-        inputValue =
-            Errable.withValue(
-                depSpec.getFacetValue(facetValues).requestResponsePairs().stream()
-                    .map(RequestResponse::response)
-                    .filter(e -> e instanceof NonNil<?>)
-                    .map(e -> (NonNil<?>) e)
-                    .map(NonNil::value)
-                    .toList());
-      } else if (sourceInput instanceof DefaultFacetSpec defaultSpec) {
-        inputValue = defaultSpec.getFacetValue(facetValues);
-      } else {
-        throw new UnsupportedOperationException("Unknown facet type " + sourceInput.getClass());
-      }
-      inputValues.add(inputValue);
-    }
+    final FacetValue<?> sourceFacetValue =
+        sourceFacet != null ? sourceFacet.getFacetValue(facetValues) : Errable.nil();
 
-    @SuppressWarnings("unchecked")
-    Optional<SkipPredicate> skipPredicate =
-        skipPredicates.stream()
-            .map(p -> (SkipPredicate) p)
-            .filter(sSkipPredicate -> sSkipPredicate.condition().test(inputValues))
-            .findFirst();
-    if (skipPredicate.isPresent()) {
-      if (fanout) {
-        return skipFanout(skipPredicate.get().reason());
-      } else {
-        return skipExecution(skipPredicate.get().reason());
+    if (sourceFacetValue != null) {
+      @SuppressWarnings("unchecked")
+      Optional<SkipPredicate> skipPredicate =
+          skipPredicates.stream()
+              .map(p -> (SkipPredicate) p)
+              .filter(sSkipPredicate -> sSkipPredicate.condition().test(sourceFacetValue))
+              .findFirst();
+      if (skipPredicate.isPresent()) {
+        if (transformer.canFanout()) {
+          return skipFanout(skipPredicate.get().reason());
+        } else {
+          return skipExecution(skipPredicate.get().reason());
+        }
       }
     }
 
-    Optional<Object> transformedInput = ofNullable(transformer.apply(inputValues));
-    if (fanout) {
+    Optional<Object> transformedInput = ofNullable(transformer.apply(sourceFacetValue));
+    if (transformer.canFanout()) {
       @SuppressWarnings("unchecked")
       FanoutCommand<T> fanoutCommand =
           FanoutCommand.executeFanoutWith(

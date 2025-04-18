@@ -6,5 +6,5 @@ import com.flipkart.krystal.krystex.Logic;
 
 @FunctionalInterface
 public non-sealed interface FacetsFromRequest extends Logic {
-  FacetValuesBuilder facetsFromRequest(Request requestBuilder);
+  FacetValuesBuilder facetsFromRequest(Request<?> requestBuilder);
 }

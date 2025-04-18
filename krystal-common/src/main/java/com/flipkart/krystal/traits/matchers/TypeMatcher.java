@@ -5,7 +5,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 final class TypeMatcher implements InputValueMatcher {
 
-  @NonNull private final Class<?> type;
+  private final @NonNull Class<?> type;
 
   public TypeMatcher(@NonNull Class<?> type) {
     this.type = type;

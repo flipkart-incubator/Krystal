@@ -3,15 +3,16 @@ package com.flipkart.krystal.krystex.logicdecorators.observability;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.testutils.SimpleFacet.input;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.data.ImmutableFacetValuesMap;
-import com.flipkart.krystal.data.SimpleRequestBuilder;
+import com.flipkart.krystal.krystex.testutils.SimpleRequestBuilder;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport.LogicExecInfo;
+import com.flipkart.krystal.krystex.testutils.ImmutableFacetValuesMap;
 import com.flipkart.krystal.krystex.testutils.SimpleFacet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,11 +47,15 @@ class DefaultKryonExecutionReportTest {
     ImmutableList<FacetValues> facetValuesList =
         ImmutableList.of(
             new ImmutableFacetValuesMap(
-                new SimpleRequestBuilder<>(allInputs, ImmutableMap.of(1, withValue("v1"))),
-                allInputs),
+                new SimpleRequestBuilder<>(
+                    allInputs, ImmutableMap.of(1, withValue("v1")), vajramID),
+                allInputs,
+                vajramID),
             new ImmutableFacetValuesMap(
-                new SimpleRequestBuilder<>(allInputs, ImmutableMap.of(1, withValue("v2"))),
-                allInputs));
+                new SimpleRequestBuilder<>(
+                    allInputs, ImmutableMap.of(1, withValue("v2")), vajramID),
+                allInputs,
+                vajramID));
 
     clock.setInstant(START_TIME);
     kryonExecutionReport.reportMainLogicStart(vajramID, kryonLogicId, facetValuesList);
@@ -68,7 +74,7 @@ class DefaultKryonExecutionReportTest {
     LogicExecInfo logicExecInfo =
         kryonExecutionReport.mainLogicExecInfos().values().stream().findFirst().orElseThrow();
 
-    assertThat(logicExecInfo.kryonId()).isEqualTo(vajramID.value());
+    assertThat(logicExecInfo.kryonId()).isEqualTo(vajramID.id());
     assertThat(logicExecInfo.startTimeMs()).isEqualTo(START_TIME.toEpochMilli());
     assertThat(logicExecInfo.endTimeMs()).isEqualTo(END_TIME.toEpochMilli());
     assertThat(logicExecInfo.result()).isInstanceOf(Map.class);
@@ -76,16 +82,16 @@ class DefaultKryonExecutionReportTest {
     Map<ImmutableMap<Facet, String>, String> mapResult =
         (Map<ImmutableMap<Facet, String>, String>) logicExecInfo.result();
     Map<ImmutableMap<Facet, String>, String> derefedMap = new LinkedHashMap<>();
-    mapResult.forEach(
-        (key, resultRef) -> {
-          Map<Facet, String> map = new LinkedHashMap<>();
-          key.forEach(
-              (inputId, valueRef) -> {
-                map.put(inputId, (String) kryonExecutionReport.dataMap().get(valueRef));
-              });
-          derefedMap.put(
-              ImmutableMap.copyOf(map), (String) kryonExecutionReport.dataMap().get(resultRef));
-        });
+    requireNonNull(mapResult)
+        .forEach(
+            (key, resultRef) -> {
+              Map<Facet, String> map = new LinkedHashMap<>();
+              key.forEach(
+                  (inputId, valueRef) ->
+                      map.put(inputId, (String) kryonExecutionReport.dataMap().get(valueRef)));
+              derefedMap.put(
+                  ImmutableMap.copyOf(map), (String) kryonExecutionReport.dataMap().get(resultRef));
+            });
     assertThat(derefedMap)
         .isEqualTo(
             ImmutableMap.of(
@@ -97,9 +103,8 @@ class DefaultKryonExecutionReportTest {
     for (ImmutableMap<Facet, String> inputs : inputsList) {
       Map<Integer, String> map = new LinkedHashMap<>();
       inputs.forEach(
-          (inputName, valueRef) -> {
-            map.put(inputName.id(), (String) kryonExecutionReport.dataMap().get(valueRef));
-          });
+          (inputName, valueRef) ->
+              map.put(inputName.id(), (String) kryonExecutionReport.dataMap().get(valueRef)));
       dereffedInputList.add(map);
     }
     assertThat(dereffedInputList)
@@ -113,11 +118,15 @@ class DefaultKryonExecutionReportTest {
     ImmutableList<FacetValues> facetValuesList =
         ImmutableList.of(
             new ImmutableFacetValuesMap(
-                new SimpleRequestBuilder<>(Set.of(input(1)), ImmutableMap.of(1, withValue("v1"))),
-                Set.of(input(1))),
+                new SimpleRequestBuilder<>(
+                    Set.of(input(1)), ImmutableMap.of(1, withValue("v1")), vajramID),
+                Set.of(input(1)),
+                vajramID),
             new ImmutableFacetValuesMap(
-                new SimpleRequestBuilder<>(Set.of(input(2)), ImmutableMap.of(2, withValue("v2"))),
-                Set.of(input(2))));
+                new SimpleRequestBuilder<>(
+                    Set.of(input(2)), ImmutableMap.of(2, withValue("v2")), vajramID),
+                Set.of(input(2)),
+                vajramID));
 
     clock.setInstant(START_TIME);
     kryonExecutionReport.reportMainLogicStart(vajramID, kryonLogicId, facetValuesList);
@@ -129,7 +138,7 @@ class DefaultKryonExecutionReportTest {
     LogicExecInfo logicExecInfo =
         kryonExecutionReport.mainLogicExecInfos().values().stream().findFirst().orElseThrow();
 
-    assertThat(logicExecInfo.kryonId()).isEqualTo(vajramID.value());
+    assertThat(logicExecInfo.kryonId()).isEqualTo(vajramID.id());
     assertThat(logicExecInfo.startTimeMs()).isEqualTo(START_TIME.toEpochMilli());
   }
 
@@ -140,11 +149,15 @@ class DefaultKryonExecutionReportTest {
     ImmutableList<FacetValues> facetValuesList =
         ImmutableList.of(
             new ImmutableFacetValuesMap(
-                new SimpleRequestBuilder<>(Set.of(input(1)), ImmutableMap.of(1, withValue("v1"))),
-                Set.of(input(1))),
+                new SimpleRequestBuilder<>(
+                    Set.of(input(1)), ImmutableMap.of(1, withValue("v1")), vajramID),
+                Set.of(input(1)),
+                vajramID),
             new ImmutableFacetValuesMap(
-                new SimpleRequestBuilder<>(Set.of(input(2)), ImmutableMap.of(2, withValue("v2"))),
-                Set.of(input(2))));
+                new SimpleRequestBuilder<>(
+                    Set.of(input(2)), ImmutableMap.of(2, withValue("v2")), vajramID),
+                Set.of(input(2)),
+                vajramID));
 
     clock.setInstant(START_TIME);
     kryonExecutionReport.reportMainLogicStart(vajramID, kryonLogicId, facetValuesList);
@@ -171,7 +184,7 @@ class DefaultKryonExecutionReportTest {
     LogicExecInfo logicExecInfo =
         kryonExecutionReport.mainLogicExecInfos().values().stream().findFirst().orElseThrow();
 
-    assertThat(logicExecInfo.kryonId()).isEqualTo(vajramID.value());
+    assertThat(logicExecInfo.kryonId()).isEqualTo(vajramID.id());
     assertThat(logicExecInfo.endTimeMs()).isEqualTo(END_TIME.toEpochMilli());
   }
 
@@ -182,11 +195,15 @@ class DefaultKryonExecutionReportTest {
     ImmutableList<FacetValues> facetValuesList =
         ImmutableList.of(
             new ImmutableFacetValuesMap(
-                new SimpleRequestBuilder<>(Set.of(input(1)), ImmutableMap.of(1, withValue("v1"))),
-                Set.of(input(1))),
+                new SimpleRequestBuilder<>(
+                    Set.of(input(1)), ImmutableMap.of(1, withValue("v1")), vajramID),
+                Set.of(input(1)),
+                vajramID),
             new ImmutableFacetValuesMap(
-                new SimpleRequestBuilder<>(Set.of(input(2)), ImmutableMap.of(2, withValue("v2"))),
-                Set.of(input(2))));
+                new SimpleRequestBuilder<>(
+                    Set.of(input(2)), ImmutableMap.of(2, withValue("v2")), vajramID),
+                Set.of(input(2)),
+                vajramID));
 
     clock.setInstant(END_TIME);
     String result = "r1";

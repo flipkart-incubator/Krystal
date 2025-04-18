@@ -25,7 +25,7 @@ public record ForwardSend(
     implements MultiRequestCommand<BatchResponse>, ClientSideCommand<BatchResponse> {
 
   @Override
-  public Set<InvocationId> requestIds() {
+  public Set<InvocationId> invocationIds() {
     return Sets.union(executableRequests().keySet(), skippedInvocations().keySet());
   }
 

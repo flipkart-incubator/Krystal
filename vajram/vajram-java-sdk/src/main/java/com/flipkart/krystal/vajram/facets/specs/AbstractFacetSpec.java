@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
+import static com.flipkart.krystal.tags.ElementTags.emptyTags;
+
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
@@ -7,7 +9,9 @@ import com.flipkart.krystal.facets.AbstractFacet;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableSet;
+import java.util.concurrent.Callable;
 import lombok.Getter;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /**
  * Represents a facet of the current vajram. This may represent an input of this vajram or a
@@ -23,7 +27,8 @@ public abstract sealed class AbstractFacetSpec<T, CV extends Request> extends Ab
   private final DataType<T> type;
   private final boolean isBatched;
   private final Class<CV> ofVajram;
-  private final ElementTags tags;
+  private @MonotonicNonNull ElementTags tags;
+  private final Callable<ElementTags> tagsParser;
 
   public AbstractFacetSpec(
       int id,
@@ -34,11 +39,23 @@ public abstract sealed class AbstractFacetSpec<T, CV extends Request> extends Ab
       Class<CV> ofVajram,
       String documentation,
       boolean isBatched,
-      ElementTags tags) {
+      Callable<ElementTags> tagsParser) {
     super(id, name, ofVajramID, facetTypes, documentation);
     this.type = type;
     this.ofVajram = ofVajram;
-    this.tags = tags;
+    this.tagsParser = tagsParser;
     this.isBatched = isBatched;
+  }
+
+  @Override
+  public ElementTags tags() {
+    if (tags == null) {
+      try {
+        tags = tagsParser.call();
+      } catch (Exception e) {
+        tags = emptyTags();
+      }
+    }
+    return tags;
   }
 }

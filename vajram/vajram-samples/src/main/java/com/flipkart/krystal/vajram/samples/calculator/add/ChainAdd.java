@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
+import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.skipFanout;
 import static com.flipkart.krystal.vajram.facets.One2OneCommand.executeWith;
@@ -7,16 +8,15 @@ import static com.flipkart.krystal.vajram.facets.One2OneCommand.skipExecution;
 import static com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Fac.chainSum_n;
 import static com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Fac.sum_n;
 
-import com.flipkart.krystal.annos.ExternalInvocation;
+import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.annos.ConformsToTrait;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
-import com.flipkart.krystal.vajram.facets.Input;
-import com.flipkart.krystal.vajram.facets.Mandatory;
 import com.flipkart.krystal.vajram.facets.One2OneCommand;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
@@ -25,14 +25,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-@ExternalInvocation(allow = true)
+@ExternallyInvocable
 @Vajram
 @ConformsToTrait(withDef = MultiAdd.class)
 public abstract class ChainAdd extends ComputeVajramDef<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
-  static class _Facets {
-    @Mandatory @Input List<Integer> numbers;
+  static class _Inputs {
+    @IfNull(FAIL)
+    List<Integer> numbers;
+  }
 
+  static class _InternalFacets {
     @Dependency(onVajram = ChainAdd.class, canFanout = true)
     int chainSum;
 
@@ -72,7 +75,7 @@ public abstract class ChainAdd extends ComputeVajramDef<Integer> {
   }
 
   @Output
-  static Integer add(Errable<Integer> sum, FanoutDepResponses<ChainAdd_Req, Integer> chainSum) {
+  static Integer add(Errable<Integer> sum, FanoutDepResponses<Integer, ChainAdd_Req> chainSum) {
     return sum.valueOpt().orElse(0)
         + chainSum.requestResponsePairs().stream()
             .mapToInt(response -> response.response().valueOpt().orElse(0))

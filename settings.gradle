@@ -2,47 +2,43 @@ pluginManagement {
     repositories {
         mavenLocal()
         mavenCentral()
-        maven { url 'https://clojars.org/repo' }
+        maven { url = 'https://clojars.org/repo' }
         gradlePluginPortal()
     }
 }
-
 
 dependencyResolutionManagement {
     repositories {
-        mavenLocal()
         mavenCentral()
-        maven { url 'https://clojars.org/repo' }
+        mavenLocal()
+        maven { url = 'https://clojars.org/repo' }
         gradlePluginPortal()
     }
 }
 
-
 rootProject.name = 'krystal'
+
+include 'code-coverage-report'
+include 'krystal-bom'
 
 include 'krystex'
 include 'honeycomb'
 include 'krystal-common'
 include 'krystal-visualization'
 
-include 'vajram-java-sdk'
-project(':vajram-java-sdk').projectDir = file('vajram/vajram-java-sdk')
+include 'vajram:vajram-java-sdk'
+include 'vajram:vajram-samples'
+include 'vajram:vajram-codegen'
+include 'vajram:vajram-codegen-common'
+include 'vajram:vajram-krystex'
+include 'vajram:vajram-lang'
 
-include 'vajram-samples'
-project(':vajram-samples').projectDir = file('vajram/vajram-samples')
+include 'lattice:lattice-core'
+include 'lattice:lattice-samples'
 
-include 'vajram-codegen'
-project(':vajram-codegen').projectDir = file('vajram/vajram-codegen')
+include 'vajram:extensions:guice:vajram-guice'
+include 'vajram:extensions:protobuf:vajram-protobuf-codegen'
+include 'vajram:extensions:protobuf:vajram-protobuf3'
 
-include 'vajram-krystex'
-project(':vajram-krystex').projectDir = file('vajram/vajram-krystex')
-
-include 'vajram-lang'
-project(':vajram-lang').projectDir = file('vajram/vajram-lang')
-
-include 'krystal-bom'
-
-include 'vajram-guice'
-project(':vajram-guice').projectDir = file('extensions/vajram-guice')
-
-include 'code-coverage-report'
+include 'lattice:extensions:grpc:lattice-grpc-codegen'
+//include 'lattice:extensions:guice:lattice-guice'

@@ -8,12 +8,8 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesBuilder;
-import com.flipkart.krystal.data.FacetValuesMap;
-import com.flipkart.krystal.data.FacetValuesMapBuilder;
 import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.data.SimpleRequest;
-import com.flipkart.krystal.data.SimpleRequestBuilder;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.facets.Facet;
@@ -72,6 +68,7 @@ public @NonFinal sealed class SimpleFacet implements Facet, InputMirror permits 
     return ((SimpleRequest) request)._asMap().get(id());
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public void setToRequest(Builder request, @Nullable Object value) {
     ((SimpleRequestBuilder<Object>) request)._asMap().put(id(), Errable.withValue(value));

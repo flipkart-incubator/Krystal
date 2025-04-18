@@ -4,18 +4,18 @@ plugins {
 }
 
 dependencies {
-    jacocoAggregation project(":vajram-samples")
-    jacocoAggregation project(":vajram-krystex")
+    jacocoAggregation project(':vajram:vajram-samples')
+    jacocoAggregation project(':vajram:vajram-krystex')
 }
 
 reporting {
     reports {
-        testCodeCoverageReport(JacocoCoverageReport) { // <.>
-            testType = TestSuiteType.UNIT_TEST
+        testCodeCoverageReport(JacocoCoverageReport) {
+            it.testSuiteName = 'test'
         }
     }
 }
 
 tasks.named('check') {
-    dependsOn tasks.named('testCodeCoverageReport', JacocoReport) // <.>
+    dependsOn tasks.named('testCodeCoverageReport', JacocoReport)
 }
