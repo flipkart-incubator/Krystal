@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram.codegen.common.models;
 import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.data.IfNull.IfNullThen.MAY_FAIL_CONDITIONALLY;
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
-import static com.flipkart.krystal.facets.FacetType.INPUT;
 import static com.flipkart.krystal.vajram.utils.Constants.IMMUT_FACETS_CLASS_SUFFIX;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
@@ -232,7 +231,7 @@ public class Utils {
     return typeElement;
   }
 
-  public FacetJavaType getReturnType(FacetGenModel facet, CodeGenParams codeGenParams) {
+  public FacetJavaType facetJavaType(FacetGenModel facet, CodeGenParams codeGenParams) {
     if (facet instanceof DependencyModel dep) {
       if (dep.canFanout()) {
         return new FanoutResponses(this);
@@ -874,17 +873,17 @@ public class Utils {
 
   private TypeName responseType(TypeAndName requestType, TypeAndName facetType) {
     return ParameterizedTypeName.get(
-        ClassName.get(One2OneDepResponse.class), requestType.typeName(), box(facetType).typeName());
+        ClassName.get(One2OneDepResponse.class), box(facetType).typeName(), requestType.typeName());
   }
 
-  TypeName responsesType(DependencyModel dep) {
+  public TypeName responsesType(DependencyModel dep) {
     return responsesType(
         new TypeAndName(toClassName(dep.depReqClassQualifiedName())), getTypeName(dep.dataType()));
   }
 
   private TypeName responsesType(TypeAndName requestType, TypeAndName facetType) {
     return ParameterizedTypeName.get(
-        ClassName.get(FanoutDepResponses.class), requestType.typeName(), box(facetType).typeName());
+        ClassName.get(FanoutDepResponses.class), box(facetType).typeName(), requestType.typeName());
   }
 
   TypeAndName getTypeName(DataType<?> dataType, List<AnnotationSpec> typeAnnotations) {

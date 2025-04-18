@@ -863,7 +863,7 @@ public class VajramCodeGenerator implements CodeGenerator {
             if($facetValuesList:L.isEmpty()) {
               return $imMap:T.of();
             }
-            $map:T<$inputBatching:T, $facetValues:T> _batchItems = new $hashMap:T<>();
+            $map:T<$inputBatching:T, $facetValues:T> _batchItems = new $linkHashMap:T<>();
             $commonInput:T _common = (($facetsInterface:T)$facetValuesList:L.get(0))._common();
             for ($facetValues:T $facetsVar:L : $facetValuesList:L) {
               $facetsInterface:T _castFacets = ($facetsInterface:T) $facetsVar:L;
@@ -883,8 +883,6 @@ public class VajramCodeGenerator implements CodeGenerator {
     valueMap.put("modInput", ClassName.get(BatchedFacets.class));
     valueMap.put("imMap", ClassName.get(ImmutableMap.class));
     valueMap.put("imList", ClassName.get(ImmutableList.class));
-    valueMap.put("hashMap", ClassName.get(HashMap.class));
-    valueMap.put("arrayList", ClassName.get(ArrayList.class));
     valueMap.put("comFuture", ClassName.get(CompletableFuture.class));
     valueMap.put("linkHashMap", ClassName.get(LinkedHashMap.class));
     valueMap.put("map", ClassName.get(Map.class));
@@ -1110,7 +1108,6 @@ public class VajramCodeGenerator implements CodeGenerator {
     if (usingFacetDef instanceof DependencyModel dependencyModel) {
       String variableName = usingFacetName;
       final VajramInfoLite depVajramInfoLite = dependencyModel.depVajramInfo();
-      String requestClass = dependencyModel.depReqClassQualifiedName();
       TypeName boxedDepType = util.toTypeName(depVajramInfoLite.responseType()).box();
       TypeName unboxedDepType =
           boxedDepType.isBoxedPrimitive() ? boxedDepType.unbox() : boxedDepType;
@@ -1135,17 +1132,15 @@ public class VajramCodeGenerator implements CodeGenerator {
         String depValueAccessorCode = "$T $L = $L.$L()";
         ifBlockBuilder.addStatement(
             depValueAccessorCode,
-            ParameterizedTypeName.get(
-                ClassName.get(FanoutDepResponses.class), toClassName(requestClass), boxedDepType),
+            util.responsesType(dependencyModel),
             variableName,
             FACET_VALUES_VAR,
             usingFacetName);
       } else {
         // This means the dependency being consumed used is not a fanout dependency
-        String depValueAccessorCode =
-            """
-            $1T $2L =
-              $3L.$4L()""";
+        String depAccessLhs = "$1T $2L";
+        String depAccessRhs = "$3L.$4L()";
+        String depValueAccessorCode = depAccessLhs + " = " + depAccessRhs;
         if (usingFacetDef.isMandatoryOnServer()) {
           if (unboxedDepType.equals(TypeName.get(parameterType))) {
             // This means this dependencyDef being consumed is a non fanout mandatory
@@ -1153,10 +1148,16 @@ public class VajramCodeGenerator implements CodeGenerator {
             // the dev has requested the value directly. So we extract the only value from
             // dependencyDef response and provide it.
             ifBlockBuilder.addStatement(
-                depValueAccessorCode + ".response().valueOrThrow()",
+                depAccessLhs
+                    + "= $5T.validateMandatoryFacet("
+                    + depAccessRhs
+                    + ".response().valueOpt().orElse(null), $6S, $7S)",
                 unboxedDepType,
                 variableName,
                 FACET_VALUES_VAR,
+                usingFacetName,
+                FacetValidation.class,
+                currentVajramInfo.lite().vajramId().id(),
                 usingFacetName);
           } else {
             // This means the dependency being consumed is mandatory, but the type of the
@@ -1181,10 +1182,8 @@ public class VajramCodeGenerator implements CodeGenerator {
                 FACET_VALUES_VAR,
                 usingFacetName);
           } else if (util.isRawAssignable(parameterType, Optional.class)) {
-            // This means this dependencyDef in "Using" annotation is not a fanout and the
-            // dev has
-            // requested an 'Optional'. So we retrieve the only Errable from the
-            // dependencyDef
+            // This means this dependencyDef being consumed is not a fanout and the
+            // dev has  requested an 'Optional'. So we retrieve the Errable from the
             // response, extract the optional and provide it.
             String code = depValueAccessorCode + ".response().valueOpt()";
             ifBlockBuilder.addStatement(
@@ -1194,11 +1193,8 @@ public class VajramCodeGenerator implements CodeGenerator {
                 FACET_VALUES_VAR,
                 usingFacetName);
           } else if (util.isRawAssignable(parameterType, One2OneDepResponse.class)) {
-            // This means this dependencyDef in "Using" annotation is not a fanout and the
-            // dev has
-            // requested an 'Optional'. So we retrieve the only Errable from the
-            // dependencyDef
-            // response, extract the optional and provide it.
+            // This means this dependencyDef being consumed is not a fanout and the  dev has
+            // requested a 'One2OneDepResponse'.
             ifBlockBuilder.addStatement(
                 depValueAccessorCode,
                 ParameterizedTypeName.get(ClassName.get(Optional.class), boxedDepType),
@@ -1468,7 +1464,7 @@ public class VajramCodeGenerator implements CodeGenerator {
               .build();
       boolean isInput = facet.facetTypes().contains(INPUT);
       if (codeGenParams.withImpl()) {
-        if ((!isInput || !codeGenParams.wrapsRequest())) {
+        if (!isInput || !codeGenParams.wrapsRequest()) {
           FieldSpec.Builder facetField =
               FieldSpec.builder(
                   facetFieldType
@@ -1483,7 +1479,25 @@ public class VajramCodeGenerator implements CodeGenerator {
           }
           classSpec.addField(facetField.build());
           fullConstructor.addParameter(facetParam);
-          fullConstructor.addStatement("this.$L = $L", facet.name(), facet.name());
+
+          // Check if this facet has IfNull annotation with usePlatformDefault as true
+          IfNull ifNull = facet.facetField().getAnnotation(IfNull.class);
+          boolean usePlatformDefault = ifNull != null && ifNull.value().usePlatformDefault();
+
+          if (usePlatformDefault && !codeGenParams.isBuilder()) {
+            // For facets with usePlatformDefault=true, add null check and use platform default if
+            // null
+            fullConstructor.addStatement(
+                "this.$L = $L != null ? $L : $T.$L.getPlatformDefaultValue()",
+                facet.name(),
+                facet.name(),
+                facet.name(),
+                getRequestInterfaceType(),
+                facet.name() + FACET_SPEC_SUFFIX);
+          } else {
+            // For other facets, use the original assignment
+            fullConstructor.addStatement("this.$L = $L", facet.name(), facet.name());
+          }
         }
       }
       // Getter
@@ -1564,7 +1578,7 @@ public class VajramCodeGenerator implements CodeGenerator {
       TypeSpec.Builder clazz, FacetGenModel facet, CodeGenParams codeGenParams) {
     MethodSpec.Builder method;
     FacetJavaType fieldType = util.getFacetFieldType(facet);
-    FacetJavaType returnType = util.getReturnType(facet, codeGenParams);
+    FacetJavaType returnType = util.facetJavaType(facet, codeGenParams);
     // Non-dependency facet (Example: GivenFacet)
     method =
         methodBuilder(facet.name())
@@ -1647,9 +1661,7 @@ public class VajramCodeGenerator implements CodeGenerator {
       @Nullable ApplicableToTypes applicableToTypes;
       try {
         applicableToTypes =
-            IfNullThen.class
-                .getField(ifNullThen.name())
-                .getAnnotation(ApplicableToTypes.class);
+            IfNullThen.class.getField(ifNullThen.name()).getAnnotation(ApplicableToTypes.class);
       } catch (NoSuchFieldException e) {
         // This should never happen since we're using the enum value's name
         throw util.errorAndThrow(
@@ -1983,7 +1995,7 @@ public class VajramCodeGenerator implements CodeGenerator {
     for (FacetGenModel facet : batchedFacets) {
       CodeGenParams codeGenParams =
           CodeGenParams.builder().isSubsetBatch(true).withImpl(true).build();
-      FacetJavaType returnType = util.getReturnType(facet, codeGenParams);
+      FacetJavaType returnType = util.facetJavaType(facet, codeGenParams);
       MethodSpec.Builder getter =
           methodBuilder(facet.name())
               .returns(
@@ -2030,7 +2042,7 @@ public class VajramCodeGenerator implements CodeGenerator {
     for (FacetGenModel facet : commonFacets) {
       CodeGenParams codeGenParams =
           CodeGenParams.builder().isSubsetCommon(true).withImpl(true).build();
-      FacetJavaType returnType = util.getReturnType(facet, codeGenParams);
+      FacetJavaType returnType = util.facetJavaType(facet, codeGenParams);
       MethodSpec.Builder getter =
           methodBuilder(facet.name())
               .returns(
@@ -2240,7 +2252,9 @@ public class VajramCodeGenerator implements CodeGenerator {
         initializerCodeBlock.add(
             """
                     $L,
-                    $T.fieldTagsParser(() -> $T.$L.class.getDeclaredField($S)),
+                    $T.fieldTagsParser(
+                      () -> $T.$L.class.getDeclaredField($S),
+                      () -> $T.class.getDeclaredField($S)),
                     _facetValues -> (($T)_facetValues).$L(),
                     (_facetValues, _value) -> {
                       if(_value != null) {
@@ -2254,6 +2268,8 @@ public class VajramCodeGenerator implements CodeGenerator {
             currentVajramInfo.vajramClass(),
             facet.facetTypes().contains(INPUT) ? _INPUTS_CLASS : _INTERNAL_FACETS_CLASS,
             facet.name(),
+            getFacetsInterfaceType(),
+            facet.name() + FACET_SPEC_SUFFIX,
             ClassName.get(packageName, getFacetsInterfaceName(vajramName)),
             facet.name(),
             ClassName.get(packageName, getImmutFacetsClassname(vajramName), "Builder"),

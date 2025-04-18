@@ -9,21 +9,20 @@ import com.google.common.collect.ImmutableMap;
 import lombok.Getter;
 import lombok.ToString;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 /**
  * @param <R> The type of the request
  * @param <T> The response type of the dependency vajram
  */
 @ToString(onlyExplicitlyIncluded = true)
-public final class FanoutDepResponses<R extends Request<T>, T> implements DepResponse<R, T> {
+public final class FanoutDepResponses<T, R extends Request<T>> implements DepResponse<T, R> {
 
   private static final FanoutDepResponses<?, ?> EMPTY =
       new FanoutDepResponses<>(ImmutableList.of());
 
   @SuppressWarnings("unchecked")
-  public static <R extends Request<T>, T> FanoutDepResponses<R, T> empty() {
-    return (FanoutDepResponses<R, T>) EMPTY;
+  public static <R extends Request<T>, T> FanoutDepResponses<T, R> empty() {
+    return (FanoutDepResponses<T, R>) EMPTY;
   }
 
   @ToString.Include @Getter

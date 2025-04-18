@@ -1,18 +1,14 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
-import com.flipkart.krystal.data.FacetValue.SingleFacetValue;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.vajram.exception.MandatoryFacetMissingException;
 import com.flipkart.krystal.vajram.facets.specs.FanoutDepSpec;
 import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
-import com.flipkart.krystal.vajram.facets.specs.MandatorySingleValueFacetSpec;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 /**
  * Stage after specifying the source input for the fanout resolver.
@@ -43,10 +39,10 @@ public final class MultiValTransformFanoutResolverStage<
    */
   @SuppressWarnings("unchecked")
   public MultiValTransformFanoutResolverStage<S, T, CV, DV, SDV> skipIf(
-      Predicate<FanoutDepResponses<?, S>> whenToSkip, String reason) {
+      Predicate<FanoutDepResponses<S, ?>> whenToSkip, String reason) {
     this.skipConditions.add(
         new SkipPredicate(
-            reason, facetValue -> whenToSkip.test((FanoutDepResponses<?, S>) facetValue)));
+            reason, facetValue -> whenToSkip.test((FanoutDepResponses<S, ?>) facetValue)));
     return this;
   }
 
@@ -60,12 +56,12 @@ public final class MultiValTransformFanoutResolverStage<
    */
   @SuppressWarnings("unchecked")
   public SimpleInputResolverSpec<T, CV, DV> asResolver(
-      Function<FanoutDepResponses<SDV, S>, ? extends Collection<? extends T>> transformer) {
+      Function<FanoutDepResponses<S, SDV>, ? extends Collection<? extends T>> transformer) {
     return new SimpleInputResolverSpec<>(
         targetInput,
         sourceFacet,
         skipConditions,
         new Transformer.Many2Many(
-            facetValue -> transformer.apply((FanoutDepResponses<SDV, S>) facetValue)));
+            facetValue -> transformer.apply((FanoutDepResponses<S, SDV>) facetValue)));
   }
 }

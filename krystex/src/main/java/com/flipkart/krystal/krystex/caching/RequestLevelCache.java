@@ -8,8 +8,6 @@ import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValues;
-import com.flipkart.krystal.data.ImmutableRequest;
-import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
@@ -83,7 +81,7 @@ public class RequestLevelCache implements KryonDecorator {
     @SuppressWarnings("FutureReturnValueIgnored")
     private CompletableFuture<KryonCommandResponse> readFromCache(
         Kryon<KryonCommand, KryonCommandResponse> kryon, ForwardReceive forwardBatch) {
-      var executableRequests = forwardBatch.executableRequests();
+      var executableRequests = forwardBatch.executableInvocations();
       Map<InvocationId, FacetValues> cacheMisses = new LinkedHashMap<>();
       Map<InvocationId, CompletableFuture<@Nullable Object>> cacheHits = new LinkedHashMap<>();
       Map<InvocationId, CompletableFuture<@Nullable Object>> newCacheEntries =
@@ -102,7 +100,7 @@ public class RequestLevelCache implements KryonDecorator {
             }
           });
       Map<InvocationId, String> skippedRequests =
-          new LinkedHashMap<>(forwardBatch.skippedRequests());
+          new LinkedHashMap<>(forwardBatch.invocationsToSkip());
       cacheHits.forEach(
           (requestId, _f) -> skippedRequests.put(requestId, "Skipping due to cache hit!"));
       CompletableFuture<KryonCommandResponse> cacheMissesResponse =

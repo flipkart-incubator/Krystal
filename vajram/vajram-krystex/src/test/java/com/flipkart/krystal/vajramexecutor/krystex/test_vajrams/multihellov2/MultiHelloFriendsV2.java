@@ -12,7 +12,6 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
-import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
@@ -47,7 +46,7 @@ public abstract class MultiHelloFriendsV2 extends ComputeVajramDef<String> {
 
   @Output
   static String sayHellos(
-      Optional<Boolean> skip, FanoutDepResponses<HelloFriendsV2_Req, String> hellos) {
+      Optional<Boolean> skip, FanoutDepResponses<String, HelloFriendsV2_Req> hellos) {
     if (skip.orElse(false)) {
       return "";
     }

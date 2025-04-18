@@ -75,7 +75,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
   private CompletableFuture<KryonCommandResponse> injectFacets(
       ForwardReceive forwardBatch, VajramDefinition vajramDefinition, VajramDef<?> vajramDef) {
     ImmutableMap<InvocationId, ? extends FacetValuesContainer> requestIdToFacets =
-        forwardBatch.executableRequests();
+        forwardBatch.executableInvocations();
 
     ImmutableMap.Builder<InvocationId, FacetValuesBuilder> newRequests = ImmutableMap.builder();
     Set<FacetSpec<?, ?>> injectableFacets = new LinkedHashSet<>();
@@ -108,7 +108,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
             forwardBatch.vajramID(),
             newRequests.build(),
             forwardBatch.dependentChain(),
-            forwardBatch.skippedRequests()));
+            forwardBatch.invocationsToSkip()));
   }
 
   private FacetValuesBuilder injectFacetsOfVajram(

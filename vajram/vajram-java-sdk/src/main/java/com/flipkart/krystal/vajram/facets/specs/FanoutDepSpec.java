@@ -25,8 +25,8 @@ import lombok.Getter;
 public abstract sealed class FanoutDepSpec<T, CV extends Request<?>, DV extends Request<T>>
     extends DependencySpec<T, CV, DV> permits MandatoryFanoutDepSpec, OptionalFanoutDepSpec {
 
-  private final Function<FacetValues, FanoutDepResponses<DV, T>> getFromFacets;
-  private final BiConsumer<FacetValues, FanoutDepResponses<DV, T>> setToFacets;
+  private final Function<FacetValues, FanoutDepResponses<T, DV>> getFromFacets;
+  private final BiConsumer<FacetValues, FanoutDepResponses<T, DV>> setToFacets;
 
   public FanoutDepSpec(
       int id,
@@ -39,8 +39,8 @@ public abstract sealed class FanoutDepSpec<T, CV extends Request<?>, DV extends 
       String documentation,
       boolean isBatched,
       Callable<ElementTags> tagsParser,
-      Function<FacetValues, FanoutDepResponses<DV, T>> getFromFacets,
-      BiConsumer<FacetValues, FanoutDepResponses<DV, T>> setToFacets) {
+      Function<FacetValues, FanoutDepResponses<T, DV>> getFromFacets,
+      BiConsumer<FacetValues, FanoutDepResponses<T, DV>> setToFacets) {
     super(
         id,
         name,
@@ -57,15 +57,15 @@ public abstract sealed class FanoutDepSpec<T, CV extends Request<?>, DV extends 
   }
 
   @Override
-  public FanoutDepResponses<DV, T> getFacetValue(FacetValues facetValues) {
+  public FanoutDepResponses<T, DV> getFacetValue(FacetValues facetValues) {
     return getFromFacets.apply(facetValues);
   }
 
   @Override
   @SuppressWarnings("unchecked")
-  public void setFacetValue(FacetValuesBuilder facets, DepResponse<DV, T> value) {
+  public void setFacetValue(FacetValuesBuilder facets, DepResponse<T, DV> value) {
     if (value instanceof FanoutDepResponses fanoutDepResponses) {
-      setFacetValue(facets, (FanoutDepResponses<DV, T>) fanoutDepResponses);
+      setFacetValue(facets, (FanoutDepResponses<T, DV>) fanoutDepResponses);
     } else {
       throw new RuntimeException(
           "Expecting facet value type 'DepResponse' for dependency facet, but found: "
@@ -74,12 +74,12 @@ public abstract sealed class FanoutDepSpec<T, CV extends Request<?>, DV extends 
   }
 
   @SuppressWarnings({"MethodOverloadsMethodOfSuperclass", "unchecked"})
-  public void setFacetValue(FacetValuesBuilder facets, FanoutDepResponses<DV, T> value) {
+  public void setFacetValue(FacetValuesBuilder facets, FanoutDepResponses<T, DV> value) {
     setToFacets.accept(facets, value);
   }
 
   @Override
-  public final FanoutDepResponses<DV, T> getPlatformDefaultValue()
+  public final FanoutDepResponses<T, DV> getPlatformDefaultValue()
       throws UnsupportedOperationException {
     return FanoutDepResponses.empty();
   }

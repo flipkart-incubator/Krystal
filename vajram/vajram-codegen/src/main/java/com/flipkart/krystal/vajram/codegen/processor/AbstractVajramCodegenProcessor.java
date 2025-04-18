@@ -24,7 +24,7 @@ import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.TypeElement;
 
 abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
-    permits VajramModelGenProcessor, VajramSchemaGenProcessor, VajramWrapperGenProcessor {
+    permits VajramModelGenProcessor, VajramWrapperGenProcessor {
 
   private final CodegenPhase codegenPhase;
 

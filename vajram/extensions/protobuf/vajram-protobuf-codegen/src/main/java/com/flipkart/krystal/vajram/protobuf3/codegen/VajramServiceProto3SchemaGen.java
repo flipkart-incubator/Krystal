@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.MODELS;
-import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.SCHEMAS;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_FILE_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_MSG_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.VAJRAM_REQ_PROTO_FILE_SUFFIX;
@@ -110,10 +109,8 @@ class VajramServiceProto3SchemaGen implements CodeGenerator {
             // Add syntax, package, and options
             protoBuilder.append("syntax = \"proto3\";\n\n");
 
-            if (packageName != null) {
-              protoBuilder.append("package ").append(packageName).append(";\n\n");
-              protoBuilder.append("option java_package = \"").append(packageName).append("\";\n");
-            }
+            protoBuilder.append("package ").append(packageName).append(";\n\n");
+            protoBuilder.append("option java_package = \"").append(packageName).append("\";\n");
             protoBuilder.append("option java_multiple_files = true;\n\n");
             // Add documentation for the service
             protoBuilder.append(

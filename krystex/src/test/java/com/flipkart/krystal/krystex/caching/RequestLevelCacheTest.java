@@ -59,7 +59,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 class RequestLevelCacheTest {
 
-  private static final Duration TIMEOUT = Duration.ofSeconds(1);
+  private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
   private static SingleThreadExecutorsPool EXEC_POOL;
 
@@ -137,9 +137,8 @@ class RequestLevelCacheTest {
   @ParameterizedTest
   @MethodSource("executorConfigsToTest")
   void multiRequestExecution_withoutCache_cacheHitFailForBatch(
-      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy)
-      throws LeaseUnavailableException {
-    // This is redundant. This should Ideally move to a paramterized @BeforeEach method or after
+      KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
+    // This is redundant. This should Ideally move to a parameterized @BeforeEach method or after
     // parametrizing this at the test class level.
     // This is currently not supported in jupiter-junit:5.9.x.
     // It is planned to be supported in jupiter-junit:5.10

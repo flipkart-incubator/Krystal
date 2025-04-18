@@ -17,7 +17,6 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.annos.ConformsToTrait;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
-import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.One2OneCommand;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
@@ -76,7 +75,7 @@ public abstract class ChainAdd extends ComputeVajramDef<Integer> {
   }
 
   @Output
-  static Integer add(Errable<Integer> sum, FanoutDepResponses<ChainAdd_Req, Integer> chainSum) {
+  static Integer add(Errable<Integer> sum, FanoutDepResponses<Integer, ChainAdd_Req> chainSum) {
     return sum.valueOpt().orElse(0)
         + chainSum.requestResponsePairs().stream()
             .mapToInt(response -> response.response().valueOpt().orElse(0))

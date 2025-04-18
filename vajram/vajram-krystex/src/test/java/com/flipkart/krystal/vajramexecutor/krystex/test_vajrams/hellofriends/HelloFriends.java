@@ -17,7 +17,6 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
-import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
@@ -70,7 +69,7 @@ public abstract class HelloFriends extends ComputeVajramDef<String> {
 
   @Output
   static String sayHellos(
-      TestUserInfo userInfo, FanoutDepResponses<TestUserService_Req, TestUserInfo> friendInfos) {
+      TestUserInfo userInfo, FanoutDepResponses<TestUserInfo, TestUserService_Req> friendInfos) {
     return "Hello Friends of %s! %s"
         .formatted(
             userInfo.userName(),

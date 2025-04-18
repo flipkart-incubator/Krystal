@@ -4,7 +4,6 @@ import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.tags.ElementTags;
 import java.util.concurrent.Callable;
@@ -25,8 +24,8 @@ public non-sealed class OptionalOne2OneDepSpec<T, CV extends Request, DV extends
       String documentation,
       boolean isBatched,
       Callable<ElementTags> tagsParser,
-      Function<FacetValues, One2OneDepResponse<DV, T>> getFromFacets,
-      BiConsumer<FacetValues, RequestResponse<DV, T>> setToFacets) {
+      Function<FacetValues, One2OneDepResponse<T, DV>> getFromFacets,
+      BiConsumer<FacetValues, One2OneDepResponse<T, DV>> setToFacets) {
     super(
         id,
         name,

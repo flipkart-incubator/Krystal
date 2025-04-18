@@ -354,7 +354,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
 
           ImmutableSet<? extends Facet> sources = inputResolver.definition().sources();
           ImmutableCollection<FacetSpec> requiredInputs =
-              facetDefinitions.stream().filter(e -> sources.contains(e)).collect(toImmutableList());
+              facetDefinitions.stream().filter(sources::contains).collect(toImmutableList());
           LogicDefinition<ResolverLogic> inputResolverLogic =
               logicRegistryDecorator.newResolverLogic(
                   vajramId.id(),
@@ -418,8 +418,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       } else if (facetValue instanceof One2OneDepResponse<?, ?> depResponse) {
         value = depResponse.response();
       } else if (facetValue instanceof FanoutDepResponses<?, ?> fanoutDepResponses) {
-        if (fanoutDepResponses.requestResponsePairs().stream()
-            .allMatch(reqResp -> reqResp.response().valueOpt().isEmpty())) {
+        if (!fanoutDepResponses.requestResponsePairs().isEmpty()
+            && fanoutDepResponses.requestResponsePairs().stream()
+                .allMatch(reqResp -> reqResp.response().valueOpt().isEmpty())) {
           missingMandatoryValues.put(
               mandatoryFacet.name(),
               new MandatoryFacetMissingException(vajramID.id(), mandatoryFacet.name()));

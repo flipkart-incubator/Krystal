@@ -14,7 +14,6 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
-import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService;
@@ -60,7 +59,7 @@ public abstract class MutualFriendsHello extends ComputeVajramDef<String> {
   }
 
   @Output
-  static String sayHelloToMutualFriends(FanoutDepResponses<HelloFriendsV2_Req, String> hellos) {
+  static String sayHelloToMutualFriends(FanoutDepResponses<String, HelloFriendsV2_Req> hellos) {
     List<String> result = new ArrayList<>();
     for (var response : hellos.requestResponsePairs()) {
       response.response().valueOpt().ifPresent(result::add);

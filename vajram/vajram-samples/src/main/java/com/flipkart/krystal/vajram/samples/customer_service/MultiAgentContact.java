@@ -16,7 +16,6 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
-import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent.AgentType;
@@ -29,9 +28,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-@Vajram
-@ExternallyInvocable
 @SuppressWarnings("initialization.field.uninitialized")
+@ExternallyInvocable
+@Vajram
 abstract class MultiAgentContact extends ComputeVajramDef<List<String>> {
   static class _Inputs {
     @IfNull(FAIL)
@@ -68,7 +67,7 @@ abstract class MultiAgentContact extends ComputeVajramDef<List<String>> {
   }
 
   @Output
-  static List<String> output(FanoutDepResponses<CustomerServiceAgent_Req, String> responses) {
+  static List<String> output(FanoutDepResponses<String, CustomerServiceAgent_Req> responses) {
     return ImmutableList.copyOf(
         responses.requestResponsePairs().stream()
             .map(RequestResponse::response)

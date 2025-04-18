@@ -17,7 +17,7 @@ public abstract class AbstractFacet implements Facet {
 
   @Override
   public final boolean equals(@Nullable Object obj) {
-    return obj instanceof Facet f && f.id() == id;
+    return obj instanceof Facet f && f.id() == id && ofVajramID.equals(f.ofVajramID());
   }
 
   @Override
@@ -27,6 +27,6 @@ public abstract class AbstractFacet implements Facet {
 
   @Override
   public String toString() {
-    return "Facet(" + id() + ", " + name() + ", " + facetTypes() + ')';
+    return "Facet(" + name + ')';
   }
 }

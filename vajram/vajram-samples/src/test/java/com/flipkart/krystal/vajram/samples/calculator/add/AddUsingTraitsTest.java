@@ -116,7 +116,7 @@ class AddUsingTraitsTest {
   @Test
   void addUsingTraits_withEmptyLists() {
     // Setup test data with empty lists
-    List<Integer> emptyList = asList();
+    List<Integer> emptyList = List.of();
 
     CompletableFuture<ThreeSums> future;
 

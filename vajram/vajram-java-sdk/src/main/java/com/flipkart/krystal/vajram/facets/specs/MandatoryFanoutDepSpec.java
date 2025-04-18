@@ -34,8 +34,8 @@ public final class MandatoryFanoutDepSpec<T, CV extends Request<?>, DV extends R
       String documentation,
       boolean isBatched,
       Callable<ElementTags> tagsParser,
-      Function<FacetValues, FanoutDepResponses<DV, T>> getFromFacets,
-      BiConsumer<FacetValues, FanoutDepResponses<DV, T>> setToFacets) {
+      Function<FacetValues, FanoutDepResponses<T, DV>> getFromFacets,
+      BiConsumer<FacetValues, FanoutDepResponses<T, DV>> setToFacets) {
     super(
         id,
         name,

@@ -1,15 +1,15 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
+import static com.flipkart.krystal.facets.FacetUtils.computePlatformDefaultValue;
+
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.data.IfNull;
-import com.flipkart.krystal.data.IfNull.IfNullThen;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
+import com.flipkart.krystal.facets.FacetUtils;
 import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableSet;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -52,30 +52,7 @@ public final class MandatoryFacetDefaultSpec<T, CV extends Request> extends Defa
   @SuppressWarnings("unchecked")
   public @NonNull T getPlatformDefaultValue() throws UnsupportedOperationException {
     if (platformDefaultValue == null) {
-      Optional<IfNull> ifNull = tags().getAnnotationByType(IfNull.class);
-      if (ifNull.isPresent()) {
-        IfNullThen ifNullThen = ifNull.get().value();
-        if (!ifNullThen.usePlatformDefault()) {
-          throw new UnsupportedOperationException(
-              "The @Mandatory facet '"
-                  + name()
-                  + "' is configured with ifNotSet strategy: "
-                  + ifNullThen
-                  + " which returns 'false' for usePlatformDefault(). Hence, platform default value is "
-                  + "not supported. This method should not have been called. This seems to be krystal platform bug.");
-        } else {
-          try {
-            platformDefaultValue = type().getPlatformDefaultValue();
-          } catch (Throwable e) {
-            throw new UnsupportedOperationException(e);
-          }
-        }
-      } else {
-        throw new AssertionError(
-            "@Mandatory annotation missing on mandatory facet "
-                + name()
-                + ". This should not be possible. Something is wrong in platform code!");
-      }
+      platformDefaultValue = computePlatformDefaultValue(this, type());
     }
     return platformDefaultValue;
   }

@@ -44,6 +44,8 @@ public final class JavaType<T> implements DataType<T> {
 
   private @MonotonicNonNull Type clazz;
 
+  private @MonotonicNonNull T platformDefaultValue;
+
   @SuppressWarnings("unchecked")
   public static <T> JavaType<@NonNull T> create(Class<?> clazz, DataType<?>... typeParams) {
     String canonicalClassName = clazz.getCanonicalName();
@@ -141,8 +143,29 @@ public final class JavaType<T> implements DataType<T> {
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public @NonNull T getPlatformDefaultValue() {
+    if (platformDefaultValue == null) {
+      synchronized (this) {
+        if (platformDefaultValue == null) {
+          platformDefaultValue = computeDefaultValue();
+        }
+      }
+    }
+    return platformDefaultValue;
+  }
+
+  @Override
+  public boolean hasPlatformDefaultValue(ProcessingEnvironment processingEnv) {
+    return TypeUtils.hasPlatformDefaultValue(javaModelType(processingEnv));
+  }
+
+  @Override
+  public DataType<T> rawType() {
+    return JavaType.create(canonicalClassName());
+  }
+
+  @SuppressWarnings("unchecked")
+  private @NonNull T computeDefaultValue() {
     try {
       Type type = javaReflectType();
       if (type instanceof Class<?> c) {
@@ -171,16 +194,6 @@ public final class JavaType<T> implements DataType<T> {
     }
     throw new IllegalArgumentException(
         "Cannot determine platform default value for type %s".formatted(this));
-  }
-
-  @Override
-  public boolean hasPlatformDefaultValue(ProcessingEnvironment processingEnv) {
-    return TypeUtils.hasPlatformDefaultValue(javaModelType(processingEnv));
-  }
-
-  @Override
-  public DataType<T> rawType() {
-    return JavaType.create(canonicalClassName());
   }
 
   @SuppressWarnings("unchecked")

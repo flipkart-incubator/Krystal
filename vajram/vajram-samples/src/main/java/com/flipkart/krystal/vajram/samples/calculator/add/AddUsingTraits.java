@@ -29,12 +29,13 @@ import java.util.List;
 import java.util.Optional;
 
 /** Adds three lists of numbers in three different ways and then returns those sums */
+@SuppressWarnings("optional.parameter")
 @ExternallyInvocable
 @Vajram
-@SuppressWarnings("optional.parameter")
 public abstract class AddUsingTraits extends ComputeVajramDef<ThreeSums> {
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Inputs {
+    @IfNull(FAIL)
     List<Integer> numbers1;
 
     @IfNull(FAIL)

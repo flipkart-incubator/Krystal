@@ -4,7 +4,6 @@ import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.skipFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInputFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends_Fac.audited_s;
@@ -21,9 +20,7 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
-import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
-import com.flipkart.krystal.vajram.facets.resolution.InputResolvers;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.audit.AuditData;
@@ -33,10 +30,8 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.Hel
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_ImmutReqPojo.Builder;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_Req;
 import com.google.common.collect.ImmutableCollection;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -100,8 +95,8 @@ public abstract class MultiHelloFriends extends ComputeVajramDef<String> {
   @Output
   static String sayHellos(
       List<String> userIds,
-      FanoutDepResponses<HelloFriends_Req, String> hellos,
-      FanoutDepResponses<AuditData_Req, Void> audited) {
+      FanoutDepResponses<String, HelloFriends_Req> hellos,
+      FanoutDepResponses<Void, AuditData_Req> audited) {
     List<String> result = new ArrayList<>();
     for (String userId : userIds) {
       for (Integer numberOfFriend : NUMBER_OF_FRIENDS) {
