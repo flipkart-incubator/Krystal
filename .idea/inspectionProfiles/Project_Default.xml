@@ -497,6 +497,7 @@
           <option value="ClassWithTooManyMethods" />
           <option value="OptionalUsedAsFieldOrParameterType" />
           <option value="Convert2MethodRef" />
+          <option value="MismatchedQueryAndUpdateOfCollection" />
         </list>
       </option>
     </inspection_tool>

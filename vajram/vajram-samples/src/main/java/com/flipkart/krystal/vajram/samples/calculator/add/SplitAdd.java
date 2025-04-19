@@ -10,9 +10,7 @@ import static com.flipkart.krystal.vajram.samples.calculator.add.SplitAdd_Fac.su
 import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.annos.ConformsToTrait;
 import com.flipkart.krystal.vajram.facets.Dependency;
-import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.facets.One2OneCommand;
 import com.flipkart.krystal.vajram.facets.Output;
@@ -23,9 +21,8 @@ import java.util.Optional;
 
 @ExternallyInvocable
 @Vajram
-@ConformsToTrait(withDef = MultiAdd.class)
 @SuppressWarnings({"optional.parameter", "initialization.field.uninitialized"})
-public abstract class SplitAdd extends ComputeVajramDef<Integer> {
+public abstract class SplitAdd extends ComputeVajramDef<Integer> implements MultiAdd {
   static class _Inputs {
     @IfNull(FAIL)
     List<Integer> numbers;

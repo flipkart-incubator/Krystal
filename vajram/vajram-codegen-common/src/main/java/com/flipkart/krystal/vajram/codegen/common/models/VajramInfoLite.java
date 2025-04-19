@@ -24,7 +24,6 @@ public record VajramInfoLite(
     DataType<?> responseType,
     String packageName,
     ImmutableBiMap<Integer, String> facetIdNameMapping,
-    @Nullable VajramInfoLite conformsToTraitInfo,
     TypeElement vajramOrReqClass,
     Utils util) {
 
@@ -42,37 +41,6 @@ public record VajramInfoLite(
 
   public TypeName builderInterfaceType() {
     return immutReqInterfaceType().nestedClass("Builder");
-  }
-
-  public Iterable<TypeName> requestInterfaceSuperTypes() {
-    return List.of(
-        conformsToTraitInfo != null
-            ? conformsToTraitInfo.requestInterfaceType()
-            : ParameterizedTypeName.get(
-                ClassName.get(Request.class), util.toTypeName(responseType()).box()));
-  }
-
-  public Iterable<TypeName> immutReqInterfaceSuperTypes() {
-    return List.of(
-        requestInterfaceType(),
-        conformsToTraitInfo != null
-            ? conformsToTraitInfo.immutReqInterfaceType()
-            : ParameterizedTypeName.get(
-                ClassName.get(ImmutableRequest.class), util.toTypeName(responseType()).box()));
-  }
-
-  public Iterable<TypeName> reqBuilderInterfaceSuperTypes() {
-    return List.of(
-        requestInterfaceType(),
-        conformsToTraitInfo != null
-            ? conformsToTraitInfo.immutReqInterfaceType().nestedClass("Builder")
-            : ParameterizedTypeName.get(
-                ClassName.get(ImmutableRequest.Builder.class),
-                util.toTypeName(responseType()).box()));
-  }
-
-  public VajramInfoLite conformsToTraitOrSelf() {
-    return conformsToTraitInfo == null ? this : conformsToTraitInfo;
   }
 
   @SneakyThrows

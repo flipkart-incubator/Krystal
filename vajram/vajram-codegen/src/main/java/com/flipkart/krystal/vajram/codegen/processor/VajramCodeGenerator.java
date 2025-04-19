@@ -254,7 +254,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                 currentVajramInfo.lite().isTrait()
                     ? TraitRequestRoot.class
                     : VajramRequestRoot.class)
-            .addSuperinterfaces(currentVajramInfo.lite().requestInterfaceSuperTypes());
+            .addSuperinterfaces(currentVajramInfo.requestInterfaceSuperTypes());
 
     // Add VAJRAM_ID constant to the request interface
     FieldSpec vajramIdField =
@@ -285,11 +285,11 @@ public class VajramCodeGenerator implements CodeGenerator {
     TypeSpec.Builder immutReqInterface =
         util.interfaceBuilder(immutReqInterfaceType.simpleName())
             .addModifiers(PUBLIC)
-            .addSuperinterfaces(currentVajramInfo.lite().immutReqInterfaceSuperTypes());
+            .addSuperinterfaces(currentVajramInfo.immutReqInterfaceSuperTypes());
     TypeSpec.Builder builderInterface =
         util.interfaceBuilder("Builder")
             .addModifiers(PUBLIC, STATIC)
-            .addSuperinterfaces(currentVajramInfo.lite().reqBuilderInterfaceSuperTypes());
+            .addSuperinterfaces(currentVajramInfo.reqBuilderInterfaceSuperTypes());
 
     modelsClassMembers(
         builderInterface,
@@ -426,13 +426,14 @@ public class VajramCodeGenerator implements CodeGenerator {
   public void vajramWrapper() {
     initParsedVajramData();
     final TypeSpec.Builder vajramWrapperClass =
-        util.classBuilder(getVajramImplClassName(vajramName));
+        util.classBuilder(getVajramImplClassName(vajramName)).addModifiers(PUBLIC, FINAL);
     List<MethodSpec> methodSpecs = new ArrayList<>();
-    // Add superclass
-    vajramWrapperClass
-        .addModifiers(PUBLIC, FINAL)
-        .superclass(ClassName.get(currentVajramInfo.vajramClass()).box())
-        .build();
+    // Add superType
+    if (currentVajramInfo.lite().isTrait()) {
+      vajramWrapperClass.addSuperinterface(ClassName.get(currentVajramInfo.vajramClass()));
+    } else {
+      vajramWrapperClass.superclass(ClassName.get(currentVajramInfo.vajramClass()));
+    }
 
     ClassName requestInterfaceType = getRequestInterfaceType();
     ClassName immutRequestType = ClassName.get(packageName, getImmutRequestPojoName(vajramName));
@@ -481,7 +482,7 @@ public class VajramCodeGenerator implements CodeGenerator {
               .addStatement(
                   "return new $T(($T)$L)",
                   immutFacetsType.nestedClass("Builder"),
-                  currentVajramInfo.lite().conformsToTraitOrSelf().requestInterfaceType(),
+                  currentVajramInfo.conformsToTraitOrSelf().requestInterfaceType(),
                   "request")
               .build());
     }
@@ -1409,8 +1410,7 @@ public class VajramCodeGenerator implements CodeGenerator {
 
     // TODO : Add checks for subsetRequest
     MethodSpec.Builder fullConstructor = constructorBuilder();
-    ClassName immutRequestType =
-        currentVajramInfo.lite().conformsToTraitOrSelf().immutReqInterfaceType();
+    ClassName immutRequestType = currentVajramInfo.conformsToTraitOrSelf().immutReqInterfaceType();
     if (codeGenParams.withImpl()) {
       classSpec.addAnnotations(
           codeGenParams.isBuilder()
@@ -1436,8 +1436,7 @@ public class VajramCodeGenerator implements CodeGenerator {
         MethodSpec.Builder requestConstructor = constructorBuilder();
         requestConstructor.addParameter(
             ParameterSpec.builder(
-                    currentVajramInfo.lite().conformsToTraitOrSelf().requestInterfaceType(),
-                    "_request")
+                    currentVajramInfo.conformsToTraitOrSelf().requestInterfaceType(), "_request")
                 .addAnnotation(NonNull.class)
                 .build());
         for (FacetGenModel facet : eligibleFacets) {
@@ -1566,7 +1565,7 @@ public class VajramCodeGenerator implements CodeGenerator {
           constructorBuilder()
               .addParameter(
                   ParameterSpec.builder(
-                          currentVajramInfo.lite().conformsToTraitOrSelf().requestInterfaceType(),
+                          currentVajramInfo.conformsToTraitOrSelf().requestInterfaceType(),
                           "_request")
                       .build())
               .addStatement("this._request = _request._asBuilder()")
@@ -2218,7 +2217,7 @@ public class VajramCodeGenerator implements CodeGenerator {
       }
       initializerCodeBlock.add("$S,", docComment);
       if (codeGenParams.isRequest()) {
-        VajramInfoLite conformsToTraitInfoOrSelf = currentVajramInfo.lite().conformsToTraitOrSelf();
+        VajramInfoLite conformsToTraitInfoOrSelf = currentVajramInfo.conformsToTraitOrSelf();
         initializerCodeBlock.add(
             """
                   $T.fieldTagsParser(() -> $T.class.getDeclaredField($S)),

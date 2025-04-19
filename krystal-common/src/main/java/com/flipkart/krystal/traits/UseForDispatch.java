@@ -21,12 +21,4 @@ import java.lang.annotation.Target;
 @Documented
 @Retention(RUNTIME)
 @Target(FIELD)
-public @interface UseForDispatch {
-  public static class Creator {
-    public static @AutoAnnotation UseForDispatch create() {
-      return new AutoAnnotation_UseForDispatch_Creator_create();
-    }
-
-    private Creator() {}
-  }
-}
+public @interface UseForDispatch {}

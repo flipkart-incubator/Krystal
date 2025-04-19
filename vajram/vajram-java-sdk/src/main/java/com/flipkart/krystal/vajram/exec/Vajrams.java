@@ -9,7 +9,6 @@ import com.flipkart.krystal.vajram.ComputeDelegationMode;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Trait;
-import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramDefRoot;
@@ -31,20 +30,27 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
 @UtilityClass
 final class Vajrams {
 
   /**
-   * Returns the exact class in the class hierarchy which has the @VajramDef annotation
+   * Returns the exact class in the class hierarchy which has the {@link Vajram} or {@link Trait}
+   * annotation
    *
    * @param aClass the class in whose class hierarcgy the vajram def class is to be searched for.
    */
   @SuppressWarnings("unchecked")
   static Class<? extends VajramDefRoot<?>> getVajramDefClass(
       @SuppressWarnings("rawtypes") Class<? extends VajramDefRoot> aClass) {
-    return _getVajramDefClass(aClass);
+    Class<? extends VajramDefRoot<?>> result = _getVajramDefClass(aClass);
+    if (result == null) {
+      throw new IllegalArgumentException(
+          "@Vajram or @VajramTrait annotation missing in type hierarchy of " + aClass);
+    }
+    return result;
   }
 
   static VajramID parseVajramId(VajramDefRoot<?> vajramDef) {
@@ -114,9 +120,9 @@ final class Vajrams {
   }
 
   @SuppressWarnings("unchecked")
-  private static Class<? extends VajramDefRoot<?>> _getVajramDefClass(Class<?> aClass) {
-    if (!VajramDef.class.isAssignableFrom(aClass) && !TraitDef.class.isAssignableFrom(aClass)) {
-      throw new IllegalArgumentException("@Vajram or @VajramTrait annotation missing.");
+  private static @Nullable Class<? extends VajramDefRoot<?>> _getVajramDefClass(Class<?> aClass) {
+    if (!VajramDefRoot.class.isAssignableFrom(aClass)) {
+      return null;
     }
     Annotation annotation = aClass.getAnnotation(Vajram.class);
     if (annotation == null) {
@@ -125,11 +131,20 @@ final class Vajrams {
     if (annotation != null) {
       return (Class<? extends VajramDefRoot<?>>) aClass;
     }
-    Class<?> superclass = aClass.getSuperclass();
-    if (Object.class.equals(superclass) || superclass == null) {
-      throw new IllegalArgumentException("@Vajram or @VajramTrait annotation missing.");
+    List<Class<?>> superTypes = new ArrayList<>(Arrays.asList(aClass.getInterfaces()));
+    {
+      Class<?> superclass = aClass.getSuperclass();
+      if (!Object.class.equals(superclass) && superclass != null) {
+        superTypes.add(superclass);
+      }
     }
-    return _getVajramDefClass(superclass);
+    for (Class<?> superType : superTypes) {
+      Class<? extends VajramDefRoot<?>> result = _getVajramDefClass(superType);
+      if (result != null) {
+        return result;
+      }
+    }
+    return null;
   }
 
   static ImmutableSet<FacetSpec> parseOutputLogicSources(
