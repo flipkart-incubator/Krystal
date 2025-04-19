@@ -13,11 +13,13 @@ import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElseGet;
 import static java.util.stream.Collectors.joining;
+import static javax.lang.model.element.Modifier.ABSTRACT;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfNull.Creator;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
@@ -25,10 +27,9 @@ import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.Trait;
-import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
-import com.flipkart.krystal.vajram.annos.ConformsToTrait;
+import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.annos.Generated;
 import com.flipkart.krystal.vajram.codegen.common.models.DefaultFacetModel.DefaultFacetModelBuilder;
 import com.flipkart.krystal.vajram.codegen.common.models.DependencyModel.DependencyModelBuilder;
@@ -54,6 +55,7 @@ import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.TypeSpec.Builder;
 import jakarta.inject.Inject;
 import java.io.PrintWriter;
 import java.lang.reflect.ParameterizedType;
@@ -63,7 +65,6 @@ import java.nio.file.Paths;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
@@ -159,7 +160,7 @@ public class Utils {
     // Check if the method has the @IfNoValue annotation
     IfNull ifNull = method.getAnnotation(IfNull.class);
     if (ifNull == null) {
-      ifNull = IfNull.Creator.createDefault();
+      ifNull = Creator.createDefault();
     }
     return ifNull;
   }
@@ -274,9 +275,14 @@ public class Utils {
   }
 
   public List<TypeElement> getDefinitionClasses(RoundEnvironment roundEnv) {
-    return roundEnv.getElementsAnnotatedWithAny(Set.of(Vajram.class, Trait.class)).stream()
-        .filter(element -> element.getKind() == ElementKind.CLASS)
-        .map(executableElement -> (TypeElement) executableElement)
+    return Stream.concat(
+            roundEnv.getElementsAnnotatedWith(Vajram.class).stream()
+                .filter(element -> element.getKind() == ElementKind.CLASS)
+                .map(executableElement -> (TypeElement) executableElement)
+                .filter(typeElement -> typeElement.getModifiers().contains(ABSTRACT)),
+            roundEnv.getElementsAnnotatedWith(Trait.class).stream()
+                .filter(element -> element.getKind() == ElementKind.INTERFACE)
+                .map(executableElement -> (TypeElement) executableElement))
         .toList();
   }
 
@@ -296,7 +302,8 @@ public class Utils {
   }
 
   public VajramInfo computeVajramInfo(TypeElement vajramClass) {
-    VajramInfoLite vajramInfoLite = getVajramInfoLite(vajramClass);
+    VajramInfoLite vajramInfoLite = computeVajramInfoLite(vajramClass);
+    VajramInfoLite conformsToTraitInfo = getConformToTraitInfoFromVajram(vajramClass);
     Optional<Element> inputsClass =
         vajramClass.getEnclosedElements().stream()
             .filter(element -> element.getKind() == ElementKind.CLASS)
@@ -357,7 +364,8 @@ public class Utils {
                             givenIdsByName,
                             takenFacetIds,
                             nextFacetId))
-                .collect(toImmutableList()));
+                .collect(toImmutableList()),
+            conformsToTraitInfo);
     note("VajramInfo: %s".formatted(vajramInfo));
     return vajramInfo;
   }
@@ -388,7 +396,7 @@ public class Utils {
       facetTypes.add(FacetType.INPUT);
     }
     if (facetField.getAnnotation(Inject.class) != null) {
-      facetTypes.add(FacetType.INJECTION);
+      facetTypes.add(INJECTION);
     }
     DefaultFacetModel facetModel =
         facetBuilder.facetTypes(facetTypes).vajramInfo(vajramInfoLite).build();
@@ -461,7 +469,7 @@ public class Utils {
               .visit(depField.asType());
       TypeElement vajramOrReqElement =
           checkNotNull((TypeElement) processingEnv.getTypeUtils().asElement(vajramOrReqType));
-      VajramInfoLite depVajramInfoLite = getVajramInfoLite(vajramOrReqElement);
+      VajramInfoLite depVajramInfoLite = computeVajramInfoLite(vajramOrReqElement);
       depBuilder
           .depVajramInfo(depVajramInfoLite)
           .depReqClassQualifiedName(getVajramReqClassName(vajramOrReqElement))
@@ -484,10 +492,9 @@ public class Utils {
         depField);
   }
 
-  private VajramInfoLite getVajramInfoLite(TypeElement vajramOrReqClass) {
+  private VajramInfoLite computeVajramInfoLite(TypeElement vajramOrReqClass) {
     String vajramClassSimpleName = vajramOrReqClass.getSimpleName().toString();
     ImmutableBiMap<Integer, String> facetIdNameMappings = ImmutableBiMap.of();
-    VajramInfoLite conformsToTraitInfo = getConformToTraitInfo(vajramOrReqClass);
     VajramID vajramId;
     DataType<Object> responseType;
     String packageName = elementUtils.getPackageOf(vajramOrReqClass).getQualifiedName().toString();
@@ -514,8 +521,7 @@ public class Utils {
           new DeclaredTypeVisitor<@NonNull Object>(
                   this, responseTypeElement, DISALLOWED_FACET_TYPES)
               .visit(responseTypeMirror);
-    } else if (isRawAssignable(vajramOrReqClass.asType(), VajramDef.class)
-        || isRawAssignable(vajramOrReqClass.asType(), TraitDef.class)) {
+    } else if (isRawAssignable(vajramOrReqClass.asType(), VajramDefRoot.class)) {
       Vajram vajram = vajramOrReqClass.getAnnotation(Vajram.class);
       Trait trait = vajramOrReqClass.getAnnotation(Trait.class);
       if (vajram == null && trait == null) {
@@ -523,9 +529,7 @@ public class Utils {
             "Vajram class %s does not have either @VajramDef or @VajramTrait annotation. This should not happen"
                 .formatted(vajramOrReqClass));
       }
-      boolean isTrait = trait != null;
-      TypeMirror responseTypeMirror =
-          getResponseType(vajramOrReqClass, isTrait ? TraitDef.class : VajramDef.class);
+      TypeMirror responseTypeMirror = getResponseType(vajramOrReqClass, VajramDefRoot.class);
       TypeElement responseTypeElement =
           checkNotNull((TypeElement) typeUtils.asElement(responseTypeMirror));
       TypeElement requestType =
@@ -555,49 +559,31 @@ public class Utils {
               .formatted(vajramOrReqClass, VajramDef.class, ImmutableRequest.class));
     }
     return new VajramInfoLite(
-        vajramId,
-        responseType,
-        packageName,
-        facetIdNameMappings,
-        conformsToTraitInfo,
-        vajramOrReqClass,
-        this);
+        vajramId, responseType, packageName, facetIdNameMappings, vajramOrReqClass, this);
   }
 
-  @SuppressWarnings("method.invocation")
-  private @Nullable VajramInfoLite getConformToTraitInfo(TypeElement vajramOrReqClass) {
-    ConformsToTrait conformsToTrait = vajramOrReqClass.getAnnotation(ConformsToTrait.class);
+  private @Nullable VajramInfoLite getConformToTraitInfoFromVajram(TypeElement vajramClass) {
+    Optional<TypeElement> conformsToTrait = getConformsToTraitType(vajramClass);
     VajramInfoLite conformsToTraitInfo = null;
-    if (conformsToTrait != null) {
-      Optional<TypeMirror> traitType =
-          getTypeFromAnnotationMember(conformsToTrait::withDef)
-              .filter(
-                  typeMirror ->
-                      !checkNotNull((QualifiedNameable) typeUtils.asElement(typeMirror))
-                          .getQualifiedName()
-                          .equals(
-                              getTypeElement(TraitDef.class.getName(), processingEnv)
-                                  .getQualifiedName()));
-
-      if (traitType.isEmpty()) {
-        throw new VajramValidationException(
-            "Either trait or traitRequest must be set in @ConformsTo annotation of vajram %s"
-                .formatted(vajramOrReqClass));
-      }
-      conformsToTraitInfo =
-          getVajramInfoLite(
-              checkNotNull(
-                  (TypeElement)
-                      processingEnv
-                          .getTypeUtils()
-                          .asElement(requireNonNull(traitType.orElse(null)))));
+    if (conformsToTrait.isPresent()) {
+      conformsToTraitInfo = computeVajramInfoLite(conformsToTrait.get());
     }
     return conformsToTraitInfo;
   }
 
+  private Optional<TypeElement> getConformsToTraitType(TypeElement vajramOrReqClass) {
+    for (TypeMirror superInterface : vajramOrReqClass.getInterfaces()) {
+      Element element = typeUtils.asElement(superInterface);
+      if (element instanceof TypeElement typeElement
+          && checkNotNull(element).getAnnotation(Trait.class) != null) {
+        return Optional.of(typeElement);
+      }
+    }
+    return Optional.empty();
+  }
+
   private String getVajramReqClassName(TypeElement vajramClass) {
-    if (isRawAssignable(vajramClass.asType(), VajramDef.class)
-        || isRawAssignable(vajramClass.asType(), TraitDef.class)) {
+    if (isRawAssignable(vajramClass.asType(), VajramDefRoot.class)) {
       return vajramClass.getQualifiedName().toString() + Constants.REQUEST_SUFFIX;
     } else if (isRawAssignable(vajramClass.asType(), Request.class)) {
       return vajramClass.getQualifiedName().toString();
@@ -734,7 +720,7 @@ public class Utils {
       final Type[] typeArgs = parameterizedType.getActualTypeArguments();
       return ParameterizedTypeName.get(
           (ClassName) toTypeName(rawType),
-          Arrays.stream(typeArgs).map(Utils::toTypeName).toArray(TypeName[]::new));
+          stream(typeArgs).map(Utils::toTypeName).toArray(TypeName[]::new));
     } else {
       if (typeArg instanceof Class<?>) {
         return ClassName.get(Primitives.wrap((Class<?>) typeArg));
@@ -793,8 +779,8 @@ public class Utils {
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
-  public TypeSpec.Builder classBuilder(String className) {
-    TypeSpec.Builder classBuilder;
+  public Builder classBuilder(String className) {
+    Builder classBuilder;
     if (className.isBlank()) {
       classBuilder = TypeSpec.anonymousClassBuilder("");
     } else {
@@ -803,7 +789,7 @@ public class Utils {
     return addDefaultAnnotations(classBuilder);
   }
 
-  private TypeSpec.Builder addDefaultAnnotations(TypeSpec.Builder classBuilder) {
+  private Builder addDefaultAnnotations(Builder classBuilder) {
     classBuilder.addAnnotation(
         AnnotationSpec.builder(SuppressWarnings.class)
             .addMember(
@@ -817,7 +803,7 @@ public class Utils {
     return classBuilder;
   }
 
-  public void addGeneratedAnnotations(TypeSpec.Builder classBuilder) {
+  public void addGeneratedAnnotations(Builder classBuilder) {
     classBuilder
         .addAnnotation(
             AnnotationSpec.builder(Generated.class)
@@ -838,8 +824,8 @@ public class Utils {
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
-  public TypeSpec.Builder interfaceBuilder(String interfaceName) {
-    TypeSpec.Builder interfaceBuilder;
+  public Builder interfaceBuilder(String interfaceName) {
+    Builder interfaceBuilder;
     if (interfaceName.isBlank()) {
       throw new RuntimeException("interface name connot be blank");
     } else {

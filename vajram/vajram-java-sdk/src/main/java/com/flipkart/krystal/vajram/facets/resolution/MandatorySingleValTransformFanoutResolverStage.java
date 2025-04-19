@@ -50,7 +50,7 @@ public final class MandatorySingleValTransformFanoutResolverStage<
                     ((SingleFacetValue<S>) facetValue)
                         .singleValue()
                         .valueOpt()
-                        .orElseThrow(mandatoryFacetMissingException()))));
+                        .orElseThrow(this::mandatoryFacetMissingException))));
     return this;
   }
 
@@ -75,11 +75,11 @@ public final class MandatorySingleValTransformFanoutResolverStage<
                     ((SingleFacetValue<S>) facetValue)
                         .singleValue()
                         .valueOpt()
-                        .orElseThrow(mandatoryFacetMissingException()))));
+                        .orElseThrow(this::mandatoryFacetMissingException))));
   }
 
-  private Supplier<MandatoryFacetMissingException> mandatoryFacetMissingException() {
-    return () ->
-        new MandatoryFacetMissingException(sourceFacet.ofVajramID().vajramId(), sourceFacet.name());
+  private MandatoryFacetMissingException mandatoryFacetMissingException() {
+    return new MandatoryFacetMissingException(
+        sourceFacet.ofVajramID().vajramId(), sourceFacet.name());
   }
 }

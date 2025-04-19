@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -50,7 +49,7 @@ public final class MandatorySingleValTransformResolverStage<
                         ((SingleFacetValue<?>) facetValue)
                             .singleValue()
                             .valueOpt()
-                            .orElseThrow(mandatoryFacetMissingException()))));
+                            .orElseThrow(this::mandatoryFacetMissingException))));
     return this;
   }
 
@@ -74,11 +73,11 @@ public final class MandatorySingleValTransformResolverStage<
                         facetValue
                             .singleValue()
                             .valueOpt()
-                            .orElseThrow(mandatoryFacetMissingException()))));
+                            .orElseThrow(this::mandatoryFacetMissingException))));
   }
 
-  private Supplier<MandatoryFacetMissingException> mandatoryFacetMissingException() {
-    return () ->
-        new MandatoryFacetMissingException(sourceFacet.ofVajramID().vajramId(), sourceFacet.name());
+  private MandatoryFacetMissingException mandatoryFacetMissingException() {
+    return new MandatoryFacetMissingException(
+        sourceFacet.ofVajramID().vajramId(), sourceFacet.name());
   }
 }

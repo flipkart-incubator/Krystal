@@ -7,9 +7,8 @@ import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.traits.UseForDispatch;
 import com.flipkart.krystal.vajram.Trait;
-import com.flipkart.krystal.vajram.TraitDef;
+import com.flipkart.krystal.vajram.TraitRoot;
 import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
-import com.flipkart.krystal.vajram.facets.Input;
 
 /**
  * Sample trait demonstrating dynamic predicate dispatch capability of krystal
@@ -19,9 +18,9 @@ import com.flipkart.krystal.vajram.facets.Input;
 @Trait
 @CallGraphDelegationMode(NONE)
 @ExternallyInvocable
-public abstract class CustomerServiceAgent implements TraitDef<String> {
+public interface CustomerServiceAgent extends TraitRoot<String> {
   @SuppressWarnings("initialization.field.uninitialized")
-  static class _Inputs {
+  class _Inputs {
     @IfNull(FAIL)
     @UseForDispatch
     AgentType agentType;
@@ -35,17 +34,17 @@ public abstract class CustomerServiceAgent implements TraitDef<String> {
     String customerName;
   }
 
-  public enum AgentType {
+  enum AgentType {
     L1,
     L2,
     L3,
   }
 
-  public sealed interface InitialCommunication {}
+  sealed interface InitialCommunication {}
 
-  public record Email(String emailContent) implements InitialCommunication {}
+  record Email(String emailContent) implements InitialCommunication {}
 
-  public record Call(String callRecording) implements InitialCommunication {}
+  record Call(String callRecording) implements InitialCommunication {}
 
-  public record Ticket(String ticketSummary) implements InitialCommunication {}
+  record Ticket(String ticketSummary) implements InitialCommunication {}
 }

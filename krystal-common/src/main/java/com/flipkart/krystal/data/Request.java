@@ -3,6 +3,11 @@ package com.flipkart.krystal.data;
 import com.flipkart.krystal.facets.InputMirror;
 import com.google.common.collect.ImmutableSet;
 
+/**
+ * Represents a request to a vajram
+ *
+ * @param <T> The response type of the vajram when invoked with this request
+ */
 @SuppressWarnings("ClassReferencesSubclass") // By Design
 public non-sealed interface Request<T> extends FacetValuesContainer {
 

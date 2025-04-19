@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.utils;
 import static java.lang.reflect.Modifier.isFinal;
 
 import com.flipkart.krystal.vajram.VajramDefRoot;
+import java.util.Arrays;
 import java.util.List;
 import org.reflections.Reflections;
 
@@ -17,12 +18,19 @@ public final class VajramLoader {
             .toList();
   }
 
-  public static VajramDefRoot<Object> loadVajramsFromClass(
+  public static VajramDefRoot<Object> createVajramObjectForClass(
       Class<? extends VajramDefRoot<?>> clazz) {
     List<Class<? extends VajramDefRoot>> impls =
         new Reflections(clazz.getPackageName())
             .getSubTypesOf(clazz).stream()
                 .filter(subclass -> isFinal(subclass.getModifiers()))
+                .filter(
+                    // Since multiple vajrams can implement a Trait, we need to pick only those
+                    // class which are immediate subtypes of the requested class to get the actual
+                    // wrapper class which can used to create the vajram object
+                    subType ->
+                        clazz.equals(subType.getSuperclass())
+                            || Arrays.asList(subType.getInterfaces()).contains(clazz))
                 .<Class<? extends VajramDefRoot>>map(
                     subType -> subType.asSubclass(VajramDefRoot.class))
                 .toList();
@@ -32,8 +40,8 @@ public final class VajramLoader {
               .formatted(clazz.getPackageName(), impls));
     } else if (impls.isEmpty()) {
       throw new IllegalArgumentException(
-          "No Vajram Impl found in the package '%s' of the provided class"
-              .formatted(clazz.getPackageName()));
+          "No Vajram Impl found in the package '%s' of the provided class: '%s'"
+              .formatted(clazz.getPackageName(), clazz));
     }
     return initVajram(impls.get(0));
   }

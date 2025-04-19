@@ -5,4 +5,4 @@ package com.flipkart.krystal.vajram;
  *
  * @param <T> The response type of this trait
  */
-public non-sealed interface TraitDef<T> extends VajramDefRoot<T> {}
+public non-sealed interface TraitRoot<T> extends VajramDefRoot<T> {}

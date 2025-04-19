@@ -16,6 +16,7 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Array;
 import java.util.List;
 import java.util.Map;
+import lombok.experimental.UtilityClass;
 
 /**
  * This annotation documents the strategy to follow when a facet has no value (i.e. {@code null} or
@@ -35,8 +36,8 @@ public @interface IfNull {
 
   /**
    * Specify the condition under which the facet is mandatory. This must be set if only if {@link
-   * #value()} is set to {@link IfNullThen#WILL_NEVER_FAIL}. In all other cases, this value is
-   * auto-inferred as "ALWAYS" or "NEVER" depending on the value of {@link #value()}.
+   * #value()} is set to {@link IfNullThen#MAY_FAIL_CONDITIONALLY}. In all other cases, this value
+   * is auto-inferred as "ALWAYS" or "NEVER" depending on the value of {@link #value()}.
    */
   String conditionalFailureInfo() default "";
 
@@ -92,7 +93,6 @@ public @interface IfNull {
     @ApplicableToTypes({String.class, Array.class, List.class, Map.class})
     DEFAULT_TO_EMPTY(true),
 
-    /** */
     @ApplicableToTypes(Model.class)
     DEFAULT_TO_MODEL_DEFAULTS(true);
 
@@ -111,8 +111,8 @@ public @interface IfNull {
     }
   }
 
+  @UtilityClass
   final class Creator {
-
     public static @AutoAnnotation IfNull create(IfNullThen value, String conditionalFailureInfo) {
       return new AutoAnnotation_IfNull_Creator_create(value, conditionalFailureInfo);
     }
@@ -120,7 +120,5 @@ public @interface IfNull {
     public static IfNull createDefault() {
       return create(IfNullThen.WILL_NEVER_FAIL, "");
     }
-
-    private Creator() {}
   }
 }

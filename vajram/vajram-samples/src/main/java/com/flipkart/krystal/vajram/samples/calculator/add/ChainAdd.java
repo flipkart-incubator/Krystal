@@ -14,7 +14,6 @@ import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.annos.ConformsToTrait;
 import com.flipkart.krystal.vajram.facets.Dependency;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.One2OneCommand;
@@ -27,8 +26,7 @@ import java.util.Optional;
 
 @ExternallyInvocable
 @Vajram
-@ConformsToTrait(withDef = MultiAdd.class)
-public abstract class ChainAdd extends ComputeVajramDef<Integer> {
+public abstract class ChainAdd extends ComputeVajramDef<Integer> implements MultiAdd {
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Inputs {
     @IfNull(FAIL)

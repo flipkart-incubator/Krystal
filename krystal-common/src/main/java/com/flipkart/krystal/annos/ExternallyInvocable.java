@@ -7,6 +7,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.Map;
+import lombok.experimental.UtilityClass;
 
 /**
  * Alows vajram developers to indicate whether the vajram has been designed for direct invocation
@@ -25,12 +26,10 @@ import java.util.Map;
 @Target(ElementType.TYPE)
 public @interface ExternallyInvocable {
 
+  @UtilityClass
   final class Creator {
-
     public static @AutoAnnotation ExternallyInvocable create() {
       return new AutoAnnotation_ExternallyInvocable_Creator_create();
     }
-
-    private Creator() {}
   }
 }

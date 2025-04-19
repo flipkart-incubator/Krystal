@@ -41,7 +41,6 @@ import com.flipkart.krystal.krystex.resolution.Resolver;
 import com.flipkart.krystal.krystex.resolution.ResolverLogic;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.flipkart.krystal.vajram.IOVajramDef;
-import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.exception.MandatoryFacetMissingException;
@@ -118,7 +117,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       loadVajramsFromClassPath(packagePrefix).forEach(this::registerVajram);
     }
     for (Class<? extends VajramDefRoot<?>> clazz : classes) {
-      this.registerVajram(VajramLoader.loadVajramsFromClass(clazz));
+      this.registerVajram(VajramLoader.createVajramObjectForClass(clazz));
     }
   }
 
@@ -144,7 +143,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
 
   public void registerInputBatchers(VajramID vajramID, InputBatcherConfig... inputBatcherConfigs) {
     if (vajramID == null) {
-      throw new IllegalArgumentException("Unable to find vajram with id %s".formatted(vajramID));
+      throw new IllegalArgumentException("VajramID cannot be null");
     }
     loadKryonSubGraphIfNeeded(vajramID);
     VajramDefinition vajramDefinition = vajramDefinitions.get(vajramID);
@@ -237,7 +236,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
    * vajram execution.
    *
    * @param vajramDef The vajram to be registered for future execution.
-   * @return the {@link VajramDefinition} corresponding to the registerd vajram
+   * @return the {@link VajramDefinition} corresponding to the registered vajram
    */
   private VajramDefinition registerVajram(VajramDefRoot<Object> vajramDef) {
     VajramDefinition vajramDefinition = new VajramDefinition(vajramDef);
@@ -315,11 +314,11 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                 new KryonLogicId(vajramId, "%s:facetsFromRequest"),
                 ImmutableSet.of(),
                 emptyTags(),
-                r -> vajramDef.facetsFromRequest(r)),
+                vajramDef::facetsFromRequest),
             vajramDefinition.vajramTags());
       }
       vajramExecutables.add(vajramId);
-      if (vajramDefRoot instanceof TraitDef<?>) {
+      if (vajramDefinition.isTrait()) {
         // Since this is a trait, we need to load all the conformers of this trait so that
         // invocations of this trait can be routed to the correct conforming Vajram.
         TraitDispatchPolicy traitDispatchPolicy = traitDispatchPolicies.get(vajramId);
@@ -418,8 +417,9 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       } else if (facetValue instanceof One2OneDepResponse<?, ?> depResponse) {
         value = depResponse.response();
       } else if (facetValue instanceof FanoutDepResponses<?, ?> fanoutDepResponses) {
-        if (!fanoutDepResponses.requestResponsePairs().isEmpty()
-            && fanoutDepResponses.requestResponsePairs().stream()
+        var requestResponsePairs = fanoutDepResponses.requestResponsePairs();
+        if (!requestResponsePairs.isEmpty()
+            && requestResponsePairs.stream()
                 .allMatch(reqResp -> reqResp.response().valueOpt().isEmpty())) {
           missingMandatoryValues.put(
               mandatoryFacet.name(),
@@ -550,6 +550,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     return vajramDefinition.vajramId();
   }
 
+  @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
   public static final class VajramKryonGraphBuilder {
     private final Set<String> packagePrefixes = new LinkedHashSet<>();
     private final Set<Class<? extends VajramDefRoot<?>>> classes = new LinkedHashSet<>();

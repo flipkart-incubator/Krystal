@@ -7,7 +7,6 @@ import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.IOVajramDef;
-import com.flipkart.krystal.vajram.TraitDef;
 import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.data.IfNull;
@@ -123,7 +122,7 @@ public class StaticCallGraphGenerator {
 
       List<String> annotationStringList = annotations.stream().map(Annotation::toString).toList();
 
-      VajramType vajramType = getVajramType(definition.def());
+      VajramType vajramType = getVajramType(definition);
       if (vajramType == VajramType.UNKNOWN) {
         throw new IllegalArgumentException("Unknown vajram type for: " + definition.def());
       }
@@ -190,13 +189,14 @@ public class StaticCallGraphGenerator {
     return Graph.builder().nodes(nodes).links(links).build();
   }
 
-  private static VajramType getVajramType(VajramDefRoot<Object> vajram) {
+  private static VajramType getVajramType(VajramDefinition vajramDef) {
     VajramType vajramType;
+    VajramDefRoot<Object> vajram = vajramDef.def();
     if (vajram instanceof ComputeVajramDef<Object>) {
       vajramType = VajramType.COMPUTE;
     } else if (vajram instanceof IOVajramDef<Object>) {
       vajramType = VajramType.IO;
-    } else if (vajram instanceof TraitDef<Object>) {
+    } else if (vajramDef.isTrait()) {
       // TODO: https://github.com/flipkart-incubator/Krystal/issues/355
       vajramType = VajramType.COMPUTE;
     } else {

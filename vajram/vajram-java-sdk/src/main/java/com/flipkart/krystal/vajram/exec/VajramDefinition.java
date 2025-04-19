@@ -15,7 +15,7 @@ import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.InputMirror;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.tags.ElementTags;
-import com.flipkart.krystal.vajram.TraitDef;
+import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
@@ -76,6 +76,6 @@ public final class VajramDefinition {
   }
 
   public boolean isTrait() {
-    return def instanceof TraitDef<?>;
+    return vajramTags().getAnnotationByType(Trait.class).isPresent();
   }
 }

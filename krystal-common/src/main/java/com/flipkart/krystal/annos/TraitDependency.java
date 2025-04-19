@@ -11,12 +11,4 @@ import java.lang.annotation.Target;
 @ApplicableToElements(Facet.Dependency.class)
 @Target(ElementType.FIELD)
 @Retention(RUNTIME)
-public @interface TraitDependency {
-  final class Creator {
-    public static @AutoAnnotation TraitDependency create() {
-      return new AutoAnnotation_TraitDependency_Creator_create();
-    }
-
-    private Creator() {}
-  }
-}
+public @interface TraitDependency {}

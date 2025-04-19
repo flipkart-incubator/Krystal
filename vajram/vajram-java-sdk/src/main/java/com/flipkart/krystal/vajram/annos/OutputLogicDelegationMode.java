@@ -7,6 +7,7 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.google.auto.value.AutoAnnotation;
 import java.lang.annotation.Target;
+import lombok.experimental.UtilityClass;
 
 @ApplicableToElements(Vajram.class)
 @Target({}) // App devs cannot use this in code. This is auto computed by the platform
@@ -23,12 +24,10 @@ public @interface OutputLogicDelegationMode {
    */
   ComputeDelegationMode value();
 
+  @UtilityClass
   final class Creator {
-
     public static @AutoAnnotation OutputLogicDelegationMode create(ComputeDelegationMode value) {
       return new AutoAnnotation_OutputLogicDelegationMode_Creator_create(value);
     }
-
-    private Creator() {}
   }
 }
