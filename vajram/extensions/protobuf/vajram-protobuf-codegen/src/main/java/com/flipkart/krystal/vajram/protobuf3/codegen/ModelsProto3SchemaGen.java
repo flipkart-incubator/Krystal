@@ -90,12 +90,11 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
 
   static void validateModelType(TypeElement modelRootType, Utils util) {
     if (!INTERFACE.equals(modelRootType.getKind())) {
-      throw util.errorAndThrow(
-          "Model root '%s' must be an interface".formatted(modelRootType), modelRootType);
+      util.error("Model root '%s' must be an interface".formatted(modelRootType), modelRootType);
     }
 
     if (!util.isRawAssignable(modelRootType.asType(), Model.class)) {
-      throw util.errorAndThrow(
+      util.error(
           "Model root '%s' must implement Model interface".formatted(modelRootType), modelRootType);
     }
   }
@@ -169,20 +168,22 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
     for (ExecutableElement method : modelMethods) {
       // Get the SerialId annotation from the method
       SerialId serialId = method.getAnnotation(SerialId.class);
+      // Get the field number from the annotation
+      int fieldNumber;
       if (serialId == null) {
-        throw util.errorAndThrow(
+        util.error(
             String.format(
                 "Missing @SerialId annotation on method '%s' in Model Root '%s'",
                 method.getSimpleName(), modelRootName),
             method);
+        fieldNumber = -1;
+      } else {
+        fieldNumber = serialId.value();
       }
-
-      // Get the field number from the annotation
-      int fieldNumber = serialId.value();
 
       // Validate the field number
       if (fieldNumber <= 0) {
-        throw util.errorAndThrow(
+        util.error(
             String.format(
                 "Invalid SerialId %d for method '%s' in Model Root '%s'. SerialId must be positive.",
                 fieldNumber, method.getSimpleName(), modelRootName),
@@ -191,7 +192,7 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
 
       // Check for duplicate field numbers
       if (!usedFieldNumbers.add(fieldNumber)) {
-        throw util.errorAndThrow(
+        util.error(
             String.format(
                 "Duplicate SerialId %d for method '%s' in Model Root '%s'",
                 fieldNumber, method.getSimpleName(), modelRootName),
@@ -212,7 +213,7 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
       boolean isMap = isProtoTypeMap(dataType);
       if ((isRepeated || isMap) && !ifNullThen.usePlatformDefault()) {
         // Proto3 always defaults repeated and map fields to default values
-        throw util.errorAndThrow(
+        util.error(
             String.format(
                 "Method '%s' in Model Root '%s' is a %s field, and has @IfNoValue(then=%s) which is not supported in protobuf3. "
                     + "Use a different IfNoValue strategy.",

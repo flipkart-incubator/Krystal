@@ -8,7 +8,7 @@ public record OptionalFieldType(ProtoFieldType elementType, Utils util, Element 
 
   public OptionalFieldType {
     if (!elementType.canBeOptional()) {
-      throw util.errorAndThrow(elementType + " cannot be marked optional", element);
+      util.error(elementType + " cannot be marked optional", element);
     }
   }
 
@@ -17,10 +17,12 @@ public record OptionalFieldType(ProtoFieldType elementType, Utils util, Element 
 
     return "optional " + elementType.typeInProtoFile();
   }
+
   @Override
   public boolean canBeMapValue() {
     return false;
   }
+
   @Override
   public String toString() {
     return typeInProtoFile();

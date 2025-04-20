@@ -9,7 +9,7 @@ public record RepeatedFieldType(ProtoFieldType elementType, Utils util, Element 
 
   public RepeatedFieldType {
     if (!elementType.canRepeat()) {
-      throw util.errorAndThrow(elementType + " cannot be a repeated field", element);
+      util.error(elementType + " cannot be a repeated field", element);
     }
   }
 

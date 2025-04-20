@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.codegen.common.models;
 
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
+import com.flipkart.krystal.datatypes.JavaTypes;
 import com.google.common.collect.ImmutableMap;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;

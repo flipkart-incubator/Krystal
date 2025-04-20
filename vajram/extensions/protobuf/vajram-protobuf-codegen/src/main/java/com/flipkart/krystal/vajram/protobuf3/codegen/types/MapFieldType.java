@@ -15,8 +15,7 @@ public record MapFieldType(
               keyType));
     }
     if (!valueType.canBeMapValue()) {
-      throw util.errorAndThrow(
-          String.format("The type %s is not allowed in a map value.", valueType), element);
+      util.error(String.format("The type %s is not allowed in a map value.", valueType), element);
     }
   }
 
@@ -29,6 +28,7 @@ public record MapFieldType(
   public boolean canBeMapValue() {
     return false;
   }
+
   @Override
   public String toString() {
     return typeInProtoFile();

@@ -14,6 +14,7 @@ import com.flipkart.krystal.vajram.codegen.common.spi.AllVajramsCodeGeneratorPro
 import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGenContext;
 import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGeneratorProvider;
 import com.google.common.collect.Iterables;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -74,16 +75,23 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
             ServiceLoader.load(
                 VajramCodeGeneratorProvider.class, this.getClass().getClassLoader()));
 
-    List<VajramInfo> vajramInfos = vajramDefinitions.stream().map(util::computeVajramInfo).toList();
-    for (VajramInfo vajramInfo : vajramInfos) {
-      VajramCodeGenContext creationContext =
-          new VajramCodeGenContext(vajramInfo, util, codegenPhase);
-      for (VajramCodeGeneratorProvider customCodeGeneratorProvider : vajramCodeGeneratorProviders) {
-        try {
-          customCodeGeneratorProvider.create(creationContext).generate();
-        } catch (VajramValidationException e) {
-          continue;
+    List<VajramInfo> vajramInfos = new ArrayList<>();
+    for (TypeElement vajramDefinition : vajramDefinitions) {
+      try {
+        VajramInfo vajramInfo = util.computeVajramInfo(vajramDefinition);
+        vajramInfos.add(vajramInfo);
+        VajramCodeGenContext creationContext =
+            new VajramCodeGenContext(vajramInfo, util, codegenPhase);
+        for (VajramCodeGeneratorProvider customCodeGeneratorProvider :
+            vajramCodeGeneratorProviders) {
+          try {
+            customCodeGeneratorProvider.create(creationContext).generate();
+          } catch (VajramValidationException e) {
+            continue;
+          }
         }
+      } catch (VajramValidationException e) {
+        continue;
       }
     }
 

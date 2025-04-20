@@ -32,7 +32,7 @@ public sealed interface FacetGenModel permits DefaultFacetModel, DependencyModel
 
   default boolean isMandatoryOnServer() {
     IfNull ifNull = facetField().getAnnotation(IfNull.class);
-    return ifNull != null && !ifNull.value().equals(IfNullThen.MAY_FAIL_CONDITIONALLY);
+    return ifNull != null && ifNull.value().isMandatoryOnServer();
   }
 
   @Nullable String documentation();

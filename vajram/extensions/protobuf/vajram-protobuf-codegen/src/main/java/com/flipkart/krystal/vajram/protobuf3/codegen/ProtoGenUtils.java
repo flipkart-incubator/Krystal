@@ -249,10 +249,10 @@ public class ProtoGenUtils {
     if (supportedModelProtocols == null
         || util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
             .noneMatch(t -> util.isSameRawType(t, Protobuf3.class))) {
-      throw util.errorAndThrow(
+      util.error(
           String.format(
               "Vajram '%s' has return type '%s' which is not a supported model protocol. "
-              + "RPC methods must return a message type that is compatible with Protobuf3.",
+                  + "RPC methods must return a message type that is compatible with Protobuf3.",
               vajramInfo.vajramName(), returnType),
           vajramInfo.vajramClass());
     }

@@ -36,15 +36,12 @@ public record ParsedVajramData(
     ImmutableList<ExecutableElement> allMethods = getAllMethods(vajramInfo.vajramClass());
     if (vajramInfo.lite().isTrait()) {
       if (!allMethods.isEmpty()) {
-        throw util.errorAndThrow("A trait must not have any methods.", vajramInfo.vajramClass());
+        util.error("A trait definition must not have any methods.", vajramInfo.vajramClass());
       }
     }
     for (ExecutableElement method : allMethods) {
       if ((isOutputLogic(method) || isResolver(method)) && !isStatic(method)) {
-        throw util.errorAndThrow(
-            "Vajram class %s has non-static method %s"
-                .formatted(vajramInfo.lite().vajramId(), method.getSimpleName()),
-            method);
+        util.error("A Vajram definition can only have static methods", method);
       }
     }
     ExecutableElement outputLogic = null;
@@ -61,7 +58,7 @@ public record ParsedVajramData(
       CallGraphDelegationMode callGraphDelegationMode =
           typeElement.getAnnotation(CallGraphDelegationMode.class);
       if (callGraphDelegationMode == null) {
-        throw util.errorAndThrow("A trait must specify a @CallGraphDelegationMode.", typeElement);
+        util.error("A trait must specify a @CallGraphDelegationMode.", typeElement);
       }
     }
   }

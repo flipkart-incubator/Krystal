@@ -175,13 +175,13 @@ class VajramServiceProto3SchemaGen implements CodeGenerator {
             try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(serviceProtoFilePath))) {
               out.println(protoBuilder);
             } catch (IOException e) {
-              throw util.errorAndThrow(
+              util.error(
                   "Failed to generate service proto file %s".formatted(serviceProtoFilePath), null);
             }
           });
 
     } catch (IOException e) {
-      throw util.errorAndThrow(
+      util.error(
           String.format(
               "Error generating protobuf service definition for %s: %s",
               vajramInfos, e.getMessage()),

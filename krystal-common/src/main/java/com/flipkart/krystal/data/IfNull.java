@@ -16,6 +16,7 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Array;
 import java.util.List;
 import java.util.Map;
+import lombok.Getter;
 import lombok.experimental.UtilityClass;
 
 /**
@@ -49,7 +50,7 @@ public @interface IfNull {
      * being set. For example, the code might always default to some value when there is no value.
      */
     @ApplicableToTypes(all = true)
-    WILL_NEVER_FAIL(false),
+    WILL_NEVER_FAIL(false, false),
 
     /**
      * Specifies that the facet is mandatory but only in specific conditions - otherwise, it's
@@ -63,51 +64,49 @@ public @interface IfNull {
      * <p>If IfNoValue annotation is missing, then this is considered the default.
      */
     @ApplicableToTypes(all = true)
-    MAY_FAIL_CONDITIONALLY(false),
+    MAY_FAIL_CONDITIONALLY(false, false),
 
     /**
      * The application will fail if the value is not set. In colloquial terms, it is said that the
      * value is "mandatory"
      */
     @ApplicableToTypes(all = true)
-    FAIL(false),
+    FAIL(false, true),
 
     /**
      * The vajram should use the default value "false" if a mandatory boolean facet value is not
      * set.
      */
     @ApplicableToTypes(boolean.class)
-    DEFAULT_TO_FALSE(true),
+    DEFAULT_TO_FALSE(true, true),
 
     /**
      * The vajram should use the default value "0" if a mandatory numeric (byte, short, int, long,
      * float, double) facet value is not set.
      */
     @ApplicableToTypes({byte.class, short.class, int.class, long.class, float.class, double.class})
-    DEFAULT_TO_ZERO(true),
+    DEFAULT_TO_ZERO(true, true),
 
     /**
      * The vajram should use the default value "empty" of the relevant type if a mandatory facet
      * value whose type is ahy of array, collection, map, or strings, is unset.
      */
     @ApplicableToTypes({String.class, Array.class, List.class, Map.class})
-    DEFAULT_TO_EMPTY(true),
+    DEFAULT_TO_EMPTY(true, true),
 
     @ApplicableToTypes(Model.class)
-    DEFAULT_TO_MODEL_DEFAULTS(true);
-
-    private final boolean usePlatformDefault;
-
-    IfNullThen(boolean usePlatformDefault) {
-      this.usePlatformDefault = usePlatformDefault;
-    }
+    DEFAULT_TO_MODEL_DEFAULTS(true, true);
 
     /**
-     * Returns true if the platform default value should be used for the facet with this ifNotSet
-     * strategy.
+     * true if the platform default value should be used for the facet with this ifNotSet strategy.
      */
-    public boolean usePlatformDefault() {
-      return usePlatformDefault;
+    @Getter private final boolean usePlatformDefault;
+
+    @Getter private final boolean isMandatoryOnServer;
+
+    IfNullThen(boolean usePlatformDefault, boolean isMandatoryOnServer) {
+      this.usePlatformDefault = usePlatformDefault;
+      this.isMandatoryOnServer = isMandatoryOnServer;
     }
   }
 

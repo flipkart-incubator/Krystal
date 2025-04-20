@@ -18,7 +18,6 @@ import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
-import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add;
@@ -26,6 +25,7 @@ import com.flipkart.krystal.vajram.samples.calculator.add.Add_Req;
 import com.flipkart.krystal.vajram.samples.calculator.divide.Divide;
 import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_Req;
 import com.google.common.collect.ImmutableCollection;
+import jakarta.inject.Inject;
 
 /** a/(p+q) */
 @ExternallyInvocable
@@ -37,6 +37,7 @@ public abstract class Formula extends ComputeVajramDef<Integer> {
     int a;
 
     /** First addend of the denominator */
+    @Inject
     @IfNull(DEFAULT_TO_ZERO)
     int p;
 
@@ -76,7 +77,7 @@ public abstract class Formula extends ComputeVajramDef<Integer> {
   }
 
   @Output
-  static int result(Errable<Integer> quotient, int q) throws Throwable {
+  static int result(Errable<Integer> quotient) throws Throwable {
     /* Return quotient */
     return quotient
         .valueOpt()

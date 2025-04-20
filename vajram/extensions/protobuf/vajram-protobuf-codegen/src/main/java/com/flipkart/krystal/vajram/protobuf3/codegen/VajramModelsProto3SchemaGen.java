@@ -141,20 +141,23 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
         vajramInfo.givenFacets().stream().filter(f -> f.facetTypes().contains(INPUT)).toList()) {
       // Get the SerialId annotation from the facet field
       SerialId serialId = facet.facetField().getAnnotation(SerialId.class);
+      int fieldNumber;
       if (serialId == null) {
-        throw util.errorAndThrow(
+        util.error(
             String.format(
                 "Missing @SerialId annotation on input '%s' in Vajram '%s'",
                 facet.name(), vajramId),
             facet.facetField());
-      }
+        fieldNumber = -1;
+      } else {
 
-      // Get the field number from the annotation
-      int fieldNumber = serialId.value();
+        // Get the field number from the annotation
+        fieldNumber = serialId.value();
+      }
 
       // Validate the field number
       if (fieldNumber <= 0) {
-        throw util.errorAndThrow(
+        util.error(
             String.format(
                 "Invalid SerialId %d for input '%s' in Vajram '%s'. SerialId must be positive.",
                 fieldNumber, facet.name(), vajramId),
@@ -163,7 +166,7 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
 
       // Check for duplicate field numbers
       if (!usedFieldNumbers.add(fieldNumber)) {
-        throw util.errorAndThrow(
+        util.error(
             String.format(
                 "Duplicate SerialId %d for input '%s' in Vajram '%s'",
                 fieldNumber, facet.name(), vajramId),
@@ -196,7 +199,7 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
         if (!ifNullThen.usePlatformDefault() && (isRepeated || isMap)) {
           // Proto3 cannot enforce mandatory fields with FAIL strategy for repeated and
           // map fields
-          throw util.errorAndThrow(
+          util.error(
               String.format(
                   "Input '%s' in Vajram '%s' is a %s field, and has @IfNoValue(then=%s) which is not supported in protobuf3. "
                       + "Use a different IfNoValue strategy or remove @IfNoValue annotation.",

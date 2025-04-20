@@ -264,7 +264,7 @@ public class Utils {
           resolverMethod);
     }
     if (!vajramId.equals(parts.get(0))) {
-      throw errorAndThrow(
+      error(
           "Expected vajram id '"
               + vajramId
               + "' does not match with the given qualified facet: "
@@ -364,6 +364,7 @@ public class Utils {
                             givenIdsByName,
                             takenFacetIds,
                             nextFacetId))
+                .filter(Objects::nonNull)
                 .collect(toImmutableList()),
             conformsToTraitInfo);
     note("VajramInfo: %s".formatted(vajramInfo));
@@ -378,7 +379,6 @@ public class Utils {
       AtomicInteger nextFacetId,
       VajramInfoLite vajramInfoLite) {
     DefaultFacetModelBuilder facetBuilder = DefaultFacetModel.builder().facetField(facetField);
-    DefaultFacetModel.builder().facetField(facetField);
     String facetName = facetField.getSimpleName().toString();
     facetBuilder.id(
         requireNonNullElseGet(
@@ -396,6 +396,9 @@ public class Utils {
       facetTypes.add(FacetType.INPUT);
     }
     if (facetField.getAnnotation(Inject.class) != null) {
+      if (isInput) {
+        error("Inject facet '%s' cannot be an input facet".formatted(facetName), facetField);
+      }
       facetTypes.add(INJECTION);
     }
     DefaultFacetModel facetModel =
@@ -412,7 +415,7 @@ public class Utils {
     return nextFacetId.getAndIncrement();
   }
 
-  private DependencyModel toDependencyModel(
+  private @Nullable DependencyModel toDependencyModel(
       VajramID vajramId,
       VariableElement depField,
       BiMap<String, Integer> givenIdsByName,
@@ -485,11 +488,12 @@ public class Utils {
       givenIdsByName.putIfAbsent(facetName, depModel.id());
       return depModel;
     }
-    throw errorAndThrow(
+    error(
         ("Invalid dependency spec of dependency '%s' of vajram '%s'."
                 + " Found withVajramReq=%s and onVajram=%s")
             .formatted(depField.getSimpleName(), vajramId, vajramReqType.get(), vajramType.get()),
         depField);
+    return null;
   }
 
   private VajramInfoLite computeVajramInfoLite(TypeElement vajramOrReqClass) {
