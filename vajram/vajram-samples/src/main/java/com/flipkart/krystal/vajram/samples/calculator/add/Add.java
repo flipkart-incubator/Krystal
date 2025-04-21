@@ -25,8 +25,8 @@ import java.util.concurrent.atomic.LongAdder;
  * Adds two numbers - {@code numberOne} and {@code numberTwo} and returns the result. While {@code
  * numberOne} is a mandatory input, {@code numberTwo} is optional and defaults to zero if not set.
  */
-@Vajram
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
+@Vajram
 public abstract class Add extends IOVajramDef<Integer> {
 
   static class _Inputs {

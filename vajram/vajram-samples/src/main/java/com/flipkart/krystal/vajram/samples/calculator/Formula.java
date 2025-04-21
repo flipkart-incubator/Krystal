@@ -37,7 +37,6 @@ public abstract class Formula extends ComputeVajramDef<Integer> {
     int a;
 
     /** First addend of the denominator */
-    @Inject
     @IfNull(DEFAULT_TO_ZERO)
     int p;
 

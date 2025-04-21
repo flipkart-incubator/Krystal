@@ -24,8 +24,8 @@ public non-sealed class OptionalOne2OneDepSpec<T, CV extends Request, DV extends
       String documentation,
       boolean isBatched,
       Callable<ElementTags> tagsParser,
-      Function<FacetValues, One2OneDepResponse<T, DV>> getFromFacets,
-      BiConsumer<FacetValues, One2OneDepResponse<T, DV>> setToFacets) {
+      Function<FacetValues, One2OneDepResponse<DV, T>> getFromFacets,
+      BiConsumer<FacetValues, One2OneDepResponse<DV, T>> setToFacets) {
     super(
         id,
         name,

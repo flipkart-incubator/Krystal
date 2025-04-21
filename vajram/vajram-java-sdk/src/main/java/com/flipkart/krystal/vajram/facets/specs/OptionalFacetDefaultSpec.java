@@ -42,6 +42,7 @@ public final class OptionalFacetDefaultSpec<T, CV extends Request> extends Defau
         setToFacets);
   }
 
+  @Deprecated
   @Override
   public @NonNull Void getPlatformDefaultValue() throws UnsupportedOperationException {
     throw new UnsupportedOperationException("Optional facets do not have a platform default value");

@@ -213,7 +213,7 @@ class VajramModelsProto3Gen implements CodeGenerator {
           MethodSpec.methodBuilder(facetName).addAnnotation(Override.class).addModifiers(PUBLIC);
 
       getterBuilder.returns(
-          util.facetJavaType(facet, CodeGenParams.builder().isRequest(true).withImpl(true).build())
+          util.getFacetReturnType(facet, CodeGenParams.builder().isRequest(true).withImpl(true).build())
               .javaTypeName(facet)
               .annotated(AnnotationSpec.builder(Nullable.class).build()));
 
@@ -390,7 +390,7 @@ class VajramModelsProto3Gen implements CodeGenerator {
           MethodSpec.methodBuilder(facetName).addAnnotation(Override.class).addModifiers(PUBLIC);
 
       getterBuilder.returns(
-          util.facetJavaType(
+          util.getFacetReturnType(
                   facet,
                   CodeGenParams.builder().isRequest(true).isBuilder(true).withImpl(true).build())
               .javaTypeName(facet)

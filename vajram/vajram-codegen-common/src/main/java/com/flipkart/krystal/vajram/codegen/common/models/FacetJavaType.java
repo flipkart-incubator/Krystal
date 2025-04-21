@@ -17,7 +17,7 @@ import com.squareup.javapoet.TypeName;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public abstract sealed class FacetJavaType {
+public abstract sealed class  FacetJavaType {
 
   protected final Utils util;
 
@@ -45,12 +45,25 @@ public abstract sealed class FacetJavaType {
   }
 
   public CodeBlock fieldInitializer(FacetGenModel facet) {
-    return CodeBlock.of(
-        "$T.$L.getPlatformDefaultValue()",
-        ClassName.get(
-            facet.vajramInfo().packageName(),
-            getFacetsInterfaceName(facet.vajramInfo().vajramId().id())),
-        facet.name() + FACET_SPEC_SUFFIX);
+    if (util.usePlatformDefault(facet)) {
+      if (facet.dataType().hasPlatformDefaultValue(util.processingEnv())) {
+        return CodeBlock.of(
+            "$T.$L.getPlatformDefaultValue()",
+            ClassName.get(
+                facet.vajramInfo().packageName(),
+                getFacetsInterfaceName(facet.vajramInfo().vajramId().id())),
+            facet.name() + FACET_SPEC_SUFFIX);
+      } else {
+        throw new VajramDefinitionException(
+            "The datatype "
+                + facet.dataType()
+                + " does not support a platform default value."
+                + " To fix this issue, change the ifNotSet strategy of the @Mandatory annotation"
+                + " to a value which does not allow default value.");
+      }
+    } else {
+      return EMPTY_CODE_BLOCK;
+    }
   }
 
   public Class<?>[] typeAnnotations(FacetGenModel facet, CodeGenParams codeGenParams) {
@@ -66,30 +79,6 @@ public abstract sealed class FacetJavaType {
     @Override
     public TypeName javaTypeName(FacetGenModel facet) {
       return util.getTypeName(util.getDataType(facet)).typeName();
-    }
-
-    @Override
-    public CodeBlock fieldInitializer(FacetGenModel facet) {
-      IfNull ifNull = facet.facetField().getAnnotation(IfNull.class);
-      if (ifNull != null && ifNull.value().usePlatformDefault()) {
-        if (facet.dataType().hasPlatformDefaultValue(util.processingEnv())) {
-          return CodeBlock.of(
-              "$T.$L.getPlatformDefaultValue()",
-              ClassName.get(
-                  facet.vajramInfo().packageName(),
-                  getFacetsInterfaceName(facet.vajramInfo().vajramId().id())),
-              facet.name() + FACET_SPEC_SUFFIX);
-        } else {
-          throw new VajramDefinitionException(
-              "The datatype "
-                  + facet.dataType()
-                  + " does not support a platform default value."
-                  + " To fix this issue, change the ifNotSet strategy of the @Mandatory annotation"
-                  + " to a value which does not allow default value.");
-        }
-      } else {
-        return EMPTY_CODE_BLOCK;
-      }
     }
 
     @Override
@@ -138,11 +127,6 @@ public abstract sealed class FacetJavaType {
     @Override
     public Class<?>[] typeAnnotations(FacetGenModel facet, CodeGenParams codeGenParams) {
       return new Class<?>[] {Nullable.class};
-    }
-
-    @Override
-    public CodeBlock fieldInitializer(FacetGenModel facet) {
-      return CodeBlock.of("null");
     }
   }
 

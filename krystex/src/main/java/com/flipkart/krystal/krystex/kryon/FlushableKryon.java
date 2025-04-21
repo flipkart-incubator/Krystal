@@ -487,7 +487,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
           Set<InvocationId> invocationIds =
               resolverCommandsByReq.keySet().stream().flatMap(Collection::stream).collect(toSet());
 
-          ImmutableMap<InvocationId, DepResponse<@Nullable Object, Request<@Nullable Object>>>
+          ImmutableMap<InvocationId, DepResponse<Request<@Nullable Object>, @Nullable Object>>
               results =
                   invocationIds.stream()
                       .collect(

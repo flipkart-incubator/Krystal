@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 public abstract class UserService extends IOVajramDef<UserInfo> {
 
   static class _Inputs {
-    @IfNull(value = FAIL)
+    @IfNull(FAIL)
     @Batched
     String userId;
   }
@@ -30,8 +30,7 @@ public abstract class UserService extends IOVajramDef<UserInfo> {
   @Output
   @SuppressWarnings("method.invocation")
   static Map<UserService_BatchItem, CompletableFuture<UserInfo>> callUserService(
-      ImmutableCollection<
-          UserService_BatchItem> _batchItems) {
+      ImmutableCollection<UserService_BatchItem> _batchItems) {
 
     // Make a call to user service and get user info
     CompletableFuture<Map<UserService_BatchItem, UserInfo>> resultsFuture =

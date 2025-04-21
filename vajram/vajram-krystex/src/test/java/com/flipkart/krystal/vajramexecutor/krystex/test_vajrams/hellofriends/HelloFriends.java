@@ -69,7 +69,7 @@ public abstract class HelloFriends extends ComputeVajramDef<String> {
 
   @Output
   static String sayHellos(
-      TestUserInfo userInfo, FanoutDepResponses<TestUserInfo, TestUserService_Req> friendInfos) {
+      TestUserInfo userInfo, FanoutDepResponses<TestUserService_Req, TestUserInfo> friendInfos) {
     return "Hello Friends of %s! %s"
         .formatted(
             userInfo.userName(),

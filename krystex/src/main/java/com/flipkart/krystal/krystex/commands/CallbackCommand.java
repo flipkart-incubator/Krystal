@@ -16,7 +16,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public record CallbackCommand(
     VajramID vajramID,
     Dependency dependency,
-    ImmutableMap<InvocationId, DepResponse<@Nullable Object, Request<@Nullable Object>>> resultsByRequest,
+    ImmutableMap<InvocationId, DepResponse<Request<@Nullable Object>, @Nullable Object>> resultsByRequest,
     DependentChain dependentChain)
     implements MultiRequestCommand<BatchResponse> {
 

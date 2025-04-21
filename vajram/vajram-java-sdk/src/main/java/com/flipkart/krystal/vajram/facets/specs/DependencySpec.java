@@ -59,15 +59,15 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
   @SuppressWarnings("unchecked")
   public final void setFacetValue(FacetValuesBuilder facets, FacetValue<?> value) {
     if (value instanceof DepResponse depResponse) {
-      setFacetValue(facets, (DepResponse<T, DV>) depResponse);
+      setFacetValue(facets, (DepResponse<DV, T>) depResponse);
     } else {
       throw new RuntimeException(
           "Dependency expects facet value of type DepResponse. Found " + value.getClass());
     }
   }
 
-  protected abstract void setFacetValue(FacetValuesBuilder facets, DepResponse<T, DV> depResponse);
+  protected abstract void setFacetValue(FacetValuesBuilder facets, DepResponse<DV, T> depResponse);
 
   @Override
-  public abstract DepResponse<T, DV> getFacetValue(FacetValues facetValues);
+  public abstract DepResponse<DV, T> getFacetValue(FacetValues facetValues);
 }

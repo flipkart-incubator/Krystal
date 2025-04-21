@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.codegen.processor;
 
+import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.BATCHES_VAR;
@@ -32,7 +33,6 @@ import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getRequest
 import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getTypeParameters;
 import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getVajramImplClassName;
 import static com.flipkart.krystal.vajram.codegen.common.models.Utils.recordAnnotations;
-import static com.flipkart.krystal.vajram.codegen.common.models.Utils.toClassName;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -1478,24 +1478,7 @@ public class VajramCodeGenerator implements CodeGenerator {
           classSpec.addField(facetField.build());
           fullConstructor.addParameter(facetParam);
 
-          // Check if this facet has IfNull annotation with usePlatformDefault as true
-          IfNull ifNull = facet.facetField().getAnnotation(IfNull.class);
-          boolean usePlatformDefault = ifNull != null && ifNull.value().usePlatformDefault();
-
-          if (usePlatformDefault && !codeGenParams.isBuilder()) {
-            // For facets with usePlatformDefault=true, add null check and use platform default if
-            // null
-            fullConstructor.addStatement(
-                "this.$L = $L != null ? $L : $T.$L.getPlatformDefaultValue()",
-                facet.name(),
-                facet.name(),
-                facet.name(),
-                getRequestInterfaceType(),
-                facet.name() + FACET_SPEC_SUFFIX);
-          } else {
-            // For other facets, use the original assignment
-            fullConstructor.addStatement("this.$L = $L", facet.name(), facet.name());
-          }
+          fullConstructor.addStatement("this.$L = $L", facet.name(), facet.name());
         }
       }
       // Getter
@@ -1507,6 +1490,8 @@ public class VajramCodeGenerator implements CodeGenerator {
                 .addModifiers(PUBLIC)
                 .addParameter(facetParam);
 
+        boolean usePlatformDefault = util.usePlatformDefault(facet);
+
         if (codeGenParams.isBuilderRoot()) {
           String documentation = facet.documentation();
           setterBuilder.addJavadoc(
@@ -1517,12 +1502,24 @@ public class VajramCodeGenerator implements CodeGenerator {
         }
 
         if (codeGenParams.withImpl()) {
-          setterBuilder
-              .addStatement(
-                  isInput && codeGenParams.wrapsRequest()
-                      ? CodeBlock.of("this._request.$L($L)", facet.name(), facet.name())
-                      : CodeBlock.of("this.$L = $L", facet.name(), facet.name())) // Set value
-              .addStatement("return this", facet.name()); // Return
+          if (isInput && codeGenParams.wrapsRequest()) {
+            // For facets that are wrapped in a request
+            setterBuilder.addStatement("this._request.$L($L)", facet.name(), facet.name());
+          } else {
+            // For facets that are not wrapped in a request
+            if (usePlatformDefault) {
+              setterBuilder.addStatement(
+                  "this.$L = $L != null ? $L : $T.$L.getPlatformDefaultValue()",
+                  facet.name(),
+                  facet.name(),
+                  facet.name(),
+                  getRequestInterfaceType(),
+                  facet.name() + FACET_SPEC_SUFFIX);
+            } else {
+              setterBuilder.addStatement("this.$L = $L", facet.name(), facet.name());
+            }
+          }
+          setterBuilder.addStatement("return this");
         } else {
           setterBuilder.addModifiers(ABSTRACT);
         }
@@ -1576,7 +1573,7 @@ public class VajramCodeGenerator implements CodeGenerator {
       TypeSpec.Builder clazz, FacetGenModel facet, CodeGenParams codeGenParams) {
     MethodSpec.Builder method;
     FacetJavaType fieldType = util.getFacetFieldType(facet);
-    FacetJavaType returnType = util.facetJavaType(facet, codeGenParams);
+    FacetJavaType returnType = util.getFacetReturnType(facet, codeGenParams);
     // Non-dependency facet (Example: GivenFacet)
     method =
         methodBuilder(facet.name())
@@ -1645,9 +1642,21 @@ public class VajramCodeGenerator implements CodeGenerator {
   private void validateIfNoValueStrategyApplicability() {
 
     for (FacetGenModel facet : facetModelsByName.values()) {
-      Element typedElement = facet.facetField();
+      Element facetField = facet.facetField();
+      IfNull ifNull = facetField.getAnnotation(IfNull.class);
+      if (ifNull != null) {
+        IfNullThen ifNullThen = ifNull.value();
+        if (ifNullThen.usePlatformDefault()) {
+          if (facet.facetTypes().contains(DEPENDENCY)) {
+            util.error(
+                "Defaulting to a platform default value is not supported for dependency facets.",
+                facetField);
+          }
+        }
+      }
+
       DataType<?> dataType = util.getDataType(facet);
-      validateIfNoValueStrategyApplicability(typedElement, dataType, util);
+      validateIfNoValueStrategyApplicability(facetField, dataType, util);
     }
   }
 
@@ -1993,7 +2002,7 @@ public class VajramCodeGenerator implements CodeGenerator {
     for (FacetGenModel facet : batchedFacets) {
       CodeGenParams codeGenParams =
           CodeGenParams.builder().isSubsetBatch(true).withImpl(true).build();
-      FacetJavaType returnType = util.facetJavaType(facet, codeGenParams);
+      FacetJavaType returnType = util.getFacetReturnType(facet, codeGenParams);
       MethodSpec.Builder getter =
           methodBuilder(facet.name())
               .returns(
@@ -2040,7 +2049,7 @@ public class VajramCodeGenerator implements CodeGenerator {
     for (FacetGenModel facet : commonFacets) {
       CodeGenParams codeGenParams =
           CodeGenParams.builder().isSubsetCommon(true).withImpl(true).build();
-      FacetJavaType returnType = util.facetJavaType(facet, codeGenParams);
+      FacetJavaType returnType = util.getFacetReturnType(facet, codeGenParams);
       MethodSpec.Builder getter =
           methodBuilder(facet.name())
               .returns(

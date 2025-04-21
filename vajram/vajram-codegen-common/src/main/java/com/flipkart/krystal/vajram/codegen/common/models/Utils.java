@@ -88,6 +88,7 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypeException;
 import javax.lang.model.type.MirroredTypesException;
 import javax.lang.model.type.PrimitiveType;
+import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
@@ -232,7 +233,7 @@ public class Utils {
     return typeElement;
   }
 
-  public FacetJavaType facetJavaType(FacetGenModel facet, CodeGenParams codeGenParams) {
+  public FacetJavaType getFacetReturnType(FacetGenModel facet, CodeGenParams codeGenParams) {
     if (facet instanceof DependencyModel dep) {
       if (dep.canFanout()) {
         return new FanoutResponses(this);
@@ -245,7 +246,7 @@ public class Utils {
         IfNull ifNull = facet.facetField().getAnnotation(IfNull.class);
         // Developers should not deal with boxed types. So we need to return the actual type or
         // an Optional wrapper as needed
-        if (ifNull != null && !ifNull.value().equals(MAY_FAIL_CONDITIONALLY)) {
+        if (ifNull != null && ifNull.value().isMandatoryOnServer()) {
           return new Actual(this);
         }
         // This means the facet is either conditionally or always optional
@@ -358,13 +359,15 @@ public class Utils {
             dependencyFields.stream()
                 .map(
                     depField ->
-                        toDependencyModel(
-                            vajramInfoLite.vajramId(),
-                            depField,
-                            givenIdsByName,
-                            takenFacetIds,
-                            nextFacetId))
-                .filter(Objects::nonNull)
+                        Optional.ofNullable(
+                            toDependencyModel(
+                                vajramInfoLite.vajramId(),
+                                depField,
+                                givenIdsByName,
+                                takenFacetIds,
+                                nextFacetId)))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .collect(toImmutableList()),
             conformsToTraitInfo);
     note("VajramInfo: %s".formatted(vajramInfo));
@@ -838,18 +841,28 @@ public class Utils {
     return addDefaultAnnotations(interfaceBuilder);
   }
 
-  public TypeAndName box(TypeAndName javaType, AnnotationSpec... annotationSpecs) {
-    List<AnnotationSpec> annotationSpecList =
-        Streams.concat(javaType.annotationSpecs().stream(), stream(annotationSpecs))
-            .distinct()
-            .toList();
+  public TypeAndName box(TypeAndName javaType) {
     @Nullable TypeMirror typeMirror = javaType.type();
-    if (typeMirror == null || !typeMirror.getKind().isPrimitive()) {
-      return new TypeAndName(javaType.typeName(), null, annotationSpecList);
+    if (typeMirror == null) {
+      return javaType;
     }
-    TypeMirror boxed = processingEnv.getTypeUtils().boxedClass((PrimitiveType) typeMirror).asType();
+    TypeKind typeKind = typeMirror.getKind();
+    if (!typeKind.isPrimitive() && typeKind != TypeKind.VOID) {
+      return javaType;
+    }
+    TypeMirror boxed;
+    if (typeKind == TypeKind.VOID) {
+      boxed =
+          requireNonNull(
+                  processingEnv.getElementUtils().getTypeElement(Void.class.getCanonicalName()))
+              .asType();
+    } else {
+      boxed = processingEnv.getTypeUtils().boxedClass((PrimitiveType) typeMirror).asType();
+    }
     return new TypeAndName(
-        TypeName.get(boxed).annotated(annotationSpecList), boxed, annotationSpecList);
+        TypeName.get(boxed).annotated(javaType.annotationSpecs()),
+        boxed,
+        javaType.annotationSpecs());
   }
 
   TypeName optional(TypeAndName javaType) {
@@ -863,7 +876,7 @@ public class Utils {
 
   private TypeName responseType(TypeAndName requestType, TypeAndName facetType) {
     return ParameterizedTypeName.get(
-        ClassName.get(One2OneDepResponse.class), box(facetType).typeName(), requestType.typeName());
+        ClassName.get(One2OneDepResponse.class), requestType.typeName(), box(facetType).typeName());
   }
 
   public TypeName responsesType(DependencyModel dep) {
@@ -873,7 +886,7 @@ public class Utils {
 
   private TypeName responsesType(TypeAndName requestType, TypeAndName facetType) {
     return ParameterizedTypeName.get(
-        ClassName.get(FanoutDepResponses.class), box(facetType).typeName(), requestType.typeName());
+        ClassName.get(FanoutDepResponses.class), requestType.typeName(), box(facetType).typeName());
   }
 
   TypeAndName getTypeName(DataType<?> dataType, List<AnnotationSpec> typeAnnotations) {
@@ -899,10 +912,10 @@ public class Utils {
 
   @SuppressWarnings("method.invocation")
   public ExecutableElement getMethodToOverride(Class<?> clazz, String methodName, int paramCount) {
-    return checkNotNull(
+    return requireNonNull(
             processingEnv()
                 .getElementUtils()
-                .getTypeElement(checkNotNull(clazz.getCanonicalName())))
+                .getTypeElement(requireNonNull(clazz.getCanonicalName())))
         .getEnclosedElements()
         .stream()
         .filter(element -> element instanceof ExecutableElement)
@@ -926,7 +939,6 @@ public class Utils {
   public FacetJavaType getFacetFieldType(FacetGenModel facet) {
     if (facet instanceof DependencyModel dep) {
       if (dep.canFanout()) {
-        // Fanout dependency
         return new FanoutResponses(this);
       } else {
         return new One2OneResponse(this);
@@ -934,6 +946,16 @@ public class Utils {
     } else {
       return new Boxed(this);
     }
+  }
+
+  public boolean usePlatformDefault(FacetGenModel facet) {
+    IfNull ifNull = facet.facetField().getAnnotation(IfNull.class);
+    return ifNull != null && ifNull.value().usePlatformDefault();
+  }
+
+  public boolean isMandatoryOnServer(FacetGenModel facet) {
+    IfNull ifNull = facet.facetField().getAnnotation(IfNull.class);
+    return ifNull != null && ifNull.value().isMandatoryOnServer();
   }
 
   public String getJavaTypeCreationCode(

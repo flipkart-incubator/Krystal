@@ -20,9 +20,12 @@ import lombok.Getter;
 import lombok.experimental.UtilityClass;
 
 /**
- * This annotation documents the strategy to follow when a facet has no value (i.e. {@code null} or
- * {@link Nil}). If a data element isn't {@link ElementTags tagged} with this annotation, then it is
- * as if it is annotated with {@code @IfNoValue(then=MAY_FAIL_CONDITIONALLY)}.
+ * This annotation documents the strategy to follow when a data element in a request - like an input
+ * facet or field in a request model has no value (i.e. {@code null} or {@link Nil}). If a data
+ * element isn't {@link ElementTags tagged} with this annotation, then the platform will infer a
+ * default value based on the context. For example, in case of input facets of vajrams, the Krystal
+ * platform defaults to {@code @IfNoValue(then=WILL_NEVER_FAIL)} in case this annotaiton is not
+ * used.
  *
  * <p>In case of maps and lists, empty maps and empty lists are considered as valid values, so this
  * annotation doesn't affect them.
