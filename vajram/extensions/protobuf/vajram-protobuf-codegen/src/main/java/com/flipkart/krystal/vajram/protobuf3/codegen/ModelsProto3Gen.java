@@ -126,7 +126,7 @@ public class ModelsProto3Gen implements CodeGenerator {
     String protoMsgClassName = modelRootName + MODELS_PROTO_MSG_SUFFIX;
 
     // Extract model methods
-    List<ExecutableElement> modelMethods = extractModelMethods(modelRootType);
+    List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
     // Create class annotations
     AnnotationSpec suppressWarningsAnnotation =
@@ -540,32 +540,6 @@ public class ModelsProto3Gen implements CodeGenerator {
                 .addStatement("return _proto")
                 .build())
         .build();
-  }
-
-  private List<ExecutableElement> extractModelMethods(TypeElement modelRootType) {
-    List<ExecutableElement> modelMethods = new ArrayList<>();
-
-    for (Element element : modelRootType.getEnclosedElements()) {
-      if (ElementKind.METHOD.equals(element.getKind())) {
-        ExecutableElement method = (ExecutableElement) element;
-
-        // Skip methods from Object class or other non-model methods
-        if (method.getSimpleName().toString().equals("_build")
-            || method.getSimpleName().toString().equals("_asBuilder")
-            || method.getSimpleName().toString().equals("_newCopy")) {
-          continue;
-        }
-
-        // Validate method has zero parameters
-        if (!method.getParameters().isEmpty()) {
-          continue;
-        }
-
-        modelMethods.add(method);
-      }
-    }
-
-    return modelMethods;
   }
 
   /**

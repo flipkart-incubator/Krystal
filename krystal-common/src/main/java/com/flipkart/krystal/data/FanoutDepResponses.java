@@ -6,6 +6,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.util.function.BiConsumer;
 import lombok.Getter;
 import lombok.ToString;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -39,6 +40,11 @@ public final class FanoutDepResponses<R extends Request<T>, T> implements DepRes
       responsesAsMap = asMap();
     }
     return responsesAsMap.getOrDefault(request._build(), nil());
+  }
+
+  public void forEach(BiConsumer<R, Errable<T>> action) {
+    requestResponsePairs.forEach(
+        requestResponse -> action.accept(requestResponse.request(), requestResponse.response()));
   }
 
   private ImmutableMap<ImmutableRequest<T>, Errable<T>> asMap() {

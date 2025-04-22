@@ -45,24 +45,24 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.K
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.FriendsService;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.Hello;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.Hello_ImmutReq;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.Hello_ImmutReqPojo;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.Hello_ReqImmut;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.Hello_ReqImmutPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_ImmutReq;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_ImmutReqPojo;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_ReqImmut;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_ReqImmutPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_ImmutReq;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_ImmutReqPojo;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_ReqImmut;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_ReqImmutPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends_ImmutReqPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2_ImmutReqPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello_ImmutReqPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService_ImmutReq;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService_ImmutReqPojo;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService_ReqImmut;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService_ReqImmutPojo;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.time.Clock;
@@ -797,34 +797,34 @@ class KrystexVajramExecutorTest {
     assertThat(multiHellos).succeedsWithin(TIMEOUT).isEqualTo("");
   }
 
-  private Hello_ImmutReq helloRequest(TestRequestContext applicationRequestContext) {
+  private Hello_ReqImmut helloRequest(TestRequestContext applicationRequestContext) {
     return helloRequestBuilder(applicationRequestContext)._build();
   }
 
-  private Hello_ImmutReq.Builder helloRequestBuilder(TestRequestContext applicationRequestContext) {
-    return Hello_ImmutReqPojo._builder()
+  private Hello_ReqImmut.Builder helloRequestBuilder(TestRequestContext applicationRequestContext) {
+    return Hello_ReqImmutPojo._builder()
         .name(applicationRequestContext.loggedInUserId().orElseThrow());
   }
 
-  private Hello_ImmutReq incompleteHelloRequest() {
-    return Hello_ImmutReqPojo._builder()._build();
+  private Hello_ReqImmut incompleteHelloRequest() {
+    return Hello_ReqImmutPojo._builder()._build();
   }
 
-  private TestUserService_ImmutReq testUserServiceRequest(TestRequestContext testRequestContext) {
-    return TestUserService_ImmutReqPojo._builder()
+  private TestUserService_ReqImmut testUserServiceRequest(TestRequestContext testRequestContext) {
+    return TestUserService_ReqImmutPojo._builder()
         .userId(testRequestContext.loggedInUserId().orElse(null))
         ._build();
   }
 
-  private HelloFriends_ImmutReq helloFriendsRequest(TestRequestContext testRequestContext) {
-    return HelloFriends_ImmutReqPojo._builder()
+  private HelloFriends_ReqImmut helloFriendsRequest(TestRequestContext testRequestContext) {
+    return HelloFriends_ReqImmutPojo._builder()
         .userId(testRequestContext.loggedInUserId().orElse(null))
         .numberOfFriends(testRequestContext.numberOfFriends())
         ._build();
   }
 
-  private HelloFriendsV2_ImmutReq helloFriendsV2Request(TestRequestContext testRequestContext) {
-    return HelloFriendsV2_ImmutReqPojo._builder()
+  private HelloFriendsV2_ReqImmut helloFriendsV2Request(TestRequestContext testRequestContext) {
+    return HelloFriendsV2_ReqImmutPojo._builder()
         .userId(testRequestContext.loggedInUserId().orElse(null))
         ._build();
   }

@@ -45,8 +45,8 @@ public final class Constants {
   public static final String _INTERNAL_FACETS_CLASS = "_InternalFacets";
   public static final String FACETS_FIELDS_VAR = "facetsFields";
   public static final String REQUEST_SUFFIX = "_Req";
-  public static final String IMMUT_REQUEST_SUFFIX = "_ImmutReq";
-  public static final String IMMUT_REQUEST_POJO_SUFFIX = "_ImmutReqPojo";
+  public static final String IMMUT_REQUEST_SUFFIX = "_ReqImmut";
+  public static final String IMMUT_REQUEST_POJO_SUFFIX = "_ReqImmutPojo";
 
   public static final String INPUT_SPECS_CLASS_SUFFIX = "_InputSpecs";
   public static final String FACET_SPECS_CLASS_SUFFIX = "_FacetSpecs";

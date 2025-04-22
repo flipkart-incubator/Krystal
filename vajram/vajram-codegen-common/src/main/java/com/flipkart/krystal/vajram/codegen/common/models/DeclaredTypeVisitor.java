@@ -2,9 +2,7 @@ package com.flipkart.krystal.vajram.codegen.common.models;
 
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
-import com.flipkart.krystal.datatypes.JavaTypes;
 import com.google.common.collect.ImmutableMap;
-import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.type.ArrayType;
@@ -104,11 +102,11 @@ public class DeclaredTypeVisitor<T> extends AbstractTypeVisitor14<DataType<T>, V
     throw uoe();
   }
 
-  private static UnsupportedOperationException uoe(String message) {
-    return new UnsupportedOperationException(message);
+  private VajramValidationException uoe(String message) {
+    return util.errorAndThrow(message, element);
   }
 
-  private static UnsupportedOperationException uoe() {
-    return new UnsupportedOperationException();
+  private VajramValidationException uoe() {
+    return util.errorAndThrow("Unsupported operation", element);
   }
 }

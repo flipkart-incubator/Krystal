@@ -12,6 +12,8 @@ import java.lang.annotation.Target;
 public @interface ModelRoot {
   ModelType type() default NONE;
 
+  String suffixSeperator() default "_";
+
   enum ModelType {
     /** This model is a neither a request model nor a response model */
     NONE,

@@ -4,7 +4,6 @@ import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
 import static com.flipkart.krystal.data.IfNull.IfNullThen.MAY_FAIL_CONDITIONALLY;
 import static com.flipkart.krystal.data.IfNull.IfNullThen.WILL_NEVER_FAIL;
 import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getIfNoValue;
-import static com.flipkart.krystal.vajram.codegen.processor.VajramCodeGenerator.validateIfNoValueStrategyApplicability;
 import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.DEFAULT;
@@ -17,15 +16,15 @@ import static javax.lang.model.element.Modifier.STATIC;
 // since the actual package paths may differ across environments
 import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.data.IfNull.IfNullThen;
-import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.model.ImmutableModel;
+import com.flipkart.krystal.model.ImmutableModelType;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelBuilder;
+import com.flipkart.krystal.model.ModelBuilderType;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase;
-import com.flipkart.krystal.vajram.codegen.common.models.DeclaredTypeVisitor;
 import com.flipkart.krystal.vajram.codegen.common.models.Utils;
 import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.vajram.codegen.common.spi.ModelsCodeGenContext;
@@ -37,16 +36,13 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -56,19 +52,27 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * ModelRoot} annotation. Interfaces which extend a {@link Model} but do not have the {@link
  * ModelRoot} annotation are ignored by this class.
  *
+ * <p>The generated subclasses and sub-interfaces only override or implement "model data accessor
+ * methods". A method is not considered one if it is a default method whose names start with '_' -
+ * these are considered "meta" methods which are not designed to be accessors for model data and are
+ * ignored by this code generator..
+ *
  * <p>This class throws an error if any of the following conditions are not satisfied:
  *
  * <ul>
  *   <li>The type with {@link ModelRoot} annotation is MUST be an interface
  *   <li>The interface with @{@link ModelRoot} annotation MUST extend {@link Model}
- *   <li>All methods in the interface MUST have zero parameters
- *   <li>All methods in the interface MUST have a return type. {@code void} and {@link Void} are not
- *       supported
- *   <li>None of the method return types must be arrays
+ *   <li>All model data accessor methods in the interface MUST have zero parameters
+ *   <li>All model data accessor methods in the interface MUST have a return type. {@code void} and
+ *       {@link Void} are not supported
+ *   <li>None of the model data accessor method return types must be arrays
  * </ul>
  *
- * <p>This code generator always generates the following classes in the same package as the model
- * root:
+ * The generated subclasses and sub-interfaces do not override or implement default methods whose
+ * names start with '_' - these are considered "meta" methods which are not designed to be accessors
+ * for model data.
+ *
+ * <p>This code generator always generates the following classes:
  *
  * <ul>
  *   <li>Immutable Model interface which extends the Model Root and extends {@link ImmutableModel}.
@@ -149,15 +153,17 @@ public final class JavaModelsGenerator implements CodeGenerator {
     // Validate the model root type
     validateModelRoot(modelRootType, util);
 
+    ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
+
     // Extract and validate model methods
-    List<ExecutableElement> modelMethods = extractAndValidateModelMethods(modelRootType, util);
+    List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
     // Get package and class names
     String packageName =
         util.processingEnv().getElementUtils().getPackageOf(modelRootType).toString();
     String modelRootName = modelRootType.getSimpleName().toString();
-    String immutableModelName = modelRootName + "_Immut";
-    String immutablePojoName = modelRootName + "_ImmutPojo";
+    String immutableModelName = modelRootName + modelRoot.suffixSeperator() + "Immut";
+    String immutablePojoName = modelRootName + modelRoot.suffixSeperator() + "ImmutPojo";
 
     // Generate the immutable interface and its builder interface
     TypeSpec immutableInterface =
@@ -197,18 +203,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
           modelRootType);
     }
 
-    boolean extendsModel = false;
-    for (TypeMirror superInterface : modelRootType.getInterfaces()) {
-      TypeElement superElement =
-          requireNonNull(
-              (TypeElement) util.processingEnv().getTypeUtils().asElement(superInterface));
-      if (superElement.getQualifiedName().contentEquals(Model.class.getCanonicalName())) {
-        extendsModel = true;
-        break;
-      }
-    }
-
-    if (!extendsModel) {
+    if (!extendsModel(modelRootType, util)) {
       util.error(
           "Interface with @ModelRoot annotation must extend Model: "
               + modelRootType.getQualifiedName(),
@@ -216,54 +211,19 @@ public final class JavaModelsGenerator implements CodeGenerator {
     }
   }
 
-  /**
-   * Extracts and validates model methods from the model root interface.
-   *
-   * @param modelRootType The type element representing the model root
-   * @param util Utilities for code generation
-   * @return List of validated executable elements representing model methods
-   */
-  private List<ExecutableElement> extractAndValidateModelMethods(
-      TypeElement modelRootType, Utils util) {
-    List<ExecutableElement> modelMethods = new ArrayList<>();
-
-    for (Element element : modelRootType.getEnclosedElements()) {
-      if (ElementKind.METHOD.equals(element.getKind())) {
-        ExecutableElement method = (ExecutableElement) element;
-
-        validateGetterMethod(util, method);
-
-        modelMethods.add(method);
+  private static boolean extendsModel(TypeElement modelRootType, Utils util) {
+    boolean extendsModel = false;
+    for (TypeMirror superInterface : modelRootType.getInterfaces()) {
+      TypeElement superElement =
+          requireNonNull(
+              (TypeElement) util.processingEnv().getTypeUtils().asElement(superInterface));
+      if (superElement.getQualifiedName().contentEquals(Model.class.getCanonicalName())
+          || extendsModel(superElement, util)) {
+        extendsModel = true;
+        break;
       }
     }
-
-    return modelMethods;
-  }
-
-  private static void validateGetterMethod(Utils util, ExecutableElement method) {
-    // Validate method has zero parameters
-    if (!method.getParameters().isEmpty()) {
-      util.error("Model root methods must have zero parameters: " + method.getSimpleName(), method);
-    }
-
-    TypeMirror returnType = method.getReturnType();
-
-    // Validate method has a return type (not void)
-    if (returnType.getKind() == TypeKind.VOID) {
-      util.error(
-          "Model root methods must have a return type (not void): " + method.getSimpleName(),
-          method);
-    }
-
-    // Validate method return type is not an array
-    if (returnType.getKind() == TypeKind.ARRAY) {
-      util.error(
-          "Model root methods must not return arrays. Use List instead.", method);
-    }
-
-    DataType<?> dataType = new DeclaredTypeVisitor<>(util, method).visit(returnType);
-
-    validateIfNoValueStrategyApplicability(method, dataType, util);
+    return extendsModel;
   }
 
   /**
@@ -277,11 +237,28 @@ public final class JavaModelsGenerator implements CodeGenerator {
   private TypeSpec generateImmutableInterface(
       TypeElement modelRootType, List<ExecutableElement> modelMethods, String immutableModelName) {
 
+    TypeMirror immutableModelType =
+        getAnnotationFromSuperInterfaces(modelRootType, ImmutableModelType.class)
+            .flatMap(t -> util.getTypeFromAnnotationMember(t::value))
+            .orElse(
+                util.processingEnv()
+                    .getElementUtils()
+                    .getTypeElement(ImmutableModel.class.getCanonicalName())
+                    .asType());
+
+    TypeMirror modelBuilderType =
+        getAnnotationFromSuperInterfaces(modelRootType, ModelBuilderType.class)
+            .flatMap(t -> util.getTypeFromAnnotationMember(t::value))
+            .orElse(
+                util.processingEnv()
+                    .getElementUtils()
+                    .getTypeElement(ImmutableModel.class.getCanonicalName())
+                    .asType());
     // Create the builder interface
     TypeSpec builderInterface =
         TypeSpec.interfaceBuilder("Builder")
             .addModifiers(PUBLIC, STATIC)
-            .addSuperinterface(ClassName.get(ModelBuilder.class))
+            .addSuperinterface(modelBuilderType)
             .addMethods(generateBuilderInterfaceMethods(modelMethods, immutableModelName))
             .build();
 
@@ -289,7 +266,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     return TypeSpec.interfaceBuilder(immutableModelName)
         .addModifiers(PUBLIC)
         .addSuperinterface(ClassName.get(modelRootType))
-        .addSuperinterface(ClassName.get(ImmutableModel.class))
+        .addSuperinterface(immutableModelType)
         .addMethod(
             MethodSpec.methodBuilder("_build")
                 .addModifiers(PUBLIC, DEFAULT)
@@ -299,6 +276,34 @@ public final class JavaModelsGenerator implements CodeGenerator {
                 .build())
         .addType(builderInterface)
         .build();
+  }
+
+  private <T extends Annotation> Optional<T> getAnnotationFromSuperInterfaces(
+      TypeElement typeElement, Class<T> annotationType) {
+    T annotation = typeElement.getAnnotation(annotationType);
+    if (annotation == null) {
+      List<T> list =
+          typeElement.getInterfaces().stream()
+              .map(t -> util.processingEnv().getTypeUtils().asElement(t))
+              .filter(e -> e instanceof TypeElement)
+              .map(e -> (TypeElement) e)
+              .map(te -> getAnnotationFromSuperInterfaces(te, annotationType))
+              .filter(Optional::isPresent)
+              .map(Optional::get)
+              .toList();
+      if (list.isEmpty()) {
+        return Optional.empty();
+      } else if (list.size() > 1) {
+        util.error(
+            "More than one super interface has @ImmutableModelType annotation. Exected zero or one",
+            typeElement);
+        return Optional.empty();
+      } else {
+        return Optional.ofNullable(list.get(0));
+      }
+    } else {
+      return Optional.of(annotation);
+    }
   }
 
   /**

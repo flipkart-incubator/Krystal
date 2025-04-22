@@ -20,9 +20,11 @@ import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.data.IfNull.Creator;
+import com.flipkart.krystal.data.IfNull.IfNullThen;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.datatypes.ApplicableToTypes;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.facets.FacetType;
@@ -164,6 +166,124 @@ public class Utils {
       ifNull = Creator.createDefault();
     }
     return ifNull;
+  }
+
+  /**
+   * Extracts and validates model methods from the model root interface.
+   *
+   * @param modelRootType The type element representing the model root
+   * @return List of validated executable elements representing model methods
+   */
+  public List<ExecutableElement> extractAndValidateModelMethods(TypeElement modelRootType) {
+    List<ExecutableElement> modelMethods = new ArrayList<>();
+
+    for (Element element : modelRootType.getEnclosedElements()) {
+      if (ElementKind.METHOD.equals(element.getKind())) {
+        ExecutableElement method = (ExecutableElement) element;
+
+        if (method.isDefault() && method.getSimpleName().toString().startsWith("_")) {
+          // Default methods whose names start with an '_' are considered "meta" methods which are
+          // used to access actual model data. So they are ignored.
+          continue;
+        }
+        // Skip methods from Object class or other non-model methods
+        if (method.getSimpleName().toString().equals("_build")
+            || method.getSimpleName().toString().equals("_asBuilder")
+            || method.getSimpleName().toString().equals("_newCopy")) {
+          continue;
+        }
+
+        validateGetterMethod(method);
+
+        modelMethods.add(method);
+      }
+    }
+
+    return modelMethods;
+  }
+
+  private void validateGetterMethod(ExecutableElement method) {
+    // Validate method has zero parameters
+    if (!method.getParameters().isEmpty()) {
+      error("Model root methods must have zero parameters: " + method.getSimpleName(), method);
+    }
+
+    TypeMirror returnType = method.getReturnType();
+
+    // Validate method has a return type (not void)
+    if (returnType.getKind() == TypeKind.VOID) {
+      error(
+          "Model root methods must have a return type (not void): " + method.getSimpleName(),
+          method);
+    }
+
+    // Validate method return type is not an array
+    if (returnType.getKind() == TypeKind.ARRAY) {
+      error("Model root methods must not return arrays. Use List instead.", method);
+    }
+
+    DataType<?> dataType = new DeclaredTypeVisitor<>(this, method).visit(returnType);
+
+    validateIfNoValueStrategyApplicability(method, dataType);
+  }
+
+  public void validateIfNoValueStrategyApplicability(Element typedElement, DataType<?> dataType) {
+    IfNull ifNull = typedElement.getAnnotation(IfNull.class);
+    if (ifNull != null) {
+      IfNullThen ifNullThen = ifNull.value();
+      @Nullable ApplicableToTypes applicableToTypes;
+      try {
+        applicableToTypes =
+            IfNullThen.class.getField(ifNullThen.name()).getAnnotation(ApplicableToTypes.class);
+      } catch (NoSuchFieldException e) {
+        // This should never happen since we're using the enum value's name
+        throw errorAndThrow(
+            "Failed to access field " + ifNullThen.name() + " in IfNoValue.Strategy enum",
+            typedElement);
+      }
+
+      if (applicableToTypes != null) {
+        List<JavaType<Object>> applicableTypes =
+            stream(applicableToTypes.value()).map(JavaType::create).toList();
+        boolean isApplicableToAll = applicableToTypes.all();
+
+        ProcessingEnvironment processingEnv = processingEnv();
+        Types typeUtils = processingEnv.getTypeUtils();
+        TypeMirror rawFacetType = typeUtils.erasure(dataType.javaModelType(processingEnv));
+        if (!applicableTypes.isEmpty()) {
+          // Get the facet's data type
+          boolean isCompatible = false;
+
+          // Check if the facet's type is compatible with any of the applicable types
+          for (JavaType<Object> applicableType : applicableTypes) {
+            if (typeUtils.isSameType(rawFacetType, applicableType.javaModelType(processingEnv))) {
+              isCompatible = true;
+              break;
+            }
+          }
+
+          if (!isCompatible) {
+            error(
+                String.format(
+                    "The IfNoValue.Strategy.%s is not applicable to data with type '%s'. "
+                        + "This strategy is only applicable to the following types: %s",
+                    ifNullThen.name(),
+                    rawFacetType,
+                    applicableTypes.stream()
+                        .map(JavaType::canonicalClassName)
+                        .collect(Collectors.joining(","))),
+                typedElement);
+          }
+        } else if (!isApplicableToAll) {
+          error(
+              String.format(
+                  "The IfNoValue.Strategy.%s is not applicable to data of type '%s'. "
+                      + "This strategy is not applicable to any types.",
+                  ifNullThen.name(), rawFacetType),
+              typedElement);
+        }
+      }
+    }
   }
 
   public boolean isNullable(TypeMirror typeMirror) {
@@ -599,7 +719,7 @@ public class Utils {
     }
   }
 
-  Optional<TypeMirror> getTypeFromAnnotationMember(Supplier<Class<?>> supplier) {
+  public Optional<TypeMirror> getTypeFromAnnotationMember(Supplier<Class<?>> supplier) {
     try {
       var ignored = supplier.get();
       throw new AssertionError("Expected supplier to throw error");

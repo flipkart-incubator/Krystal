@@ -160,7 +160,7 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
     protoBuilder.append("message ").append(modelRootName).append(MODELS_PROTO_MSG_SUFFIX + " {\n");
 
     // Extract methods from the model root interface
-    List<ExecutableElement> modelMethods = extractModelMethods(modelRootType);
+    List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
     // Add fields from model methods using SerialId annotation for field numbers
     Set<Integer> usedFieldNumbers = new HashSet<>();
@@ -258,31 +258,5 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
     protoBuilder.append("}\n");
 
     return protoBuilder.toString();
-  }
-
-  private List<ExecutableElement> extractModelMethods(TypeElement modelRootType) {
-    List<ExecutableElement> modelMethods = new ArrayList<>();
-
-    for (Element element : modelRootType.getEnclosedElements()) {
-      if (ElementKind.METHOD.equals(element.getKind())) {
-        ExecutableElement method = (ExecutableElement) element;
-
-        // Skip methods from Object class or other non-model methods
-        if (method.getSimpleName().toString().equals("_build")
-            || method.getSimpleName().toString().equals("_asBuilder")
-            || method.getSimpleName().toString().equals("_newCopy")) {
-          continue;
-        }
-
-        // Validate method has zero parameters
-        if (!method.getParameters().isEmpty()) {
-          continue;
-        }
-
-        modelMethods.add(method);
-      }
-    }
-
-    return modelMethods;
   }
 }
