@@ -4,20 +4,22 @@ import com.diffplug.gradle.spotless.SpotlessExtension
 import org.checkerframework.gradle.plugin.CheckerFrameworkExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.Task
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.testing.jacoco.plugins.JacocoPluginExtension
 
 class FkJavaCodeStandard implements Plugin<Project> {
+
+    public static final String UNSAFE_COMPILE_OPTION = "unsafeCompile"
+
     @Override
     void apply(Project project) {
         java(project)
         idea(project)
+        tests(project)
+
         checkerFramework(project)
         spotless(project)
         errorProne(project)
-
-        tests(project)
     }
 
     private static tests(Project project) {
@@ -60,7 +62,9 @@ class FkJavaCodeStandard implements Plugin<Project> {
         project.dependencies.add('annotationProcessor', 'org.pcollections:pcollections:4.0.2')
         project.dependencies.add('annotationProcessor', 'com.github.kevinstern:software-and-algorithms:1.0')
 
-
+        if (project.findProperty(UNSAFE_COMPILE_OPTION) == "true") {
+            checkerFramework.skipCheckerFramework = true
+        }
     }
 
     private static spotless(Project project) {
@@ -73,14 +77,19 @@ class FkJavaCodeStandard implements Plugin<Project> {
                     googleJavaFormat()
                 }
 
+        project.tasks.named('spotlessJava').configure { mustRunAfter('compileJava') }
+        project.tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
+
         project.afterEvaluate(p -> {
             p.tasks.named('spotlessCheck') {
                 it.dependsOn('spotlessApply')
             }
         })
-
-        project.tasks.named('spotlessJava').configure { mustRunAfter('compileJava') }
-        project.tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
+        if (project.findProperty(UNSAFE_COMPILE_OPTION) == "true") {
+            project.tasks.named('spotlessCheck').configure {
+                enabled = false
+            }
+        }
     }
 
     private static errorProne(Project project) {
@@ -88,8 +97,14 @@ class FkJavaCodeStandard implements Plugin<Project> {
 
         project.dependencies.add('errorprone', 'com.google.errorprone:error_prone_core:2.27.1')
         project.tasks.compileTestJava.configure { JavaCompile task -> task.options.errorprone.enabled = false }
-        project.tasks.withType(JavaCompile).configureEach { JavaCompile task ->
-            task.options.errorprone.disableWarningsInGeneratedCode = true
+        project.tasks
+                .withType(JavaCompile)
+                .configureEach { JavaCompile task -> task.options.errorprone.disableWarningsInGeneratedCode = true }
+
+        if (project.findProperty(UNSAFE_COMPILE_OPTION) == "true") {
+            project.tasks
+                    .withType(JavaCompile)
+                    .configureEach { JavaCompile task -> task.options.errorprone.enabled = false }
         }
     }
 

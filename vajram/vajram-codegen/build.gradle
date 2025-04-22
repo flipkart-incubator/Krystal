@@ -38,8 +38,6 @@ dependencies {
     annotationProcessor 'com.google.auto.service:auto-service'
 }
 
-if (!fast_compile) {
-    checkerFramework {
-        extraJavacArgs += ['-AresolveReflection',]
-    }
+checkerFramework {
+    extraJavacArgs += ['-AresolveReflection',]
 }

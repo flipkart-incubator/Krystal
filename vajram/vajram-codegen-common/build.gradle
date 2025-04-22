@@ -17,8 +17,6 @@ publishing {
     }
 }
 
-if (!fast_compile) {
-    checkerFramework {
-        extraJavacArgs += ['-AresolveReflection',]
-    }
+checkerFramework {
+    extraJavacArgs += ['-AresolveReflection',]
 }

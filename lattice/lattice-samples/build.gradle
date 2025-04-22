@@ -43,6 +43,4 @@ dependencies {
     testImplementation project(':vajram:extensions:guice:vajram-guice')
 }
 
-if (!fast_compile) {
-    tasks.named("spotlessJava").configure { dependsOn("codeGenVajramModels") }
-}
+tasks.named("spotlessJava").configure { dependsOn("codeGenVajramModels") }
