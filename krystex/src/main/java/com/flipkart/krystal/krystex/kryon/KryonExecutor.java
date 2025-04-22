@@ -127,7 +127,7 @@ public final class KryonExecutor implements KrystalExecutor {
   private final KryonExecutorMetrics kryonMetrics;
   private final Map<InvocationId, KryonExecution> allExecutions = new LinkedHashMap<>();
   private final Set<InvocationId> unFlushedExecutions = new LinkedHashSet<>();
-  private final Map<VajramID, Set<DependentChain>> dependantChainsPerKryon = new LinkedHashMap<>();
+  private final Map<VajramID, Set<DependentChain>> dependentChainsPerKryon = new LinkedHashMap<>();
   private final RequestIdGenerator preferredReqGenerator;
   private final Set<DependentChain> depChainsDisabledInAllExecutions = new LinkedHashSet<>();
 
@@ -212,7 +212,7 @@ public final class KryonExecutor implements KrystalExecutor {
                       new InitiateActiveDepChains(
                           vajramID,
                           ImmutableSet.copyOf(
-                              dependantChainsPerKryon.getOrDefault(vajramID, ImmutableSet.of()))));
+                              dependentChainsPerKryon.getOrDefault(vajramID, ImmutableSet.of()))));
                   decorators.put(decoratorType, outputLogicDecorator);
                   break;
                 }
@@ -271,7 +271,7 @@ public final class KryonExecutor implements KrystalExecutor {
             (Supplier<CompletableFuture<@Nullable T>>)
                 () -> {
                   createDependencyKryons(
-                      vajramID, kryonDefinitionRegistry.getDependantChainsStart(), executionConfig);
+                      vajramID, kryonDefinitionRegistry.getDependentChainsStart(), executionConfig);
                   CompletableFuture<@Nullable Object> future = new CompletableFuture<>();
                   if (allExecutions.containsKey(invocationId)) {
                     future.completeExceptionally(
@@ -343,7 +343,7 @@ public final class KryonExecutor implements KrystalExecutor {
           (dependency, depKryonId) ->
               createDependencyKryons(
                   depKryonId, dependentChain.extend(finalVajramId, dependency), executionConfig));
-      dependantChainsPerKryon
+      dependentChainsPerKryon
           .computeIfAbsent(finalVajramId, _n -> new LinkedHashSet<>())
           .add(dependentChain);
     }
@@ -499,7 +499,7 @@ public final class KryonExecutor implements KrystalExecutor {
   private void flush() {
     enqueueRunnable(
         () -> {
-          computeDisabledDependantChains();
+          computeDisabledDependentChains();
           submitBatch(unFlushedExecutions);
           unFlushedExecutions.stream()
               .map(requestId -> getKryonExecution(requestId).vajramID())
@@ -511,11 +511,11 @@ public final class KryonExecutor implements KrystalExecutor {
                           .<VoidResponse>decorateDependency(this::executeCommand)
                           .invokeDependency(
                               new Flush(
-                                  kryonId, kryonDefinitionRegistry.getDependantChainsStart())));
+                                  kryonId, kryonDefinitionRegistry.getDependentChainsStart())));
         });
   }
 
-  private void computeDisabledDependantChains() {
+  private void computeDisabledDependentChains() {
     depChainsDisabledInAllExecutions.clear();
     List<ImmutableSet<DependentChain>> disabledDependantChainsPerExecution =
         unFlushedExecutions.stream()
@@ -567,7 +567,7 @@ public final class KryonExecutor implements KrystalExecutor {
                                         .<KryonExecution, InvocationId, Request<?>>toImmutableMap(
                                             KryonExecution::instanceExecutionId,
                                             KryonExecution::request)),
-                            kryonDefinitionRegistry.getDependantChainsStart(),
+                            kryonDefinitionRegistry.getDependentChainsStart(),
                             ImmutableMap.of()));
           } catch (Throwable throwable) {
             batchResponseFuture =

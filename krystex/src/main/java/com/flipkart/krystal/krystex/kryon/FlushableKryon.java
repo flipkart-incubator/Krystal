@@ -116,7 +116,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
 
   private final Map<DependentChain, Set<Facet>> executedDependencies = new LinkedHashMap<>();
 
-  private final Map<DependentChain, Set<InvocationId>> invocationsByDependantChain =
+  private final Map<DependentChain, Set<InvocationId>> invocationsByDependentChain =
       new LinkedHashMap<>();
 
   private final Set<DependentChain> flushedDependentChain = new LinkedHashSet<>();
@@ -763,7 +763,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
   }
 
   private void collectInputValues(ForwardReceive forwardBatch) {
-    if (invocationsByDependantChain.putIfAbsent(
+    if (invocationsByDependentChain.putIfAbsent(
             forwardBatch.dependentChain(), forwardBatch.invocationIds())
         != null) {
       throw new DuplicateRequestException(

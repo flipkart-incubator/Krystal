@@ -83,7 +83,7 @@ class ChainAddTest {
     CompletableFuture<Integer> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
     MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(kryonExecutionReport);
-    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependantChains(graph));
+    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependentChains(graph));
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
@@ -121,7 +121,7 @@ class ChainAddTest {
               graph.getVajramIdByVajramDefType(ChainAdd.class),
               ChainAdd_ImmutReqPojo._builder().numbers(List.of())._build(),
               KryonExecutionConfig.builder()
-                  .disabledDependentChains(getDisabledDependantChains(graph))
+                  .disabledDependentChains(getDisabledDependentChains(graph))
                   .build());
     }
     assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(0);
@@ -139,7 +139,7 @@ class ChainAddTest {
     long startTime = System.nanoTime();
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
-    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependantChains(graph));
+    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependentChains(graph));
     for (int value = 0; value < loopCount; value++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor krystexVajramExecutor =
@@ -205,7 +205,7 @@ class ChainAddTest {
     long startTime = System.nanoTime();
     long timeToCreateExecutors = 0;
     long timeToEnqueueVajram = 0;
-    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependantChains(graph));
+    autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependentChains(graph));
     for (int outer_i = 0; outer_i < outerLoopCount; outer_i++) {
       long iterStartTime = System.nanoTime();
       try (KrystexVajramExecutor krystexVajramExecutor =
@@ -281,7 +281,7 @@ class ChainAddTest {
         KryonExecutionConfig.builder()
             .executionId(String.valueOf(multiplier))
             // Tests whether execution level disabled dependant chains is working
-            .disabledDependentChains(getDisabledDependantChains(graph))
+            .disabledDependentChains(getDisabledDependentChains(graph))
             .build());
   }
 
@@ -331,9 +331,9 @@ class ChainAddTest {
     return completedFuture(a + b);
   }
 
-  private static ImmutableSet<DependentChain> getDisabledDependantChains(VajramKryonGraph graph) {
+  private static ImmutableSet<DependentChain> getDisabledDependentChains(VajramKryonGraph graph) {
     return ImmutableSet.of(
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             graph.getVajramIdByVajramDefType(ChainAdd.class).id(),
             chainSum_s,
             chainSum_s,

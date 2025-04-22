@@ -192,22 +192,22 @@ class AddUsingTraitsTest {
             .numbers3(numbers3)
             ._build(),
         KryonExecutionConfig.builder()
-            .disabledDependentChains(getDisabledDependantChains(graph))
+            .disabledDependentChains(getDisabledDependentChains(graph))
             .executionId(REQUEST_ID)
             .build());
   }
 
-  private static ImmutableSet<DependentChain> getDisabledDependantChains(VajramKryonGraph graph) {
+  private static ImmutableSet<DependentChain> getDisabledDependentChains(VajramKryonGraph graph) {
     String vajramId = graph.getVajramIdByVajramDefType(AddUsingTraits.class).id();
     return ImmutableSet.of(
-        graph.computeDependantChain(vajramId, sum2_s, chainSum_s, chainSum_s),
-        graph.computeDependantChain(vajramId, sum3_s, splitSum1_s, splitSum1_s, splitSum1_s),
-        graph.computeDependantChain(vajramId, sum3_s, splitSum1_s, splitSum1_s, splitSum2_s),
-        graph.computeDependantChain(vajramId, sum3_s, splitSum1_s, splitSum2_s, splitSum1_s),
-        graph.computeDependantChain(vajramId, sum3_s, splitSum1_s, splitSum2_s, splitSum2_s),
-        graph.computeDependantChain(vajramId, sum3_s, splitSum2_s, splitSum1_s, splitSum1_s),
-        graph.computeDependantChain(vajramId, sum3_s, splitSum2_s, splitSum1_s, splitSum2_s),
-        graph.computeDependantChain(vajramId, sum3_s, splitSum2_s, splitSum2_s, splitSum1_s),
-        graph.computeDependantChain(vajramId, sum3_s, splitSum2_s, splitSum2_s, splitSum2_s));
+        graph.computeDependentChain(vajramId, sum2_s, chainSum_s, chainSum_s),
+        graph.computeDependentChain(vajramId, sum3_s, splitSum1_s, splitSum1_s, splitSum1_s),
+        graph.computeDependentChain(vajramId, sum3_s, splitSum1_s, splitSum1_s, splitSum2_s),
+        graph.computeDependentChain(vajramId, sum3_s, splitSum1_s, splitSum2_s, splitSum1_s),
+        graph.computeDependentChain(vajramId, sum3_s, splitSum1_s, splitSum2_s, splitSum2_s),
+        graph.computeDependentChain(vajramId, sum3_s, splitSum2_s, splitSum1_s, splitSum1_s),
+        graph.computeDependentChain(vajramId, sum3_s, splitSum2_s, splitSum1_s, splitSum2_s),
+        graph.computeDependentChain(vajramId, sum3_s, splitSum2_s, splitSum2_s, splitSum1_s),
+        graph.computeDependentChain(vajramId, sum3_s, splitSum2_s, splitSum2_s, splitSum2_s));
   }
 }

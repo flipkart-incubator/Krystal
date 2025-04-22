@@ -45,8 +45,8 @@ public class RequestLevelCache implements KryonDecorator {
   }
 
   public void primeCache(
-      String kryonId, ImmutableFacetValues request, CompletableFuture<@Nullable Object> data) {
-    cache.put(new CacheKey(new VajramID(kryonId), request._build()), data);
+      VajramID vajramID, ImmutableFacetValues request, CompletableFuture<@Nullable Object> data) {
+    cache.put(new CacheKey(vajramID, request._build()), data);
   }
 
   private class CachingDecoratedKryon implements Kryon<KryonCommand, KryonCommandResponse> {

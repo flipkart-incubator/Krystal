@@ -184,7 +184,7 @@ public record InputBatcherConfig(
     Map<com.flipkart.krystal.core.VajramID, Map<Integer, Set<DependentChain>>> ioNodes =
         new HashMap<>();
     for (VajramDefinition rootNode : externallyInvocableVajrams(graph)) {
-      DependentChain dependentChain = graph.kryonDefinitionRegistry().getDependantChainsStart();
+      DependentChain dependentChain = graph.kryonDefinitionRegistry().getDependentChainsStart();
       Map<com.flipkart.krystal.core.VajramID, Integer> ioNodeDepths = new HashMap<>();
       dfs(rootNode, graph, ioNodes, 0, dependentChain, ioNodeDepths, disabledDependentChains);
     }

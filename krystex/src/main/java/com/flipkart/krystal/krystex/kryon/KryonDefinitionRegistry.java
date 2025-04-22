@@ -20,7 +20,7 @@ public final class KryonDefinitionRegistry {
 
   private final LogicDefinitionRegistry logicDefinitionRegistry;
   private final Map<VajramID, KryonDefinition> kryonDefinitions = new ConcurrentHashMap<>();
-  private final DependentChainStart dependantChainStart = new DependentChainStart();
+  private final DependentChainStart dependentChainStart = new DependentChainStart();
 
   public KryonDefinitionRegistry(LogicDefinitionRegistry logicDefinitionRegistry) {
     this.logicDefinitionRegistry = logicDefinitionRegistry;
@@ -77,7 +77,7 @@ public final class KryonDefinitionRegistry {
     return kryonDefinition;
   }
 
-  public DependentChain getDependantChainsStart() {
-    return dependantChainStart;
+  public DependentChain getDependentChainsStart() {
+    return dependentChainStart;
   }
 }
