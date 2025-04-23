@@ -33,18 +33,29 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.MethodSpec.Builder;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.AnnotationValue;
+import javax.lang.model.element.AnnotationValueVisitor;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.AbstractAnnotationValueVisitor8;
+import javax.lang.model.util.SimpleAnnotationValueVisitor8;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.units.qual.A;
+import org.gradle.internal.tools.api.impl.SimpleAnnotationValue;
 
 /**
  * A ModelCodeGenerator generates sub interfaces and implementation classes for "ModelRoots". A
@@ -237,9 +248,23 @@ public final class JavaModelsGenerator implements CodeGenerator {
   private TypeSpec generateImmutableInterface(
       TypeElement modelRootType, List<ExecutableElement> modelMethods, String immutableModelName) {
 
+    SimpleAnnotationValueVisitor8<TypeMirror, Object> visitor =
+        new SimpleAnnotationValueVisitor8<>() {
+          @Override
+          public TypeMirror visitType(TypeMirror t, Object o) {
+            return t;
+          }
+        };
+
     TypeMirror immutableModelType =
         getAnnotationFromSuperInterfaces(modelRootType, ImmutableModelType.class)
-            .flatMap(t -> util.getTypeFromAnnotationMember(t::value))
+            .flatMap(
+                t ->
+                    t.getElementValues().entrySet().stream()
+                        .filter(e -> e.getKey().getSimpleName().contentEquals("value"))
+                        .map(Entry::getValue)
+                        .findAny())
+            .map(visitor::visit)
             .orElse(
                 util.processingEnv()
                     .getElementUtils()
@@ -248,7 +273,13 @@ public final class JavaModelsGenerator implements CodeGenerator {
 
     TypeMirror modelBuilderType =
         getAnnotationFromSuperInterfaces(modelRootType, ModelBuilderType.class)
-            .flatMap(t -> util.getTypeFromAnnotationMember(t::value))
+            .flatMap(
+                t ->
+                    t.getElementValues().entrySet().stream()
+                        .filter(e -> e.getKey().getSimpleName().contentEquals("value"))
+                        .map(Entry::getValue)
+                        .findAny())
+            .map(visitor::visit)
             .orElse(
                 util.processingEnv()
                     .getElementUtils()
@@ -278,11 +309,19 @@ public final class JavaModelsGenerator implements CodeGenerator {
         .build();
   }
 
-  private <T extends Annotation> Optional<T> getAnnotationFromSuperInterfaces(
-      TypeElement typeElement, Class<T> annotationType) {
-    T annotation = typeElement.getAnnotation(annotationType);
-    if (annotation == null) {
-      List<T> list =
+  private <T extends Annotation>
+      Optional<? extends AnnotationMirror> getAnnotationFromSuperInterfaces(
+          TypeElement typeElement, Class<T> annotationType) {
+    Optional<? extends AnnotationMirror> annotation =
+        typeElement.getAnnotationMirrors().stream()
+            .filter(
+                m ->
+                    ((QualifiedNameable) m.getAnnotationType().asElement())
+                        .getQualifiedName()
+                        .contentEquals(annotationType.getCanonicalName()))
+            .findAny();
+    if (annotation.isEmpty()) {
+      List<? extends AnnotationMirror> list =
           typeElement.getInterfaces().stream()
               .map(t -> util.processingEnv().getTypeUtils().asElement(t))
               .filter(e -> e instanceof TypeElement)
@@ -302,7 +341,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
         return Optional.ofNullable(list.get(0));
       }
     } else {
-      return Optional.of(annotation);
+      return annotation;
     }
   }
 
@@ -387,7 +426,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     }
 
     // Create constructor for the POJO class
-    MethodSpec.Builder constructorBuilder = MethodSpec.constructorBuilder().addModifiers(PRIVATE);
+    Builder constructorBuilder = MethodSpec.constructorBuilder().addModifiers(PRIVATE);
 
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
@@ -405,7 +444,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
       String methodName = method.getSimpleName().toString();
       TypeName returnType = TypeName.get(method.getReturnType());
 
-      MethodSpec.Builder methodBuilder =
+      Builder methodBuilder =
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC)
               .addAnnotation(Override.class)
@@ -422,7 +461,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     }
 
     // Create _asBuilder method to return a new Builder instance with all fields
-    MethodSpec.Builder asBuilderMethodBuilder =
+    Builder asBuilderMethodBuilder =
         MethodSpec.methodBuilder("_asBuilder")
             .addModifiers(PUBLIC)
             .addAnnotation(Override.class)
@@ -438,7 +477,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     asBuilderMethodBuilder.addCode(";");
 
     // Create _newCopy method to return a new instance with the same values
-    MethodSpec.Builder newCopyMethodBuilder =
+    Builder newCopyMethodBuilder =
         MethodSpec.methodBuilder("_newCopy")
             .addModifiers(PUBLIC)
             .addAnnotation(Override.class)
@@ -448,7 +487,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     String fieldNames =
         modelMethods.stream()
             .map(m -> m.getSimpleName().toString())
-            .collect(java.util.stream.Collectors.joining(", "));
+            .collect(Collectors.joining(", "));
 
     // Create a new instance of the POJO with current field values
     newCopyMethodBuilder.addStatement(
@@ -549,7 +588,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     }
 
     // Create _build method
-    MethodSpec.Builder buildMethodBuilder =
+    Builder buildMethodBuilder =
         MethodSpec.methodBuilder("_build")
             .addModifiers(PUBLIC)
             .returns(ClassName.get("", immutablePojoName))
@@ -601,8 +640,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
       IfNullThen ifNullThen = ifNull.value();
 
       // Only generate null check if validation is needed or error needs to be thrown
-      if (ifNullThen != IfNullThen.MAY_FAIL_CONDITIONALLY
-          && ifNullThen != IfNullThen.WILL_NEVER_FAIL) {
+      if (ifNullThen != MAY_FAIL_CONDITIONALLY && ifNullThen != WILL_NEVER_FAIL) {
         buildMethodBuilder.beginControlFlow("if (this.$N == null)", fieldName);
 
         switch (ifNullThen) {
@@ -662,7 +700,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     buildMethodBuilder.addCode(");");
 
     // Create _newCopy method for the Builder
-    MethodSpec.Builder builderCopyMethodBuilder =
+    Builder builderCopyMethodBuilder =
         MethodSpec.methodBuilder("_newCopy")
             .addModifiers(PUBLIC)
             .addAnnotation(Override.class)
