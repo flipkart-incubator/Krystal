@@ -1,8 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
-import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.ImmutableRequest;
-import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
@@ -56,20 +54,14 @@ public class KrystexVajramExecutor implements VajramExecutor {
   }
 
   @Override
-  public <T> CompletableFuture<@Nullable T> execute(VajramID vajramId, ImmutableRequest request) {
-    return execute(
-        vajramId, request, KryonExecutionConfig.builder().executionId("defaultExecution").build());
+  public <T> CompletableFuture<@Nullable T> execute(ImmutableRequest request) {
+    return execute(request, KryonExecutionConfig.builder().executionId("defaultExecution").build());
   }
 
   public <T> CompletableFuture<@Nullable T> execute(
-      VajramID vajramId, ImmutableRequest vajramRequest, KryonExecutionConfig executionConfig) {
-    return executeWithFacets(vajramId, vajramRequest, executionConfig);
-  }
-
-  public <T> CompletableFuture<@Nullable T> executeWithFacets(
-      VajramID vajramId, Request facets, KryonExecutionConfig executionConfig) {
-    vajramKryonGraph.loadKryonSubGraphIfNeeded(vajramId);
-    return krystalExecutor.executeKryon(vajramId, facets, executionConfig);
+      ImmutableRequest vajramRequest, KryonExecutionConfig executionConfig) {
+    vajramKryonGraph.loadKryonSubGraphIfNeeded(vajramRequest._vajramID());
+    return krystalExecutor.executeKryon(vajramRequest, executionConfig);
   }
 
   public KrystalExecutor getKrystalExecutor() {

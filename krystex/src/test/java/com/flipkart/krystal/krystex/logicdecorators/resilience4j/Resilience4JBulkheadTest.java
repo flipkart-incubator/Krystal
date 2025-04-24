@@ -140,9 +140,9 @@ class Resilience4JBulkheadTest {
             "executor1");
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         executor1.executeKryon(
-            kryonDefinition.vajramID(),
             new SimpleRequestBuilder<>(
-                Set.of(input(1)), ImmutableMap.of(1, withValue(1)), kryonDefinition.vajramID()),
+                    Set.of(input(1)), ImmutableMap.of(1, withValue(1)), kryonDefinition.vajramID())
+                ._build(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     KryonExecutor executor2 =
         new KryonExecutor(
@@ -151,9 +151,9 @@ class Resilience4JBulkheadTest {
             "executor2");
     CompletableFuture<Object> call2BeforeBulkheadExhaustion =
         executor2.executeKryon(
-            kryonDefinition.vajramID(),
             new SimpleRequestBuilder<>(
-                Set.of(input(1)), ImmutableMap.of(1, withValue(2)), kryonDefinition.vajramID()),
+                    Set.of(input(1)), ImmutableMap.of(1, withValue(2)), kryonDefinition.vajramID())
+                ._build(),
             KryonExecutionConfig.builder().executionId("req_2").build());
     KryonExecutor executor3 =
         new KryonExecutor(
@@ -162,9 +162,9 @@ class Resilience4JBulkheadTest {
             "executor3");
     CompletableFuture<Object> callAfterBulkheadExhaustion =
         executor3.executeKryon(
-            kryonDefinition.vajramID(),
             new SimpleRequestBuilder<>(
-                Set.of(input(1)), ImmutableMap.of(1, withValue(3)), kryonDefinition.vajramID()),
+                    Set.of(input(1)), ImmutableMap.of(1, withValue(3)), kryonDefinition.vajramID())
+                ._build(),
             KryonExecutionConfig.builder().executionId("req_3").build());
     executor1.close();
     executor2.close();
@@ -240,9 +240,9 @@ class Resilience4JBulkheadTest {
             "executor1");
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         executor1.executeKryon(
-            kryonDefinition.vajramID(),
             new SimpleRequestBuilder<>(
-                inputs, ImmutableMap.of(1, withValue(1)), kryonDefinition.vajramID()),
+                    inputs, ImmutableMap.of(1, withValue(1)), kryonDefinition.vajramID())
+                ._build(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     KryonExecutor executor2 =
         new KryonExecutor(
@@ -251,9 +251,9 @@ class Resilience4JBulkheadTest {
             "executor2");
     CompletableFuture<Object> call2BeforeBulkheadExhaustion =
         executor2.executeKryon(
-            kryonDefinition.vajramID(),
             new SimpleRequestBuilder<>(
-                inputs, ImmutableMap.of(1, withValue(2)), kryonDefinition.vajramID()),
+                    inputs, ImmutableMap.of(1, withValue(2)), kryonDefinition.vajramID())
+                ._build(),
             KryonExecutionConfig.builder().executionId("req_2").build());
     KryonExecutor executor3 =
         new KryonExecutor(
@@ -262,9 +262,9 @@ class Resilience4JBulkheadTest {
             "executor3");
     CompletableFuture<Object> callAfterBulkheadExhaustion =
         executor3.executeKryon(
-            kryonDefinition.vajramID(),
             new SimpleRequestBuilder<>(
-                inputs, ImmutableMap.of(1, withValue(3)), kryonDefinition.vajramID()),
+                    inputs, ImmutableMap.of(1, withValue(3)), kryonDefinition.vajramID())
+                ._build(),
             KryonExecutionConfig.builder().executionId("req_3").build());
     executor1.close();
     executor2.close();

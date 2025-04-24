@@ -119,12 +119,10 @@ class RequestLevelCacheTest {
             ElementTags.of(List.of(ExternallyInvocable.Creator.create())));
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
-            kryonDefinition.vajramID(),
             SimpleImmutRequest.empty(kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> future2 =
         kryonExecutor.executeKryon(
-            kryonDefinition.vajramID(),
             SimpleImmutRequest.empty(kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_2").build());
 
@@ -166,12 +164,10 @@ class RequestLevelCacheTest {
 
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
-            kryonDefinition.vajramID(),
             SimpleImmutRequest.empty(kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> future2 =
         kryonExecutor.executeKryon(
-            kryonDefinition.vajramID(),
             SimpleImmutRequest.empty(kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_2").build());
 

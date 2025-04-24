@@ -10,8 +10,6 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
-import com.flipkart.krystal.lattice.samples.proto3.sampleProtoService.Proto3LatticeSampleResponse;
-import com.flipkart.krystal.lattice.samples.proto3.sampleProtoService.Proto3LatticeSample;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -84,7 +82,6 @@ class Proto3LatticeSampleTest {
                 .build())) {
       result =
           executor.execute(
-              graph.getVajramIdByVajramDefType(Proto3LatticeSample.class),
               request,
               KryonExecutionConfig.builder().executionId("test_all_inputs").build());
     }
@@ -122,7 +119,6 @@ class Proto3LatticeSampleTest {
                 .build())) {
       result =
           executor.execute(
-              graph.getVajramIdByVajramDefType(Proto3LatticeSample.class),
               request,
               KryonExecutionConfig.builder().executionId("test_optional_omitted").build());
     }
@@ -158,7 +154,6 @@ class Proto3LatticeSampleTest {
                 .build())) {
       result =
           executor.execute(
-              graph.getVajramIdByVajramDefType(Proto3LatticeSample.class),
               request,
               KryonExecutionConfig.builder().executionId("test_default_value").build());
     }
@@ -190,7 +185,6 @@ class Proto3LatticeSampleTest {
                 .build())) {
       result =
           executor.execute(
-              graph.getVajramIdByVajramDefType(Proto3LatticeSample.class),
               request,
               KryonExecutionConfig.builder().executionId("test_missing_mandatory").build());
     }
@@ -222,7 +216,6 @@ class Proto3LatticeSampleTest {
                 .build())) {
       result =
           executor.execute(
-              graph.getVajramIdByVajramDefType(Proto3LatticeSample.class),
               request,
               KryonExecutionConfig.builder().executionId("test_missing_mandatory_byte").build());
     }
@@ -267,7 +260,6 @@ class Proto3LatticeSampleTest {
                 .buildConfig())) {
       result =
           executor.execute(
-              graph.getVajramIdByVajramDefType(Proto3LatticeSample.class),
               request,
               KryonExecutionConfig.builder().executionId("test_mocked_response").build());
     }
@@ -300,7 +292,6 @@ class Proto3LatticeSampleTest {
                 .build())) {
       result =
           executor.execute(
-              graph.getVajramIdByVajramDefType(Proto3LatticeSample.class),
               request,
               KryonExecutionConfig.builder().executionId("test_byte_string").build());
     }

@@ -52,8 +52,7 @@ class DivideTest {
       assertThatThrownBy(
               () ->
                   krystexVajramExecutor.execute(
-                      graph.getVajramIdByVajramDefType(Divide.class),
-                      Subtract_ImmutReqPojo._builder().numberOne(5).numberTwo(7)._build()))
+                      Divide_ImmutReqPojo._builder().numerator(5).denominator(7)._build()))
           .isInstanceOf(RejectedExecutionException.class)
           .hasMessage("External invocation is not allowed for vajramId: v<Divide>");
     }

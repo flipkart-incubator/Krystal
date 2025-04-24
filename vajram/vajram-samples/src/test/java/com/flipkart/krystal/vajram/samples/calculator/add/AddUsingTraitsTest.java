@@ -185,7 +185,6 @@ class AddUsingTraitsTest {
       List<Integer> numbers3) {
 
     return krystexVajramExecutor.execute(
-        graph.getVajramIdByVajramDefType(AddUsingTraits.class),
         AddUsingTraits_ImmutReqPojo._builder()
             .numbers1(numbers1)
             .numbers2(numbers2)

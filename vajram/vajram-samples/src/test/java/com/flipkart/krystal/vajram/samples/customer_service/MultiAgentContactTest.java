@@ -103,7 +103,7 @@ class MultiAgentContactTest {
     CompletableFuture<@Nullable List<String>> responses;
     try (var executor = graph.createExecutor(getExecutorConfig()); ) {
       responses =
-          executor.execute(graph.getVajramIdByVajramDefType(MultiAgentContact.class), request);
+          executor.execute(request);
     }
 
     ListAssert<Object> responsesList =

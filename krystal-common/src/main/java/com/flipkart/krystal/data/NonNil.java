@@ -14,7 +14,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @EqualsAndHashCode(of = "value")
 @ToString(of = "value")
 public final class NonNil<T> implements Success<T> {
-  @Getter private final @NonNull T value;
+  private final @NonNull T value;
 
   private @MonotonicNonNull CompletableFuture<@Nullable T> c;
 
@@ -37,6 +37,11 @@ public final class NonNil<T> implements Success<T> {
 
   @Override
   public @NonNull T valueOrThrow() {
+    return value;
+  }
+
+  @Override
+  public @NonNull T value() {
     return value;
   }
 }
