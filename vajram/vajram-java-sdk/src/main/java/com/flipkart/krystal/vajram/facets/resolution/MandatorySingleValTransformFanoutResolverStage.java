@@ -11,7 +11,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 /**
  * Stage after specifying the source input for the fanout resolver.

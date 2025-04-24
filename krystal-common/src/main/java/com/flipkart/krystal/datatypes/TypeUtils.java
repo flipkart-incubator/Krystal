@@ -15,7 +15,6 @@ import static com.flipkart.krystal.datatypes.JavaTypes.STRING;
 import static com.flipkart.krystal.datatypes.JavaTypes.VOID;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.common.collect.ImmutableList;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.LinkedHashMap;

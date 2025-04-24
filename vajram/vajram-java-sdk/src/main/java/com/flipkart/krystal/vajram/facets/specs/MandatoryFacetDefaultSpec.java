@@ -7,7 +7,6 @@ import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
-import com.flipkart.krystal.facets.FacetUtils;
 import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableSet;
 import java.util.concurrent.Callable;

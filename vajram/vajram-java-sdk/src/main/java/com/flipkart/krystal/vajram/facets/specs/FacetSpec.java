@@ -2,12 +2,11 @@ package com.flipkart.krystal.vajram.facets.specs;
 
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfNull.IfNullThen;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.Facet;
-import com.flipkart.krystal.data.IfNull;
-import com.flipkart.krystal.data.IfNull.IfNullThen;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 public sealed interface FacetSpec<T, CV extends Request> extends Facet
     permits AbstractFacetSpec, MandatoryFacetSpec, OptionalFacetSpec {

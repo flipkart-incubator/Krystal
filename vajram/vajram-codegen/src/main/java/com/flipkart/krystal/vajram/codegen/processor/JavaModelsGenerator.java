@@ -12,8 +12,6 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
-// Note: Using direct class references to model framework interfaces instead of imports
-// since the actual package paths may differ across environments
 import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.data.IfNull.IfNullThen;
 import com.flipkart.krystal.model.ImmutableModel;
@@ -233,6 +231,12 @@ public final class JavaModelsGenerator implements CodeGenerator {
         extendsModel = true;
         break;
       }
+    }
+    if (!extendsModel) {
+      util.error(
+          "Interface with @ModelRoot annotation must extend Model: "
+          + modelRootType.getQualifiedName(),
+          modelRootType);
     }
     return extendsModel;
   }

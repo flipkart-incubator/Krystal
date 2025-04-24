@@ -63,7 +63,6 @@ class AddZeroTest {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              graph.getVajramIdByVajramDefType((AddZero.class)),
               AddZero_ImmutReqPojo._builder().number(5)._build(),
               KryonExecutionConfig.builder().executionId("addZeroTest").build());
     }

@@ -51,10 +51,7 @@ class TooManyQualifiersTest {
     CompletableFuture<@Nullable String> result;
     try (VajramKryonGraph vajramKryonGraph = graph.build();
         KrystexVajramExecutor executor = createExecutor(vajramKryonGraph)) {
-      result =
-          executor.execute(
-              vajramKryonGraph.getVajramIdByVajramDefType(TooManyQualifiers.class),
-              TooManyQualifiers_ImmutReqPojo._builder().input("i1")._build());
+      result = executor.execute(TooManyQualifiers_ImmutReqPojo._builder().input("i1")._build());
     }
     assertThat(result)
         .failsWithin(TEST_TIMEOUT)

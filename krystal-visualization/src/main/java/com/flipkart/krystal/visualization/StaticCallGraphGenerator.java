@@ -2,6 +2,7 @@ package com.flipkart.krystal.visualization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.facets.InputMirror;
 import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
@@ -9,7 +10,6 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
-import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;

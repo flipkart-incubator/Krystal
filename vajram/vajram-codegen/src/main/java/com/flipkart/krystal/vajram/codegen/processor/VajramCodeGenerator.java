@@ -1196,6 +1196,7 @@ public class VajramCodeGenerator implements CodeGenerator {
       } else if (util.isRawAssignable(returnType, FanoutCommand.class)) {
         // TODO : add missing validations if any (??)
         if (!dependencyModel.canFanout()) {
+
           util.error(
               """
                   Dependency '%s' is not a fanout dependency, yet the resolver method returns a MultiExecute command.\
@@ -2045,11 +2046,9 @@ public class VajramCodeGenerator implements CodeGenerator {
         }
         initializerCodeBlock.add(String.join(",", params) + "),", args.toArray());
       }
-      initializerCodeBlock.add(
-          """
+      initializerCodeBlock.add("""
                 $T.class,
-              """,
-          vajramReqClass);
+              """, vajramReqClass);
       if (facet instanceof DependencyModel vajramDepDef) {
         ClassName depReqClass = ClassName.bestGuess(vajramDepDef.depReqClassQualifiedName());
         ClassName depReqInterfaceClass =

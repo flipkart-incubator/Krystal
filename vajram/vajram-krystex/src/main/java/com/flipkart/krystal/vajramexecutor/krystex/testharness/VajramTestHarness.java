@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajramexecutor.krystex.testharness;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ImmutableFacetValues;
-import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
@@ -12,7 +11,6 @@ import jakarta.inject.Inject;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Test harness is a collection of software/test data used by developers for unit testing. It is

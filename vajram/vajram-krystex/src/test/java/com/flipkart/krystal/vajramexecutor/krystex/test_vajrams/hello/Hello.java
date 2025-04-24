@@ -6,7 +6,6 @@ import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import java.util.Optional;
 import java.util.concurrent.atomic.LongAdder;

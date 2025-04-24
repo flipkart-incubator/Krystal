@@ -11,7 +11,6 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.create
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.getPackageName;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProto3Applicable;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.validateReturnTypeForProtobuf;
-import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.flipkart.krystal.vajram.codegen.common.models.Utils;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;

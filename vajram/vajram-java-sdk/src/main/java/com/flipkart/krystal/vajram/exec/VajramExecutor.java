@@ -1,13 +1,12 @@
 package com.flipkart.krystal.vajram.exec;
 
-import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.ImmutableRequest;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public interface VajramExecutor extends AutoCloseable {
 
-  <T> CompletableFuture<@Nullable T> execute(VajramID vajramId, ImmutableRequest request);
+  <T> CompletableFuture<@Nullable T> execute(ImmutableRequest request);
 
   // Override to suppress "throws Exception"
   /**

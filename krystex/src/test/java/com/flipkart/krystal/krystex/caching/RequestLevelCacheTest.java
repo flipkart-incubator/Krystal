@@ -15,8 +15,6 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.krystex.testutils.SimpleImmutRequest;
-import com.flipkart.krystal.krystex.testutils.SimpleRequestBuilder;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinition;
@@ -36,6 +34,8 @@ import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
 import com.flipkart.krystal.krystex.testutils.FacetValuesMapBuilder;
 import com.flipkart.krystal.krystex.testutils.SimpleFacet;
+import com.flipkart.krystal.krystex.testutils.SimpleImmutRequest;
+import com.flipkart.krystal.krystex.testutils.SimpleRequestBuilder;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.tags.ElementTags;
@@ -119,12 +119,10 @@ class RequestLevelCacheTest {
             ElementTags.of(List.of(ExternallyInvocable.Creator.create())));
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
-            kryonDefinition.vajramID(),
             SimpleImmutRequest.empty(kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> future2 =
         kryonExecutor.executeKryon(
-            kryonDefinition.vajramID(),
             SimpleImmutRequest.empty(kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_2").build());
 
@@ -166,12 +164,10 @@ class RequestLevelCacheTest {
 
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
-            kryonDefinition.vajramID(),
             SimpleImmutRequest.empty(kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_1").build());
     CompletableFuture<Object> future2 =
         kryonExecutor.executeKryon(
-            kryonDefinition.vajramID(),
             SimpleImmutRequest.empty(kryonDefinition.vajramID()),
             KryonExecutionConfig.builder().executionId("req_2").build());
 

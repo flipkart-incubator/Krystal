@@ -7,7 +7,6 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
-import com.flipkart.krystal.vajram.samples.calculator.subtract.Subtract_ImmutReqPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
@@ -52,8 +51,7 @@ class DivideTest {
       assertThatThrownBy(
               () ->
                   krystexVajramExecutor.execute(
-                      graph.getVajramIdByVajramDefType(Divide.class),
-                      Subtract_ImmutReqPojo._builder().numberOne(5).numberTwo(7)._build()))
+                      Divide_ImmutReqPojo._builder().numerator(5).denominator(7)._build()))
           .isInstanceOf(RejectedExecutionException.class)
           .hasMessage("External invocation is not allowed for vajramId: v<Divide>");
     }

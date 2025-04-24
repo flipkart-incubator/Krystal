@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
-import static com.flipkart.krystal.data.IfNull.IfNullThen.MAY_FAIL_CONDITIONALLY;
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
 import static com.flipkart.krystal.vajram.utils.Constants.IMMUT_FACETS_CLASS_SUFFIX;
 import static com.google.common.base.Preconditions.checkNotNull;

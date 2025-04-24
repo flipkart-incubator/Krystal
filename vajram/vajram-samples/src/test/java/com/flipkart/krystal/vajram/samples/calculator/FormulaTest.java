@@ -35,8 +35,6 @@ import com.flipkart.krystal.vajram.guice.inputinjection.VajramGuiceInputInjector
 import com.flipkart.krystal.vajram.samples.Util;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add_ImmutFacPojo;
-import com.flipkart.krystal.vajram.samples.calculator.add.Add_ImmutFacPojo;
-import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_ImmutFacPojo;
 import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_ImmutFacPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
@@ -425,7 +423,6 @@ class FormulaTest {
       int value,
       FormulaRequestContext rc) {
     return krystexVajramExecutor.execute(
-        graph.getVajramIdByVajramDefType((Formula.class)),
         Formula_ImmutReqPojo._builder().a(rc.a + value).p(rc.p + value).q(rc.q + value)._build(),
         KryonExecutionConfig.builder().executionId("formulaTest" + value).build());
   }

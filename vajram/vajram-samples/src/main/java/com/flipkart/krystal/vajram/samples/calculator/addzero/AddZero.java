@@ -12,7 +12,6 @@ import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
-import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.flipkart.krystal.vajram.samples.calculator.add.Add;

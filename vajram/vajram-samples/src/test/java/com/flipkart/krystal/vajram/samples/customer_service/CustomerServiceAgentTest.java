@@ -99,7 +99,7 @@ class CustomerServiceAgentTest {
     // Execute and verify
     CompletableFuture<@Nullable String> result;
     try (var executor = graph.createExecutor(getExecutorConfig()); ) {
-      result = executor.execute(traitId, request);
+      result = executor.execute(request);
     }
 
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("L1 Agent");
@@ -118,7 +118,7 @@ class CustomerServiceAgentTest {
 
     CompletableFuture<@Nullable String> result;
     try (var executor = graph.createExecutor(getExecutorConfig()); ) {
-      result = executor.execute(traitId, request);
+      result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("L1 Agent");
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("Pikachu");
@@ -136,7 +136,7 @@ class CustomerServiceAgentTest {
 
     CompletableFuture<@Nullable String> result;
     try (var executor = graph.createExecutor(getExecutorConfig()); ) {
-      result = executor.execute(traitId, request);
+      result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("L2 Agent");
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("Swami");
@@ -154,7 +154,7 @@ class CustomerServiceAgentTest {
 
     CompletableFuture<@Nullable String> result;
     try (var executor = graph.createExecutor(getExecutorConfig()); ) {
-      result = executor.execute(traitId, request);
+      result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("L3 Agent");
     assertThat(result)
@@ -176,7 +176,7 @@ class CustomerServiceAgentTest {
 
     CompletableFuture<@Nullable String> result;
     try (var executor = graph.createExecutor(getExecutorConfig()); ) {
-      result = executor.execute(traitId, request);
+      result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("I am an email Agent");
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("Jejamma");
@@ -195,7 +195,7 @@ class CustomerServiceAgentTest {
 
     CompletableFuture<@Nullable String> result;
     try (var executor = graph.createExecutor(getExecutorConfig()); ) {
-      result = executor.execute(traitId, request);
+      result = executor.execute(request);
     }
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("I am a call Agent");
     assertThat(result).succeedsWithin(TEST_TIMEOUT).asString().contains("Man without a name");
@@ -214,7 +214,7 @@ class CustomerServiceAgentTest {
 
     CompletableFuture<@Nullable String> result;
     try (var executor = graph.createExecutor(getExecutorConfig()); ) {
-      result = executor.execute(traitId, request);
+      result = executor.execute(request);
     }
     assertThat(result)
         .succeedsWithin(TEST_TIMEOUT)

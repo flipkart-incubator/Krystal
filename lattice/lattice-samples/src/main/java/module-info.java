@@ -5,7 +5,7 @@ module flipkart.krystal.lattice.samples {
   requires org.checkerframework.checker.qual;
   requires com.google.common;
   requires flipkart.krystal.lattice.core;
-//  requires flipkart.krystal.lattice.extensions.guice;
+  //  requires flipkart.krystal.lattice.extensions.guice;
   requires com.google.guice;
   requires static lombok;
   requires java.compiler;

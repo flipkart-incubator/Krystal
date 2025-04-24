@@ -102,8 +102,7 @@ class MultiAgentContactTest {
     // Execute and verify
     CompletableFuture<@Nullable List<String>> responses;
     try (var executor = graph.createExecutor(getExecutorConfig()); ) {
-      responses =
-          executor.execute(graph.getVajramIdByVajramDefType(MultiAgentContact.class), request);
+      responses = executor.execute(request);
     }
 
     ListAssert<Object> responsesList =

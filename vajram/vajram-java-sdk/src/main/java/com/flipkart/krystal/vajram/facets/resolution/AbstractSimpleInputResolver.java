@@ -1,12 +1,8 @@
 package com.flipkart.krystal.vajram.facets.resolution;
 
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
-
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.resolution.ResolutionTarget;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
-import com.google.common.collect.ImmutableSet;
-import java.util.Optional;
 
 /** A resolver which resolves exactly one input of a dependency. */
 public abstract sealed class AbstractSimpleInputResolver<

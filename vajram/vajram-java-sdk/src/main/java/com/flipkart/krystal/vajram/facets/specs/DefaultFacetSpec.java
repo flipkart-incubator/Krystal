@@ -16,7 +16,6 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public abstract sealed class DefaultFacetSpec<T, CV extends Request>

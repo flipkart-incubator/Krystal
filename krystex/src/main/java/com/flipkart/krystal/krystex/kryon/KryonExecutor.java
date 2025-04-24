@@ -19,6 +19,7 @@ import com.flipkart.krystal.annos.TraitDependency;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.KrystalExecutor;
@@ -243,11 +244,12 @@ public final class KryonExecutor implements KrystalExecutor {
   @Override
   @SuppressWarnings("FutureReturnValueIgnored")
   public <T> CompletableFuture<@Nullable T> executeKryon(
-      final VajramID vajramID, Request facets, KryonExecutionConfig executionConfig) {
+      ImmutableRequest request, KryonExecutionConfig executionConfig) {
     if (closed) {
       throw new RejectedExecutionException("KryonExecutor is already closed");
     }
     checkArgument(executionConfig != null, "executionConfig can not be null");
+    VajramID vajramID = request._vajramID();
     if (!executorConfig._riskyOpenAllKryonsForExternalInvocation()) {
       if (kryonDefinitionRegistry
           .getOrThrow(vajramID)
@@ -283,7 +285,7 @@ public final class KryonExecutor implements KrystalExecutor {
                     allExecutions.put(
                         invocationId,
                         new KryonExecution(
-                            vajramID, invocationId, facets, executionConfig, future));
+                            vajramID, invocationId, request, executionConfig, future));
                     unFlushedExecutions.add(invocationId);
                   }
 
@@ -672,7 +674,7 @@ public final class KryonExecutor implements KrystalExecutor {
   private record KryonExecution(
       VajramID vajramID,
       InvocationId instanceExecutionId,
-      Request request,
+      ImmutableRequest request,
       KryonExecutionConfig executionConfig,
       CompletableFuture<@Nullable Object> future) {}
 }

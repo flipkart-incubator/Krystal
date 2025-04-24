@@ -17,7 +17,7 @@ import com.squareup.javapoet.TypeName;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public abstract sealed class  FacetJavaType {
+public abstract sealed class FacetJavaType {
 
   protected final Utils util;
 
