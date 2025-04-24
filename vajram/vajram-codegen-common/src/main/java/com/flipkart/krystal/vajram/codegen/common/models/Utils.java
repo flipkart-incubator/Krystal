@@ -370,7 +370,21 @@ public class Utils {
                 .collect(toImmutableList()),
             conformsToTraitInfo);
     note("VajramInfo: %s".formatted(vajramInfo));
+    validateVajramInfo(vajramInfo);
     return vajramInfo;
+  }
+
+  private void validateVajramInfo(VajramInfo vajramInfo) {
+    vajramInfo
+        .facetStream()
+        .forEach(
+            facetGenModel -> {
+              if (facetGenModel.name().startsWith("_")) {
+                error(
+                    "Facet names cannot start with an underscore (_). These are reserved for platform specific identifiers",
+                    facetGenModel.facetField());
+              }
+            });
   }
 
   private DefaultFacetModel toGivenFacetModel(
