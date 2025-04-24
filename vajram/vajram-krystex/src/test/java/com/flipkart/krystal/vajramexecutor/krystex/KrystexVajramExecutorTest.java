@@ -140,9 +140,7 @@ class KrystexVajramExecutorTest {
             getExecutorConfig(graphTraversalStrategy)
                 .requestId("vajramWithNoDependencies")
                 .build())) {
-      result =
-          krystexVajramExecutor.execute(
-              this.helloRequest(requestContext));
+      result = krystexVajramExecutor.execute(this.helloRequest(requestContext));
     }
     assertThat(result).succeedsWithin(TIMEOUT).isEqualTo("Hello! user_id_1");
   }
@@ -179,9 +177,7 @@ class KrystexVajramExecutorTest {
             getExecutorConfig(graphTraversalStrategy)
                 .requestId(requestContext.requestId())
                 .build())) {
-      userInfo123 =
-          krystexVajramExecutor.execute(
-              this.testUserServiceRequest(requestContext));
+      userInfo123 = krystexVajramExecutor.execute(this.testUserServiceRequest(requestContext));
     }
     assertThat(userInfo123)
         .succeedsWithin(TIMEOUT)
@@ -206,9 +202,7 @@ class KrystexVajramExecutorTest {
             getExecutorConfig(graphTraversalStrategy)
                 .requestId(requestContext.requestId())
                 .build())) {
-      helloString =
-          krystexVajramExecutor.execute(
-              this.helloFriendsRequest(requestContext));
+      helloString = krystexVajramExecutor.execute(this.helloFriendsRequest(requestContext));
     }
     assertThat(helloString)
         .succeedsWithin(TIMEOUT)
@@ -238,9 +232,7 @@ class KrystexVajramExecutorTest {
             getExecutorConfig(graphTraversalStrategy)
                 .requestId(requestContext.requestId())
                 .build())) {
-      helloString =
-          krystexVajramExecutor.execute(
-              this.helloFriendsV2Request(requestContext));
+      helloString = krystexVajramExecutor.execute(this.helloFriendsV2Request(requestContext));
     }
     assertThat(helloString)
         .succeedsWithin(TIMEOUT)
@@ -293,9 +285,7 @@ class KrystexVajramExecutorTest {
             getExecutorConfig(graphTraversalStrategy)
                 .requestId(requestContext.requestId())
                 .build())) {
-      result =
-          krystexVajramExecutor.execute(
-              this.incompleteHelloRequest());
+      result = krystexVajramExecutor.execute(this.incompleteHelloRequest());
     }
     assertThat(result)
         .failsWithin(TIMEOUT)

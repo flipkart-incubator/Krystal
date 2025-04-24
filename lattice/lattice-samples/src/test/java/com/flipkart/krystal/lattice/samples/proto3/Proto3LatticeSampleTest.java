@@ -1,6 +1,5 @@
 package com.flipkart.krystal.lattice.samples.proto3.sampleProtoService;
 
-import static java.util.Arrays.stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -82,8 +81,7 @@ class Proto3LatticeSampleTest {
                 .build())) {
       result =
           executor.execute(
-              request,
-              KryonExecutionConfig.builder().executionId("test_all_inputs").build());
+              request, KryonExecutionConfig.builder().executionId("test_all_inputs").build());
     }
 
     // Verify the result
@@ -119,8 +117,7 @@ class Proto3LatticeSampleTest {
                 .build())) {
       result =
           executor.execute(
-              request,
-              KryonExecutionConfig.builder().executionId("test_optional_omitted").build());
+              request, KryonExecutionConfig.builder().executionId("test_optional_omitted").build());
     }
 
     // Verify the result
@@ -154,8 +151,7 @@ class Proto3LatticeSampleTest {
                 .build())) {
       result =
           executor.execute(
-              request,
-              KryonExecutionConfig.builder().executionId("test_default_value").build());
+              request, KryonExecutionConfig.builder().executionId("test_default_value").build());
     }
 
     // Verify the result - inputWithDefaultValue should be 0 (default for int)
@@ -260,8 +256,7 @@ class Proto3LatticeSampleTest {
                 .buildConfig())) {
       result =
           executor.execute(
-              request,
-              KryonExecutionConfig.builder().executionId("test_mocked_response").build());
+              request, KryonExecutionConfig.builder().executionId("test_mocked_response").build());
     }
 
     // Verify the mocked result
@@ -292,8 +287,7 @@ class Proto3LatticeSampleTest {
                 .build())) {
       result =
           executor.execute(
-              request,
-              KryonExecutionConfig.builder().executionId("test_byte_string").build());
+              request, KryonExecutionConfig.builder().executionId("test_byte_string").build());
     }
 
     // Verify the result

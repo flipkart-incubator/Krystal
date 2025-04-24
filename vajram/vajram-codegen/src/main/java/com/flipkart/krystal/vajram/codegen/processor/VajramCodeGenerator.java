@@ -36,14 +36,12 @@ import static com.flipkart.krystal.vajram.codegen.common.models.Utils.recordAnno
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.squareup.javapoet.CodeBlock.joining;
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static com.squareup.javapoet.MethodSpec.overriding;
 import static com.squareup.javapoet.TypeSpec.anonymousClassBuilder;
 import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.DEFAULT;
@@ -88,10 +86,10 @@ import com.flipkart.krystal.vajram.batching.BatchedFacets;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
 import com.flipkart.krystal.vajram.codegen.common.models.CodeGenParams;
 import com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase;
+import com.flipkart.krystal.vajram.codegen.common.models.DefaultFacetModel;
 import com.flipkart.krystal.vajram.codegen.common.models.DependencyModel;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetGenModel;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType;
-import com.flipkart.krystal.vajram.codegen.common.models.DefaultFacetModel;
 import com.flipkart.krystal.vajram.codegen.common.models.ParsedVajramData;
 import com.flipkart.krystal.vajram.codegen.common.models.TypeAndName;
 import com.flipkart.krystal.vajram.codegen.common.models.Utils;
@@ -1300,6 +1298,7 @@ public class VajramCodeGenerator implements CodeGenerator {
       } else if (util.isRawAssignable(returnType, FanoutCommand.class)) {
         // TODO : add missing validations if any (??)
         if (!dependencyModel.canFanout()) {
+
           util.error(
               """
                   Dependency '%s' is not a fanout dependency, yet the resolver method returns a MultiExecute command.\
@@ -2199,11 +2198,9 @@ public class VajramCodeGenerator implements CodeGenerator {
         }
         initializerCodeBlock.add(String.join(",", params) + "),", args.toArray());
       }
-      initializerCodeBlock.add(
-          """
+      initializerCodeBlock.add("""
                 $T.class,
-              """,
-          vajramReqClass);
+              """, vajramReqClass);
       if (facet instanceof DependencyModel vajramDepDef) {
         ClassName depReqClass = ClassName.bestGuess(vajramDepDef.depReqClassQualifiedName());
         ClassName depReqInterfaceClass =

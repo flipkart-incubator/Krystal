@@ -5,19 +5,15 @@ import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getImmutRe
 import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getRequestInterfaceName;
 
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.data.ImmutableRequest;
-import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.vajram.Trait;
 import com.google.common.collect.ImmutableBiMap;
 import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import java.util.List;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.TypeElement;
 import lombok.SneakyThrows;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record VajramInfoLite(
     VajramID vajramId,

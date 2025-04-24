@@ -67,7 +67,8 @@ public sealed interface DataType<T> permits JavaType {
    *     ClassNotFoundException}
    * @throws IllegalArgumentException if the datatype does not have a platform default value.
    */
-  @NonNull T getPlatformDefaultValue() throws ClassNotFoundException, IllegalArgumentException;
+  @NonNull
+  T getPlatformDefaultValue() throws ClassNotFoundException, IllegalArgumentException;
 
   /**
    * Returns true if the datatype has a platform default value. Generally true for scalars,

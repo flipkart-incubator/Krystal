@@ -3,10 +3,10 @@ package com.flipkart.krystal.vajram.samples.calculator.add;
 import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
 import static com.flipkart.krystal.vajram.ComputeDelegationMode.SYNC;
 
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitRoot;
 import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
-import com.flipkart.krystal.data.IfNull;
 import com.google.auto.value.AutoAnnotation;
 import jakarta.inject.Qualifier;
 import java.lang.annotation.ElementType;

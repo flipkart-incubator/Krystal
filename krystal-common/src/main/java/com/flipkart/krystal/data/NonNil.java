@@ -5,7 +5,6 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import lombok.ToString;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;

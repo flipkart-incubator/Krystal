@@ -3,7 +3,6 @@ package com.flipkart.krystal.serial;
 import static java.lang.annotation.RetentionPolicy.SOURCE;
 
 import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 
 /**
  * {@link SerialId}s which are not to be used by any facet because they represent older facets which
