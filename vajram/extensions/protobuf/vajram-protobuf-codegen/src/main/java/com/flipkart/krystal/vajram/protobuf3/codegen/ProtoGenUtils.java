@@ -41,9 +41,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Supplier;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
@@ -249,10 +247,10 @@ public class ProtoGenUtils {
     if (supportedModelProtocols == null
         || util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
             .noneMatch(t -> util.isSameRawType(t, Protobuf3.class))) {
-      throw util.errorAndThrow(
+      util.error(
           String.format(
               "Vajram '%s' has return type '%s' which is not a supported model protocol. "
-              + "RPC methods must return a message type that is compatible with Protobuf3.",
+                  + "RPC methods must return a message type that is compatible with Protobuf3.",
               vajramInfo.vajramName(), returnType),
           vajramInfo.vajramClass());
     }

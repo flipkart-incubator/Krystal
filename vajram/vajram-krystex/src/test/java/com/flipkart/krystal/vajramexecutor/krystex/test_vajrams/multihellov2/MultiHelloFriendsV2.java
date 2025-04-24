@@ -46,7 +46,7 @@ public abstract class MultiHelloFriendsV2 extends ComputeVajramDef<String> {
 
   @Output
   static String sayHellos(
-      Optional<Boolean> skip, FanoutDepResponses<String, HelloFriendsV2_Req> hellos) {
+      Optional<Boolean> skip, FanoutDepResponses<HelloFriendsV2_Req, String> hellos) {
     if (skip.orElse(false)) {
       return "";
     }

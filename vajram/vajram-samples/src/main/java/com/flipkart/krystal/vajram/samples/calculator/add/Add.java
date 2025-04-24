@@ -11,7 +11,6 @@ import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
-import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.google.common.collect.ImmutableCollection;
 import jakarta.inject.Inject;
@@ -25,8 +24,8 @@ import java.util.concurrent.atomic.LongAdder;
  * Adds two numbers - {@code numberOne} and {@code numberTwo} and returns the result. While {@code
  * numberOne} is a mandatory input, {@code numberTwo} is optional and defaults to zero if not set.
  */
-@Vajram
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
+@Vajram
 public abstract class Add extends IOVajramDef<Integer> {
 
   static class _Inputs {

@@ -216,12 +216,12 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
    * @param subsequentDependencies an array representing the dependency names in the DependantChain
    *     in trigger order
    */
-  public DependentChain computeDependantChain(
+  public DependentChain computeDependentChain(
       String firstVajramId, Dependency firstDependency, Dependency... subsequentDependencies) {
     VajramID firstVajramID = vajramID(firstVajramId);
     loadKryonSubGraphIfNeeded(firstVajramID);
     DependentChain currentDepChain =
-        kryonDefinitionRegistry.getDependantChainsStart().extend(firstVajramID, firstDependency);
+        kryonDefinitionRegistry.getDependentChainsStart().extend(firstVajramID, firstDependency);
     for (Dependency dependency : subsequentDependencies) {
       currentDepChain = currentDepChain.extend(dependency.ofVajramID(), dependency);
     }

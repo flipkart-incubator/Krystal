@@ -1,7 +1,6 @@
 package com.flipkart.krystal.data;
 
 import java.util.Optional;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 public sealed interface Success<T> extends Errable<T> permits Nil, NonNil {
 

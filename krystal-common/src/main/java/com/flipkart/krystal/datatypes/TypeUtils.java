@@ -12,9 +12,9 @@ import static com.flipkart.krystal.datatypes.JavaTypes.MAP_RAW;
 import static com.flipkart.krystal.datatypes.JavaTypes.OBJECT;
 import static com.flipkart.krystal.datatypes.JavaTypes.SHORT;
 import static com.flipkart.krystal.datatypes.JavaTypes.STRING;
+import static com.flipkart.krystal.datatypes.JavaTypes.VOID;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.common.collect.ImmutableList;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.LinkedHashMap;
@@ -84,6 +84,11 @@ public final class TypeUtils {
 
     dataTypeMappings.put(String.class.getCanonicalName(), _unused -> STRING);
     dataTypeMappings.put(Object.class.getCanonicalName(), _unused -> OBJECT);
+
+    dataTypeMappings.put(void.class.getCanonicalName(), _unused -> VOID);
+    dataTypeMappings.put(Void.class.getCanonicalName(), _unused -> VOID);
+    typeKindMappings.put(void.class.getCanonicalName(), TypeKind.VOID);
+    typeKindMappings.put(Void.class.getCanonicalName(), TypeKind.VOID);
 
     dataTypeMappings.put(
         List.class.getName(),

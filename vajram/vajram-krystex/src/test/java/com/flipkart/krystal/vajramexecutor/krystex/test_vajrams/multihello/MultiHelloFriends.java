@@ -95,8 +95,8 @@ public abstract class MultiHelloFriends extends ComputeVajramDef<String> {
   @Output
   static String sayHellos(
       List<String> userIds,
-      FanoutDepResponses<String, HelloFriends_Req> hellos,
-      FanoutDepResponses<Void, AuditData_Req> audited) {
+      FanoutDepResponses<HelloFriends_Req, String> hellos,
+      FanoutDepResponses<AuditData_Req, Void> audited) {
     List<String> result = new ArrayList<>();
     for (String userId : userIds) {
       for (Integer numberOfFriend : NUMBER_OF_FRIENDS) {

@@ -1,5 +1,5 @@
 plugins {
-    id 'com.flipkart.java.code.standard' version '3.5'
+    id 'com.flipkart.java.code.standard' version '3.6'
     id 'org.gradlex.extra-java-module-info' version '1.11'
 }
 
@@ -10,8 +10,6 @@ ext {
 
     protobuf_version = '4.30.2'
 
-    //Use this during development time to fasten compilation by disabling heavy compiler plugins
-    fast_compile = false
 }
 
 subprojects {
@@ -48,9 +46,7 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
     apply plugin: 'java-library'
     apply plugin: 'org.gradlex.extra-java-module-info'
 
-    if (!fast_compile) {
-        apply plugin: 'com.flipkart.java.code.standard'
-    }
+    apply plugin: 'com.flipkart.java.code.standard'
 
     dependencies {
         implementation 'com.google.guava:guava'
@@ -117,10 +113,8 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
         }
     }
 
-    if (!fast_compile) {
-        checkerFramework {
-            excludeTests = true
-        }
+    checkerFramework {
+        excludeTests = true
     }
 
     java {

@@ -39,10 +39,10 @@ public final class MultiValTransformFanoutResolverStage<
    */
   @SuppressWarnings("unchecked")
   public MultiValTransformFanoutResolverStage<S, T, CV, DV, SDV> skipIf(
-      Predicate<FanoutDepResponses<S, ?>> whenToSkip, String reason) {
+      Predicate<FanoutDepResponses<?, S>> whenToSkip, String reason) {
     this.skipConditions.add(
         new SkipPredicate(
-            reason, facetValue -> whenToSkip.test((FanoutDepResponses<S, ?>) facetValue)));
+            reason, facetValue -> whenToSkip.test((FanoutDepResponses<?, S>) facetValue)));
     return this;
   }
 
@@ -56,12 +56,12 @@ public final class MultiValTransformFanoutResolverStage<
    */
   @SuppressWarnings("unchecked")
   public SimpleInputResolverSpec<T, CV, DV> asResolver(
-      Function<FanoutDepResponses<S, SDV>, ? extends Collection<? extends T>> transformer) {
+      Function<FanoutDepResponses<SDV, S>, ? extends Collection<? extends T>> transformer) {
     return new SimpleInputResolverSpec<>(
         targetInput,
         sourceFacet,
         skipConditions,
         new Transformer.Many2Many(
-            facetValue -> transformer.apply((FanoutDepResponses<S, SDV>) facetValue)));
+            facetValue -> transformer.apply((FanoutDepResponses<SDV, S>) facetValue)));
   }
 }

@@ -60,4 +60,9 @@ public final class Failure<T> implements Errable<T> {
   private RuntimeException asRuntimException() {
     return error instanceof RuntimeException e ? e : new StackTracelessException("Failure", error);
   }
+
+  @Override
+  public @Nullable T value() {
+    return null;
+  }
 }

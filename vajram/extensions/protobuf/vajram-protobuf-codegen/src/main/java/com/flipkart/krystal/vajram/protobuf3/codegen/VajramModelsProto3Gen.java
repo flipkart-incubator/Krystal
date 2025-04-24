@@ -14,6 +14,7 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.codegen.common.models.CodeGenParams;
@@ -22,9 +23,8 @@ import com.flipkart.krystal.vajram.codegen.common.models.DefaultFacetModel;
 import com.flipkart.krystal.vajram.codegen.common.models.Utils;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramValidationException;
-import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGenContext;
 import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGenContext;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
@@ -213,7 +213,8 @@ class VajramModelsProto3Gen implements CodeGenerator {
           MethodSpec.methodBuilder(facetName).addAnnotation(Override.class).addModifiers(PUBLIC);
 
       getterBuilder.returns(
-          util.facetJavaType(facet, CodeGenParams.builder().isRequest(true).withImpl(true).build())
+          util.getFacetReturnType(
+                  facet, CodeGenParams.builder().isRequest(true).withImpl(true).build())
               .javaTypeName(facet)
               .annotated(AnnotationSpec.builder(Nullable.class).build()));
 
@@ -390,7 +391,7 @@ class VajramModelsProto3Gen implements CodeGenerator {
           MethodSpec.methodBuilder(facetName).addAnnotation(Override.class).addModifiers(PUBLIC);
 
       getterBuilder.returns(
-          util.facetJavaType(
+          util.getFacetReturnType(
                   facet,
                   CodeGenParams.builder().isRequest(true).isBuilder(true).withImpl(true).build())
               .javaTypeName(facet)

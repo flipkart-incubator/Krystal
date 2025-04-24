@@ -125,8 +125,13 @@ public final class JavaType<T> implements DataType<T> {
   @Override
   public TypeMirror javaModelType(ProcessingEnvironment processingEnv) {
     TypeKind typeKind = typeKindMappings.get(canonicalClassName);
-    if (typeKind != null && typeKind.isPrimitive()) {
-      return processingEnv.getTypeUtils().getPrimitiveType(typeKind);
+    if (typeKind != null) {
+      if (typeKind.isPrimitive()) {
+        return processingEnv.getTypeUtils().getPrimitiveType(typeKind);
+      }
+      if (typeKind == TypeKind.VOID) {
+        return processingEnv.getTypeUtils().getNoType(typeKind);
+      }
     }
     TypeElement typeElement = processingEnv.getElementUtils().getTypeElement(canonicalClassName);
     if (typeElement == null) {

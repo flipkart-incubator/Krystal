@@ -45,5 +45,8 @@ public final class JavaTypes {
   /** JavaType for the {@link Object} */
   public static final JavaType<Object> OBJECT = new JavaType<>(Object.class);
 
+  /** JavaType for {@link Void} */
+  public static final JavaType<Void> VOID = new JavaType<>(void.class);
+
   private JavaTypes() {}
 }

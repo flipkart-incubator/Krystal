@@ -15,14 +15,14 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  * @param <T> The response type of the dependency vajram
  */
 @ToString(onlyExplicitlyIncluded = true)
-public final class FanoutDepResponses<T, R extends Request<T>> implements DepResponse<T, R> {
+public final class FanoutDepResponses<R extends Request<T>, T> implements DepResponse<R, T> {
 
   private static final FanoutDepResponses<?, ?> EMPTY =
       new FanoutDepResponses<>(ImmutableList.of());
 
   @SuppressWarnings("unchecked")
-  public static <R extends Request<T>, T> FanoutDepResponses<T, R> empty() {
-    return (FanoutDepResponses<T, R>) EMPTY;
+  public static <R extends Request<T>, T> FanoutDepResponses<R, T> empty() {
+    return (FanoutDepResponses<R, T>) EMPTY;
   }
 
   @ToString.Include @Getter

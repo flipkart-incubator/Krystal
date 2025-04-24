@@ -59,7 +59,7 @@ public abstract class MutualFriendsHello extends ComputeVajramDef<String> {
   }
 
   @Output
-  static String sayHelloToMutualFriends(FanoutDepResponses<String, HelloFriendsV2_Req> hellos) {
+  static String sayHelloToMutualFriends(FanoutDepResponses<HelloFriendsV2_Req, String> hellos) {
     List<String> result = new ArrayList<>();
     for (var response : hellos.requestResponsePairs()) {
       response.response().valueOpt().ifPresent(result::add);

@@ -51,7 +51,6 @@ class MultiplyTest {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              graph.getVajramIdByVajramDefType(Multiply.class),
               Multiply_ImmutReqPojo._builder().numberOne(3).numberTwo(9)._build());
     }
     Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(27);

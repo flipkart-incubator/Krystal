@@ -67,7 +67,7 @@ abstract class MultiAgentContact extends ComputeVajramDef<List<String>> {
   }
 
   @Output
-  static List<String> output(FanoutDepResponses<String, CustomerServiceAgent_Req> responses) {
+  static List<String> output(FanoutDepResponses<CustomerServiceAgent_Req, String> responses) {
     return ImmutableList.copyOf(
         responses.requestResponsePairs().stream()
             .map(RequestResponse::response)

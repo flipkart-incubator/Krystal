@@ -5,7 +5,6 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import com.flipkart.krystal.annos.ApplicableToElements;
 import com.flipkart.krystal.core.KrystalElement.Facet;
-import com.google.auto.value.AutoAnnotation;
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;

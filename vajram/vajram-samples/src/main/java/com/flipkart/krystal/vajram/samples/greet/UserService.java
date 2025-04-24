@@ -6,10 +6,10 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Function.identity;
 
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;
-import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.google.common.collect.ImmutableCollection;
 import java.util.Collection;
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 public abstract class UserService extends IOVajramDef<UserInfo> {
 
   static class _Inputs {
-    @IfNull(value = FAIL)
+    @IfNull(FAIL)
     @Batched
     String userId;
   }
@@ -30,8 +30,7 @@ public abstract class UserService extends IOVajramDef<UserInfo> {
   @Output
   @SuppressWarnings("method.invocation")
   static Map<UserService_BatchItem, CompletableFuture<UserInfo>> callUserService(
-      ImmutableCollection<
-          UserService_BatchItem> _batchItems) {
+      ImmutableCollection<UserService_BatchItem> _batchItems) {
 
     // Make a call to user service and get user info
     CompletableFuture<Map<UserService_BatchItem, UserInfo>> resultsFuture =

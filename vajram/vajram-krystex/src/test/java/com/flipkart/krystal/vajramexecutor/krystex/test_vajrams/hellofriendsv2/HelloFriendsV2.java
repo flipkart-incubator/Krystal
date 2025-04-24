@@ -57,7 +57,7 @@ public abstract class HelloFriendsV2 extends ComputeVajramDef<String> {
   }
 
   @Output
-  static String sayHellos(FanoutDepResponses<TestUserInfo, TestUserService_Req> friendInfos) {
+  static String sayHellos(FanoutDepResponses<TestUserService_Req, TestUserInfo> friendInfos) {
     return "Hello Friends! %s"
         .formatted(
             friendInfos.requestResponsePairs().stream()

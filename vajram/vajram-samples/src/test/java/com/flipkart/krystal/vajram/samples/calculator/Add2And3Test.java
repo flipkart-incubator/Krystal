@@ -50,10 +50,7 @@ class Add2And3Test {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
                 .build())) {
-      future =
-          krystexVajramExecutor.execute(
-              graph.getVajramIdByVajramDefType(Add2And3.class),
-              Add2And3_ImmutReqPojo._builder()._build());
+      future = krystexVajramExecutor.execute(Add2And3_ImmutReqPojo._builder()._build());
     }
     Assertions.assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(5);
   }

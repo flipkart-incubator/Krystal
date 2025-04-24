@@ -1,7 +1,6 @@
 package com.flipkart.krystal.krystex;
 
-import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -9,7 +8,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public interface KrystalExecutor extends AutoCloseable {
 
   <T> CompletableFuture<@Nullable T> executeKryon(
-      VajramID vajramID, Request facets, KryonExecutionConfig executionConfig);
+      ImmutableRequest request, KryonExecutionConfig executionConfig);
 
   /**
    * This method starts execution of all submitted requests. No new kryon execution requests will be

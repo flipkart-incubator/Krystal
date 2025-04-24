@@ -1,11 +1,10 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
+import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
-import com.flipkart.krystal.data.IfNull;
-import com.flipkart.krystal.data.IfNull.IfNullThen;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import javax.lang.model.element.AnnotationMirror;
@@ -32,7 +31,7 @@ public sealed interface FacetGenModel permits DefaultFacetModel, DependencyModel
 
   default boolean isMandatoryOnServer() {
     IfNull ifNull = facetField().getAnnotation(IfNull.class);
-    return ifNull != null && !ifNull.value().equals(IfNullThen.MAY_FAIL_CONDITIONALLY);
+    return ifNull != null && ifNull.value().isMandatoryOnServer();
   }
 
   @Nullable String documentation();

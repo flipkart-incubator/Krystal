@@ -40,7 +40,7 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
 
   private final String instanceId;
   private final InputBatcher inputBatcher;
-  private final Predicate<DependentChain> isApplicableToDependantChain;
+  private final Predicate<DependentChain> isApplicableToDependentChain;
   private final Map<ImmutableFacetValues, CompletableFuture<@Nullable Object>> futureCache =
       new LinkedHashMap<>();
   private ImmutableSet<DependentChain> activeDependentChains = ImmutableSet.of();
@@ -49,10 +49,10 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
   public InputBatchingDecorator(
       String instanceId,
       InputBatcher inputBatcher,
-      Predicate<DependentChain> isApplicableToDependantChain) {
+      Predicate<DependentChain> isApplicableToDependentChain) {
     this.instanceId = instanceId;
     this.inputBatcher = inputBatcher;
-    this.isApplicableToDependantChain = isApplicableToDependantChain;
+    this.isApplicableToDependentChain = isApplicableToDependentChain;
   }
 
   @Override
@@ -106,7 +106,7 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
       LinkedHashSet<DependentChain> allActiveDepChains =
           new LinkedHashSet<>(initiateActiveDepChains.dependantsChains());
       // Retain only the ones which are applicable for this input batching decorator
-      allActiveDepChains.removeIf(isApplicableToDependantChain.negate());
+      allActiveDepChains.removeIf(isApplicableToDependentChain.negate());
       this.activeDependentChains = ImmutableSet.copyOf(allActiveDepChains);
     } else if (logicDecoratorCommand instanceof FlushCommand flushCommand) {
       flushedDependentChains.add(flushCommand.dependantsChain());

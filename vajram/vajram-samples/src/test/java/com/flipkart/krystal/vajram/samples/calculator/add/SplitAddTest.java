@@ -123,7 +123,6 @@ class SplitAddTest {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              graph.getVajramIdByVajramDefType(SplitAdd.class),
               SplitAdd_ImmutReqPojo._builder().numbers(List.of())._build(),
               KryonExecutionConfig.builder()
                   .disabledDependentChains(disabledDepChains(graph))
@@ -280,7 +279,6 @@ class SplitAddTest {
   private static CompletableFuture<Integer> executeVajram(
       VajramKryonGraph graph, KrystexVajramExecutor krystexVajramExecutor, int multiplier) {
     return krystexVajramExecutor.execute(
-        graph.getVajramIdByVajramDefType(SplitAdd.class),
         SplitAdd_ImmutReqPojo._builder()
             .numbers(
                 new ArrayList<>(
@@ -344,69 +342,69 @@ class SplitAddTest {
   private static ImmutableSet<DependentChain> disabledDepChains(VajramKryonGraph graph) {
     String splitAdderId = graph.getVajramIdByVajramDefType(SplitAdd.class).id();
     return ImmutableSet.of(
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum1_s, splitSum1_s, splitSum1_s, splitSum1_s, splitSum1_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum1_s, splitSum1_s, splitSum1_s, splitSum1_s, splitSum2_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum1_s, splitSum1_s, splitSum1_s, splitSum2_s, splitSum1_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum1_s, splitSum1_s, splitSum1_s, splitSum2_s, splitSum2_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum1_s, splitSum1_s, splitSum2_s, splitSum1_s, splitSum1_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum1_s, splitSum1_s, splitSum2_s, splitSum1_s, splitSum2_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum1_s, splitSum1_s, splitSum2_s, splitSum2_s, splitSum1_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum1_s, splitSum1_s, splitSum2_s, splitSum2_s, splitSum2_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum1_s, splitSum2_s, splitSum1_s, splitSum1_s, splitSum1_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum1_s, splitSum2_s, splitSum1_s, splitSum1_s, splitSum2_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum1_s, splitSum2_s, splitSum1_s, splitSum2_s, splitSum1_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum1_s, splitSum2_s, splitSum1_s, splitSum2_s, splitSum2_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum1_s, splitSum2_s, splitSum2_s, splitSum1_s, splitSum1_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum1_s, splitSum2_s, splitSum2_s, splitSum1_s, splitSum2_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum1_s, splitSum2_s, splitSum2_s, splitSum2_s, splitSum1_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum1_s, splitSum2_s, splitSum2_s, splitSum2_s, splitSum2_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum2_s, splitSum1_s, splitSum1_s, splitSum1_s, splitSum1_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum2_s, splitSum1_s, splitSum1_s, splitSum1_s, splitSum2_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum2_s, splitSum1_s, splitSum1_s, splitSum2_s, splitSum1_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum2_s, splitSum1_s, splitSum1_s, splitSum2_s, splitSum2_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum2_s, splitSum1_s, splitSum2_s, splitSum1_s, splitSum1_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum2_s, splitSum1_s, splitSum2_s, splitSum1_s, splitSum2_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum2_s, splitSum1_s, splitSum2_s, splitSum2_s, splitSum1_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum2_s, splitSum1_s, splitSum2_s, splitSum2_s, splitSum2_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum2_s, splitSum2_s, splitSum1_s, splitSum1_s, splitSum1_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum2_s, splitSum2_s, splitSum1_s, splitSum1_s, splitSum2_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum2_s, splitSum2_s, splitSum1_s, splitSum2_s, splitSum1_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum2_s, splitSum2_s, splitSum1_s, splitSum2_s, splitSum2_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum2_s, splitSum2_s, splitSum2_s, splitSum1_s, splitSum1_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum2_s, splitSum2_s, splitSum2_s, splitSum1_s, splitSum2_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum2_s, splitSum2_s, splitSum2_s, splitSum2_s, splitSum1_s),
-        graph.computeDependantChain(
+        graph.computeDependentChain(
             splitAdderId, splitSum2_s, splitSum2_s, splitSum2_s, splitSum2_s, splitSum2_s));
   }
 }

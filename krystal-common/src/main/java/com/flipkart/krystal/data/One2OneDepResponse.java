@@ -5,14 +5,15 @@ import static com.flipkart.krystal.data.Errable.nil;
 import com.flipkart.krystal.data.FacetValue.SingleFacetValue;
 import com.flipkart.krystal.data.One2OneDepResponse.NoRequest;
 import lombok.ToString;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-public sealed interface One2OneDepResponse<T, R extends Request<T>>
-    extends DepResponse<T, R>, SingleFacetValue<T> permits NoRequest, RequestResponse {
+public sealed interface One2OneDepResponse<R extends Request<T>, T>
+    extends DepResponse<R, T>, SingleFacetValue<T> permits NoRequest, RequestResponse {
 
   Errable<T> response();
 
   @SuppressWarnings("unchecked")
-  static <R extends Request<T>, T> One2OneDepResponse<T, R> noRequest() {
+  static <R extends Request<T>, T> One2OneDepResponse<R, T> noRequest() {
     return NoRequest.NO_REQUEST;
   }
 
@@ -32,6 +33,11 @@ public sealed interface One2OneDepResponse<T, R extends Request<T>>
     @Override
     public Errable<Object> response() {
       return nil();
+    }
+
+    @Override
+    public @Nullable Object value() {
+      return null;
     }
   }
 }

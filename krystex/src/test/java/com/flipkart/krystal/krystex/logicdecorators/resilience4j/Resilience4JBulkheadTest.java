@@ -16,7 +16,6 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.krystex.testutils.SimpleRequestBuilder;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.InputMirror;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
@@ -34,6 +33,7 @@ import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
 import com.flipkart.krystal.krystex.testutils.FacetValuesMapBuilder;
 import com.flipkart.krystal.krystex.testutils.SimpleFacet;
+import com.flipkart.krystal.krystex.testutils.SimpleRequestBuilder;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.tags.ElementTags;
@@ -108,10 +108,10 @@ class Resilience4JBulkheadTest {
           @Override
           public <T> Optional<T> getConfig(String key) {
             return switch (key) {
-              case "bulkhead_restrictsConcurrency.bulkhead.max_concurrency" ->
-                  (Optional<T>) Optional.of(2);
-              case "bulkhead_restrictsConcurrency.bulkhead.enabled" ->
-                  (Optional<T>) Optional.of(true);
+              case "bulkhead_restrictsConcurrency.bulkhead.max_concurrency" -> (Optional<T>)
+                  Optional.of(2);
+              case "bulkhead_restrictsConcurrency.bulkhead.enabled" -> (Optional<T>)
+                  Optional.of(true);
               default -> Optional.empty();
             };
           }
@@ -140,9 +140,9 @@ class Resilience4JBulkheadTest {
             "executor1");
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         executor1.executeKryon(
-            kryonDefinition.vajramID(),
             new SimpleRequestBuilder<>(
-                Set.of(input(1)), ImmutableMap.of(1, withValue(1)), kryonDefinition.vajramID()),
+                    Set.of(input(1)), ImmutableMap.of(1, withValue(1)), kryonDefinition.vajramID())
+                ._build(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     KryonExecutor executor2 =
         new KryonExecutor(
@@ -151,9 +151,9 @@ class Resilience4JBulkheadTest {
             "executor2");
     CompletableFuture<Object> call2BeforeBulkheadExhaustion =
         executor2.executeKryon(
-            kryonDefinition.vajramID(),
             new SimpleRequestBuilder<>(
-                Set.of(input(1)), ImmutableMap.of(1, withValue(2)), kryonDefinition.vajramID()),
+                    Set.of(input(1)), ImmutableMap.of(1, withValue(2)), kryonDefinition.vajramID())
+                ._build(),
             KryonExecutionConfig.builder().executionId("req_2").build());
     KryonExecutor executor3 =
         new KryonExecutor(
@@ -162,9 +162,9 @@ class Resilience4JBulkheadTest {
             "executor3");
     CompletableFuture<Object> callAfterBulkheadExhaustion =
         executor3.executeKryon(
-            kryonDefinition.vajramID(),
             new SimpleRequestBuilder<>(
-                Set.of(input(1)), ImmutableMap.of(1, withValue(3)), kryonDefinition.vajramID()),
+                    Set.of(input(1)), ImmutableMap.of(1, withValue(3)), kryonDefinition.vajramID())
+                ._build(),
             KryonExecutionConfig.builder().executionId("req_3").build());
     executor1.close();
     executor2.close();
@@ -206,12 +206,13 @@ class Resilience4JBulkheadTest {
           @Override
           public <T> Optional<T> getConfig(String key) {
             return switch (key) {
-              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.max_concurrency" ->
-                  (Optional<T>) Optional.of(2);
-              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.enabled" ->
-                  (Optional<T>) Optional.of(true);
-              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.type" ->
-                  (Optional<T>) Optional.of("THREADPOOL");
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.max_concurrency" -> (Optional<
+                      T>)
+                  Optional.of(2);
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.enabled" -> (Optional<T>)
+                  Optional.of(true);
+              case "threadpoolBulkhead_restrictsConcurrency.bulkhead.type" -> (Optional<T>)
+                  Optional.of("THREADPOOL");
               default -> Optional.empty();
             };
           }
@@ -240,9 +241,9 @@ class Resilience4JBulkheadTest {
             "executor1");
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         executor1.executeKryon(
-            kryonDefinition.vajramID(),
             new SimpleRequestBuilder<>(
-                inputs, ImmutableMap.of(1, withValue(1)), kryonDefinition.vajramID()),
+                    inputs, ImmutableMap.of(1, withValue(1)), kryonDefinition.vajramID())
+                ._build(),
             KryonExecutionConfig.builder().executionId("req_1").build());
     KryonExecutor executor2 =
         new KryonExecutor(
@@ -251,9 +252,9 @@ class Resilience4JBulkheadTest {
             "executor2");
     CompletableFuture<Object> call2BeforeBulkheadExhaustion =
         executor2.executeKryon(
-            kryonDefinition.vajramID(),
             new SimpleRequestBuilder<>(
-                inputs, ImmutableMap.of(1, withValue(2)), kryonDefinition.vajramID()),
+                    inputs, ImmutableMap.of(1, withValue(2)), kryonDefinition.vajramID())
+                ._build(),
             KryonExecutionConfig.builder().executionId("req_2").build());
     KryonExecutor executor3 =
         new KryonExecutor(
@@ -262,9 +263,9 @@ class Resilience4JBulkheadTest {
             "executor3");
     CompletableFuture<Object> callAfterBulkheadExhaustion =
         executor3.executeKryon(
-            kryonDefinition.vajramID(),
             new SimpleRequestBuilder<>(
-                inputs, ImmutableMap.of(1, withValue(3)), kryonDefinition.vajramID()),
+                    inputs, ImmutableMap.of(1, withValue(3)), kryonDefinition.vajramID())
+                ._build(),
             KryonExecutionConfig.builder().executionId("req_3").build());
     executor1.close();
     executor2.close();

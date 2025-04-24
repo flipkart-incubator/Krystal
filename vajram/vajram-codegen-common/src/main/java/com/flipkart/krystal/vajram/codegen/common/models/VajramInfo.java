@@ -24,14 +24,11 @@ public record VajramInfo(
     if (lite.isTrait()) {
       for (DefaultFacetModel defaultFacet : givenFacets) {
         if (!defaultFacet.facetTypes().equals(Set.of(INPUT))) {
-          throw lite.util()
-              .errorAndThrow(
-                  "Only INPUT facets are supported in Traits", defaultFacet.facetField());
+          lite.util().error("Only INPUT facets are supported in Traits", defaultFacet.facetField());
         }
       }
       if (!dependencies.isEmpty()) {
-        throw lite.util()
-            .errorAndThrow("Traits cannot have dependencies", dependencies.get(0).facetField());
+        lite.util().error("Traits cannot have dependencies", dependencies.get(0).facetField());
       }
     }
   }

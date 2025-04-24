@@ -13,8 +13,6 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
-// Note: Using direct class references to model framework interfaces instead of imports
-// since the actual package paths may differ across environments
 import com.flipkart.krystal.data.IfNull;
 import com.flipkart.krystal.data.IfNull.IfNullThen;
 import com.flipkart.krystal.datatypes.DataType;
@@ -39,7 +37,6 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -191,7 +188,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
    */
   private void validateModelRoot(TypeElement modelRootType, Utils util) {
     if (!modelRootType.getKind().isInterface()) {
-      throw util.errorAndThrow(
+      util.error(
           "Type with @ModelRoot annotation must be an interface: "
               + modelRootType.getQualifiedName(),
           modelRootType);
@@ -209,7 +206,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     }
 
     if (!extendsModel) {
-      throw util.errorAndThrow(
+      util.error(
           "Interface with @ModelRoot annotation must extend Model: "
               + modelRootType.getQualifiedName(),
           modelRootType);
@@ -243,23 +240,21 @@ public final class JavaModelsGenerator implements CodeGenerator {
   private static void validateGetterMethod(Utils util, ExecutableElement method) {
     // Validate method has zero parameters
     if (!method.getParameters().isEmpty()) {
-      throw util.errorAndThrow(
-          "Model root methods must have zero parameters: " + method.getSimpleName(), method);
+      util.error("Model root methods must have zero parameters: " + method.getSimpleName(), method);
     }
 
     TypeMirror returnType = method.getReturnType();
 
     // Validate method has a return type (not void)
     if (returnType.getKind() == TypeKind.VOID) {
-      throw util.errorAndThrow(
+      util.error(
           "Model root methods must have a return type (not void): " + method.getSimpleName(),
           method);
     }
 
     // Validate method return type is not an array
     if (returnType.getKind() == TypeKind.ARRAY) {
-      throw util.errorAndThrow(
-          "Model root methods must not return arrays. Use List instead.", method);
+      util.error("Model root methods must not return arrays. Use List instead.", method);
     }
 
     DataType<?> dataType = new DeclaredTypeVisitor<>(util, method).visit(returnType);

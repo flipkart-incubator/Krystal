@@ -73,7 +73,7 @@ public abstract class ChainAdd extends ComputeVajramDef<Integer> implements Mult
   }
 
   @Output
-  static Integer add(Errable<Integer> sum, FanoutDepResponses<Integer, ChainAdd_Req> chainSum) {
+  static Integer add(Errable<Integer> sum, FanoutDepResponses<ChainAdd_Req, Integer> chainSum) {
     return sum.valueOpt().orElse(0)
         + chainSum.requestResponsePairs().stream()
             .mapToInt(response -> response.response().valueOpt().orElse(0))

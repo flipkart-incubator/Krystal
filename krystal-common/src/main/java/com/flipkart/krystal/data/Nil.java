@@ -13,7 +13,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @SuppressWarnings("Singleton")
 @EqualsAndHashCode
 @ToString
-final class Nil<T> implements Success<T> {
+public final class Nil<T> implements Success<T> {
   private static final Nil NIL = new Nil();
   private static final CompletableFuture NIL_FUTURE = completedFuture(null);
 
@@ -21,6 +21,11 @@ final class Nil<T> implements Success<T> {
   @SuppressWarnings("unchecked")
   public CompletableFuture<@Nullable T> toFuture() {
     return NIL_FUTURE;
+  }
+
+  @Override
+  public @Nullable T value() {
+    return null;
   }
 
   @Override

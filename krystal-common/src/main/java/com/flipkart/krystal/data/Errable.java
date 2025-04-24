@@ -28,9 +28,9 @@ public sealed interface Errable<T> extends FacetValue<T>, SingleFacetValue<T>
   Optional<T> valueOpt();
 
   /**
-   * Returns an {@link Optional} which is has the error which caused this Errable to be a {@link
-   * Failure}. The returned Optional is present only if and only if this Errable is of the type
-   * {@link Failure}. In all other cases, the returned Optional is empty.
+   * Returns an {@link Optional} which has the error which caused this Errable to be a {@link
+   * Failure} if and only if this errable is a Failure. In all other cases, the returned Optional is
+   * empty.
    */
   Optional<Throwable> errorOpt();
 
