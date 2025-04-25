@@ -16,16 +16,17 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import com.google.protobuf.ByteString;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 
+@SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 @ExternallyInvocable
 @RemotelyInvocable
 @SupportedSerdeProtocols(Protobuf3.class)
 @ReservedSerialIds(8)
 @Vajram
 abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3LatticeSampleResponse> {
-  @SuppressWarnings("initialization.field.uninitialized")
   static class _Inputs {
     @SerialId(1)
     int optionalInput;
@@ -84,7 +85,8 @@ abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3LatticeSampleR
                     inputWithDefaultValue,
                     optionalLongInput,
                     mandatoryLongInput,
-                    optionalByteString.map(bytes -> new String(bytes.toByteArray()))))
+                    optionalByteString.map(
+                        bytes -> new String(bytes.toByteArray(), StandardCharsets.UTF_8))))
         .mandatoryInt(1)
         ._build();
   }

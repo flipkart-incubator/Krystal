@@ -1,14 +1,13 @@
 package com.flipkart.krystal.vajram.facets;
 
-import com.google.common.collect.ImmutableList;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public sealed interface DependencyCommand<T> permits One2OneCommand, FanoutCommand {
 
   String EMPTY_STRING = "";
 
-  ImmutableList<@NonNull T> inputs();
+  List<@Nullable T> inputs();
 
   boolean shouldSkip();
 

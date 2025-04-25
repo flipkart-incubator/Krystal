@@ -11,6 +11,8 @@ import lombok.ToString;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /**
+ * Response of a Fanout dependency
+ *
  * @param <R> The type of the request
  * @param <T> The response type of the dependency vajram
  */

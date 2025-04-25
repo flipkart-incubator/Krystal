@@ -18,18 +18,14 @@ public non-sealed interface StaticDispatchPolicy extends TraitDispatchPolicy {
   /**
    * Returns the concrete {@link VajramID} bound to the a trait for the given dependency.
    *
-   * @param traitId The vajramId of the trait for which the concrete bound vajram is to be
-   *     determined
    * @param dependency The depdency facet by which a vajram has added a dependency on the trait
    */
   VajramID get(Dependency dependency);
 
   /**
-   * Returns the concrete {@link VajramID} bound to the a trait for the given qualifier.
+   * Returns the concrete {@link VajramID} bound to a trait for the given qualifier.
    *
-   * @param traitId The vajramId of the trait for which the concrete bound vajram is to be
-   *     determined
-   * @param dependency The depdency facet by which a vajram has added a dependency on the trait
+   * @param qualifier The qualifier by which a dispatch target is to be selected
    */
   VajramID get(@Nullable Annotation qualifier);
 

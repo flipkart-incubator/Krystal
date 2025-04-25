@@ -1,17 +1,27 @@
 package com.flipkart.krystal.vajram.facets;
 
-import com.google.common.collect.ImmutableList;
+import static java.util.Collections.unmodifiableList;
+
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record FanoutCommand<T>(
-    ImmutableList<T> inputs, boolean shouldSkip, String doc, @Nullable Throwable skipCause)
+    List<@Nullable T> inputs, boolean shouldSkip, String doc, @Nullable Throwable skipCause)
     implements DependencyCommand<T> {
 
   public FanoutCommand(
-      Collection<T> inputs, boolean shouldSkip, String doc, @Nullable Throwable skipCause) {
-    this(ImmutableList.copyOf(inputs), shouldSkip, doc, skipCause);
+      Collection<? extends T> inputs,
+      boolean shouldSkip,
+      String doc,
+      @Nullable Throwable skipCause) {
+    this(new ArrayList<>(inputs), shouldSkip, doc, skipCause);
+  }
+
+  public FanoutCommand {
+    inputs = unmodifiableList(inputs);
   }
 
   @Override
@@ -20,11 +30,12 @@ public record FanoutCommand<T>(
   }
 
   public static <T> FanoutCommand<T> executeFanoutWith(Collection<? extends T> inputs) {
-    return new FanoutCommand<>(
-        inputs == null ? ImmutableList.of() : ImmutableList.copyOf(inputs),
-        false,
-        EMPTY_STRING,
-        null);
+    return new FanoutCommand<>(inputs, false, EMPTY_STRING, null);
+  }
+
+  @SuppressWarnings("unchecked")
+  public static <T> FanoutCommand<T> executeFanoutWith(List<? extends T> inputs) {
+    return new FanoutCommand<>((List<@Nullable T>) inputs, false, EMPTY_STRING, null);
   }
 
   public static <T> FanoutCommand<T> skipFanout(String reason) {
@@ -32,6 +43,6 @@ public record FanoutCommand<T>(
   }
 
   public static <T> FanoutCommand<T> skipFanout(String reason, @Nullable Throwable skipCause) {
-    return new FanoutCommand<>(Collections.emptyList(), true, reason, skipCause);
+    return new FanoutCommand<>(Collections.<@Nullable T>emptyList(), true, reason, skipCause);
   }
 }
