@@ -1,12 +1,12 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2;
 
-import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2_Fac.hellos_n;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.except.SkippedExecutionException;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -25,7 +25,7 @@ import java.util.Set;
 @Vajram
 public abstract class MultiHelloFriendsV2 extends ComputeVajramDef<String> {
   static class _Inputs {
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     Set<String> userIds;
 
     boolean skip;

@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
-import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.ComputeDelegationMode.SYNC;
 
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitRoot;
 import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
@@ -22,7 +22,7 @@ import lombok.experimental.UtilityClass;
 public interface MultiAdd extends TraitRoot<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
   class _Inputs {
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     List<Integer> numbers;
   }
 

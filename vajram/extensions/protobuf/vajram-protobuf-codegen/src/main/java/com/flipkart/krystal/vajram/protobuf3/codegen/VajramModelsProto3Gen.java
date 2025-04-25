@@ -14,7 +14,7 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.codegen.common.models.CodeGenParams;
@@ -488,8 +488,8 @@ class VajramModelsProto3Gen implements CodeGenerator {
     if (isProtoTypeMap(dataType)) {
       return false;
     }
-    IfNull ifNull = facet.facetField().getAnnotation(IfNull.class);
-    return ifNull == null || !ifNull.value().usePlatformDefault();
+    IfAbsent ifAbsent = facet.facetField().getAnnotation(IfAbsent.class);
+    return ifAbsent == null || !ifAbsent.value().usePlatformDefault();
   }
 
   /**

@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.samples.customer_service;
 
-import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.agentType_n;
 import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServiceAgent_Req.customerName_n;
@@ -10,7 +10,7 @@ import static com.flipkart.krystal.vajram.samples.customer_service.MultiAgentCon
 import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -33,15 +33,15 @@ import java.util.function.Function;
 @Vajram
 abstract class MultiAgentContact extends ComputeVajramDef<List<String>> {
   static class _Inputs {
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     String name;
 
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     String communication;
   }
 
   static class _InternalFacets {
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     @Dependency(onVajram = CustomerServiceAgent.class, canFanout = true)
     String responses;
   }

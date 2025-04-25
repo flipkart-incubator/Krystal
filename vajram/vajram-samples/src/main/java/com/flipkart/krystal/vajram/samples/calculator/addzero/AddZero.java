@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator.addzero;
 
-import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
@@ -8,7 +8,7 @@ import static com.flipkart.krystal.vajram.samples.calculator.addzero.AddZero_Fac
 import static com.flipkart.krystal.vajram.samples.calculator.addzero.AddZero_Fac.sum_s;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
@@ -22,12 +22,12 @@ import com.google.common.collect.ImmutableCollection;
 @ExternallyInvocable
 public abstract class AddZero extends ComputeVajramDef<Integer> {
   static class _Inputs {
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     int number;
   }
 
   static class _InternalFacets {
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     @Dependency(onVajram = Add.class)
     int sum;
   }

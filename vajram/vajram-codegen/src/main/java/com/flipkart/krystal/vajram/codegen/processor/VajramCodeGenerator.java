@@ -58,8 +58,8 @@ import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.FacetValuesContainer;
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.data.IfNull;
-import com.flipkart.krystal.data.IfNull.IfNullThen;
+import com.flipkart.krystal.data.IfAbsent;
+import com.flipkart.krystal.data.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 import com.flipkart.krystal.data.ImmutableRequest;
@@ -1645,10 +1645,10 @@ public class VajramCodeGenerator implements CodeGenerator {
 
     for (FacetGenModel facet : facetModelsByName.values()) {
       Element facetField = facet.facetField();
-      IfNull ifNull = facetField.getAnnotation(IfNull.class);
-      if (ifNull != null) {
-        IfNullThen ifNullThen = ifNull.value();
-        if (ifNullThen.usePlatformDefault()) {
+      IfAbsent ifAbsent = facetField.getAnnotation(IfAbsent.class);
+      if (ifAbsent != null) {
+        IfAbsentThen ifAbsentThen = ifAbsent.value();
+        if (ifAbsentThen.usePlatformDefault()) {
           if (facet.facetTypes().contains(DEPENDENCY)) {
             util.error(
                 "Defaulting to a platform default value is not supported for dependency facets.",
@@ -1664,17 +1664,17 @@ public class VajramCodeGenerator implements CodeGenerator {
 
   static void validateIfNoValueStrategyApplicability(
       Element typedElement, DataType<?> dataType, Utils util) {
-    IfNull ifNull = typedElement.getAnnotation(IfNull.class);
-    if (ifNull != null) {
-      IfNullThen ifNullThen = ifNull.value();
+    IfAbsent ifAbsent = typedElement.getAnnotation(IfAbsent.class);
+    if (ifAbsent != null) {
+      IfAbsentThen ifAbsentThen = ifAbsent.value();
       @Nullable ApplicableToTypes applicableToTypes;
       try {
         applicableToTypes =
-            IfNullThen.class.getField(ifNullThen.name()).getAnnotation(ApplicableToTypes.class);
+            IfAbsentThen.class.getField(ifAbsentThen.name()).getAnnotation(ApplicableToTypes.class);
       } catch (NoSuchFieldException e) {
         // This should never happen since we're using the enum value's name
         throw util.errorAndThrow(
-            "Failed to access field " + ifNullThen.name() + " in IfNoValue.Strategy enum",
+            "Failed to access field " + ifAbsentThen.name() + " in IfNoValue.Strategy enum",
             typedElement);
       }
 
@@ -1703,7 +1703,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                 String.format(
                     "The IfNoValue.Strategy.%s is not applicable to data with type '%s'. "
                         + "This strategy is only applicable to the following types: %s",
-                    ifNullThen.name(),
+                    ifAbsentThen.name(),
                     rawFacetType,
                     applicableTypes.stream()
                         .map(JavaType::canonicalClassName)
@@ -1715,7 +1715,7 @@ public class VajramCodeGenerator implements CodeGenerator {
               String.format(
                   "The IfNoValue.Strategy.%s is not applicable to data of type '%s'. "
                       + "This strategy is not applicable to any types.",
-                  ifNullThen.name(), rawFacetType),
+                  ifAbsentThen.name(), rawFacetType),
               typedElement);
         }
       }

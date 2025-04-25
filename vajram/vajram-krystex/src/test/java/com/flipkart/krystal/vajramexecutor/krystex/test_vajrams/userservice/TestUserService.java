@@ -1,12 +1,12 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice;
 
-import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;
@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.LongAdder;
 @Vajram
 public abstract class TestUserService extends IOVajramDef<TestUserInfo> {
   static class _Inputs {
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     @Batched
     String userId;
   }

@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.codegen.processor;
 
-import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
-import static com.flipkart.krystal.data.IfNull.IfNullThen.MAY_FAIL_CONDITIONALLY;
-import static com.flipkart.krystal.data.IfNull.IfNullThen.WILL_NEVER_FAIL;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
 import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getIfNoValue;
 import static com.flipkart.krystal.vajram.codegen.processor.VajramCodeGenerator.validateIfNoValueStrategyApplicability;
 import static java.util.Objects.requireNonNull;
@@ -13,8 +13,8 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
-import com.flipkart.krystal.data.IfNull;
-import com.flipkart.krystal.data.IfNull.IfNullThen;
+import com.flipkart.krystal.data.IfAbsent;
+import com.flipkart.krystal.data.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.model.ImmutableModel;
 import com.flipkart.krystal.model.Model;
@@ -98,7 +98,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *       and all setters accept nulls. This class has a package private no arg constructor, and a
  *       package private all args constructor. The class implements the {@link Model#_build()}
  *       method which calls the all arg constructor of the pojo class. The builder class respects
- *       the @ {@link IfNull} annotation and does necessary validations before calling the pojo
+ *       the @ {@link IfAbsent} annotation and does necessary validations before calling the pojo
  *       constructor. implements {@link Model#_newCopy()} in which it creates a new Builder and sets
  *       all the values.
  * </ul>
@@ -359,9 +359,10 @@ public final class JavaModelsGenerator implements CodeGenerator {
         }
       } else {
         // Check if the method has @IfNoValue and is primitive
-        IfNull ifNull = getIfNoValue(method);
+        IfAbsent ifAbsent = getIfNoValue(method);
         if (method.getReturnType().getKind().isPrimitive()
-            && (ifNull.value() == MAY_FAIL_CONDITIONALLY || ifNull.value() == WILL_NEVER_FAIL)) {
+            && (ifAbsent.value() == MAY_FAIL_CONDITIONALLY
+                || ifAbsent.value() == WILL_NEVER_FAIL)) {
           fieldType = TypeName.get(method.getReturnType()).box();
         } else {
           fieldType = TypeName.get(method.getReturnType());
@@ -585,18 +586,18 @@ public final class JavaModelsGenerator implements CodeGenerator {
       }
 
       // Get the IfNoValue annotation directly
-      IfNull ifNull = getIfNoValue(method);
+      IfAbsent ifAbsent = getIfNoValue(method);
 
       // If IfNoValue annotation was found, handle according to strategy
       // Get the strategy directly from the annotation
-      IfNullThen ifNullThen = ifNull.value();
+      IfAbsentThen ifAbsentThen = ifAbsent.value();
 
       // Only generate null check if validation is needed or error needs to be thrown
-      if (ifNullThen != IfNullThen.MAY_FAIL_CONDITIONALLY
-          && ifNullThen != IfNullThen.WILL_NEVER_FAIL) {
+      if (ifAbsentThen != IfAbsentThen.MAY_FAIL_CONDITIONALLY
+          && ifAbsentThen != IfAbsentThen.WILL_NEVER_FAIL) {
         buildMethodBuilder.beginControlFlow("if (this.$N == null)", fieldName);
 
-        switch (ifNullThen) {
+        switch (ifAbsentThen) {
           case FAIL:
             // FAIL strategy - throw exception when value is null
             buildMethodBuilder.addStatement(
@@ -628,7 +629,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
             }
             break;
           default:
-            throw new AssertionError("Unexpected IfNoValueThen = " + ifNullThen);
+            throw new AssertionError("Unexpected IfNoValueThen = " + ifAbsentThen);
         }
 
         buildMethodBuilder.endControlFlow();
@@ -738,8 +739,8 @@ public final class JavaModelsGenerator implements CodeGenerator {
    * must be either Optional or annotated with @Nullable.
    */
   private void validateOptionalField(ExecutableElement method) {
-    IfNull ifNull = getIfNoValue(method);
-    if (ifNull.value() == MAY_FAIL_CONDITIONALLY) {
+    IfAbsent ifAbsent = getIfNoValue(method);
+    if (ifAbsent.value() == MAY_FAIL_CONDITIONALLY) {
       // Check if the return type is primitive
       TypeMirror returnType = method.getReturnType();
       if (returnType.getKind().isPrimitive()) {
@@ -755,7 +756,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
                 .formatted(method.getSimpleName(), Nullable.class.getCanonicalName()),
             method);
       }
-    } else if (ifNull.value() == FAIL) {
+    } else if (ifAbsent.value() == FAIL) {
       // For FAIL strategy, we don't need to validate anything specific here
       // The code generation will handle boxing primitive types for these fields
     }

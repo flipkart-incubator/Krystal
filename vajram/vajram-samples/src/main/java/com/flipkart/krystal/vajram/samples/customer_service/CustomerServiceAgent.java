@@ -1,10 +1,10 @@
 package com.flipkart.krystal.vajram.samples.customer_service;
 
-import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.ComputeDelegationMode.NONE;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.traits.UseForDispatch;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitRoot;
@@ -21,15 +21,15 @@ import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 public interface CustomerServiceAgent extends TraitRoot<String> {
   @SuppressWarnings("initialization.field.uninitialized")
   class _Inputs {
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     @UseForDispatch
     AgentType agentType;
 
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     @UseForDispatch
     InitialCommunication initialCommunication;
 
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     @UseForDispatch
     String customerName;
   }

@@ -12,8 +12,8 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
-import com.flipkart.krystal.data.IfNull;
-import com.flipkart.krystal.data.IfNull.IfNullThen;
+import com.flipkart.krystal.data.IfAbsent;
+import com.flipkart.krystal.data.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.serial.SerializableModel;
@@ -572,10 +572,11 @@ public class ModelsProto3Gen implements CodeGenerator {
    * or @IfNoValue(then=MAY_FAIL_CONDITIONALLY) need presence check.
    */
   private static boolean needsPresenceCheckInModels(ExecutableElement method) {
-    IfNull ifNull = getIfNoValue(method);
+    IfAbsent ifAbsent = getIfNoValue(method);
 
     // For FAIL and MAY_FAIL_CONDITIONALLY, we need presence check
-    return ifNull.value() == IfNullThen.FAIL || ifNull.value() == IfNullThen.MAY_FAIL_CONDITIONALLY;
+    return ifAbsent.value() == IfAbsentThen.FAIL
+        || ifAbsent.value() == IfAbsentThen.MAY_FAIL_CONDITIONALLY;
   }
 
   /**
@@ -583,6 +584,6 @@ public class ModelsProto3Gen implements CodeGenerator {
    * as mandatory.
    */
   private static boolean isMandatoryField(ExecutableElement method) {
-    return getIfNoValue(method).value() == IfNullThen.FAIL;
+    return getIfNoValue(method).value() == IfAbsentThen.FAIL;
   }
 }

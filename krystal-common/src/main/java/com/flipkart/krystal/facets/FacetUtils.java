@@ -1,7 +1,7 @@
 package com.flipkart.krystal.facets;
 
-import com.flipkart.krystal.data.IfNull;
-import com.flipkart.krystal.data.IfNull.IfNullThen;
+import com.flipkart.krystal.data.IfAbsent;
+import com.flipkart.krystal.data.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.tags.ElementTags;
 import java.lang.annotation.Annotation;
@@ -34,15 +34,15 @@ public class FacetUtils {
 
   public static <T> @NonNull T computePlatformDefaultValue(
       BasicFacetInfo facetInfo, DataType<T> type) {
-    Optional<IfNull> ifNull = facetInfo.tags().getAnnotationByType(IfNull.class);
+    Optional<IfAbsent> ifNull = facetInfo.tags().getAnnotationByType(IfAbsent.class);
     if (ifNull.isPresent()) {
-      IfNullThen ifNullThen = ifNull.get().value();
-      if (!ifNullThen.usePlatformDefault()) {
+      IfAbsentThen ifAbsentThen = ifNull.get().value();
+      if (!ifAbsentThen.usePlatformDefault()) {
         throw new UnsupportedOperationException(
             "The @IfNull(...) facet '"
                 + facetInfo.name()
                 + "' is configured with strategy: "
-                + ifNullThen
+                + ifAbsentThen
                 + " which returns 'false' for usePlatformDefault(). Hence, platform default value is "
                 + "not supported. This method should not have been called. This seems to be krystal platform bug.");
       } else {

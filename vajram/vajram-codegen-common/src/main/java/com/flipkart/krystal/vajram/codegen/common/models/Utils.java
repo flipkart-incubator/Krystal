@@ -17,8 +17,8 @@ import static javax.lang.model.element.Modifier.ABSTRACT;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.data.IfNull;
-import com.flipkart.krystal.data.IfNull.Creator;
+import com.flipkart.krystal.data.IfAbsent;
+import com.flipkart.krystal.data.IfAbsent.Creator;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
@@ -156,13 +156,13 @@ public class Utils {
     return stream(annotations).map(aClass -> AnnotationSpec.builder(aClass).build()).toList();
   }
 
-  public static @NonNull IfNull getIfNoValue(ExecutableElement method) {
+  public static @NonNull IfAbsent getIfNoValue(ExecutableElement method) {
     // Check if the method has the @IfNoValue annotation
-    IfNull ifNull = method.getAnnotation(IfNull.class);
-    if (ifNull == null) {
-      ifNull = Creator.createDefault();
+    IfAbsent ifAbsent = method.getAnnotation(IfAbsent.class);
+    if (ifAbsent == null) {
+      ifAbsent = Creator.createDefault();
     }
-    return ifNull;
+    return ifAbsent;
   }
 
   public boolean isNullable(TypeMirror typeMirror) {
@@ -242,10 +242,10 @@ public class Utils {
     } else {
       boolean localDevAccessible = codeGenParams.isDevAccessible() && codeGenParams.isLocal();
       if (localDevAccessible) {
-        IfNull ifNull = facet.facetField().getAnnotation(IfNull.class);
+        IfAbsent ifAbsent = facet.facetField().getAnnotation(IfAbsent.class);
         // Developers should not deal with boxed types. So we need to return the actual type or
         // an Optional wrapper as needed
-        if (ifNull != null && ifNull.value().isMandatoryOnServer()) {
+        if (ifAbsent != null && ifAbsent.value().isMandatoryOnServer()) {
           return new Actual(this);
         }
         // This means the facet is either conditionally or always optional
@@ -962,13 +962,13 @@ public class Utils {
   }
 
   public boolean usePlatformDefault(FacetGenModel facet) {
-    IfNull ifNull = facet.facetField().getAnnotation(IfNull.class);
-    return ifNull != null && ifNull.value().usePlatformDefault();
+    IfAbsent ifAbsent = facet.facetField().getAnnotation(IfAbsent.class);
+    return ifAbsent != null && ifAbsent.value().usePlatformDefault();
   }
 
   public boolean isMandatoryOnServer(FacetGenModel facet) {
-    IfNull ifNull = facet.facetField().getAnnotation(IfNull.class);
-    return ifNull != null && ifNull.value().isMandatoryOnServer();
+    IfAbsent ifAbsent = facet.facetField().getAnnotation(IfAbsent.class);
+    return ifAbsent != null && ifAbsent.value().isMandatoryOnServer();
   }
 
   public String getJavaTypeCreationCode(

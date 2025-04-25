@@ -11,7 +11,7 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProt
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
 import static javax.lang.model.element.ElementKind.INTERFACE;
 
-import com.flipkart.krystal.data.IfNull.IfNullThen;
+import com.flipkart.krystal.data.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
@@ -205,19 +205,22 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
       // In proto3, the 'optional' keyword is needed for all primitive types to check
       // presence. This includes numeric types, booleans, strings, bytes, and enums.
 
-      IfNullThen ifNullThen = getIfNoValue(method).value();
+      IfAbsentThen ifAbsentThen = getIfNoValue(method).value();
 
       boolean isRepeated = isProtoTypeRepeated(dataType);
       boolean isMap = isProtoTypeMap(dataType);
-      if ((isRepeated || isMap) && !ifNullThen.usePlatformDefault()) {
+      if ((isRepeated || isMap) && !ifAbsentThen.usePlatformDefault()) {
         // Proto3 always defaults repeated and map fields to default values
         util.error(
             String.format(
                 "Method '%s' in Model Root '%s' is a %s field, and has @IfNoValue(then=%s) which is not supported in protobuf3. "
                     + "Use a different IfNoValue strategy.",
-                method.getSimpleName(), modelRootName, isRepeated ? "repeated" : "map", ifNullThen),
+                method.getSimpleName(),
+                modelRootName,
+                isRepeated ? "repeated" : "map",
+                ifAbsentThen),
             method);
-      } else if (ifNullThen.usePlatformDefault()) {
+      } else if (ifAbsentThen.usePlatformDefault()) {
         // If the strategy allows defaulting, we can make it a required field in proto3
         isOptional = false;
       }

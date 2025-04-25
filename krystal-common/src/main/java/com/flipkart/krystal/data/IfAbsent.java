@@ -34,19 +34,19 @@ import lombok.experimental.UtilityClass;
 @Target({FIELD, METHOD})
 @ApplicableToElements(Facet.class)
 @Documented
-public @interface IfNull {
+public @interface IfAbsent {
 
-  IfNullThen value();
+  IfAbsentThen value();
 
   /**
    * Specify the condition under which the facet is mandatory. This must be set if only if {@link
-   * #value()} is set to {@link IfNullThen#MAY_FAIL_CONDITIONALLY}. In all other cases, this value
+   * #value()} is set to {@link IfAbsentThen#MAY_FAIL_CONDITIONALLY}. In all other cases, this value
    * is auto-inferred as "ALWAYS" or "NEVER" depending on the value of {@link #value()}.
    */
   String conditionalFailureInfo() default "";
 
   /** The behavior to follow if the facet value is not set. */
-  enum IfNullThen {
+  enum IfAbsentThen {
 
     /**
      * The author of the code guarantees that the code will never fail because of this value not
@@ -107,7 +107,7 @@ public @interface IfNull {
 
     @Getter private final boolean isMandatoryOnServer;
 
-    IfNullThen(boolean usePlatformDefault, boolean isMandatoryOnServer) {
+    IfAbsentThen(boolean usePlatformDefault, boolean isMandatoryOnServer) {
       this.usePlatformDefault = usePlatformDefault;
       this.isMandatoryOnServer = isMandatoryOnServer;
     }
@@ -115,12 +115,13 @@ public @interface IfNull {
 
   @UtilityClass
   final class Creator {
-    public static @AutoAnnotation IfNull create(IfNullThen value, String conditionalFailureInfo) {
-      return new AutoAnnotation_IfNull_Creator_create(value, conditionalFailureInfo);
+    public static @AutoAnnotation IfAbsent create(
+        IfAbsentThen value, String conditionalFailureInfo) {
+      return new AutoAnnotation_IfAbsent_Creator_create(value, conditionalFailureInfo);
     }
 
-    public static IfNull createDefault() {
-      return create(IfNullThen.WILL_NEVER_FAIL, "");
+    public static IfAbsent createDefault() {
+      return create(IfAbsentThen.WILL_NEVER_FAIL, "");
     }
   }
 }
