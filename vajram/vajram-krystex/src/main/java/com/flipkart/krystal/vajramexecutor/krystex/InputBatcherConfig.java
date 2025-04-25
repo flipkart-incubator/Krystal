@@ -150,7 +150,7 @@ public record InputBatcherConfig(
           return generateInstanceId(
                   defaultDependantChain.incomingDependentChain(), kryonDefinitionRegistry)
               .append('>')
-              .append(vajramIdAnno.get().value())
+              .append(defaultDependantChain.kryonId().id())
               .append(':')
               .append(defaultDependantChain.latestDependency());
         } else {

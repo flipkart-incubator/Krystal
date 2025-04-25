@@ -26,7 +26,7 @@ public final class OptionalAsIsResolverStage<T, CV extends Request, DV extends R
     this.skipConditions.add(
         new SkipPredicate(
             reason,
-            facetValue -> whenToSkip.test(((SingleFacetValue<T>) facetValue).singleValue())));
+            facetValue -> whenToSkip.test(((SingleFacetValue<T>) facetValue).asErrable())));
     return this;
   }
 
@@ -36,6 +36,6 @@ public final class OptionalAsIsResolverStage<T, CV extends Request, DV extends R
         targetInput,
         sourceInput,
         skipConditions,
-        new Transformer.One2One(t -> t.singleValue().valueOpt().orElse(null)));
+        new Transformer.One2One(t -> t.asErrable().valueOpt().orElse(null)));
   }
 }

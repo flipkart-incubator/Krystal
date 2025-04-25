@@ -18,7 +18,7 @@ public sealed interface One2OneDepResponse<R extends Request<T>, T>
   }
 
   @Override
-  default Errable<T> singleValue() {
+  default Errable<T> asErrable() {
     return response();
   }
 

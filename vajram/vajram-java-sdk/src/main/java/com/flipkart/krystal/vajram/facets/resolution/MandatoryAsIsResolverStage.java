@@ -28,7 +28,7 @@ public final class MandatoryAsIsResolverStage<T, CV extends Request, DV extends 
             facetValue ->
                 whenToSkip.test(
                     ((SingleFacetValue<T>) facetValue)
-                        .singleValue()
+                        .asErrable()
                         .valueOpt()
                         .orElseThrow(this::mandatoryFacetMissingException))));
     return this;
@@ -41,11 +41,11 @@ public final class MandatoryAsIsResolverStage<T, CV extends Request, DV extends 
         sourceFacet,
         skipConditions,
         new Transformer.One2One(
-            t -> t.singleValue().valueOpt().orElseThrow(this::mandatoryFacetMissingException)));
+            t -> t.asErrable().valueOpt().orElseThrow(this::mandatoryFacetMissingException)));
   }
 
   private MandatoryFacetMissingException mandatoryFacetMissingException() {
     return new MandatoryFacetMissingException(
-        sourceFacet.ofVajramID().vajramId(), sourceFacet.name());
+        sourceFacet.ofVajramID().id(), sourceFacet.name());
   }
 }

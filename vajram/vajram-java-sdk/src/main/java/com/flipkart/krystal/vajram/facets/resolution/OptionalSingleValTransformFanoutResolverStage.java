@@ -44,7 +44,7 @@ public final class OptionalSingleValTransformFanoutResolverStage<
     this.skipConditions.add(
         new SkipPredicate(
             reason,
-            facetValue -> whenToSkip.test(((SingleFacetValue<S>) facetValue).singleValue())));
+            facetValue -> whenToSkip.test(((SingleFacetValue<S>) facetValue).asErrable())));
     return this;
   }
 
@@ -64,6 +64,6 @@ public final class OptionalSingleValTransformFanoutResolverStage<
         sourceFacet,
         skipConditions,
         new One2Many(
-            facetValue -> transformer.apply(((SingleFacetValue<S>) facetValue).singleValue())));
+            facetValue -> transformer.apply(((SingleFacetValue<S>) facetValue).asErrable())));
   }
 }
