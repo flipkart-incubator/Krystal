@@ -25,8 +25,7 @@ public final class OptionalAsIsResolverStage<T, CV extends Request, DV extends R
       Predicate<Errable<T>> whenToSkip, String reason) {
     this.skipConditions.add(
         new SkipPredicate(
-            reason,
-            facetValue -> whenToSkip.test(((SingleFacetValue<T>) facetValue).asErrable())));
+            reason, facetValue -> whenToSkip.test(((SingleFacetValue<T>) facetValue).asErrable())));
     return this;
   }
 

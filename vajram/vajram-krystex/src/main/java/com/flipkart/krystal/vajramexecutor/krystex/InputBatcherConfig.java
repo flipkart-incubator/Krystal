@@ -9,13 +9,10 @@ import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.krystex.kryon.DefaultDependentChain;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.DependentChainStart;
-import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.LogicDecoratorContext;
 import com.flipkart.krystal.vajram.IOVajramDef;
-import com.flipkart.krystal.vajram.Vajram;
-import com.flipkart.krystal.vajram.annos.VajramIdentifier;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
@@ -33,8 +30,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.function.Function;
@@ -61,23 +56,18 @@ public record InputBatcherConfig(
    */
   public static InputBatcherConfig simple(Supplier<InputBatcher> inputBatcherSupplier) {
     return new InputBatcherConfig(
-        logicExecutionContext ->
-            generateInstanceId(
-                    logicExecutionContext.dependants(),
-                    logicExecutionContext.kryonDefinitionRegistry())
-                .toString(),
+        logicExecutionContext -> generateInstanceId(logicExecutionContext.dependants()).toString(),
         batcherContext -> true,
-        batcherContext -> {
-          return new InputBatchingDecorator(
-              batcherContext.logicDecoratorContext().instanceId(),
-              inputBatcherSupplier.get(),
-              dependantChain ->
-                  batcherContext
-                      .logicDecoratorContext()
-                      .logicExecutionContext()
-                      .dependants()
-                      .equals(dependantChain));
-        });
+        batcherContext ->
+            new InputBatchingDecorator(
+                batcherContext.logicDecoratorContext().instanceId(),
+                inputBatcherSupplier.get(),
+                dependantChain ->
+                    batcherContext
+                        .logicDecoratorContext()
+                        .logicExecutionContext()
+                        .dependants()
+                        .equals(dependantChain)));
   }
 
   public static InputBatcherConfig sharedBatcher(
@@ -96,10 +86,9 @@ public record InputBatcherConfig(
         batcherContext ->
             dependentChains.contains(
                 batcherContext.logicDecoratorContext().logicExecutionContext().dependants()),
-        batcherContext -> {
-          return new InputBatchingDecorator(
-              instanceId, inputBatcherSupplier.get(), dependentChains::contains);
-        });
+        batcherContext ->
+            new InputBatchingDecorator(
+                instanceId, inputBatcherSupplier.get(), dependentChains::contains));
   }
 
   public static void autoRegisterSharedBatchers(
@@ -135,32 +124,18 @@ public record InputBatcherConfig(
    * @return decorator instanceId of the form {@code
    *     [Start]>vajramId_1:dep_1>vajramId_2:dep_2>....>vajramId_n:dep_n}
    */
-  private static StringBuilder generateInstanceId(
-      DependentChain dependentChain, KryonDefinitionRegistry kryonDefinitionRegistry) {
+  private static StringBuilder generateInstanceId(DependentChain dependentChain) {
     if (dependentChain instanceof DependentChainStart dependantChainStart) {
       return new StringBuilder(dependantChainStart.toString());
     } else if (dependentChain instanceof DefaultDependentChain defaultDependantChain) {
       if (defaultDependantChain.incomingDependentChain() instanceof DependentChainStart) {
-        Optional<VajramIdentifier> vajramIdAnno =
-            kryonDefinitionRegistry
-                .getOrThrow(defaultDependantChain.kryonId())
-                .tags()
-                .getAnnotationByType(VajramIdentifier.class);
-        if (vajramIdAnno.isPresent()) {
-          return generateInstanceId(
-                  defaultDependantChain.incomingDependentChain(), kryonDefinitionRegistry)
-              .append('>')
-              .append(defaultDependantChain.kryonId().id())
-              .append(':')
-              .append(defaultDependantChain.latestDependency());
-        } else {
-          throw new NoSuchElementException(
-              "Could not find tag %s for kryon %s"
-                  .formatted(Vajram.class, defaultDependantChain.kryonId()));
-        }
+        return generateInstanceId(defaultDependantChain.incomingDependentChain())
+            .append('>')
+            .append(defaultDependantChain.kryonId().id())
+            .append(':')
+            .append(defaultDependantChain.latestDependency());
       } else {
-        return generateInstanceId(
-                defaultDependantChain.incomingDependentChain(), kryonDefinitionRegistry)
+        return generateInstanceId(defaultDependantChain.incomingDependentChain())
             .append('>')
             .append(defaultDependantChain.latestDependency());
       }
@@ -303,10 +278,8 @@ public record InputBatcherConfig(
   private static List<ResolverDefinition> getInputResolverDefinition(
       VajramDefinition rootNode, DependencySpec<?, ?, ?> dependency) {
     return rootNode.inputResolvers().values().stream()
-        .filter(
-            inputResolver ->
-                inputResolver.definition().target().dependency().id() == dependency.id())
         .map(InputResolver::definition)
+        .filter(definition -> definition.target().dependency().id() == dependency.id())
         .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
   }
 

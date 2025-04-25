@@ -45,7 +45,6 @@ public final class MandatoryAsIsResolverStage<T, CV extends Request, DV extends 
   }
 
   private MandatoryFacetMissingException mandatoryFacetMissingException() {
-    return new MandatoryFacetMissingException(
-        sourceFacet.ofVajramID().id(), sourceFacet.name());
+    return new MandatoryFacetMissingException(sourceFacet.ofVajramID().id(), sourceFacet.name());
   }
 }

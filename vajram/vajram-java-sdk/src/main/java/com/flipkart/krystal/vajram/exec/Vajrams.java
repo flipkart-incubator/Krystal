@@ -13,7 +13,6 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.annos.OutputLogicDelegationMode;
-import com.flipkart.krystal.vajram.annos.VajramIdentifier;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
@@ -57,10 +56,10 @@ final class Vajrams {
     return vajramID(getVajramDefClass(vajramDef.getClass()).getSimpleName());
   }
 
-  static ElementTags parseVajramTags(VajramID inferredVajramId, VajramDefRoot<?> vajramDef) {
+  static ElementTags parseVajramTags(VajramDefRoot<?> vajramDef) {
     return ElementTags.of(
         Arrays.stream(getVajramDefClass(vajramDef.getClass()).getAnnotations())
-            .flatMap(a -> enrich(a, inferredVajramId, vajramDef))
+            .flatMap(a -> enrich(a, vajramDef))
             .toList());
   }
 
@@ -97,11 +96,9 @@ final class Vajrams {
         : ElementTags.emptyTags();
   }
 
-  private static Stream<Annotation> enrich(
-      Annotation annotation, VajramID inferredVajramId, VajramDefRoot<?> vajramDefRoot) {
+  private static Stream<Annotation> enrich(Annotation annotation, VajramDefRoot<?> vajramDefRoot) {
     List<Annotation> inferredAnnos = new ArrayList<>();
     if (annotation instanceof Vajram && vajramDefRoot instanceof VajramDef<?> vajramDef) {
-      inferredAnnos.add(VajramIdentifier.Creator.create(inferredVajramId.id()));
       inferredAnnos.add(
           OutputLogicDelegationMode.Creator.create(getComputeDelegationType(vajramDef)));
     }
