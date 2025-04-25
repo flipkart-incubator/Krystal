@@ -15,7 +15,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
@@ -38,7 +37,6 @@ class CustomerServiceAgentTest {
   }
 
   private VajramKryonGraph graph;
-  private VajramID traitId;
   private Lease<SingleThreadExecutor> executorLease;
 
   @BeforeEach
@@ -50,10 +48,6 @@ class CustomerServiceAgentTest {
         VajramKryonGraph.builder()
             .loadFromPackage(CustomerServiceAgent.class.getPackageName())
             .build();
-
-    traitId = graph.getVajramIdByVajramDefType(CustomerServiceAgent.class);
-
-    // Get the facets to use for dispatch
 
     // Create and register dispatch policy
     graph.registerTraitDispatchPolicies(

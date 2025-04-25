@@ -21,16 +21,16 @@ import lombok.AllArgsConstructor;
 import lombok.Value;
 
 public class PredicateDispatchUtil {
-  public static <T extends Request<?>> InputDispatcherBuilder<T> dispatchTrait(
-      Class<T> traitReq, VajramKryonGraph graph) {
+  public static <R extends Request<?>> InputDispatcherBuilder<R> dispatchTrait(
+      Class<R> traitReq, VajramKryonGraph graph) {
     checkArgument(
         traitReq.getAnnotation(TraitRequestRoot.class) != null,
         "Expecting a trait request root i.e a request class with the annotation @TraitRequestRoot");
-    return new InputDispatcherBuilder<T>(traitReq, graph);
+    return new InputDispatcherBuilder<>(traitReq, graph);
   }
 
-  public static <T extends Request<?>> DispatchCaseBuilder<T> when(
-      InputMirrorSpec<?, T> input, InputValueMatcher inputValueMatcher) {
+  public static <T, R extends Request<?>> DispatchCaseBuilder<R> when(
+      InputMirrorSpec<T, R> input, InputValueMatcher<T> inputValueMatcher) {
     checkArgument(
         input.tags().getAnnotationByType(UseForDispatch.class).isPresent(),
         "Only the trait Inputs annotated as @UseForDispatch can be used for dynamic dispatching");
@@ -38,14 +38,14 @@ public class PredicateDispatchUtil {
   }
 
   @AllArgsConstructor(access = PRIVATE)
-  public static class InputDispatcherBuilder<T extends Request<?>> {
+  public static class InputDispatcherBuilder<R extends Request<?>> {
 
-    private final Class<T> traitReq;
+    private final Class<R> traitReq;
     private final VajramKryonGraph graph;
 
     @SafeVarargs
     public final PredicateDynamicDispatchPolicy conditionally(
-        DispatchCaseFinal<T>... dispatchCases) {
+        DispatchCaseFinal<R>... dispatchCases) {
       return new PredicateDynamicDispatchPolicy(
           graph.getVajramIdByVajramReqType(traitReq),
           Arrays.stream(dispatchCases)
@@ -59,10 +59,11 @@ public class PredicateDispatchUtil {
   }
 
   @AllArgsConstructor(access = PRIVATE)
-  public static class DispatchCaseBuilder<T extends Request<?>> {
+  public static class DispatchCaseBuilder<R extends Request<?>> {
     private ImmutableMap<InputMirror, InputValueMatcher> facetPredicates;
 
-    public DispatchCaseBuilder<T> and(InputMirror input, InputValueMatcher dataType) {
+    public <P> DispatchCaseBuilder<R> and(
+        InputMirrorSpec<P, R> input, InputValueMatcher<P> dataType) {
       checkArgument(
           !facetPredicates.containsKey(input),
           "Facet " + input + " already has a type check in this case");
@@ -71,11 +72,11 @@ public class PredicateDispatchUtil {
       return new DispatchCaseBuilder<>(ImmutableMap.copyOf(newMap));
     }
 
-    public DispatchCaseFinal<T> to(Class<? extends T> dispatchTarget) {
+    public DispatchCaseFinal<R> to(Class<? extends R> dispatchTarget) {
       checkArgument(
           dispatchTarget.getAnnotation(VajramRequestRoot.class) != null,
           "Expecting a Vajram request root class, i.e. one with the @VajramRequestRoot annotation");
-      return new DispatchCaseFinal<T>(facetPredicates, dispatchTarget);
+      return new DispatchCaseFinal<>(facetPredicates, dispatchTarget);
     }
   }
 
