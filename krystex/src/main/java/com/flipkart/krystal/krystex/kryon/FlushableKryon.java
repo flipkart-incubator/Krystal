@@ -81,9 +81,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * DependentChain dependent chain}. A given client kryon cannot send multiple {@link ForwardSend}
  * commands to another kryon in the same dependent chain. This way a Flushable Kryon is able to keep
  * track of incoming requests per dependent chain and thus is able to send a {@link Flush} command
- * to its depdendencies per dependent chain. This "flushing" capability is crucial for achieving
- * capabilities like optimal batching in {@link
- * com.flipkart.krystal.vajramexecutor.krystex.InputBatchingDecorator} etc which rely on the fact
+ * to its dependencies per dependent chain. This "flushing" capability is crucial for achieving
+ * capabilities like optimal batching (For example:
+ * com.flipkart.krystal.vajramexecutor.krystex.InputBatchingDecorator) etc which rely on the fact
  * that they are able to track the complete super set of active dependent chains and able to
  * determine accurately when the call graph execution has reached a point where not further requests
  * can be received.
@@ -158,14 +158,13 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
           forward
               .executableInvocations()
               .forEach(
-                  (requestId, facets) -> {
-                    log.debug(
-                        "Exec Ids - {}: {} invoked with inputs {}, in call path {}",
-                        requestId,
-                        vajramID,
-                        facets,
-                        forward.dependentChain());
-                  });
+                  (requestId, facets) ->
+                      log.debug(
+                          "Exec Ids - {}: {} invoked with inputs {}, in call path {}",
+                          requestId,
+                          vajramID,
+                          facets,
+                          forward.dependentChain()));
         }
         collectInputValues(forward);
       } else if (kryonCommand instanceof CallbackCommand callbackBatch) {
@@ -173,15 +172,14 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
           callbackBatch
               .resultsByRequest()
               .forEach(
-                  (requestId, results) -> {
-                    log.debug(
-                        "Exec Ids - {}: {} received response for dependency {} in call path {}. Response: {}",
-                        requestId,
-                        vajramID,
-                        callbackBatch.dependency(),
-                        callbackBatch.dependentChain(),
-                        results);
-                  });
+                  (requestId, results) ->
+                      log.debug(
+                          "Exec Ids - {}: {} received response for dependency {} in call path {}. Response: {}",
+                          requestId,
+                          vajramID,
+                          callbackBatch.dependency(),
+                          callbackBatch.dependentChain(),
+                          results));
         }
         collectDependencyValues(callbackBatch);
       }
@@ -232,7 +230,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
                         .resolverDefinitionsByDependencies()
                         .getOrDefault(depFacetId, ImmutableSet.of())
                         .stream()
-                        .map(resolver -> resolver.definition())
+                        .map(Resolver::definition)
                         .collect(toImmutableSet())));
   }
 
@@ -343,8 +341,14 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
                         .resolve(depRequestBuilders, facetValues);
                 if (resolverCommand instanceof ExecuteDependency
                     && resolverCommand.getRequests().isEmpty()) {
-                  // This means the resolvers resolved any input. This can occur, for
-                  // example if a fanout resolver returns empty inputs
+                  // This means the resolvers did not resolve any input. This can occur, for
+                  // example if a fanout resolver returns empty inputs. When a fanout resolver
+                  // returns empty results, we continue to execute the dependency as if the fanout
+                  // resolver returned one null value. This is done so that developers don't
+                  // accidentally end up skipping a dependency by resolving an empty list. We
+                  // interpret such a resolution as the following developer intent: "I want to
+                  // execute the dependency, but I do not know what value to resolve - so execute
+                  // with some default value"
                   resolverCommand = executeWithRequests(depRequestBuilders);
                 }
               }
@@ -354,7 +358,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
               // with an empty request. This case can occur, for example, when all the inputs of
               // vajram are optional and the client vajram chooses not to write any resolvers for
               // the inputs, instead opting to go with the null values.
-              resolverCommand = executeWithRequests(ImmutableList.of(newDepRequestBuilder.get()));
+              resolverCommand = executeWithRequests(depRequestBuilders);
             }
             commandsByDependency
                 .computeIfAbsent(dep, _k -> new LinkedHashMap<>())
@@ -630,18 +634,17 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
     var ignored =
         allOf(results.values().toArray(CompletableFuture[]::new))
             .whenComplete(
-                (unused, throwable) -> {
-                  resultForBatch.complete(
-                      new BatchResponse(
-                          outputLogicInputs.keySet().stream()
-                              .collect(
-                                  toImmutableMap(
-                                      identity(),
-                                      requestId ->
-                                          results
-                                              .getOrDefault(requestId, new CompletableFuture<>())
-                                              .getNow(nil())))));
-                });
+                (unused, throwable) ->
+                    resultForBatch.complete(
+                        new BatchResponse(
+                            outputLogicInputs.keySet().stream()
+                                .collect(
+                                    toImmutableMap(
+                                        identity(),
+                                        requestId ->
+                                            results
+                                                .getOrDefault(requestId, new CompletableFuture<>())
+                                                .getNow(nil()))))));
     outputLogicExecuted.put(dependentChain, true);
     flushDecoratorsIfNeeded(dependentChain);
     return resultForBatch;
@@ -786,11 +789,10 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
     forwardBatch
         .executableInvocations()
         .forEach(
-            (requestId, container) -> {
-              facetsCollector
-                  .computeIfAbsent(forwardBatch.dependentChain(), _d -> new LinkedHashMap<>())
-                  .put(requestId, facetsBuilderFromContainer(container));
-            });
+            (requestId, container) ->
+                facetsCollector
+                    .computeIfAbsent(forwardBatch.dependentChain(), _d -> new LinkedHashMap<>())
+                    .put(requestId, facetsBuilderFromContainer(container)));
   }
 
   private Set<? extends Facet> facetsOfCommand(KryonCommand command) {
@@ -801,10 +803,6 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
     } else {
       throw new UnsupportedOperationException("" + command);
     }
-  }
-
-  private static String getSkipMessage(ForwardReceive forwardBatch) {
-    return String.join(", ", forwardBatch.invocationsToSkip().values());
   }
 
   private void collectDependencyValues(CallbackCommand callbackBatch) {

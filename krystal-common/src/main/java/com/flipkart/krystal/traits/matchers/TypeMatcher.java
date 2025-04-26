@@ -3,16 +3,16 @@ package com.flipkart.krystal.traits.matchers;
 import lombok.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-final class TypeMatcher implements InputValueMatcher {
+final class TypeMatcher<T> implements InputValueMatcher<T> {
 
-  private final @NonNull Class<?> type;
+  private final @NonNull Class<? extends T> type;
 
-  public TypeMatcher(@NonNull Class<?> type) {
+  public TypeMatcher(@NonNull Class<? extends T> type) {
     this.type = type;
   }
 
   @Override
-  public boolean matches(@Nullable Object inputValue) {
+  public boolean matches(@Nullable T inputValue) {
     return type.isInstance(inputValue);
   }
 }

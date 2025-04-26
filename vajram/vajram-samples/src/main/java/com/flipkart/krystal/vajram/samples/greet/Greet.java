@@ -1,10 +1,10 @@
 package com.flipkart.krystal.vajram.samples.greet;
 
-import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.samples.greet.Greet_Fac.userInfo_n;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
@@ -26,14 +26,14 @@ import java.util.Optional;
 // ComputeVajram means that this Vajram does not directly perform any blocking operations.
 public abstract class Greet extends ComputeVajramDef<String> {
   static class _Inputs {
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     String userId;
   }
 
   static class _InternalFacets {
     @Inject Logger log;
 
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     @Inject
     @Named("analytics_sink")
     AnalyticsEventSink analyticsEventSink;

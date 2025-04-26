@@ -7,7 +7,7 @@ import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 public interface BatchEnabledFacetValues extends FacetValues {
   ImmutableFacetValuesContainer _batchItem();
 
-  ImmutableFacetValuesContainer _common();
+  ImmutableFacetValuesContainer _batchKey();
 
   @Override
   BatchEnabledImmutableFacetValues _build();

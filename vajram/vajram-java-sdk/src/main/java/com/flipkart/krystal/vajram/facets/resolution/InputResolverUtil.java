@@ -9,9 +9,7 @@ import static java.util.function.Function.identity;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.facets.resolution.ResolverCommand;
 import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
 import com.flipkart.krystal.vajram.facets.One2OneCommand;
@@ -23,29 +21,6 @@ import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputResolverUtil {
-
-  public static ResolverCommand toResolverCommand(
-      DependencyCommand<ImmutableRequest.Builder<?>> dependencyCommand) {
-    if (dependencyCommand.shouldSkip()) {
-      return ResolverCommand.skip(dependencyCommand.doc(), dependencyCommand.skipCause());
-    }
-    return ResolverCommand.executeWithRequests(dependencyCommand.inputs());
-  }
-
-  public static <T> DependencyCommand<T> handleResolverException(Throwable e, boolean fanout) {
-    return handleResolverException(e, fanout, "Resolver threw exception.");
-  }
-
-  public static <T> DependencyCommand<T> handleResolverException(
-      Throwable e, boolean fanout, String messagePrefix) {
-    DependencyCommand<T> command;
-    if (fanout) {
-      command = skipFanout(messagePrefix, e);
-    } else {
-      command = skipExecution(messagePrefix, e);
-    }
-    return command;
-  }
 
   @SuppressWarnings("rawtypes")
   static <T> DependencyCommand<T> _resolutionHelper(

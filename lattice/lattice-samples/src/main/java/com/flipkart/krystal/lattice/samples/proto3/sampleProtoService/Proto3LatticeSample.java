@@ -1,12 +1,12 @@
 package com.flipkart.krystal.lattice.samples.proto3.sampleProtoService;
 
-import static com.flipkart.krystal.data.IfNull.IfNullThen.DEFAULT_TO_EMPTY;
-import static com.flipkart.krystal.data.IfNull.IfNullThen.DEFAULT_TO_ZERO;
-import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
-import static com.flipkart.krystal.data.IfNull.IfNullThen.MAY_FAIL_CONDITIONALLY;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.DEFAULT_TO_EMPTY;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.DEFAULT_TO_ZERO;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.lattice.core.RemotelyInvocable;
 import com.flipkart.krystal.serial.ReservedSerialIds;
 import com.flipkart.krystal.serial.SerialId;
@@ -16,43 +16,44 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import com.google.protobuf.ByteString;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 
+@SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 @ExternallyInvocable
 @RemotelyInvocable
 @SupportedSerdeProtocols(Protobuf3.class)
 @ReservedSerialIds(8)
 @Vajram
 abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3LatticeSampleResponse> {
-  @SuppressWarnings("initialization.field.uninitialized")
   static class _Inputs {
     @SerialId(1)
     int optionalInput;
 
     @SerialId(2)
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     int mandatoryInput;
 
     @SerialId(3)
-    @IfNull(value = MAY_FAIL_CONDITIONALLY, conditionalFailureInfo = "In some scenarios")
+    @IfAbsent(value = MAY_FAIL_CONDITIONALLY, conditionalFailureInfo = "In some scenarios")
     int conditionallyMandatoryInput;
 
     @SerialId(4)
-    @IfNull(DEFAULT_TO_ZERO)
+    @IfAbsent(DEFAULT_TO_ZERO)
     int inputWithDefaultValue;
 
     @SerialId(5)
     long optionalLongInput;
 
     @SerialId(6)
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     long mandatoryLongInput;
 
     @SerialId(7)
     ByteString optionalByteString;
 
-    @IfNull(DEFAULT_TO_EMPTY)
+    @IfAbsent(DEFAULT_TO_EMPTY)
     @SerialId(9)
     List<Integer> repeatedInts;
   }
@@ -84,7 +85,8 @@ abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3LatticeSampleR
                     inputWithDefaultValue,
                     optionalLongInput,
                     mandatoryLongInput,
-                    optionalByteString.map(bytes -> new String(bytes.toByteArray()))))
+                    optionalByteString.map(
+                        bytes -> new String(bytes.toByteArray(), StandardCharsets.UTF_8))))
         .mandatoryInt(1)
         ._build();
   }

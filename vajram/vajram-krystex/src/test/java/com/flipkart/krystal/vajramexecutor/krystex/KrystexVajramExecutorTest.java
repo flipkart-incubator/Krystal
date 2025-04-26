@@ -38,7 +38,6 @@ import com.flipkart.krystal.krystex.logicdecorators.resilience4j.Resilience4JCir
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.annos.OutputLogicDelegationMode;
-import com.flipkart.krystal.vajram.annos.VajramIdentifier;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
@@ -809,15 +808,7 @@ class KrystexVajramExecutorTest {
                 .getAnnotationByType(OutputLogicDelegationMode.class)
                 .map(v -> v.value() == SYNC)
                 .orElse(false);
-    Function<LogicExecutionContext, String> instanceIdCreator =
-        context ->
-            context
-                .kryonDefinitionRegistry()
-                .getOrThrow(context.vajramID())
-                .tags()
-                .getAnnotationByType(VajramIdentifier.class)
-                .map(VajramIdentifier::value)
-                .orElseThrow(() -> new IllegalStateException("Missing VajramDef annotation"));
+    Function<LogicExecutionContext, String> instanceIdCreator = context -> context.vajramID().id();
     return builder
         .decorateOutputLogicForSession(
             new OutputLogicDecoratorConfig(

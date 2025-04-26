@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice;
 
-import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;
@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.LongAdder;
 @Vajram
 public abstract class FriendsService extends IOVajramDef<Set<String>> {
   static class _Inputs {
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     @Batched
     String userId;
   }

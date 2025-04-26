@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.batching.Batched;
@@ -30,8 +30,8 @@ public sealed interface FacetGenModel permits DefaultFacetModel, DependencyModel
   }
 
   default boolean isMandatoryOnServer() {
-    IfNull ifNull = facetField().getAnnotation(IfNull.class);
-    return ifNull != null && ifNull.value().isMandatoryOnServer();
+    IfAbsent ifAbsent = facetField().getAnnotation(IfAbsent.class);
+    return ifAbsent != null && ifAbsent.value().isMandatoryOnServer();
   }
 
   @Nullable String documentation();

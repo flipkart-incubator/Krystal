@@ -2,7 +2,7 @@ package com.flipkart.krystal.traits.matchers;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-final class AnythingMatcher implements InputValueMatcher {
+final class AnythingMatcher implements InputValueMatcher<Object> {
 
   static final AnythingMatcher ANY_VALUE = new AnythingMatcher(true);
   static final AnythingMatcher ANY_NON_NULL = new AnythingMatcher(false);
@@ -14,6 +14,6 @@ final class AnythingMatcher implements InputValueMatcher {
 
   @Override
   public boolean matches(@Nullable Object inputValue) {
-    return allowNull ? true : inputValue != null;
+    return allowNull || inputValue != null;
   }
 }

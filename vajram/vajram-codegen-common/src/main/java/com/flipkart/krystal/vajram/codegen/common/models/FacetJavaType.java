@@ -7,7 +7,7 @@ import static com.flipkart.krystal.vajram.codegen.common.models.Constants.FACET_
 import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getFacetsInterfaceName;
 
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
 import com.flipkart.krystal.vajram.facets.FacetValidation;
@@ -94,8 +94,8 @@ public abstract sealed class FacetJavaType {
     @Override
     public CodeBlock fieldGetterCode(FacetGenModel facet, CodeGenParams codeGenParams) {
       if (codeGenParams.isSubsetBatch()) {
-        IfNull ifNull = facet.facetField().getAnnotation(IfNull.class);
-        if (ifNull != null && !ifNull.value().usePlatformDefault()) {
+        IfAbsent ifAbsent = facet.facetField().getAnnotation(IfAbsent.class);
+        if (ifAbsent != null && !ifAbsent.value().usePlatformDefault()) {
           return CodeBlock.of(
               """
               return $T.validateMandatoryFacet(this.$L.$L(), $S, $S)

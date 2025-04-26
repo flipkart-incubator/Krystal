@@ -1,10 +1,9 @@
 package com.flipkart.krystal.vajramexecutor.krystex;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
+import static com.flipkart.krystal.facets.resolution.ResolverCommand.skip;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 import static com.flipkart.krystal.vajram.facets.FacetValidation.validateMandatoryFacet;
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.handleResolverException;
-import static com.flipkart.krystal.vajram.facets.resolution.InputResolverUtil.toResolverCommand;
 import static com.flipkart.krystal.vajram.utils.VajramLoader.loadVajramsFromClassPath;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -387,12 +386,10 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                       }
                     } catch (Throwable t) {
                       resolverCommand =
-                          toResolverCommand(
-                              handleResolverException(
-                                  t,
-                                  false,
-                                  "Got exception '%s' while executing the resolver of the dependency '%s'"
-                                      .formatted(t, depName)));
+                          skip(
+                              "Got exception '%s' while executing the resolver of the dependency '%s'"
+                                  .formatted(t, depName),
+                              t);
                     }
                     return resolverCommand;
                   });
@@ -418,9 +415,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
         value = depResponse.response();
       } else if (facetValue instanceof FanoutDepResponses<?, ?> fanoutDepResponses) {
         var requestResponsePairs = fanoutDepResponses.requestResponsePairs();
-        if (!requestResponsePairs.isEmpty()
-            && requestResponsePairs.stream()
-                .allMatch(reqResp -> reqResp.response().valueOpt().isEmpty())) {
+        if (requestResponsePairs.stream()
+            .allMatch(reqResp -> reqResp.response().valueOpt().isEmpty())) {
           missingMandatoryValues.put(
               mandatoryFacet.name(),
               new MandatoryFacetMissingException(vajramID.id(), mandatoryFacet.name()));

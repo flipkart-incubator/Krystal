@@ -29,7 +29,7 @@ public final class InputBatcherImpl implements InputBatcher {
 
   @Override
   public ImmutableList<BatchedFacets> add(BatchEnabledFacetValues batchEnabledFacets) {
-    ImmutableFacetValuesContainer commonFacets = batchEnabledFacets._common();
+    ImmutableFacetValuesContainer commonFacets = batchEnabledFacets._batchKey();
     unBatchedRequests.computeIfAbsent(commonFacets, k -> new ArrayList<>()).add(batchEnabledFacets);
     return getBatchedInputs(commonFacets, false);
   }

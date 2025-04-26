@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
-import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
@@ -11,7 +11,7 @@ import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.twoA_
 import static com.flipkart.krystal.vajram.samples.calculator.A2MinusB2_Fac.twoB_s;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
@@ -28,24 +28,24 @@ import com.google.common.collect.ImmutableCollection;
 @Vajram
 public abstract class A2MinusB2 extends ComputeVajramDef<Integer> {
   static class _Inputs {
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     int a;
 
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     int b;
   }
 
   static class _InternalFacets {
     /** The value of facet {@code a} multiplied by {@code 2} */
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     @Dependency(onVajram = Multiply.class)
     int twoA;
 
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     @Dependency(onVajram = Multiply.class)
     int twoB;
 
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     @Dependency(onVajram = Subtract.class)
     int diff;
   }

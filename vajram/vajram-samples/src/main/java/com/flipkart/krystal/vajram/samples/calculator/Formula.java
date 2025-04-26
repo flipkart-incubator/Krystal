@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
-import static com.flipkart.krystal.data.IfNull.IfNullThen.DEFAULT_TO_ZERO;
-import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.DEFAULT_TO_ZERO;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resolve;
@@ -13,7 +13,7 @@ import static com.flipkart.krystal.vajram.samples.calculator.Formula_Fac.sum_s;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -36,17 +36,17 @@ public abstract class Formula extends ComputeVajramDef<Integer> {
     int a;
 
     /** First addend of the denominator */
-    @IfNull(DEFAULT_TO_ZERO)
+    @IfAbsent(DEFAULT_TO_ZERO)
     int p;
 
     /** Second addend of the denominator */
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     int q;
   }
 
   static class _InternalFacets {
     /** The denominator */
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     @Dependency(onVajram = Add.class)
     int sum;
 

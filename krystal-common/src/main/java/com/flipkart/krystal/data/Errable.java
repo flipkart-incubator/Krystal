@@ -58,7 +58,7 @@ public sealed interface Errable<T> extends FacetValue<T>, SingleFacetValue<T>
   T valueOrThrow();
 
   @Override
-  default Errable<T> singleValue() {
+  default Errable<T> asErrable() {
     return this;
   }
 

@@ -1,27 +1,22 @@
 package com.flipkart.krystal.vajram.facets;
 
-import com.google.common.collect.ImmutableList;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Consumer;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record One2OneCommand<T>(
     @Nullable T input, boolean shouldSkip, String doc, @Nullable Throwable skipCause)
     implements DependencyCommand<T> {
 
+  @SuppressWarnings("RedundantTypeArguments")
   @Override
-  public ImmutableList<@NonNull T> inputs() {
-    if (input == null) {
-      return ImmutableList.of();
-    } else {
-      return ImmutableList.of(input);
-    }
+  public List<@Nullable T> inputs() {
+    return Collections.<@Nullable T>singletonList(input);
   }
 
-  public void ifPresent(Consumer<T> action) {
-    if (input != null) {
-      action.accept(input);
-    }
+  public void ifPresent(Consumer<@Nullable T> action) {
+    action.accept(input);
   }
 
   public static <T> One2OneCommand<T> executeWith(@Nullable T input) {

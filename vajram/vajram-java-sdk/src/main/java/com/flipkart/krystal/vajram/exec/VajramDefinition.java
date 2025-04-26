@@ -68,7 +68,7 @@ public final class VajramDefinition {
     this.facetsById = facetSpecs.stream().collect(toImmutableMap(Facet::id, Function.identity()));
 
     this.outputLogicTags = parseOutputLogicTags(vajramDefRoot);
-    this.vajramTags = parseVajramTags(vajramId, vajramDefRoot);
+    this.vajramTags = parseVajramTags(vajramDefRoot);
     this.outputLogicSources = parseOutputLogicSources(vajramDefRoot, facetSpecs, facetsByName);
     this.inputResolvers = parseInputResolvers(vajramDefRoot);
 

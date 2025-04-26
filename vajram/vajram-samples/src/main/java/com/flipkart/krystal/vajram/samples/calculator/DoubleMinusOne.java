@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
-import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInputFanout;
@@ -10,7 +10,7 @@ import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.
 import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.result_s;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -32,16 +32,15 @@ import java.util.Optional;
 public abstract class DoubleMinusOne extends ComputeVajramDef<Integer> {
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Inputs {
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     List<Integer> numbers;
   }
 
   static class _InternalFacets {
-    @IfNull(FAIL)
     @Dependency(onVajram = Multiply.class, canFanout = true)
     int doubledNumbers;
 
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     @Dependency(onVajram = Subtract.class)
     int result;
   }
@@ -53,6 +52,9 @@ public abstract class DoubleMinusOne extends ComputeVajramDef<Integer> {
             doubledNumbers_s,
             depInputFanout(Multiply_Req.numberOne_s)
                 .using(numbers_s)
+                .skipIf(
+                    List::isEmpty,
+                    "No numbers provided. Skipping multiplier call to double numbers")
                 .asResolver(numbers -> numbers),
             depInput(Multiply_Req.numberTwo_s).usingValueAsResolver(() -> 2)),
         dep(

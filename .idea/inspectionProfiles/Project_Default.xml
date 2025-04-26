@@ -498,6 +498,7 @@
           <option value="OptionalUsedAsFieldOrParameterType" />
           <option value="Convert2MethodRef" />
           <option value="MismatchedQueryAndUpdateOfCollection" />
+          <option value="ExtendsObject" />
         </list>
       </option>
     </inspection_tool>

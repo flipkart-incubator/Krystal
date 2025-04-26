@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends;
 
-import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
@@ -13,7 +13,7 @@ import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;
@@ -34,14 +34,14 @@ import java.util.stream.IntStream;
 @Vajram
 public abstract class HelloFriends extends ComputeVajramDef<String> {
   static class _Inputs {
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     String userId;
 
     int numberOfFriends;
   }
 
   static class _InternalFacets {
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     @Dependency(onVajram = TestUserService.class)
     TestUserInfo userInfo;
 

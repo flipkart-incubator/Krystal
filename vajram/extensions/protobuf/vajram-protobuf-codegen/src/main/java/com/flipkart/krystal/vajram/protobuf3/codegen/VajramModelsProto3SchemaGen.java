@@ -9,8 +9,8 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.getPro
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProto3Applicable;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.validateProtobufCompatibility;
 
-import com.flipkart.krystal.data.IfNull;
-import com.flipkart.krystal.data.IfNull.IfNullThen;
+import com.flipkart.krystal.data.IfAbsent;
+import com.flipkart.krystal.data.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.codegen.common.models.DefaultFacetModel;
 import com.flipkart.krystal.vajram.codegen.common.models.Utils;
@@ -173,7 +173,7 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
       }
 
       // Check if the field has the @Mandatory annotation
-      IfNull ifNull = facet.facetField().getAnnotation(IfNull.class);
+      IfAbsent ifAbsent = facet.facetField().getAnnotation(IfAbsent.class);
       boolean isOptional = true; // Default to optional for proto3
 
       // In proto3, the 'optional' keyword is needed for all primitive types to check
@@ -185,9 +185,9 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
       // Repeated fields, and maps support the optional keyword (they can never be
       // checked for presence)
       // Ref: https://protobuf.dev/programming-guides/field_presence/#presence-in-proto3-apis
-      if (ifNull != null) {
+      if (ifAbsent != null) {
         // Field has @Mandatory annotation
-        IfNullThen ifNullThen = ifNull.value();
+        IfAbsentThen ifAbsentThen = ifAbsent.value();
 
         TypeMirror rawType =
             util.processingEnv()
@@ -195,16 +195,16 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
                 .erasure(facet.dataType().javaModelType(util.processingEnv()));
         boolean isRepeated = util.isRawAssignable(rawType, List.class);
         boolean isMap = util.isRawAssignable(rawType, Map.class);
-        if (!ifNullThen.usePlatformDefault() && (isRepeated || isMap)) {
+        if (!ifAbsentThen.usePlatformDefault() && (isRepeated || isMap)) {
           // Proto3 cannot enforce mandatory fields with FAIL strategy for repeated and
           // map fields
           util.error(
               String.format(
                   "Input '%s' in Vajram '%s' is a %s field, and has @IfNoValue(then=%s) which is not supported in protobuf3. "
                       + "Use a different IfNoValue strategy or remove @IfNoValue annotation.",
-                  facet.name(), vajramId, isRepeated ? "repeated" : "map", ifNullThen),
+                  facet.name(), vajramId, isRepeated ? "repeated" : "map", ifAbsentThen),
               facet.facetField());
-        } else if (ifNullThen.usePlatformDefault()) {
+        } else if (ifAbsentThen.usePlatformDefault()) {
           // If the strategy allows defaulting, we can make it a required field in proto3
           isOptional = false;
         }

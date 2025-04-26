@@ -150,11 +150,7 @@ public final class JavaType<T> implements DataType<T> {
   @Override
   public @NonNull T getPlatformDefaultValue() {
     if (platformDefaultValue == null) {
-      synchronized (this) {
-        if (platformDefaultValue == null) {
-          platformDefaultValue = computeDefaultValue();
-        }
-      }
+      platformDefaultValue = computeDefaultValue();
     }
     return platformDefaultValue;
   }

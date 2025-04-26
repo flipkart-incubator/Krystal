@@ -1,12 +1,12 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
-import static com.flipkart.krystal.data.IfNull.IfNullThen.DEFAULT_TO_ZERO;
-import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.DEFAULT_TO_ZERO;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Function.identity;
 
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;
@@ -30,12 +30,12 @@ public abstract class Add extends IOVajramDef<Integer> {
 
   static class _Inputs {
     /** The first number to add */
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     @Batched
     int numberOne;
 
     /** The second number to add */
-    @IfNull(DEFAULT_TO_ZERO)
+    @IfAbsent(DEFAULT_TO_ZERO)
     @Batched
     int numberTwo;
   }
