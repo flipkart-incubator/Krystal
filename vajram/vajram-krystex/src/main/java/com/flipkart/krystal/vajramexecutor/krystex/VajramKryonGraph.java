@@ -415,9 +415,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
         value = depResponse.response();
       } else if (facetValue instanceof FanoutDepResponses<?, ?> fanoutDepResponses) {
         var requestResponsePairs = fanoutDepResponses.requestResponsePairs();
-        if (!requestResponsePairs.isEmpty()
-            && requestResponsePairs.stream()
-                .allMatch(reqResp -> reqResp.response().valueOpt().isEmpty())) {
+        if (requestResponsePairs.stream()
+            .allMatch(reqResp -> reqResp.response().valueOpt().isEmpty())) {
           missingMandatoryValues.put(
               mandatoryFacet.name(),
               new MandatoryFacetMissingException(vajramID.id(), mandatoryFacet.name()));

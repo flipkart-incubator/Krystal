@@ -37,7 +37,6 @@ public abstract class DoubleMinusOne extends ComputeVajramDef<Integer> {
   }
 
   static class _InternalFacets {
-    @IfAbsent(FAIL)
     @Dependency(onVajram = Multiply.class, canFanout = true)
     int doubledNumbers;
 
@@ -53,7 +52,9 @@ public abstract class DoubleMinusOne extends ComputeVajramDef<Integer> {
             doubledNumbers_s,
             depInputFanout(Multiply_Req.numberOne_s)
                 .using(numbers_s)
-                .skipIf(List::isEmpty, "No numbers provided. Skipping multiplier call")
+                .skipIf(
+                    List::isEmpty,
+                    "No numbers provided. Skipping multiplier call to double numbers")
                 .asResolver(numbers -> numbers),
             depInput(Multiply_Req.numberTwo_s).usingValueAsResolver(() -> 2)),
         dep(

@@ -24,8 +24,14 @@ import lombok.experimental.UtilityClass;
  * facet or field in a request model has no value (i.e. {@code null} or {@link Nil}). If a data
  * element isn't {@link ElementTags tagged} with this annotation, then the platform will infer a
  * default value based on the context. For example, in case of input facets of vajrams, the Krystal
- * platform defaults to {@code @IfNoValue(then=WILL_NEVER_FAIL)} in case this annotaiton is not
- * used.
+ * platform defaults to {@code @IfAbsent(WILL_NEVER_FAIL)} in case this annotation is not used.
+ *
+ * <p>The interpretation of this annotation is context specific. For example, when placed on a field
+ * in a request model or an input facet of a vajram, it applies to the cases when the client who
+ * sent the request did not send any value (as discussed above, empty collections and maps are
+ * considered to be "present" not "absent". When placed on a dependency, it means: the dependency
+ * was not called, or the dependency was called N times (If N>1, we call it a fanout dependency) -
+ * and all N calls failed.
  *
  * <p>In case of maps and lists, empty maps and empty lists are considered as valid values, so this
  * annotation doesn't affect them.
