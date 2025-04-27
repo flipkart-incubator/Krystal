@@ -38,7 +38,6 @@ import com.flipkart.krystal.krystex.logicdecorators.resilience4j.Resilience4JCir
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.annos.OutputLogicDelegationMode;
-import com.flipkart.krystal.vajram.annos.VajramIdentifier;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
 import com.flipkart.krystal.vajram.exception.MandatoryFacetsMissingException;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
@@ -54,12 +53,12 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.H
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_ReqImmut;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_ReqImmutPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends_ReqImmutPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2_ImmutReqPojo;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello_ImmutReqPojo;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2_ReqImmutPojo;
+import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello_ReqImmutPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService_ImmutReqPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService_ReqImmut;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserService_ReqImmutPojo;
 import com.google.common.collect.ImmutableMap;
@@ -163,7 +162,7 @@ class KrystexVajramExecutorTest {
                 .build())) {
       result =
           krystexVajramExecutor.execute(
-              helloRequestBuilder(requestContext)._asBuilder().greeting("Namaste")._build());
+              helloRequestBuilder(requestContext).greeting("Namaste")._build());
     }
     assertThat(result).succeedsWithin(TIMEOUT).isEqualTo("Namaste! user_id_1");
   }
@@ -320,11 +319,11 @@ class KrystexVajramExecutorTest {
                 .build())) {
       userInfo =
           krystexVajramExecutor.execute(
-              TestUserService_ImmutReqPojo._builder().userId("user_id_1")._build(),
+              TestUserService_ReqImmutPojo._builder().userId("user_id_1")._build(),
               KryonExecutionConfig.builder().executionId("req_1").build());
       helloFriends =
           krystexVajramExecutor.execute(
-              HelloFriends_ImmutReqPojo._builder().userId("user_id_1").numberOfFriends(0)._build(),
+              HelloFriends_ReqImmutPojo._builder().userId("user_id_1").numberOfFriends(0)._build(),
               KryonExecutionConfig.builder().executionId("req_2").build());
     }
     assertThat(userInfo)
@@ -356,11 +355,11 @@ class KrystexVajramExecutorTest {
                 .build())) {
       userInfo =
           krystexVajramExecutor.execute(
-              TestUserService_ImmutReqPojo._builder().userId("user_id_1:friend_1")._build(),
+              TestUserService_ReqImmutPojo._builder().userId("user_id_1:friend_1")._build(),
               KryonExecutionConfig.builder().executionId("req_1").build());
       helloFriends =
           krystexVajramExecutor.execute(
-              HelloFriends_ImmutReqPojo._builder().userId("user_id_1").numberOfFriends(1)._build(),
+              HelloFriends_ReqImmutPojo._builder().userId("user_id_1").numberOfFriends(1)._build(),
               KryonExecutionConfig.builder().executionId("req_2").build());
     }
     assertThat(userInfo)
@@ -375,8 +374,8 @@ class KrystexVajramExecutorTest {
     assertThat(TestUserService.REQUESTS)
         .isEqualTo(
             Set.of(
-                TestUserService_ImmutReqPojo._builder().userId("user_id_1:friend_1")._build(),
-                TestUserService_ImmutReqPojo._builder().userId("user_id_1")._build()));
+                TestUserService_ReqImmutPojo._builder().userId("user_id_1:friend_1")._build(),
+                TestUserService_ReqImmutPojo._builder().userId("user_id_1")._build()));
   }
 
   @ParameterizedTest
@@ -419,7 +418,7 @@ class KrystexVajramExecutorTest {
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
-              MultiHelloFriends_ImmutReqPojo._builder()
+              MultiHelloFriends_ReqImmutPojo._builder()
                   .userIds(new ArrayList<>(List.of("user_id_1", "user_id_2")))
                   ._build());
     }
@@ -458,7 +457,7 @@ class KrystexVajramExecutorTest {
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
-              MultiHelloFriends_ImmutReqPojo._builder()
+              MultiHelloFriends_ReqImmutPojo._builder()
                   .userIds(new ArrayList<>(List.of("user_id_1", "user_id_2")))
                   ._build());
     }
@@ -500,7 +499,7 @@ class KrystexVajramExecutorTest {
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
-              MultiHelloFriends_ImmutReqPojo._builder()
+              MultiHelloFriends_ReqImmutPojo._builder()
                   .userIds(new ArrayList<>(List.of("user_id_1", "user_id_2")))
                   .skip(false)
                   ._build());
@@ -569,7 +568,7 @@ class KrystexVajramExecutorTest {
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
-              MultiHelloFriends_ImmutReqPojo._builder()
+              MultiHelloFriends_ReqImmutPojo._builder()
                   .userIds(new ArrayList<>(Set.of("user_id_1", "user_id_2")))
                   .skip(true)
                   ._build());
@@ -613,7 +612,7 @@ class KrystexVajramExecutorTest {
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
-              MultiHelloFriendsV2_ImmutReqPojo._builder()
+              MultiHelloFriendsV2_ReqImmutPojo._builder()
                   .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
                   ._build());
     }
@@ -647,7 +646,7 @@ class KrystexVajramExecutorTest {
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
-              MutualFriendsHello_ImmutReqPojo._builder().userId("user_id_1")._build());
+              MutualFriendsHello_ReqImmutPojo._builder().userId("user_id_1")._build());
     }
     assertThat(multiHellos)
         .succeedsWithin(TIMEOUT)
@@ -679,7 +678,7 @@ class KrystexVajramExecutorTest {
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
-              MutualFriendsHello_ImmutReqPojo._builder().userId("user_id_1").skip(true)._build());
+              MutualFriendsHello_ReqImmutPojo._builder().userId("user_id_1").skip(true)._build());
     }
     assertThat(multiHellos).succeedsWithin(1, TimeUnit.HOURS).isEqualTo("");
     assertThat(FriendsService.CALL_COUNTER.sum()).isEqualTo(1);
@@ -759,7 +758,7 @@ class KrystexVajramExecutorTest {
                 .build())) {
       multiHellos =
           krystexVajramExecutor.execute(
-              MultiHelloFriendsV2_ImmutReqPojo._builder()
+              MultiHelloFriendsV2_ReqImmutPojo._builder()
                   .userIds(new LinkedHashSet<>(List.of("user_id_1", "user_id_2")))
                   .skip(true)
                   ._build());
@@ -813,15 +812,7 @@ class KrystexVajramExecutorTest {
                 .getAnnotationByType(OutputLogicDelegationMode.class)
                 .map(v -> v.value() == SYNC)
                 .orElse(false);
-    Function<LogicExecutionContext, String> instanceIdCreator =
-        context ->
-            context
-                .kryonDefinitionRegistry()
-                .getOrThrow(context.vajramID())
-                .tags()
-                .getAnnotationByType(VajramIdentifier.class)
-                .map(VajramIdentifier::value)
-                .orElseThrow(() -> new IllegalStateException("Missing VajramDef annotation"));
+    Function<LogicExecutionContext, String> instanceIdCreator = context -> context.vajramID().id();
     return builder
         .decorateOutputLogicForSession(
             new OutputLogicDecoratorConfig(

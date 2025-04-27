@@ -43,8 +43,7 @@ public final class OptionalSingleValTransformResolverStage<
       Predicate<Errable<S>> whenToSkip, String reason) {
     this.skipConditions.add(
         new SkipPredicate(
-            reason,
-            facetValue -> whenToSkip.test(((SingleFacetValue<S>) facetValue).singleValue())));
+            reason, facetValue -> whenToSkip.test(((SingleFacetValue<S>) facetValue).asErrable())));
     return this;
   }
 
@@ -62,6 +61,6 @@ public final class OptionalSingleValTransformResolverStage<
         targetInput,
         sourceInput,
         skipConditions,
-        new One2One(facetValue -> transformer.apply((Errable<S>) facetValue.singleValue())));
+        new One2One(facetValue -> transformer.apply((Errable<S>) facetValue.asErrable())));
   }
 }

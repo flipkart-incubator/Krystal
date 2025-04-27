@@ -34,12 +34,12 @@ import lombok.Singular;
  * @param singleThreadExecutor MANDATORY! This is used as the event loop for the message passing
  *     within this execution.
  * @param traitDispatchDecorator used to determine the conformant vajrams bound to traits
- * @param debug If true, more human readable names are give to entities - might be memory
+ * @param debug If true, more human-readable names are give to entities - might be memory
  *     ineffecient.
  * @param _riskyOpenAllKryonsForExternalInvocation DO NOT SET THIS TO TRUE IN PRODUCTION CODE - ELSE
- *     NEW VERSIONS OF CODE CAN BREAK BACKWARD COMPATIBILITY. {@code true} if all vajrams are
- *     allowed to be invoked from outside the krystal graph intead of only allowing vajrams tagged
- *     with @{@link ExternallyInvocable}(allow=true)
+ *     NEW VERSIONS OF CODE CAN BREAK BACKWARD COMPATIBILITY. TO BE USED IN TESTING CODE ONLY.
+ *     {@code true} if all vajrams are allowed to be invoked from outside the krystal graph instead
+ *     of only allowing vajrams tagged with @{@link ExternallyInvocable}(allow=true)
  */
 public record KryonExecutorConfig(
     LogicDecorationOrdering logicDecorationOrdering,
@@ -53,8 +53,8 @@ public record KryonExecutorConfig(
     TraitDispatchDecorator traitDispatchDecorator,
     boolean enableFlush,
     boolean debug,
-    /******* Risky Flags ********/
-    boolean _riskyOpenAllKryonsForExternalInvocation) {
+    /* ****** Risky Flags ********/
+    @Deprecated boolean _riskyOpenAllKryonsForExternalInvocation) {
 
   @Builder(toBuilder = true)
   public KryonExecutorConfig {

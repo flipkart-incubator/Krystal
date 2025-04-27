@@ -11,8 +11,4 @@ public record VajramID(String id) {
   public String toString() {
     return "v<%s>".formatted(id());
   }
-
-  public String vajramId() {
-    return id;
-  }
 }

@@ -28,10 +28,9 @@ public final class Constants {
   public static final String GET_SIMPLE_INPUT_RESOLVERS = "getSimpleInputResolvers";
   public static final String FACETS_CLASS_SUFFIX = "_Fac";
   public static final String FACETS_LIST = "_facetValuesList";
-  public static final String BATCH_FACETS = "BatchFacets";
-  public static final String BATCH_FACETS_SUFFIX = "_BatchItem";
-  public static final String COMMON_INPUTS = "CommonFacets";
-  public static final String COMMON_FACETS_SUFFIX = "_CommonFac";
+  public static final String BATCH_ITEM_FACETS_SUFFIX = "_BatchItem";
+  public static final String BATCH_KEY_FACETS_SUFFIX = "_BatchKey";
+  public static final String BATCH_KEY_NAME = "_batchKey";
   public static final String COMMON_IMMUT_FACETS_CLASS_SUFFIX =
       "Common" + IMMUT_FACETS_CLASS_SUFFIX;
   public static final String FACET_VALUES_VAR = "_facetValues";

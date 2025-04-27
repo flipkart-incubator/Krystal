@@ -12,8 +12,8 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
-import com.flipkart.krystal.data.IfNull;
-import com.flipkart.krystal.data.IfNull.IfNullThen;
+import com.flipkart.krystal.data.IfAbsent;
+import com.flipkart.krystal.data.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.serial.SerializableModel;
@@ -102,10 +102,12 @@ public class ModelsProto3Gen implements CodeGenerator {
 
   private void generateProtoImplementation() {
     TypeElement modelRootType = codeGenContext.modelRootType();
+    ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
+
     String modelRootName = modelRootType.getSimpleName().toString();
     String packageName =
         util.processingEnv().getElementUtils().getPackageOf(modelRootType).toString();
-    String protoClassName = modelRootName + "_ImmutProto";
+    String protoClassName = modelRootName + modelRoot.suffixSeperator() + "ImmutProto";
 
     // Generate the implementation class using JavaPoet
     TypeSpec typeSpec = generateImplementationTypeSpec(modelRootType, packageName, protoClassName);
@@ -120,9 +122,10 @@ public class ModelsProto3Gen implements CodeGenerator {
 
   private TypeSpec generateImplementationTypeSpec(
       TypeElement modelRootType, String packageName, String protoClassName) {
+    ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
     ClassName immutableProtoType = ClassName.get(packageName, protoClassName);
     String modelRootName = modelRootType.getSimpleName().toString();
-    String immutInterfaceName = modelRootName + "_Immut";
+    String immutInterfaceName = modelRootName + modelRoot.suffixSeperator() + "Immut";
     String protoMsgClassName = modelRootName + MODELS_PROTO_MSG_SUFFIX;
 
     // Extract model methods
@@ -357,7 +360,8 @@ public class ModelsProto3Gen implements CodeGenerator {
       } else {
         getterBuilder
             .addCode(protoPresenceCheck)
-            .addCode("""
+            .addCode(
+                """
                 return null;
               }
               """);
@@ -546,10 +550,11 @@ public class ModelsProto3Gen implements CodeGenerator {
    * or @IfNoValue(then=MAY_FAIL_CONDITIONALLY) need presence check.
    */
   private static boolean needsPresenceCheckInModels(ExecutableElement method) {
-    IfNull ifNull = getIfNoValue(method);
+    IfAbsent ifAbsent = getIfNoValue(method);
 
     // For FAIL and MAY_FAIL_CONDITIONALLY, we need presence check
-    return ifNull.value() == IfNullThen.FAIL || ifNull.value() == IfNullThen.MAY_FAIL_CONDITIONALLY;
+    return ifAbsent.value() == IfAbsentThen.FAIL
+        || ifAbsent.value() == IfAbsentThen.MAY_FAIL_CONDITIONALLY;
   }
 
   /**
@@ -557,6 +562,6 @@ public class ModelsProto3Gen implements CodeGenerator {
    * as mandatory.
    */
   private static boolean isMandatoryField(ExecutableElement method) {
-    return getIfNoValue(method).value() == IfNullThen.FAIL;
+    return getIfNoValue(method).value() == IfAbsentThen.FAIL;
   }
 }

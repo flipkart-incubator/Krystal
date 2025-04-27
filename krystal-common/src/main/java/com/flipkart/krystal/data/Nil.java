@@ -24,11 +24,6 @@ public final class Nil<T> implements Success<T> {
   }
 
   @Override
-  public @Nullable T value() {
-    return null;
-  }
-
-  @Override
   public Optional<@NonNull T> valueOpt() {
     return Optional.empty();
   }

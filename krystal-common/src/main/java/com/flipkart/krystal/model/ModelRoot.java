@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
 @Retention(SOURCE)
 @Target(ElementType.TYPE)
 public @interface ModelRoot {
-  ModelType type() default NONE;
+  ModelType type();
 
   String suffixSeperator() default "_";
 

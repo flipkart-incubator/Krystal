@@ -4,8 +4,9 @@ import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.BATCHES_VAR;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.BATCH_FACETS_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.COMMON_FACETS_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.BATCH_ITEM_FACETS_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.BATCH_KEY_FACETS_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.BATCH_KEY_NAME;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.EMPTY_CODE_BLOCK;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.FACETS_LIST;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.FACET_NAME_SUFFIX;
@@ -58,8 +59,8 @@ import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.FacetValuesContainer;
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.data.IfNull;
-import com.flipkart.krystal.data.IfNull.IfNullThen;
+import com.flipkart.krystal.data.IfAbsent;
+import com.flipkart.krystal.data.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 import com.flipkart.krystal.data.ImmutableRequest;
@@ -168,7 +169,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class VajramCodeGenerator implements CodeGenerator {
 
   private static final Set<String> MODEL_METHOD_ANNOTATIONS =
-      Stream.of(IfNull.class, SerialId.class).map(Class::getCanonicalName).collect(toSet());
+      Stream.of(IfAbsent.class, SerialId.class).map(Class::getCanonicalName).collect(toSet());
 
   private static final Set<String> MODEL_CLASS_ANNOTATIONS =
       Stream.of(ReservedSerialIds.class).map(Class::getCanonicalName).collect(toSet());
@@ -764,7 +765,7 @@ public class VajramCodeGenerator implements CodeGenerator {
               return $imMap:T.of();
             }
             $map:T<$inputBatching:T, $facetValues:T> _batchItems = new $linkHashMap:T<>();
-            $commonInput:T _common = (($facetsInterface:T)$facetValuesList:L.get(0))._common();
+            $commonInput:T $batchKeyName:L = (($facetsInterface:T)$facetValuesList:L.get(0)).$batchKeyName:L();
             for ($facetValues:T $facetsVar:L : $facetValuesList:L) {
               $facetsInterface:T _castFacets = ($facetsInterface:T) $facetsVar:L;
               $inputBatching:T _batch = _castFacets._batchItem();
@@ -773,6 +774,8 @@ public class VajramCodeGenerator implements CodeGenerator {
         """;
     Map<String, Object> valueMap = new HashMap<>();
     valueMap.put("facetValues", ClassName.get(FacetValues.class));
+    valueMap.put("batchKeyName", BATCH_KEY_NAME);
+
     valueMap.put("facetValuesList", FACETS_LIST);
     valueMap.put("facetsVar", FACET_VALUES_VAR);
     valueMap.put("facetsInterface", ClassName.get(packageName, getFacetsInterfaceName(vajramName)));
@@ -838,7 +841,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                   + BatchesGroupedBy.class.getSimpleName(),
               param);
         }
-        generateFacetLocalVariable(outputLogic, param, codeBuilder, "_common");
+        generateFacetLocalVariable(outputLogic, param, codeBuilder, BATCH_KEY_NAME);
       }
     }
 
@@ -1550,10 +1553,10 @@ public class VajramCodeGenerator implements CodeGenerator {
 
     for (FacetGenModel facet : facetModelsByName.values()) {
       Element facetField = facet.facetField();
-      IfNull ifNull = facetField.getAnnotation(IfNull.class);
-      if (ifNull != null) {
-        IfNullThen ifNullThen = ifNull.value();
-        if (ifNullThen.usePlatformDefault()) {
+      IfAbsent ifAbsent = facetField.getAnnotation(IfAbsent.class);
+      if (ifAbsent != null) {
+        IfAbsentThen ifAbsentThen = ifAbsent.value();
+        if (ifAbsentThen.usePlatformDefault()) {
           if (facet.facetTypes().contains(DEPENDENCY)) {
             util.error(
                 "Defaulting to a platform default value is not supported for dependency facets.",
@@ -1599,7 +1602,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                         constructorParamString.formatted(
                             codeGenParams.wrapsRequest()
                                 ? "_request._build()"
-                                : "_batchable._build(), _common._build()"))
+                                : "_batchable._build(), _batchKey._build()"))
                 : "return this");
       } else {
         methodBuilder.addModifiers(ABSTRACT);
@@ -1619,7 +1622,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                         constructorParamString.formatted(
                             codeGenParams.wrapsRequest()
                                 ? "_request._asBuilder()"
-                                : "_batchable._asBuilder(), _common._asBuilder()")));
+                                : "_batchable._asBuilder(), _batchKey._asBuilder()")));
       } else {
         methodBuilder.addModifiers(ABSTRACT);
       }
@@ -1641,7 +1644,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                         constructorParamString.formatted(
                             codeGenParams.wrapsRequest()
                                 ? "_request._newCopy()"
-                                : "_batchable._newCopy(), _common._newCopy()"))
+                                : "_batchable._newCopy(), _batchKey._newCopy()"))
                 : "return this");
       } else {
         methodBuilder.addModifiers(ABSTRACT);
@@ -1929,11 +1932,11 @@ public class VajramCodeGenerator implements CodeGenerator {
   }
 
   private ClassName getBatchFacetsClassName() {
-    return ClassName.get(packageName, vajramName + BATCH_FACETS_SUFFIX);
+    return ClassName.get(packageName, vajramName + BATCH_ITEM_FACETS_SUFFIX);
   }
 
   private ClassName getCommonFacetsClassName() {
-    return ClassName.get(packageName, vajramName + COMMON_FACETS_SUFFIX);
+    return ClassName.get(packageName, vajramName + BATCH_KEY_FACETS_SUFFIX);
   }
 
   private void codegenBatchableFacets(
@@ -1945,7 +1948,7 @@ public class VajramCodeGenerator implements CodeGenerator {
         overriding(util.getMethodToOverride(BatchEnabledFacetValues.class, "_batchItem", 0))
             .returns(batchFacetsType);
     MethodSpec.Builder commonMethod =
-        overriding(util.getMethodToOverride(BatchEnabledFacetValues.class, "_common", 0))
+        overriding(util.getMethodToOverride(BatchEnabledFacetValues.class, BATCH_KEY_NAME, 0))
             .returns(commonFacetsType);
     if (codeGenParams.withImpl()) {
       batchElementMethod.addStatement("return new $T(this)", batchFacetsType);

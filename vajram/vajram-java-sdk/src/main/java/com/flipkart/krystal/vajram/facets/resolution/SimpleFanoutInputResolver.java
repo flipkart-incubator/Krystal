@@ -47,9 +47,7 @@ public final class SimpleFanoutInputResolver<S, T, CV extends Request<?>, DV ext
           if (depCommand.shouldSkip()) {
             return skip(depCommand.doc(), depCommand.skipCause());
           } else {
-            if (depCommand.inputs().isEmpty()) {
-              return skip("Fanout resolver returned empty collection", null);
-            } else if (depCommand.inputs().size() == 1) {
+            if (depCommand.inputs().size() == 1) {
               getResolverSpec().targetInput().setToRequest(_depRequest, depCommand.inputs().get(0));
               return executeWithRequests(
                   ImmutableList.of((ImmutableRequest.Builder<?>) _depRequest));

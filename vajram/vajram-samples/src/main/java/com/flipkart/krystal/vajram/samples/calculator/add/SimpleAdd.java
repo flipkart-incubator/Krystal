@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
-import static com.flipkart.krystal.data.IfNull.IfNullThen.DEFAULT_TO_EMPTY;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.DEFAULT_TO_EMPTY;
 
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
@@ -13,7 +13,7 @@ import java.util.List;
 public abstract class SimpleAdd extends ComputeVajramDef<Integer> implements MultiAdd {
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Inputs {
-    @IfNull(DEFAULT_TO_EMPTY)
+    @IfAbsent(DEFAULT_TO_EMPTY)
     List<Integer> numbers;
   }
 

@@ -47,7 +47,7 @@ public final class MandatorySingleValTransformFanoutResolverStage<
             facetValue ->
                 whenToSkip.test(
                     ((SingleFacetValue<S>) facetValue)
-                        .singleValue()
+                        .asErrable()
                         .valueOpt()
                         .orElseThrow(this::mandatoryFacetMissingException))));
     return this;
@@ -72,13 +72,12 @@ public final class MandatorySingleValTransformFanoutResolverStage<
             facetValue ->
                 transformer.apply(
                     ((SingleFacetValue<S>) facetValue)
-                        .singleValue()
+                        .asErrable()
                         .valueOpt()
                         .orElseThrow(this::mandatoryFacetMissingException))));
   }
 
   private MandatoryFacetMissingException mandatoryFacetMissingException() {
-    return new MandatoryFacetMissingException(
-        sourceFacet.ofVajramID().vajramId(), sourceFacet.name());
+    return new MandatoryFacetMissingException(sourceFacet.ofVajramID().id(), sourceFacet.name());
   }
 }

@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.samples.customer_service;
 
-import static com.flipkart.krystal.data.IfNull.IfNullThen.FAIL;
+import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
 
-import com.flipkart.krystal.data.IfNull;
+import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
@@ -12,13 +12,13 @@ public abstract class L1EmailAgent extends ComputeVajramDef<String>
     implements CustomerServiceAgent {
   @SuppressWarnings("initialization.field.uninitialized")
   static class _Inputs {
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     AgentType agentType;
 
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     InitialCommunication initialCommunication;
 
-    @IfNull(FAIL)
+    @IfAbsent(FAIL)
     String customerName;
   }
 
