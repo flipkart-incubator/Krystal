@@ -1,9 +1,8 @@
 package com.flipkart.krystal.data;
 
 import com.flipkart.krystal.facets.InputMirror;
-import com.flipkart.krystal.model.ImmutableModelType;
 import com.flipkart.krystal.model.Model;
-import com.flipkart.krystal.model.ModelBuilderType;
+import com.flipkart.krystal.model.ModelClusterRoot;
 import com.google.common.collect.ImmutableSet;
 
 /**
@@ -12,8 +11,9 @@ import com.google.common.collect.ImmutableSet;
  * @param <T> The response type of the vajram when invoked with this request
  */
 @SuppressWarnings("ClassReferencesSubclass") // By Design
-@ImmutableModelType(ImmutableRequest.class)
-@ModelBuilderType(ImmutableRequest.Builder.class)
+@ModelClusterRoot(
+    immutableRoot = ImmutableRequest.class,
+    builderRoot = ImmutableRequest.Builder.class)
 public non-sealed interface Request<T> extends FacetValuesContainer, Model {
 
   ImmutableRequest.Builder<T> _asBuilder();

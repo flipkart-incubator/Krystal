@@ -180,18 +180,11 @@ public class Utils {
       if (ElementKind.METHOD.equals(element.getKind())) {
         ExecutableElement method = (ExecutableElement) element;
 
-        if (method.isDefault() && method.getSimpleName().toString().startsWith("_")) {
-          // Default methods whose names start with an '_' are considered "meta" methods which are
+        if (method.getSimpleName().toString().startsWith("_")) {
+          // Methods whose names start with an '_' are considered "meta" methods which are not
           // used to access actual model data. So they are ignored.
           continue;
         }
-        // Skip methods from Object class or other non-model methods
-        if (method.getSimpleName().toString().equals("_build")
-            || method.getSimpleName().toString().equals("_asBuilder")
-            || method.getSimpleName().toString().equals("_newCopy")) {
-          continue;
-        }
-
         validateGetterMethod(method);
 
         modelMethods.add(method);
@@ -650,7 +643,7 @@ public class Utils {
               .map(element -> element.getAnnotation(FacetIdNameMapping.class))
               .filter(Objects::nonNull)
               .collect(toImmutableBiMap(FacetIdNameMapping::id, FacetIdNameMapping::name));
-      TypeMirror responseTypeMirror = getResponseType(vajramOrReqClass, Request.class);
+      TypeMirror responseTypeMirror = getVajramResponseType(vajramOrReqClass, Request.class);
       TypeElement responseTypeElement =
           checkNotNull((TypeElement) typeUtils.asElement(responseTypeMirror));
       vajramId =
@@ -669,7 +662,7 @@ public class Utils {
             "Vajram class %s does not have either @VajramDef or @VajramTrait annotation. This should not happen"
                 .formatted(vajramOrReqClass));
       }
-      TypeMirror responseTypeMirror = getResponseType(vajramOrReqClass, VajramDefRoot.class);
+      TypeMirror responseTypeMirror = getVajramResponseType(vajramOrReqClass, VajramDefRoot.class);
       TypeElement responseTypeElement =
           checkNotNull((TypeElement) typeUtils.asElement(responseTypeMirror));
       TypeElement requestType =
@@ -750,13 +743,33 @@ public class Utils {
     }
   }
 
-  private TypeMirror getResponseType(TypeElement vajramDef, Class<?> targetClass) {
+  private TypeMirror getVajramResponseType(TypeElement vajramOrReqType, Class<?> targetClass) {
     int typeParamIndex = 0;
-    List<TypeMirror> currentTypes = List.of(vajramDef.asType());
-    note("VajramDef: %s".formatted(vajramDef));
+    List<? extends TypeMirror> typeParameters =
+        getTypeParamTypes(
+            vajramOrReqType, elementUtils.getTypeElement(targetClass.getCanonicalName()));
+    if (typeParameters.size() > typeParamIndex) {
+      return typeParameters.get(typeParamIndex);
+    } else {
+      throw errorAndThrow(
+          "Incorrect number of parameter types on Vajram interface. Expected 1, Found %s. Unable to infer response type for Vajram %s"
+              .formatted(typeParameters, vajramOrReqType.getQualifiedName()),
+          vajramOrReqType);
+    }
+  }
+
+  /**
+   * @param childTypeElement
+   * @param targetParentClass
+   * @return
+   */
+  public List<? extends TypeMirror> getTypeParamTypes(
+      TypeElement childTypeElement, TypeElement targetParentClass) {
+    List<TypeMirror> currentTypes = List.of(childTypeElement.asType());
+    note("VajramDef: %s".formatted(childTypeElement));
 
     Types typeUtils = processingEnv.getTypeUtils();
-    DeclaredType vajramInterface = null;
+    DeclaredType targetType = null;
     do {
       List<TypeMirror> newSuperTypes = new ArrayList<>();
       for (TypeMirror currentType : currentTypes) {
@@ -771,33 +784,25 @@ public class Utils {
           Element element = typeUtils.asElement(superType);
           if (element instanceof TypeElement typeElement) {
             note("Element qualified name: %s".formatted(typeElement.getQualifiedName()));
-            if (typeElement.getQualifiedName().contentEquals(targetClass.getName())) {
-              vajramInterface = superType;
+            if (typeElement
+                .getQualifiedName()
+                .contentEquals(targetParentClass.getQualifiedName())) {
+              targetType = superType;
               break;
             }
           }
         }
         note("CurrentElement: %s".formatted(currentType));
       }
-      if (vajramInterface == null) {
+      if (targetType == null) {
         currentTypes = newSuperTypes;
       }
-    } while (!currentTypes.isEmpty() && vajramInterface == null);
-    if (vajramInterface != null) {
-      List<? extends TypeMirror> typeParameters = vajramInterface.getTypeArguments();
-      if (typeParameters.size() > typeParamIndex) {
-        return typeParameters.get(typeParamIndex);
-      } else {
-        error(
-            "Incorrect number of parameter types on Vajram interface. Expected 1, Found %s"
-                .formatted(typeParameters),
-            vajramDef);
-      }
+    } while (!currentTypes.isEmpty() && targetType == null);
+    if (targetType != null) {
+      List<? extends TypeMirror> typeParameters = targetType.getTypeArguments();
+      return typeParameters;
     }
-    error(
-        "Unable to infer response type for Vajram %s".formatted(vajramDef.getQualifiedName()),
-        vajramDef);
-    throw new RuntimeException();
+    return List.of();
   }
 
   public void note(CharSequence message) {

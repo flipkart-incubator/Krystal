@@ -247,6 +247,7 @@ public class VajramCodeGenerator implements CodeGenerator {
 
   private void vajramRequest() {
     ClassName requestInterfaceType = currentVajramInfo.lite().requestInterfaceType();
+    ClassName immutReqInterfaceType = currentVajramInfo.lite().immutReqInterfaceType();
     List<DefaultFacetModel> inputs =
         currentVajramInfo.givenFacets().stream()
             .filter(facetDef -> facetDef.facetTypes().contains(INPUT))
@@ -264,6 +265,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                     .addMember(
                         "type", CodeBlock.of("$T.$L", ModelType.class, ModelType.REQUEST.name()))
                     .addMember("suffixSeperator", CodeBlock.of("$S", ""))
+                    .addMember("builderExtendsModelRoot", "true")
                     .build())
             .addAnnotations(
                 currentVajramInfo.vajramClass().getAnnotationMirrors().stream()
@@ -298,15 +300,23 @@ public class VajramCodeGenerator implements CodeGenerator {
     modelsClassMembers(
         requestInterface,
         requestInterfaceType,
-        currentVajramInfo
-            .facetStream()
-            .filter(facet -> facet.facetTypes().contains(INPUT))
-            .toList(),
+        inputs,
         CodeGenParams.builder().isRequest(true).isModelRoot(true).build());
 
     util.generateSourceFile(
         requestInterfaceType.canonicalName(),
-        JavaFile.builder(packageName, requestInterface.build()).build().toString(),
+        JavaFile.builder(
+                packageName,
+                requestInterface
+                    .addMethods(
+                        facetContainerMethods(
+                            inputs,
+                            requestInterfaceType,
+                            immutReqInterfaceType,
+                            CodeGenParams.builder().isRequest(true).build()))
+                    .build())
+            .build()
+            .toString(),
         currentVajramInfo.vajramClass());
   }
 
@@ -2049,9 +2059,11 @@ public class VajramCodeGenerator implements CodeGenerator {
         }
         initializerCodeBlock.add(String.join(",", params) + "),", args.toArray());
       }
-      initializerCodeBlock.add("""
+      initializerCodeBlock.add(
+          """
                 $T.class,
-              """, vajramReqClass);
+              """,
+          vajramReqClass);
       if (facet instanceof DependencyModel vajramDepDef) {
         ClassName depReqClass = ClassName.bestGuess(vajramDepDef.depReqClassQualifiedName());
         ClassName depReqInterfaceClass =

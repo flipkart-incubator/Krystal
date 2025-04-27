@@ -14,6 +14,9 @@ public @interface ModelRoot {
 
   String suffixSeperator() default "_";
 
+  /** If true, then the generated Builder Interface will extend the ModelRoot interface. */
+  boolean builderExtendsModelRoot() default false;
+
   enum ModelType {
     /** This model is a neither a request model nor a response model */
     NONE,

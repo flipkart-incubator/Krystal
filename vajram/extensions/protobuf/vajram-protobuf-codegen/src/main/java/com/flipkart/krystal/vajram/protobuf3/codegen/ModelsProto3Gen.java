@@ -53,8 +53,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * generates an inner class inside the ImmutProto class which extends the
  * "[ModelName]_Immut.Builder" interface and wraps a "[ModelName]_Proto.Builder" instance and all
  * setter and getter calls are delegated to this.
- *
- * @see VajramModelsProto3Gen
  */
 @Slf4j
 public class ModelsProto3Gen implements CodeGenerator {
