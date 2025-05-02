@@ -1,9 +1,11 @@
 package com.flipkart.krystal.vajram.codegen.processor;
 
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
 import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.WILL_NEVER_FAIL;
-import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getIfNoValue;
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.POJO_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getIfAbsent;
+import static com.flipkart.krystal.vajram.codegen.common.models.Utils.recordAnnotations;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.ABSTRACT;
@@ -15,6 +17,7 @@ import static javax.lang.model.element.Modifier.STATIC;
 
 import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.data.IfAbsent.IfAbsentThen;
+import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.model.ImmutableModel;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelBuilder;
@@ -26,7 +29,6 @@ import com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.vajram.codegen.common.models.Utils;
 import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.vajram.codegen.common.spi.ModelsCodeGenContext;
-import com.google.common.base.Preconditions;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
@@ -34,6 +36,7 @@ import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.MethodSpec.Builder;
 import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.util.ArrayList;
@@ -44,7 +47,6 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -161,8 +163,9 @@ public final class JavaModelsGenerator implements CodeGenerator {
     String packageName =
         util.processingEnv().getElementUtils().getPackageOf(modelRootType).toString();
     String modelRootName = modelRootType.getSimpleName().toString();
-    String immutableModelName = modelRootName + modelRoot.suffixSeperator() + "Immut";
-    String immutablePojoName = modelRootName + modelRoot.suffixSeperator() + "ImmutPojo";
+    String immutableModelName = modelRootName + modelRoot.suffixSeperator() + IMMUT_SUFFIX;
+    String immutablePojoName =
+        modelRootName + modelRoot.suffixSeperator() + IMMUT_SUFFIX + POJO_SUFFIX;
 
     // Generate the immutable interface and its builder interface
     TypeSpec immutableInterface =
@@ -171,7 +174,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     // Generate the POJO class if PlainJavaObject is supported
     if (isPlainJavaObjectSupported(modelRootType, util)) {
       TypeSpec immutablePojo =
-          generateImmutablePojo(modelMethods, immutableModelName, immutablePojoName);
+          generateImmutablePojo(modelRootType, modelMethods, immutableModelName, immutablePojoName);
       writeJavaFile(packageName, immutablePojo, modelRootType, util);
     }
 
@@ -241,40 +244,89 @@ public final class JavaModelsGenerator implements CodeGenerator {
       TypeElement modelRootType, List<ExecutableElement> modelMethods, String immutableModelName) {
 
     ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
-    Optional<TypeElement> modelClusterRoot = getModelClusterRoot(modelRootType);
+    Optional<TypeElement> parentModelRoot =
+        getParentInterfaceWithAnnotation(modelRootType, ModelRoot.class);
+    util.note("***** generateImmutableInterface *****");
+    util.note("modelRootType: " + modelRootType);
+    util.note("parentModelRoot: " + parentModelRoot);
+    Optional<TypeElement> modelClusterRoot =
+        parentModelRoot.isPresent()
+            ? Optional.empty()
+            : getInterfaceWithAnnotation(modelRootType, ModelClusterRoot.class);
     List<? extends TypeMirror> typeParamTypes =
         modelClusterRoot.map(mcr -> util.getTypeParamTypes(modelRootType, mcr)).orElse(List.of());
 
     Optional<ModelClusterRoot> modelClusterRootAnno =
         modelClusterRoot.map(typeElement -> typeElement.getAnnotation(ModelClusterRoot.class));
-    TypeElement immutableModelRootType =
-        modelClusterRootAnno
-            .flatMap(anno -> util.getTypeFromAnnotationMember(anno::immutableRoot))
-            .map(tm -> (TypeElement) util.processingEnv().getTypeUtils().asElement(tm))
-            .orElse(
-                util.processingEnv()
-                    .getElementUtils()
-                    .getTypeElement(ImmutableModel.class.getCanonicalName()));
 
-    TypeElement modelBuilderRootType =
-        modelClusterRootAnno
-            .flatMap(anno -> util.getTypeFromAnnotationMember(anno::builderRoot))
-            .map(tm -> (TypeElement) util.processingEnv().getTypeUtils().asElement(tm))
-            .orElse(
-                util.processingEnv()
-                    .getElementUtils()
-                    .getTypeElement(ModelBuilder.class.getCanonicalName()));
+    Optional<? extends AnnotationMirror> modelRootAnno =
+        parentModelRoot.flatMap(
+            a ->
+                a.getAnnotationMirrors().stream()
+                    .filter(
+                        m ->
+                            ((QualifiedNameable) m.getAnnotationType().asElement())
+                                .getQualifiedName()
+                                .contentEquals(ModelRoot.class.getCanonicalName()))
+                    .findAny());
+
+    ClassName immutableModelRootType =
+        modelRootAnno
+            .map(
+                parentModelRootAnno ->
+                    ClassName.get(
+                        util.processingEnv()
+                            .getElementUtils()
+                            .getPackageOf(parentModelRoot.get())
+                            .getQualifiedName()
+                            .toString(),
+                        parentModelRoot.get().getSimpleName()
+                            + util.<String>getAnnotationElement(
+                                parentModelRootAnno, "suffixSeperator")
+                            + IMMUT_SUFFIX))
+            .or(
+                () ->
+                    modelClusterRootAnno
+                        .flatMap(anno -> util.getTypeFromAnnotationMember(anno::immutableRoot))
+                        .map(tm -> (TypeElement) util.processingEnv().getTypeUtils().asElement(tm))
+                        .map(ClassName::get))
+            .orElse(ClassName.get(ImmutableModel.class));
+
+    ClassName modelBuilderRootType =
+        modelRootAnno
+            .map(
+                parentModelRootAnno ->
+                    ClassName.get(
+                        util.processingEnv()
+                            .getElementUtils()
+                            .getPackageOf(parentModelRoot.get())
+                            .getQualifiedName()
+                            .toString(),
+                        parentModelRoot.get().getSimpleName()
+                            + util.<String>getAnnotationElement(
+                                parentModelRootAnno, "suffixSeperator")
+                            + IMMUT_SUFFIX,
+                        "Builder"))
+            .or(
+                () ->
+                    modelClusterRootAnno
+                        .flatMap(anno -> util.getTypeFromAnnotationMember(anno::builderRoot))
+                        .map(tm -> (TypeElement) util.processingEnv().getTypeUtils().asElement(tm))
+                        .map(ClassName::get))
+            .orElse(ClassName.get(ModelBuilder.class));
 
     // Create the builder interface
     TypeSpec.Builder builderInterface =
         TypeSpec.interfaceBuilder("Builder")
             .addModifiers(PUBLIC, STATIC)
             .addSuperinterface(
-                util.processingEnv()
-                    .getTypeUtils()
-                    .getDeclaredType(
-                        modelBuilderRootType, typeParamTypes.toArray(TypeMirror[]::new)))
+                typeParamTypes.isEmpty()
+                    ? modelBuilderRootType
+                    : ParameterizedTypeName.get(
+                        modelBuilderRootType,
+                        typeParamTypes.stream().map(TypeName::get).toArray(TypeName[]::new)))
             .addMethods(generateBuilderInterfaceMethods(modelMethods, immutableModelName));
+
     if (modelRoot.builderExtendsModelRoot()) {
       builderInterface.addSuperinterface(modelRootType.asType());
     }
@@ -284,45 +336,60 @@ public final class JavaModelsGenerator implements CodeGenerator {
         .addModifiers(PUBLIC)
         .addSuperinterface(ClassName.get(modelRootType))
         .addSuperinterface(
-            util.processingEnv()
-                .getTypeUtils()
-                .getDeclaredType(immutableModelRootType, typeParamTypes.toArray(TypeMirror[]::new)))
+            typeParamTypes.isEmpty()
+                ? immutableModelRootType
+                : ParameterizedTypeName.get(
+                    immutableModelRootType,
+                    typeParamTypes.stream().map(TypeName::get).toArray(TypeName[]::new)))
         .addMethod(
-            MethodSpec.overriding(util.getMethodToOverride(Model.class, "_build", 0))
+            MethodSpec.overriding(util.getMethod(Model.class, "_build", 0))
                 .addModifiers(PUBLIC, DEFAULT)
                 .returns(ClassName.get("", immutableModelName))
                 .addStatement("return this")
                 .build())
         .addMethod(
-            MethodSpec.overriding(util.getMethodToOverride(Model.class, "_newCopy", 0))
+            MethodSpec.overriding(util.getMethod(Model.class, "_newCopy", 0))
                 .addModifiers(PUBLIC, ABSTRACT)
                 .returns(ClassName.get("", immutableModelName))
                 .build())
         .addMethod(
-            MethodSpec.overriding(util.getMethodToOverride(Model.class, "_asBuilder", 0))
+            MethodSpec.overriding(util.getMethod(Model.class, "_asBuilder", 0))
                 .addModifiers(PUBLIC, ABSTRACT)
-                .returns(ClassName.get("", "Builder"))
+                .returns(ClassName.get("", immutableModelName + ".Builder"))
                 .build())
         .addType(builderInterface.build())
         .build();
   }
 
-  private Optional<TypeElement> getModelClusterRoot(TypeElement typeElement) {
+  private Optional<TypeElement> getParentInterfaceWithAnnotation(
+      TypeElement typeElement, Class<?> annotationClass) {
+    return getInterfaceWithAnnotation(typeElement, annotationClass, true);
+  }
+
+  private Optional<TypeElement> getInterfaceWithAnnotation(
+      TypeElement typeElement, Class<?> annotationClass) {
+    return getInterfaceWithAnnotation(typeElement, annotationClass, false);
+  }
+
+  private Optional<TypeElement> getInterfaceWithAnnotation(
+      TypeElement typeElement, Class<?> annotationClass, boolean skipFirst) {
     Optional<? extends AnnotationMirror> annotation =
-        typeElement.getAnnotationMirrors().stream()
-            .filter(
-                m ->
-                    ((QualifiedNameable) m.getAnnotationType().asElement())
-                        .getQualifiedName()
-                        .contentEquals(ModelClusterRoot.class.getCanonicalName()))
-            .findAny();
+        skipFirst
+            ? Optional.empty()
+            : typeElement.getAnnotationMirrors().stream()
+                .filter(
+                    m ->
+                        ((QualifiedNameable) m.getAnnotationType().asElement())
+                            .getQualifiedName()
+                            .contentEquals(annotationClass.getCanonicalName()))
+                .findAny();
     if (annotation.isEmpty()) {
       List<TypeElement> list =
           typeElement.getInterfaces().stream()
               .map(t -> util.processingEnv().getTypeUtils().asElement(t))
               .filter(e -> e instanceof TypeElement)
               .map(e -> (TypeElement) e)
-              .map(this::getModelClusterRoot)
+              .map(te -> getInterfaceWithAnnotation(te, annotationClass, false))
               .filter(Optional::isPresent)
               .map(Optional::get)
               .toList();
@@ -330,7 +397,8 @@ public final class JavaModelsGenerator implements CodeGenerator {
         return Optional.empty();
       } else if (list.size() > 1) {
         util.error(
-            "More than one super interface has @ModelClusterRoot annotation. Expected zero or one",
+            "More than one super interface has @%s annotation. Expected zero or one"
+                .formatted(annotationClass.getSimpleName()),
             typeElement);
         return Optional.empty();
       } else {
@@ -368,17 +436,17 @@ public final class JavaModelsGenerator implements CodeGenerator {
 
     methods.addAll(
         List.of(
-            MethodSpec.overriding(util.getMethodToOverride(Model.class, "_build", 0))
+            MethodSpec.overriding(util.getMethod(Model.class, "_build", 0))
                 .addModifiers(PUBLIC, ABSTRACT)
                 .returns(ClassName.get("", immutableModelName))
                 .build(),
-            MethodSpec.overriding(util.getMethodToOverride(Model.class, "_newCopy", 0))
+            MethodSpec.overriding(util.getMethod(Model.class, "_newCopy", 0))
                 .addModifiers(PUBLIC, ABSTRACT)
                 .returns(ClassName.get("", "Builder"))
                 .build(),
-            MethodSpec.overriding(util.getMethodToOverride(Model.class, "_asBuilder", 0))
+            MethodSpec.overriding(util.getMethod(Model.class, "_asBuilder", 0))
                 .addModifiers(PUBLIC, DEFAULT)
-                .returns(ClassName.get("", "Builder"))
+                .returns(ClassName.get("", immutableModelName + ".Builder"))
                 .addStatement("return this")
                 .build()));
 
@@ -388,13 +456,17 @@ public final class JavaModelsGenerator implements CodeGenerator {
   /**
    * Generates the immutable POJO class that implements the immutable interface.
    *
+   * @param modelRootType The model root type
    * @param modelMethods The methods from the model root
    * @param immutableModelName The name of the immutable interface
    * @param immutablePojoName The name for the immutable POJO
    * @return TypeSpec for the immutable POJO
    */
   private TypeSpec generateImmutablePojo(
-      List<ExecutableElement> modelMethods, String immutableModelName, String immutablePojoName) {
+      TypeElement modelRootType,
+      List<ExecutableElement> modelMethods,
+      String immutableModelName,
+      String immutablePojoName) {
 
     // Create fields for the POJO class
     List<FieldSpec> fields = new ArrayList<>();
@@ -413,7 +485,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
         }
       } else {
         // Check if the method has @IfNoValue and is primitive
-        IfAbsent ifAbsent = getIfNoValue(method);
+        IfAbsent ifAbsent = getIfAbsent(method);
         if (method.getReturnType().getKind().isPrimitive()
             && (ifAbsent.value() == MAY_FAIL_CONDITIONALLY
                 || ifAbsent.value() == WILL_NEVER_FAIL)) {
@@ -514,10 +586,11 @@ public final class JavaModelsGenerator implements CodeGenerator {
 
     // Create builder class
     TypeSpec builderClass =
-        generateBuilderClass(modelMethods, immutableModelName, immutablePojoName);
+        generateBuilderClass(modelRootType, modelMethods, immutableModelName, immutablePojoName);
 
     // Create the POJO class
     return TypeSpec.classBuilder(immutablePojoName)
+        .addAnnotations(recordAnnotations())
         .addModifiers(PUBLIC, FINAL)
         .addSuperinterface(ClassName.get("", immutableModelName))
         .addFields(fields)
@@ -531,14 +604,18 @@ public final class JavaModelsGenerator implements CodeGenerator {
   /**
    * Generates the builder class for the immutable POJO.
    *
+   * @param modelRootType
    * @param modelMethods The methods from the model root
    * @param immutableModelName The name of the immutable interface
    * @param immutablePojoName The name of the immutable POJO
    * @return TypeSpec for the builder class
    */
   private TypeSpec generateBuilderClass(
-      List<ExecutableElement> modelMethods, String immutableModelName, String immutablePojoName) {
-
+      TypeElement modelRootType,
+      List<ExecutableElement> modelMethods,
+      String immutableModelName,
+      String immutablePojoName) {
+    ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
     // Create fields for the builder class
     List<FieldSpec> fields = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
@@ -579,11 +656,11 @@ public final class JavaModelsGenerator implements CodeGenerator {
     MethodSpec noArgConstructor = MethodSpec.constructorBuilder().addModifiers(PUBLIC).build();
 
     // Create setter methods
-    List<MethodSpec> setterMethods = new ArrayList<>();
+    List<MethodSpec> dataAccessMethods = new ArrayList<>();
     for (ExecutableElement method : modelMethods) {
       String methodName = method.getSimpleName().toString();
 
-      setterMethods.add(
+      dataAccessMethods.add(
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC)
               .addParameter(getParameterType(method.getReturnType()), methodName)
@@ -592,6 +669,15 @@ public final class JavaModelsGenerator implements CodeGenerator {
               .addStatement("return this")
               .addAnnotation(Override.class)
               .build());
+      if (modelRoot.builderExtendsModelRoot()) {
+        dataAccessMethods.add(
+            MethodSpec.methodBuilder(methodName)
+                .addAnnotation(Override.class)
+                .addModifiers(PUBLIC)
+                .returns(TypeName.get(method.getReturnType()))
+                .addStatement("return this.$N", methodName)
+                .build());
+      }
     }
 
     // Create _build method
@@ -605,6 +691,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
       TypeMirror returnType = method.getReturnType();
+      DataType<?> returnDataType = util.toDataType(returnType);
       String typeName = returnType.toString();
       boolean isPrimitive = returnType.getKind().isPrimitive();
 
@@ -639,16 +726,12 @@ public final class JavaModelsGenerator implements CodeGenerator {
         defaultValue = "new " + componentType + "[0]";
       }
 
-      // Get the IfNoValue annotation directly
-      IfAbsent ifAbsent = getIfNoValue(method);
-
       // If IfNoValue annotation was found, handle according to strategy
       // Get the strategy directly from the annotation
-      IfAbsentThen ifAbsentThen = ifAbsent.value();
+      IfAbsentThen ifAbsentThen = getIfAbsent(method).value();
 
       // Only generate null check if validation is needed or error needs to be thrown
-      if (ifAbsentThen != IfAbsentThen.MAY_FAIL_CONDITIONALLY
-          && ifAbsentThen != IfAbsentThen.WILL_NEVER_FAIL) {
+      if (!typeSupportsAbsentValues(returnType)) {
         buildMethodBuilder.beginControlFlow("if (this.$N == null)", fieldName);
 
         switch (ifAbsentThen) {
@@ -685,14 +768,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
           default:
             throw new AssertionError("Unexpected IfNoValueThen = " + ifAbsentThen);
         }
-
         buildMethodBuilder.endControlFlow();
-      } else {
-        // MAY_FAIL_CONDITIONALLY strategy - this would require more complex logic
-        // Since conditional logic would be defined elsewhere, we don't generate null check
-        buildMethodBuilder.addComment(
-            "MAY_FAIL_CONDITIONALLY strategy detected - conditional logic should be handled separately");
-        buildMethodBuilder.addStatement("// No default handling for conditional strategy");
       }
     }
 
@@ -729,8 +805,14 @@ public final class JavaModelsGenerator implements CodeGenerator {
         .addSuperinterface(ClassName.get("", immutableModelName + ".Builder"))
         .addFields(fields)
         .addMethod(noArgConstructor)
-        .addMethods(setterMethods)
+        .addMethods(dataAccessMethods)
         .addMethod(buildMethodBuilder.build())
+        .addMethod(
+            MethodSpec.overriding(util.getMethod(Model.class, "_asBuilder", 0))
+                .addModifiers(PUBLIC)
+                .returns(ClassName.get("", immutablePojoName + ".Builder"))
+                .addStatement("return this")
+                .build())
         .addMethod(builderCopyMethodBuilder.build())
         .build();
   }
@@ -788,32 +870,24 @@ public final class JavaModelsGenerator implements CodeGenerator {
   }
 
   /**
-   * Validates that conditionally optional fields are not primitive types and are properly
-   * annotated. Fields with @IfNoValue(then=MAY_FAIL_CONDITIONALLY) must not be primitive types and
-   * must be either Optional or annotated with @Nullable.
+   * Validates that fields not mandatory on server are not primitive types and are of Optional type
+   * or are properly annotated as Nullable.
    */
   private void validateOptionalField(ExecutableElement method) {
-    IfAbsent ifAbsent = getIfNoValue(method);
-    if (ifAbsent.value() == MAY_FAIL_CONDITIONALLY) {
-      // Check if the return type is primitive
-      TypeMirror returnType = method.getReturnType();
-      if (returnType.getKind().isPrimitive()) {
+    IfAbsentThen ifAbsentThen = getIfAbsent(method).value();
+    if (!ifAbsentThen.isMandatoryOnServer()) {
+      if (!typeSupportsAbsentValues(method.getReturnType())) {
         util.error(
-            "An optional field cannot be a primitive type. Use Optional<> or @Nullable boxed type instead",
-            method);
-      }
-
-      // Check if the return type has @Nullable or is an Optional
-      if (!util.isOptional(returnType) && !util.isNullable(returnType)) {
-        util.error(
-            "Field '%s' with @IfNoValue(then=MAY_FAIL_CONDITIONALLY) must be an Optional or annotated with %s: "
-                .formatted(method.getSimpleName(), Nullable.class.getCanonicalName()),
+            "Field '%s' with @IfAbsent(%s) must be an Optional or annotated with %s: "
+                .formatted(method.getSimpleName(), ifAbsentThen, Nullable.class.getCanonicalName()),
             method);
       }
     }
-    // For FAIL strategy, we don't need to validate anything specific here
-    // The code generation will handle boxing primitive types for these fields
+  }
 
+  private boolean typeSupportsAbsentValues(TypeMirror returnType) {
+    return !returnType.getKind().isPrimitive()
+        && (util.isOptional(returnType) || util.isNullable(returnType));
   }
 
   /**

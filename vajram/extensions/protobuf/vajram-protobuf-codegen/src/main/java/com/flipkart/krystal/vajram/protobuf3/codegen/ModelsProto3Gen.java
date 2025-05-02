@@ -1,8 +1,10 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.datatypes.JavaTypes.BYTE;
-import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getIfNoValue;
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getIfAbsent;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_MSG_SUFFIX;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.PROTO_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ModelsProto3SchemaGen.validateModelType;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeMap;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
@@ -15,6 +17,7 @@ import static javax.lang.model.element.Modifier.STATIC;
 import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.data.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.datatypes.DataType;
+import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase;
@@ -33,10 +36,7 @@ import com.squareup.javapoet.MethodSpec.Builder;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-import java.util.ArrayList;
 import java.util.List;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
@@ -105,7 +105,8 @@ public class ModelsProto3Gen implements CodeGenerator {
     String modelRootName = modelRootType.getSimpleName().toString();
     String packageName =
         util.processingEnv().getElementUtils().getPackageOf(modelRootType).toString();
-    String protoClassName = modelRootName + modelRoot.suffixSeperator() + "ImmutProto";
+    String protoClassName =
+        modelRootName + modelRoot.suffixSeperator() + IMMUT_SUFFIX + PROTO_SUFFIX;
 
     // Generate the implementation class using JavaPoet
     TypeSpec typeSpec = generateImplementationTypeSpec(modelRootType, packageName, protoClassName);
@@ -123,7 +124,7 @@ public class ModelsProto3Gen implements CodeGenerator {
     ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
     ClassName immutableProtoType = ClassName.get(packageName, protoClassName);
     String modelRootName = modelRootType.getSimpleName().toString();
-    String immutInterfaceName = modelRootName + modelRoot.suffixSeperator() + "Immut";
+    String immutInterfaceName = modelRootName + modelRoot.suffixSeperator() + IMMUT_SUFFIX;
     String protoMsgClassName = modelRootName + MODELS_PROTO_MSG_SUFFIX;
 
     // Extract model methods
@@ -245,22 +246,7 @@ public class ModelsProto3Gen implements CodeGenerator {
       DataType<?> dataType = new DeclaredTypeVisitor<>(util, method).visit(returnType);
       TypeName typeName = TypeName.get(returnType);
 
-      MethodSpec.Builder getterBuilder =
-          MethodSpec.methodBuilder(methodName).addAnnotation(Override.class).addModifiers(PUBLIC);
-
-      // Only add @Nullable annotation if the field needs presence check, is not FAIL,
-      // and the return type is not Optional
-      if (needsPresenceCheckInModels(method)
-          && !isMandatoryField(method)
-          && !util.isOptional(returnType)) {
-        getterBuilder.returns(typeName.annotated(AnnotationSpec.builder(Nullable.class).build()));
-      } else {
-        getterBuilder.returns(typeName);
-      }
-
-      addGetterCode(getterBuilder, method, dataType, methodName);
-
-      classBuilder.addMethod(getterBuilder.build());
+      classBuilder.addMethod(getterMethod(method, returnType, typeName, dataType).build());
     }
 
     // Add equals method that delegates to the proto object
@@ -299,7 +285,12 @@ public class ModelsProto3Gen implements CodeGenerator {
     // Add Builder inner class
     TypeSpec builderTypeSpec =
         generateBuilderTypeSpec(
-            packageName, protoClassName, protoMsgClassName, immutInterfaceName, modelMethods);
+            modelRootType,
+            packageName,
+            protoClassName,
+            protoMsgClassName,
+            immutInterfaceName,
+            modelMethods);
     classBuilder.addType(builderTypeSpec);
     classBuilder.addMethod(
         methodBuilder("_builder")
@@ -308,6 +299,28 @@ public class ModelsProto3Gen implements CodeGenerator {
             .addStatement("return new $T()", immutableProtoType.nestedClass("Builder"))
             .build());
     return classBuilder.build();
+  }
+
+  private Builder getterMethod(
+      ExecutableElement method, TypeMirror returnType, TypeName typeName, DataType<?> dataType) {
+
+    String methodName = method.getSimpleName().toString();
+
+    Builder getterBuilder =
+        MethodSpec.methodBuilder(methodName).addAnnotation(Override.class).addModifiers(PUBLIC);
+
+    // Only add @Nullable annotation if the field needs presence check, is not FAIL,
+    // and the return type is not Optional
+    if (needsPresenceCheckInModels(method)
+        && !isMandatoryField(method)
+        && !util.isOptional(returnType)) {
+      getterBuilder.returns(typeName.annotated(AnnotationSpec.builder(Nullable.class).build()));
+    } else {
+      getterBuilder.returns(typeName);
+    }
+
+    addGetterCode(getterBuilder, method, dataType, methodName);
+    return getterBuilder;
   }
 
   private void addGetterCode(
@@ -376,11 +389,13 @@ public class ModelsProto3Gen implements CodeGenerator {
   }
 
   private TypeSpec generateBuilderTypeSpec(
+      TypeElement modelRootType,
       String packageName,
       String protoClassName,
       String protoMsgClassName,
       String immutInterfaceName,
       List<ExecutableElement> modelMethods) {
+    ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
 
     ClassName immutableProtoType = ClassName.get(packageName, protoClassName);
 
@@ -530,6 +545,9 @@ public class ModelsProto3Gen implements CodeGenerator {
       setterBuilder.addStatement("return this");
 
       builderClassBuilder.addMethod(setterBuilder.addParameter(paramBuilder.build()).build());
+      if (modelRoot.builderExtendsModelRoot()) {
+        builderClassBuilder.addMethod(getterMethod(method, returnType, typeName, dataType).build());
+      }
     }
 
     // Add method to access the proto builder
@@ -543,16 +561,16 @@ public class ModelsProto3Gen implements CodeGenerator {
         .build();
   }
 
-  /**
-   * Checks if a field needs presence check in the models. Fields with @IfNoValue(then=FAIL)
-   * or @IfNoValue(then=MAY_FAIL_CONDITIONALLY) need presence check.
-   */
-  private static boolean needsPresenceCheckInModels(ExecutableElement method) {
-    IfAbsent ifAbsent = getIfNoValue(method);
-
-    // For FAIL and MAY_FAIL_CONDITIONALLY, we need presence check
-    return ifAbsent.value() == IfAbsentThen.FAIL
-        || ifAbsent.value() == IfAbsentThen.MAY_FAIL_CONDITIONALLY;
+  private boolean needsPresenceCheckInModels(ExecutableElement method) {
+    TypeMirror returnType = method.getReturnType();
+    DataType<?> dataType = util.toDataType(returnType);
+    if (isProtoTypeRepeated(dataType)) {
+      return false;
+    }
+    if (isProtoTypeMap(dataType)) {
+      return false;
+    }
+    return !getIfAbsent(method).value().usePlatformDefault();
   }
 
   /**
@@ -560,6 +578,6 @@ public class ModelsProto3Gen implements CodeGenerator {
    * as mandatory.
    */
   private static boolean isMandatoryField(ExecutableElement method) {
-    return getIfNoValue(method).value() == IfAbsentThen.FAIL;
+    return getIfAbsent(method).value() == IfAbsentThen.FAIL;
   }
 }

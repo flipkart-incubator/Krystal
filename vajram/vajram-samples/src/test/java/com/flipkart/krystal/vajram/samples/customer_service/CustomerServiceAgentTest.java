@@ -83,8 +83,8 @@ class CustomerServiceAgentTest {
   @Test
   void testL1CallAgent() {
     // Create request for L1 agent and Call communication
-    CustomerServiceAgent_ImmutReq request =
-        CustomerServiceAgent_ImmutReqPojo._builder()
+    CustomerServiceAgent_ReqImmut request =
+        CustomerServiceAgent_ReqImmutPojo._builder()
             .agentType(L1)
             .initialCommunication(new Call("Recording content"))
             .customerName("Mowgli")
@@ -103,8 +103,8 @@ class CustomerServiceAgentTest {
 
   @Test
   void testL1EmailAgent() {
-    CustomerServiceAgent_ImmutReq request =
-        CustomerServiceAgent_ImmutReqPojo._builder()
+    CustomerServiceAgent_ReqImmut request =
+        CustomerServiceAgent_ReqImmutPojo._builder()
             .agentType(L1)
             .initialCommunication(new Email("Email content"))
             .customerName("Pikachu")
@@ -121,8 +121,8 @@ class CustomerServiceAgentTest {
 
   @Test
   void testL2CallAgent() {
-    CustomerServiceAgent_ImmutReq request =
-        CustomerServiceAgent_ImmutReqPojo._builder()
+    CustomerServiceAgent_ReqImmut request =
+        CustomerServiceAgent_ReqImmutPojo._builder()
             .agentType(L2)
             .initialCommunication(new Call("Recording content"))
             .customerName("Swami")
@@ -139,8 +139,8 @@ class CustomerServiceAgentTest {
 
   @Test
   void testL3EmailAgent() {
-    CustomerServiceAgent_ImmutReq request =
-        CustomerServiceAgent_ImmutReqPojo._builder()
+    CustomerServiceAgent_ReqImmut request =
+        CustomerServiceAgent_ReqImmutPojo._builder()
             .agentType(L3)
             .initialCommunication(new Email("Email content"))
             .customerName("Gangadhar Vidhyadhar Mayadhar Omkarnath Shastri")
@@ -161,8 +161,8 @@ class CustomerServiceAgentTest {
   @Test
   void testDefaultEmailAgent() {
     // L2 agent with Email has no specific handler
-    CustomerServiceAgent_ImmutReq request =
-        CustomerServiceAgent_ImmutReqPojo._builder()
+    CustomerServiceAgent_ReqImmut request =
+        CustomerServiceAgent_ReqImmutPojo._builder()
             .agentType(L2)
             .initialCommunication(new Email("Email content"))
             .customerName("Jejamma")
@@ -180,8 +180,8 @@ class CustomerServiceAgentTest {
   @Test
   void testDefaultCallAgent() {
     // L2 agent with Email has no specific handler
-    CustomerServiceAgent_ImmutReq request =
-        CustomerServiceAgent_ImmutReqPojo._builder()
+    CustomerServiceAgent_ReqImmut request =
+        CustomerServiceAgent_ReqImmutPojo._builder()
             .agentType(L3)
             .initialCommunication(new Call("Call recording"))
             .customerName("Man without a name")
@@ -199,8 +199,8 @@ class CustomerServiceAgentTest {
   @Test
   void testFallbackForTicket() {
     // No specific handler for Ticket type
-    CustomerServiceAgent_ImmutReq request =
-        CustomerServiceAgent_ImmutReqPojo._builder()
+    CustomerServiceAgent_ReqImmut request =
+        CustomerServiceAgent_ReqImmutPojo._builder()
             .agentType(L2)
             .initialCommunication(new Ticket("Ticket summary"))
             .customerName("Bruce Wayne")

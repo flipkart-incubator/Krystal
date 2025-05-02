@@ -31,7 +31,7 @@ class AddTest {
       // Execute the Adder Vajram without passing numberTwo
       future =
           executor.execute(
-              Add_ImmutReqPojo._builder().numberOne(5)._build(),
+              Add_ReqImmutPojo._builder().numberOne(5)._build(),
               KryonExecutionConfig.builder().build());
     }
     // Assert that the result is equal to numberOne (5) + default numberTwo (0)

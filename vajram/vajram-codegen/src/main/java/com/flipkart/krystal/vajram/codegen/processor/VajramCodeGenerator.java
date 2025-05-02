@@ -291,7 +291,7 @@ public class VajramCodeGenerator implements CodeGenerator {
 
     // Add _vajramID() method to the request interface
     requestInterface.addMethod(
-        overriding(util.getMethodToOverride(FacetValuesContainer.class, "_vajramID", 0))
+        overriding(util.getMethod(FacetValuesContainer.class, "_vajramID", 0))
             .addModifiers(DEFAULT)
             .addStatement("return " + VAJRAM_ID_CONSTANT_NAME)
             .build());
@@ -404,14 +404,14 @@ public class VajramCodeGenerator implements CodeGenerator {
                   .addMethods(methodSpecs)
                   .addMethod(
                       overriding(
-                              util.getMethodToOverride(VajramDefRoot.class, "newRequestBuilder", 0))
+                              util.getMethod(VajramDefRoot.class, "newRequestBuilder", 0))
                           .returns(immutRequestType.nestedClass("Builder"))
                           .addModifiers(PUBLIC)
                           .addStatement("return $T._builder()", immutRequestType)
                           .build())
                   .addMethod(
                       overriding(
-                              util.getMethodToOverride(VajramDefRoot.class, "requestRootType", 0))
+                              util.getMethod(VajramDefRoot.class, "requestRootType", 0))
                           .returns(
                               ParameterizedTypeName.get(
                                   ClassName.get(Class.class), requestInterfaceType))
@@ -455,7 +455,7 @@ public class VajramCodeGenerator implements CodeGenerator {
     }
 
     MethodSpec.Builder getInputResolversMethod =
-        overriding(util.getMethodToOverride(VajramDef.class, GET_INPUT_RESOLVERS, 0));
+        overriding(util.getMethod(VajramDef.class, GET_INPUT_RESOLVERS, 0));
 
     Builder resolveMethodToObjConvCode = CodeBlock.builder();
     getInputResolversMethod.addCode(
@@ -509,7 +509,7 @@ public class VajramCodeGenerator implements CodeGenerator {
             }
             MethodSpec.Builder resolveMethod =
                 overriding(
-                        util.getMethodToOverride(inputResolverInterfaceClass, "resolve", 2),
+                        util.getMethod(inputResolverInterfaceClass, "resolve", 2),
                         (DeclaredType)
                             checkNotNull(
                                     util.processingEnv()
@@ -603,7 +603,7 @@ public class VajramCodeGenerator implements CodeGenerator {
   private MethodSpec computeVajramExecuteMethod(TypeName vajramResponseType) {
 
     MethodSpec.Builder executeBuilder =
-        overriding(util.getMethodToOverride(VajramDef.class, "execute", 1))
+        overriding(util.getMethod(VajramDef.class, "execute", 1))
             .returns(
                 ParameterizedTypeName.get(
                     ClassName.get(ImmutableMap.class),
@@ -1689,7 +1689,7 @@ public class VajramCodeGenerator implements CodeGenerator {
 
     // Add _vajramID() method to the facets interface
     facetsInterface.addMethod(
-        overriding(util.getMethodToOverride(FacetValuesContainer.class, "_vajramID", 0))
+        overriding(util.getMethod(FacetValuesContainer.class, "_vajramID", 0))
             .addModifiers(DEFAULT)
             .addStatement("return $T." + VAJRAM_ID_CONSTANT_NAME, getRequestInterfaceType())
             .build());
@@ -1843,7 +1843,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                     .addMember("onlyExplicitlyIncluded", "true")
                     .build())
             .addMethod(
-                overriding(util.getMethodToOverride(FacetValuesContainer.class, "_facets", 0))
+                overriding(util.getMethod(FacetValuesContainer.class, "_facets", 0))
                     .addStatement(
                         """
                         return $T._facets.stream()
@@ -1855,7 +1855,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                         ImmutableSet.class)
                     .build())
             .addMethod(
-                overriding(util.getMethodToOverride(FacetValuesContainer.class, "_vajramID", 0))
+                overriding(util.getMethod(FacetValuesContainer.class, "_vajramID", 0))
                     .addStatement("return $T." + VAJRAM_ID_CONSTANT_NAME, getRequestInterfaceType())
                     .build());
 
@@ -1891,7 +1891,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                     .addMember("onlyExplicitlyIncluded", "true")
                     .build())
             .addMethod(
-                overriding(util.getMethodToOverride(FacetValuesContainer.class, "_facets", 0))
+                overriding(util.getMethod(FacetValuesContainer.class, "_facets", 0))
                     .addStatement(
                         """
                         return $T._facets.stream()
@@ -1902,7 +1902,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                         ImmutableSet.class)
                     .build())
             .addMethod(
-                overriding(util.getMethodToOverride(FacetValuesContainer.class, "_vajramID", 0))
+                overriding(util.getMethod(FacetValuesContainer.class, "_vajramID", 0))
                     .addStatement("return $T." + VAJRAM_ID_CONSTANT_NAME, getRequestInterfaceType())
                     .build());
 
@@ -1955,10 +1955,10 @@ public class VajramCodeGenerator implements CodeGenerator {
       ClassName commonFacetsType,
       CodeGenParams codeGenParams) {
     MethodSpec.Builder batchElementMethod =
-        overriding(util.getMethodToOverride(BatchEnabledFacetValues.class, "_batchItem", 0))
+        overriding(util.getMethod(BatchEnabledFacetValues.class, "_batchItem", 0))
             .returns(batchFacetsType);
     MethodSpec.Builder commonMethod =
-        overriding(util.getMethodToOverride(BatchEnabledFacetValues.class, BATCH_KEY_NAME, 0))
+        overriding(util.getMethod(BatchEnabledFacetValues.class, BATCH_KEY_NAME, 0))
             .returns(commonFacetsType);
     if (codeGenParams.withImpl()) {
       batchElementMethod.addStatement("return new $T(this)", batchFacetsType);
@@ -2172,7 +2172,7 @@ public class VajramCodeGenerator implements CodeGenerator {
     classBuilder.addField(facetsField);
 
     classBuilder.addMethod(
-        overriding(util.getMethodToOverride(FacetValuesContainer.class, "_facets", 0))
+        overriding(util.getMethod(FacetValuesContainer.class, "_facets", 0))
             .addModifiers(PUBLIC, DEFAULT)
             .returns(facetsFieldType)
             .addStatement("return $N", facetsField)

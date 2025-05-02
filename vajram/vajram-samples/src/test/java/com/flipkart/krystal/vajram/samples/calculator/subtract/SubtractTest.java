@@ -51,7 +51,7 @@ class SubtractTest {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              Subtract_ImmutReqPojo._builder().numberOne(5).numberTwo(7)._build());
+              Subtract_ReqImmutPojo._builder().numberOne(5).numberTwo(7)._build());
     }
     Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(-2);
   }

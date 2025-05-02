@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
+import static com.flipkart.krystal.datatypes.JavaType.create;
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
 import static com.flipkart.krystal.vajram.utils.Constants.IMMUT_FACETS_CLASS_SUFFIX;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -68,6 +69,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
@@ -79,6 +81,7 @@ import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
@@ -110,7 +113,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Slf4j
 public class Utils {
 
-  private static final boolean DEBUG = false;
+  private static final boolean DEBUG = true;
 
   private static final ImmutableMap<Class<?>, String> DISALLOWED_FACET_TYPES =
       ImmutableMap.<Class<?>, String>builder()
@@ -158,11 +161,11 @@ public class Utils {
     return stream(annotations).map(aClass -> AnnotationSpec.builder(aClass).build()).toList();
   }
 
-  public static @NonNull IfAbsent getIfNoValue(ExecutableElement method) {
+  public static @NonNull IfAbsent getIfAbsent(ExecutableElement method) {
     // Check if the method has the @IfNoValue annotation
     IfAbsent ifAbsent = method.getAnnotation(IfAbsent.class);
     if (ifAbsent == null) {
-      ifAbsent = Creator.createDefault();
+      ifAbsent = Creator.create(IfAbsentThen.WILL_NEVER_FAIL, "");
     }
     return ifAbsent;
   }
@@ -747,7 +750,8 @@ public class Utils {
     int typeParamIndex = 0;
     List<? extends TypeMirror> typeParameters =
         getTypeParamTypes(
-            vajramOrReqType, elementUtils.getTypeElement(targetClass.getCanonicalName()));
+            vajramOrReqType,
+            elementUtils.getTypeElement(requireNonNull(targetClass.getCanonicalName())));
     if (typeParameters.size() > typeParamIndex) {
       return typeParameters.get(typeParamIndex);
     } else {
@@ -1048,8 +1052,23 @@ public class Utils {
     }
   }
 
+  public DataType<?> toDataType(TypeMirror typeMirror) {
+    Element element = processingEnv.getTypeUtils().asElement(typeMirror);
+    if (!(element instanceof TypeElement typeElement)) {
+      return new DeclaredTypeVisitor<>(this, null).visit(typeMirror, null);
+    }
+
+    DataType[] dataTypes = new DataType[0];
+    if (typeMirror instanceof DeclaredType declaredType) {
+      dataTypes =
+          declaredType.getTypeArguments().stream().map(this::toDataType).toArray(DataType[]::new);
+    }
+
+    return create(typeElement.getQualifiedName().toString(), dataTypes);
+  }
+
   @SuppressWarnings("method.invocation")
-  public ExecutableElement getMethodToOverride(Class<?> clazz, String methodName, int paramCount) {
+  public ExecutableElement getMethod(Class<?> clazz, String methodName, int paramCount) {
     return requireNonNull(
             processingEnv()
                 .getElementUtils()
@@ -1144,5 +1163,20 @@ public class Utils {
           codeGenElement);
     }
     return requireNonNull(sourcePath.getParent());
+  }
+
+  @SuppressWarnings("unchecked")
+  public <T> T getAnnotationElement(AnnotationMirror parentModelRootAnno, String annoElement) {
+    AnnotationValue annoValue =
+        parentModelRootAnno.getElementValues().entrySet().stream()
+            .filter(e -> e.getKey().getSimpleName().contentEquals(annoElement))
+            .findAny()
+            .map(Entry::getValue)
+            .orElse(null);
+    if (annoValue != null) {
+      return (T) annoValue.getValue();
+    } else {
+      return null;
+    }
   }
 }

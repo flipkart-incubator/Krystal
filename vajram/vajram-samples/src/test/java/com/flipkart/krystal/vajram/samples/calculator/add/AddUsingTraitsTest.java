@@ -185,7 +185,7 @@ class AddUsingTraitsTest {
       List<Integer> numbers3) {
 
     return krystexVajramExecutor.execute(
-        AddUsingTraits_ImmutReqPojo._builder()
+        AddUsingTraits_ReqImmutPojo._builder()
             .numbers1(numbers1)
             .numbers2(numbers2)
             .numbers3(numbers3)

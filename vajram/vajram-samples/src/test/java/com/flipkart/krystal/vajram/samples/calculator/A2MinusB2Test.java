@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
+import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -56,9 +57,9 @@ class A2MinusB2Test {
                 .build())) {
       future =
           executeVajram(
-              graph, krystexVajramExecutor, A2MinusB2_ImmutReqPojo._builder().a(3).b(2)._build());
+              graph, krystexVajramExecutor, A2MinusB2_ReqImmutPojo._builder().a(3).b(2)._build());
     }
-    assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(2);
+    assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(2);
   }
 
   private static CompletableFuture<Integer> executeVajram(

@@ -183,7 +183,7 @@ class GreetTest {
   private static CompletableFuture<String> executeVajram(
       VajramKryonGraph graph, KrystexVajramExecutor krystexVajramExecutor, RequestContext rc) {
     return krystexVajramExecutor.execute(
-        Greet_ImmutReqPojo._builder().userId(rc.userId)._build(),
+        Greet_ReqImmutPojo._builder().userId(rc.userId)._build(),
         KryonExecutionConfig.builder().executionId("req_1").build());
   }
 
@@ -208,7 +208,7 @@ class GreetTest {
                             .build(),
                         requestLevelCache)
                     .withMock(
-                        UserService_ImmutFacPojo._builder().userId(USER_ID)._build(),
+                        UserService_FacImmutPojo._builder().userId(USER_ID)._build(),
                         withValue(new UserInfo(USER_ID, USER_NAME)))
                     .buildConfig())) {
       future = executeVajram(vajramKryonGraph, krystexVajramExecutor, requestContext);
@@ -237,7 +237,7 @@ class GreetTest {
                             .build(),
                         requestLevelCache)
                     .withMock(
-                        UserService_ImmutFacPojo._builder().userId(USER_ID)._build(),
+                        UserService_FacImmutPojo._builder().userId(USER_ID)._build(),
                         Errable.withError(new IOException("Request Timeout")))
                     .buildConfig())) {
       future = executeVajram(vajramKryonGraph, krystexVajramExecutor, requestContext);

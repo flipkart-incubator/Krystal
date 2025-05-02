@@ -123,7 +123,7 @@ class SplitAddTest {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              SplitAdd_ImmutReqPojo._builder().numbers(List.of())._build(),
+              SplitAdd_ReqImmutPojo._builder().numbers(List.of())._build(),
               KryonExecutionConfig.builder()
                   .disabledDependentChains(disabledDepChains(graph))
                   .build());
@@ -279,7 +279,7 @@ class SplitAddTest {
   private static CompletableFuture<Integer> executeVajram(
       VajramKryonGraph graph, KrystexVajramExecutor krystexVajramExecutor, int multiplier) {
     return krystexVajramExecutor.execute(
-        SplitAdd_ImmutReqPojo._builder()
+        SplitAdd_ReqImmutPojo._builder()
             .numbers(
                 new ArrayList<>(
                     Stream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)

@@ -126,8 +126,5 @@ public @interface IfAbsent {
       return new AutoAnnotation_IfAbsent_Creator_create(value, conditionalFailureInfo);
     }
 
-    public static IfAbsent createDefault() {
-      return create(IfAbsentThen.WILL_NEVER_FAIL, "");
-    }
   }
 }

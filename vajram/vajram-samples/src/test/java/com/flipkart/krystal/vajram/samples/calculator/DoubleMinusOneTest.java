@@ -53,7 +53,7 @@ class DoubleMinusOneTest {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              DoubleMinusOne_ImmutReqPojo._builder().numbers(List.of(1, 2, 3))._build());
+              DoubleMinusOne_ReqImmutPojo._builder().numbers(List.of(1, 2, 3))._build());
     }
     Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(11);
   }
@@ -72,7 +72,7 @@ class DoubleMinusOneTest {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              DoubleMinusOne_ImmutReqPojo._builder().numbers(List.of(1, 1, 3))._build());
+              DoubleMinusOne_ReqImmutPojo._builder().numbers(List.of(1, 1, 3))._build());
     }
     Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(9);
   }
@@ -91,7 +91,7 @@ class DoubleMinusOneTest {
                 .build())) {
       future =
           krystexVajramExecutor.execute(
-              DoubleMinusOne_ImmutReqPojo._builder().numbers(List.of())._build());
+              DoubleMinusOne_ReqImmutPojo._builder().numbers(List.of())._build());
     }
     Assertions.assertThat(future).succeedsWithin(1, TimeUnit.SECONDS).isEqualTo(-1);
   }

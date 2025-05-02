@@ -17,19 +17,20 @@ import javax.lang.model.type.TypeVariable;
 import javax.lang.model.type.UnionType;
 import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.AbstractTypeVisitor14;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class DeclaredTypeVisitor<T> extends AbstractTypeVisitor14<DataType<T>, Void> {
 
   private final Utils util;
-  private final Element element;
+  private final @Nullable Element element;
   private final ImmutableMap<Class<?>, String> disallowedTypes;
 
-  public DeclaredTypeVisitor(Utils util, Element element) {
+  public DeclaredTypeVisitor(Utils util, @Nullable Element element) {
     this(util, element, ImmutableMap.of());
   }
 
   public DeclaredTypeVisitor(
-      Utils util, Element element, ImmutableMap<Class<?>, String> disallowedTypes) {
+      Utils util, @Nullable Element element, ImmutableMap<Class<?>, String> disallowedTypes) {
     this.util = util;
     this.element = element;
     this.disallowedTypes = disallowedTypes;

@@ -65,8 +65,6 @@ public class VajramPlugin implements Plugin<Project> {
             "codeGenVajramModels",
             JavaCompile.class,
             task -> {
-              //              task.dependsOn("codeGenVajramSchemas");
-
               // Compile the generatedCode
               task.setGroup("krystal");
               task.source(VajramPlugin.MAIN_SRC_DIR);

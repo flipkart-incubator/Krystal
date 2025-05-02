@@ -40,7 +40,7 @@ public abstract class TestUserService extends IOVajramDef<TestUserInfo> {
       ImmutableCollection<TestUserService_BatchItem> _batchItems) {
     CALL_COUNTER.increment();
     _batchItems.stream()
-        .map(im -> TestUserService_ImmutReqPojo._builder().userId(im.userId())._build())
+        .map(im -> TestUserService_ReqImmutPojo._builder().userId(im.userId())._build())
         .forEach(REQUESTS::add);
 
     // Make a call to user service and get user info

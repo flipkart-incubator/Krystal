@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.MODELS;
-import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getIfNoValue;
+import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getIfAbsent;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_FILE_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_MSG_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_OUTER_CLASS_SUFFIX;
@@ -27,12 +27,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import lombok.extern.slf4j.Slf4j;
@@ -205,7 +202,7 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
       // In proto3, the 'optional' keyword is needed for all primitive types to check
       // presence. This includes numeric types, booleans, strings, bytes, and enums.
 
-      IfAbsentThen ifAbsentThen = getIfNoValue(method).value();
+      IfAbsentThen ifAbsentThen = getIfAbsent(method).value();
 
       boolean isRepeated = isProtoTypeRepeated(dataType);
       boolean isMap = isProtoTypeMap(dataType);
