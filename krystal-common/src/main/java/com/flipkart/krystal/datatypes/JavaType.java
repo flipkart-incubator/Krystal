@@ -1,9 +1,7 @@
 package com.flipkart.krystal.datatypes;
 
-import static com.flipkart.krystal.datatypes.TypeUtils.box;
 import static com.flipkart.krystal.datatypes.TypeUtils.dataTypeMappings;
 import static com.flipkart.krystal.datatypes.TypeUtils.getJavaType;
-import static com.flipkart.krystal.datatypes.TypeUtils.typeKindMappings;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.function.Function.identity;
 
@@ -45,9 +43,7 @@ public final class JavaType<T> implements DataType<T> {
   /** Number of array dimensions if this type is an array, 0 otherwise */
   @Getter private final int numberOfArrayDimensions;
 
-  private @MonotonicNonNull Type clazz;
-
-  private @MonotonicNonNull T platformDefaultValue;
+  private @MonotonicNonNull Type type;
 
   @SuppressWarnings("unchecked")
   public static <T> JavaType<@NonNull T> create(Class<?> clazz, DataType<?>... typeParams) {
@@ -71,16 +67,7 @@ public final class JavaType<T> implements DataType<T> {
   }
 
   JavaType(Class<?> clazz, DataType<?>... typeParameters) {
-    this(
-        Stream.of(
-                Optional.ofNullable(clazz.getPackage()).map(Package::getName).stream(),
-                getEnclosingClasses(clazz).stream(),
-                Stream.of(clazz.getSimpleName()))
-            .flatMap(identity())
-            .filter(Objects::nonNull)
-            .collect(Collectors.joining(".")),
-        clazz,
-        typeParameters);
+    this(clazz.getCanonicalName(), clazz, typeParameters);
   }
 
   private JavaType(String canonicalClassName, DataType<?>... typeParameters) {
@@ -89,7 +76,7 @@ public final class JavaType<T> implements DataType<T> {
 
   private JavaType(
       @NonNull String canonicalClassName, @Nullable Class<?> clazz, DataType<?>... typeParameters) {
-    this.clazz = clazz;
+    this.type = clazz;
     this.typeParameters = ImmutableList.copyOf(typeParameters);
     this.canonicalClassName = canonicalClassName;
     if (canonicalClassName.startsWith("@")) {
@@ -110,7 +97,7 @@ public final class JavaType<T> implements DataType<T> {
 
   @Override
   public Type javaReflectType() throws ClassNotFoundException {
-    if (clazz == null) {
+    if (type == null) {
       @SuppressWarnings("unchecked")
       Class<T> type =
           (Class<T>) checkNotNull(this.getClass().getClassLoader()).loadClass(canonicalClassName());
@@ -121,105 +108,9 @@ public final class JavaType<T> implements DataType<T> {
         list.add(javaReflectType);
       }
       // noinspection ZeroLengthArrayAllocation
-      this.clazz = getJavaType(type, list.toArray(new Type[0]));
+      this.type = getJavaType(type, list.toArray(new Type[0]));
     }
-    return clazz;
-  }
-
-  @Override
-  public TypeMirror javaModelType(ProcessingEnvironment processingEnv) {
-    TypeKind typeKind = typeKindMappings.get(canonicalClassName);
-    if (typeKind != null) {
-      if (typeKind.isPrimitive()) {
-        return processingEnv.getTypeUtils().getPrimitiveType(typeKind);
-      }
-      if (typeKind == TypeKind.VOID) {
-        return processingEnv.getTypeUtils().getNoType(typeKind);
-      }
-    }
-    TypeElement typeElement = processingEnv.getElementUtils().getTypeElement(canonicalClassName);
-    if (typeElement == null) {
-      throw new IllegalArgumentException(
-          "Could not find typeElement for canonical class name %s".formatted(canonicalClassName));
-    }
-    return processingEnv
-        .getTypeUtils()
-        .getDeclaredType(
-            typeElement,
-            typeParameters.stream()
-                .map(t -> box(t.javaModelType(processingEnv), processingEnv))
-                .toArray(TypeMirror[]::new));
-  }
-
-  @Override
-  public @NonNull T getPlatformDefaultValue() {
-    if (platformDefaultValue == null) {
-      platformDefaultValue = computeDefaultValue();
-    }
-    return platformDefaultValue;
-  }
-
-  @Override
-  public boolean hasPlatformDefaultValue(ProcessingEnvironment processingEnv) {
-    return TypeUtils.hasPlatformDefaultValue(javaModelType(processingEnv));
-  }
-
-  @Override
-  public DataType<T> rawType() {
-    return JavaType.create(canonicalClassName());
-  }
-
-  @SuppressWarnings("unchecked")
-  private @NonNull T computeDefaultValue() {
-    try {
-      Type type = javaReflectType();
-      if (type instanceof Class<?> c) {
-        T defaultPrimitiveValue = (T) Defaults.defaultValue(c);
-        if (defaultPrimitiveValue != null) {
-          return defaultPrimitiveValue;
-        } else {
-          T defaultNonPrimitiveValue = defaultNonPrimitiveValue(c);
-          if (defaultNonPrimitiveValue != null) {
-            return defaultNonPrimitiveValue;
-          }
-        }
-      } else if (type instanceof ArrayType) {
-        return (@NonNull T) new Object[0];
-      } else if (type instanceof ParameterizedType p) {
-        Type rawType = p.getRawType();
-        if (rawType instanceof Class<?> c) {
-          T defaultValue = defaultNonPrimitiveValue(c);
-          if (defaultValue != null) {
-            return defaultValue;
-          }
-        }
-      }
-    } catch (ClassNotFoundException e) {
-      throw new RuntimeException(e);
-    }
-    throw new IllegalArgumentException(
-        "Cannot determine platform default value for type %s".formatted(this));
-  }
-
-  @SuppressWarnings("unchecked")
-  private @Nullable T defaultNonPrimitiveValue(Class<?> c) {
-    if (String.class.isAssignableFrom(c)) {
-      return (T) "";
-    } else if (List.class.isAssignableFrom(c)) {
-      return (T) List.of();
-    } else if (Map.class.isAssignableFrom(c)) {
-      return (T) Map.of();
-    }
-    return null;
-  }
-
-  private static ImmutableList<String> getEnclosingClasses(Class<?> clazz) {
-    Deque<String> enclosingClasses = new ArrayDeque<>();
-    Class<?> enclosingClass = clazz;
-    while ((enclosingClass = enclosingClass.getEnclosingClass()) != null) {
-      enclosingClasses.push(enclosingClass.getSimpleName());
-    }
-    return ImmutableList.copyOf(enclosingClasses);
+    return type;
   }
 
   @Override

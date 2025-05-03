@@ -1,7 +1,8 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen.types;
 
 import com.flipkart.krystal.datatypes.DataType;
-import com.flipkart.krystal.datatypes.DataTypeFactory;
+import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenDataType;
+import com.flipkart.krystal.vajram.codegen.common.datatypes.DataTypeFactory;
 import com.google.auto.service.AutoService;
 import com.google.protobuf.MessageLiteOrBuilder;
 import javax.annotation.processing.ProcessingEnvironment;
@@ -13,19 +14,19 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class ProtoDataTypeFactory implements DataTypeFactory {
 
   @Override
-  public @Nullable <T> DataType<T> create(
+  public @Nullable CodeGenDataType create(
       ProcessingEnvironment processingEnv,
       String canonicalClassName,
-      DataType<?>... typeParameters) {
+      CodeGenDataType... typeParameters) {
     if (typeParameters.length > 0) {
       // Protobuf types do not support generics
       return null;
     }
     TypeElement typeElement = processingEnv.getElementUtils().getTypeElement(canonicalClassName);
     TypeMirror type = typeElement.asType();
+    // Check if the type is a subtype of Message
     if (processingEnv.getTypeUtils().isAssignable(type, messageType(processingEnv))) {
-      // Check if the type is a subtype of Message
-      return Proto3DataType.create(canonicalClassName);
+      return Proto3DataType.create(processingEnv, canonicalClassName);
     } else {
       // Not a protobuf message type
       return null;
@@ -37,10 +38,5 @@ public final class ProtoDataTypeFactory implements DataTypeFactory {
         .getElementUtils()
         .getTypeElement(MessageLiteOrBuilder.class.getCanonicalName())
         .asType();
-  }
-
-  @Override
-  public @Nullable <T> DataType<T> create(Class<?> clazz, DataType<?>... typeParams) {
-    return null;
   }
 }

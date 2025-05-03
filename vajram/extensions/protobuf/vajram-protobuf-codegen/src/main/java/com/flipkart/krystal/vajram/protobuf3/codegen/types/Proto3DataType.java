@@ -1,64 +1,40 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen.types;
 
-import com.flipkart.krystal.datatypes.DataType;
-import com.google.common.collect.ImmutableList;
+import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenDataType;
 import com.google.protobuf.MessageLiteOrBuilder;
-import java.lang.reflect.Type;
+import com.squareup.javapoet.CodeBlock;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.type.TypeMirror;
 import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
-public final class Proto3DataType<T> implements DataType<T> {
+public final class Proto3DataType implements CodeGenDataType {
+
+  static Proto3DataType create(ProcessingEnvironment processingEnv, String canonicalClassName) {
+    return new Proto3DataType(processingEnv, canonicalClassName);
+  }
+
+  private final ProcessingEnvironment processingEnv;
 
   @Getter private final String canonicalClassName;
-  private @MonotonicNonNull Class<? extends MessageLiteOrBuilder> clazz;
 
-  private Proto3DataType(String canonicalClassName) {
+  private Proto3DataType(ProcessingEnvironment processingEnv, String canonicalClassName) {
+    this.processingEnv = processingEnv;
     this.canonicalClassName = canonicalClassName;
   }
 
-  private Proto3DataType(Class<? extends MessageLiteOrBuilder> clazz) {
-    this.canonicalClassName = clazz.getCanonicalName();
-    this.clazz = clazz;
-  }
-
-  static <T> Proto3DataType<T> create(String canonicalClassName) {
-    return new Proto3DataType<>(canonicalClassName);
-  }
-
   @Override
-  public Type javaReflectType() throws ClassNotFoundException {
-    if (clazz != null) {
-      return clazz;
-    }
-    throw new ClassNotFoundException();
-  }
-
-  @Override
-  public TypeMirror javaModelType(ProcessingEnvironment processingEnv) {
+  public TypeMirror javaModelType() {
     return processingEnv.getElementUtils().getTypeElement(canonicalClassName).asType();
   }
 
   @Override
-  public DataType<T> rawType() {
+  public CodeGenDataType rawType() {
     return this;
   }
 
   @Override
-  public ImmutableList<DataType<?>> typeParameters() {
-    return ImmutableList.of();
-  }
-
-  @Override
-  public @NonNull T getPlatformDefaultValue()
-      throws ClassNotFoundException, IllegalArgumentException {
-    return null;
-  }
-
-  @Override
-  public boolean hasPlatformDefaultValue(ProcessingEnvironment processingEnv) {
-    return false;
+  public CodeBlock defaultValueExpr() throws IllegalArgumentException {
+    return CodeBlock.of("$T.getDefaultInstance()", javaModelType());
   }
 }

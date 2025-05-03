@@ -1,13 +1,12 @@
-package com.flipkart.krystal.datatypes;
+package com.flipkart.krystal.vajram.codegen.common.datatypes;
 
+import com.flipkart.krystal.datatypes.DataType;
 import javax.annotation.processing.ProcessingEnvironment;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public interface DataTypeFactory {
-  <T> @Nullable DataType<T> create(
+  @Nullable CodeGenDataType create(
       ProcessingEnvironment processingEnv,
       String canonicalClassName,
-      DataType<?>... typeParameters);
-
-  <T> @Nullable DataType<T> create(Class<?> clazz, DataType<?>... typeParams);
+      CodeGenDataType... typeParameters);
 }
