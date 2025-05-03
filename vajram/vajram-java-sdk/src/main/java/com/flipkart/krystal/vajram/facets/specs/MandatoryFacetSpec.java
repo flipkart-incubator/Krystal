@@ -7,7 +7,7 @@ public sealed interface MandatoryFacetSpec<T, CV extends Request> extends FacetS
     permits MandatoryFanoutDepSpec, MandatorySingleValueFacetSpec {
 
   @Override
-  default boolean isMandatory() {
+  default boolean isMandatoryOnServer() {
     return true;
   }
 

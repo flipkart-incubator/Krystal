@@ -131,9 +131,9 @@ public final class TypeUtils {
   }
 
   static boolean hasPlatformDefaultValue(TypeMirror t) {
-    if (t instanceof PrimitiveType) {
+    if (t.getKind().isPrimitive()) {
       return true;
-    } else if (t instanceof ArrayType) {
+    } else if (TypeKind.ARRAY.equals(t.getKind())) {
       return true;
     } else if (t instanceof DeclaredType declaredType
         && declaredType.asElement() instanceof TypeElement typeElement) {

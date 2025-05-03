@@ -16,6 +16,8 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.data.IfAbsent;
+import com.flipkart.krystal.data.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.BasicFacetInfo;
@@ -404,7 +406,15 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       VajramID vajramID, FacetValues facetValues, ImmutableCollection<FacetSpec> requiredInputs) {
     @SuppressWarnings("StreamToIterable")
     Iterable<FacetSpec> mandatoryFacets =
-        requiredInputs.stream().filter(FacetSpec::isMandatory)::iterator;
+        requiredInputs.stream()
+                .filter(
+                    facetSpec ->
+                        facetSpec
+                            .tags()
+                            .getAnnotationByType(IfAbsent.class)
+                            .map(ifAbsent -> IfAbsentThen.FAIL.equals(ifAbsent.value()))
+                            .orElse(false))
+            ::iterator;
     Map<String, Throwable> missingMandatoryValues = new HashMap<>();
     for (Facet mandatoryFacet : mandatoryFacets) {
       FacetValue facetValue = mandatoryFacet.getFacetValue(facetValues);

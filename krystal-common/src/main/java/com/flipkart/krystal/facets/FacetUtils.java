@@ -39,7 +39,7 @@ public class FacetUtils {
       IfAbsentThen ifAbsentThen = ifNull.get().value();
       if (!ifAbsentThen.usePlatformDefault()) {
         throw new UnsupportedOperationException(
-            "The @IfNull(...) facet '"
+            "The @IfAbsent(...) facet '"
                 + facetInfo.name()
                 + "' is configured with strategy: "
                 + ifAbsentThen
@@ -54,7 +54,7 @@ public class FacetUtils {
       }
     } else {
       throw new AssertionError(
-          "@IfNull annotation missing on facet "
+          "@IfAbsent annotation missing on facet "
               + facetInfo.name()
               + ". This should not be possible as this method should not have been. Something is wrong in platform code!");
     }

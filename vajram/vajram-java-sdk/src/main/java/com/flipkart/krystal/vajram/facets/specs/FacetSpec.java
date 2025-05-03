@@ -11,7 +11,7 @@ import com.flipkart.krystal.facets.Facet;
 public sealed interface FacetSpec<T, CV extends Request> extends Facet
     permits AbstractFacetSpec, MandatoryFacetSpec, OptionalFacetSpec {
 
-  boolean isMandatory();
+  boolean isMandatoryOnServer();
 
   boolean isBatched();
 

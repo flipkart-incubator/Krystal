@@ -154,7 +154,7 @@ public class StaticCallGraphGenerator {
                     .source(vajramId.id())
                     .target(dependencyId.id())
                     .name(facet.name())
-                    .isMandatory(facet.isMandatory())
+                    .isMandatory(facet.isMandatoryOnServer())
                     .canFanout(facet.canFanout())
                     .documentation(facet.documentation())
                     .build();

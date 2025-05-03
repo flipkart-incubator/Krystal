@@ -31,12 +31,12 @@ import lombok.extern.slf4j.Slf4j;
  * a vajram
  */
 @Slf4j
-class VajramServiceProto3SchemaGen implements CodeGenerator {
+class VajramProto3ServiceSchemaGen implements CodeGenerator {
 
   private final AllVajramCodeGenContext creationContext;
   private final Utils util;
 
-  public VajramServiceProto3SchemaGen(AllVajramCodeGenContext creationContext) {
+  public VajramProto3ServiceSchemaGen(AllVajramCodeGenContext creationContext) {
     this.creationContext = creationContext;
     this.util = creationContext.util();
   }

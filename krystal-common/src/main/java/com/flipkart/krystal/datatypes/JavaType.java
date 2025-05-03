@@ -60,10 +60,11 @@ public final class JavaType<T> implements DataType<T> {
   }
 
   @SuppressWarnings("unchecked")
-  public static <T> JavaType<T> create(String canonicalClassName, DataType<?>... typeParameters) {
+  public static <T> JavaType<@NonNull T> create(
+      String canonicalClassName, DataType<?>... typeParameters) {
     if (dataTypeMappings.containsKey(canonicalClassName)) {
       // noinspection unchecked
-      return (JavaType<T>) dataTypeMappings.get(canonicalClassName).apply(typeParameters);
+      return (JavaType<@NonNull T>) dataTypeMappings.get(canonicalClassName).apply(typeParameters);
     } else {
       return new JavaType<>(canonicalClassName, typeParameters);
     }

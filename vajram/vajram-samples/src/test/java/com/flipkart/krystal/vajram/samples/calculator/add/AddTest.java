@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
+import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -35,6 +36,6 @@ class AddTest {
               KryonExecutionConfig.builder().build());
     }
     // Assert that the result is equal to numberOne (5) + default numberTwo (0)
-    assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(5);
+    assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(5);
   }
 }

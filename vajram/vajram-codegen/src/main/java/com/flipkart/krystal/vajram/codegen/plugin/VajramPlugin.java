@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.plugin;
+package com.flipkart.krystal.vajram.codegen.plugin;
 
 import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.FINAL;
 import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.MODELS;
