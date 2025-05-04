@@ -50,7 +50,11 @@ public record VajramInfo(
         conformsToTraitInfo != null
             ? conformsToTraitInfo.requestInterfaceType()
             : ParameterizedTypeName.get(
-                ClassName.get(Request.class), lite.util().toTypeName(lite.responseType()).box()));
+                ClassName.get(Request.class), util().toTypeName(lite.responseType()).box()));
+  }
+
+  private CodeGenUtility util() {
+    return lite.util();
   }
 
   public Iterable<TypeName> immutReqInterfaceSuperTypes() {
@@ -60,7 +64,7 @@ public record VajramInfo(
             ? conformsToTraitInfo.immutReqInterfaceType()
             : ParameterizedTypeName.get(
                 ClassName.get(ImmutableRequest.class),
-                lite.util().toTypeName(lite.responseType()).box()));
+                util().toTypeName(lite.responseType()).box()));
   }
 
   public Iterable<TypeName> reqBuilderInterfaceSuperTypes() {
@@ -70,7 +74,7 @@ public record VajramInfo(
             ? conformsToTraitInfo.immutReqInterfaceType().nestedClass("Builder")
             : ParameterizedTypeName.get(
                 ClassName.get(ImmutableRequest.Builder.class),
-                lite.util().toTypeName(lite.responseType()).box()));
+                util().toTypeName(lite.responseType()).box()));
   }
 
   public VajramInfoLite conformsToTraitOrSelf() {

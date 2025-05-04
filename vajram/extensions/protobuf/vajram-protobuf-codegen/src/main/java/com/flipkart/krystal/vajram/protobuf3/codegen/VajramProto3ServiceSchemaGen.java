@@ -12,7 +12,7 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.getPac
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProto3Applicable;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.validateReturnTypeForProtobuf;
 
-import com.flipkart.krystal.vajram.codegen.common.models.Utils;
+import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramValidationException;
 import com.flipkart.krystal.vajram.codegen.common.spi.AllVajramCodeGenContext;
@@ -34,7 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 class VajramProto3ServiceSchemaGen implements CodeGenerator {
 
   private final AllVajramCodeGenContext creationContext;
-  private final Utils util;
+  private final CodeGenUtility util;
 
   public VajramProto3ServiceSchemaGen(AllVajramCodeGenContext creationContext) {
     this.creationContext = creationContext;
@@ -49,7 +49,7 @@ class VajramProto3ServiceSchemaGen implements CodeGenerator {
   }
 
   private static List<VajramInfo> getApplicable(
-      AllVajramCodeGenContext creationContext, Utils util) {
+      AllVajramCodeGenContext creationContext, CodeGenUtility util) {
     if (!MODELS.equals(creationContext.codegenPhase())) {
       util.note("Skipping protobuf codegen since current phase is not MODELS");
       return List.of();
@@ -64,7 +64,8 @@ class VajramProto3ServiceSchemaGen implements CodeGenerator {
    *
    * @throws VajramValidationException if validation fails
    */
-  static void validate(List<VajramInfo> vajramInfos, Utils util) throws VajramValidationException {
+  static void validate(List<VajramInfo> vajramInfos, CodeGenUtility util)
+      throws VajramValidationException {
     for (VajramInfo vajramInfo : vajramInfos) {
       // Validate that the Vajram's return type conforms to protobuf RPC requirements
       validateReturnTypeForProtobuf(vajramInfo, util);
@@ -76,7 +77,6 @@ class VajramProto3ServiceSchemaGen implements CodeGenerator {
    * remotely invocable Vajram.
    *
    * @param vajramInfos The Vajram information
-   * @return The content for the service proto file
    */
   private void generateServiceFiles(List<VajramInfo> vajramInfos) {
     Map<String, List<VajramInfo>> vajramsByPackageName =

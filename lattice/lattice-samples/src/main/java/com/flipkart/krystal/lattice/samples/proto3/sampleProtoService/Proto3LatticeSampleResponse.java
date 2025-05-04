@@ -1,15 +1,13 @@
 package com.flipkart.krystal.lattice.samples.proto3.sampleProtoService;
 
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.DEFAULT_TO_EMPTY;
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.DEFAULT_TO_ZERO;
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
 import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 
-import com.flipkart.krystal.data.IfAbsent;
+import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
-import com.flipkart.krystal.model.ModelRoot.ModelType;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerialId;
@@ -37,7 +35,7 @@ public interface Proto3LatticeSampleResponse extends Model {
   @Nullable Integer nullableInteger();
 
   @SerialId(6)
-  @IfAbsent(DEFAULT_TO_EMPTY)
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
   List<Integer> optionalIntArray();
 
   @SerialId(7)
@@ -45,6 +43,10 @@ public interface Proto3LatticeSampleResponse extends Model {
   int mandatoryInt();
 
   @SerialId(8)
-  @IfAbsent(DEFAULT_TO_ZERO)
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
   int defaultInt();
+
+  @SerialId(9)
+  @IfAbsent(FAIL)
+  @Nullable String mandatoryStringPartialConstruction();
 }

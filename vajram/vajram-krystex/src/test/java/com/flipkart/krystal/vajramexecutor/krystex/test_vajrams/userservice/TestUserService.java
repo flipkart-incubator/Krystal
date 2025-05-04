@@ -1,12 +1,12 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice;
 
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
-import com.flipkart.krystal.data.IfAbsent;
+import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;

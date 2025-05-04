@@ -1,7 +1,5 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
-import static com.flipkart.krystal.facets.FacetUtils.computePlatformDefaultValue;
-
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.Request;
@@ -12,14 +10,10 @@ import com.google.common.collect.ImmutableSet;
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class MandatoryFacetDefaultSpec<T, CV extends Request> extends DefaultFacetSpec<T, CV>
     implements MandatorySingleValueFacetSpec<T, CV> {
-
-  private @MonotonicNonNull T platformDefaultValue;
 
   public MandatoryFacetDefaultSpec(
       int id,
@@ -45,14 +39,5 @@ public final class MandatoryFacetDefaultSpec<T, CV extends Request> extends Defa
         tagsParser,
         getFromFacets,
         setToFacets);
-  }
-
-  @Override
-  @SuppressWarnings("unchecked")
-  public @NonNull T getPlatformDefaultValue() throws UnsupportedOperationException {
-    if (platformDefaultValue == null) {
-      platformDefaultValue = computePlatformDefaultValue(this, type());
-    }
-    return platformDefaultValue;
   }
 }

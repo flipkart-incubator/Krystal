@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
-import com.flipkart.krystal.datatypes.DataType;
-import com.flipkart.krystal.datatypes.JavaType;
+import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.vajram.codegen.common.datatypes.DataTypeRegistry;
 import com.google.common.collect.ImmutableMap;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.QualifiedNameable;
@@ -19,95 +19,100 @@ import javax.lang.model.type.WildcardType;
 import javax.lang.model.util.AbstractTypeVisitor14;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public class DeclaredTypeVisitor<T> extends AbstractTypeVisitor14<DataType<T>, Void> {
+public class DeclaredTypeVisitor extends AbstractTypeVisitor14<CodeGenType, Void> {
 
-  private final Utils util;
+  private final CodeGenUtility util;
   private final @Nullable Element element;
   private final ImmutableMap<Class<?>, String> disallowedTypes;
+  private final DataTypeRegistry dataTypeRegistry;
 
-  public DeclaredTypeVisitor(Utils util, @Nullable Element element) {
+  public DeclaredTypeVisitor(CodeGenUtility util, @Nullable Element element) {
     this(util, element, ImmutableMap.of());
   }
 
   public DeclaredTypeVisitor(
-      Utils util, @Nullable Element element, ImmutableMap<Class<?>, String> disallowedTypes) {
+      CodeGenUtility util,
+      @Nullable Element element,
+      ImmutableMap<Class<?>, String> disallowedTypes) {
     this.util = util;
     this.element = element;
     this.disallowedTypes = disallowedTypes;
+    this.dataTypeRegistry = util.dataTypeRegistry();
   }
 
   @Override
-  public DataType<T> visitDeclared(DeclaredType t, Void inputDef) {
+  public CodeGenType visitDeclared(DeclaredType t, Void inputDef) {
     String disallowedMessage = util.getDisallowedMessage(t, disallowedTypes);
     if (disallowedMessage != null) {
       util.error(disallowedMessage, element);
     }
     Element elementOfType = t.asElement();
     if (elementOfType instanceof QualifiedNameable qualifiedNameable) {
-      return JavaType.create(
+      return dataTypeRegistry.create(
+          util.processingEnv(),
           qualifiedNameable.getQualifiedName().toString(),
-          t.getTypeArguments().stream().map(this::visit).toArray(DataType<?>[]::new));
+          t.getTypeArguments().stream().map(this::visit).toArray(CodeGenType[]::new));
     }
     throw util.errorAndThrow("Could not infer data type for type " + elementOfType, element);
   }
 
   @Override
-  public DataType<T> visitPrimitive(PrimitiveType t, Void unused) {
+  public CodeGenType visitPrimitive(PrimitiveType t, Void unused) {
     PrimitiveType withoutAnnotations =
         util.processingEnv().getTypeUtils().getPrimitiveType(t.getKind());
-    return JavaType.create(withoutAnnotations.toString());
+    return dataTypeRegistry.create(util.processingEnv(), withoutAnnotations.toString());
   }
 
   @Override
-  public DataType<T> visitArray(ArrayType t, Void unused) {
+  public CodeGenType visitArray(ArrayType t, Void unused) {
     throw uoe("Array types are not supported by Krystal. Use collections instead.");
   }
 
   @Override
-  public DataType<T> visitTypeVariable(TypeVariable t, Void unused) {
+  public CodeGenType visitTypeVariable(TypeVariable t, Void unused) {
     throw uoe();
   }
 
   @Override
-  public DataType<T> visitNull(NullType t, Void unused) {
+  public CodeGenType visitNull(NullType t, Void unused) {
     throw uoe();
   }
 
   @Override
-  public DataType<T> visitIntersection(IntersectionType t, Void unused) {
+  public CodeGenType visitIntersection(IntersectionType t, Void unused) {
     throw uoe();
   }
 
   @Override
-  public DataType<T> visitError(ErrorType t, Void unused) {
+  public CodeGenType visitError(ErrorType t, Void unused) {
     throw uoe();
   }
 
   @Override
-  public DataType<T> visitWildcard(WildcardType t, Void unused) {
+  public CodeGenType visitWildcard(WildcardType t, Void unused) {
     throw uoe();
   }
 
   @Override
-  public DataType<T> visitExecutable(ExecutableType t, Void unused) {
+  public CodeGenType visitExecutable(ExecutableType t, Void unused) {
     throw uoe();
   }
 
   @Override
-  public DataType<T> visitNoType(NoType t, Void unused) {
+  public CodeGenType visitNoType(NoType t, Void unused) {
     throw uoe();
   }
 
   @Override
-  public DataType<T> visitUnion(UnionType t, Void unused) {
+  public CodeGenType visitUnion(UnionType t, Void unused) {
     throw uoe();
   }
 
-  private VajramValidationException uoe(String message) {
+  private CodeValidationException uoe(String message) {
     return util.errorAndThrow(message, element);
   }
 
-  private VajramValidationException uoe() {
+  private CodeValidationException uoe() {
     return util.errorAndThrow("Unsupported operation", element);
   }
 }

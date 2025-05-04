@@ -43,7 +43,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
 import com.google.inject.AbstractModule;
-import java.util.Timer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.LongAdder;

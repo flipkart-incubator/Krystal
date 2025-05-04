@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
 import static com.flipkart.krystal.vajram.samples.Util.TEST_TIMEOUT;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;

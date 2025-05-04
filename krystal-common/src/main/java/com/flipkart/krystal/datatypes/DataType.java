@@ -2,10 +2,6 @@ package com.flipkart.krystal.datatypes;
 
 import com.google.common.collect.ImmutableList;
 import java.lang.reflect.Type;
-import java.util.List;
-import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.type.TypeMirror;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 public interface DataType<T> {
 

@@ -1,10 +1,10 @@
 package com.flipkart.krystal.vajram.samples.customer_service;
 
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.ComputeDelegationMode.NONE;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
-import com.flipkart.krystal.data.IfAbsent;
+import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.traits.UseForDispatch;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitRoot;

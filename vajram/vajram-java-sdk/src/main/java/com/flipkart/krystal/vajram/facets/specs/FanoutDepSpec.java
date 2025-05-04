@@ -79,12 +79,6 @@ public abstract sealed class FanoutDepSpec<T, CV extends Request<?>, DV extends 
   }
 
   @Override
-  public final FanoutDepResponses<DV, T> getPlatformDefaultValue()
-      throws UnsupportedOperationException {
-    return FanoutDepResponses.empty();
-  }
-
-  @Override
   public boolean canFanout() {
     return true;
   }

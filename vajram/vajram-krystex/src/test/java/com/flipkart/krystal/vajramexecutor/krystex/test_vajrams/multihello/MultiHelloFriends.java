@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello;
 
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.executeFanoutWith;
 import static com.flipkart.krystal.vajram.facets.FanoutCommand.skipFanout;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
@@ -14,8 +14,8 @@ import static java.lang.System.lineSeparator;
 import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.data.RequestResponse;
+import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;

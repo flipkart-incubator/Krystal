@@ -1,12 +1,12 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
-import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getImmutRequestInterfaceName;
-import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getImmutRequestPojoName;
-import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getRequestInterfaceName;
+import static com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility.getImmutRequestInterfaceName;
+import static com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility.getImmutRequestPojoName;
+import static com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility.getRequestInterfaceName;
 
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.vajram.Trait;
+import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
 import com.google.common.collect.ImmutableBiMap;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeName;
@@ -17,11 +17,11 @@ import lombok.SneakyThrows;
 
 public record VajramInfoLite(
     VajramID vajramId,
-    DataType<?> responseType,
+    CodeGenType responseType,
     String packageName,
     ImmutableBiMap<Integer, String> facetIdNameMapping,
     TypeElement vajramOrReqClass,
-    Utils util) {
+    CodeGenUtility util) {
 
   public ClassName requestInterfaceType() {
     return ClassName.get(packageName(), getRequestInterfaceName(vajramId().id()));

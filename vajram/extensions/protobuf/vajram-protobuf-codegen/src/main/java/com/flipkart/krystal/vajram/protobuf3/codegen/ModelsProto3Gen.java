@@ -1,8 +1,7 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
-import static com.flipkart.krystal.datatypes.JavaTypes.BYTE;
+import static com.flipkart.krystal.vajram.codegen.common.datatypes.StandardJavaType.BYTE;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getIfAbsent;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_MSG_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.PROTO_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ModelsProto3SchemaGen.validateModelType;
@@ -14,15 +13,13 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
-import com.flipkart.krystal.data.IfAbsent;
-import com.flipkart.krystal.data.IfAbsent.IfAbsentThen;
-import com.flipkart.krystal.datatypes.DataType;
-import com.flipkart.krystal.datatypes.JavaType;
+import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.serial.SerializableModel;
+import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.vajram.codegen.common.models.DeclaredTypeVisitor;
-import com.flipkart.krystal.vajram.codegen.common.models.Utils;
 import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.vajram.codegen.common.spi.ModelsCodeGenContext;
 import com.squareup.javapoet.AnnotationSpec;
@@ -32,7 +29,6 @@ import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.MethodSpec.Builder;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
@@ -58,7 +54,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class ModelsProto3Gen implements CodeGenerator {
 
   private final ModelsCodeGenContext codeGenContext;
-  private final Utils util;
+  private final CodeGenUtility util;
 
   public ModelsProto3Gen(ModelsCodeGenContext codeGenContext) {
     this.codeGenContext = codeGenContext;
@@ -239,11 +235,10 @@ public class ModelsProto3Gen implements CodeGenerator {
 
     // Add getters for all model methods
     for (ExecutableElement method : modelMethods) {
-      String methodName = method.getSimpleName().toString();
 
       // Get the return type
       TypeMirror returnType = method.getReturnType();
-      DataType<?> dataType = new DeclaredTypeVisitor<>(util, method).visit(returnType);
+      CodeGenType dataType = new DeclaredTypeVisitor(util, method).visit(returnType);
       TypeName typeName = TypeName.get(returnType);
 
       classBuilder.addMethod(getterMethod(method, returnType, typeName, dataType).build());
@@ -301,12 +296,12 @@ public class ModelsProto3Gen implements CodeGenerator {
     return classBuilder.build();
   }
 
-  private Builder getterMethod(
-      ExecutableElement method, TypeMirror returnType, TypeName typeName, DataType<?> dataType) {
+  private MethodSpec.Builder getterMethod(
+      ExecutableElement method, TypeMirror returnType, TypeName typeName, CodeGenType dataType) {
 
     String methodName = method.getSimpleName().toString();
 
-    Builder getterBuilder =
+    MethodSpec.Builder getterBuilder =
         MethodSpec.methodBuilder(methodName).addAnnotation(Override.class).addModifiers(PUBLIC);
 
     // Only add @Nullable annotation if the field needs presence check, is not FAIL,
@@ -324,7 +319,10 @@ public class ModelsProto3Gen implements CodeGenerator {
   }
 
   private void addGetterCode(
-      Builder getterBuilder, ExecutableElement method, DataType<?> dataType, String methodName) {
+      MethodSpec.Builder getterBuilder,
+      ExecutableElement method,
+      CodeGenType dataType,
+      String methodName) {
 
     if (isProtoTypeRepeated(dataType)) {
       // For repeated fields, use getXList() method
@@ -371,8 +369,7 @@ public class ModelsProto3Gen implements CodeGenerator {
       } else {
         getterBuilder
             .addCode(protoPresenceCheck)
-            .addCode(
-                """
+            .addCode("""
                 return null;
               }
               """);
@@ -464,7 +461,7 @@ public class ModelsProto3Gen implements CodeGenerator {
     for (ExecutableElement method : modelMethods) {
       String methodName = method.getSimpleName().toString();
       TypeMirror returnType = method.getReturnType();
-      DataType<?> dataType = new DeclaredTypeVisitor<>(util, method).visit(returnType);
+      CodeGenType dataType = new DeclaredTypeVisitor(util, method).visit(returnType);
 
       // Check if the return type is Optional
       boolean isOptionalReturnType = util.isOptional(returnType);
@@ -563,21 +560,21 @@ public class ModelsProto3Gen implements CodeGenerator {
 
   private boolean needsPresenceCheckInModels(ExecutableElement method) {
     TypeMirror returnType = method.getReturnType();
-    DataType<?> dataType = util.toDataType(returnType);
+    CodeGenType dataType = new DeclaredTypeVisitor(util, method).visit(returnType, null);
     if (isProtoTypeRepeated(dataType)) {
       return false;
     }
     if (isProtoTypeMap(dataType)) {
       return false;
     }
-    return !getIfAbsent(method).value().usePlatformDefault();
+    return !util.getIfAbsent(method).value().usePlatformDefault();
   }
 
   /**
    * Checks if a field should be treated as mandatory. Fields with @IfNoValue(then=FAIL) are treated
    * as mandatory.
    */
-  private static boolean isMandatoryField(ExecutableElement method) {
-    return getIfAbsent(method).value() == IfAbsentThen.FAIL;
+  private boolean isMandatoryField(ExecutableElement method) {
+    return util.getIfAbsent(method).value() == IfAbsentThen.FAIL;
   }
 }

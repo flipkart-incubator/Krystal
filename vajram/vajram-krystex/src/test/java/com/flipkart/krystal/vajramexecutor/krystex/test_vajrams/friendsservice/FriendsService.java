@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice;
 
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-import com.flipkart.krystal.data.IfAbsent;
+import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.batching.Batched;

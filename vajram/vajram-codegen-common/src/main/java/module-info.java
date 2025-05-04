@@ -13,4 +13,5 @@ module flipkart.krystal.vajram.codegen.common {
   requires org.checkerframework.checker.qual;
   requires static lombok;
   requires java.xml;
+  requires com.google.errorprone.annotations;
 }

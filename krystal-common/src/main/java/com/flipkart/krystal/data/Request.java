@@ -16,10 +16,13 @@ import com.google.common.collect.ImmutableSet;
     builderRoot = ImmutableRequest.Builder.class)
 public non-sealed interface Request<T> extends FacetValuesContainer, Model {
 
+  @Override
   ImmutableRequest.Builder<T> _asBuilder();
 
+  @Override
   ImmutableRequest<T> _build();
 
+  @Override
   Request<T> _newCopy();
 
   /** Returns the facet definitions of the all the inputs of the vajram. */

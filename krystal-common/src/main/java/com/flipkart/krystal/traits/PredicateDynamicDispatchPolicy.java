@@ -62,5 +62,5 @@ public final class PredicateDynamicDispatchPolicy implements TraitDispatchPolicy
   }
 
   public record DispatchCase(
-      ImmutableMap<InputMirror, InputValueMatcher> inputPredicates, VajramID dispatchTarget) {}
+      ImmutableMap<InputMirror, InputValueMatcher<?>> inputPredicates, VajramID dispatchTarget) {}
 }

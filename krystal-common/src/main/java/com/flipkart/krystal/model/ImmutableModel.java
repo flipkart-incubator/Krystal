@@ -6,4 +6,12 @@ public interface ImmutableModel extends Model {
   default ImmutableModel _build() {
     return this;
   }
+
+  interface Builder extends Model {
+
+    @Override
+    default Builder _asBuilder() {
+      return this;
+    }
+  }
 }

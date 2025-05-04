@@ -1,7 +1,5 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
-import static com.flipkart.krystal.vajram.utils.Constants.IMMUT_FACETS_CLASS_SUFFIX;
-
 import com.squareup.javapoet.CodeBlock;
 
 public final class Constants {

@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.ComputeDelegationMode.SYNC;
 
-import com.flipkart.krystal.data.IfAbsent;
+import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.TraitRoot;
 import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;

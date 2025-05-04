@@ -1,7 +1,6 @@
 package com.flipkart.krystal.data;
 
 import com.flipkart.krystal.model.ImmutableModel;
-import com.flipkart.krystal.model.ModelBuilder;
 
 /**
  * An Immutable implementation of a Request
@@ -24,7 +23,7 @@ public interface ImmutableRequest<T>
    *
    * @param <T> The response type of the vajram corresponding to this request
    */
-  interface Builder<T> extends Request<T>, FacetValuesContainerBuilder, ModelBuilder {
+  interface Builder<T> extends Request<T>, FacetValuesContainerBuilder, ImmutableModel.Builder {
 
     @Override
     default Builder<T> _asBuilder() {

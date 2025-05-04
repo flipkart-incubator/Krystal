@@ -250,7 +250,10 @@ public final class KryonExecutor implements KrystalExecutor {
     }
     checkArgument(executionConfig != null, "executionConfig can not be null");
     VajramID vajramID = request._vajramID();
-    if (!executorConfig._riskyOpenAllKryonsForExternalInvocation()) {
+    @SuppressWarnings("deprecation")
+    boolean openAllKryonsForExternalInvocation =
+        executorConfig._riskyOpenAllKryonsForExternalInvocation();
+    if (!openAllKryonsForExternalInvocation) {
       if (kryonDefinitionRegistry
           .getOrThrow(vajramID)
           .tags()

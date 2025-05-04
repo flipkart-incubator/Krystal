@@ -11,5 +11,5 @@ import java.lang.annotation.Target;
 public @interface ModelClusterRoot {
   Class<? extends ImmutableModel> immutableRoot() default ImmutableModel.class;
 
-  Class<? extends ModelBuilder> builderRoot() default ModelBuilder.class;
+  Class<? extends ImmutableModel.Builder> builderRoot() default ImmutableModel.Builder.class;
 }

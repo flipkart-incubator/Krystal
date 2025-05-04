@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.dep;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInput;
 import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.depInputFanout;
@@ -10,8 +10,8 @@ import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.
 import static com.flipkart.krystal.vajram.samples.calculator.DoubleMinusOne_Fac.result_s;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.data.RequestResponse;
+import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Dependency;

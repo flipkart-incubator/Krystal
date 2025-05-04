@@ -1,19 +1,25 @@
 package com.flipkart.krystal.vajram.codegen.common.datatypes;
 
+import com.flipkart.krystal.vajram.codegen.common.models.CodeGenerationException;
+import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.CodeBlock;
 import java.util.List;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.type.TypeMirror;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
-public interface CodeGenDataType {
-  TypeMirror javaModelType();
+public interface CodeGenType {
+
+  String canonicalClassName();
+
+  ImmutableList<CodeGenType> typeParameters();
+
+  TypeMirror javaModelType(ProcessingEnvironment processingEnv);
 
   /**
    * Returns the raw type of this data type. For example, if this represents a {@link List}<{@link
    * String}>,this will return {@link List}
    */
-  CodeGenDataType rawType();
+  CodeGenType rawType();
 
   /**
    * Returns the default value for this data type. This is useful in case the developer has marked
@@ -22,7 +28,7 @@ public interface CodeGenDataType {
    *
    * <p>The most common example for this is scalars (like primitive types) . This value becomes
    * especially relevant in distributed environments when the client vajram is in a different
-   * process and the server vajram is in a different process. In the case of non scalar types, if
+   * process and the server vajram is in a different process. In the case of non-scalar types, if
    * the client vajram does not pass any value for the mandatory facet, we check for null and throw
    * an error. But in the case of scalar values, there is no way to check if the client has sent the
    * value or not. This is because of quirks of serialization protocols. Wire protocols like json,
@@ -41,23 +47,22 @@ public interface CodeGenDataType {
    * and collections when they are non-optional, since in these optimized cases we cannot
    * differentiate between the field being set or not set (default values are not transmitted over
    * the wire). This means non-optional scalars and collections will never be null and hence can
-   * never fail mandatory checks in the case of serialized communtation over the wire between
+   * never fail mandatory checks in the case of serialized communication over the wire between
    * vajrams in a distributed setup.
    *
-   * <p>To make this behaviour choice explicit (whether we differentate between set and unset
+   * <p>To make this behaviour choice explicit (whether we differentiate between set and unset
    * values), Vajram developers can opt into this memory saving behaviour by tagging the facet with
-   * `@Mandatory(ifNotSet = DEFAULT_TO_ZERO)`, `@Mandatory(ifNotSet = DEFAULT_TO_EMPTY)`
-   * or @Mandatory(ifNotSet = DEFAULT_TO_FALSE) as the case may be. In case of lists and maps, many
-   * serialization protocols don't provide a way to differentiate between set and unset. So tagging
-   * facets of list and map types with `@Mandatory(ifNotSet = DEFAULT_TO_EMPTY)` may not be allowed
-   * when the vajram is configured to be serialized over such protocols - and the SDK might throw a
-   * compilation error upfront. When the developer does opt-in to this optimization via
-   * DEFAULT_TO_..., the relevant platform default value is always used in case the value is not
-   * set.
+   * `@IfAbsent(DEFAULT_TO_ZERO)`, `@IfAbsent(DEFAULT_TO_EMPTY)` or @IfAbsent(DEFAULT_TO_FALSE) as
+   * the case may be. In case of lists and maps, many serialization protocols don't provide a way to
+   * differentiate between set and unset. So tagging facets of list and map types with
+   * `@IfAbsent(DEFAULT_TO_EMPTY)` may not be allowed when the vajram is configured to be serialized
+   * over such protocols - and the SDK might throw a compilation error upfront. When the developer
+   * does opt-in to this optimization via DEFAULT_TO_..., the relevant platform default value is
+   * always used in case the value is not set.
    *
    * <p>This method returns that default value.
    *
-   * @throws IllegalArgumentException if the datatype does not have a platform default value.
+   * @throws CodeGenerationException if the datatype does not have a platform default value.
    */
-  CodeBlock defaultValueExpr() throws IllegalArgumentException;
+  CodeBlock defaultValueExpr(ProcessingEnvironment processingEnv) throws CodeGenerationException;
 }

@@ -1,13 +1,7 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
-import static com.flipkart.krystal.datatypes.JavaTypes.BOOLEAN;
-import static com.flipkart.krystal.datatypes.JavaTypes.DOUBLE;
-import static com.flipkart.krystal.datatypes.JavaTypes.FLOAT;
-import static com.flipkart.krystal.datatypes.JavaTypes.INT;
-import static com.flipkart.krystal.datatypes.JavaTypes.LIST_RAW;
-import static com.flipkart.krystal.datatypes.JavaTypes.LONG;
-import static com.flipkart.krystal.datatypes.JavaTypes.MAP_RAW;
-import static com.flipkart.krystal.datatypes.JavaTypes.STRING;
+import static com.flipkart.krystal.vajram.codegen.common.datatypes.StandardJavaType.*;
+import static com.flipkart.krystal.vajram.codegen.common.datatypes.StandardJavaType.BOOLEAN;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoScalarType.BOOL_P;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoScalarType.BYTES_P;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoScalarType.DOUBLE_P;
@@ -15,17 +9,17 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoScalarTyp
 import static com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoScalarType.SINT32_P;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoScalarType.SINT64_P;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoScalarType.STRING_P;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.types.StandardProto3Type.*;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.nio.file.Files.createDirectories;
 import static java.util.Objects.requireNonNull;
 import static lombok.AccessLevel.PRIVATE;
 
-import com.flipkart.krystal.datatypes.DataType;
-import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.lattice.core.RemotelyInvocable;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SupportedSerdeProtocols;
-import com.flipkart.krystal.vajram.codegen.common.models.Utils;
+import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramValidationException;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
@@ -34,8 +28,8 @@ import com.flipkart.krystal.vajram.protobuf3.codegen.types.OptionalFieldType;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoFieldType;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.ProtoScalarType;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.RepeatedFieldType;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -55,15 +49,15 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public class ProtoGenUtils {
 
   /** Map of Java DataType objects to their Protocol Buffers type mapping metadata */
-  private static final Map<DataType<?>, ProtoScalarType> JAVA_TO_PROTO_SCALAR_TYPES =
-      ImmutableMap.<DataType<?>, ProtoScalarType>builder()
+  private static final Map<CodeGenType, ProtoScalarType> JAVA_TO_PROTO_SCALAR_TYPES =
+      ImmutableMap.<CodeGenType, ProtoScalarType>builder()
           .put(BOOLEAN, BOOL_P)
           .put(INT, SINT32_P)
           .put(LONG, SINT64_P)
           .put(FLOAT, FLOAT_P)
           .put(DOUBLE, DOUBLE_P)
           .put(STRING, STRING_P)
-          .put(JavaType.create(ByteString.class), BYTES_P)
+          .put(BYTE_STRING, BYTES_P)
           .build();
 
   static @NonNull String getSimpleClassName(String canonicalClassName) {
@@ -92,7 +86,7 @@ public class ProtoGenUtils {
    *
    * @return true if the code generator is applicable, false otherwise
    */
-  static boolean isProto3Applicable(VajramInfo vajramInfo, Utils util) {
+  static boolean isProto3Applicable(VajramInfo vajramInfo, CodeGenUtility util) {
 
     TypeElement vajramClass = vajramInfo.vajramClass();
     RemotelyInvocable remotelyInvocable = vajramClass.getAnnotation(RemotelyInvocable.class);
@@ -119,7 +113,8 @@ public class ProtoGenUtils {
     return true;
   }
 
-  static Path createOutputDirectory(Path sourceOutputLocation, Utils util) throws IOException {
+  static Path createOutputDirectory(Path sourceOutputLocation, CodeGenUtility util)
+      throws IOException {
     try {
 
       // Navigate to find the 'java' directory to create a parallel 'protobuf'
@@ -167,49 +162,54 @@ public class ProtoGenUtils {
    * Checks if the given data type is a Protocol Buffers scalar type
    *
    * @param dataType The data type to check
-   * @param util
+   * @param util Code gen utility
    * @return true if the data type is a Protocol Buffers scalar type, false otherwise
    */
-  static boolean isProtoTypeScalar(DataType<?> dataType, Utils util) {
+  static boolean isProtoTypeScalar(CodeGenType dataType, CodeGenUtility util) {
     if (util.isSameRawType(
         dataType.rawType().javaModelType(util.processingEnv()), Optional.class)) {
       // Extract the inner type parameter from Optional
-      DataType<?> innerType = dataType.typeParameters().get(0);
+      CodeGenType innerType = dataType.typeParameters().get(0);
       // Get the protobuf type for the inner type
       return isProtoTypeScalar(innerType, util);
     }
     return JAVA_TO_PROTO_SCALAR_TYPES.containsKey(dataType);
   }
 
-  static boolean isProtoTypeRepeated(DataType<?> dataType) {
-    return dataType.rawType().equals(LIST_RAW);
+  static boolean isProtoTypeRepeated(CodeGenType dataType) {
+    return dataType.rawType().canonicalClassName().equals(List.class.getCanonicalName());
   }
 
-  static boolean isProtoTypeMap(DataType<?> dataType) {
-    return dataType.rawType().equals(MAP_RAW);
+  static boolean isProtoTypeMap(CodeGenType dataType) {
+    return dataType.rawType().canonicalClassName().equals(Map.class.getCanonicalName());
   }
 
   /**
    * Gets the Protocol Buffers type for a given data type
    *
    * @param dataType The data type to get the Protocol Buffers type for
-   * @param element
+   * @param element The element whose type needs to be mapped to a protobuf type
    * @return The Protocol Buffers type as a string
    */
-  static ProtoFieldType getProtobufType(DataType<?> dataType, Utils util, Element element) {
+  static ProtoFieldType getProtobufType(
+      CodeGenType dataType, CodeGenUtility util, Element element) {
     // Check if the type is an Optional
+    ImmutableList<CodeGenType> typeParameters = dataType.typeParameters();
     if (util.isOptional(dataType.javaModelType(util.processingEnv()))) {
       // Extract the inner type parameter from Optional
       // Get the protobuf type for the inner type
       return new OptionalFieldType(
-          getProtobufType(dataType.typeParameters().get(0), util, element), util, element);
+          getProtobufType(typeParameters.get(0), util, element), util, element);
     } else if (isProtoTypeRepeated(dataType)) {
+      if (typeParameters.isEmpty()) {
+        throw util.errorAndThrow("Raw list types are not supported by protobuf", element);
+      }
       // Handle List types as repeated fields
       return new RepeatedFieldType(
-          getProtobufType(dataType.typeParameters().get(0), util, element), util, element);
+          getProtobufType(typeParameters.get(0), util, element), util, element);
     } else if (isProtoTypeMap(dataType)) {
       // Handle Map types as map fields
-      List<DataType<?>> typeParams = dataType.typeParameters();
+      ImmutableList<CodeGenType> typeParams = typeParameters;
       return new MapFieldType(
           getProtobufType(typeParams.get(0), util, element),
           getProtobufType(typeParams.get(1), util, element),
@@ -233,9 +233,9 @@ public class ProtoGenUtils {
    *
    * @throws VajramValidationException if the return type is not valid for protobuf RPC
    */
-  static void validateReturnTypeForProtobuf(VajramInfo vajramInfo, Utils util)
+  static void validateReturnTypeForProtobuf(VajramInfo vajramInfo, CodeGenUtility util)
       throws VajramValidationException {
-    DataType<?> returnType = vajramInfo.lite().responseType();
+    CodeGenType returnType = vajramInfo.lite().responseType();
 
     Element typeElement =
         requireNonNull(
@@ -257,7 +257,7 @@ public class ProtoGenUtils {
   }
 
   static List<? extends TypeMirror> getSerializationProtocols(
-      @Nullable SupportedSerdeProtocols supportedSerdeProtocols, Utils util) {
+      @Nullable SupportedSerdeProtocols supportedSerdeProtocols, CodeGenUtility util) {
     return supportedSerdeProtocols == null
         ? List.of()
         : util.getTypesFromAnnotationMember(supportedSerdeProtocols::value);
@@ -268,7 +268,7 @@ public class ProtoGenUtils {
    *
    * @throws VajramValidationException if validation fails
    */
-  static void validateProtobufCompatibility(VajramInfo vajramInfo, Utils util)
+  static void validateProtobufCompatibility(VajramInfo vajramInfo, CodeGenUtility util)
       throws VajramValidationException {
     // Validate that the Vajram's return type conforms to protobuf RPC requirements
     validateReturnTypeForProtobuf(vajramInfo, util);

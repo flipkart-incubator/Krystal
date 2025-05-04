@@ -1,8 +1,9 @@
 package com.flipkart.krystal.data;
 
-import com.flipkart.krystal.model.ModelBuilder;
+import com.flipkart.krystal.model.ImmutableModel;
 
-public interface FacetValuesBuilder extends FacetValues, FacetValuesContainerBuilder, ModelBuilder {
+public interface FacetValuesBuilder
+    extends FacetValues, FacetValuesContainerBuilder, ImmutableModel.Builder {
 
   @Override
   default FacetValuesBuilder _asBuilder() {

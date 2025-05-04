@@ -13,7 +13,6 @@ import static com.flipkart.krystal.datatypes.JavaTypes.OBJECT;
 import static com.flipkart.krystal.datatypes.JavaTypes.SHORT;
 import static com.flipkart.krystal.datatypes.JavaTypes.STRING;
 import static com.flipkart.krystal.datatypes.JavaTypes.VOID;
-import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -22,13 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.ArrayType;
-import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.PrimitiveType;
-import javax.lang.model.type.TypeKind;
-import javax.lang.model.type.TypeMirror;
 import lombok.experimental.UtilityClass;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -102,23 +94,5 @@ public final class TypeUtils {
         }
       };
     }
-  }
-
-  static boolean hasPlatformDefaultValue(TypeMirror t) {
-    char[][][] c = new char[][][] {};
-    if (t.getKind().isPrimitive()) {
-      return true;
-    } else if (TypeKind.ARRAY.equals(t.getKind())) {
-      return true;
-    } else if (t instanceof DeclaredType declaredType
-        && declaredType.asElement() instanceof TypeElement typeElement) {
-      return NON_PRIMITIVE_CLASSES_WITH_PLATFORM_DEFAULTS.stream()
-          .anyMatch(
-              aClass ->
-                  typeElement
-                      .getQualifiedName()
-                      .contentEquals(checkNotNull(aClass.getCanonicalName())));
-    }
-    return false;
   }
 }

@@ -46,15 +46,11 @@ import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.friendsservice.F
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.Hello;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.Hello_ReqImmut;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hello.Hello_ReqImmutPojo;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_ReqImmut;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriends.HelloFriends_ReqImmutPojo;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_ReqImmut;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_ReqImmutPojo;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends_ReqImmutPojo;
-import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihellov2.MultiHelloFriendsV2_ReqImmutPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.mutualFriendsHello.MutualFriendsHello_ReqImmutPojo;
 import com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.userservice.TestUserInfo;

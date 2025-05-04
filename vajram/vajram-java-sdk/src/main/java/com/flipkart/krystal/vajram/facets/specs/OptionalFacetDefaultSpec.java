@@ -10,7 +10,6 @@ import com.google.common.collect.ImmutableSet;
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class OptionalFacetDefaultSpec<T, CV extends Request> extends DefaultFacetSpec<T, CV>
@@ -40,11 +39,5 @@ public final class OptionalFacetDefaultSpec<T, CV extends Request> extends Defau
         tagsParser,
         getFromFacets,
         setToFacets);
-  }
-
-  @Deprecated
-  @Override
-  public @NonNull Void getPlatformDefaultValue() throws UnsupportedOperationException {
-    throw new UnsupportedOperationException("Optional facets do not have a platform default value");
   }
 }

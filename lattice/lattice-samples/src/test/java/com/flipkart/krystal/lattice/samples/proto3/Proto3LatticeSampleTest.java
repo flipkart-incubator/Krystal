@@ -57,7 +57,7 @@ class Proto3LatticeSampleTest {
   }
 
   @Test
-  void testWithAllInputsProvided() throws Exception {
+  void allInputsProvided_success() throws Exception {
     // Create a request with all inputs provided
     Proto3LatticeSample_ReqImmut request =
         Proto3LatticeSample_ReqImmutProto._builder()
@@ -68,6 +68,7 @@ class Proto3LatticeSampleTest {
             .optionalLongInput(10L)
             .mandatoryLongInput(20L)
             .optionalByteString(ByteString.copyFromUtf8("test"))
+            .defaultByteString(ByteString.copyFromUtf8("hello"))
             ._build();
 
     // Execute the vajram
@@ -86,17 +87,18 @@ class Proto3LatticeSampleTest {
 
     // Verify the result
     Proto3LatticeSampleResponse output = result.get();
-    assertThat(output.string()).contains("optionalInput: Optional[42]");
-    assertThat(output.string()).contains("mandatoryInput: 100");
-    assertThat(output.string()).contains("conditionallyMandatoryInput: Optional[200]");
-    assertThat(output.string()).contains("inputWithDefaultValue: 300");
-    assertThat(output.string()).contains("optionalLongInput: Optional[10]");
-    assertThat(output.string()).contains("mandatoryLongInput: 20");
-    assertThat(output.string()).contains("optionalByteString: Optional[test]");
+    assertThat(output.string()).contains("$$ optionalInput: Optional[42] $$");
+    assertThat(output.string()).contains("$$ mandatoryInput: 100 $$");
+    assertThat(output.string()).contains("$$ conditionallyMandatoryInput: Optional[200] $$");
+    assertThat(output.string()).contains("$$ inputWithDefaultValue: 300 $$");
+    assertThat(output.string()).contains("$$ optionalLongInput: Optional[10] $$");
+    assertThat(output.string()).contains("$$ mandatoryLongInput: 20 $$");
+    assertThat(output.string()).contains("$$ optionalByteString: Optional[test] $$");
+    assertThat(output.string()).contains("$$ defaultByteString: hello $$");
   }
 
   @Test
-  void testWithOptionalInputsOmitted() throws Exception {
+  void optionalInputsOmitted_success() throws Exception {
     // Create a request with only mandatory inputs
     Proto3LatticeSample_ReqImmut request =
         Proto3LatticeSample_ReqImmutProto._builder()
@@ -122,16 +124,17 @@ class Proto3LatticeSampleTest {
 
     // Verify the result
     Proto3LatticeSampleResponse output = result.get();
-    assertThat(output.string()).contains("optionalInput: Optional.empty");
-    assertThat(output.string()).contains("mandatoryInput: 100");
-    assertThat(output.string()).contains("inputWithDefaultValue: 300");
-    assertThat(output.string()).contains("optionalLongInput: Optional.empty");
-    assertThat(output.string()).contains("mandatoryLongInput: 20");
-    assertThat(output.string()).contains("optionalByteString: ");
+    assertThat(output.string()).contains("$$ optionalInput: Optional.empty $$");
+    assertThat(output.string()).contains("$$ mandatoryInput: 100 $$");
+    assertThat(output.string()).contains("$$ inputWithDefaultValue: 300 $$");
+    assertThat(output.string()).contains("$$ optionalLongInput: Optional.empty $$");
+    assertThat(output.string()).contains("$$ mandatoryLongInput: 20 $$");
+    assertThat(output.string()).contains("$$ optionalByteString: Optional.empty $$");
+    assertThat(output.string()).contains("$$ defaultByteString:  $$");
   }
 
   @Test
-  void testWithDefaultValueStrategy() throws Exception {
+  void defaultValueStrategy() throws Exception {
     // Create a request without the input that has a default value strategy
     Proto3LatticeSample_ReqImmut request =
         Proto3LatticeSample_ReqImmutProto._builder()
@@ -160,7 +163,7 @@ class Proto3LatticeSampleTest {
   }
 
   @Test
-  void testMissingMandatoryInput() {
+  void missingMandatoryInput_throws() {
     // Create a request missing a mandatory input
     Proto3LatticeSample_ReqImmut request =
         Proto3LatticeSample_ReqImmutProto._builder()
@@ -191,7 +194,7 @@ class Proto3LatticeSampleTest {
   }
 
   @Test
-  void testMissingMandatoryByteInput() {
+  void missingMandatoryByteInput_throws() {
     // Create a request missing a mandatory byte input
     Proto3LatticeSample_ReqImmut request =
         Proto3LatticeSample_ReqImmutProto._builder()
@@ -222,7 +225,7 @@ class Proto3LatticeSampleTest {
   }
 
   @Test
-  void testWithMockedResponse() throws Exception {
+  void mockedResponse_success() throws Exception {
     // Create a test harness with a mocked response
     Proto3LatticeSample_ReqImmut request =
         Proto3LatticeSample_ReqImmutProto._builder()
@@ -264,7 +267,7 @@ class Proto3LatticeSampleTest {
   }
 
   @Test
-  void testWithByteStringInput() throws Exception {
+  void byteStringInput_success() throws Exception {
     // Create a request with ByteString input
     ByteString byteString = ByteString.copyFromUtf8("Hello, World!");
     Proto3LatticeSample_ReqImmut request =

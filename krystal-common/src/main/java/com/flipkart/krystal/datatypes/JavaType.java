@@ -3,29 +3,14 @@ package com.flipkart.krystal.datatypes;
 import static com.flipkart.krystal.datatypes.TypeUtils.dataTypeMappings;
 import static com.flipkart.krystal.datatypes.TypeUtils.getJavaType;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.util.function.Function.identity;
+import static java.util.Objects.requireNonNull;
 
-import com.google.common.base.Defaults;
 import com.google.common.collect.ImmutableList;
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import javax.annotation.processing.ProcessingEnvironment;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.ArrayType;
-import javax.lang.model.type.DeclaredType;
-import javax.lang.model.type.TypeKind;
-import javax.lang.model.type.TypeMirror;
-import javax.lang.model.type.TypeVisitor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -67,7 +52,7 @@ public final class JavaType<T> implements DataType<T> {
   }
 
   JavaType(Class<?> clazz, DataType<?>... typeParameters) {
-    this(clazz.getCanonicalName(), clazz, typeParameters);
+    this(requireNonNull(clazz.getCanonicalName()), clazz, typeParameters);
   }
 
   private JavaType(String canonicalClassName, DataType<?>... typeParameters) {
@@ -75,7 +60,7 @@ public final class JavaType<T> implements DataType<T> {
   }
 
   private JavaType(
-      @NonNull String canonicalClassName, @Nullable Class<?> clazz, DataType<?>... typeParameters) {
+      String canonicalClassName, @Nullable Class<?> clazz, DataType<?>... typeParameters) {
     this.type = clazz;
     this.typeParameters = ImmutableList.copyOf(typeParameters);
     this.canonicalClassName = canonicalClassName;

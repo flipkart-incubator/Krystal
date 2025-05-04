@@ -60,14 +60,15 @@ public class PredicateDispatchUtil {
 
   @AllArgsConstructor(access = PRIVATE)
   public static class DispatchCaseBuilder<R extends Request<?>> {
-    private ImmutableMap<InputMirror, InputValueMatcher> facetPredicates;
+    private ImmutableMap<InputMirror, InputValueMatcher<?>> facetPredicates;
 
     public <P> DispatchCaseBuilder<R> and(
         InputMirrorSpec<P, R> input, InputValueMatcher<P> dataType) {
       checkArgument(
           !facetPredicates.containsKey(input),
           "Facet " + input + " already has a type check in this case");
-      LinkedHashMap<InputMirror, InputValueMatcher> newMap = new LinkedHashMap<>(facetPredicates);
+      LinkedHashMap<InputMirror, InputValueMatcher<?>> newMap =
+          new LinkedHashMap<>(facetPredicates);
       newMap.put(input, dataType);
       return new DispatchCaseBuilder<>(ImmutableMap.copyOf(newMap));
     }
@@ -83,7 +84,7 @@ public class PredicateDispatchUtil {
   @Value
   @AllArgsConstructor(access = PRIVATE)
   public static final class DispatchCaseFinal<T extends Request<?>> {
-    ImmutableMap<InputMirror, InputValueMatcher> inputPredicates;
+    ImmutableMap<InputMirror, InputValueMatcher<?>> inputPredicates;
     Class<? extends T> dispatchTarget;
   }
 

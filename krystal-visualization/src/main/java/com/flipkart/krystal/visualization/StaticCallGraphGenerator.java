@@ -2,8 +2,8 @@ package com.flipkart.krystal.visualization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.facets.InputMirror;
+import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.flipkart.krystal.vajram.ComputeVajramDef;

@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.MODELS;
-import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getIfAbsent;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_FILE_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_MSG_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_OUTER_CLASS_SUFFIX;
@@ -11,13 +10,13 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProt
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
 import static javax.lang.model.element.ElementKind.INTERFACE;
 
-import com.flipkart.krystal.data.IfAbsent.IfAbsentThen;
-import com.flipkart.krystal.datatypes.DataType;
+import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.serial.SerialId;
+import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.DeclaredTypeVisitor;
-import com.flipkart.krystal.vajram.codegen.common.models.Utils;
 import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.vajram.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.OptionalFieldType;
@@ -39,7 +38,7 @@ import lombok.extern.slf4j.Slf4j;
 final class ModelsProto3SchemaGen implements CodeGenerator {
 
   private final ModelsCodeGenContext codeGenContext;
-  private final Utils util;
+  private final CodeGenUtility util;
 
   public ModelsProto3SchemaGen(ModelsCodeGenContext codeGenContext) {
     this.codeGenContext = codeGenContext;
@@ -83,7 +82,7 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
     validateModelType(codeGenContext.modelRootType(), util);
   }
 
-  static void validateModelType(TypeElement modelRootType, Utils util) {
+  static void validateModelType(TypeElement modelRootType, CodeGenUtility util) {
     if (!INTERFACE.equals(modelRootType.getKind())) {
       util.error("Model root '%s' must be an interface".formatted(modelRootType), modelRootType);
     }
@@ -146,6 +145,7 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
 
     protoBuilder.append("option java_package = \"").append(packageName).append("\";\n");
     protoBuilder.append("option java_multiple_files = true;\n");
+    //noinspection SpellCheckingInspection: java_outer_classname
     protoBuilder
         .append("option java_outer_classname = \"")
         .append(modelRootName)
@@ -195,14 +195,14 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
       }
 
       // Get the return type and convert it to a DataType
-      DataType<?> dataType = new DeclaredTypeVisitor<>(util, method).visit(method.getReturnType());
+      CodeGenType dataType = new DeclaredTypeVisitor(util, method).visit(method.getReturnType());
 
       boolean isOptional = true; // Default to optional for proto3
 
       // In proto3, the 'optional' keyword is needed for all primitive types to check
       // presence. This includes numeric types, booleans, strings, bytes, and enums.
 
-      IfAbsentThen ifAbsentThen = getIfAbsent(method).value();
+      IfAbsentThen ifAbsentThen = util.getIfAbsent(method).value();
 
       boolean isRepeated = isProtoTypeRepeated(dataType);
       boolean isMap = isProtoTypeMap(dataType);

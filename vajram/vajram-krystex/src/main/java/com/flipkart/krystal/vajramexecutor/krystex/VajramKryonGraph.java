@@ -16,8 +16,6 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.data.IfAbsent;
-import com.flipkart.krystal.data.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.BasicFacetInfo;
@@ -40,6 +38,8 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.L
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.Resolver;
 import com.flipkart.krystal.krystex.resolution.ResolverLogic;
+import com.flipkart.krystal.model.IfAbsent;
+import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.VajramDef;
