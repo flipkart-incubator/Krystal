@@ -381,8 +381,7 @@ public class ModelsProto3Gen implements CodeGenerator {
       } else {
         getterBuilder
             .addCode(protoPresenceCheck)
-            .addCode(
-                """
+            .addCode("""
                 return null;
               }
               """);
@@ -584,8 +583,8 @@ public class ModelsProto3Gen implements CodeGenerator {
   }
 
   /**
-   * Checks if a field should be treated as mandatory. Fields with @IfAbsent(FAIL) are treated
-   * as mandatory.
+   * Checks if a field should be treated as mandatory. Fields with @IfAbsent(FAIL) are treated as
+   * mandatory.
    */
   private boolean isMandatoryField(ExecutableElement method) {
     return util.getIfAbsent(method).value() == IfAbsentThen.FAIL;

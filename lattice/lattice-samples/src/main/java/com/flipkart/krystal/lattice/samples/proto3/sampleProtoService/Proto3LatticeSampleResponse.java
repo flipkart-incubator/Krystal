@@ -13,6 +13,7 @@ import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -51,6 +52,6 @@ public interface Proto3LatticeSampleResponse extends Model {
   @Nullable String mandatoryStringPartialConstruction();
 
   @SerialId(10)
-  @IfAbsent(FAIL)
-  List<String> notAllowed();
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
+  @Nullable Map<String, String> notAllowed();
 }
