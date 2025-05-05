@@ -18,7 +18,6 @@ module flipkart.krystal.common {
   requires com.google.common;
   requires org.checkerframework.checker.qual;
   requires java.compiler;
-  requires java.xml;
   requires org.slf4j;
   requires jdk.httpserver;
   requires com.google.auto.value.annotations;

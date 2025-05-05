@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajram.plugin;
+package com.flipkart.krystal.vajram.codegen.plugin;
 
 import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.FINAL;
 import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.MODELS;
@@ -65,8 +65,6 @@ public class VajramPlugin implements Plugin<Project> {
             "codeGenVajramModels",
             JavaCompile.class,
             task -> {
-              //              task.dependsOn("codeGenVajramSchemas");
-
               // Compile the generatedCode
               task.setGroup("krystal");
               task.source(VajramPlugin.MAIN_SRC_DIR);

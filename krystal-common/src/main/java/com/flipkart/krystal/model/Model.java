@@ -13,7 +13,7 @@ package com.flipkart.krystal.model;
  */
 @SuppressWarnings("ClassReferencesSubclass") // By Design
 public interface Model {
-  ModelBuilder _asBuilder();
+  ImmutableModel.Builder _asBuilder();
 
   ImmutableModel _build();
 

@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
-import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
+import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
 import com.google.common.collect.ImmutableSet;
 import java.util.EnumSet;
 import javax.lang.model.element.VariableElement;
@@ -19,7 +19,7 @@ public record DefaultFacetModel(
     int id,
     @NonNull String name,
     @NonNull VajramInfoLite vajramInfo,
-    @NonNull DataType<Object> dataType,
+    @NonNull CodeGenType dataType,
     @Nullable String documentation,
     ImmutableSet<FacetType> facetTypes,
     @NonNull VariableElement facetField)

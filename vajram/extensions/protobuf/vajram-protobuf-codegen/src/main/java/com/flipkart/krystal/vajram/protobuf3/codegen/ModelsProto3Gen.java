@@ -1,8 +1,9 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
-import static com.flipkart.krystal.datatypes.JavaTypes.BYTE;
-import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getIfNoValue;
+import static com.flipkart.krystal.vajram.codegen.common.datatypes.StandardJavaType.BYTE;
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_MSG_SUFFIX;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.PROTO_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ModelsProto3SchemaGen.validateModelType;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeMap;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
@@ -12,14 +13,13 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
-import com.flipkart.krystal.data.IfAbsent;
-import com.flipkart.krystal.data.IfAbsent.IfAbsentThen;
-import com.flipkart.krystal.datatypes.DataType;
+import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.serial.SerializableModel;
+import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.vajram.codegen.common.models.DeclaredTypeVisitor;
-import com.flipkart.krystal.vajram.codegen.common.models.Utils;
 import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.vajram.codegen.common.spi.ModelsCodeGenContext;
 import com.squareup.javapoet.AnnotationSpec;
@@ -29,14 +29,10 @@ import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.MethodSpec.Builder;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-import java.util.ArrayList;
 import java.util.List;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
@@ -53,14 +49,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * generates an inner class inside the ImmutProto class which extends the
  * "[ModelName]_Immut.Builder" interface and wraps a "[ModelName]_Proto.Builder" instance and all
  * setter and getter calls are delegated to this.
- *
- * @see VajramModelsProto3Gen
  */
 @Slf4j
 public class ModelsProto3Gen implements CodeGenerator {
 
   private final ModelsCodeGenContext codeGenContext;
-  private final Utils util;
+  private final CodeGenUtility util;
 
   public ModelsProto3Gen(ModelsCodeGenContext codeGenContext) {
     this.codeGenContext = codeGenContext;
@@ -102,10 +96,13 @@ public class ModelsProto3Gen implements CodeGenerator {
 
   private void generateProtoImplementation() {
     TypeElement modelRootType = codeGenContext.modelRootType();
+    ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
+
     String modelRootName = modelRootType.getSimpleName().toString();
     String packageName =
         util.processingEnv().getElementUtils().getPackageOf(modelRootType).toString();
-    String protoClassName = modelRootName + "_ImmutProto";
+    String protoClassName =
+        modelRootName + modelRoot.suffixSeparator() + IMMUT_SUFFIX + PROTO_SUFFIX;
 
     // Generate the implementation class using JavaPoet
     TypeSpec typeSpec = generateImplementationTypeSpec(modelRootType, packageName, protoClassName);
@@ -120,13 +117,14 @@ public class ModelsProto3Gen implements CodeGenerator {
 
   private TypeSpec generateImplementationTypeSpec(
       TypeElement modelRootType, String packageName, String protoClassName) {
+    ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
     ClassName immutableProtoType = ClassName.get(packageName, protoClassName);
     String modelRootName = modelRootType.getSimpleName().toString();
-    String immutInterfaceName = modelRootName + "_Immut";
+    String immutInterfaceName = modelRootName + modelRoot.suffixSeparator() + IMMUT_SUFFIX;
     String protoMsgClassName = modelRootName + MODELS_PROTO_MSG_SUFFIX;
 
     // Extract model methods
-    List<ExecutableElement> modelMethods = extractModelMethods(modelRootType);
+    List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
     // Create class annotations
     AnnotationSpec suppressWarningsAnnotation =
@@ -211,8 +209,20 @@ public class ModelsProto3Gen implements CodeGenerator {
         MethodSpec.methodBuilder("_newCopy")
             .addAnnotation(Override.class)
             .addModifiers(PUBLIC)
-            .returns(immutInterfaceClassName)
-            .addStatement("return new $L(_serializedPayload)", protoClassName)
+            .returns(immutableProtoType)
+            .addCode(
+                """
+                if(_serializedPayload != null) {
+                  return new $L(_serializedPayload);
+                } else if(_proto != null){
+                  return new $L(_proto);
+                } else {
+                  throw new $T("Both _proto and _serializedPayload are null");
+                }
+                """,
+                protoClassName,
+                protoClassName,
+                IllegalStateException.class)
             .build());
 
     // Add method to lazily deserialize the proto message
@@ -237,29 +247,13 @@ public class ModelsProto3Gen implements CodeGenerator {
 
     // Add getters for all model methods
     for (ExecutableElement method : modelMethods) {
-      String methodName = method.getSimpleName().toString();
 
       // Get the return type
       TypeMirror returnType = method.getReturnType();
-      DataType<?> dataType = new DeclaredTypeVisitor<>(util, method).visit(returnType);
+      CodeGenType dataType = new DeclaredTypeVisitor(util, method).visit(returnType);
       TypeName typeName = TypeName.get(returnType);
 
-      MethodSpec.Builder getterBuilder =
-          MethodSpec.methodBuilder(methodName).addAnnotation(Override.class).addModifiers(PUBLIC);
-
-      // Only add @Nullable annotation if the field needs presence check, is not FAIL,
-      // and the return type is not Optional
-      if (needsPresenceCheckInModels(method)
-          && !isMandatoryField(method)
-          && !util.isOptional(returnType)) {
-        getterBuilder.returns(typeName.annotated(AnnotationSpec.builder(Nullable.class).build()));
-      } else {
-        getterBuilder.returns(typeName);
-      }
-
-      addGetterCode(getterBuilder, method, dataType, methodName);
-
-      classBuilder.addMethod(getterBuilder.build());
+      classBuilder.addMethod(getterMethod(method, returnType, typeName, dataType).build());
     }
 
     // Add equals method that delegates to the proto object
@@ -298,7 +292,12 @@ public class ModelsProto3Gen implements CodeGenerator {
     // Add Builder inner class
     TypeSpec builderTypeSpec =
         generateBuilderTypeSpec(
-            packageName, protoClassName, protoMsgClassName, immutInterfaceName, modelMethods);
+            modelRootType,
+            packageName,
+            protoClassName,
+            protoMsgClassName,
+            immutInterfaceName,
+            modelMethods);
     classBuilder.addType(builderTypeSpec);
     classBuilder.addMethod(
         methodBuilder("_builder")
@@ -309,8 +308,33 @@ public class ModelsProto3Gen implements CodeGenerator {
     return classBuilder.build();
   }
 
+  private MethodSpec.Builder getterMethod(
+      ExecutableElement method, TypeMirror returnType, TypeName typeName, CodeGenType dataType) {
+
+    String methodName = method.getSimpleName().toString();
+
+    MethodSpec.Builder getterBuilder =
+        MethodSpec.methodBuilder(methodName).addAnnotation(Override.class).addModifiers(PUBLIC);
+
+    // Only add @Nullable annotation if the field needs presence check, is not FAIL,
+    // and the return type is not Optional
+    if (needsPresenceCheckInModels(method)
+        && !isMandatoryField(method)
+        && !util.isOptional(returnType)) {
+      getterBuilder.returns(typeName.annotated(AnnotationSpec.builder(Nullable.class).build()));
+    } else {
+      getterBuilder.returns(typeName);
+    }
+
+    addGetterCode(getterBuilder, method, dataType, methodName);
+    return getterBuilder;
+  }
+
   private void addGetterCode(
-      Builder getterBuilder, ExecutableElement method, DataType<?> dataType, String methodName) {
+      MethodSpec.Builder getterBuilder,
+      ExecutableElement method,
+      CodeGenType dataType,
+      String methodName) {
 
     if (isProtoTypeRepeated(dataType)) {
       // For repeated fields, use getXList() method
@@ -374,11 +398,13 @@ public class ModelsProto3Gen implements CodeGenerator {
   }
 
   private TypeSpec generateBuilderTypeSpec(
+      TypeElement modelRootType,
       String packageName,
       String protoClassName,
       String protoMsgClassName,
       String immutInterfaceName,
       List<ExecutableElement> modelMethods) {
+    ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
 
     ClassName immutableProtoType = ClassName.get(packageName, protoClassName);
 
@@ -447,7 +473,7 @@ public class ModelsProto3Gen implements CodeGenerator {
     for (ExecutableElement method : modelMethods) {
       String methodName = method.getSimpleName().toString();
       TypeMirror returnType = method.getReturnType();
-      DataType<?> dataType = new DeclaredTypeVisitor<>(util, method).visit(returnType);
+      CodeGenType dataType = new DeclaredTypeVisitor(util, method).visit(returnType);
 
       // Check if the return type is Optional
       boolean isOptionalReturnType = util.isOptional(returnType);
@@ -528,6 +554,9 @@ public class ModelsProto3Gen implements CodeGenerator {
       setterBuilder.addStatement("return this");
 
       builderClassBuilder.addMethod(setterBuilder.addParameter(paramBuilder.build()).build());
+      if (modelRoot.builderExtendsModelRoot()) {
+        builderClassBuilder.addMethod(getterMethod(method, returnType, typeName, dataType).build());
+      }
     }
 
     // Add method to access the proto builder
@@ -541,49 +570,23 @@ public class ModelsProto3Gen implements CodeGenerator {
         .build();
   }
 
-  private List<ExecutableElement> extractModelMethods(TypeElement modelRootType) {
-    List<ExecutableElement> modelMethods = new ArrayList<>();
-
-    for (Element element : modelRootType.getEnclosedElements()) {
-      if (ElementKind.METHOD.equals(element.getKind())) {
-        ExecutableElement method = (ExecutableElement) element;
-
-        // Skip methods from Object class or other non-model methods
-        if (method.getSimpleName().toString().equals("_build")
-            || method.getSimpleName().toString().equals("_asBuilder")
-            || method.getSimpleName().toString().equals("_newCopy")) {
-          continue;
-        }
-
-        // Validate method has zero parameters
-        if (!method.getParameters().isEmpty()) {
-          continue;
-        }
-
-        modelMethods.add(method);
-      }
+  private boolean needsPresenceCheckInModels(ExecutableElement method) {
+    TypeMirror returnType = method.getReturnType();
+    CodeGenType dataType = new DeclaredTypeVisitor(util, method).visit(returnType, null);
+    if (isProtoTypeRepeated(dataType)) {
+      return false;
     }
-
-    return modelMethods;
+    if (isProtoTypeMap(dataType)) {
+      return false;
+    }
+    return !util.getIfAbsent(method).value().usePlatformDefault();
   }
 
   /**
-   * Checks if a field needs presence check in the models. Fields with @IfNoValue(then=FAIL)
-   * or @IfNoValue(then=MAY_FAIL_CONDITIONALLY) need presence check.
+   * Checks if a field should be treated as mandatory. Fields with @IfAbsent(FAIL) are treated as
+   * mandatory.
    */
-  private static boolean needsPresenceCheckInModels(ExecutableElement method) {
-    IfAbsent ifAbsent = getIfNoValue(method);
-
-    // For FAIL and MAY_FAIL_CONDITIONALLY, we need presence check
-    return ifAbsent.value() == IfAbsentThen.FAIL
-        || ifAbsent.value() == IfAbsentThen.MAY_FAIL_CONDITIONALLY;
-  }
-
-  /**
-   * Checks if a field should be treated as mandatory. Fields with @IfNoValue(then=FAIL) are treated
-   * as mandatory.
-   */
-  private static boolean isMandatoryField(ExecutableElement method) {
-    return getIfNoValue(method).value() == IfAbsentThen.FAIL;
+  private boolean isMandatoryField(ExecutableElement method) {
+    return util.getIfAbsent(method).value() == IfAbsentThen.FAIL;
   }
 }

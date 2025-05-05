@@ -1,10 +1,10 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
-import com.flipkart.krystal.data.IfAbsent;
-import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
+import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
+import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import javax.lang.model.element.AnnotationMirror;
@@ -23,7 +23,7 @@ public sealed interface FacetGenModel permits DefaultFacetModel, DependencyModel
 
   ImmutableSet<FacetType> facetTypes();
 
-  DataType<?> dataType();
+  CodeGenType dataType();
 
   default boolean isGiven() {
     return false;

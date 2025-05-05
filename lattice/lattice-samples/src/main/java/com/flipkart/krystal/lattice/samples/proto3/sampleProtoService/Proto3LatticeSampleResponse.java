@@ -1,11 +1,11 @@
 package com.flipkart.krystal.lattice.samples.proto3.sampleProtoService;
 
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.DEFAULT_TO_EMPTY;
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.DEFAULT_TO_ZERO;
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
+import static com.flipkart.krystal.model.ModelRoot.ModelType.RESPONSE;
 
-import com.flipkart.krystal.data.IfAbsent;
+import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.PlainJavaObject;
@@ -13,10 +13,11 @@ import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@ModelRoot
+@ModelRoot(type = RESPONSE)
 @SupportedModelProtocols({PlainJavaObject.class, Protobuf3.class})
 public interface Proto3LatticeSampleResponse extends Model {
   @SerialId(1)
@@ -35,7 +36,7 @@ public interface Proto3LatticeSampleResponse extends Model {
   @Nullable Integer nullableInteger();
 
   @SerialId(6)
-  @IfAbsent(DEFAULT_TO_EMPTY)
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
   List<Integer> optionalIntArray();
 
   @SerialId(7)
@@ -43,6 +44,14 @@ public interface Proto3LatticeSampleResponse extends Model {
   int mandatoryInt();
 
   @SerialId(8)
-  @IfAbsent(DEFAULT_TO_ZERO)
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
   int defaultInt();
+
+  @SerialId(9)
+  @IfAbsent(FAIL)
+  @Nullable String mandatoryStringPartialConstruction();
+
+  @SerialId(10)
+  @IfAbsent(ASSUME_DEFAULT_VALUE)
+  @Nullable Map<String, String> mapTypedField();
 }

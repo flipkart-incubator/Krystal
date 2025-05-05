@@ -1,6 +1,7 @@
 module flipkart.krystal.vajram.codegen.common {
   exports com.flipkart.krystal.vajram.codegen.common.spi;
   exports com.flipkart.krystal.vajram.codegen.common.models;
+  exports com.flipkart.krystal.vajram.codegen.common.datatypes;
 
   requires transitive flipkart.krystal.common;
   requires transitive java.compiler;
@@ -11,4 +12,5 @@ module flipkart.krystal.vajram.codegen.common {
   requires org.slf4j;
   requires org.checkerframework.checker.qual;
   requires static lombok;
+  requires com.google.errorprone.annotations;
 }

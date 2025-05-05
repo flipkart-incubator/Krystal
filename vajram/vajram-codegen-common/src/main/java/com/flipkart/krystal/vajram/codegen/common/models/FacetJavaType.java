@@ -2,16 +2,13 @@ package com.flipkart.krystal.vajram.codegen.common.models;
 
 import static com.flipkart.krystal.facets.FacetType.INPUT;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.EMPTY_CODE_BLOCK;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.FACET_SPEC_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.FACET_VALUES_VAR;
-import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getFacetsInterfaceName;
 
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.data.One2OneDepResponse;
+import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
 import com.flipkart.krystal.vajram.facets.FacetValidation;
-import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.TypeName;
 import java.util.Optional;
@@ -19,9 +16,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public abstract sealed class FacetJavaType {
 
-  protected final Utils util;
+  protected final CodeGenUtility util;
 
-  public FacetJavaType(Utils util) {
+  public FacetJavaType(CodeGenUtility util) {
     this.util = util;
   }
 
@@ -46,19 +43,14 @@ public abstract sealed class FacetJavaType {
 
   public CodeBlock fieldInitializer(FacetGenModel facet) {
     if (util.usePlatformDefault(facet)) {
-      if (facet.dataType().hasPlatformDefaultValue(util.processingEnv())) {
-        return CodeBlock.of(
-            "$T.$L.getPlatformDefaultValue()",
-            ClassName.get(
-                facet.vajramInfo().packageName(),
-                getFacetsInterfaceName(facet.vajramInfo().vajramId().id())),
-            facet.name() + FACET_SPEC_SUFFIX);
-      } else {
+      try {
+        return facet.dataType().defaultValueExpr(util.processingEnv());
+      } catch (Exception e) {
         throw new VajramDefinitionException(
             "The datatype "
                 + facet.dataType()
                 + " does not support a platform default value."
-                + " To fix this issue, change the ifNotSet strategy of the @Mandatory annotation"
+                + " To fix this issue, change the ifNotSet strategy of the @IfAbsent annotation"
                 + " to a value which does not allow default value.");
       }
     } else {
@@ -72,8 +64,8 @@ public abstract sealed class FacetJavaType {
 
   public static final class Actual extends FacetJavaType {
 
-    public Actual(Utils utils) {
-      super(utils);
+    public Actual(CodeGenUtility util) {
+      super(util);
     }
 
     @Override
@@ -115,8 +107,8 @@ public abstract sealed class FacetJavaType {
 
   public static final class Boxed extends FacetJavaType {
 
-    public Boxed(Utils utils) {
-      super(utils);
+    public Boxed(CodeGenUtility util) {
+      super(util);
     }
 
     @Override
@@ -132,8 +124,8 @@ public abstract sealed class FacetJavaType {
 
   public static final class OptionalType extends FacetJavaType {
 
-    public OptionalType(Utils utils) {
-      super(utils);
+    public OptionalType(CodeGenUtility util) {
+      super(util);
     }
 
     @Override
@@ -158,7 +150,7 @@ public abstract sealed class FacetJavaType {
 
   public static final class One2OneResponse extends FacetJavaType {
 
-    public One2OneResponse(Utils util) {
+    public One2OneResponse(CodeGenUtility util) {
       super(util);
     }
 
@@ -175,7 +167,7 @@ public abstract sealed class FacetJavaType {
 
   public static final class FanoutResponses extends FacetJavaType {
 
-    public FanoutResponses(Utils util) {
+    public FanoutResponses(CodeGenUtility util) {
       super(util);
     }
 

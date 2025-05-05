@@ -16,8 +16,6 @@ import com.google.auto.service.AutoService;
  * generates an inner class inside the ImmutProto class which extends the
  * "[ModelName]_Immut.Builder" interface and wraps a "[ModelName]_Proto.Builder" instance and all
  * setter and getter calls are delegated to this.
- *
- * @see VajramModelsProto3Gen
  */
 @AutoService(ModelsCodeGeneratorProvider.class)
 public class ModelsProto3GenProvider implements ModelsCodeGeneratorProvider {

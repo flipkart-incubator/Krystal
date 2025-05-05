@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.MODELS;
-import static com.flipkart.krystal.vajram.codegen.common.models.Utils.getIfNoValue;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_FILE_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_MSG_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_OUTER_CLASS_SUFFIX;
@@ -11,13 +10,13 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProt
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
 import static javax.lang.model.element.ElementKind.INTERFACE;
 
-import com.flipkart.krystal.data.IfAbsent.IfAbsentThen;
-import com.flipkart.krystal.datatypes.DataType;
+import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.serial.SerialId;
+import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.DeclaredTypeVisitor;
-import com.flipkart.krystal.vajram.codegen.common.models.Utils;
 import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.vajram.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.vajram.protobuf3.codegen.types.OptionalFieldType;
@@ -27,12 +26,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +38,7 @@ import lombok.extern.slf4j.Slf4j;
 final class ModelsProto3SchemaGen implements CodeGenerator {
 
   private final ModelsCodeGenContext codeGenContext;
-  private final Utils util;
+  private final CodeGenUtility util;
 
   public ModelsProto3SchemaGen(ModelsCodeGenContext codeGenContext) {
     this.codeGenContext = codeGenContext;
@@ -86,7 +82,7 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
     validateModelType(codeGenContext.modelRootType(), util);
   }
 
-  static void validateModelType(TypeElement modelRootType, Utils util) {
+  static void validateModelType(TypeElement modelRootType, CodeGenUtility util) {
     if (!INTERFACE.equals(modelRootType.getKind())) {
       util.error("Model root '%s' must be an interface".formatted(modelRootType), modelRootType);
     }
@@ -149,6 +145,7 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
 
     protoBuilder.append("option java_package = \"").append(packageName).append("\";\n");
     protoBuilder.append("option java_multiple_files = true;\n");
+    //noinspection SpellCheckingInspection: java_outer_classname
     protoBuilder
         .append("option java_outer_classname = \"")
         .append(modelRootName)
@@ -158,7 +155,7 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
     protoBuilder.append("message ").append(modelRootName).append(MODELS_PROTO_MSG_SUFFIX + " {\n");
 
     // Extract methods from the model root interface
-    List<ExecutableElement> modelMethods = extractModelMethods(modelRootType);
+    List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
     // Add fields from model methods using SerialId annotation for field numbers
     Set<Integer> usedFieldNumbers = new HashSet<>();
@@ -198,14 +195,14 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
       }
 
       // Get the return type and convert it to a DataType
-      DataType<?> dataType = new DeclaredTypeVisitor<>(util, method).visit(method.getReturnType());
+      CodeGenType dataType = new DeclaredTypeVisitor(util, method).visit(method.getReturnType());
 
       boolean isOptional = true; // Default to optional for proto3
 
       // In proto3, the 'optional' keyword is needed for all primitive types to check
       // presence. This includes numeric types, booleans, strings, bytes, and enums.
 
-      IfAbsentThen ifAbsentThen = getIfNoValue(method).value();
+      IfAbsentThen ifAbsentThen = util.getIfAbsent(method).value();
 
       boolean isRepeated = isProtoTypeRepeated(dataType);
       boolean isMap = isProtoTypeMap(dataType);
@@ -213,8 +210,8 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
         // Proto3 always defaults repeated and map fields to default values
         util.error(
             String.format(
-                "Method '%s' in Model Root '%s' is a %s field, and has @IfNoValue(then=%s) which is not supported in protobuf3. "
-                    + "Use a different IfNoValue strategy.",
+                "Method '%s' in Model Root '%s' is a %s field, and has @IfAbsent(%s) which is not supported in protobuf3. "
+                    + "Use a different IfAbsent strategy.",
                 method.getSimpleName(),
                 modelRootName,
                 isRepeated ? "repeated" : "map",
@@ -259,31 +256,5 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
     protoBuilder.append("}\n");
 
     return protoBuilder.toString();
-  }
-
-  private List<ExecutableElement> extractModelMethods(TypeElement modelRootType) {
-    List<ExecutableElement> modelMethods = new ArrayList<>();
-
-    for (Element element : modelRootType.getEnclosedElements()) {
-      if (ElementKind.METHOD.equals(element.getKind())) {
-        ExecutableElement method = (ExecutableElement) element;
-
-        // Skip methods from Object class or other non-model methods
-        if (method.getSimpleName().toString().equals("_build")
-            || method.getSimpleName().toString().equals("_asBuilder")
-            || method.getSimpleName().toString().equals("_newCopy")) {
-          continue;
-        }
-
-        // Validate method has zero parameters
-        if (!method.getParameters().isEmpty()) {
-          continue;
-        }
-
-        modelMethods.add(method);
-      }
-    }
-
-    return modelMethods;
   }
 }

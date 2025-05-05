@@ -1,13 +1,13 @@
 package com.flipkart.krystal.lattice.samples.proto3.sampleProtoService;
 
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.DEFAULT_TO_EMPTY;
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.DEFAULT_TO_ZERO;
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.FAIL;
-import static com.flipkart.krystal.data.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
+import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
-import com.flipkart.krystal.data.IfAbsent;
 import com.flipkart.krystal.lattice.core.RemotelyInvocable;
+import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.serial.ReservedSerialIds;
 import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.serial.SupportedSerdeProtocols;
@@ -16,7 +16,6 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import com.google.protobuf.ByteString;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,7 +39,7 @@ abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3LatticeSampleR
     int conditionallyMandatoryInput;
 
     @SerialId(4)
-    @IfAbsent(DEFAULT_TO_ZERO)
+    @IfAbsent(ASSUME_DEFAULT_VALUE)
     int inputWithDefaultValue;
 
     @SerialId(5)
@@ -53,9 +52,13 @@ abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3LatticeSampleR
     @SerialId(7)
     ByteString optionalByteString;
 
-    @IfAbsent(DEFAULT_TO_EMPTY)
+    @IfAbsent(ASSUME_DEFAULT_VALUE)
     @SerialId(9)
     List<Integer> repeatedInts;
+
+    @SerialId(10)
+    @IfAbsent(ASSUME_DEFAULT_VALUE)
+    ByteString defaultByteString;
   }
 
   @Output
@@ -66,7 +69,8 @@ abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3LatticeSampleR
       int inputWithDefaultValue,
       Optional<Long> optionalLongInput,
       Long mandatoryLongInput,
-      Optional<ByteString> optionalByteString) {
+      Optional<ByteString> optionalByteString,
+      ByteString defaultByteString) {
     return Proto3LatticeSampleResponse_ImmutPojo._builder()
         .string(
             """
@@ -77,6 +81,7 @@ abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3LatticeSampleR
               $$ optionalLongInput: %s $$
               $$ mandatoryLongInput: %s $$
               $$ optionalByteString: %s $$
+              $$ defaultByteString: %s $$
               """
                 .formatted(
                     optionalInput,
@@ -85,8 +90,8 @@ abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3LatticeSampleR
                     inputWithDefaultValue,
                     optionalLongInput,
                     mandatoryLongInput,
-                    optionalByteString.map(
-                        bytes -> new String(bytes.toByteArray(), StandardCharsets.UTF_8))))
+                    optionalByteString.map(bytes -> bytes.toString(UTF_8)),
+                    defaultByteString.toString(UTF_8)))
         .mandatoryInt(1)
         ._build();
   }

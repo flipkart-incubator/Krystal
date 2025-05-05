@@ -9,11 +9,11 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.getPro
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProto3Applicable;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.validateProtobufCompatibility;
 
-import com.flipkart.krystal.data.IfAbsent;
-import com.flipkart.krystal.data.IfAbsent.IfAbsentThen;
+import com.flipkart.krystal.model.IfAbsent;
+import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.serial.SerialId;
+import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.DefaultFacetModel;
-import com.flipkart.krystal.vajram.codegen.common.models.Utils;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramValidationException;
 import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
@@ -38,7 +38,7 @@ import lombok.extern.slf4j.Slf4j;
 class VajramModelsProto3SchemaGen implements CodeGenerator {
 
   private final VajramCodeGenContext creationContext;
-  private final Utils util;
+  private final CodeGenUtility util;
 
   public VajramModelsProto3SchemaGen(VajramCodeGenContext creationContext) {
     this.creationContext = creationContext;
@@ -54,7 +54,7 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
     generateProtobufSchema(creationContext.vajramInfo());
   }
 
-  private static boolean isApplicable(VajramCodeGenContext creationContext, Utils util) {
+  private static boolean isApplicable(VajramCodeGenContext creationContext, CodeGenUtility util) {
     if (!MODELS.equals(creationContext.codegenPhase())) {
       util.note("Skipping protobuf codegen since current phase is not MODELS");
       return false;
@@ -200,8 +200,8 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
           // map fields
           util.error(
               String.format(
-                  "Input '%s' in Vajram '%s' is a %s field, and has @IfNoValue(then=%s) which is not supported in protobuf3. "
-                      + "Use a different IfNoValue strategy or remove @IfNoValue annotation.",
+                  "Input '%s' in Vajram '%s' is a %s field, and has @IfAbsent(%s) which is not supported in protobuf3. "
+                      + "Use a different IfAbsent strategy or remove @IfAbsent annotation.",
                   facet.name(), vajramId, isRepeated ? "repeated" : "map", ifAbsentThen),
               facet.facetField());
         } else if (ifAbsentThen.usePlatformDefault()) {

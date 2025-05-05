@@ -1,16 +1,20 @@
 package com.flipkart.krystal.model;
 
-import static com.flipkart.krystal.model.ModelRoot.ModelType.NONE;
-import static java.lang.annotation.RetentionPolicy.SOURCE;
+import static java.lang.annotation.ElementType.TYPE;
+import static java.lang.annotation.RetentionPolicy.CLASS;
 
-import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-@Retention(SOURCE)
-@Target(ElementType.TYPE)
+@Retention(CLASS)
+@Target(TYPE)
 public @interface ModelRoot {
-  ModelType type() default NONE;
+  ModelType type();
+
+  String suffixSeparator() default "_";
+
+  /** If true, then the generated Builder Interface will extend the ModelRoot interface. */
+  boolean builderExtendsModelRoot() default false;
 
   enum ModelType {
     /** This model is a neither a request model nor a response model */

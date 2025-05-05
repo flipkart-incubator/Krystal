@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen.types;
 
-import com.flipkart.krystal.vajram.codegen.common.models.Utils;
+import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
 import javax.lang.model.element.Element;
 
-public record RepeatedFieldType(ProtoFieldType elementType, Utils util, Element element)
+public record RepeatedFieldType(ProtoFieldType elementType, CodeGenUtility util, Element element)
     implements ProtoFieldType {
 
   public RepeatedFieldType {

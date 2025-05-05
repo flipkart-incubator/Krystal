@@ -30,7 +30,8 @@ public record ParsedVajramData(
     String packageName,
     VajramInfo vajramInfo) {
 
-  public static Optional<ParsedVajramData> fromVajramInfo(VajramInfo vajramInfo, Utils util) {
+  public static Optional<ParsedVajramData> fromVajramInfo(
+      VajramInfo vajramInfo, CodeGenUtility util) {
     validate(vajramInfo, util);
     String packageName = vajramInfo.lite().packageName();
     ImmutableList<ExecutableElement> allMethods = getAllMethods(vajramInfo.vajramClass());
@@ -52,7 +53,7 @@ public record ParsedVajramData(
     return Optional.of(new ParsedVajramData(resolverMethods, outputLogic, packageName, vajramInfo));
   }
 
-  private static void validate(VajramInfo vajramInfo, Utils util) {
+  private static void validate(VajramInfo vajramInfo, CodeGenUtility util) {
     if (vajramInfo.lite().isTrait()) {
       TypeElement typeElement = vajramInfo.lite().vajramOrReqClass();
       CallGraphDelegationMode callGraphDelegationMode =
@@ -64,7 +65,7 @@ public record ParsedVajramData(
   }
 
   public static void validateNoDuplicateResolvers(
-      List<ExecutableElement> methods, VajramInfo vajramInfo, Utils util) {
+      List<ExecutableElement> methods, VajramInfo vajramInfo, CodeGenUtility util) {
     Map<String, Map<String, Boolean>> lookUpMap = new HashMap<>();
     for (ExecutableElement method : methods) {
       Resolve resolve = method.getAnnotation(Resolve.class);
@@ -98,7 +99,7 @@ public record ParsedVajramData(
   }
 
   public static ExecutableElement getOutputLogicAndResolverMethods(
-      VajramInfo vajramInfo, List<ExecutableElement> resolveMethods, Utils util) {
+      VajramInfo vajramInfo, List<ExecutableElement> resolveMethods, CodeGenUtility util) {
     ExecutableElement outputLogic = null;
     TypeElement vajramClass = vajramInfo.vajramClass();
     List<ExecutableElement> methods = getStaticMethods(vajramClass);

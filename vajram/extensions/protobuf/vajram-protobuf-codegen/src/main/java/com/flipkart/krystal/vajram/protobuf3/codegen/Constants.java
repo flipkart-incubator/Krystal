@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 public final class Constants {
 
+  public static final String PROTO_SUFFIX = "Proto";
   static final String VAJRAM_REQ_PROTO_FILE_SUFFIX = "_Req.models.proto";
   static final String VAJRAM_SVC_PROTO_FILE_SUFFIX = ".service.proto";
 

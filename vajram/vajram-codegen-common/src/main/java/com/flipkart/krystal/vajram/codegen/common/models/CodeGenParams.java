@@ -8,7 +8,7 @@ package com.flipkart.krystal.vajram.codegen.common.models;
  *     vajram model hierarchy. For example, Vajram_Req and Vajram_Fac.
  * @param isBuilder {@code true} when the class being generated is a builder.
  * @param isBuilderRoot {@code true} when the interface being generated is the root type for that
- *     vajram model builder hierarchy. For example, Vajram_ImmutReq.Builder and
+ *     vajram model builder hierarchy. For example, Vajram_ReqImmut.Builder and
  *     Vajram_ImmutFacet.Builder
  * @param wrapsRequest {@code true} when the class being generated wraps the request class (Ex:
  *     Facets class)

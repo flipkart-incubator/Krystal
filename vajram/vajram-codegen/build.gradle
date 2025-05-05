@@ -22,7 +22,7 @@ gradlePlugin {
     plugins {
         simplePlugin {
             id = 'com.flipkart.krystal'
-            implementationClass = 'com.flipkart.krystal.vajram.plugin.VajramPlugin'
+            implementationClass = 'com.flipkart.krystal.vajram.codegen.plugin.VajramPlugin'
         }
     }
 }

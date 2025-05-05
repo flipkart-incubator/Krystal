@@ -1,6 +1,5 @@
 package com.flipkart.krystal.vajram.facets.specs;
 
-import static com.flipkart.krystal.facets.FacetUtils.computePlatformDefaultValue;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 
 import com.flipkart.krystal.core.VajramID;
@@ -15,7 +14,6 @@ import java.util.function.Function;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputMirrorSpec<T, CV extends Request> implements InputMirror {
@@ -30,7 +28,6 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
   private final Function<Request, @Nullable T> getFromRequest;
   private final BiConsumer<ImmutableRequest.Builder, @Nullable T> setToRequest;
   private final Callable<ElementTags> tagsParser;
-  private @MonotonicNonNull T platformDefaultValue;
 
   public InputMirrorSpec(
       int id,
@@ -80,13 +77,5 @@ public final class InputMirrorSpec<T, CV extends Request> implements InputMirror
       }
     }
     return tags;
-  }
-
-  @SuppressWarnings("unchecked")
-  public @NonNull T getPlatformDefaultValue() throws UnsupportedOperationException {
-    if (platformDefaultValue == null) {
-      platformDefaultValue = computePlatformDefaultValue(this, type);
-    }
-    return platformDefaultValue;
   }
 }

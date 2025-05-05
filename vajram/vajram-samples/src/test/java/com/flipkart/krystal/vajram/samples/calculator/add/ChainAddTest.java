@@ -118,7 +118,7 @@ class ChainAddTest {
         graph.createExecutor(configBuilder().build())) {
       future =
           krystexVajramExecutor.execute(
-              ChainAdd_ImmutReqPojo._builder().numbers(List.of())._build(),
+              ChainAdd_ReqImmutPojo._builder().numbers(List.of())._build(),
               KryonExecutionConfig.builder()
                   .disabledDependentChains(getDisabledDependentChains(graph))
                   .build());
@@ -269,7 +269,7 @@ class ChainAddTest {
   private CompletableFuture<Integer> executeVajram(
       KrystexVajramExecutor krystexVajramExecutor, int multiplier) {
     return krystexVajramExecutor.execute(
-        ChainAdd_ImmutReqPojo._builder()
+        ChainAdd_ReqImmutPojo._builder()
             .numbers(
                 new ArrayList<>(
                     Stream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)

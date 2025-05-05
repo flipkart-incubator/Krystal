@@ -38,6 +38,8 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.L
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.Resolver;
 import com.flipkart.krystal.krystex.resolution.ResolverLogic;
+import com.flipkart.krystal.model.IfAbsent;
+import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -404,7 +406,15 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       VajramID vajramID, FacetValues facetValues, ImmutableCollection<FacetSpec> requiredInputs) {
     @SuppressWarnings("StreamToIterable")
     Iterable<FacetSpec> mandatoryFacets =
-        requiredInputs.stream().filter(FacetSpec::isMandatory)::iterator;
+        requiredInputs.stream()
+                .filter(
+                    facetSpec ->
+                        facetSpec
+                            .tags()
+                            .getAnnotationByType(IfAbsent.class)
+                            .map(ifAbsent -> IfAbsentThen.FAIL.equals(ifAbsent.value()))
+                            .orElse(false))
+            ::iterator;
     Map<String, Throwable> missingMandatoryValues = new HashMap<>();
     for (Facet mandatoryFacet : mandatoryFacets) {
       FacetValue facetValue = mandatoryFacet.getFacetValue(facetValues);

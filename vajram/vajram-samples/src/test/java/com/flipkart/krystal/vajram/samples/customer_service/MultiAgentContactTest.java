@@ -93,8 +93,8 @@ class MultiAgentContactTest {
   @Test
   void dynamicDispatch_multipleDispatchTargets_success() {
     // Create request for L1 agent and Call communication
-    MultiAgentContact_ImmutReq request =
-        MultiAgentContact_ImmutReqPojo._builder()
+    MultiAgentContact_ReqImmut request =
+        MultiAgentContact_ReqImmutPojo._builder()
             .name("Bahubali")
             .communication("Jai Mahishmati")
             ._build();

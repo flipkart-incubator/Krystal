@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
-import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
+import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
 import com.google.common.collect.ImmutableSet;
 import java.util.EnumSet;
 import javax.lang.model.element.VariableElement;
@@ -15,7 +15,7 @@ public record DependencyModel(
     @NonNull String name,
     @NonNull VajramInfoLite vajramInfo,
     @NonNull VajramInfoLite depVajramInfo,
-    @NonNull DataType<?> dataType,
+    @NonNull CodeGenType dataType,
     @NonNull String depReqClassQualifiedName,
     boolean canFanout,
     @Nullable String documentation,

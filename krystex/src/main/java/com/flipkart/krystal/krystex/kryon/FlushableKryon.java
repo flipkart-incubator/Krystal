@@ -214,10 +214,10 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
         .distinct()
         .filter(depName -> !executedDeps.contains(depName))
         .filter(
-            depName ->
+            dep ->
                 kryonDefinition
                     .resolverDefinitionsByDependencies()
-                    .getOrDefault(depName, ImmutableSet.of())
+                    .getOrDefault(dep, ImmutableSet.of())
                     .stream()
                     .map(resolver -> resolver.definition().sources())
                     .flatMap(Collection::stream)

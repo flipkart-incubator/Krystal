@@ -1,10 +1,10 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen.types;
 
-import com.flipkart.krystal.vajram.codegen.common.models.Utils;
+import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
 import javax.lang.model.element.Element;
 
 public record MapFieldType(
-    ProtoFieldType keyType, ProtoFieldType valueType, Utils util, Element element)
+    ProtoFieldType keyType, ProtoFieldType valueType, CodeGenUtility util, Element element)
     implements ProtoFieldType {
 
   public MapFieldType {

@@ -499,6 +499,8 @@
           <option value="Convert2MethodRef" />
           <option value="MismatchedQueryAndUpdateOfCollection" />
           <option value="ExtendsObject" />
+          <option value="SpellCheckingInspection" />
+          <option value="ImmutableEnumChecker" />
         </list>
       </option>
     </inspection_tool>

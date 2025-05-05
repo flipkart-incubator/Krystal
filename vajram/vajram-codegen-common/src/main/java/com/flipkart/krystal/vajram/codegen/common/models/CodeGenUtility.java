@@ -17,19 +17,21 @@ import static javax.lang.model.element.Modifier.ABSTRACT;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FanoutDepResponses;
-import com.flipkart.krystal.data.IfAbsent;
-import com.flipkart.krystal.data.IfAbsent.Creator;
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.facets.FacetType;
+import com.flipkart.krystal.model.IfAbsent;
+import com.flipkart.krystal.model.IfAbsent.Creator;
+import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramDefRoot;
 import com.flipkart.krystal.vajram.annos.Generated;
+import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.vajram.codegen.common.datatypes.DataTypeRegistry;
 import com.flipkart.krystal.vajram.codegen.common.models.DefaultFacetModel.DefaultFacetModelBuilder;
 import com.flipkart.krystal.vajram.codegen.common.models.DependencyModel.DependencyModelBuilder;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetJavaType.Actual;
@@ -45,6 +47,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 import com.google.common.primitives.Primitives;
@@ -54,7 +57,6 @@ import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-import com.squareup.javapoet.TypeSpec.Builder;
 import jakarta.inject.Inject;
 import java.io.PrintWriter;
 import java.lang.reflect.ParameterizedType;
@@ -66,6 +68,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
@@ -101,12 +104,11 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SuppressWarnings("ClassWithTooManyMethods")
 @Slf4j
-public class Utils {
+public class CodeGenUtility {
 
   private static final boolean DEBUG = false;
 
@@ -126,18 +128,20 @@ public class Utils {
                   + " is not an allowed facet type as this can cause undesired behaviour.")
           .build();
   public static final Splitter QUALIFIED_FACET_SPLITTER =
-      Splitter.onPattern(Constants.QUALIFIED_FACET_SEPERATOR);
+      Splitter.onPattern(Constants.QUALIFIED_FACET_SEPARATOR);
 
   @Getter private final ProcessingEnvironment processingEnv;
   private final Types typeUtils;
   private final Elements elementUtils;
   private final Class<?> generator;
+  @Getter private final DataTypeRegistry dataTypeRegistry;
 
-  public Utils(ProcessingEnvironment processingEnv, Class<?> generator) {
+  public CodeGenUtility(ProcessingEnvironment processingEnv, Class<?> generator) {
     this.processingEnv = processingEnv;
     this.typeUtils = processingEnv.getTypeUtils();
     this.elementUtils = processingEnv.getElementUtils();
     this.generator = generator;
+    this.dataTypeRegistry = new DataTypeRegistry();
   }
 
   public static ClassName toClassName(String depReqClassName) {
@@ -156,13 +160,61 @@ public class Utils {
     return stream(annotations).map(aClass -> AnnotationSpec.builder(aClass).build()).toList();
   }
 
-  public static @NonNull IfAbsent getIfNoValue(ExecutableElement method) {
-    // Check if the method has the @IfNoValue annotation
-    IfAbsent ifAbsent = method.getAnnotation(IfAbsent.class);
+  public IfAbsent getIfAbsent(Element element) {
+    // Check if the element has the @IfAbsent annotation
+    IfAbsent ifAbsent = element.getAnnotation(IfAbsent.class);
     if (ifAbsent == null) {
-      ifAbsent = Creator.createDefault();
+      ifAbsent = Creator.create(IfAbsentThen.WILL_NEVER_FAIL, "");
     }
     return ifAbsent;
+  }
+
+  /**
+   * Extracts and validates model methods from the model root interface.
+   *
+   * @param modelRootType The type element representing the model root
+   * @return List of validated executable elements representing model methods
+   */
+  public List<ExecutableElement> extractAndValidateModelMethods(TypeElement modelRootType) {
+    List<ExecutableElement> modelMethods = new ArrayList<>();
+
+    for (ExecutableElement executableElem :
+        ElementFilter.methodsIn(processingEnv.getElementUtils().getAllMembers(modelRootType))) {
+      if (ElementKind.METHOD.equals(executableElem.getKind())
+          && executableElem.getModifiers().contains(ABSTRACT)) {
+        if (executableElem.getSimpleName().toString().startsWith("_")) {
+          // Methods whose names start with an '_' are considered "meta" methods which are not
+          // used to access actual model data. So they are ignored.
+          continue;
+        }
+        validateGetterMethod(executableElem);
+
+        modelMethods.add(executableElem);
+      }
+    }
+
+    return modelMethods;
+  }
+
+  private void validateGetterMethod(ExecutableElement method) {
+    // Validate method has zero parameters
+    if (!method.getParameters().isEmpty()) {
+      error("Model root methods must have zero parameters: " + method.getSimpleName(), method);
+    }
+
+    TypeMirror returnType = method.getReturnType();
+
+    // Validate method has a return type (not void)
+    if (returnType.getKind() == TypeKind.VOID) {
+      error(
+          "Model root methods must have a return type (not void): " + method.getSimpleName(),
+          method);
+    }
+
+    // Validate method return type is not an array
+    if (returnType.getKind() == TypeKind.ARRAY) {
+      error("Model root methods must not return arrays. Use List instead.", method);
+    }
   }
 
   public boolean isNullable(TypeMirror typeMirror) {
@@ -181,7 +233,7 @@ public class Utils {
 
   public TypeMirror getOptionalInnerType(TypeMirror optionalType) {
     if (!isOptional(optionalType)) {
-      throw new IllegalArgumentException("Type %s is not Optional".formatted(optionalType));
+      return optionalType;
     }
 
     if (optionalType instanceof DeclaredType declaredType) {
@@ -242,10 +294,10 @@ public class Utils {
     } else {
       boolean localDevAccessible = codeGenParams.isDevAccessible() && codeGenParams.isLocal();
       if (localDevAccessible) {
-        IfAbsent ifAbsent = facet.facetField().getAnnotation(IfAbsent.class);
+        IfAbsent ifAbsent = getIfAbsent(facet.facetField());
         // Developers should not deal with boxed types. So we need to return the actual type or
         // an Optional wrapper as needed
-        if (ifAbsent != null && ifAbsent.value().isMandatoryOnServer()) {
+        if (ifAbsent.value().isMandatoryOnServer()) {
           return new Actual(this);
         }
         // This means the facet is either conditionally or always optional
@@ -402,10 +454,10 @@ public class Utils {
             () -> getNextAvailableFacetId(takenFacetIds, nextFacetId)));
     facetBuilder.name(facetName);
     facetBuilder.documentation(elementUtils.getDocComment(facetField));
-    DataType<Object> dataType =
+    CodeGenType dataType =
         facetField
             .asType()
-            .accept(new DeclaredTypeVisitor<>(this, facetField, DISALLOWED_FACET_TYPES), null);
+            .accept(new DeclaredTypeVisitor(this, facetField, DISALLOWED_FACET_TYPES), null);
     facetBuilder.dataType(dataType);
     EnumSet<FacetType> facetTypes = EnumSet.noneOf(FacetType.class);
     if (isInput) {
@@ -483,9 +535,8 @@ public class Utils {
               .formatted(depField.getSimpleName(), vajramId, vajramReqType.get(), vajramType.get()),
           depField);
     } else {
-      DataType<?> declaredDataType =
-          new DeclaredTypeVisitor<@NonNull Object>(this, depField, DISALLOWED_FACET_TYPES)
-              .visit(depField.asType());
+      CodeGenType declaredDataType =
+          new DeclaredTypeVisitor(this, depField, DISALLOWED_FACET_TYPES).visit(depField.asType());
       TypeElement vajramOrReqElement =
           checkNotNull((TypeElement) processingEnv.getTypeUtils().asElement(vajramOrReqType));
       VajramInfoLite depVajramInfoLite = computeVajramInfoLite(vajramOrReqElement);
@@ -516,7 +567,7 @@ public class Utils {
     String vajramClassSimpleName = vajramOrReqClass.getSimpleName().toString();
     ImmutableBiMap<Integer, String> facetIdNameMappings = ImmutableBiMap.of();
     VajramID vajramId;
-    DataType<Object> responseType;
+    CodeGenType responseType;
     String packageName = elementUtils.getPackageOf(vajramOrReqClass).getQualifiedName().toString();
     if (isRawAssignable(vajramOrReqClass.asType(), Request.class)) {
       facetIdNameMappings =
@@ -530,7 +581,7 @@ public class Utils {
               .map(element -> element.getAnnotation(FacetIdNameMapping.class))
               .filter(Objects::nonNull)
               .collect(toImmutableBiMap(FacetIdNameMapping::id, FacetIdNameMapping::name));
-      TypeMirror responseTypeMirror = getResponseType(vajramOrReqClass, Request.class);
+      TypeMirror responseTypeMirror = getVajramResponseType(vajramOrReqClass, Request.class);
       TypeElement responseTypeElement =
           checkNotNull((TypeElement) typeUtils.asElement(responseTypeMirror));
       vajramId =
@@ -538,8 +589,7 @@ public class Utils {
               vajramClassSimpleName.substring(
                   0, vajramClassSimpleName.length() - Constants.REQUEST_SUFFIX.length()));
       responseType =
-          new DeclaredTypeVisitor<@NonNull Object>(
-                  this, responseTypeElement, DISALLOWED_FACET_TYPES)
+          new DeclaredTypeVisitor(this, responseTypeElement, DISALLOWED_FACET_TYPES)
               .visit(responseTypeMirror);
     } else if (isRawAssignable(vajramOrReqClass.asType(), VajramDefRoot.class)) {
       Vajram vajram = vajramOrReqClass.getAnnotation(Vajram.class);
@@ -549,7 +599,7 @@ public class Utils {
             "Vajram class %s does not have either @VajramDef or @VajramTrait annotation. This should not happen"
                 .formatted(vajramOrReqClass));
       }
-      TypeMirror responseTypeMirror = getResponseType(vajramOrReqClass, VajramDefRoot.class);
+      TypeMirror responseTypeMirror = getVajramResponseType(vajramOrReqClass, VajramDefRoot.class);
       TypeElement responseTypeElement =
           checkNotNull((TypeElement) typeUtils.asElement(responseTypeMirror));
       TypeElement requestType =
@@ -570,8 +620,7 @@ public class Utils {
       }
       vajramId = vajramID(vajramClassSimpleName);
       responseType =
-          new DeclaredTypeVisitor<@NonNull Object>(
-                  this, responseTypeElement, DISALLOWED_FACET_TYPES)
+          new DeclaredTypeVisitor(this, responseTypeElement, DISALLOWED_FACET_TYPES)
               .visit(responseTypeMirror);
     } else {
       throw new IllegalArgumentException(
@@ -612,7 +661,7 @@ public class Utils {
     }
   }
 
-  Optional<TypeMirror> getTypeFromAnnotationMember(Supplier<Class<?>> supplier) {
+  public Optional<TypeMirror> getTypeFromAnnotationMember(Supplier<Class<?>> supplier) {
     try {
       var ignored = supplier.get();
       throw new AssertionError("Expected supplier to throw error");
@@ -630,13 +679,30 @@ public class Utils {
     }
   }
 
-  private TypeMirror getResponseType(TypeElement vajramDef, Class<?> targetClass) {
+  private TypeMirror getVajramResponseType(TypeElement vajramOrReqType, Class<?> targetClass) {
     int typeParamIndex = 0;
-    List<TypeMirror> currentTypes = List.of(vajramDef.asType());
-    note("VajramDef: %s".formatted(vajramDef));
+    List<? extends TypeMirror> typeParameters =
+        getTypeParamTypes(
+            vajramOrReqType,
+            requireNonNull(
+                elementUtils.getTypeElement(requireNonNull(targetClass.getCanonicalName()))));
+    if (typeParameters.size() > typeParamIndex) {
+      return typeParameters.get(typeParamIndex);
+    } else {
+      throw errorAndThrow(
+          "Incorrect number of parameter types on Vajram interface. Expected 1, Found %s. Unable to infer response type for Vajram %s"
+              .formatted(typeParameters, vajramOrReqType.getQualifiedName()),
+          vajramOrReqType);
+    }
+  }
+
+  public ImmutableList<TypeMirror> getTypeParamTypes(
+      TypeElement childTypeElement, TypeElement targetParentClass) {
+    List<TypeMirror> currentTypes = List.of(childTypeElement.asType());
+    note("VajramDef: %s".formatted(childTypeElement));
 
     Types typeUtils = processingEnv.getTypeUtils();
-    DeclaredType vajramInterface = null;
+    DeclaredType targetType = null;
     do {
       List<TypeMirror> newSuperTypes = new ArrayList<>();
       for (TypeMirror currentType : currentTypes) {
@@ -651,33 +717,29 @@ public class Utils {
           Element element = typeUtils.asElement(superType);
           if (element instanceof TypeElement typeElement) {
             note("Element qualified name: %s".formatted(typeElement.getQualifiedName()));
-            if (typeElement.getQualifiedName().contentEquals(targetClass.getName())) {
-              vajramInterface = superType;
+            if (typeElement
+                .getQualifiedName()
+                .contentEquals(targetParentClass.getQualifiedName())) {
+              targetType = superType;
               break;
             }
           }
         }
         note("CurrentElement: %s".formatted(currentType));
       }
-      if (vajramInterface == null) {
+      if (targetType == null) {
         currentTypes = newSuperTypes;
       }
-    } while (!currentTypes.isEmpty() && vajramInterface == null);
-    if (vajramInterface != null) {
-      List<? extends TypeMirror> typeParameters = vajramInterface.getTypeArguments();
-      if (typeParameters.size() > typeParamIndex) {
-        return typeParameters.get(typeParamIndex);
-      } else {
-        error(
-            "Incorrect number of parameter types on Vajram interface. Expected 1, Found %s"
-                .formatted(typeParameters),
-            vajramDef);
-      }
+    } while (!currentTypes.isEmpty() && targetType == null);
+    if (targetType != null) {
+      return ImmutableList.copyOf(getTypeMirrors(targetType));
     }
-    error(
-        "Unable to infer response type for Vajram %s".formatted(vajramDef.getQualifiedName()),
-        vajramDef);
-    throw new RuntimeException();
+    return ImmutableList.of();
+  }
+
+  private static List<? extends TypeMirror> getTypeMirrors(DeclaredType targetType) {
+    List<? extends TypeMirror> typeParameters = targetType.getTypeArguments();
+    return typeParameters;
   }
 
   public void note(CharSequence message) {
@@ -688,9 +750,9 @@ public class Utils {
     }
   }
 
-  public VajramValidationException errorAndThrow(String message, @Nullable Element element) {
+  public CodeValidationException errorAndThrow(String message, @Nullable Element element) {
     error(message, element);
-    return new VajramValidationException(message);
+    return new CodeValidationException(message);
   }
 
   public void error(String message, @Nullable Element element) {
@@ -722,16 +784,12 @@ public class Utils {
     return vajramName + Constants.FACETS_CLASS_SUFFIX;
   }
 
-  public static String getImmutFacetsClassname(String vajramName) {
+  public static String getImmutFacetsClassName(String vajramName) {
     return vajramName + IMMUT_FACETS_CLASS_SUFFIX;
   }
 
-  public TypeName toTypeName(DataType<?> dataType) {
-    return TypeName.get(toTypeMirror(dataType));
-  }
-
-  public TypeMirror toTypeMirror(DataType<?> dataType) {
-    return dataType.javaModelType(processingEnv);
+  public TypeName toTypeName(CodeGenType dataType) {
+    return TypeName.get(dataType.javaModelType(processingEnv));
   }
 
   public static TypeName toTypeName(Type typeArg) {
@@ -740,7 +798,7 @@ public class Utils {
       final Type[] typeArgs = parameterizedType.getActualTypeArguments();
       return ParameterizedTypeName.get(
           (ClassName) toTypeName(rawType),
-          stream(typeArgs).map(Utils::toTypeName).toArray(TypeName[]::new));
+          stream(typeArgs).map(CodeGenUtility::toTypeName).toArray(TypeName[]::new));
     } else {
       if (typeArg instanceof Class<?>) {
         return ClassName.get(Primitives.wrap((Class<?>) typeArg));
@@ -795,21 +853,22 @@ public class Utils {
    * Creates a class builder with the given class name. If the className is a blank string, then the
    * builder represents an anonymous class.
    *
-   * @param className fully qualifield class name
+   * @param className fully qualified class name
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
-  public Builder classBuilder(String className) {
-    Builder classBuilder;
+  public TypeSpec.Builder classBuilder(String className) {
+    TypeSpec.Builder classBuilder;
     if (className.isBlank()) {
       classBuilder = TypeSpec.anonymousClassBuilder("");
     } else {
       classBuilder = TypeSpec.classBuilder(className);
     }
-    return addDefaultAnnotations(classBuilder);
+    addDefaultAnnotations(classBuilder);
+    return classBuilder;
   }
 
-  private Builder addDefaultAnnotations(Builder classBuilder) {
+  private void addDefaultAnnotations(TypeSpec.Builder classBuilder) {
     classBuilder.addAnnotation(
         AnnotationSpec.builder(SuppressWarnings.class)
             .addMember(
@@ -820,10 +879,9 @@ public class Utils {
                     .collect(joining(",", "{", "}")))
             .build());
     addGeneratedAnnotations(classBuilder);
-    return classBuilder;
   }
 
-  public void addGeneratedAnnotations(Builder classBuilder) {
+  public void addGeneratedAnnotations(TypeSpec.Builder classBuilder) {
     classBuilder
         .addAnnotation(
             AnnotationSpec.builder(Generated.class)
@@ -840,18 +898,19 @@ public class Utils {
    * Creates a class builder with the given class name. If the interfaceName is a blank string, then
    * the builder represents an anonymous class.
    *
-   * @param interfaceName fully qualifield class name
+   * @param interfaceName fully qualified class name
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
-  public Builder interfaceBuilder(String interfaceName) {
-    Builder interfaceBuilder;
+  public TypeSpec.Builder interfaceBuilder(String interfaceName) {
+    TypeSpec.Builder interfaceBuilder;
     if (interfaceName.isBlank()) {
-      throw new RuntimeException("interface name connot be blank");
+      throw new RuntimeException("interface name cannot be blank");
     } else {
       interfaceBuilder = TypeSpec.interfaceBuilder(interfaceName);
     }
-    return addDefaultAnnotations(interfaceBuilder);
+    addDefaultAnnotations(interfaceBuilder);
+    return interfaceBuilder;
   }
 
   public TypeAndName box(TypeAndName javaType) {
@@ -902,17 +961,17 @@ public class Utils {
         ClassName.get(FanoutDepResponses.class), requestType.typeName(), box(facetType).typeName());
   }
 
-  TypeAndName getTypeName(DataType<?> dataType, List<AnnotationSpec> typeAnnotations) {
+  TypeAndName getTypeName(CodeGenType dataType, List<AnnotationSpec> typeAnnotations) {
     TypeMirror javaModelType = dataType.javaModelType(processingEnv);
     return new TypeAndName(
         TypeName.get(javaModelType).annotated(typeAnnotations), javaModelType, typeAnnotations);
   }
 
-  public TypeAndName getTypeName(DataType<?> dataType) {
+  public TypeAndName getTypeName(CodeGenType dataType) {
     return getTypeName(dataType, List.of());
   }
 
-  public DataType<?> getDataType(FacetGenModel abstractInput) {
+  public CodeGenType getDataType(FacetGenModel abstractInput) {
     if (abstractInput instanceof DefaultFacetModel facetDef) {
       return facetDef.dataType();
     } else if (abstractInput instanceof DependencyModel dep) {
@@ -924,7 +983,7 @@ public class Utils {
   }
 
   @SuppressWarnings("method.invocation")
-  public ExecutableElement getMethodToOverride(Class<?> clazz, String methodName, int paramCount) {
+  public ExecutableElement getMethod(Class<?> clazz, String methodName, int paramCount) {
     return requireNonNull(
             processingEnv()
                 .getElementUtils()
@@ -971,8 +1030,7 @@ public class Utils {
     return ifAbsent != null && ifAbsent.value().isMandatoryOnServer();
   }
 
-  public String getJavaTypeCreationCode(
-      JavaType<?> javaType, List<TypeName> collectClassNames, VariableElement facetField) {
+  public String getJavaTypeCreationCode(CodeGenType javaType, List<TypeName> collectClassNames) {
     TypeMirror typeMirror = javaType.javaModelType(processingEnv);
     collectClassNames.add(ClassName.get(JavaType.class));
     if (javaType.typeParameters().isEmpty()) {
@@ -982,23 +1040,16 @@ public class Utils {
       collectClassNames.add(TypeName.get(processingEnv.getTypeUtils().erasure(typeMirror)));
       return "$T.create($T.class, "
           + javaType.typeParameters().stream()
-              .map(
-                  dataType -> {
-                    if (!(dataType instanceof JavaType<?> typeParamType)) {
-                      error("Unrecognised data type %s".formatted(dataType), facetField);
-                      return "";
-                    } else {
-                      return getJavaTypeCreationCode(typeParamType, collectClassNames, facetField);
-                    }
-                  })
+              .map(dataType -> getJavaTypeCreationCode(dataType, collectClassNames))
               .collect(Collectors.joining(","))
           + ")";
     }
   }
 
   /**
+   * Returns the source output path
+   *
    * @param codeGenElement the element for which code gen is being done
-   * @return the source output path
    */
   public Path detectSourceOutputPath(@Nullable Element codeGenElement) {
     Path sourcePath;
@@ -1019,5 +1070,17 @@ public class Utils {
           codeGenElement);
     }
     return requireNonNull(sourcePath.getParent());
+  }
+
+  @SuppressWarnings("unchecked")
+  public <T> T getAnnotationElement(
+      AnnotationMirror parentModelRootAnno, String annoElement, Class<T> type) {
+    return type.cast(
+        elementUtils.getElementValuesWithDefaults(parentModelRootAnno).entrySet().stream()
+            .filter(e -> e.getKey().getSimpleName().contentEquals(annoElement))
+            .findAny()
+            .map(Entry::getValue)
+            .orElseThrow(AssertionError::new)
+            .getValue());
   }
 }

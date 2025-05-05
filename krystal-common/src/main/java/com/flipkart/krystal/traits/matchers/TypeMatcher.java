@@ -12,7 +12,7 @@ final class TypeMatcher<T> implements InputValueMatcher<T> {
   }
 
   @Override
-  public boolean matches(@Nullable T inputValue) {
+  public boolean matches(@Nullable Object inputValue) {
     return type.isInstance(inputValue);
   }
 }
