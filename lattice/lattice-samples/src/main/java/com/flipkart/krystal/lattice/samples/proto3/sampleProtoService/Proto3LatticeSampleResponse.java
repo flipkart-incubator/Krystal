@@ -53,5 +53,5 @@ public interface Proto3LatticeSampleResponse extends Model {
 
   @SerialId(10)
   @IfAbsent(ASSUME_DEFAULT_VALUE)
-  @Nullable Map<String, String> notAllowed();
+  @Nullable Map<String, String> mapTypedField();
 }
