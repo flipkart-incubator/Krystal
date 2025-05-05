@@ -295,6 +295,6 @@ class Proto3LatticeSampleTest {
 
     // Verify the result
     Proto3LatticeSampleResponse output = result.get();
-    assertThat(output.string()).contains("optionalByteString: Optional[Hello, World!]");
+    assertThat(output.string()).contains("$$ optionalByteString: Optional[Hello, World!] $$");
   }
 }

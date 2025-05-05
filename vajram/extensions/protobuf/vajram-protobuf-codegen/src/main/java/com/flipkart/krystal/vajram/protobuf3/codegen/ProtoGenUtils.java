@@ -67,8 +67,6 @@ public class ProtoGenUtils {
     if (typeName.contains(".")) {
       typeName = typeName.substring(typeName.lastIndexOf('.') + 1);
     }
-
-    // Add the _Proto suffix
     return typeName;
   }
 
@@ -130,9 +128,13 @@ public class ProtoGenUtils {
           javaDir = sourceOutputLocation;
           break;
         }
+        Path parent = sourceOutputLocation.getParent();
+        if (parent == null) {
+          break;
+        }
         // Add directory name to the beginning of our list (we're going up)
         pathComponents.add(0, sourceOutputLocation.getFileName().toString());
-        sourceOutputLocation = requireNonNull(sourceOutputLocation.getParent());
+        sourceOutputLocation = parent;
       }
 
       if (javaDir == null) {
@@ -177,11 +179,11 @@ public class ProtoGenUtils {
   }
 
   static boolean isProtoTypeRepeated(CodeGenType dataType) {
-    return dataType.rawType().canonicalClassName().equals(List.class.getCanonicalName());
+    return dataType.canonicalClassName().equals(List.class.getCanonicalName());
   }
 
   static boolean isProtoTypeMap(CodeGenType dataType) {
-    return dataType.rawType().canonicalClassName().equals(Map.class.getCanonicalName());
+    return dataType.canonicalClassName().equals(Map.class.getCanonicalName());
   }
 
   /**
@@ -208,11 +210,13 @@ public class ProtoGenUtils {
       return new RepeatedFieldType(
           getProtobufType(typeParameters.get(0), util, element), util, element);
     } else if (isProtoTypeMap(dataType)) {
+      if (typeParameters.size() != 2) {
+        throw util.errorAndThrow("Raw map types are not supported by protobuf", element);
+      }
       // Handle Map types as map fields
-      ImmutableList<CodeGenType> typeParams = typeParameters;
       return new MapFieldType(
-          getProtobufType(typeParams.get(0), util, element),
-          getProtobufType(typeParams.get(1), util, element),
+          getProtobufType(typeParameters.get(0), util, element),
+          getProtobufType(typeParameters.get(1), util, element),
           util,
           element);
     } else if (JAVA_TO_PROTO_SCALAR_TYPES.containsKey(dataType)) {

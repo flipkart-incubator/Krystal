@@ -18,7 +18,7 @@ import lombok.Getter;
 public enum StandardJavaType implements CodeGenType {
   BOOLEAN(
       TypeKind.BOOLEAN,
-      CodeBlock.of("true"),
+      CodeBlock.of("false"),
       boolean.class.getCanonicalName(),
       Boolean.class.getCanonicalName()),
   INT(

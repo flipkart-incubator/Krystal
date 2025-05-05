@@ -65,7 +65,7 @@ public @interface IfAbsent {
      * #WILL_NEVER_FAIL}) or the facet is strictly mandatory meaning missing value will always fail
      * (depicted by using {@link #FAIL}).
      *
-     * <p>If IfNoValue annotation is missing, then this is considered the default.
+     * <p>If IfAbsent annotation is missing, then this is considered the default.
      */
     MAY_FAIL_CONDITIONALLY(false, false),
 

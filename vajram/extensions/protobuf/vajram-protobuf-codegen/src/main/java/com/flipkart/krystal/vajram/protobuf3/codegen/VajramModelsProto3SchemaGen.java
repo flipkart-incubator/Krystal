@@ -200,8 +200,8 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
           // map fields
           util.error(
               String.format(
-                  "Input '%s' in Vajram '%s' is a %s field, and has @IfNoValue(then=%s) which is not supported in protobuf3. "
-                      + "Use a different IfNoValue strategy or remove @IfNoValue annotation.",
+                  "Input '%s' in Vajram '%s' is a %s field, and has @IfAbsent(%s) which is not supported in protobuf3. "
+                      + "Use a different IfAbsent strategy or remove @IfAbsent annotation.",
                   facet.name(), vajramId, isRepeated ? "repeated" : "map", ifAbsentThen),
               facet.facetField());
         } else if (ifAbsentThen.usePlatformDefault()) {

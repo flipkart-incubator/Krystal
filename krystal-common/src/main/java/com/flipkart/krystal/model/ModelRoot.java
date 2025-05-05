@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
 public @interface ModelRoot {
   ModelType type();
 
-  String suffixSeperator() default "_";
+  String suffixSeparator() default "_";
 
   /** If true, then the generated Builder Interface will extend the ModelRoot interface. */
   boolean builderExtendsModelRoot() default false;

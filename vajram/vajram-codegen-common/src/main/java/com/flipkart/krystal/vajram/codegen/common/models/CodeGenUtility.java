@@ -83,6 +83,7 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
@@ -128,7 +129,7 @@ public class CodeGenUtility {
                   + " is not an allowed facet type as this can cause undesired behaviour.")
           .build();
   public static final Splitter QUALIFIED_FACET_SPLITTER =
-      Splitter.onPattern(Constants.QUALIFIED_FACET_SEPERATOR);
+      Splitter.onPattern(Constants.QUALIFIED_FACET_SEPARATOR);
 
   @Getter private final ProcessingEnvironment processingEnv;
   private final Types typeUtils;
@@ -161,7 +162,7 @@ public class CodeGenUtility {
   }
 
   public IfAbsent getIfAbsent(Element element) {
-    // Check if the element has the @IfNoValue annotation
+    // Check if the element has the @IfAbsent annotation
     IfAbsent ifAbsent = element.getAnnotation(IfAbsent.class);
     if (ifAbsent == null) {
       ifAbsent = Creator.create(IfAbsentThen.WILL_NEVER_FAIL, "");
@@ -178,18 +179,18 @@ public class CodeGenUtility {
   public List<ExecutableElement> extractAndValidateModelMethods(TypeElement modelRootType) {
     List<ExecutableElement> modelMethods = new ArrayList<>();
 
-    for (Element element : modelRootType.getEnclosedElements()) {
-      if (ElementKind.METHOD.equals(element.getKind())) {
-        ExecutableElement method = (ExecutableElement) element;
-
-        if (method.getSimpleName().toString().startsWith("_")) {
+    for (ExecutableElement executableElem :
+        ElementFilter.methodsIn(processingEnv.getElementUtils().getAllMembers(modelRootType))) {
+      if (ElementKind.METHOD.equals(executableElem.getKind())
+          && executableElem.getModifiers().contains(ABSTRACT)) {
+        if (executableElem.getSimpleName().toString().startsWith("_")) {
           // Methods whose names start with an '_' are considered "meta" methods which are not
           // used to access actual model data. So they are ignored.
           continue;
         }
-        validateGetterMethod(method);
+        validateGetterMethod(executableElem);
 
-        modelMethods.add(method);
+        modelMethods.add(executableElem);
       }
     }
 

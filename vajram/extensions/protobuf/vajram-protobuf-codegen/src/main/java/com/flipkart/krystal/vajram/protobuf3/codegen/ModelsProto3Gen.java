@@ -102,7 +102,7 @@ public class ModelsProto3Gen implements CodeGenerator {
     String packageName =
         util.processingEnv().getElementUtils().getPackageOf(modelRootType).toString();
     String protoClassName =
-        modelRootName + modelRoot.suffixSeperator() + IMMUT_SUFFIX + PROTO_SUFFIX;
+        modelRootName + modelRoot.suffixSeparator() + IMMUT_SUFFIX + PROTO_SUFFIX;
 
     // Generate the implementation class using JavaPoet
     TypeSpec typeSpec = generateImplementationTypeSpec(modelRootType, packageName, protoClassName);
@@ -120,7 +120,7 @@ public class ModelsProto3Gen implements CodeGenerator {
     ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
     ClassName immutableProtoType = ClassName.get(packageName, protoClassName);
     String modelRootName = modelRootType.getSimpleName().toString();
-    String immutInterfaceName = modelRootName + modelRoot.suffixSeperator() + IMMUT_SUFFIX;
+    String immutInterfaceName = modelRootName + modelRoot.suffixSeparator() + IMMUT_SUFFIX;
     String protoMsgClassName = modelRootName + MODELS_PROTO_MSG_SUFFIX;
 
     // Extract model methods
@@ -209,8 +209,20 @@ public class ModelsProto3Gen implements CodeGenerator {
         MethodSpec.methodBuilder("_newCopy")
             .addAnnotation(Override.class)
             .addModifiers(PUBLIC)
-            .returns(immutInterfaceClassName)
-            .addStatement("return new $L(_serializedPayload)", protoClassName)
+            .returns(immutableProtoType)
+            .addCode(
+                """
+                if(_serializedPayload != null) {
+                  return new $L(_serializedPayload);
+                } else if(_proto != null){
+                  return new $L(_proto);
+                } else {
+                  throw new $T("Both _proto and _serializedPayload are null");
+                }
+                """,
+                protoClassName,
+                protoClassName,
+                IllegalStateException.class)
             .build());
 
     // Add method to lazily deserialize the proto message
@@ -369,7 +381,8 @@ public class ModelsProto3Gen implements CodeGenerator {
       } else {
         getterBuilder
             .addCode(protoPresenceCheck)
-            .addCode("""
+            .addCode(
+                """
                 return null;
               }
               """);
@@ -571,7 +584,7 @@ public class ModelsProto3Gen implements CodeGenerator {
   }
 
   /**
-   * Checks if a field should be treated as mandatory. Fields with @IfNoValue(then=FAIL) are treated
+   * Checks if a field should be treated as mandatory. Fields with @IfAbsent(FAIL) are treated
    * as mandatory.
    */
   private boolean isMandatoryField(ExecutableElement method) {

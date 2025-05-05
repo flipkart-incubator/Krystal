@@ -25,7 +25,7 @@ import static com.flipkart.krystal.vajram.codegen.common.models.Constants.GET_IN
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.GET_SIMPLE_INPUT_RESOLVERS;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.INCOMING_FACETS;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.METHOD_EXECUTE;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.QUALIFIED_FACET_SEPERATOR;
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.QUALIFIED_FACET_SEPARATOR;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.RESOLVER_REQUEST;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.RESOLVER_REQUESTS;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.RESOLVER_RESULT;
@@ -238,9 +238,9 @@ public class VajramCodeGenerator implements CodeGenerator {
   }
 
   private void validate() {
-    // Validate that IfNoValue.Strategy values are only applied to facets with
+    // Validate that IfAbsent.Strategy values are only applied to facets with
     // compatible data types
-    validateIfNoValueStrategyApplicability();
+    validateIfAbsentStrategyApplicability();
 
     // Validate that none of the SerialId annotations on facets clash with the ReservedSerialIds
     // annotation on the Vajram
@@ -266,7 +266,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                 AnnotationSpec.builder(ModelRoot.class)
                     .addMember(
                         "type", CodeBlock.of("$T.$L", ModelType.class, ModelType.REQUEST.name()))
-                    .addMember("suffixSeperator", CodeBlock.of("$S", ""))
+                    .addMember("suffixSeparator", CodeBlock.of("$S", ""))
                     .addMember("builderExtendsModelRoot", "true")
                     .build())
             .addAnnotations(
@@ -1558,11 +1558,11 @@ public class VajramCodeGenerator implements CodeGenerator {
   }
 
   /**
-   * Validates that the Strategy values in the IfNoValue annotation are only applied to facets with
+   * Validates that the Strategy values in the IfAbsent annotation are only applied to facets with
    * data types that match the whitelisted types specified in the ApplicableToTypes annotation on
    * each enum value.
    */
-  private void validateIfNoValueStrategyApplicability() {
+  private void validateIfAbsentStrategyApplicability() {
 
     for (FacetGenModel facet : facetModelsByName.values()) {
       Element facetField = facet.facetField();
@@ -1983,7 +1983,7 @@ public class VajramCodeGenerator implements CodeGenerator {
       FieldSpec facetIdField =
           FieldSpec.builder(String.class, facet.name() + FACET_NAME_SUFFIX)
               .addModifiers(PUBLIC, STATIC, FINAL)
-              .initializer("$S", vajramName + QUALIFIED_FACET_SEPERATOR + facet.name())
+              .initializer("$S", vajramName + QUALIFIED_FACET_SEPARATOR + facet.name())
               .addJavadoc(facetDoc != null ? CodeBlock.of(facetDoc) : EMPTY_CODE_BLOCK)
               .build();
 

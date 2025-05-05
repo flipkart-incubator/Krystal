@@ -165,9 +165,9 @@ public final class JavaModelsGenerator implements CodeGenerator {
     String packageName =
         util.processingEnv().getElementUtils().getPackageOf(modelRootType).toString();
     String modelRootName = modelRootType.getSimpleName().toString();
-    String immutableModelName = modelRootName + modelRoot.suffixSeperator() + IMMUT_SUFFIX;
+    String immutableModelName = modelRootName + modelRoot.suffixSeparator() + IMMUT_SUFFIX;
     String immutablePojoName =
-        modelRootName + modelRoot.suffixSeperator() + IMMUT_SUFFIX + POJO_SUFFIX;
+        modelRootName + modelRoot.suffixSeparator() + IMMUT_SUFFIX + POJO_SUFFIX;
 
     // Generate the immutable interface and its builder interface
     TypeSpec immutableInterface =
@@ -286,7 +286,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
                                     .toString(),
                                 parentModelRoot.getSimpleName()
                                     + util.getAnnotationElement(
-                                        parentModelRootAnno.get(), "suffixSeperator", String.class)
+                                        parentModelRootAnno.get(), "suffixSeparator", String.class)
                                     + IMMUT_SUFFIX))
                         : Optional.empty())
             .or(
@@ -311,7 +311,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
                                     .toString(),
                                 parentModelRoot.getSimpleName()
                                     + util.getAnnotationElement(
-                                        parentModelRootAnno.get(), "suffixSeperator", String.class)
+                                        parentModelRootAnno.get(), "suffixSeparator", String.class)
                                     + IMMUT_SUFFIX,
                                 "Builder"))
                         : Optional.empty())
@@ -676,9 +676,9 @@ public final class JavaModelsGenerator implements CodeGenerator {
           fieldType = TypeName.get(innerType);
         }
       } else {
-        // Box primitive types for methods with @IfNoValue(then = FAIL) or with platform defaults
+        // Box primitive types for methods with @IfAbsent(FAIL) or with platform defaults
         if (method.getReturnType().getKind().isPrimitive()) {
-          // Box primitive types for methods with @IfNoValue(then = FAIL) or platform defaults
+          // Box primitive types for methods with @IfAbsent(FAIL) or platform defaults
           fieldType = TypeName.get(method.getReturnType()).box();
         } else {
           fieldType = TypeName.get(method.getReturnType());
@@ -725,7 +725,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
             .returns(ClassName.get("", immutablePojoName))
             .addAnnotation(Override.class);
 
-    // Validate fields based on IfNoValue annotation strategies
+    // Validate fields based on IfAbsent annotation strategies
     for (ExecutableElement method : modelMethods) {
       String fieldName = method.getSimpleName().toString();
       TypeMirror returnType = method.getReturnType();
@@ -758,7 +758,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
             }
             break;
           default:
-            throw new AssertionError("Unexpected IfNoValueThen = " + ifAbsentThen);
+            throw new AssertionError("Unexpected IfAbsentThen = " + ifAbsentThen);
         }
         buildMethodBuilder.endControlFlow();
       }

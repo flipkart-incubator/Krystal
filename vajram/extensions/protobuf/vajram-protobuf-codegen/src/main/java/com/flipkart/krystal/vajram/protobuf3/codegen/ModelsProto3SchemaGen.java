@@ -210,8 +210,8 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
         // Proto3 always defaults repeated and map fields to default values
         util.error(
             String.format(
-                "Method '%s' in Model Root '%s' is a %s field, and has @IfNoValue(then=%s) which is not supported in protobuf3. "
-                    + "Use a different IfNoValue strategy.",
+                "Method '%s' in Model Root '%s' is a %s field, and has @IfAbsent(%s) which is not supported in protobuf3. "
+                    + "Use a different IfAbsent strategy.",
                 method.getSimpleName(),
                 modelRootName,
                 isRepeated ? "repeated" : "map",

@@ -52,13 +52,13 @@ public interface CodeGenType {
    *
    * <p>To make this behaviour choice explicit (whether we differentiate between set and unset
    * values), Vajram developers can opt into this memory saving behaviour by tagging the facet with
-   * `@IfAbsent(DEFAULT_TO_ZERO)`, `@IfAbsent(DEFAULT_TO_EMPTY)` or @IfAbsent(DEFAULT_TO_FALSE) as
-   * the case may be. In case of lists and maps, many serialization protocols don't provide a way to
-   * differentiate between set and unset. So tagging facets of list and map types with
-   * `@IfAbsent(DEFAULT_TO_EMPTY)` may not be allowed when the vajram is configured to be serialized
-   * over such protocols - and the SDK might throw a compilation error upfront. When the developer
-   * does opt-in to this optimization via DEFAULT_TO_..., the relevant platform default value is
-   * always used in case the value is not set.
+   * `@IfAbsent(ASSUME_DEFAULT_VALUE)`. In case of lists and maps, many serialization protocols
+   * don't provide a way to differentiate between value present and absent. So tagging facets of
+   * list and map types with `@IfAbsent(FAIL)` and `@IfAbsent(MAY_FAIL_CONDITIONALLY)` may not be
+   * allowed when the vajram is configured to be serialized over such protocols - and the SDK might
+   * throw a compilation error upfront. When the developer does opt-in to this optimization via
+   * DEFAULT_TO_..., the relevant platform default value is always used in case the value is not
+   * set.
    *
    * <p>This method returns that default value.
    *

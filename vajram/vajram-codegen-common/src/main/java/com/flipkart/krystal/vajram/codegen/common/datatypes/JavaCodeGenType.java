@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.codegen.common.datatypes;
 import static com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenTypeUtils.box;
 import static com.flipkart.krystal.vajram.codegen.common.datatypes.StandardJavaType.standardTypesByCanonicalName;
 
+import com.flipkart.krystal.vajram.codegen.common.models.CodeGenerationException;
 import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.CodeBlock;
 import java.util.Objects;
@@ -53,12 +54,13 @@ public final class JavaCodeGenType implements CodeGenType {
 
   @Override
   public CodeBlock defaultValueExpr(ProcessingEnvironment processingEnv)
-      throws IllegalArgumentException {
+      throws CodeGenerationException {
     StandardJavaType standardTypeInfo = standardTypesByCanonicalName.get(canonicalClassName);
     if (standardTypeInfo != null) {
       return standardTypeInfo.defaultValueExpr(processingEnv);
     }
-    throw new IllegalArgumentException("No default value for non standard type %s".formatted(this));
+    throw new CodeGenerationException(
+        "No default value for non standard type '%s'".formatted(this));
   }
 
   @Override

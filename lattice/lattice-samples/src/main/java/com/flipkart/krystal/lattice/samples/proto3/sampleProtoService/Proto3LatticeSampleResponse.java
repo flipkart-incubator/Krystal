@@ -49,4 +49,8 @@ public interface Proto3LatticeSampleResponse extends Model {
   @SerialId(9)
   @IfAbsent(FAIL)
   @Nullable String mandatoryStringPartialConstruction();
+
+  @SerialId(10)
+  @IfAbsent(FAIL)
+  List<String> notAllowed();
 }
