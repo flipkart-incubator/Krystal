@@ -13,26 +13,26 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param executionId A unique execution id
  * @param disabledDependentChains if any of these dependant chains are encountered during the
  *     execution, that execution path is terminated
- * @param staticDispatchQualifer if the vajram being executed is a trait and static dispatch is
+ * @param staticDispatchQualifier if the vajram being executed is a trait and static dispatch is
  *     configured for that vajram, this qualifier is used to determine the bound vajram Id
  */
 @Builder(toBuilder = true)
 public record KryonExecutionConfig(
     String executionId,
     ImmutableSet<DependentChain> disabledDependentChains,
-    @Nullable Annotation staticDispatchQualifer) {
+    @Nullable Annotation staticDispatchQualifier) {
 
   private static final AtomicLong EXEC_COUNT = new AtomicLong();
 
   public KryonExecutionConfig {
     if (executionId == null) {
-      executionId = "KyonExecution-" + EXEC_COUNT.getAndIncrement();
+      executionId = "KryonExecution-" + EXEC_COUNT.getAndIncrement();
     }
     if (disabledDependentChains == null) {
       disabledDependentChains = ImmutableSet.of();
     }
-    if (staticDispatchQualifer != null) {
-      StaticDispatchPolicy.isValidQualifier(staticDispatchQualifer);
+    if (staticDispatchQualifier != null) {
+      StaticDispatchPolicy.isValidQualifier(staticDispatchQualifier);
     }
   }
 }

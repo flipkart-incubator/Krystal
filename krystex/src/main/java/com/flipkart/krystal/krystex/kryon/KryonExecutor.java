@@ -323,7 +323,7 @@ public final class KryonExecutor implements KrystalExecutor {
           if (latestDependency != null) {
             boundVajram = staticDispatchPolicy.get(latestDependency);
           } else {
-            boundVajram = staticDispatchPolicy.get(executionConfig.staticDispatchQualifer());
+            boundVajram = staticDispatchPolicy.get(executionConfig.staticDispatchQualifier());
           }
         } catch (Throwable throwable) {
           throw new IllegalArgumentException(
