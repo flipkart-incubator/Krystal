@@ -7,7 +7,6 @@ public final class Constants {
   public static final String DEP_RESP = "depResp";
   public static final String RESOLVABLE_INPUTS = "resolvableInputs";
   public static final String INPUT_SRC = "inputSrc";
-  public static final String VAJRAM_LOGIC_INPUT_ARGS = "outputLogicInputArguments";
   public static final String FACET_NAME_SUFFIX = "_n";
   public static final String FACET_SPEC_SUFFIX = "_s";
   public static final String RESPONSE = "response";
@@ -26,10 +25,12 @@ public final class Constants {
   public static final String GET_SIMPLE_INPUT_RESOLVERS = "getSimpleInputResolvers";
 
   public static final String FACETS_CLASS_SUFFIX = "_Fac";
+  public static final String OUTPUT_LOGIC_INPUT_VAR = "_logicInput";
   public static final String FACETS_LIST = "_facetValuesList";
   public static final String BATCH_ITEM_FACETS_SUFFIX = "_BatchItem";
   public static final String BATCH_KEY_FACETS_SUFFIX = "_BatchKey";
   public static final String BATCHES_VAR = "_batchItems";
+  public static final String BATCHED_OUTPUT_VAR = "_batchedOutput";
   public static final String BATCH_KEY_NAME = "_batchKey";
 
   public static final String FACET_VALUES_VAR = "_facetValues";

@@ -22,6 +22,7 @@ import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.annos.ExternallyInvocable.Creator;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.RequestResponse;
@@ -585,12 +586,13 @@ class KryonExecutorTest {
         new ComputeLogicDefinition<>(
             new KryonLogicId(new VajramID(kryonId), kryonId),
             usedFacets,
-            inputsList ->
-                inputsList.stream()
-                    .collect(toImmutableMap(identity(), computeErrableFrom(logic)))
-                    .entrySet()
-                    .stream()
-                    .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture())),
+            input ->
+                new OutputLogicExecutionResults<>(
+                    input.facetValues().stream()
+                        .collect(toImmutableMap(identity(), computeErrableFrom(logic)))
+                        .entrySet()
+                        .stream()
+                        .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture()))),
             emptyTags());
 
     logicDefinitionRegistry.addOutputLogic(def);
@@ -605,9 +607,13 @@ class KryonExecutorTest {
         new IOLogicDefinition<>(
             new KryonLogicId(new VajramID(kryonId), kryonId),
             inputs,
-            inputsList ->
-                inputsList.stream().collect(toImmutableMap(identity(), logic)).entrySet().stream()
-                    .collect(toImmutableMap(Entry::getKey, Entry::getValue)),
+            input ->
+                new OutputLogicExecutionResults<>(
+                    input.facetValues().stream()
+                        .collect(toImmutableMap(identity(), logic))
+                        .entrySet()
+                        .stream()
+                        .collect(toImmutableMap(Entry::getKey, Entry::getValue))),
             emptyTags());
 
     logicDefinitionRegistry.addOutputLogic(def);

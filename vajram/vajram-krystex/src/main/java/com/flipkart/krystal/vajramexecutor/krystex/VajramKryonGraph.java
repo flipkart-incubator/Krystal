@@ -11,6 +11,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.function.Function.identity;
 
+import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
@@ -465,7 +466,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
 
     // Step 4: Create and register Kryon for the output logic
     OutputLogic<@Nullable Object> outputLogicCode =
-        inputsList -> {
+        input -> {
+          ImmutableList<? extends FacetValues> inputsList = input.facetValues();
           List<FacetValues> validInputs = new ArrayList<>();
           Map<FacetValues, CompletableFuture<@Nullable Object>> failedValidations =
               new LinkedHashMap<>();
@@ -478,17 +480,19 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                   failedValidations.put(inputs, failedFuture(e));
                 }
               });
-          ImmutableMap<FacetValues, CompletableFuture<@Nullable Object>> validResults;
+          OutputLogicExecutionResults<Object> validResults;
           try {
-            validResults = vajramDef.execute(ImmutableList.copyOf(validInputs));
+            validResults = vajramDef.execute(input.withFacetValues(validInputs));
           } catch (Throwable e) {
-            return validInputs.stream().collect(toImmutableMap(identity(), i -> failedFuture(e)));
+            return new OutputLogicExecutionResults<>(
+                validInputs.stream().collect(toImmutableMap(identity(), i -> failedFuture(e))));
           }
 
-          return ImmutableMap.<FacetValues, CompletableFuture<@Nullable Object>>builder()
-              .putAll(validResults)
-              .putAll(failedValidations)
-              .build();
+          return validResults.withResults(
+              ImmutableMap.<FacetValues, CompletableFuture<@Nullable Object>>builder()
+                  .putAll(validResults.results())
+                  .putAll(failedValidations)
+                  .build());
         };
     OutputLogicDefinition<?> outputLogic =
         logicRegistryDecorator.newOutputLogic(

@@ -6,6 +6,8 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Function.identity;
 
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.NonNil;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -13,6 +15,7 @@ import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableMap;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.Map;
@@ -55,20 +58,34 @@ public abstract class Add extends IOVajramDef<Integer> {
 
   public static final String FAIL_ADDER_FLAG = "failAdder";
 
-  @Output
-  static Map<Add_BatchItem, CompletableFuture<Integer>> add(
+  @Output.Batched
+  static CompletableFuture<BatchAddResult> batchedOutput(
       ImmutableCollection<Add_BatchItem> _batchItems, Optional<Boolean> fail) {
     CALL_COUNTER.increment();
     if (fail.orElse(false)) {
       throw new RuntimeException("Adder failed because fail flag was set");
     }
-    return _batchItems.stream()
-        .collect(
-            toImmutableMap(
-                identity(), batch -> completedFuture(add(batch.numberOne(), batch.numberTwo()))));
+    return completedFuture(
+        new BatchAddResult(
+            _batchItems.stream()
+                .collect(
+                    toImmutableMap(
+                        identity(), batch -> add(batch.numberOne(), batch.numberTwo())))));
+  }
+
+  @Output.Unbatch
+  static Map<Add_BatchItem, Errable<Integer>> unbatchOutput(
+      Errable<BatchAddResult> _batchedOutput) {
+    if (!(_batchedOutput instanceof NonNil<BatchAddResult> nonNil)) {
+      return ImmutableMap.of();
+    }
+    return nonNil.value().result().entrySet().stream()
+        .collect(toImmutableMap(Map.Entry::getKey, entry -> Errable.withValue(entry.getValue())));
   }
 
   public static int add(int a, int b) {
     return a + b;
   }
+
+  record BatchAddResult(ImmutableMap<Add_BatchItem, Integer> result) {}
 }

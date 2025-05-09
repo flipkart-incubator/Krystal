@@ -18,4 +18,8 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD, ElementType.FIELD})
-public @interface Output {}
+public @interface Output {
+  @interface Batched {}
+
+  @interface Unbatch {}
+}

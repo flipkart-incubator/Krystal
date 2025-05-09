@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
@@ -20,7 +21,7 @@ import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -31,7 +32,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
 public class MainLogicExecReporter implements OutputLogicDecorator {
@@ -56,38 +56,38 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
   @SuppressWarnings("FutureReturnValueIgnored")
   public OutputLogic<Object> decorateLogic(
       OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
-    return facets -> {
+    return input -> {
       VajramID vajramID = originalLogicDefinition.kryonLogicId().vajramID();
       KryonLogicId kryonLogicId = originalLogicDefinition.kryonLogicId();
       /*
        Report logic start
       */
+      ImmutableList<? extends FacetValues> facets = input.facetValues();
       kryonExecutionReport.reportMainLogicStart(vajramID, kryonLogicId, facets);
 
       /*
        Execute logic
       */
-      ImmutableMap<FacetValues, CompletableFuture<@Nullable Object>> results =
-          logicToDecorate.execute(facets);
+      OutputLogicExecutionResults<Object> executionResult = logicToDecorate.execute(input);
       /*
        Report logic end
       */
+      var results = executionResult.results();
       allOf(results.values().toArray(CompletableFuture[]::new))
           .whenComplete(
-              (unused, throwable) -> {
-                kryonExecutionReport.reportMainLogicEnd(
-                    vajramID,
-                    kryonLogicId,
-                    new LogicExecResults(
-                        results.entrySet().stream()
-                            .map(
-                                e ->
-                                    new LogicExecResponse(
-                                        e.getKey(),
-                                        e.getValue().handle(Errable::errableFrom).getNow(nil())))
-                            .collect(toImmutableList())));
-              });
-      return results;
+              (unused, throwable) ->
+                  kryonExecutionReport.reportMainLogicEnd(
+                      vajramID,
+                      kryonLogicId,
+                      new LogicExecResults(
+                          results.entrySet().stream()
+                              .map(
+                                  e ->
+                                      new LogicExecResponse(
+                                          e.getKey(),
+                                          e.getValue().handle(Errable::errableFrom).getNow(nil())))
+                              .collect(toImmutableList()))));
+      return executionResult;
     };
   }
 

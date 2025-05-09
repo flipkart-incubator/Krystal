@@ -29,22 +29,19 @@ public final class InputBatcherImpl implements InputBatcher {
 
   @Override
   public ImmutableList<BatchedFacets> add(BatchEnabledFacetValues batchEnabledFacets) {
-    ImmutableFacetValuesContainer commonFacets = batchEnabledFacets._batchKey();
-    unBatchedRequests.computeIfAbsent(commonFacets, k -> new ArrayList<>()).add(batchEnabledFacets);
-    return getBatchedInputs(commonFacets, false);
+    ImmutableFacetValuesContainer batchKey = batchEnabledFacets._batchKey();
+    unBatchedRequests.computeIfAbsent(batchKey, k -> new ArrayList<>()).add(batchEnabledFacets);
+    return getBatchedInputs(batchKey, false);
   }
 
   private ImmutableList<BatchedFacets> getBatchedInputs(
-      ImmutableFacetValuesContainer commonFacets, boolean force) {
-    if (commonFacets == null) {
-      return ImmutableList.of();
-    }
+      ImmutableFacetValuesContainer batchKey, boolean force) {
     List<BatchEnabledFacetValues> batchItems =
-        unBatchedRequests.getOrDefault(commonFacets, ImmutableList.of());
+        unBatchedRequests.getOrDefault(batchKey, ImmutableList.of());
     if (force || batchItems.size() >= minBatchSize) {
       ImmutableList<BatchedFacets> batchedFacets =
           ImmutableList.of(new BatchedFacets(ImmutableList.copyOf(batchItems)));
-      unBatchedRequests.put(commonFacets, new ArrayList<>());
+      unBatchedRequests.put(batchKey, new ArrayList<>());
       return batchedFacets;
     }
     return ImmutableList.of();

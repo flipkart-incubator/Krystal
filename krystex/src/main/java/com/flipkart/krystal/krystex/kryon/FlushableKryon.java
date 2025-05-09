@@ -18,6 +18,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
+import com.flipkart.krystal.core.OutputLogicExecutionInput;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.DepResponse;
 import com.flipkart.krystal.data.Errable;
@@ -666,19 +667,23 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
     Map<InvocationId, CompletableFuture<Errable<@Nullable Object>>> resultsByRequest =
         new LinkedHashMap<>();
     inputs.forEach(
-        (requestId, outputLogicFacets) -> {
+        (invocationId, outputLogicFacets) -> {
           CompletableFuture<@Nullable Object> result;
           try {
             result =
                 finalLogic
-                    .execute(ImmutableList.of(outputLogicFacets.allFacetValues()))
+                    .execute(
+                        new OutputLogicExecutionInput(
+                            ImmutableList.of(outputLogicFacets.allFacetValues()),
+                            kryonExecutor.commandQueue()))
+                    .results()
                     .values()
                     .iterator()
                     .next();
           } catch (Throwable e) {
             result = failedFuture(e);
           }
-          resultsByRequest.put(requestId, result.handle(Errable::errableFrom));
+          resultsByRequest.put(invocationId, result.handle(Errable::errableFrom));
         });
     return resultsByRequest;
   }

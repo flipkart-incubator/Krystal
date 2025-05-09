@@ -5,9 +5,13 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.lang.Boolean.TRUE;
 
 import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
+import com.flipkart.krystal.vajram.codegen.common.models.LogicMethods.OutputLogics;
+import com.flipkart.krystal.vajram.codegen.common.models.LogicMethods.OutputLogics.NoBatching;
+import com.flipkart.krystal.vajram.codegen.common.models.LogicMethods.OutputLogics.WithBatching;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.Resolve;
 import com.google.common.collect.ImmutableList;
+import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -25,10 +29,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
 public record ParsedVajramData(
-    List<ExecutableElement> resolvers,
-    @Nullable ExecutableElement outputLogic,
-    String packageName,
-    VajramInfo vajramInfo) {
+    @Nullable LogicMethods logicMethods, String packageName, VajramInfo vajramInfo) {
 
   public static Optional<ParsedVajramData> fromVajramInfo(
       VajramInfo vajramInfo, CodeGenUtility util) {
@@ -41,16 +42,15 @@ public record ParsedVajramData(
       }
     }
     for (ExecutableElement method : allMethods) {
-      if ((isOutputLogic(method) || isResolver(method)) && !isStatic(method)) {
+      if ((isNonBatchedOutputLogic(method) || isResolver(method)) && !isStatic(method)) {
         util.error("A Vajram definition can only have static methods", method);
       }
     }
-    ExecutableElement outputLogic = null;
-    List<ExecutableElement> resolverMethods = new ArrayList<>();
+    LogicMethods logicMethods = null;
     if (vajramInfo.lite().isVajram()) {
-      outputLogic = getOutputLogicAndResolverMethods(vajramInfo, resolverMethods, util);
+      logicMethods = getOutputLogicAndResolverMethods(vajramInfo, util);
     }
-    return Optional.of(new ParsedVajramData(resolverMethods, outputLogic, packageName, vajramInfo));
+    return Optional.of(new ParsedVajramData(logicMethods, packageName, vajramInfo));
   }
 
   private static void validate(VajramInfo vajramInfo, CodeGenUtility util) {
@@ -98,45 +98,85 @@ public record ParsedVajramData(
     }
   }
 
-  public static ExecutableElement getOutputLogicAndResolverMethods(
-      VajramInfo vajramInfo, List<ExecutableElement> resolveMethods, CodeGenUtility util) {
-    ExecutableElement outputLogic = null;
+  private static LogicMethods getOutputLogicAndResolverMethods(
+      VajramInfo vajramInfo, CodeGenUtility util) {
+    List<ExecutableElement> resolverMethods = new ArrayList<>();
+
+    boolean vajramSupportsBatching = vajramInfo.facetStream().anyMatch(FacetGenModel::isBatched);
+    ExecutableElement nonBatchedOutputLogic = null;
+    ExecutableElement batchedOutputLogic = null;
+    ExecutableElement unbatchOutputLogic = null;
+    OutputLogics outputLogics;
     TypeElement vajramClass = vajramInfo.vajramClass();
     List<ExecutableElement> methods = getStaticMethods(vajramClass);
     for (ExecutableElement method : methods) {
       if (isResolver(method)) {
-        resolveMethods.add(method);
-      } else if (isOutputLogic(method)) {
-        if (outputLogic == null) {
-          outputLogic = method;
+        resolverMethods.add(method);
+      } else if (isNonBatchedOutputLogic(method)) {
+        if (nonBatchedOutputLogic != null) {
+          util.error(
+              "Duplicate @Output annotated method %s".formatted(method.getSimpleName()), method);
+        } else if (vajramSupportsBatching) {
+          util.error(
+              "Vajram which support batching must use @Output.Batched and @Output.Unbatch instead of @Output",
+              method);
         } else {
-          String errorMessage =
-              "Multiple @Output annotated methods (%s, %s) found in %s"
-                  .formatted(
-                      outputLogic.getSimpleName(),
-                      method.getSimpleName(),
-                      vajramClass.getSimpleName());
-          util.error(errorMessage, outputLogic);
-          util.error(errorMessage, method);
-          throw new VajramValidationException(errorMessage);
+          nonBatchedOutputLogic = method;
+        }
+      } else if (hasAnnotation(method, Output.Batched.class)) {
+        if (batchedOutputLogic != null) {
+          util.error(
+              "Duplicate @Output.Batched annotated method %s".formatted(method.getSimpleName()),
+              method);
+        } else if (!vajramSupportsBatching) {
+          util.error(
+              "Vajram which does not support batching must use @Output instead of @Output.Batched",
+              method);
+        } else {
+          batchedOutputLogic = method;
+        }
+      } else if (hasAnnotation(method, Output.Unbatch.class)) {
+        if (unbatchOutputLogic != null) {
+          util.error("Duplicate @Output.Unbatch annotated method", method);
+        } else if (!vajramSupportsBatching) {
+          util.error(
+              "Vajram which does not support batching must use @Output instead of @Output.Unbatch",
+              method);
+        } else {
+          unbatchOutputLogic = method;
         }
       }
     }
-    validateNoDuplicateResolvers(resolveMethods, vajramInfo, util);
-    if (outputLogic == null) {
-      String errorMessage = "Missing output logic method";
-      util.error(errorMessage, vajramClass);
-      throw new VajramValidationException(errorMessage);
+    if (!vajramSupportsBatching) {
+      if (nonBatchedOutputLogic == null) {
+        throw util.errorAndThrow(
+            "Vajram which does not support batching must have @Output annotated method",
+            vajramClass);
+      }
+      outputLogics = new NoBatching(nonBatchedOutputLogic);
+    } else {
+      if (batchedOutputLogic == null || unbatchOutputLogic == null) {
+        throw util.errorAndThrow(
+            "Vajram which supports batching must have @Output.Unbatch annotated method",
+            vajramClass);
+      }
+      outputLogics = new WithBatching(batchedOutputLogic, unbatchOutputLogic);
     }
-    return outputLogic;
+    validateNoDuplicateResolvers(resolverMethods, vajramInfo, util);
+    return new LogicMethods(outputLogics, resolverMethods);
   }
 
   private static boolean isResolver(ExecutableElement method) {
-    return method.getAnnotationsByType(Resolve.class).length == 1;
+    return hasAnnotation(method, Resolve.class);
   }
 
-  private static boolean isOutputLogic(ExecutableElement method) {
-    return method.getAnnotationsByType(Output.class).length == 1;
+  private static boolean isNonBatchedOutputLogic(ExecutableElement method) {
+    return hasAnnotation(method, Output.class);
+  }
+
+  private static boolean hasAnnotation(
+      ExecutableElement method, Class<? extends Annotation> annotationType) {
+    return method.getAnnotationsByType(annotationType).length == 1;
   }
 
   private static List<ExecutableElement> getStaticMethods(TypeElement vajramClass) {

@@ -750,13 +750,19 @@ public class CodeGenUtility {
     }
   }
 
-  public CodeValidationException errorAndThrow(String message, @Nullable Element element) {
-    error(message, element);
+  public CodeValidationException errorAndThrow(String message, @Nullable Element... elements) {
+    error(message, elements);
     return new CodeValidationException(message);
   }
 
-  public void error(String message, @Nullable Element element) {
-    processingEnv.getMessager().printMessage(Kind.ERROR, message, element);
+  public void error(String message, @Nullable Element... elements) {
+    if (elements.length == 0) {
+      processingEnv.getMessager().printMessage(Kind.ERROR, message);
+    } else {
+      for (Element element : elements) {
+        processingEnv.getMessager().printMessage(Kind.ERROR, message, element);
+      }
+    }
   }
 
   private String getTimestamp() {

@@ -14,6 +14,7 @@ import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.config.ConfigProvider;
+import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.facets.Facet;
@@ -292,9 +293,10 @@ class Resilience4JBulkheadTest {
         new IOLogicDefinition<T>(
             new KryonLogicId(new VajramID(kryonId), kryonId + ":asyncLogic"),
             usedFacets,
-            inputsList ->
-                inputsList.stream()
-                    .collect(ImmutableMap.toImmutableMap(Function.identity(), logic)),
+            input ->
+                new OutputLogicExecutionResults<>(
+                    input.facetValues().stream()
+                        .collect(ImmutableMap.toImmutableMap(Function.identity(), logic))),
             emptyTags());
     logicDefinitionRegistry.addOutputLogic(def);
     return def;

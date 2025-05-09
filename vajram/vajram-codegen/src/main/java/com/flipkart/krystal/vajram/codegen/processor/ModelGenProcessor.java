@@ -55,8 +55,7 @@ public final class ModelGenProcessor extends AbstractProcessor {
                   getClass().getSimpleName(),
                   String.valueOf(phaseString),
                   Arrays.toString(CodegenPhase.values()),
-                  CODEGEN_PHASE_KEY),
-          null);
+                  CODEGEN_PHASE_KEY));
       return false;
     }
     List<TypeElement> modelRoots =
