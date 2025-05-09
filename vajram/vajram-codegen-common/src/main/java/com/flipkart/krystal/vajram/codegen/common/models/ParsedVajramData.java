@@ -42,8 +42,12 @@ public record ParsedVajramData(
       }
     }
     for (ExecutableElement method : allMethods) {
-      if ((isNonBatchedOutputLogic(method) || isResolver(method)) && !isStatic(method)) {
-        util.error("A Vajram definition can only have static methods", method);
+      if ((isNonBatchedOutputLogic(method)
+              || isResolver(method)
+              || hasAnnotation(method, Output.Batched.class)
+              || hasAnnotation(method, Output.Unbatch.class))
+          && !isStatic(method)) {
+        util.error("@Resolve methods and @Output methods must be static", method);
       }
     }
     LogicMethods logicMethods = null;
