@@ -19,7 +19,16 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD, ElementType.FIELD})
 public @interface Output {
+  /**
+   * Marks a method that processes multiple inputs as a batch output logic. Methods with this
+   * annotation should accept batch inputs, perform the IO operation, and return a single {@link
+   * java.util.concurrent.CompletableFuture} corresponding to the complete batch operation.
+   */
   @interface Batched {}
 
+  /**
+   * Marks a method that converts a batched output back to individual results corresponding to each
+   * batch item. Any missing results are automatically set to null
+   */
   @interface Unbatch {}
 }

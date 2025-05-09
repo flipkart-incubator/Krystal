@@ -69,6 +69,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+@SuppressWarnings("unchecked")
 class KryonExecutorTest {
 
   private static final Duration TIMEOUT = Duration.ofSeconds(100);
@@ -589,10 +590,11 @@ class KryonExecutorTest {
             input ->
                 new OutputLogicExecutionResults<>(
                     input.facetValues().stream()
-                        .collect(toImmutableMap(identity(), computeErrableFrom(logic)))
-                        .entrySet()
-                        .stream()
-                        .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture()))),
+                        .collect(
+                            toImmutableMap(
+                                identity(),
+                                facetValues ->
+                                    computeErrableFrom(logic).apply(facetValues).toFuture()))),
             emptyTags());
 
     logicDefinitionRegistry.addOutputLogic(def);
@@ -609,11 +611,7 @@ class KryonExecutorTest {
             inputs,
             input ->
                 new OutputLogicExecutionResults<>(
-                    input.facetValues().stream()
-                        .collect(toImmutableMap(identity(), logic))
-                        .entrySet()
-                        .stream()
-                        .collect(toImmutableMap(Entry::getKey, Entry::getValue))),
+                    input.facetValues().stream().collect(toImmutableMap(identity(), logic))),
             emptyTags());
 
     logicDefinitionRegistry.addOutputLogic(def);
