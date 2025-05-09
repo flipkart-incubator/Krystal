@@ -15,12 +15,11 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @ToString
 public final class Nil<T> implements Success<T> {
   private static final Nil NIL = new Nil();
-  private static final CompletableFuture NIL_FUTURE = completedFuture(null);
 
   @Override
   @SuppressWarnings("unchecked")
   public CompletableFuture<@Nullable T> toFuture() {
-    return NIL_FUTURE;
+    return completedFuture(null);
   }
 
   @Override

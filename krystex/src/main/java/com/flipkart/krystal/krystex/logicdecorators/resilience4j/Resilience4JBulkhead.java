@@ -5,12 +5,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.config.ConfigProvider;
-import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.core.OutputLogicExecutionInput;
+import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
 import io.github.resilience4j.bulkhead.ThreadPoolBulkhead;
@@ -46,8 +45,8 @@ public final class Resilience4JBulkhead implements OutputLogicDecorator {
       OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
     BulkheadAdapter bulkhead = this.adaptedBulkhead;
     if (bulkhead != null) {
-      return inputsList ->
-          extractResponseMap(inputsList, bulkhead.decorate(logicToDecorate, inputsList));
+      return input ->
+          extractResponseMap(input.facetValues(), bulkhead.decorate(logicToDecorate, input));
     } else {
       return logicToDecorate;
     }
@@ -152,23 +151,20 @@ public final class Resilience4JBulkhead implements OutputLogicDecorator {
     }
 
     @SuppressWarnings("RedundantTypeArguments") // Avoid nullChecker errors
-    CompletionStage<ImmutableMap<FacetValues, CompletableFuture<@Nullable Object>>> decorate(
-        OutputLogic<Object> logicToDecorate, ImmutableList<? extends FacetValues> facetsList) {
+    CompletionStage<OutputLogicExecutionResults<Object>> decorate(
+        OutputLogic<Object> logicToDecorate, OutputLogicExecutionInput input) {
       ThreadPoolBulkhead threadPoolBulkhead = this.threadPoolBulkhead;
       Bulkhead bulkhead = this.bulkhead;
       if (threadPoolBulkhead != null) {
-        return threadPoolBulkhead
-            .<ImmutableMap<FacetValues, CompletableFuture<@Nullable Object>>>executeCallable(
-                () -> logicToDecorate.execute(facetsList));
+        return threadPoolBulkhead.executeCallable(() -> logicToDecorate.execute(input));
       } else if (bulkhead != null) {
-        return Decorators
-            .<ImmutableMap<FacetValues, CompletableFuture<@Nullable Object>>>ofCompletionStage(
+        return Decorators.ofCompletionStage(
                 () -> {
-                  ImmutableMap<FacetValues, CompletableFuture<@Nullable Object>> result =
-                      logicToDecorate.execute(facetsList);
-                  return allOf(result.values().toArray(CompletableFuture[]::new))
-                      .<ImmutableMap<FacetValues, CompletableFuture<@Nullable Object>>>handle(
-                          (unused, throwable) -> result);
+                  OutputLogicExecutionResults<Object> results = logicToDecorate.execute(input);
+                  CompletableFuture<OutputLogicExecutionResults<Object>> handle =
+                      allOf(results.results().values().toArray(CompletableFuture[]::new))
+                          .handle((unused, throwable) -> results);
+                  return handle;
                 })
             .withBulkhead(bulkhead)
             .get();

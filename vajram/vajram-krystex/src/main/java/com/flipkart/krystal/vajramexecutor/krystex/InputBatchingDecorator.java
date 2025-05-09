@@ -9,6 +9,8 @@ import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.config.NestedConfig;
+import com.flipkart.krystal.core.OutputLogicExecutionInput;
+import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.krystex.OutputLogic;
@@ -32,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputBatchingDecorator implements OutputLogicDecorator {
@@ -45,6 +48,7 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
       new LinkedHashMap<>();
   private ImmutableSet<DependentChain> activeDependentChains = ImmutableSet.of();
   private final Set<DependentChain> flushedDependentChains = new LinkedHashSet<>();
+  private @MonotonicNonNull OutputLogicExecutionInput outputLogicExecutionInput;
 
   public InputBatchingDecorator(
       String instanceId,
@@ -60,43 +64,45 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
       OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
     inputBatcher.onBatching(
         requests -> requests.forEach(request -> batchFacetsList(logicToDecorate, request)));
-    return facetsList -> {
+    return input -> {
+      if (outputLogicExecutionInput == null) {
+        outputLogicExecutionInput = input;
+      }
       ImmutableList<BatchEnabledFacetValues> immutableFacetsList =
-          facetsList.stream()
+          input.facetValues().stream()
               .map(
                   f -> {
                     if (f instanceof BatchEnabledFacetValues) {
                       return (BatchEnabledFacetValues) f;
                     } else {
                       throw new IllegalStateException(
-                          "Expected to recieve instance of BatchEnabledFacetValues in batcher %s but received %s"
+                          "Expected to receive instance of BatchEnabledFacetValues in batcher %s but received %s"
                               .formatted(instanceId, f));
                     }
                   })
               .map(BatchEnabledFacetValues::_build)
               .collect(toImmutableList());
       List<BatchedFacets> batchedFacetsList =
-          immutableFacetsList.stream()
-              .map(f -> f)
-              .map(inputBatcher::add)
-              .flatMap(Collection::stream)
-              .toList();
-      facetsList.forEach(
-          facets ->
-              futureCache.computeIfAbsent(
-                  facets._build(), e -> new CompletableFuture<@Nullable Object>()));
+          immutableFacetsList.stream().map(inputBatcher::add).flatMap(Collection::stream).toList();
+      input
+          .facetValues()
+          .forEach(
+              facetValues ->
+                  futureCache.computeIfAbsent(
+                      facetValues._build(), e -> new CompletableFuture<@Nullable Object>()));
       for (BatchedFacets batchedFacets : batchedFacetsList) {
         batchFacetsList(logicToDecorate, batchedFacets);
       }
-      return facetsList.stream()
-          .collect(
-              ImmutableMap
-                  .<FacetValues, FacetValues, CompletableFuture<@Nullable Object>>toImmutableMap(
-                      identity(),
-                      key -> {
-                        return requireNonNullElseGet(
-                            futureCache.get(key._build()), CompletableFuture::new);
-                      }));
+      return new OutputLogicExecutionResults<>(
+          input.facetValues().stream()
+              .collect(
+                  ImmutableMap
+                      .<FacetValues, FacetValues, CompletableFuture<@Nullable Object>>
+                          toImmutableMap(
+                              identity(),
+                              key ->
+                                  requireNonNullElseGet(
+                                      futureCache.get(key._build()), CompletableFuture::new))));
     };
   }
 
@@ -120,21 +126,35 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
   @SuppressWarnings("UnnecessaryTypeArgument") // --> To Handle nullChecker errors
   private void batchFacetsList(OutputLogic<Object> logicToDecorate, BatchedFacets batchedFacets) {
     ImmutableList<BatchEnabledFacetValues> facetsList = batchedFacets.batchItems();
-    ImmutableMap<FacetValues, CompletableFuture<@Nullable Object>> result;
-    try {
-      result = logicToDecorate.execute(facetsList);
-    } catch (Throwable e) {
-      result = facetsList.stream().collect(toImmutableMap(identity(), i -> failedFuture(e)));
+    OutputLogicExecutionResults<Object> result;
+    if (outputLogicExecutionInput == null) {
+      if (facetsList.isEmpty()) {
+        // This means the logicToDecorate (the output logic) method was never invoked
+        // So we directly return empty results
+        result = new OutputLogicExecutionResults<>(ImmutableMap.of());
+      } else {
+        throw new AssertionError(
+            "The decorateLogic was never invoked by facetsList is not empty. This should not be possible");
+      }
+    } else {
+      try {
+        result = logicToDecorate.execute(outputLogicExecutionInput.withFacetValues(facetsList));
+      } catch (Throwable e) {
+        result =
+            new OutputLogicExecutionResults<>(
+                facetsList.stream().collect(toImmutableMap(identity(), i -> failedFuture(e))));
+      }
     }
-
-    result.forEach(
-        (inputs, resultFuture) -> {
-          //noinspection RedundantTypeArguments: To Handle nullChecker errors
-          linkFutures(
-              resultFuture,
-              futureCache.<CompletableFuture<@Nullable Object>>computeIfAbsent(
-                  inputs._build(), request -> new CompletableFuture<@Nullable Object>()));
-        });
+    result
+        .results()
+        .forEach(
+            (inputs, resultFuture) -> {
+              //noinspection RedundantTypeArguments: To Handle nullChecker errors
+              linkFutures(
+                  resultFuture,
+                  futureCache.<CompletableFuture<@Nullable Object>>computeIfAbsent(
+                      inputs._build(), request -> new CompletableFuture<@Nullable Object>()));
+            });
   }
 
   @Override

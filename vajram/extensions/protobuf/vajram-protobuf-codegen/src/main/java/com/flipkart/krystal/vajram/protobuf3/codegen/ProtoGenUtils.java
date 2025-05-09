@@ -138,7 +138,7 @@ public class ProtoGenUtils {
       }
 
       if (javaDir == null) {
-        throw util.errorAndThrow("Failed to find 'java' directory in the source path", null);
+        throw util.errorAndThrow("Failed to find 'java' directory in the source path");
       }
 
       // Create a parallel 'protobuf' directory at the same level as 'java'

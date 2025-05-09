@@ -32,10 +32,10 @@ public final class Resilience4JCircuitBreaker implements OutputLogicDecorator {
       OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
     CircuitBreaker circuitBreaker = this.circuitBreaker;
     if (circuitBreaker != null) {
-      return inputsList ->
+      return input ->
           extractResponseMap(
-              inputsList,
-              decorateAsyncExecute(logicToDecorate, inputsList)
+              input.facetValues(),
+              decorateAsyncExecute(logicToDecorate, input)
                   .withCircuitBreaker(circuitBreaker)
                   .get());
     } else {

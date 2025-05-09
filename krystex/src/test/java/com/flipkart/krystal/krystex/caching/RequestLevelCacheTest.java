@@ -13,6 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.facets.Facet;
@@ -210,12 +211,13 @@ class RequestLevelCacheTest {
         new ComputeLogicDefinition<>(
             new KryonLogicId(new VajramID(kryonId), kryonId),
             inputs,
-            inputsList ->
-                inputsList.stream()
-                    .collect(toImmutableMap(identity(), computeErrableFrom(logic)))
-                    .entrySet()
-                    .stream()
-                    .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture())),
+            input ->
+                new OutputLogicExecutionResults<>(
+                    input.facetValues().stream()
+                        .collect(toImmutableMap(identity(), computeErrableFrom(logic)))
+                        .entrySet()
+                        .stream()
+                        .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture()))),
             emptyTags());
 
     logicDefinitionRegistry.addOutputLogic(def);

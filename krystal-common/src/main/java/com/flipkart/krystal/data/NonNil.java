@@ -27,7 +27,7 @@ public final class NonNil<T> implements Success<T> {
 
   @Override
   public CompletableFuture<@Nullable T> toFuture() {
-    return c != null ? c : (c = completedFuture(value));
+    return completedFuture(value);
   }
 
   @Override

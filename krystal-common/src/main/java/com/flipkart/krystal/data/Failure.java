@@ -6,15 +6,12 @@ import com.flipkart.krystal.except.StackTracelessException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import lombok.EqualsAndHashCode;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @EqualsAndHashCode(of = "error")
 public final class Failure<T> implements Errable<T> {
   private final Throwable error;
-
-  private @MonotonicNonNull CompletableFuture<@Nullable T> c;
 
   @SuppressWarnings({"optional.field", "OptionalUsedAsFieldOrParameterType"})
   private Optional<Throwable> o = Optional.empty();
@@ -25,7 +22,7 @@ public final class Failure<T> implements Errable<T> {
 
   @Override
   public CompletableFuture<@Nullable T> toFuture() {
-    return c != null ? c : (c = failedFuture(error));
+    return failedFuture(error);
   }
 
   @Override

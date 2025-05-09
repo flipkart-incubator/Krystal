@@ -1,15 +1,13 @@
 package com.flipkart.krystal.vajram;
 
-import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.core.OutputLogicExecutionInput;
+import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import java.util.concurrent.CompletableFuture;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Vajrams represent the smallest units of work in the Krystal programming paradigm.
@@ -62,8 +60,7 @@ public sealed interface VajramDef<T> extends VajramDefRoot<T>
     return getSimpleInputResolvers();
   }
 
-  ImmutableMap<FacetValues, CompletableFuture<@Nullable T>> execute(
-      ImmutableList<FacetValues> _facetValuesList);
+  OutputLogicExecutionResults<T> execute(OutputLogicExecutionInput _logicInput);
 
   FacetValuesBuilder facetsFromRequest(Request<?> request);
 }
