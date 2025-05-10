@@ -64,12 +64,13 @@ public final class SimpleImmutRequest<T> implements SimpleRequest<T>, ImmutableR
   @Override
   public boolean equals(final @Nullable Object o) {
     if (o == this) return true;
-    if (!(o instanceof SimpleRequest<?> other)) return false;
-    return Objects.equals(this._data, other._asMap());
+    if (!(o instanceof SimpleImmutRequest<?> other)) return false;
+    return Objects.equals(_asMap(), other._asMap())
+        && Objects.equals(_vajramID(), other._vajramID());
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(this._data);
+    return Objects.hash(_data, _vajramID);
   }
 }

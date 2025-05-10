@@ -4,10 +4,9 @@ import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.allOf;
 
-import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.data.ImmutableFacetValues;
+import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
@@ -44,9 +43,8 @@ public class RequestLevelCache implements KryonDecorator {
     return new CachingDecoratedKryon(decorationInput.kryon());
   }
 
-  public void primeCache(
-      VajramID vajramID, ImmutableFacetValues request, CompletableFuture<@Nullable Object> data) {
-    cache.put(new CacheKey(vajramID, request._build()), data);
+  public void primeCache(FacetValues request, CompletableFuture<@Nullable Object> data) {
+    cache.put(new CacheKey(request._build()), data);
   }
 
   private class CachingDecoratedKryon implements Kryon<KryonCommand, KryonCommandResponse> {
@@ -88,8 +86,8 @@ public class RequestLevelCache implements KryonDecorator {
           new LinkedHashMap<>();
       executableRequests.forEach(
           (requestId, facets) -> {
-            var cacheKey = new CacheKey(kryon.getKryonDefinition().vajramID(), facets._build());
-            var cachedFuture = cache.get(cacheKey);
+            var cacheKey = new CacheKey(facets._build());
+            var cachedFuture = getCachedValue(cacheKey);
             if (cachedFuture == null) {
               var placeHolderFuture = new CompletableFuture<@Nullable Object>();
               newCacheEntries.put(requestId, placeHolderFuture);
@@ -162,5 +160,23 @@ public class RequestLevelCache implements KryonDecorator {
                                               .getNow(UNKNOWN_ERROR))))));
       return finalResponse;
     }
+  }
+
+  private @Nullable CompletableFuture<@Nullable Object> getCachedValue(CacheKey cacheKey) {
+    Errable<Object> cachedValue = getCachedValue(cacheKey.facets());
+    if (cachedValue != null) {
+      return cachedValue.toFuture();
+    }
+    return cache.get(cacheKey);
+  }
+
+  /**
+   * Useful for testing. Test code can spy this object and mock this method to behave as expected.
+   *
+   * @param facets The facets for which cache lookup is being done
+   * @return a mocked cache hit or null if no mocking is done.
+   */
+  public @Nullable Errable<Object> getCachedValue(ImmutableFacetValuesContainer facets) {
+    return null;
   }
 }
