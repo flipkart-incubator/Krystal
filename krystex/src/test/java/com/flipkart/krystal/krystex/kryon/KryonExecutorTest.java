@@ -71,7 +71,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 @SuppressWarnings("unchecked")
 class KryonExecutorTest {
 
-  private static final Duration TIMEOUT = Duration.ofSeconds(100);
+  private static final Duration TIMEOUT = Duration.ofSeconds(10);
   private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll
@@ -369,13 +369,14 @@ class KryonExecutorTest {
         newFacetsFromRequestLogic(l4Dep, allFacets),
         ElementTags.of(List.of(ExternallyInvocable.Creator.create())));
 
+    String finalKryon = "requestExecution_multiLevelDependencies_final";
     VajramID vajramID =
         kryonDefinitionRegistry
             .newVajramKryonDefinition(
-                "requestExecution_multiLevelDependencies_final",
+                finalKryon,
                 allFacets,
                 newComputeLogic(
-                        "requestExecution_multiLevelDependencies_final",
+                        finalKryon,
                         allFacets,
                         facets ->
                             ((FacetValuesMap) facets)
@@ -388,8 +389,8 @@ class KryonExecutorTest {
                     .kryonLogicId(),
                 ImmutableMap.of(dependency(1), new VajramID(l4Dep)),
                 ImmutableMap.of(),
-                newCreateNewRequestLogic(l4Dep, emptySet()),
-                newFacetsFromRequestLogic(l4Dep, allFacets),
+                newCreateNewRequestLogic(finalKryon, emptySet()),
+                newFacetsFromRequestLogic(finalKryon, allFacets),
                 ElementTags.of(Creator.create()))
             .vajramID();
     CompletableFuture<Object> future =

@@ -16,6 +16,9 @@ import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.IntStream.range;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
@@ -79,7 +82,7 @@ class FormulaTest {
 
   private VajramKryonGraphBuilder graph;
   private static final String REQUEST_ID = "formulaTest";
-  private final RequestLevelCache requestLevelCache = new RequestLevelCache();
+  private final RequestLevelCache requestLevelCache = spy(new RequestLevelCache());
 
   private Lease<SingleThreadExecutor> executorLease;
 
@@ -128,12 +131,11 @@ class FormulaTest {
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
             .build();
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 0, 0, REQUEST_ID);
+    when(requestLevelCache.getCachedValue(any(Add_FacImmutPojo.class)))
+        .thenReturn(Errable.withValue(0));
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             VajramTestHarness.prepareForTest(vajramExecutorConfig, requestLevelCache)
-                .withMock(
-                    Add_FacImmutPojo._builder().numberOne(0).numberTwo(0)._build(),
-                    Errable.withValue(0))
                 .buildConfig())) {
       future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
     }

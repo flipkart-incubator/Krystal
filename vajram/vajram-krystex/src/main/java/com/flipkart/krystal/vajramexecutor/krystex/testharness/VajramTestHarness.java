@@ -51,8 +51,7 @@ public class VajramTestHarness {
         (vajramID, vajramRequestErrableMap) ->
             vajramRequestErrableMap.forEach(
                 (objectVajramRequest, objectErrable) ->
-                    requestLevelCache.primeCache(
-                        vajramID, objectVajramRequest, objectErrable.toFuture())));
+                    requestLevelCache.primeCache(objectVajramRequest, objectErrable.toFuture())));
     KryonExecutorConfigBuilder configBuilder =
         kryonExecutorConfigBuilder.kryonExecutorConfigBuilder();
     KryonDecoratorConfig kryonDecoratorConfig =
