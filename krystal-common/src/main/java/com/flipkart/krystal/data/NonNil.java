@@ -16,8 +16,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class NonNil<T> implements Success<T> {
   @Getter private final @NonNull T value;
 
-  private @MonotonicNonNull CompletableFuture<@Nullable T> c;
-
   @SuppressWarnings({"optional.field", "OptionalUsedAsFieldOrParameterType"})
   private Optional<@NonNull T> o = Optional.empty();
 

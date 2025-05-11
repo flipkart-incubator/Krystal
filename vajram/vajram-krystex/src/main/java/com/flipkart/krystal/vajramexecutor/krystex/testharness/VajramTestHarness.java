@@ -4,6 +4,7 @@ import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
+import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
@@ -22,19 +23,19 @@ public class VajramTestHarness {
 
   private final Map<VajramID, Map<ImmutableFacetValues, Errable<Object>>> vajramIdMockData;
   private final KrystexVajramExecutorConfig kryonExecutorConfigBuilder;
-  private final RequestLevelCache requestLevelCache;
+  private final TestRequestLevelCache requestLevelCache;
 
   @Inject
   public VajramTestHarness(
       KrystexVajramExecutorConfig krystexVajramExecutorConfig,
-      RequestLevelCache requestLevelCache) {
+      TestRequestLevelCache requestLevelCache) {
     this.kryonExecutorConfigBuilder = krystexVajramExecutorConfig;
     this.requestLevelCache = requestLevelCache;
     this.vajramIdMockData = new HashMap<>();
   }
 
   public static VajramTestHarness prepareForTest(
-      KrystexVajramExecutorConfig executorConfig, RequestLevelCache requestLevelCache) {
+      KrystexVajramExecutorConfig executorConfig, TestRequestLevelCache requestLevelCache) {
     return new VajramTestHarness(executorConfig, requestLevelCache);
   }
 

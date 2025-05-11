@@ -6,7 +6,6 @@ import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
@@ -28,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
-public class RequestLevelCache implements KryonDecorator {
+public sealed class RequestLevelCache implements KryonDecorator permits TestRequestLevelCache {
 
   public static final String DECORATOR_TYPE = RequestLevelCache.class.getName();
 
@@ -41,10 +40,6 @@ public class RequestLevelCache implements KryonDecorator {
   public Kryon<KryonCommand, KryonCommandResponse> decorateKryon(
       KryonDecorationInput decorationInput) {
     return new CachingDecoratedKryon(decorationInput.kryon());
-  }
-
-  public void primeCache(FacetValues request, CompletableFuture<@Nullable Object> data) {
-    cache.put(new CacheKey(request._build()), data);
   }
 
   private class CachingDecoratedKryon implements Kryon<KryonCommand, KryonCommandResponse> {
@@ -162,21 +157,11 @@ public class RequestLevelCache implements KryonDecorator {
     }
   }
 
-  private @Nullable CompletableFuture<@Nullable Object> getCachedValue(CacheKey cacheKey) {
-    Errable<Object> cachedValue = getCachedValue(cacheKey.facets());
-    if (cachedValue != null) {
-      return cachedValue.toFuture();
-    }
+  @Nullable CompletableFuture<@Nullable Object> getCachedValue(CacheKey cacheKey) {
     return cache.get(cacheKey);
   }
 
-  /**
-   * Useful for testing. Test code can spy this object and mock this method to behave as expected.
-   *
-   * @param facets The facets for which cache lookup is being done
-   * @return a mocked cache hit or null if no mocking is done.
-   */
-  public @Nullable Errable<Object> getCachedValue(ImmutableFacetValuesContainer facets) {
-    return null;
+  void primeCache(FacetValues request, CompletableFuture<@Nullable Object> data) {
+    cache.put(new CacheKey(request._build()), data);
   }
 }

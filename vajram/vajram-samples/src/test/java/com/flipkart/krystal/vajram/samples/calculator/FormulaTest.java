@@ -6,6 +6,7 @@ import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.add.Add.FAIL_ADDER_FLAG;
 import static com.flipkart.krystal.vajram.samples.calculator.add.Add.add;
 import static com.flipkart.krystal.vajram.samples.calculator.divide.Divide.divide;
+import static com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness.prepareForTest;
 import static com.google.inject.Guice.createInjector;
 import static com.google.inject.name.Names.named;
 import static java.time.Duration.ofSeconds;
@@ -23,7 +24,7 @@ import static org.mockito.Mockito.when;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.krystex.caching.RequestLevelCache;
+import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
@@ -44,7 +45,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
-import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
 import com.google.inject.AbstractModule;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -82,7 +82,7 @@ class FormulaTest {
 
   private VajramKryonGraphBuilder graph;
   private static final String REQUEST_ID = "formulaTest";
-  private final RequestLevelCache requestLevelCache = spy(new RequestLevelCache());
+  private final TestRequestLevelCache requestLevelCache = spy(new TestRequestLevelCache());
 
   private Lease<SingleThreadExecutor> executorLease;
 
@@ -108,7 +108,7 @@ class FormulaTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
                 .build())) {
-      future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
+      future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(4);
     assertThat(Add.CALL_COUNTER.sum()).isEqualTo(1);
@@ -131,13 +131,11 @@ class FormulaTest {
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
             .build();
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 0, 0, REQUEST_ID);
-    when(requestLevelCache.getCachedValue(any(Add_FacImmutPojo.class)))
-        .thenReturn(Errable.withValue(0));
+    when(requestLevelCache.getValue(any(Add_FacImmutPojo.class))).thenReturn(0);
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
-            VajramTestHarness.prepareForTest(vajramExecutorConfig, requestLevelCache)
-                .buildConfig())) {
-      future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
+            prepareForTest(vajramExecutorConfig, requestLevelCache).buildConfig())) {
+      future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future)
         .failsWithin(ofSeconds(1))
@@ -162,7 +160,7 @@ class FormulaTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
                 .build())) {
-      future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
+      future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future)
         .failsWithin(TEST_TIMEOUT)
@@ -178,20 +176,20 @@ class FormulaTest {
    */
   @ParameterizedTest
   @ValueSource(ints = {1, 2, 4, 6, 8}) // test with different values of parallelism
-  void parallelExecuteVajrams_success(int parallellism) {
+  void parallelExecuteVajrams_success(int parallelism) {
     // This number must be divisible by parallelism. Else this test case will fail because we
     // won't be able to cleanly divide this total executionsCount equally to the executors.
     int executionsCount = 216;
-    SingleThreadExecutor[] executors = getExecutors(parallellism);
+    SingleThreadExecutor[] executors = getExecutors(parallelism);
     VajramKryonGraph graph = this.graph.build();
-    CompletableFuture<?>[] submissionFutures = new CompletableFuture[parallellism];
+    CompletableFuture<?>[] submissionFutures = new CompletableFuture[parallelism];
     @SuppressWarnings("unchecked")
     CompletableFuture<Integer>[] futures = new CompletableFuture[executionsCount];
     LongAdder timeToCreateExecutors = new LongAdder();
     LongAdder timeToEnqueueVajram = new LongAdder();
-    int loopCountPerExecutor = executionsCount / parallellism;
+    int loopCountPerExecutor = executionsCount / parallelism;
 
-    for (int currentThread : range(0, parallellism).toArray()) {
+    for (int currentThread : range(0, parallelism).toArray()) {
       SingleThreadExecutor executor = executors[currentThread];
       int coreCountStart = currentThread * loopCountPerExecutor;
       submissionFutures[currentThread] =
@@ -212,8 +210,7 @@ class FormulaTest {
                     timeToCreateExecutors.add(System.nanoTime() - iterStartTime);
                     long enqueueStart = System.nanoTime();
                     futures[currentLoopCount] =
-                        executeVajram(
-                            graph, krystexVajramExecutor, currentLoopCount, requestContext);
+                        executeVajram(krystexVajramExecutor, currentLoopCount, requestContext);
                     timeToEnqueueVajram.add(System.nanoTime() - enqueueStart);
                   }
                 }
@@ -282,8 +279,7 @@ class FormulaTest {
                             .getKryonMetrics();
                     long enqueueStart = System.nanoTime();
                     futures[currentLoopCount] =
-                        executeVajram(
-                            graph, krystexVajramExecutor, currentLoopCount, requestContext);
+                        executeVajram(krystexVajramExecutor, currentLoopCount, requestContext);
                     timeToEnqueueVajram.add(System.nanoTime() - enqueueStart);
                   }
                 }
@@ -356,7 +352,7 @@ class FormulaTest {
           int iterationNum = outer_i * innerLoopCount + inner_i;
           long enqueueStart = System.nanoTime();
           futures[iterationNum] =
-              executeVajram(graph, krystexVajramExecutor, iterationNum, requestContext);
+              executeVajram(krystexVajramExecutor, iterationNum, requestContext);
           timeToEnqueueVajram += System.nanoTime() - enqueueStart;
         }
       }
@@ -420,10 +416,7 @@ class FormulaTest {
   }
 
   private static CompletableFuture<Integer> executeVajram(
-      VajramKryonGraph graph,
-      KrystexVajramExecutor krystexVajramExecutor,
-      int value,
-      FormulaRequestContext rc) {
+      KrystexVajramExecutor krystexVajramExecutor, int value, FormulaRequestContext rc) {
     return krystexVajramExecutor.execute(
         Formula_ReqImmutPojo._builder().a(rc.a + value).p(rc.p + value).q(rc.q + value)._build(),
         KryonExecutionConfig.builder().executionId("formulaTest" + value).build());
@@ -467,7 +460,7 @@ class FormulaTest {
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
-            VajramTestHarness.prepareForTest(executorConfigBuilder, requestLevelCache)
+            prepareForTest(executorConfigBuilder, requestLevelCache)
                 .withMock(
                     Add_FacImmutPojo._builder().numberOne(20).numberTwo(5)._build(),
                     Errable.withValue(25))
@@ -475,7 +468,7 @@ class FormulaTest {
                     Divide_FacImmutPojo._builder().numerator(100).denominator(25)._build(),
                     Errable.withValue(4))
                 .buildConfig())) {
-      future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
+      future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(4);
     assertThat(Add.CALL_COUNTER.sum()).isEqualTo(0);
@@ -500,12 +493,12 @@ class FormulaTest {
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
-            VajramTestHarness.prepareForTest(kryonExecutorConfigBuilder, requestLevelCache)
+            prepareForTest(kryonExecutorConfigBuilder, requestLevelCache)
                 .withMock(
                     Add_FacImmutPojo._builder().numberOne(20).numberTwo(5)._build(),
                     Errable.withValue(25))
                 .buildConfig())) {
-      future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
+      future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(4);
     assertThat(Add.CALL_COUNTER.sum()).isEqualTo(0);
@@ -530,12 +523,12 @@ class FormulaTest {
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
-            VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
+            prepareForTest(executorConfig, requestLevelCache)
                 .withMock(
                     Divide_FacImmutPojo._builder().numerator(100).denominator(25)._build(),
                     Errable.withValue(4))
                 .buildConfig())) {
-      future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
+      future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future).succeedsWithin(TEST_TIMEOUT).isEqualTo(4);
     assertThat(Add.CALL_COUNTER.sum()).isEqualTo(1);
@@ -559,12 +552,12 @@ class FormulaTest {
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 0, 0, REQUEST_ID);
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
-            VajramTestHarness.prepareForTest(executorConfig, requestLevelCache)
+            prepareForTest(executorConfig, requestLevelCache)
                 .withMock(
                     Add_FacImmutPojo._builder().numberOne(0).numberTwo(0)._build(),
                     Errable.withValue(0))
                 .buildConfig())) {
-      future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
+      future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
     assertThat(future)
         .failsWithin(TEST_TIMEOUT)

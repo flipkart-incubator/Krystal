@@ -20,6 +20,7 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
+import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
@@ -78,7 +79,7 @@ class GreetTest {
   private final MyAnalyticsEventSinkImpl analyticsEventSink = new MyAnalyticsEventSinkImpl();
 
   private LogicDecorationOrdering logicDecorationOrdering;
-  private RequestLevelCache requestLevelCache;
+  private TestRequestLevelCache requestLevelCache;
   private Injector injector;
 
   private Lease<SingleThreadExecutor> executorLease;
@@ -87,7 +88,7 @@ class GreetTest {
   void setUp() throws LeaseUnavailableException {
     this.executorLease = EXEC_POOL.lease();
     injector = createInjector(new GuiceModule());
-    requestLevelCache = new RequestLevelCache();
+    requestLevelCache = new TestRequestLevelCache();
     logicDecorationOrdering =
         new LogicDecorationOrdering(
             ImmutableSet.<String>builder()

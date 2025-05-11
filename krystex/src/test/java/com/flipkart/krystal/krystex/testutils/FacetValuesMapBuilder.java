@@ -14,7 +14,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import lombok.Getter;
 
@@ -115,10 +114,5 @@ public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesB
     }
     otherFacetValues.put(facetId, value);
     return this;
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(this._asMap(), this._vajramID());
   }
 }

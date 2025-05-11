@@ -501,6 +501,7 @@
           <option value="ExtendsObject" />
           <option value="SpellCheckingInspection" />
           <option value="ImmutableEnumChecker" />
+          <option value="DataFlowIssue" />
         </list>
       </option>
     </inspection_tool>
