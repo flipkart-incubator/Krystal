@@ -30,7 +30,7 @@ public class Resilience4JBulkheadConfigurator implements KryonExecutorConfigurat
 
   @Override
   public void addToConfig(KryonExecutorConfigBuilder configBuilder) {
-    configBuilder.logicDecoratorConfig(
+    configBuilder.outputLogicDecoratorConfig(
         DECORATOR_TYPE,
         new OutputLogicDecoratorConfig(
             DECORATOR_TYPE,

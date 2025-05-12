@@ -186,7 +186,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
 
     this.inputBatchingConfig =
         configBuilder ->
-            configBuilder.logicDecoratorConfig(
+            configBuilder.outputLogicDecoratorConfig(
                 InputBatchingDecorator.DECORATOR_TYPE,
                 new OutputLogicDecoratorConfig(
                     InputBatchingDecorator.DECORATOR_TYPE,

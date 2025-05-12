@@ -59,7 +59,7 @@ public final class MainLogicExecReporter
 
   @Override
   public void addToConfig(KryonExecutorConfigBuilder configBuilder) {
-    configBuilder.logicDecoratorConfig(
+    configBuilder.outputLogicDecoratorConfig(
         decoratorType(),
         new OutputLogicDecoratorConfig(
             decoratorType(),

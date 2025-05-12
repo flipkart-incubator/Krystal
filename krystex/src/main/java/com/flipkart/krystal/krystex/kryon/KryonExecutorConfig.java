@@ -23,7 +23,7 @@ import lombok.Singular;
  * This is used to configure a particular execution of the Krystal graph.
  *
  * @param decorationOrdering The ordering of logic decorators to be applied
- * @param logicDecoratorConfigs The request scoped logic decorators to be applied
+ * @param outputLogicDecoratorConfigs The request scoped logic decorators to be applied
  * @param disabledDependentChains Invocation originating for these dependant chains will be blocked.
  *     Useful for avoid graph size explosion in case of recursive dependencies
  * @param kryonExecStrategy Currently on BATCH is supported. More might be added in future
@@ -45,7 +45,7 @@ public record KryonExecutorConfig(
     ImmutableSet<DependentChain> disabledDependentChains,
     KryonExecStrategy kryonExecStrategy,
     GraphTraversalStrategy graphTraversalStrategy,
-    @Singular ImmutableMap<String, OutputLogicDecoratorConfig> logicDecoratorConfigs,
+    @Singular ImmutableMap<String, OutputLogicDecoratorConfig> outputLogicDecoratorConfigs,
     @Singular ImmutableMap<String, KryonDecoratorConfig> kryonDecoratorConfigs,
     @Singular ImmutableMap<String, DependencyDecoratorConfig> dependencyDecoratorConfigs,
     @NonNull SingleThreadExecutor singleThreadExecutor,
@@ -74,8 +74,8 @@ public record KryonExecutorConfig(
     if (decorationOrdering == null) {
       decorationOrdering = DecorationOrdering.none();
     }
-    if (logicDecoratorConfigs == null) {
-      logicDecoratorConfigs = ImmutableMap.of();
+    if (outputLogicDecoratorConfigs == null) {
+      outputLogicDecoratorConfigs = ImmutableMap.of();
     }
     if (traitDispatchDecorator == null) {
       traitDispatchDecorator = DependencyDecorator.NO_OP::decorateDependency;
