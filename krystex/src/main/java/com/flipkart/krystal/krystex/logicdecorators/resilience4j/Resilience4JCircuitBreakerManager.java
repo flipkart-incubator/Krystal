@@ -23,8 +23,7 @@ public class Resilience4JCircuitBreakerManager implements KryonExecutorConfigura
   private final Function<LogicExecutionContext, String> instanceIdGenerator;
   private final List<Consumer<Resilience4JCircuitBreaker>> listeners = new ArrayList<>();
 
-  Resilience4JCircuitBreakerManager(
-      Function<LogicExecutionContext, String> instanceIdGenerator) {
+  Resilience4JCircuitBreakerManager(Function<LogicExecutionContext, String> instanceIdGenerator) {
     this.instanceIdGenerator = instanceIdGenerator;
   }
 
