@@ -82,7 +82,7 @@ public record KryonExecutorConfig(
     }
   }
 
-  public static final class KryonExecutorConfigBuilder {
+  public static class KryonExecutorConfigBuilder {
     public KryonExecutorConfigBuilder configureWith(KryonExecutorConfigurator applier) {
       applier.addToConfig(this);
       return this;

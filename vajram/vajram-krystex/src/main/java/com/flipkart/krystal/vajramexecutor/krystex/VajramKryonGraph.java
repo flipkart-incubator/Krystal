@@ -149,7 +149,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       throw new IllegalArgumentException(
           "Re-registering input batcher config in not currently allowed.");
     }
-    Map<DependentChain, DepChainBatcherConfig> batcherConfigByDepChain = new LinkedHashMap<>();
+    ConcurrentHashMap<DependentChain, DepChainBatcherConfig> batcherConfigByDepChain =
+        new ConcurrentHashMap<>();
 
     Function<LogicExecutionContext, DepChainBatcherConfig> inputBatcherForLogicExecContext =
         logicExecutionContext ->

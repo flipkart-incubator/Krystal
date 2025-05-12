@@ -1,6 +1,7 @@
 package com.flipkart.krystal.krystex.logicdecorators.resilience4j;
 
 import static com.flipkart.krystal.krystex.logicdecorators.resilience4j.Resilience4JBulkhead.DECORATOR_TYPE;
+import static java.util.Collections.synchronizedList;
 
 import com.flipkart.krystal.annos.ComputeDelegationMode;
 import com.flipkart.krystal.annos.OutputLogicDelegationMode;
@@ -11,18 +12,19 @@ import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class Resilience4JBulkheadManager implements KryonExecutorConfigurator {
 
-  private final Map<String, Resilience4JBulkhead> bulkheads = new LinkedHashMap<>();
+  private final ConcurrentHashMap<String, Resilience4JBulkhead> bulkheads =
+      new ConcurrentHashMap<>();
 
   private final Function<LogicExecutionContext, String> instanceIdGenerator;
-  private final List<Consumer<Resilience4JBulkhead>> listeners = new ArrayList<>();
+  private final List<Consumer<Resilience4JBulkhead>> listeners =
+      synchronizedList(new ArrayList<>());
 
   Resilience4JBulkheadManager(Function<LogicExecutionContext, String> instanceIdGenerator) {
     this.instanceIdGenerator = instanceIdGenerator;

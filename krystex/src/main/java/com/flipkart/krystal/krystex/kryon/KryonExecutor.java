@@ -178,9 +178,6 @@ public final class KryonExecutor implements KrystalExecutor {
     Map<String, OutputLogicDecorator> decorators = new LinkedHashMap<>();
     outputLogicDecoratorConfigs.forEach(
         (decoratorType, decoratorConfig) -> {
-          if (decorators.containsKey(decoratorType)) {
-            return;
-          }
           if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
             String instanceId = decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
             OutputLogicDecorator outputLogicDecorator =
@@ -188,17 +185,21 @@ public final class KryonExecutor implements KrystalExecutor {
                     .computeIfAbsent(decoratorType, t -> new LinkedHashMap<>())
                     .computeIfAbsent(
                         instanceId,
-                        _i ->
-                            decoratorConfig
-                                .factory()
-                                .apply(
-                                    new OutputLogicDecoratorContext(
-                                        instanceId, logicExecutionContext)));
-            outputLogicDecorator.executeCommand(
-                new InitiateActiveDepChains(
-                    vajramID,
-                    ImmutableSet.copyOf(
-                        dependentChainsPerKryon.getOrDefault(vajramID, ImmutableSet.of()))));
+                        _i -> {
+                          OutputLogicDecorator logicDecorator =
+                              decoratorConfig
+                                  .factory()
+                                  .apply(
+                                      new OutputLogicDecoratorContext(
+                                          instanceId, logicExecutionContext));
+                          logicDecorator.executeCommand(
+                              new InitiateActiveDepChains(
+                                  vajramID,
+                                  ImmutableSet.copyOf(
+                                      dependentChainsPerKryon.getOrDefault(
+                                          vajramID, ImmutableSet.of()))));
+                          return logicDecorator;
+                        });
             decorators.put(decoratorType, outputLogicDecorator);
           }
         });
