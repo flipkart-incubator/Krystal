@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.samples.calculator.add;
 
+import static com.flipkart.krystal.annos.ComputeDelegationMode.SYNC;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
-import static com.flipkart.krystal.vajram.ComputeDelegationMode.SYNC;
 
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.Trait;

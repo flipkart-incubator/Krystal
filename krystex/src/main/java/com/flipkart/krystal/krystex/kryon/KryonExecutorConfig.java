@@ -5,17 +5,16 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
+import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
-import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import java.util.List;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.Singular;
@@ -23,8 +22,8 @@ import lombok.Singular;
 /**
  * This is used to configure a particular execution of the Krystal graph.
  *
- * @param logicDecorationOrdering The ordering of logic decorators to be applied
- * @param requestScopedLogicDecoratorConfigs The request scoped logic decorators to be applied
+ * @param decorationOrdering The ordering of logic decorators to be applied
+ * @param logicDecoratorConfigs The request scoped logic decorators to be applied
  * @param disabledDependentChains Invocation originating for these dependant chains will be blocked.
  *     Useful for avoid graph size explosion in case of recursive dependencies
  * @param kryonExecStrategy Currently on BATCH is supported. More might be added in future
@@ -42,16 +41,15 @@ import lombok.Singular;
  *     of only allowing vajrams tagged with @{@link ExternallyInvocable}(allow=true)
  */
 public record KryonExecutorConfig(
-    LogicDecorationOrdering logicDecorationOrdering,
-    ImmutableMap<String, List<OutputLogicDecoratorConfig>> requestScopedLogicDecoratorConfigs,
+    DecorationOrdering decorationOrdering,
     ImmutableSet<DependentChain> disabledDependentChains,
     KryonExecStrategy kryonExecStrategy,
     GraphTraversalStrategy graphTraversalStrategy,
+    @Singular ImmutableMap<String, OutputLogicDecoratorConfig> logicDecoratorConfigs,
     @Singular ImmutableMap<String, KryonDecoratorConfig> kryonDecoratorConfigs,
     @Singular ImmutableMap<String, DependencyDecoratorConfig> dependencyDecoratorConfigs,
     @NonNull SingleThreadExecutor singleThreadExecutor,
     TraitDispatchDecorator traitDispatchDecorator,
-    boolean enableFlush,
     boolean debug,
     /* ****** Risky Flags ********/
     @Deprecated boolean _riskyOpenAllKryonsForExternalInvocation) {
@@ -73,14 +71,21 @@ public record KryonExecutorConfig(
     if (disabledDependentChains == null) {
       disabledDependentChains = ImmutableSet.of();
     }
-    if (logicDecorationOrdering == null) {
-      logicDecorationOrdering = LogicDecorationOrdering.none();
+    if (decorationOrdering == null) {
+      decorationOrdering = DecorationOrdering.none();
     }
-    if (requestScopedLogicDecoratorConfigs == null) {
-      requestScopedLogicDecoratorConfigs = ImmutableMap.of();
+    if (logicDecoratorConfigs == null) {
+      logicDecoratorConfigs = ImmutableMap.of();
     }
     if (traitDispatchDecorator == null) {
       traitDispatchDecorator = DependencyDecorator.NO_OP::decorateDependency;
+    }
+  }
+
+  public static final class KryonExecutorConfigBuilder {
+    public KryonExecutorConfigBuilder configureWith(KryonExecutorConfigurator applier) {
+      applier.addToConfig(this);
+      return this;
     }
   }
 }

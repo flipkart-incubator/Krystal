@@ -6,7 +6,7 @@ import static com.flipkart.krystal.vajram.samples.Util.javaMethodBenchmark;
 import static com.flipkart.krystal.vajram.samples.Util.printStats;
 import static com.flipkart.krystal.vajram.samples.calculator.add.Add.add;
 import static com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Fac.chainSum_s;
-import static com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig.autoRegisterSharedBatchers;
+import static com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig.autoRegisterSharedBatchers;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -23,7 +23,6 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
-import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
@@ -33,7 +32,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -82,7 +80,6 @@ class ChainAddTest {
   void chainer_success() throws Exception {
     CompletableFuture<Integer> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
-    MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(kryonExecutionReport);
     autoRegisterSharedBatchers(graph, _v -> 100, getDisabledDependentChains(graph));
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
@@ -91,16 +88,7 @@ class ChainAddTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .singleThreadExecutor(executorLease.get())
-                        .requestScopedLogicDecoratorConfigs(
-                            ImmutableMap.of(
-                                mainLogicExecReporter.decoratorType(),
-                                List.of(
-                                    new OutputLogicDecoratorConfig(
-                                        mainLogicExecReporter.decoratorType(),
-                                        logicExecutionContext -> true,
-                                        logicExecutionContext ->
-                                            mainLogicExecReporter.decoratorType(),
-                                        decoratorContext -> mainLogicExecReporter)))))
+                        .configureWith(new MainLogicExecReporter(kryonExecutionReport)))
                 .build())) {
 
       future = executeVajram(krystexVajramExecutor, 0);

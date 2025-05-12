@@ -3,9 +3,10 @@ package com.flipkart.krystal.vajram.annos;
 import static java.lang.annotation.ElementType.TYPE;
 
 import com.flipkart.krystal.annos.ApplicableToElements;
+import com.flipkart.krystal.annos.ComputeDelegationMode;
 import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.OutputLogicDelegationMode;
 import com.flipkart.krystal.core.KrystalElement.VajramRoot;
-import com.flipkart.krystal.vajram.ComputeDelegationMode;
 import java.lang.annotation.Documented;
 import java.lang.annotation.Target;
 

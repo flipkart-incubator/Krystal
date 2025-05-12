@@ -46,11 +46,11 @@ import com.flipkart.krystal.krystex.commands.ForwardSend;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.commands.MultiRequestCommand;
 import com.flipkart.krystal.krystex.commands.VoidResponse;
+import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
+import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.dependencydecoration.VajramInvocation;
-import com.flipkart.krystal.krystex.logicdecoration.FlushCommand;
-import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.request.InvocationId;
@@ -130,14 +130,14 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
           outputLogicDecoratorSuppliers,
       Function<DependencyExecutionContext, ImmutableMap<String, DependencyDecorator>>
           depDecoratorSuppliers,
-      LogicDecorationOrdering logicDecorationOrdering,
+      DecorationOrdering decorationOrdering,
       RequestIdGenerator requestIdGenerator) {
     super(
         kryonDefinition,
         kryonExecutor,
         outputLogicDecoratorSuppliers,
         depDecoratorSuppliers,
-        logicDecorationOrdering,
+        decorationOrdering,
         requestIdGenerator);
   }
 

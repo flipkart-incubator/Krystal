@@ -24,7 +24,6 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorMetrics;
-import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
@@ -35,7 +34,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -83,7 +81,6 @@ class SplitAddTest {
   void splitAdder_success() throws Exception {
     CompletableFuture<Integer> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
-    MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(kryonExecutionReport);
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
@@ -91,16 +88,7 @@ class SplitAddTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .singleThreadExecutor(executorLease.get())
-                        .requestScopedLogicDecoratorConfigs(
-                            ImmutableMap.of(
-                                mainLogicExecReporter.decoratorType(),
-                                List.of(
-                                    new OutputLogicDecoratorConfig(
-                                        mainLogicExecReporter.decoratorType(),
-                                        logicExecutionContext -> true,
-                                        logicExecutionContext ->
-                                            mainLogicExecReporter.decoratorType(),
-                                        decoratorContext -> mainLogicExecReporter))))
+                        .configureWith(new MainLogicExecReporter(kryonExecutionReport))
                         // Tests whether executor level disabled dependant chains is working
                         .disabledDependentChains(disabledDepChains(graph)))
                 .build())) {

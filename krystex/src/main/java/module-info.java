@@ -1,8 +1,6 @@
 module flipkart.krystal.krystex {
   exports com.flipkart.krystal.krystex to
       flipkart.krystal.vajramexecutor.krystex;
-  exports com.flipkart.krystal.krystex.kryon to
-      flipkart.krystal.vajramexecutor.krystex;
   exports com.flipkart.krystal.krystex.logicdecoration to
       flipkart.krystal.vajramexecutor.krystex;
   exports com.flipkart.krystal.krystex.logicdecorators.resilience4j to
@@ -19,6 +17,9 @@ module flipkart.krystal.krystex {
   exports com.flipkart.krystal.krystex.caching;
   exports com.flipkart.krystal.krystex.dependencydecoration;
   exports com.flipkart.krystal.krystex.dependencydecorators;
+  exports com.flipkart.krystal.krystex.kryon;
+  exports com.flipkart.krystal.krystex.decoration to
+      flipkart.krystal.vajramexecutor.krystex;
 
   requires com.google.common;
   requires org.checkerframework.checker.qual;

@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajramexecutor.krystex;
+package com.flipkart.krystal.vajramexecutor.krystex.batching;
 
 import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
 
@@ -11,7 +11,7 @@ import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.DependentChainStart;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
-import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.LogicDecoratorContext;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig.OutputLogicDecoratorContext;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.batching.InputBatcher;
 import com.flipkart.krystal.vajram.batching.InputBatcherImpl;
@@ -19,13 +19,17 @@ import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
+import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -37,10 +41,13 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public record InputBatcherConfig(
+public record DepChainBatcherConfig(
+    Predicate<LogicExecutionContext> shouldBatch,
     Function<LogicExecutionContext, String> instanceIdGenerator,
-    Predicate<BatcherContext> shouldBatch,
-    Function<BatcherContext, OutputLogicDecorator> decoratorFactory) {
+    Function<OutputLogicDecoratorContext, OutputLogicDecorator> decoratorFactory) {
+
+  public static final DepChainBatcherConfig NO_BATCHING =
+      new DepChainBatcherConfig(_l -> false, _l -> "", _l -> OutputLogicDecorator.NO_OP);
 
   /**
    * Creates a default InputBatcherConfig which guarantees that every unique {@link DependentChain}
@@ -54,39 +61,36 @@ public record InputBatcherConfig(
    *     InputBatchingDecorator}. This supplier is guaranteed to be called exactly once for every
    *     unique {@link InputBatchingDecorator} instance.
    */
-  public static InputBatcherConfig simple(Supplier<InputBatcher> inputBatcherSupplier) {
-    return new InputBatcherConfig(
+  public static DepChainBatcherConfig simple(Supplier<InputBatcher> inputBatcherSupplier) {
+    return new DepChainBatcherConfig(
+        logicExecutionContext -> true,
         logicExecutionContext -> generateInstanceId(logicExecutionContext.dependants()).toString(),
-        batcherContext -> true,
-        batcherContext ->
+        outputLogicDecoratorContext ->
             new InputBatchingDecorator(
-                batcherContext.logicDecoratorContext().instanceId(),
+                outputLogicDecoratorContext.instanceId(),
                 inputBatcherSupplier.get(),
                 dependantChain ->
-                    batcherContext
-                        .logicDecoratorContext()
+                    outputLogicDecoratorContext
                         .logicExecutionContext()
                         .dependants()
                         .equals(dependantChain)));
   }
 
-  public static InputBatcherConfig sharedBatcher(
+  public static DepChainBatcherConfig sharedBatcher(
       Supplier<InputBatcher> inputBatcherSupplier,
       String instanceId,
       DependentChain... dependentChains) {
     return sharedBatcher(inputBatcherSupplier, instanceId, ImmutableSet.copyOf(dependentChains));
   }
 
-  public static InputBatcherConfig sharedBatcher(
+  public static DepChainBatcherConfig sharedBatcher(
       Supplier<InputBatcher> inputBatcherSupplier,
       String instanceId,
       ImmutableSet<DependentChain> dependentChains) {
-    return new InputBatcherConfig(
+    return new DepChainBatcherConfig(
+        logicExecutionContext -> dependentChains.contains(logicExecutionContext.dependants()),
         logicExecutionContext -> instanceId,
-        batcherContext ->
-            dependentChains.contains(
-                batcherContext.logicDecoratorContext().logicExecutionContext().dependants()),
-        batcherContext ->
+        outputLogicDecoratorContext ->
             new InputBatchingDecorator(
                 instanceId, inputBatcherSupplier.get(), dependentChains::contains));
   }
@@ -102,23 +106,26 @@ public record InputBatcherConfig(
       ImmutableSet<DependentChain> disabledDependentChains) {
     Map<VajramID, Map<Integer, Set<DependentChain>>> ioNodes =
         getIoVajrams(graph, disabledDependentChains);
+    Map<VajramID, ImmutableList<DepChainBatcherConfig>> depChainBatcherConfigs =
+        new LinkedHashMap<>();
     ioNodes.forEach(
         (vajramId, ioNodeMap) -> {
           if (isBatchingNeededForIoVajram(graph, vajramId)) {
-            List<InputBatcherConfig> inputModulatorConfigs = new ArrayList<>(ioNodeMap.size());
+            List<DepChainBatcherConfig> inputModulatorConfigs = new ArrayList<>(ioNodeMap.size());
             for (Entry<Integer, Set<DependentChain>> entry : ioNodeMap.entrySet()) {
               Integer depth = entry.getKey();
               Set<DependentChain> depChains = entry.getValue();
               inputModulatorConfigs.add(
-                  InputBatcherConfig.sharedBatcher(
+                  DepChainBatcherConfig.sharedBatcher(
                       () -> new InputBatcherImpl(batchSizeSupplier.getBatchSize(vajramId)),
                       vajramId.id() + ":depth(" + depth + ")",
                       depChains.toArray(DependentChain[]::new)));
             }
-            graph.registerInputBatchers(
-                vajramId, inputModulatorConfigs.toArray(InputBatcherConfig[]::new));
+            depChainBatcherConfigs.put(vajramId, ImmutableList.copyOf(inputModulatorConfigs));
           }
         });
+    graph.registerInputBatchers(
+        new InputBatcherConfig(ImmutableMap.copyOf(depChainBatcherConfigs)));
   }
 
   /**
@@ -183,7 +190,6 @@ public record InputBatcherConfig(
     // get the order of execution of inputDefinitions
     Map<Facet, List<Facet>> inputDefGraph = new HashMap<>();
     VajramID vajramId = rootNode.vajramId();
-    graph.loadKryonSubGraphIfNeeded(vajramId);
     for (Facet inputDef : getOrderedInputDef(rootNode, inputDefGraph)) {
       if (inputDef instanceof DependencySpec<?, ?, ?> dependency) {
         List<ResolverDefinition> resolverDefinition =
@@ -334,8 +340,6 @@ public record InputBatcherConfig(
       stack.add(vid);
     }
   }
-
-  public record BatcherContext(LogicDecoratorContext logicDecoratorContext) {}
 
   @FunctionalInterface
   public interface BatchSizeSupplier {

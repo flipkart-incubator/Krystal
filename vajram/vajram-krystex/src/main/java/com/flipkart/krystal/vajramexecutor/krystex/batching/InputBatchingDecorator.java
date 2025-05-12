@@ -1,4 +1,4 @@
-package com.flipkart.krystal.vajramexecutor.krystex;
+package com.flipkart.krystal.vajramexecutor.krystex.batching;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -16,9 +16,9 @@ import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
-import com.flipkart.krystal.krystex.logicdecoration.FlushCommand;
-import com.flipkart.krystal.krystex.logicdecoration.InitiateActiveDepChains;
-import com.flipkart.krystal.krystex.logicdecoration.LogicDecoratorCommand;
+import com.flipkart.krystal.krystex.decoration.FlushCommand;
+import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
+import com.flipkart.krystal.krystex.decoration.DecoratorCommand;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.vajram.batching.BatchEnabledFacetValues;
 import com.flipkart.krystal.vajram.batching.BatchedFacets;
@@ -107,14 +107,14 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
   }
 
   @Override
-  public void executeCommand(LogicDecoratorCommand logicDecoratorCommand) {
-    if (logicDecoratorCommand instanceof InitiateActiveDepChains initiateActiveDepChains) {
+  public void executeCommand(DecoratorCommand decoratorCommand) {
+    if (decoratorCommand instanceof InitiateActiveDepChains initiateActiveDepChains) {
       LinkedHashSet<DependentChain> allActiveDepChains =
           new LinkedHashSet<>(initiateActiveDepChains.dependantsChains());
       // Retain only the ones which are applicable for this input batching decorator
       allActiveDepChains.removeIf(isApplicableToDependentChain.negate());
       this.activeDependentChains = ImmutableSet.copyOf(allActiveDepChains);
-    } else if (logicDecoratorCommand instanceof FlushCommand flushCommand) {
+    } else if (decoratorCommand instanceof FlushCommand flushCommand) {
       flushedDependentChains.add(flushCommand.dependantsChain());
       if (flushedDependentChains.containsAll(activeDependentChains)) {
         inputBatcher.batch();
@@ -161,10 +161,5 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
   public void onConfigUpdate(ConfigProvider configProvider) {
     inputBatcher.onConfigUpdate(
         new NestedConfig(String.format("input_batching.%s.", instanceId), configProvider));
-  }
-
-  @Override
-  public String getId() {
-    return instanceId;
   }
 }

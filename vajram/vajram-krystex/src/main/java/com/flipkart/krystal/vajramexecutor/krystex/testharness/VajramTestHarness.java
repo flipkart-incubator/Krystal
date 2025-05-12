@@ -22,14 +22,14 @@ import java.util.Map;
 public class VajramTestHarness {
 
   private final Map<VajramID, Map<ImmutableFacetValues, Errable<Object>>> vajramIdMockData;
-  private final KrystexVajramExecutorConfig kryonExecutorConfigBuilder;
+  private final KrystexVajramExecutorConfig kryonExecutorConfig;
   private final TestRequestLevelCache requestLevelCache;
 
   @Inject
   public VajramTestHarness(
       KrystexVajramExecutorConfig krystexVajramExecutorConfig,
       TestRequestLevelCache requestLevelCache) {
-    this.kryonExecutorConfigBuilder = krystexVajramExecutorConfig;
+    this.kryonExecutorConfig = krystexVajramExecutorConfig;
     this.requestLevelCache = requestLevelCache;
     this.vajramIdMockData = new HashMap<>();
   }
@@ -53,12 +53,11 @@ public class VajramTestHarness {
             vajramRequestErrableMap.forEach(
                 (objectVajramRequest, objectErrable) ->
                     requestLevelCache.primeCache(objectVajramRequest, objectErrable.toFuture())));
-    KryonExecutorConfigBuilder configBuilder =
-        kryonExecutorConfigBuilder.kryonExecutorConfigBuilder();
+    KryonExecutorConfigBuilder configBuilder = kryonExecutorConfig.kryonExecutorConfigBuilder();
     KryonDecoratorConfig kryonDecoratorConfig =
         configBuilder.build().kryonDecoratorConfigs().get(RequestLevelCache.DECORATOR_TYPE);
     if (kryonDecoratorConfig == null) {
-      kryonExecutorConfigBuilder
+      kryonExecutorConfig
           .kryonExecutorConfigBuilder()
           .kryonDecoratorConfig(
               RequestLevelCache.DECORATOR_TYPE,
@@ -68,6 +67,6 @@ public class VajramTestHarness {
                   executionContext -> RequestLevelCache.DECORATOR_TYPE,
                   kryonExecutionContext -> requestLevelCache));
     }
-    return kryonExecutorConfigBuilder;
+    return kryonExecutorConfig;
   }
 }

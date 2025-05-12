@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.samples.customer_service;
 
+import static com.flipkart.krystal.annos.ComputeDelegationMode.NONE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
-import static com.flipkart.krystal.vajram.ComputeDelegationMode.NONE;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.model.IfAbsent;

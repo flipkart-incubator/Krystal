@@ -6,4 +6,7 @@ import com.flipkart.krystal.krystex.kryon.KrystalExecutorCompletionListener;
 
 public non-sealed interface OutputLogicDecorator
     extends LogicDecorator<OutputLogic<Object>, OutputLogicDefinition<Object>>,
-        KrystalExecutorCompletionListener {}
+        KrystalExecutorCompletionListener {
+
+  OutputLogicDecorator NO_OP = (logicToDecorate, originalLogicDefinition) -> logicToDecorate;
+}

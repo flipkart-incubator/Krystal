@@ -35,7 +35,6 @@ import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
-import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
 import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
 import com.flipkart.krystal.krystex.testutils.FacetValuesMap;
@@ -625,13 +624,7 @@ class KryonExecutorTest {
             .singleThreadExecutor(executorLease.get())
             .kryonExecStrategy(kryonExecStrategy)
             .graphTraversalStrategy(graphTraversalStrategy)
-            .kryonDecoratorConfig(
-                RequestLevelCache.DECORATOR_TYPE,
-                new KryonDecoratorConfig(
-                    RequestLevelCache.DECORATOR_TYPE,
-                    _c -> true,
-                    _c -> RequestLevelCache.DECORATOR_TYPE,
-                    _c -> requestLevelCache))
+            .configureWith(requestLevelCache)
             .build();
     return new KryonExecutor(kryonDefinitionRegistry, config, "test");
   }

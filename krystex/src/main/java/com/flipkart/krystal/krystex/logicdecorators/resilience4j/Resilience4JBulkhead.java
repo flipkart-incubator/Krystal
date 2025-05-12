@@ -9,6 +9,7 @@ import com.flipkart.krystal.core.OutputLogicExecutionInput;
 import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
+import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
@@ -18,6 +19,7 @@ import io.github.resilience4j.decorators.Decorators;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class Resilience4JBulkhead implements OutputLogicDecorator {
@@ -40,6 +42,15 @@ public final class Resilience4JBulkhead implements OutputLogicDecorator {
     this.instanceId = instanceId;
   }
 
+  public static Resilience4JBulkheadConfigurator onePerIOVajram() {
+    return onePerInstanceId(logicExecutionContext -> logicExecutionContext.vajramID().id());
+  }
+
+  public static Resilience4JBulkheadConfigurator onePerInstanceId(
+      Function<LogicExecutionContext, String> instanceIdGenerator) {
+    return new Resilience4JBulkheadConfigurator(instanceIdGenerator);
+  }
+
   @Override
   public OutputLogic<Object> decorateLogic(
       OutputLogic<Object> logicToDecorate, OutputLogicDefinition<Object> originalLogicDefinition) {
@@ -55,11 +66,6 @@ public final class Resilience4JBulkhead implements OutputLogicDecorator {
   @Override
   public void onConfigUpdate(ConfigProvider configProvider) {
     updateBulkhead(configProvider);
-  }
-
-  @Override
-  public String getId() {
-    return instanceId;
   }
 
   private void updateBulkhead(ConfigProvider configProvider) {

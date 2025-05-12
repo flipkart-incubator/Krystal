@@ -11,6 +11,7 @@ import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import jakarta.inject.Inject;
 import jakarta.inject.Provider;
 import jakarta.inject.Qualifier;
 import java.lang.annotation.Annotation;
@@ -28,6 +29,7 @@ public class VajramGuiceInputInjector implements VajramInjectionProvider {
   private final Injector injector;
   private final Map<VajramID, Map<String, Provider<?>>> providerCache = new LinkedHashMap<>();
 
+  @Inject
   public VajramGuiceInputInjector(Injector injector) {
     this.injector = injector;
   }
