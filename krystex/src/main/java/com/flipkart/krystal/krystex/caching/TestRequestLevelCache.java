@@ -45,6 +45,7 @@ public final class TestRequestLevelCache extends RequestLevelCache {
 
   public TestRequestLevelCache() {}
 
+  @Override
   public void primeCache(FacetValues facetValues, CompletableFuture<@Nullable Object> data) {
     super.primeCache(facetValues, data);
   }
