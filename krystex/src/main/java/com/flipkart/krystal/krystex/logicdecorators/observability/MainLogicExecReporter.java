@@ -19,8 +19,11 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
+import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.google.common.collect.ImmutableList;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -34,8 +37,10 @@ import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class MainLogicExecReporter implements OutputLogicDecorator {
+public final class MainLogicExecReporter
+    implements OutputLogicDecorator, KryonExecutorConfigurator {
 
+  public static final String DECORATOR_TYPE = MainLogicExecReporter.class.getName();
   private final KryonExecutionReport kryonExecutionReport;
   private static final String FILE_PATH = separator + "tmp" + separator + "krystal_exec_graph_";
   private final ObjectMapper objectMapper;
@@ -50,6 +55,18 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
             .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
             .disable(SerializationFeature.FAIL_ON_SELF_REFERENCES);
+  }
+
+  @Override
+  public void addToConfig(KryonExecutorConfigBuilder configBuilder) {
+    configBuilder.outputLogicDecoratorConfig(
+        decoratorType(),
+        new OutputLogicDecoratorConfig(
+            decoratorType(),
+            logicExecutionContext -> true, // apply to all vajrams
+            logicExecutionContext -> decoratorType(), // Only one instance across the graph
+            decoratorContext -> this // Reuse this one instance across the graph,
+            ));
   }
 
   @Override
@@ -92,8 +109,8 @@ public class MainLogicExecReporter implements OutputLogicDecorator {
   }
 
   @Override
-  public String getId() {
-    return MainLogicExecReporter.class.getName();
+  public String decoratorType() {
+    return DECORATOR_TYPE;
   }
 
   public KryonExecutionReport getKryonExecutionReport() {

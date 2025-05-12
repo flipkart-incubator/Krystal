@@ -4,10 +4,8 @@ import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.allOf;
 
-import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
@@ -15,9 +13,12 @@ import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationInput;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
+import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.request.InvocationId;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashMap;
@@ -29,7 +30,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
-public class RequestLevelCache implements KryonDecorator {
+public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorConfigurator
+    permits TestRequestLevelCache {
 
   public static final String DECORATOR_TYPE = RequestLevelCache.class.getName();
 
@@ -39,14 +41,21 @@ public class RequestLevelCache implements KryonDecorator {
   private final Map<CacheKey, CompletableFuture<@Nullable Object>> cache = new LinkedHashMap<>();
 
   @Override
+  public void addToConfig(KryonExecutorConfigBuilder configBuilder) {
+    configBuilder.kryonDecoratorConfig(
+        DECORATOR_TYPE,
+        new KryonDecoratorConfig(
+            DECORATOR_TYPE,
+            _c -> true, // Apply cache to all vajrams
+            _c -> DECORATOR_TYPE, // Only one RequestLevelCache across the vajram graph
+            _c -> this // Reuse this instance across the graph
+            ));
+  }
+
+  @Override
   public Kryon<KryonCommand, KryonCommandResponse> decorateKryon(
       KryonDecorationInput decorationInput) {
     return new CachingDecoratedKryon(decorationInput.kryon());
-  }
-
-  public void primeCache(
-      VajramID vajramID, ImmutableFacetValues request, CompletableFuture<@Nullable Object> data) {
-    cache.put(new CacheKey(vajramID, request._build()), data);
   }
 
   private class CachingDecoratedKryon implements Kryon<KryonCommand, KryonCommandResponse> {
@@ -88,8 +97,8 @@ public class RequestLevelCache implements KryonDecorator {
           new LinkedHashMap<>();
       executableRequests.forEach(
           (requestId, facets) -> {
-            var cacheKey = new CacheKey(kryon.getKryonDefinition().vajramID(), facets._build());
-            var cachedFuture = cache.get(cacheKey);
+            var cacheKey = new CacheKey(facets._build());
+            var cachedFuture = getCachedValue(cacheKey);
             if (cachedFuture == null) {
               var placeHolderFuture = new CompletableFuture<@Nullable Object>();
               newCacheEntries.put(requestId, placeHolderFuture);
@@ -162,5 +171,13 @@ public class RequestLevelCache implements KryonDecorator {
                                               .getNow(UNKNOWN_ERROR))))));
       return finalResponse;
     }
+  }
+
+  @Nullable CompletableFuture<@Nullable Object> getCachedValue(CacheKey cacheKey) {
+    return cache.get(cacheKey);
+  }
+
+  void primeCache(FacetValues request, CompletableFuture<@Nullable Object> data) {
+    cache.put(new CacheKey(request._build()), data);
   }
 }

@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.krystex.caching.RequestLevelCache;
+import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
@@ -30,7 +30,7 @@ class Proto3LatticeSampleTest {
 
   private static SingleThreadExecutorsPool EXEC_POOL;
   private static final String REQUEST_ID = "protoExhaustiveTest";
-  private final RequestLevelCache requestLevelCache = new RequestLevelCache();
+  private final TestRequestLevelCache requestLevelCache = new TestRequestLevelCache();
 
   private VajramKryonGraph graph;
   private Lease<SingleThreadExecutor> executorLease;

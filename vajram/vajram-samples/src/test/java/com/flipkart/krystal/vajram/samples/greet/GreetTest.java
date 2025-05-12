@@ -20,12 +20,12 @@ import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
+import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
+import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
-import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
-import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecorators.observability.DefaultKryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.KryonExecutionReport;
 import com.flipkart.krystal.krystex.logicdecorators.observability.MainLogicExecReporter;
@@ -39,7 +39,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.VajramKryonGraphBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
@@ -77,8 +76,8 @@ class GreetTest {
 
   private final MyAnalyticsEventSinkImpl analyticsEventSink = new MyAnalyticsEventSinkImpl();
 
-  private LogicDecorationOrdering logicDecorationOrdering;
-  private RequestLevelCache requestLevelCache;
+  private DecorationOrdering decorationOrdering;
+  private TestRequestLevelCache requestLevelCache;
   private Injector injector;
 
   private Lease<SingleThreadExecutor> executorLease;
@@ -87,12 +86,12 @@ class GreetTest {
   void setUp() throws LeaseUnavailableException {
     this.executorLease = EXEC_POOL.lease();
     injector = createInjector(new GuiceModule());
-    requestLevelCache = new RequestLevelCache();
-    logicDecorationOrdering =
-        new LogicDecorationOrdering(
+    requestLevelCache = new TestRequestLevelCache();
+    decorationOrdering =
+        new DecorationOrdering(
             ImmutableSet.<String>builder()
                 // Output logic decorators
-                .add(MainLogicExecReporter.class.getName())
+                .add(MainLogicExecReporter.DECORATOR_TYPE)
                 // KryonDecorators
                 .add(RequestLevelCache.DECORATOR_TYPE)
                 .add(KryonInputInjector.DECORATOR_TYPE)
@@ -128,7 +127,6 @@ class GreetTest {
   void greetingVajram_success() throws Exception {
     CompletableFuture<String> future;
     KryonExecutionReport kryonExecutionReport = new DefaultKryonExecutionReport(Clock.systemUTC());
-    MainLogicExecReporter mainLogicExecReporter = new MainLogicExecReporter(kryonExecutionReport);
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
     assertThat(analyticsEventSink.events).isEmpty();
     try (VajramKryonGraph vajramKryonGraph = graph.build();
@@ -140,19 +138,10 @@ class GreetTest {
                     .kryonExecutorConfigBuilder(
                         KryonExecutorConfig.builder()
                             .singleThreadExecutor(executorLease.get())
-                            .logicDecorationOrdering(logicDecorationOrdering)
-                            .requestScopedLogicDecoratorConfigs(
-                                ImmutableMap.of(
-                                    mainLogicExecReporter.decoratorType(),
-                                    List.of(
-                                        new OutputLogicDecoratorConfig(
-                                            mainLogicExecReporter.decoratorType(),
-                                            logicExecutionContext -> true,
-                                            logicExecutionContext ->
-                                                mainLogicExecReporter.decoratorType(),
-                                            decoratorContext -> mainLogicExecReporter)))))
+                            .decorationOrdering(decorationOrdering)
+                            .configureWith(new MainLogicExecReporter(kryonExecutionReport)))
                     .build())) {
-      future = executeVajram(vajramKryonGraph, krystexVajramExecutor, requestContext);
+      future = executeVajram(krystexVajramExecutor, requestContext);
     }
     assertThat(future)
         .succeedsWithin(1, SECONDS)
@@ -181,7 +170,7 @@ class GreetTest {
   public record RequestContext(String requestId, String userId) {}
 
   private static CompletableFuture<String> executeVajram(
-      VajramKryonGraph graph, KrystexVajramExecutor krystexVajramExecutor, RequestContext rc) {
+      KrystexVajramExecutor krystexVajramExecutor, RequestContext rc) {
     return krystexVajramExecutor.execute(
         Greet_ReqImmutPojo._builder().userId(rc.userId)._build(),
         KryonExecutionConfig.builder().executionId("req_1").build());
@@ -211,7 +200,7 @@ class GreetTest {
                         UserService_FacImmutPojo._builder().userId(USER_ID)._build(),
                         withValue(new UserInfo(USER_ID, USER_NAME)))
                     .buildConfig())) {
-      future = executeVajram(vajramKryonGraph, krystexVajramExecutor, requestContext);
+      future = executeVajram(krystexVajramExecutor, requestContext);
     }
     assertThat(future).succeedsWithin(TIMEOUT).asInstanceOf(STRING).contains(USER_NAME);
   }
@@ -240,7 +229,7 @@ class GreetTest {
                         UserService_FacImmutPojo._builder().userId(USER_ID)._build(),
                         Errable.withError(new IOException("Request Timeout")))
                     .buildConfig())) {
-      future = executeVajram(vajramKryonGraph, krystexVajramExecutor, requestContext);
+      future = executeVajram(krystexVajramExecutor, requestContext);
     }
     assertThat(future).succeedsWithin(TIMEOUT).asInstanceOf(STRING).doesNotContain(USER_NAME);
   }

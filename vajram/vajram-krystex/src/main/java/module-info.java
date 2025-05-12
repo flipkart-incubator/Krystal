@@ -1,5 +1,6 @@
 module flipkart.krystal.vajramexecutor.krystex {
   exports com.flipkart.krystal.vajramexecutor.krystex;
+  exports com.flipkart.krystal.vajramexecutor.krystex.batching;
 
   requires flipkart.krystal.common;
   requires flipkart.krystal.vajram;

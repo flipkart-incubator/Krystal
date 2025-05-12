@@ -1,6 +1,6 @@
 package com.flipkart.krystal.krystex.dependencydecoration;
 
-import com.flipkart.krystal.krystex.Decorator;
+import com.flipkart.krystal.krystex.decoration.Decorator;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 
 @FunctionalInterface

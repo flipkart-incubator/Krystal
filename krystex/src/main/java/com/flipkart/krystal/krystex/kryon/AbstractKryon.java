@@ -4,9 +4,9 @@ import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
+import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
-import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
@@ -30,7 +30,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
 
   private final Function<DependencyExecutionContext, ImmutableMap<String, DependencyDecorator>>
       depDecoratorSuppliers;
-  protected final LogicDecorationOrdering logicDecorationOrdering;
+  protected final DecorationOrdering decorationOrdering;
 
   protected final RequestIdGenerator requestIdGenerator;
 
@@ -41,14 +41,14 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
           outputLogicDecoratorSuppliers,
       Function<DependencyExecutionContext, ImmutableMap<String, DependencyDecorator>>
           depDecoratorSuppliers,
-      LogicDecorationOrdering logicDecorationOrdering,
+      DecorationOrdering decorationOrdering,
       RequestIdGenerator requestIdGenerator) {
     this.kryonDefinition = definition;
     this.vajramID = definition.vajramID();
     this.kryonExecutor = kryonExecutor;
     this.outputLogicDecoratorSuppliers = outputLogicDecoratorSuppliers;
     this.depDecoratorSuppliers = depDecoratorSuppliers;
-    this.logicDecorationOrdering = logicDecorationOrdering;
+    this.decorationOrdering = decorationOrdering;
     this.requestIdGenerator = requestIdGenerator;
   }
 
@@ -58,19 +58,15 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
         kryonDefinition.getOutputLogicDefinition();
     Map<String, OutputLogicDecorator> decorators =
         new LinkedHashMap<>(
-            outputLogicDefinition.getSessionScopedLogicDecorators(kryonDefinition, dependentChain));
-    // If the same decoratorType is configured for session and request scope, request scope
-    // overrides session scope.
-    decorators.putAll(
-        outputLogicDecoratorSuppliers.apply(
-            new LogicExecutionContext(
-                vajramID,
-                outputLogicDefinition.tags(),
-                dependentChain,
-                kryonDefinition.kryonDefinitionRegistry())));
+            outputLogicDecoratorSuppliers.apply(
+                new LogicExecutionContext(
+                    vajramID,
+                    outputLogicDefinition.tags(),
+                    dependentChain,
+                    kryonDefinition.kryonDefinitionRegistry())));
     TreeSet<OutputLogicDecorator> sortedDecorators =
         new TreeSet<>(
-            logicDecorationOrdering
+            decorationOrdering
                 .encounterOrder()
                 // Reverse the ordering so that the ones with the highest index are applied first.
                 .reversed());
@@ -84,7 +80,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
     // overrides session scope.
     TreeSet<DependencyDecorator> sortedDecorators =
         new TreeSet<>(
-            logicDecorationOrdering
+            decorationOrdering
                 .encounterOrder()
                 // Reverse the ordering so that the ones with the highest index are applied first.
                 .reversed());

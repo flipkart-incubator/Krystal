@@ -60,6 +60,7 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
         testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
         testImplementation 'org.junit.jupiter:junit-jupiter-params'
         testImplementation 'org.assertj:assertj-core'
+        testImplementation 'org.mockito:mockito-core:5.17.0'
 
         compileOnly 'com.google.auto.value:auto-value-annotations'
         annotationProcessor 'com.google.auto.value:auto-value'
@@ -68,6 +69,7 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
         testAnnotationProcessor 'org.projectlombok:lombok'
 
         api platform('org.junit:junit-bom:5.10.1')
+        api platform('org.mockito:mockito-bom:5.17.0')
         api platform('org.assertj:assertj-bom:3.25.2')
         api platform('io.github.resilience4j:resilience4j-bom:2.2.0')
         api platform('com.google.inject:guice-bom:7.0.0')

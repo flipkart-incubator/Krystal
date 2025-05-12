@@ -14,10 +14,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import lombok.Getter;
-import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SuppressWarnings("unchecked")
 public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesBuilder {
@@ -116,18 +114,5 @@ public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesB
     }
     otherFacetValues.put(facetId, value);
     return this;
-  }
-
-  @Override
-  public boolean equals(final @Nullable Object o) {
-    if (o == this) return true;
-    if (!(o instanceof FacetValuesMap other)) return false;
-    return Objects.equals(this._asMap(), other._asMap())
-        && Objects.equals(this._vajramID, other._vajramID());
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(this._asMap());
   }
 }

@@ -6,11 +6,13 @@ import static com.flipkart.krystal.krystex.logicdecorators.resilience4j.R4JUtils
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
+import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.internal.CircuitBreakerStateMachine;
 import java.util.Optional;
+import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class Resilience4JCircuitBreaker implements OutputLogicDecorator {
@@ -25,6 +27,15 @@ public final class Resilience4JCircuitBreaker implements OutputLogicDecorator {
    */
   public Resilience4JCircuitBreaker(String instanceId) {
     this.instanceId = instanceId;
+  }
+
+  public static Resilience4JCircuitBreakerManager onePerIOVajram() {
+    return onePerInstanceId(logicExecutionContext -> logicExecutionContext.vajramID().id());
+  }
+
+  public static Resilience4JCircuitBreakerManager onePerInstanceId(
+      Function<LogicExecutionContext, String> instanceIdGenerator) {
+    return new Resilience4JCircuitBreakerManager(instanceIdGenerator);
   }
 
   @Override
@@ -46,11 +57,6 @@ public final class Resilience4JCircuitBreaker implements OutputLogicDecorator {
   @Override
   public void onConfigUpdate(ConfigProvider configProvider) {
     updateCircuitBreaker(configProvider);
-  }
-
-  @Override
-  public String getId() {
-    return instanceId;
   }
 
   private void init(ConfigProvider configProvider) {

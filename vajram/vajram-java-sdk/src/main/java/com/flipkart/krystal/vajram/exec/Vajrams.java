@@ -2,17 +2,17 @@ package com.flipkart.krystal.vajram.exec;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
 
+import com.flipkart.krystal.annos.ComputeDelegationMode;
+import com.flipkart.krystal.annos.OutputLogicDelegationMode;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.tags.ElementTags;
-import com.flipkart.krystal.vajram.ComputeDelegationMode;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.IOVajramDef;
 import com.flipkart.krystal.vajram.Trait;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.VajramDef;
 import com.flipkart.krystal.vajram.VajramDefRoot;
-import com.flipkart.krystal.vajram.annos.OutputLogicDelegationMode;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
