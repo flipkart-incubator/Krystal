@@ -17,14 +17,14 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public class Resilience4JBulkheadConfigurator implements KryonExecutorConfigurator {
+public class Resilience4JBulkheadManager implements KryonExecutorConfigurator {
 
   private final Map<String, Resilience4JBulkhead> bulkheads = new LinkedHashMap<>();
 
   private final Function<LogicExecutionContext, String> instanceIdGenerator;
   private final List<Consumer<Resilience4JBulkhead>> listeners = new ArrayList<>();
 
-  Resilience4JBulkheadConfigurator(Function<LogicExecutionContext, String> instanceIdGenerator) {
+  Resilience4JBulkheadManager(Function<LogicExecutionContext, String> instanceIdGenerator) {
     this.instanceIdGenerator = instanceIdGenerator;
   }
 

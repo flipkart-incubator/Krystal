@@ -16,14 +16,14 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public class Resilience4JCircuitBreakerConfigurator implements KryonExecutorConfigurator {
+public class Resilience4JCircuitBreakerManager implements KryonExecutorConfigurator {
 
   private final Map<String, Resilience4JCircuitBreaker> circuitBreakers = new LinkedHashMap<>();
 
   private final Function<LogicExecutionContext, String> instanceIdGenerator;
   private final List<Consumer<Resilience4JCircuitBreaker>> listeners = new ArrayList<>();
 
-  Resilience4JCircuitBreakerConfigurator(
+  Resilience4JCircuitBreakerManager(
       Function<LogicExecutionContext, String> instanceIdGenerator) {
     this.instanceIdGenerator = instanceIdGenerator;
   }

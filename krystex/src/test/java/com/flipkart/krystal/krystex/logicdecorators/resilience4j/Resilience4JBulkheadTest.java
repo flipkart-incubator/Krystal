@@ -114,7 +114,7 @@ class Resilience4JBulkheadTest {
             ElementTags.of(
                 ExternallyInvocable.Creator.create(),
                 OutputLogicDelegationMode.Creator.create(SYNC)));
-    Resilience4JBulkheadConfigurator singleBulkhead =
+    Resilience4JBulkheadManager singleBulkhead =
         Resilience4JBulkhead.onePerInstanceId(
             logicExecutionContext -> "bulkhead_restrictsConcurrency");
     singleBulkhead.onCreate(
@@ -201,7 +201,7 @@ class Resilience4JBulkheadTest {
               }
               return completedFuture("computed_value");
             });
-    Resilience4JBulkheadConfigurator resilience4JBulkhead =
+    Resilience4JBulkheadManager resilience4JBulkhead =
         Resilience4JBulkhead.onePerInstanceId(_l -> "threadpoolBulkhead_restrictsConcurrency");
     resilience4JBulkhead.onCreate(
         bulkhead ->
