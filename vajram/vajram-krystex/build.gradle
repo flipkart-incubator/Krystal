@@ -28,9 +28,9 @@ tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
 publishing {
     publications {
         maven(MavenPublication) {
-            groupId = 'com.flipkart.krystal'
+            groupId = project.group
             artifactId = project.name
-            version = project.krystal_version
+            version = project.version
             from components.java
         }
     }
