@@ -6,7 +6,7 @@ import static com.google.inject.name.Names.named;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
-import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
@@ -25,11 +25,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class TooManyQualifiersTest {
-  private static SingleThreadExecutorsPool EXEC_POOL;
+  private static ThreadPerRequestExecutorsPool EXEC_POOL;
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new SingleThreadExecutorsPool("Test", Runtime.getRuntime().availableProcessors());
+    EXEC_POOL =
+        new ThreadPerRequestExecutorsPool("Test", Runtime.getRuntime().availableProcessors());
   }
 
   private VajramKryonGraphBuilder graph;
@@ -64,23 +65,19 @@ class TooManyQualifiersTest {
   }
 
   private KrystexVajramExecutor createExecutor(VajramKryonGraph vajramKryonGraph) {
+    vajramKryonGraph.registerInputInjector(
+        new VajramGuiceInputInjector(
+            createInjector(
+                binder -> {
+                  binder.bind(String.class).annotatedWith(named("toInject")).toInstance("i2a");
+                  binder
+                      .bind(String.class)
+                      .annotatedWith(TooManyQualifiers.InjectionQualifier.class)
+                      .toInstance("i2b");
+                })));
     return vajramKryonGraph.createExecutor(
         KrystexVajramExecutorConfig.builder()
-            .kryonExecutorConfigBuilder(
-                KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
-            .inputInjectionProvider(
-                new VajramGuiceInputInjector(
-                    createInjector(
-                        binder -> {
-                          binder
-                              .bind(String.class)
-                              .annotatedWith(named("toInject"))
-                              .toInstance("i2a");
-                          binder
-                              .bind(String.class)
-                              .annotatedWith(TooManyQualifiers.InjectionQualifier.class)
-                              .toInstance("i2b");
-                        })))
+            .kryonExecutorConfigBuilder(KryonExecutorConfig.builder().executor(executorLease.get()))
             .build());
   }
 }

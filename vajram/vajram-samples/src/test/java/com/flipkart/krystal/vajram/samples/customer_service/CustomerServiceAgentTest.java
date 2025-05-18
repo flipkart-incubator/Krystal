@@ -14,7 +14,7 @@ import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispat
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
-import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
@@ -29,11 +29,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class CustomerServiceAgentTest {
-  private static SingleThreadExecutorsPool EXEC_POOL;
+  private static ThreadPerRequestExecutorsPool EXEC_POOL;
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
+    EXEC_POOL = new ThreadPerRequestExecutorsPool("Test", 4);
   }
 
   private VajramKryonGraph graph;
@@ -220,8 +220,7 @@ class CustomerServiceAgentTest {
 
   private KrystexVajramExecutorConfig getExecutorConfig() {
     return KrystexVajramExecutorConfig.builder()
-        .kryonExecutorConfigBuilder(
-            KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+        .kryonExecutorConfigBuilder(KryonExecutorConfig.builder().executor(executorLease.get()))
         .build();
   }
 }

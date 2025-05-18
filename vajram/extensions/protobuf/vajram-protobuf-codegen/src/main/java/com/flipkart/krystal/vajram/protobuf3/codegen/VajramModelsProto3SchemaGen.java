@@ -1,22 +1,26 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
+import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
-import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.MODELS;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.VAJRAM_REQ_PROTO_FILE_SUFFIX;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.VAJRAM_REQ_PROTO_MSG_SUFFIX;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.VAJRAM_REQ_PROTO_OUTER_CLASS_SUFFIX;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.createOutputDirectory;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.getProtobufType;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProto3Applicable;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeMap;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeScalar;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.validateProtobufCompatibility;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.VAJRAM_REQ_PROTO_FILE_SUFFIX;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.VAJRAM_REQ_PROTO_MSG_SUFFIX;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.VAJRAM_REQ_PROTO_OUTER_CLASS_SUFFIX;
 
+import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.serial.SerialId;
-import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.DefaultFacetModel;
+import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramValidationException;
-import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGenContext;
 import com.google.common.base.Splitter;
 import java.io.IOException;
@@ -38,7 +42,7 @@ import lombok.extern.slf4j.Slf4j;
 class VajramModelsProto3SchemaGen implements CodeGenerator {
 
   private final VajramCodeGenContext creationContext;
-  private final CodeGenUtility util;
+  private final VajramCodeGenUtility util;
 
   public VajramModelsProto3SchemaGen(VajramCodeGenContext creationContext) {
     this.creationContext = creationContext;
@@ -50,11 +54,12 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
     if (!isApplicable(creationContext, util)) {
       return;
     }
-    validateProtobufCompatibility(creationContext.vajramInfo(), util);
+    validateProtobufCompatibility(creationContext.vajramInfo(), util.codegenUtil());
     generateProtobufSchema(creationContext.vajramInfo());
   }
 
-  private static boolean isApplicable(VajramCodeGenContext creationContext, CodeGenUtility util) {
+  private static boolean isApplicable(
+      VajramCodeGenContext creationContext, VajramCodeGenUtility util) {
     if (!MODELS.equals(creationContext.codegenPhase())) {
       util.note("Skipping protobuf codegen since current phase is not MODELS");
       return false;
@@ -70,8 +75,8 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
     try {
       // Create output directory if it doesn't exist
       Path outputDir =
-          ProtoGenUtils.createOutputDirectory(
-              util.detectSourceOutputPath(vajramInfo.vajramClass()), util);
+          createOutputDirectory(
+              util.detectSourceOutputPath(vajramInfo.vajramClass()), util.codegenUtil());
 
       // Generate request proto file content
       String reqProtoContent = generateRequestProtoFileContent(vajramInfo, packageName);
@@ -226,16 +231,18 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
       // Add 'optional' keyword if needed
       // Note: repeated and map fields don't need the optional keyword
       if (isOptional
-          && ProtoGenUtils.isProtoTypeScalar(facet.dataType(), util)
-          && !ProtoGenUtils.isProtoTypeRepeated(facet.dataType())
-          && !ProtoGenUtils.isProtoTypeMap(facet.dataType())) {
+          && isProtoTypeScalar(facet.dataType(), util.codegenUtil())
+          && !isProtoTypeRepeated(facet.dataType())
+          && !isProtoTypeMap(facet.dataType())) {
         protoBuilder.append("optional ");
       }
 
       // For repeated and map fields, the 'repeated' or 'map<>' prefix is already included in
       // fieldType
       protoBuilder
-          .append(getProtobufType(facet.dataType(), util, facet.facetField()).typeInProtoFile())
+          .append(
+              getProtobufType(facet.dataType(), util.codegenUtil(), facet.facetField())
+                  .typeInProtoFile())
           .append(" ")
           .append(facet.name())
           .append(" = ")

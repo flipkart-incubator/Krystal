@@ -1,27 +1,27 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
-import static com.flipkart.krystal.vajram.codegen.common.datatypes.StandardJavaType.BYTE;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_SUFFIX;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.MODELS_PROTO_MSG_SUFFIX;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.Constants.PROTO_SUFFIX;
+import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BYTE;
+import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ModelsProto3SchemaGen.validateModelType;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeMap;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.PROTO_SUFFIX;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
+import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.codegen.common.models.CodegenPhase;
+import com.flipkart.krystal.codegen.common.models.DeclaredTypeVisitor;
+import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
+import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.serial.SerializableModel;
-import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
-import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
-import com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase;
-import com.flipkart.krystal.vajram.codegen.common.models.DeclaredTypeVisitor;
-import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
-import com.flipkart.krystal.vajram.codegen.common.spi.ModelsCodeGenContext;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;

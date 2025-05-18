@@ -1,0 +1,4 @@
+dopants:
+  - krystal.lattice.grpcServer:
+      port: 8789
+      maxApplicationThreads: 400

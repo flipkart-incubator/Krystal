@@ -1,12 +1,12 @@
 package com.flipkart.krystal.vajram.codegen.processor;
 
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
+import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
 import static com.flipkart.krystal.vajram.codegen.processor.Constants.DEFAULT_VAJRAM_CODEGEN_PROVIDER;
 import static java.lang.System.lineSeparator;
 import static java.util.stream.Collectors.joining;
 
-import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
-import com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase;
+import com.flipkart.krystal.codegen.common.models.CodegenPhase;
+import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramValidationException;
 import com.flipkart.krystal.vajram.codegen.common.spi.AllVajramCodeGenContext;
@@ -35,7 +35,7 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
 
   @Override
   public final boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    CodeGenUtility util = new CodeGenUtility(processingEnv, this.getClass());
+    VajramCodeGenUtility util = new VajramCodeGenUtility(processingEnv, this.getClass());
     String phaseString = processingEnv.getOptions().get(CODEGEN_PHASE_KEY);
     try {
       if (phaseString == null || !codegenPhase.equals(CodegenPhase.valueOf(phaseString))) {

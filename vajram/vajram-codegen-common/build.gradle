@@ -3,14 +3,17 @@ description =
 
 dependencies {
     api project(':vajram:vajram-java-sdk')
+    implementation project(':krystal-codegen-common')
     implementation 'com.squareup:javapoet'
 }
 
 publishing {
     publications {
         maven(MavenPublication) {
+            groupId = 'com.flipkart.krystal'
             groupId = project.group
             artifactId = project.name
+            version = project.krystal_version
             version = project.version
             from components.java
         }

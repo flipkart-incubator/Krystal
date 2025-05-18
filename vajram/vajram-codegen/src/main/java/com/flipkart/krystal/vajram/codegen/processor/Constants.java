@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.codegen.processor;
 
-import com.flipkart.krystal.vajram.codegen.common.spi.ModelsCodeGeneratorProvider;
+import com.flipkart.krystal.codegen.common.spi.ModelsCodeGeneratorProvider;
 import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGeneratorProvider;
 
 class Constants {

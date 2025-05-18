@@ -1,5 +1,5 @@
-import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.FINAL
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.CODEGEN_PHASE_KEY
+import static com.flipkart.krystal.codegen.common.models.CodegenPhase.FINAL
+import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY
 
 plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
@@ -13,7 +13,8 @@ dependencies {
 
     testAnnotationProcessor 'com.flipkart.krystal:vajram-codegen'
     testAnnotationProcessor project(':krystal-common')
-    testAnnotationProcessor project(':vajram:vajram-codegen-common')
+    testAnnotationProcessor project(':krystal-codegen-common')
+    testAnnotationProcessor project(':krystal-codegen-common')
 
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
@@ -67,42 +68,38 @@ compileTestJava {
     doFirst {
         def moduleName = 'flipkart.krystal.vajramexecutor.krystex'
         options.compilerArgs += modulePathArgs(moduleName)
-        options.compilerArgs += [
-                '--module-path', classpath.asPath,
-                '--patch-module', "$moduleName=" + files(sourceSets.test.java.srcDirs).asPath,
-                '-A' + CODEGEN_PHASE_KEY + '=' + FINAL,
-                '-parameters'
-        ]
+        options.compilerArgs += ['--module-path', classpath.asPath,
+                                 '--patch-module', "$moduleName=" + files(sourceSets.test.java.srcDirs).asPath,
+                                 '-A' + CODEGEN_PHASE_KEY + '=' + FINAL,
+                                 '-parameters']
     }
 }
 
 private static ArrayList<String> modulePathArgs(String moduleName) {
-    [
-            '--add-modules', 'flipkart.krystal.krystex',
-            '--add-reads', "$moduleName=flipkart.krystal.krystex",
+    ['--add-modules', 'flipkart.krystal.krystex',
+     '--add-reads', "$moduleName=flipkart.krystal.krystex",
 
-            '--add-modules', 'org.junit.jupiter.api',
-            '--add-reads', "$moduleName=org.junit.jupiter.api",
+     '--add-modules', 'org.junit.jupiter.api',
+     '--add-reads', "$moduleName=org.junit.jupiter.api",
 
-            '--add-modules', 'org.junit.jupiter.params',
-            '--add-reads', "$moduleName=org.junit.jupiter.params",
+     '--add-modules', 'org.junit.jupiter.params',
+     '--add-reads', "$moduleName=org.junit.jupiter.params",
 
-            '--add-modules', 'org.assertj.core',
-            '--add-reads', "$moduleName=org.assertj.core",
+     '--add-modules', 'org.assertj.core',
+     '--add-reads', "$moduleName=org.assertj.core",
 
-            '--add-modules', 'com.fasterxml.jackson.annotation',
-            '--add-reads', "$moduleName=com.fasterxml.jackson.annotation",
+     '--add-modules', 'com.fasterxml.jackson.annotation',
+     '--add-reads', "$moduleName=com.fasterxml.jackson.annotation",
 
-            '--add-modules', 'com.fasterxml.jackson.databind',
-            '--add-reads', "$moduleName=com.fasterxml.jackson.databind",
+     '--add-modules', 'com.fasterxml.jackson.databind',
+     '--add-reads', "$moduleName=com.fasterxml.jackson.databind",
 
-            '--add-modules', 'com.fasterxml.jackson.datatype.jdk8',
-            '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jdk8",
+     '--add-modules', 'com.fasterxml.jackson.datatype.jdk8',
+     '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jdk8",
 
-            '--add-modules', 'com.fasterxml.jackson.datatype.jsr310',
-            '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jsr310",
+     '--add-modules', 'com.fasterxml.jackson.datatype.jsr310',
+     '--add-reads', "$moduleName=com.fasterxml.jackson.datatype.jsr310",
 
-            '--add-modules', 'lombok',
-            '--add-reads', "$moduleName=lombok",
-    ]
+     '--add-modules', 'lombok',
+     '--add-reads', "$moduleName=lombok",]
 }

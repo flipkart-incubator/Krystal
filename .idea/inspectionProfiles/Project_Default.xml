@@ -21,6 +21,7 @@
       <scope name="Tests" level="INFORMATION" enabled="true" editorAttributes="INFORMATION_ATTRIBUTES">
         <option name="METHOD_MATCHER_CONFIG" value="java.util.Formatter,format,java.io.Writer,append,com.google.common.base.Preconditions,checkNotNull,org.hibernate.Session,close,java.io.PrintWriter,printf,java.io.PrintStream,printf,com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder,build" />
       </scope>
+      <option name="ignoreFromMethodCall" value="true" />
       <option name="METHOD_MATCHER_CONFIG" value="java.util.Formatter,format,java.io.Writer,append,com.google.common.base.Preconditions,checkNotNull,org.hibernate.Session,close,java.io.PrintWriter,printf,java.io.PrintStream,printf,com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder,build" />
     </inspection_tool>
     <inspection_tool class="BooleanExpressionMayBeConditional" enabled="false" level="INFORMATION" enabled_by_default="false" />
@@ -502,6 +503,8 @@
           <option value="SpellCheckingInspection" />
           <option value="ImmutableEnumChecker" />
           <option value="DataFlowIssue" />
+          <option value="ClassEscapesDefinedScope" />
+          <option value="TestOnlyProblems" />
         </list>
       </option>
     </inspection_tool>

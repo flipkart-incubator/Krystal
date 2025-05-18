@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.samples.calculator;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
-import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
@@ -18,11 +18,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class DoubleMinusOneTest {
-  private static SingleThreadExecutorsPool EXEC_POOL;
+  private static ThreadPerRequestExecutorsPool EXEC_POOL;
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new SingleThreadExecutorsPool("Test", Runtime.getRuntime().availableProcessors());
+    EXEC_POOL =
+        new ThreadPerRequestExecutorsPool("Test", Runtime.getRuntime().availableProcessors());
   }
 
   private final VajramKryonGraph graph =
@@ -45,10 +46,10 @@ class DoubleMinusOneTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .requestId("doubleMinusOne")
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
-                        .singleThreadExecutor(executorLease.get())
+                        .executorId("doubleMinusOne")
+                        .executor(executorLease.get())
                         ._riskyOpenAllKryonsForExternalInvocation(true))
                 .build())) {
       future =
@@ -64,10 +65,10 @@ class DoubleMinusOneTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .requestId("doubleMinusOne")
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
-                        .singleThreadExecutor(executorLease.get())
+                        .executorId("doubleMinusOne")
+                        .executor(executorLease.get())
                         ._riskyOpenAllKryonsForExternalInvocation(true))
                 .build())) {
       future =
@@ -83,10 +84,10 @@ class DoubleMinusOneTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .requestId("doubleMinusOne")
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
-                        .singleThreadExecutor(executorLease.get())
+                        .executorId("doubleMinusOne")
+                        .executor(executorLease.get())
                         ._riskyOpenAllKryonsForExternalInvocation(true))
                 .build())) {
       future =

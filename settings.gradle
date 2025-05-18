@@ -29,16 +29,21 @@ include 'krystal-visualization'
 include 'vajram:vajram-java-sdk'
 include 'vajram:vajram-samples'
 include 'vajram:vajram-codegen'
-include 'vajram:vajram-codegen-common'
+include 'krystal-codegen-common'
 include 'vajram:vajram-krystex'
 include 'vajram:vajram-lang'
-
-include 'lattice:lattice-core'
-include 'lattice:lattice-samples'
+include 'vajram:vajram-codegen-common'
 
 include 'vajram:extensions:guice:vajram-guice'
 include 'vajram:extensions:protobuf:vajram-protobuf-codegen'
 include 'vajram:extensions:protobuf:vajram-protobuf3'
 
-include 'lattice:extensions:grpc:lattice-grpc-codegen'
+include 'lattice:lattice-core'
+include 'lattice:lattice-samples'
+
+include 'lattice:extensions:grpc:lattice-grpc'
+include 'lattice:lattice-codegen'
+include 'lattice:extensions:protobuf:lattice-protobuf-codegen'
 //include 'lattice:extensions:guice:lattice-guice'
+
+

@@ -23,7 +23,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
-import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
@@ -71,11 +71,11 @@ class FormulaTest {
   @SuppressWarnings("unchecked")
   private static final Lease<SingleThreadExecutor>[] EXECUTOR_LEASES = new Lease[MAX_THREADS];
 
-  private static SingleThreadExecutorsPool EXEC_POOL;
+  private static ThreadPerRequestExecutorsPool EXEC_POOL;
 
   @BeforeAll
   static void beforeAll() throws LeaseUnavailableException {
-    EXEC_POOL = new SingleThreadExecutorsPool("Test", MAX_THREADS);
+    EXEC_POOL = new ThreadPerRequestExecutorsPool("Test", MAX_THREADS);
     for (int i = 0; i < MAX_THREADS; i++) {
       EXECUTOR_LEASES[i] = EXEC_POOL.lease();
     }
@@ -110,9 +110,10 @@ class FormulaTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .requestId(REQUEST_ID)
                 .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                    KryonExecutorConfig.builder()
+                        .executorId(REQUEST_ID)
+                        .executor(executorLease.get()))
                 .build())) {
       future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
@@ -129,11 +130,11 @@ class FormulaTest {
             graph.getVajramIdByVajramDefType(Add.class), () -> new InputBatcherImpl(100)));
     KrystexVajramExecutorConfig vajramExecutorConfig =
         KrystexVajramExecutorConfig.builder()
-            .requestId(REQUEST_ID)
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
+                    .executorId(REQUEST_ID)
                     .kryonExecStrategy(KryonExecStrategy.BATCH)
-                    .singleThreadExecutor(executorLease.get())
+                    .executor(executorLease.get())
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
             .build();
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 0, 0, REQUEST_ID);
@@ -154,6 +155,7 @@ class FormulaTest {
   void formula_ioDepFails_failsWithSameException() {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
+    graph.registerInputInjector(injectAdderFailure());
     graph.registerInputBatchers(
         simpleInputBatcher(
             graph.getVajramIdByVajramDefType(Add.class), () -> new InputBatcherImpl(100)));
@@ -161,10 +163,10 @@ class FormulaTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .requestId(REQUEST_ID)
-                .inputInjectionProvider(injectAdderFailure())
                 .kryonExecutorConfigBuilder(
-                    KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                    KryonExecutorConfig.builder()
+                        .executorId(REQUEST_ID)
+                        .executor(executorLease.get()))
                 .build())) {
       future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
@@ -210,8 +212,9 @@ class FormulaTest {
                       graph.createExecutor(
                           KrystexVajramExecutorConfig.builder()
                               .kryonExecutorConfigBuilder(
-                                  KryonExecutorConfig.builder().singleThreadExecutor(executor))
-                              .requestId("formulaTest")
+                                  KryonExecutorConfig.builder()
+                                      .executorId("formulaTest")
+                                      .executor(executor))
                               .build())) {
                     timeToCreateExecutors.add(System.nanoTime() - iterStartTime);
                     long enqueueStart = System.nanoTime();
@@ -276,8 +279,9 @@ class FormulaTest {
                       graph.createExecutor(
                           KrystexVajramExecutorConfig.builder()
                               .kryonExecutorConfigBuilder(
-                                  KryonExecutorConfig.builder().singleThreadExecutor(executor))
-                              .requestId("formulaTest")
+                                  KryonExecutorConfig.builder()
+                                      .executorId("formulaTest")
+                                      .executor(executor))
                               .build())) {
                     timeToCreateExecutors.add(System.nanoTime() - iterStartTime);
                     metrics[currentLoopCount] =
@@ -349,8 +353,7 @@ class FormulaTest {
           graph.createExecutor(
               KrystexVajramExecutorConfig.builder()
                   .kryonExecutorConfigBuilder(
-                      KryonExecutorConfig.builder().singleThreadExecutor(executor))
-                  .requestId("formulaTest")
+                      KryonExecutorConfig.builder().executorId("formulaTest").executor(executor))
                   .build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;
         metrics[outer_i] =
@@ -460,9 +463,8 @@ class FormulaTest {
             graph.getVajramIdByVajramDefType(Add.class), () -> new InputBatcherImpl(100)));
     KrystexVajramExecutorConfig executorConfigBuilder =
         KrystexVajramExecutorConfig.builder()
-            .requestId(REQUEST_ID)
             .kryonExecutorConfigBuilder(
-                KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+                KryonExecutorConfig.builder().executorId(REQUEST_ID).executor(executorLease.get()))
             .build();
     FormulaRequestContext requestContext = new FormulaRequestContext(100, 20, 5, REQUEST_ID);
     try (KrystexVajramExecutor krystexVajramExecutor =
@@ -490,10 +492,10 @@ class FormulaTest {
             graph.getVajramIdByVajramDefType(Add.class), () -> new InputBatcherImpl(100)));
     KrystexVajramExecutorConfig kryonExecutorConfigBuilder =
         KrystexVajramExecutorConfig.builder()
-            .requestId(REQUEST_ID)
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
-                    .singleThreadExecutor(executorLease.get())
+                    .executorId(REQUEST_ID)
+                    .executor(executorLease.get())
                     .kryonExecStrategy(KryonExecStrategy.BATCH)
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
             .build();
@@ -520,10 +522,10 @@ class FormulaTest {
             graph.getVajramIdByVajramDefType(Add.class), () -> new InputBatcherImpl(100)));
     KrystexVajramExecutorConfig executorConfig =
         KrystexVajramExecutorConfig.builder()
-            .requestId(REQUEST_ID)
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
-                    .singleThreadExecutor(executorLease.get())
+                    .executorId(REQUEST_ID)
+                    .executor(executorLease.get())
                     .kryonExecStrategy(KryonExecStrategy.BATCH)
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
             .build();
@@ -552,7 +554,7 @@ class FormulaTest {
         KrystexVajramExecutorConfig.builder()
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
-                    .singleThreadExecutor(executorLease.get())
+                    .executor(executorLease.get())
                     .kryonExecStrategy(KryonExecStrategy.BATCH)
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH))
             .build();

@@ -35,6 +35,8 @@ import com.flipkart.krystal.krystex.kryon.KryonDefinitionRegistry;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.kryon.VajramKryonDefinition;
+import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
+import com.flipkart.krystal.krystex.kryondecoration.KryonExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.flipkart.krystal.krystex.resolution.CreateNewRequest;
@@ -56,10 +58,12 @@ import com.flipkart.krystal.vajram.facets.resolution.InputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.One2OneInputResolver;
 import com.flipkart.krystal.vajram.facets.specs.DependencySpec;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
+import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
 import com.flipkart.krystal.vajram.utils.VajramLoader;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.DepChainBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatcherConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.batching.InputBatchingDecorator;
+import com.flipkart.krystal.vajramexecutor.krystex.inputinjection.KryonInputInjector;
 import com.flipkart.krystal.vajramexecutor.krystex.traits.TraitDispatchDecoratorImpl;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -109,6 +113,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
   private @MonotonicNonNull TraitDispatchDecorator traitDispatchDecorator = null;
 
   @Getter private KryonExecutorConfigurator inputBatchingConfig = KryonExecutorConfigurator.NO_OP;
+  @Getter private KryonExecutorConfigurator inputInjectionConfig = KryonExecutorConfigurator.NO_OP;
 
   @lombok.Builder
   private VajramKryonGraph(
@@ -142,6 +147,31 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
 
   public ImmutableMap<VajramID, VajramDefinition> vajramDefinitions() {
     return ImmutableMap.copyOf(vajramDefinitions);
+  }
+
+  public void registerInputInjector(VajramInjectionProvider injectionProvider) {
+    if (this.inputInjectionConfig != KryonExecutorConfigurator.NO_OP) {
+      throw new IllegalArgumentException(
+          "Re-registering input injector config in not currently allowed.");
+    }
+    if (injectionProvider == null) {
+      return;
+    }
+    this.inputInjectionConfig =
+        configBuilder ->
+            configBuilder.kryonDecoratorConfig(
+                KryonInputInjector.DECORATOR_TYPE,
+                new KryonDecoratorConfig(
+                    KryonInputInjector.DECORATOR_TYPE,
+                    /* shouldDecorate= */ this::isInjectionNeeded,
+                    /* instanceIdGenerator= */ executionContext ->
+                        KryonInputInjector.DECORATOR_TYPE,
+                    /* factory= */ decoratorContext ->
+                        new KryonInputInjector(this, injectionProvider)));
+  }
+
+  private boolean isInjectionNeeded(KryonExecutionContext executionContext) {
+    return getVajramDefinition(executionContext.vajramID()).metadata().isInputInjectionNeeded();
   }
 
   public void registerInputBatchers(InputBatcherConfig inputBatcherConfig) {
@@ -185,25 +215,26 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                   return DepChainBatcherConfig.NO_BATCHING;
                 });
 
+    OutputLogicDecoratorConfig batchingDecoratorConfig =
+        new OutputLogicDecoratorConfig(
+            InputBatchingDecorator.DECORATOR_TYPE,
+            logicExecutionContext ->
+                DepChainBatcherConfig.NO_BATCHING
+                    != inputBatcherForLogicExecContext.apply(logicExecutionContext),
+            logicExecutionContext ->
+                requireNonNull(inputBatcherForLogicExecContext.apply(logicExecutionContext))
+                    .instanceIdGenerator()
+                    .apply(logicExecutionContext),
+            decoratorContext ->
+                requireNonNull(
+                        inputBatcherForLogicExecContext.apply(
+                            decoratorContext.logicExecutionContext()))
+                    .decoratorFactory()
+                    .apply(decoratorContext));
     this.inputBatchingConfig =
         configBuilder ->
             configBuilder.outputLogicDecoratorConfig(
-                InputBatchingDecorator.DECORATOR_TYPE,
-                new OutputLogicDecoratorConfig(
-                    InputBatchingDecorator.DECORATOR_TYPE,
-                    logicExecutionContext ->
-                        inputBatcherForLogicExecContext.apply(logicExecutionContext)
-                            != DepChainBatcherConfig.NO_BATCHING,
-                    logicExecutionContext ->
-                        requireNonNull(inputBatcherForLogicExecContext.apply(logicExecutionContext))
-                            .instanceIdGenerator()
-                            .apply(logicExecutionContext),
-                    decoratorContext ->
-                        requireNonNull(
-                                inputBatcherForLogicExecContext.apply(
-                                    decoratorContext.logicExecutionContext()))
-                            .decoratorFactory()
-                            .apply(decoratorContext)));
+                InputBatchingDecorator.DECORATOR_TYPE, batchingDecoratorConfig);
   }
 
   public void registerTraitDispatchPolicies(TraitDispatchPolicy... traitDispatchPolicies) {

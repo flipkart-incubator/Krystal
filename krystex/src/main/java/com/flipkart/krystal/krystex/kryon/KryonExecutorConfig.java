@@ -15,9 +15,12 @@ import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecoratorConfig;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.concurrent.atomic.AtomicLong;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.Singular;
+import org.checkerframework.common.returnsreceiver.qual.This;
+import org.jetbrains.annotations.TestOnly;
 
 /**
  * This is used to configure a particular execution of the Krystal graph.
@@ -30,8 +33,8 @@ import lombok.Singular;
  * @param graphTraversalStrategy DEPTH is more performant and memory efficient. BREADTH is sometimes
  *     useful for debugging
  * @param kryonDecoratorConfigs The request scoped kryon decorators to be applied
- * @param singleThreadExecutor MANDATORY! This is used as the event loop for the message passing
- *     within this execution.
+ * @param executor MANDATORY! This is used as the event loop for the message passing within this
+ *     execution.
  * @param traitDispatchDecorator used to determine the conformant vajrams bound to traits
  * @param debug If true, more human-readable names are give to entities - might be memory
  *     ineffecient.
@@ -41,6 +44,7 @@ import lombok.Singular;
  *     of only allowing vajrams tagged with @{@link ExternallyInvocable}(allow=true)
  */
 public record KryonExecutorConfig(
+    String executorId,
     DecorationOrdering decorationOrdering,
     ImmutableSet<DependentChain> disabledDependentChains,
     KryonExecStrategy kryonExecStrategy,
@@ -48,14 +52,18 @@ public record KryonExecutorConfig(
     @Singular ImmutableMap<String, OutputLogicDecoratorConfig> outputLogicDecoratorConfigs,
     @Singular ImmutableMap<String, KryonDecoratorConfig> kryonDecoratorConfigs,
     @Singular ImmutableMap<String, DependencyDecoratorConfig> dependencyDecoratorConfigs,
-    @NonNull SingleThreadExecutor singleThreadExecutor,
+    @NonNull SingleThreadExecutor executor,
     TraitDispatchDecorator traitDispatchDecorator,
     boolean debug,
     /* ****** Risky Flags ********/
-    @Deprecated boolean _riskyOpenAllKryonsForExternalInvocation) {
+    @TestOnly @Deprecated boolean _riskyOpenAllKryonsForExternalInvocation) {
+  private static final AtomicLong EXEC_COUNT = new AtomicLong();
 
   @Builder(toBuilder = true)
   public KryonExecutorConfig {
+    if (executorId == null) {
+      executorId = "KrystalExecutor-" + EXEC_COUNT.getAndIncrement();
+    }
     if (kryonExecStrategy == null) {
       kryonExecStrategy = BATCH;
     }
@@ -83,7 +91,8 @@ public record KryonExecutorConfig(
   }
 
   public static class KryonExecutorConfigBuilder {
-    public KryonExecutorConfigBuilder configureWith(KryonExecutorConfigurator applier) {
+
+    public @This KryonExecutorConfigBuilder configureWith(KryonExecutorConfigurator applier) {
       applier.addToConfig(this);
       return this;
     }

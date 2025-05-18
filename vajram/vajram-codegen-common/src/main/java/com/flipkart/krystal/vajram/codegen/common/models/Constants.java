@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram.codegen.common.models;
 import com.squareup.javapoet.CodeBlock;
 
 public final class Constants {
-  public static final String CODEGEN_PHASE_KEY = "krystal.vajram.codegen.phase";
   public static final String DEP_RESP = "depResp";
   public static final String RESOLVABLE_INPUTS = "resolvableInputs";
   public static final String INPUT_SRC = "inputSrc";

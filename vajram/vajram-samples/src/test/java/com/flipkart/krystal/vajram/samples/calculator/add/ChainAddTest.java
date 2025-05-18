@@ -17,7 +17,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
-import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutor;
@@ -46,11 +46,11 @@ import org.junit.jupiter.api.Test;
 
 class ChainAddTest {
 
-  private static SingleThreadExecutorsPool EXEC_POOL;
+  private static ThreadPerRequestExecutorsPool EXEC_POOL;
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
+    EXEC_POOL = new ThreadPerRequestExecutorsPool("Test", 4);
   }
 
   private VajramKryonGraph graph;
@@ -84,10 +84,10 @@ class ChainAddTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .requestId("chainAdderTest")
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
-                        .singleThreadExecutor(executorLease.get())
+                        .executorId("chainAdderTest")
+                        .executor(executorLease.get())
                         .configureWith(new MainLogicExecReporter(kryonExecutionReport)))
                 .build())) {
 
@@ -249,9 +249,10 @@ class ChainAddTest {
 
   private KrystexVajramExecutorConfigBuilder configBuilder() {
     return KrystexVajramExecutorConfig.builder()
-        .requestId("chainAdderTest")
         .kryonExecutorConfigBuilder(
-            KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()));
+            KryonExecutorConfig.builder()
+                .executorId("chainAdderTest")
+                .executor(executorLease.get()));
   }
 
   private CompletableFuture<Integer> executeVajram(

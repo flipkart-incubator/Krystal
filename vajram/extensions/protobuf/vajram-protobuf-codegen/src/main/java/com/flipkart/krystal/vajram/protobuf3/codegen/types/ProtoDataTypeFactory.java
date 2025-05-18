@@ -3,8 +3,8 @@ package com.flipkart.krystal.vajram.protobuf3.codegen.types;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.types.StandardProto3Type.standardProto3TypesByCanonicalName;
 import static java.util.Objects.requireNonNull;
 
-import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
-import com.flipkart.krystal.vajram.codegen.common.datatypes.DataTypeFactory;
+import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.codegen.common.datatypes.DataTypeFactory;
 import com.google.auto.service.AutoService;
 import com.google.protobuf.MessageLiteOrBuilder;
 import java.lang.reflect.Type;

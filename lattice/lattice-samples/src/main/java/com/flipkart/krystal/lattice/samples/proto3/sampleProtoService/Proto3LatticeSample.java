@@ -6,7 +6,7 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIO
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.flipkart.krystal.annos.ExternallyInvocable;
-import com.flipkart.krystal.lattice.core.RemotelyInvocable;
+import com.flipkart.krystal.lattice.core.annos.RemotelyInvocable;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.serial.ReservedSerialIds;
 import com.flipkart.krystal.serial.SerialId;
@@ -19,13 +19,17 @@ import com.google.protobuf.ByteString;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * A sample vajram to demonstrate integration between grpc and vajrams. This vajram can be invoked
+ * via a GRPC call by remote clients.
+ */
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 @ExternallyInvocable
 @RemotelyInvocable
 @SupportedSerdeProtocols(Protobuf3.class)
 @ReservedSerialIds(8)
 @Vajram
-abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3LatticeSampleResponse> {
+public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3LatticeSampleResponse> {
   static class _Inputs {
     @SerialId(1)
     int optionalInput;

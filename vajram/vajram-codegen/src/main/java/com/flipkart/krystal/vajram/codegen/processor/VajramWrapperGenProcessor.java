@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.codegen.processor;
 
-import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.FINAL;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
+import static com.flipkart.krystal.codegen.common.models.CodegenPhase.FINAL;
+import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
 
 import com.google.auto.service.AutoService;
 import javax.annotation.processing.Processor;

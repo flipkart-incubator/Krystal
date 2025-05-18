@@ -1,6 +1,16 @@
-
 dependencies {
     implementation project(':krystal-common')
+    api project(':vajram:vajram-java-sdk')
+    api project(':vajram:vajram-krystex')
+
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-guava'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
+    api 'commons-cli:commons-cli'
 }
 publishing {
     publications {

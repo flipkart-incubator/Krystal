@@ -13,7 +13,7 @@ import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
-import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
@@ -40,6 +40,8 @@ class AddUsingTraitsTest {
 
   private static final String REQUEST_ID = "addUsingTraitsTest";
   private static final int MAX_THREADS = 1;
+
+  @SuppressWarnings("unchecked")
   private static final Lease<SingleThreadExecutor>[] EXECUTOR_LEASES = new Lease[MAX_THREADS];
 
   private VajramKryonGraph graph;
@@ -47,7 +49,7 @@ class AddUsingTraitsTest {
 
   @BeforeAll
   static void beforeAll() throws LeaseUnavailableException {
-    SingleThreadExecutorsPool execPool = new SingleThreadExecutorsPool("Test", MAX_THREADS);
+    ThreadPerRequestExecutorsPool execPool = new ThreadPerRequestExecutorsPool("Test", MAX_THREADS);
     for (int i = 0; i < MAX_THREADS; i++) {
       EXECUTOR_LEASES[i] = execPool.lease();
     }
@@ -140,17 +142,16 @@ class AddUsingTraitsTest {
 
   private KrystexVajramExecutorConfigBuilder executorConfig() {
     return KrystexVajramExecutorConfig.builder()
-        .requestId(REQUEST_ID)
         .kryonExecutorConfigBuilder(
-            KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()));
+            KryonExecutorConfig.builder().executorId(REQUEST_ID).executor(executorLease.get()));
   }
 
   @Test
   void addUsingTraits_withDifferentSizedLists() {
     // Setup test data with different sized lists
-    List<Integer> smallList = asList(1);
-    List<Integer> mediumList = asList(2, 3);
-    List<Integer> largeList = asList(4, 5, 6, 7);
+    List<Integer> smallList = List.of(1);
+    List<Integer> mediumList = List.of(2, 3);
+    List<Integer> largeList = List.of(4, 5, 6, 7);
 
     // Expected sums
     int expectedSum1 = 1; // small list using SIMPLE

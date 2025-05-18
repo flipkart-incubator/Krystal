@@ -9,7 +9,8 @@ class RandomMultiLeasePoolTest {
 
   @Test
   void lease_createsNewObjectWhenPoolIsEmpty() throws LeaseUnavailableException {
-    RandomMultiLeasePool<Object> pool = new RandomMultiLeasePool<>(Object::new, 3, 5, obj -> {});
+    RandomMultiLeasePool<Object> pool =
+        new RandomMultiLeasePool<>("RandomMultiLeasePool", Object::new, 3, 5, obj -> {});
 
     assertThat(pool.stats().currentPoolSize()).isEqualTo(0);
     Lease<Object> lease = pool.lease();
@@ -19,7 +20,8 @@ class RandomMultiLeasePoolTest {
 
   @Test
   void lease_createsNewObjectWhenNoObjectsAreAvailable() throws LeaseUnavailableException {
-    RandomMultiLeasePool<Object> pool = new RandomMultiLeasePool<>(Object::new, 1, 5, obj -> {});
+    RandomMultiLeasePool<Object> pool =
+        new RandomMultiLeasePool<>("RandomMultiLeasePool", Object::new, 1, 5, obj -> {});
     pool.lease();
 
     assertThat(pool.stats().currentPoolSize()).isEqualTo(1);
@@ -30,7 +32,8 @@ class RandomMultiLeasePoolTest {
 
   @Test
   void lease_throwsExceptionWhenSoftMaxObjectsBreached() throws LeaseUnavailableException {
-    RandomMultiLeasePool<Object> pool = new RandomMultiLeasePool<>(Object::new, 1, 5, obj -> {});
+    RandomMultiLeasePool<Object> pool =
+        new RandomMultiLeasePool<>("RandomMultiLeasePool", Object::new, 1, 5, obj -> {});
 
     for (int i = 0; i < 5; i++) {
       pool.lease();
@@ -40,7 +43,8 @@ class RandomMultiLeasePoolTest {
 
   @Test
   void lease_reusesAvailableObject() throws LeaseUnavailableException {
-    RandomMultiLeasePool<Object> pool = new RandomMultiLeasePool<>(Object::new, 3, 5, obj -> {});
+    RandomMultiLeasePool<Object> pool =
+        new RandomMultiLeasePool<>("RandomMultiLeasePool", Object::new, 3, 5, obj -> {});
 
     Lease<Object> lease1 = pool.lease();
     Object object1 = lease1.get();
@@ -52,7 +56,8 @@ class RandomMultiLeasePoolTest {
 
   @Test
   void close_makesObjectAvailableForReuse() throws LeaseUnavailableException {
-    RandomMultiLeasePool<Object> pool = new RandomMultiLeasePool<>(Object::new, 3, 5, obj -> {});
+    RandomMultiLeasePool<Object> pool =
+        new RandomMultiLeasePool<>("RandomMultiLeasePool", Object::new, 3, 5, obj -> {});
 
     Lease<Object> lease = pool.lease();
     lease.close();
@@ -70,7 +75,7 @@ class RandomMultiLeasePoolTest {
       }
     }
     RandomMultiLeasePool<Closeable> pool =
-        new RandomMultiLeasePool<>(Closeable::new, 3, 5, Closeable::close);
+        new RandomMultiLeasePool<>("RandomMultiLeasePool", Closeable::new, 3, 5, Closeable::close);
 
     Lease<Closeable> lease = pool.lease();
     Closeable closeable = lease.get();
@@ -81,7 +86,8 @@ class RandomMultiLeasePoolTest {
 
   @Test
   void lease_throwsExceptionWhenPoolIsClosed() {
-    RandomMultiLeasePool<Object> pool = new RandomMultiLeasePool<>(Object::new, 3, 5, obj -> {});
+    RandomMultiLeasePool<Object> pool =
+        new RandomMultiLeasePool<>("RandomMultiLeasePool", Object::new, 3, 5, obj -> {});
 
     pool.close();
     assertThatThrownBy(pool::lease)

@@ -1,6 +1,6 @@
 package com.flipkart.krystal.vajram.codegen.processor;
 
-import static com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility.recordAnnotations;
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.recordAnnotations;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.POJO_SUFFIX;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -13,6 +13,13 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
+import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.codegen.common.models.CodeGenerationException;
+import com.flipkart.krystal.codegen.common.models.CodegenPhase;
+import com.flipkart.krystal.codegen.common.models.DeclaredTypeVisitor;
+import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
+import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.ImmutableModel;
@@ -24,13 +31,6 @@ import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.vajram.Trait;
-import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
-import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
-import com.flipkart.krystal.vajram.codegen.common.models.CodeGenerationException;
-import com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase;
-import com.flipkart.krystal.vajram.codegen.common.models.DeclaredTypeVisitor;
-import com.flipkart.krystal.vajram.codegen.common.spi.CodeGenerator;
-import com.flipkart.krystal.vajram.codegen.common.spi.ModelsCodeGenContext;
 import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;

@@ -32,7 +32,7 @@ public record ParsedVajramData(
     @Nullable LogicMethods logicMethods, String packageName, VajramInfo vajramInfo) {
 
   public static Optional<ParsedVajramData> fromVajramInfo(
-      VajramInfo vajramInfo, CodeGenUtility util) {
+      VajramInfo vajramInfo, VajramCodeGenUtility util) {
     validate(vajramInfo, util);
     String packageName = vajramInfo.lite().packageName();
     ImmutableList<ExecutableElement> allMethods = getAllMethods(vajramInfo.vajramClass());
@@ -57,7 +57,7 @@ public record ParsedVajramData(
     return Optional.of(new ParsedVajramData(logicMethods, packageName, vajramInfo));
   }
 
-  private static void validate(VajramInfo vajramInfo, CodeGenUtility util) {
+  private static void validate(VajramInfo vajramInfo, VajramCodeGenUtility util) {
     if (vajramInfo.lite().isTrait()) {
       TypeElement typeElement = vajramInfo.lite().vajramOrReqClass();
       CallGraphDelegationMode callGraphDelegationMode =
@@ -69,7 +69,7 @@ public record ParsedVajramData(
   }
 
   public static void validateNoDuplicateResolvers(
-      List<ExecutableElement> methods, VajramInfo vajramInfo, CodeGenUtility util) {
+      List<ExecutableElement> methods, VajramInfo vajramInfo, VajramCodeGenUtility util) {
     Map<String, Map<String, Boolean>> lookUpMap = new HashMap<>();
     for (ExecutableElement method : methods) {
       Resolve resolve = method.getAnnotation(Resolve.class);
@@ -103,7 +103,7 @@ public record ParsedVajramData(
   }
 
   private static LogicMethods getOutputLogicAndResolverMethods(
-      VajramInfo vajramInfo, CodeGenUtility util) {
+      VajramInfo vajramInfo, VajramCodeGenUtility util) {
     List<ExecutableElement> resolverMethods = new ArrayList<>();
 
     boolean vajramSupportsBatching = vajramInfo.facetStream().anyMatch(FacetGenModel::isBatched);

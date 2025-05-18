@@ -2,6 +2,7 @@ description = 'Enables support for protocol buffers in Krystal'
 
 dependencies {
     implementation project(':krystal-common')
+    implementation 'com.google.protobuf:protobuf-java'
 }
 
 publishing {

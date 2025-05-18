@@ -5,6 +5,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.flipkart.krystal:vajram-java-sdk:' + project.krystal_version
+        classpath 'com.flipkart.krystal:krystal-codegen-common:' + project.krystal_version
     }
 }
 
@@ -27,9 +28,9 @@ gradlePlugin {
 
 dependencies {
     api project(':vajram:vajram-java-sdk')
+    implementation project(':krystal-codegen-common')
     implementation project(':vajram:vajram-codegen-common')
     implementation 'com.squareup:javapoet'
-    implementation 'commons-cli:commons-cli'
     implementation 'org.projectlombok:lombok'
 
     compileOnly 'com.google.auto.service:auto-service'

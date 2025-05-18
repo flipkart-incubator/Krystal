@@ -10,6 +10,7 @@ ext {
     lattice_version = '0.0.1-SNAPSHOT'
 
     protobuf_version = '4.30.2'
+    grpc_version = '1.72.0'
 }
 
 subprojects {
@@ -80,43 +81,49 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
         api platform('com.google.inject:guice-bom:7.0.0')
         api platform('org.slf4j:slf4j-bom:2.0.13')
         api platform('com.fasterxml.jackson:jackson-bom:2.18.3')
+        api platform("com.google.protobuf:protobuf-bom:${protobuf_version}")
+        api platform("io.grpc:grpc-bom:${grpc_version}")
 
         constraints {
+            String lombok_version = '1.18.36'
 
-            implementation 'org.yaml:snakeyaml:2.2'
-
+            implementation "org.projectlombok:lombok:$lombok_version"
+            implementation 'com.google.auto.service:auto-service:1.1.1'
+            implementation 'com.google.code.findbugs:jsr305:3.0.2'
             implementation 'com.google.guava:guava:33.0.0-jre'
-            implementation 'org.slf4j:slf4j-api:2.0.11'
-            implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
-            implementation 'org.reflections:reflections:0.10.2'
+            implementation 'com.google.j2objc:j2objc-annotations:3.0.0'
             implementation 'com.squareup:javapoet:1.13.0'
             implementation 'commons-cli:commons-cli:1.6.0'
-            annotationProcessor 'com.google.guava:failureaccess:1.0.2'
-            testAnnotationProcessor 'com.google.guava:failureaccess:1.0.2'
-
-            implementation "com.google.protobuf:protobuf-java:$protobuf_version"
-
-            implementation 'com.google.j2objc:j2objc-annotations:3.0.0'
-            annotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
-            testImplementation 'com.google.j2objc:j2objc-annotations:3.0.0'
-            testAnnotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
-
-            implementation 'com.google.auto.service:auto-service:1.1.1'
-            annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
+            implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
+            implementation 'javax.annotation:javax.annotation-api:1.3.2'
+            implementation 'org.reflections:reflections:0.10.2'
+            implementation 'org.slf4j:slf4j-api:2.0.11'
+            implementation 'org.yaml:snakeyaml:2.2'
 
             compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
-            annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
+            compileOnly 'org.jetbrains:annotations:26.0.2'
 
+            annotationProcessor "com.flipkart.krystal.lattice:lattice-codegen:$lattice_version"
+            annotationProcessor "com.flipkart.krystal.lattice:lattice-protobuf-codegen:$lattice_version"
             annotationProcessor "com.flipkart.krystal:vajram-codegen:$krystal_version"
-            testAnnotationProcessor "com.flipkart.krystal:vajram-codegen:$krystal_version"
-
             annotationProcessor "com.flipkart.krystal:vajram-protobuf-codegen:$krystal_version"
-            testAnnotationProcessor "com.flipkart.krystal:vajram-protobuf-codegen:$krystal_version"
-
-            String lombok_version = '1.18.36'
-            implementation "org.projectlombok:lombok:$lombok_version"
             annotationProcessor "org.projectlombok:lombok:$lombok_version"
+            annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
+            annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
+            annotationProcessor 'com.google.guava:failureaccess:1.0.2'
+            annotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
+
+            testImplementation 'com.google.j2objc:j2objc-annotations:3.0.0'
+
+
+            testAnnotationProcessor "com.flipkart.krystal.lattice:lattice-codegen:$lattice_version"
+            testAnnotationProcessor "com.flipkart.krystal.lattice:lattice-protobuf-codegen:$lattice_version"
+            testAnnotationProcessor "com.flipkart.krystal:vajram-codegen:$krystal_version"
+            testAnnotationProcessor "com.flipkart.krystal:vajram-protobuf-codegen:$krystal_version"
             testAnnotationProcessor "org.projectlombok:lombok:$lombok_version"
+            testAnnotationProcessor 'com.google.guava:failureaccess:1.0.2'
+            testAnnotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
+
         }
     }
 
@@ -161,6 +168,12 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
         module('com.flipkart.krystal:vajram-codegen', 'com.flipkart.krystal.vajram.codegen')
         module('org.slf4j:slf4j-reload4j', 'org.slf4j.reload4j')
         module('ch.qos.reload4j:reload4j', 'ch.qos.reload4j')
+
+        module('proto-google-common-protos-2.51.0.jar', 'com.google.api.grpc.common.protos')
+        module('animal-sniffer-annotations-1.24.jar', 'org.codehaus.mojo.animal.sniffer.annotations')
+        module('grpc-context-1.72.0.jar', 'io.grpc.context')
+        module('annotations-4.1.1.4.jar', 'com.google.android.annotations')
+
         //These already have a module name
         knownModule('com.google.guava:failureaccess', 'com.google.common.util.concurrent.internal')
         knownModule('org.slf4j:slf4j-api', 'org.slf4j')
@@ -177,8 +190,15 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
 
         knownModule('com.flipkart.krystal:vajram-java-sdk', 'flipkart.krystal.vajram')
         knownModule('com.flipkart.krystal:krystal-common', 'flipkart.krystal.common')
+        knownModule('com.flipkart.krystal:krystal-codegen-common', 'flipkart.krystal.codegen.common')
         knownModule('com.flipkart.krystal:vajram-codegen-common', 'flipkart.krystal.vajram.codegen.common')
         knownModule('com.flipkart.krystal:krystal-visualization', 'flipkart.krystal.visualization')
+
+        module('javax.annotation:javax.annotation-api', 'java.annotation') {
+            mergeJar('com.google.code.findbugs:jsr305')
+            exports('javax.annotation')
+            exports('javax.annotation.concurrent')
+        }
     }
 }
 

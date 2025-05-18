@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
+import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.facets.FacetType;
-import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
 import com.google.common.collect.ImmutableSet;
 import java.util.EnumSet;
 import javax.lang.model.element.VariableElement;

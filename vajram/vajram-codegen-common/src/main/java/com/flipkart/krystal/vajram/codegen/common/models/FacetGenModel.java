@@ -1,10 +1,10 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
+import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
-import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
 import javax.lang.model.element.AnnotationMirror;

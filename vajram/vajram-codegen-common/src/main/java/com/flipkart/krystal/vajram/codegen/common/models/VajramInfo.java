@@ -53,7 +53,7 @@ public record VajramInfo(
                 ClassName.get(Request.class), util().toTypeName(lite.responseType()).box()));
   }
 
-  private CodeGenUtility util() {
+  private VajramCodeGenUtility util() {
     return lite.util();
   }
 

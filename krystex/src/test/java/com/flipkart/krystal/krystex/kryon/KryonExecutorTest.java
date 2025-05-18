@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.flipkart.krystal.annos.ExternallyInvocable;
 import com.flipkart.krystal.annos.ExternallyInvocable.Creator;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
-import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
+import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
 import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
@@ -71,11 +71,11 @@ import org.junit.jupiter.params.provider.MethodSource;
 class KryonExecutorTest {
 
   private static final Duration TIMEOUT = Duration.ofSeconds(10);
-  private static SingleThreadExecutorsPool EXEC_POOL;
+  private static ThreadPerRequestExecutorsPool EXEC_POOL;
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new SingleThreadExecutorsPool("KryonExecutorTest", 4);
+    EXEC_POOL = new ThreadPerRequestExecutorsPool("KryonExecutorTest", 4);
   }
 
   private Lease<SingleThreadExecutor> executorLease;
@@ -621,12 +621,13 @@ class KryonExecutorTest {
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     var config =
         KryonExecutorConfig.builder()
-            .singleThreadExecutor(executorLease.get())
+            .executor(executorLease.get())
             .kryonExecStrategy(kryonExecStrategy)
             .graphTraversalStrategy(graphTraversalStrategy)
             .configureWith(requestLevelCache)
+            .executorId("test")
             .build();
-    return new KryonExecutor(kryonDefinitionRegistry, config, "test");
+    return new KryonExecutor(kryonDefinitionRegistry, config);
   }
 
   public static Stream<Arguments> executorConfigsToTest() {

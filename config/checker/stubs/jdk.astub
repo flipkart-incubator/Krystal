@@ -33,6 +33,11 @@ package javax.annotation.processing;
 
 class Messager {
   void printMessage(Diagnostic.Kind kind, CharSequence msg, @Nullable Element e);
+  void printMessage(Diagnostic.Kind kind,
+      CharSequence msg,
+      @Nullable Element e,
+      @Nullable AnnotationMirror a,
+      @Nullable AnnotationValue v);
 }
 
 package javax.lang.model.util;

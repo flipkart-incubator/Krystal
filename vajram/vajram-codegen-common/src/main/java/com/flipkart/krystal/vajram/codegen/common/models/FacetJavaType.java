@@ -16,9 +16,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public abstract sealed class FacetJavaType {
 
-  protected final CodeGenUtility util;
+  protected final VajramCodeGenUtility util;
 
-  public FacetJavaType(CodeGenUtility util) {
+  public FacetJavaType(VajramCodeGenUtility util) {
     this.util = util;
   }
 
@@ -64,7 +64,7 @@ public abstract sealed class FacetJavaType {
 
   public static final class Actual extends FacetJavaType {
 
-    public Actual(CodeGenUtility util) {
+    public Actual(VajramCodeGenUtility util) {
       super(util);
     }
 
@@ -107,7 +107,7 @@ public abstract sealed class FacetJavaType {
 
   public static final class Boxed extends FacetJavaType {
 
-    public Boxed(CodeGenUtility util) {
+    public Boxed(VajramCodeGenUtility util) {
       super(util);
     }
 
@@ -124,7 +124,7 @@ public abstract sealed class FacetJavaType {
 
   public static final class OptionalType extends FacetJavaType {
 
-    public OptionalType(CodeGenUtility util) {
+    public OptionalType(VajramCodeGenUtility util) {
       super(util);
     }
 
@@ -150,7 +150,7 @@ public abstract sealed class FacetJavaType {
 
   public static final class One2OneResponse extends FacetJavaType {
 
-    public One2OneResponse(CodeGenUtility util) {
+    public One2OneResponse(VajramCodeGenUtility util) {
       super(util);
     }
 
@@ -167,7 +167,7 @@ public abstract sealed class FacetJavaType {
 
   public static final class FanoutResponses extends FacetJavaType {
 
-    public FanoutResponses(CodeGenUtility util) {
+    public FanoutResponses(VajramCodeGenUtility util) {
       super(util);
     }
 

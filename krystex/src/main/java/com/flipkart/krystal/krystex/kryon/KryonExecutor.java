@@ -86,7 +86,7 @@ public final class KryonExecutor implements KrystalExecutor {
   @Getter(PACKAGE)
   private final SingleThreadExecutor commandQueue;
 
-  private final String instanceId;
+  private final String executorId;
 
   /**
    * We need to have a list of request scope global decorators corresponding to each type, in case
@@ -132,13 +132,11 @@ public final class KryonExecutor implements KrystalExecutor {
   private boolean shutdownRequested;
 
   public KryonExecutor(
-      KryonDefinitionRegistry kryonDefinitionRegistry,
-      KryonExecutorConfig executorConfig,
-      String instanceId) {
+      KryonDefinitionRegistry kryonDefinitionRegistry, KryonExecutorConfig executorConfig) {
     this.kryonDefinitionRegistry = kryonDefinitionRegistry;
     this.executorConfig = executorConfig;
-    this.commandQueue = executorConfig.singleThreadExecutor();
-    this.instanceId = instanceId;
+    this.commandQueue = executorConfig.executor();
+    this.executorId = executorConfig.executorId();
     this.outputLogicDecoratorConfigs = executorConfig.outputLogicDecoratorConfigs();
     this.dependencyDecoratorConfigs = makeDependencyDecorConfigs(executorConfig);
     this.kryonDecoratorConfigs = executorConfig.kryonDecoratorConfigs();
@@ -234,7 +232,7 @@ public final class KryonExecutor implements KrystalExecutor {
     }
     checkArgument(executionConfig != null, "executionConfig can not be null");
     VajramID vajramID = request._vajramID();
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "TestOnlyProblems"})
     boolean openAllKryonsForExternalInvocation =
         executorConfig._riskyOpenAllKryonsForExternalInvocation();
     if (!openAllKryonsForExternalInvocation) {
@@ -251,7 +249,7 @@ public final class KryonExecutor implements KrystalExecutor {
     String executionId = executionConfig.executionId();
     checkArgument(executionId != null, "executionConfig.executionId can not be null");
     InvocationId invocationId =
-        preferredReqGenerator.newRequest("%s:%s".formatted(instanceId, executionId));
+        preferredReqGenerator.newRequest("%s:%s".formatted(executorId, executionId));
 
     //noinspection RedundantCast: This is to avoid nullChecker failing compilation.
     return enqueueCommand(
@@ -266,7 +264,7 @@ public final class KryonExecutor implements KrystalExecutor {
                     future.completeExceptionally(
                         new IllegalArgumentException(
                             "Received duplicate requests for same instanceId '%s' and execution Id '%s'"
-                                .formatted(instanceId, executionId)));
+                                .formatted(executorId, executionId)));
                   } else {
                     //noinspection unchecked
                     allExecutions.put(

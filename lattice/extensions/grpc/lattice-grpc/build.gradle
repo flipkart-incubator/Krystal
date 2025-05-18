@@ -1,0 +1,20 @@
+description = "Extends Lattice to support hosting GRPC services"
+
+dependencies {
+    implementation project(":lattice:lattice-core")
+    implementation project(":vajram:extensions:protobuf:vajram-protobuf3")
+    api 'io.grpc:grpc-protobuf'
+    api 'io.grpc:grpc-stub'
+    runtimeOnly 'io.grpc:grpc-netty-shaded'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = project.group
+            artifactId = project.name
+            version = project.version
+            from components.java
+        }
+    }
+}
