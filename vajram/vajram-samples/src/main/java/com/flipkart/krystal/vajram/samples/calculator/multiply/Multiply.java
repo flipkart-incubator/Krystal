@@ -2,14 +2,14 @@ package com.flipkart.krystal.vajram.samples.calculator.multiply;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 import java.util.Optional;
 
-@ExternallyInvocable
+@InvocableOutsideGraph
 @Vajram
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 public abstract class Multiply extends ComputeVajramDef<Integer> {

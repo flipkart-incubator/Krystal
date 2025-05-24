@@ -26,17 +26,6 @@ dependencies {
 
 tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
 
-publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId = project.group
-            artifactId = project.name
-            version = project.version
-            from components.java
-        }
-    }
-}
-
 afterEvaluate {
     //The main sourceSet doesn't have any vajrams - so remove this dependency
     compileJava.dependsOn -= "codeGenVajramModels"

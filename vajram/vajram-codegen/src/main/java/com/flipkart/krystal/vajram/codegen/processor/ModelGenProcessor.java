@@ -10,7 +10,6 @@ import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGeneratorProvider;
 import com.flipkart.krystal.model.ModelRoot;
-import com.flipkart.krystal.vajram.codegen.common.models.VajramValidationException;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.Iterables;
 import java.util.Arrays;
@@ -85,7 +84,7 @@ public final class ModelGenProcessor extends AbstractProcessor {
       for (ModelsCodeGeneratorProvider customCodeGeneratorProvider : codeGeneratorProviders) {
         try {
           customCodeGeneratorProvider.create(creationContext).generate();
-        } catch (VajramValidationException e) {
+        } catch (Exception e) {
           continue;
         }
       }

@@ -8,7 +8,7 @@ import static com.flipkart.krystal.vajram.facets.One2OneCommand.skipExecution;
 import static com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Fac.chainSum_n;
 import static com.flipkart.krystal.vajram.samples.calculator.add.ChainAdd_Fac.sum_n;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.model.IfAbsent;
@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-@ExternallyInvocable
+@InvocableOutsideGraph
 @Vajram
 public abstract class ChainAdd extends ComputeVajramDef<Integer> implements MultiAdd {
   @SuppressWarnings("initialization.field.uninitialized")

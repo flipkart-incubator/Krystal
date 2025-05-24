@@ -45,8 +45,9 @@ public final class Constants {
   public static final String IMMUT_SUFFIX = "Immut";
   public static final String POJO_SUFFIX = "Pojo";
   public static final String REQUEST_SUFFIX = "_Req";
-  public static final String IMMUT_REQUEST_SUFFIX = "_Req" + IMMUT_SUFFIX;
-  public static final String IMMUT_REQUEST_POJO_SUFFIX = "_Req" + IMMUT_SUFFIX + POJO_SUFFIX;
+  public static final String IMMUT_REQUEST_SUFFIX = REQUEST_SUFFIX + IMMUT_SUFFIX;
+  public static final String IMMUT_REQUEST_POJO_SUFFIX =
+      REQUEST_SUFFIX + IMMUT_SUFFIX + POJO_SUFFIX;
   public static final String IMPL_SUFFIX = "_Wrpr";
 
   public static final String INPUT_SPECS_CLASS_SUFFIX = "_InputSpecs";

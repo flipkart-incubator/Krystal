@@ -11,33 +11,31 @@ import com.google.inject.Guice;
 import com.google.inject.Module;
 import jakarta.inject.Singleton;
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-public final class GuiceModuleBinder implements DependencyInjectionBinder {
+public class GuiceModuleBinder implements DependencyInjectionBinder {
 
   private final List<Binding<?>> bindings = new ArrayList<>();
   private final List<Class<?>> singletons = new ArrayList<>();
-  private final AbstractModule rootModule;
-  private @MonotonicNonNull com.flipkart.krystal.lattice.ext.guice.GuiceInjector guiceInjector;
+  private @MonotonicNonNull AbstractModule rootModule;
+  private @MonotonicNonNull GuiceInjector guiceInjector;
   private @MonotonicNonNull VajramGuiceInputInjector vajramGuiceInputInjector;
+  private final ImmutableList<? extends Module> modules;
 
   public GuiceModuleBinder(Module... modules) {
     this(ImmutableList.copyOf(modules));
   }
 
   public GuiceModuleBinder(ImmutableList<? extends Module> modules) {
-    this.rootModule =
-        new AbstractModule() {
-          @Override
-          protected void configure() {
-            modules.forEach(this::install);
-            bindings.forEach(binding -> binding.bind(binder()));
-            singletons.forEach(c -> bind(c).in(Singleton.class));
-          }
-        };
+    this.modules = modules;
+  }
+
+  protected List<Module> getExtensionModules() {
+    return List.of();
   }
 
   @Override
@@ -61,6 +59,18 @@ public final class GuiceModuleBinder implements DependencyInjectionBinder {
   }
 
   public Module getRootModule() {
+    if (rootModule == null) {
+      this.rootModule =
+          new AbstractModule() {
+            @Override
+            protected void configure() {
+              getExtensionModules().forEach(this::install);
+              modules.forEach(this::install);
+              bindings.forEach(binding -> binding.bind(binder()));
+              singletons.forEach(c -> bind(c).in(Singleton.class));
+            }
+          };
+    }
     return rootModule;
   }
 
@@ -74,8 +84,8 @@ public final class GuiceModuleBinder implements DependencyInjectionBinder {
 
   @Override
   public Closeable openRequestScope(
-      Map<Object, Object> seedMap, ThreadingStrategy threadingStrategy) {
-    ;
+      Map<BindingKey, Object> seedMap, ThreadingStrategy threadingStrategy) {
+    return () -> {};
   }
 
   private record Binding<T>(Class<T> type, T instance) {

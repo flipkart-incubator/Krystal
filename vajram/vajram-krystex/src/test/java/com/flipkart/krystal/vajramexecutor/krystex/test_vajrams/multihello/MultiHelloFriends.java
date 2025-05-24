@@ -11,7 +11,7 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihell
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.multihello.MultiHelloFriends_Fac.hellos_s;
 import static java.lang.System.lineSeparator;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.RequestResponse;
@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@ExternallyInvocable
+@InvocableOutsideGraph
 @Vajram
 public abstract class MultiHelloFriends extends ComputeVajramDef<String> {
   static class _Inputs {

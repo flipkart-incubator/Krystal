@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.exception;
 
 import com.flipkart.krystal.except.StackTracelessException;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class MandatoryFacetMissingException extends StackTracelessException {
 
@@ -10,6 +11,12 @@ public final class MandatoryFacetMissingException extends StackTracelessExceptio
   private @MonotonicNonNull String detailedMessage;
 
   public MandatoryFacetMissingException(String vajramId, String facetName) {
+    this(vajramId, facetName, null);
+  }
+
+  public MandatoryFacetMissingException(
+      String vajramId, String facetName, @Nullable Throwable cause) {
+    super("", cause);
     this.vajramName = vajramId;
     this.facetName = facetName;
   }

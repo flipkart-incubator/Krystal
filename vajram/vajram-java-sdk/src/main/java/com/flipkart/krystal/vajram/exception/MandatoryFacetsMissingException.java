@@ -14,6 +14,7 @@ public class MandatoryFacetsMissingException extends StackTracelessException {
 
   public MandatoryFacetsMissingException(
       VajramID vajramID, Map<String, Throwable> failedMandatoryInputs) {
+    super("", failedMandatoryInputs.entrySet().iterator().next().getValue());
     this.vajramID = vajramID;
     this.failedMandatoryInputs = ImmutableMap.copyOf(failedMandatoryInputs);
   }

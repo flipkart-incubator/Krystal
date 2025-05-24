@@ -1,28 +1,28 @@
-package com.flipkart.krystal.lattice.core.dopants;
+package com.flipkart.krystal.lattice.core.doping;
 
-import com.flipkart.krystal.lattice.core.dopants.DopantConfig.NoAnnotation;
-import com.flipkart.krystal.lattice.core.dopants.DopantConfig.NoConfiguration;
+import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoAnnotation;
+import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoConfiguration;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public abstract class SimpleDopantSpecBuilder<
         DS extends DopantSpec<NoAnnotation, NoConfiguration, DS>>
-    extends DopantSpecBuilder<NoAnnotation, NoConfiguration, DS> {
+    implements DopantSpecBuilder<NoAnnotation, NoConfiguration, DS> {
 
-  public abstract DS build();
+  public abstract DS _buildSpec();
 
   @Override
-  public Class<NoAnnotation> getAnnotationType() {
+  public Class<NoAnnotation> _annotationType() {
     return NoAnnotation.class;
   }
 
   @Override
-  public Class<NoConfiguration> getConfigurationType() {
+  public Class<NoConfiguration> _configurationType() {
     return NoConfiguration.class;
   }
 
   @Override
-  public final DS build(
+  public final DS _buildSpec(
       @Nullable NoAnnotation annotation, @Nullable NoConfiguration configuration) {
-    throw new UnsupportedOperationException();
+    return _buildSpec();
   }
 }

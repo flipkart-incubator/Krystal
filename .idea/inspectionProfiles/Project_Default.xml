@@ -505,6 +505,7 @@
           <option value="DataFlowIssue" />
           <option value="ClassEscapesDefinedScope" />
           <option value="TestOnlyProblems" />
+          <option value="JavaReflectionMemberAccess" />
         </list>
       </option>
     </inspection_tool>

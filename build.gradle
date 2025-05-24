@@ -48,7 +48,10 @@ subprojects {
     }
 }
 
-configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-coverage-report" }) {
+configure(subprojects.findAll {
+    //Exclude non java projects
+    it.name !in (['krystal-bom', 'code-coverage-report'] as Set)
+}) {
     apply plugin: 'java-library'
     apply plugin: 'org.gradlex.extra-java-module-info'
 
@@ -100,13 +103,18 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
             implementation 'org.slf4j:slf4j-api:2.0.11'
             implementation 'org.yaml:snakeyaml:2.2'
 
+            runtimeOnly 'jakarta.servlet:jakarta.servlet-api:6.1.0'
+
             compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
             compileOnly 'org.jetbrains:annotations:26.0.2'
 
             annotationProcessor "com.flipkart.krystal.lattice:lattice-codegen:$lattice_version"
+            annotationProcessor "com.flipkart.krystal.lattice:lattice-guice-codegen:$lattice_version"
             annotationProcessor "com.flipkart.krystal.lattice:lattice-protobuf-codegen:$lattice_version"
+            annotationProcessor "com.flipkart.krystal.lattice:lattice-grpc-codegen:$lattice_version"
             annotationProcessor "com.flipkart.krystal:vajram-codegen:$krystal_version"
             annotationProcessor "com.flipkart.krystal:vajram-protobuf-codegen:$krystal_version"
+
             annotationProcessor "org.projectlombok:lombok:$lombok_version"
             annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
             annotationProcessor 'com.google.auto.value:auto-value:1.11.0'
@@ -116,14 +124,26 @@ configure(subprojects.findAll { it.name != 'krystal-bom' && it.name != "code-cov
             testImplementation 'com.google.j2objc:j2objc-annotations:3.0.0'
 
 
-            testAnnotationProcessor "com.flipkart.krystal.lattice:lattice-codegen:$lattice_version"
-            testAnnotationProcessor "com.flipkart.krystal.lattice:lattice-protobuf-codegen:$lattice_version"
             testAnnotationProcessor "com.flipkart.krystal:vajram-codegen:$krystal_version"
-            testAnnotationProcessor "com.flipkart.krystal:vajram-protobuf-codegen:$krystal_version"
             testAnnotationProcessor "org.projectlombok:lombok:$lombok_version"
             testAnnotationProcessor 'com.google.guava:failureaccess:1.0.2'
             testAnnotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
 
+        }
+    }
+
+    if (!project.name.contains('samples') &&
+            //Exclude modules which should not be published or have custom publishing config
+            project.name != 'vajram-lang') {
+        publishing {
+            publications {
+                maven(MavenPublication) {
+                    groupId = project.group
+                    artifactId = project.name
+                    version = project.version
+                    from components.java
+                }
+            }
         }
     }
 

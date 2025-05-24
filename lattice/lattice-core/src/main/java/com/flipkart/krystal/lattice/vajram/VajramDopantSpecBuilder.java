@@ -1,5 +1,7 @@
 package com.flipkart.krystal.lattice.vajram;
 
+import static com.flipkart.krystal.lattice.vajram.VajramDopant.DOPANT_TYPE;
+
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopantSpecBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
@@ -10,9 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-public final class VajramGraphSpecBuilder extends SimpleDopantSpecBuilder<VajramGraphSpec> {
-
-  private static final String DOPANT_TYPE = "krystal.vajram.graph";
+public final class VajramDopantSpecBuilder extends SimpleDopantSpecBuilder<VajramDopantSpec> {
 
   private VajramKryonGraphBuilder graphBuilder = VajramKryonGraph.builder();
 
@@ -21,35 +21,35 @@ public final class VajramGraphSpecBuilder extends SimpleDopantSpecBuilder<Vajram
       new ArrayList<>();
   private final List<KryonExecutorConfigurator> kryonExecutorConfigurators = new ArrayList<>();
 
-  VajramGraphSpecBuilder() {}
+  VajramDopantSpecBuilder() {}
 
-  public VajramGraphSpecBuilder graphBuilder(VajramKryonGraphBuilder graphBuilder) {
+  public VajramDopantSpecBuilder graphBuilder(VajramKryonGraphBuilder graphBuilder) {
     this.graphBuilder = graphBuilder;
     return this;
   }
 
-  public VajramGraphSpecBuilder extendGraph(Consumer<VajramKryonGraph> processor) {
+  public VajramDopantSpecBuilder extendGraph(Consumer<VajramKryonGraph> processor) {
     graphProcessors.add(processor);
     return this;
   }
 
-  public VajramGraphSpecBuilder configureVajramExecutor(
+  public VajramDopantSpecBuilder configureVajramExecutor(
       Consumer<KrystexVajramExecutorConfigBuilder> processor) {
     vajramExecConfigProcessors.add(processor);
     return this;
   }
 
-  public VajramGraphSpecBuilder configureKryonExecutor(KryonExecutorConfigurator manager) {
+  public VajramDopantSpecBuilder configureKryonExecutor(KryonExecutorConfigurator manager) {
     kryonExecutorConfigurators.add(manager);
     return this;
   }
 
   @SuppressWarnings("ClassEscapesDefinedScope")
   @Override
-  public VajramGraphSpec _buildSpec() {
+  public VajramDopantSpec _buildSpec() {
     VajramKryonGraph graph = graphBuilder.build();
     graphProcessors.forEach(p -> p.accept(graph));
-    return new VajramGraphSpec(
+    return new VajramDopantSpec(
         graph,
         ImmutableList.copyOf(vajramExecConfigProcessors),
         ImmutableList.copyOf(kryonExecutorConfigurators));

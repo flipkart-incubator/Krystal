@@ -10,7 +10,7 @@ import static java.util.Collections.emptySet;
 import static java.util.function.Function.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
 import com.flipkart.krystal.core.OutputLogicExecutionResults;
@@ -116,7 +116,7 @@ class RequestLevelCacheTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic("kryon", emptySet()),
             newFacetsFromRequestLogic("kryon"),
-            ElementTags.of(List.of(ExternallyInvocable.Creator.create())));
+            ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
             SimpleImmutRequest.empty(kryonDefinition.vajramID()),
@@ -160,7 +160,7 @@ class RequestLevelCacheTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic("kryon", emptySet()),
             newFacetsFromRequestLogic("kryon"),
-            ElementTags.of(List.of(ExternallyInvocable.Creator.create())));
+            ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
 
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(

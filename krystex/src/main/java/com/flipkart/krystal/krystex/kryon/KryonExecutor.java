@@ -14,7 +14,7 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.groupingBy;
 import static lombok.AccessLevel.PACKAGE;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.TraitDependency;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.core.VajramID;
@@ -239,7 +239,7 @@ public final class KryonExecutor implements KrystalExecutor {
       if (kryonDefinitionRegistry
           .getOrThrow(vajramID)
           .tags()
-          .getAnnotationByType(ExternallyInvocable.class)
+          .getAnnotationByType(InvocableOutsideGraph.class)
           .isEmpty()) {
         throw new RejectedExecutionException(
             "External invocation is not allowed for vajramId: " + vajramID);

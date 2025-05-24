@@ -50,7 +50,7 @@ public record VajramInfo(
         conformsToTraitInfo != null
             ? conformsToTraitInfo.requestInterfaceType()
             : ParameterizedTypeName.get(
-                ClassName.get(Request.class), util().toTypeName(lite.responseType()).box()));
+                ClassName.get(Request.class), util().codegenUtil().toTypeName(lite.responseType()).box()));
   }
 
   private VajramCodeGenUtility util() {
@@ -64,7 +64,7 @@ public record VajramInfo(
             ? conformsToTraitInfo.immutReqInterfaceType()
             : ParameterizedTypeName.get(
                 ClassName.get(ImmutableRequest.class),
-                util().toTypeName(lite.responseType()).box()));
+                util().codegenUtil().toTypeName(lite.responseType()).box()));
   }
 
   public Iterable<TypeName> reqBuilderInterfaceSuperTypes() {
@@ -74,7 +74,7 @@ public record VajramInfo(
             ? conformsToTraitInfo.immutReqInterfaceType().nestedClass("Builder")
             : ParameterizedTypeName.get(
                 ClassName.get(ImmutableRequest.Builder.class),
-                util().toTypeName(lite.responseType()).box()));
+                util().codegenUtil().toTypeName(lite.responseType()).box()));
   }
 
   public VajramInfoLite conformsToTraitOrSelf() {

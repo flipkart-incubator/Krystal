@@ -95,8 +95,7 @@ public record ParsedVajramData(
           String errorMessage =
               "Two Resolver resolving same input (%s) for dependency name (%s)"
                   .formatted(depInputName, dep);
-          util.error(errorMessage, method);
-          throw new VajramValidationException(errorMessage);
+          throw util.errorAndThrow(errorMessage, method);
         }
       }
     }

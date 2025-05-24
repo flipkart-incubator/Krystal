@@ -1,5 +1,6 @@
 package com.flipkart.krystal.codegen.common.models;
 
+import static com.flipkart.krystal.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.squareup.javapoet.CodeBlock.joining;
 import static java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME;
@@ -15,6 +16,7 @@ import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.Creator;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
+import com.flipkart.krystal.model.ModelRoot;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Primitives;
@@ -71,7 +73,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Slf4j
 public class CodeGenUtility {
 
-  private static final boolean DEBUG = false;
+  private static final boolean DEBUG = true;
 
   @Getter private final ProcessingEnvironment processingEnv;
   private final Types typeUtils;
@@ -87,7 +89,15 @@ public class CodeGenUtility {
     this.dataTypeRegistry = new DataTypeRegistry();
   }
 
-  public static ClassName toClassName(String depReqClassName) {
+  public static String capitalizeFirstChar(String str) {
+    return str.isEmpty() ? str : Character.toUpperCase(str.charAt(0)) + str.substring(1);
+  }
+
+  public static String lowerCaseFirstChar(String str) {
+    return str.isEmpty() ? str : Character.toLowerCase(str.charAt(0)) + str.substring(1);
+  }
+
+  public ClassName toClassName(String depReqClassName) {
     int lastDotIndex = depReqClassName.lastIndexOf('.');
     return ClassName.get(
         depReqClassName.substring(0, lastDotIndex), depReqClassName.substring(lastDotIndex + 1));
@@ -227,10 +237,10 @@ public class CodeGenUtility {
     return typeElement;
   }
 
-  public void generateSourceFile(String className, String code, TypeElement vajramDefinition) {
+  public void generateSourceFile(String className, String code, TypeElement originatingElement) {
     try {
       JavaFileObject requestFile =
-          processingEnv.getFiler().createSourceFile(className, vajramDefinition);
+          processingEnv.getFiler().createSourceFile(className, originatingElement);
       note("Successfully Create source file %s".formatted(className));
       try (PrintWriter out = new PrintWriter(requestFile.openWriter())) {
         out.println(code);
@@ -238,7 +248,7 @@ public class CodeGenUtility {
     } catch (Exception e) {
       error(
           "Error creating java file for className: %s. Error: %s".formatted(className, e),
-          vajramDefinition);
+          originatingElement);
     }
   }
 
@@ -263,7 +273,7 @@ public class CodeGenUtility {
   public ImmutableList<TypeMirror> getTypeParamTypes(
       TypeElement childTypeElement, TypeElement targetParentClass) {
     List<TypeMirror> currentTypes = List.of(childTypeElement.asType());
-    note("VajramDef: %s".formatted(childTypeElement));
+    note("Child Type Element: %s".formatted(childTypeElement));
 
     Types typeUtils = processingEnv.getTypeUtils();
     DeclaredType targetType = null;
@@ -483,7 +493,7 @@ public class CodeGenUtility {
         javaType.annotationSpecs());
   }
 
-  TypeAndName getTypeName(CodeGenType dataType, List<AnnotationSpec> typeAnnotations) {
+  public TypeAndName getTypeName(CodeGenType dataType, List<AnnotationSpec> typeAnnotations) {
     TypeMirror javaModelType = dataType.javaModelType(processingEnv);
     return new TypeAndName(
         TypeName.get(javaModelType).annotated(typeAnnotations), javaModelType, typeAnnotations);
@@ -495,19 +505,13 @@ public class CodeGenUtility {
 
   @SuppressWarnings("method.invocation")
   public ExecutableElement getMethod(Class<?> clazz, String methodName, int paramCount) {
-    return requireNonNull(
-            processingEnv()
-                .getElementUtils()
-                .getTypeElement(requireNonNull(clazz.getCanonicalName())))
-        .getEnclosedElements()
-        .stream()
-        .filter(element -> element instanceof ExecutableElement)
-        .map(element -> (ExecutableElement) element)
-        .filter(
-            element ->
-                element.getSimpleName().contentEquals(methodName)
-                    && element.getParameters().size() == paramCount)
-        .findAny()
+    return getMethod(
+            requireNonNull(
+                processingEnv()
+                    .getElementUtils()
+                    .getTypeElement(requireNonNull(clazz.getCanonicalName()))),
+            methodName,
+            paramCount)
         .orElseThrow(
             () ->
                 new IllegalArgumentException(
@@ -517,6 +521,18 @@ public class CodeGenUtility {
                         + paramCount
                         + "' in class "
                         + clazz));
+  }
+
+  public Optional<ExecutableElement> getMethod(
+      TypeElement typeElement, String methodName, int paramCount) {
+    return typeElement.getEnclosedElements().stream()
+        .filter(element -> element instanceof ExecutableElement)
+        .map(element -> (ExecutableElement) element)
+        .filter(
+            element ->
+                element.getSimpleName().contentEquals(methodName)
+                    && element.getParameters().size() == paramCount)
+        .findAny();
   }
 
   public String getJavaTypeCreationCode(CodeGenType javaType, List<TypeName> collectClassNames) {
@@ -571,5 +587,21 @@ public class CodeGenUtility {
             .map(Entry::getValue)
             .orElseThrow(AssertionError::new)
             .getValue());
+  }
+
+  public TypeName optional(TypeAndName javaType) {
+    return ParameterizedTypeName.get(ClassName.get(Optional.class), box(javaType).typeName());
+  }
+
+  public ClassName getImmutClassName(TypeElement modelRootType) {
+    ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
+    if (modelRoot == null) {
+      throw new IllegalArgumentException(
+          "Cannot fetch Immut class name for Model which does not have @ModelRoot annotation");
+    }
+
+    String modelRootName = modelRootType.getSimpleName().toString();
+    String packageName = processingEnv().getElementUtils().getPackageOf(modelRootType).toString();
+    return ClassName.get(packageName, modelRootName + modelRoot.suffixSeparator() + IMMUT_SUFFIX);
   }
 }

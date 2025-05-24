@@ -125,15 +125,15 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
       }
       // Input was not resolved by calling vajram.
       Errable<Object> injectedValue = getInjectedValue(vajramDefinition.vajramId(), facetSpec);
-      if (injectedValue instanceof Success<Object> success) {
-        defaultFacetSpec.setFacetValue(facetsBuilder, success);
-      } else if (injectedValue instanceof Failure<Object> f) {
+      if (injectedValue instanceof Failure<Object> f) {
+        defaultFacetSpec.setFacetValue(facetsBuilder, f);
         log.error(
             "Could not inject input {} of vajram {}",
             facetSpec,
             kryon.getKryonDefinition().vajramID().id(),
             f.error());
       }
+      defaultFacetSpec.setFacetValue(facetsBuilder, injectedValue);
     }
     return facetsBuilder;
   }

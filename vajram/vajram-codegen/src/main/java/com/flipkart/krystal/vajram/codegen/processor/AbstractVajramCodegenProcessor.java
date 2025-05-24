@@ -8,7 +8,6 @@ import static java.util.stream.Collectors.joining;
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
-import com.flipkart.krystal.vajram.codegen.common.models.VajramValidationException;
 import com.flipkart.krystal.vajram.codegen.common.spi.AllVajramCodeGenContext;
 import com.flipkart.krystal.vajram.codegen.common.spi.AllVajramsCodeGeneratorProvider;
 import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGenContext;
@@ -28,6 +27,7 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
     permits VajramModelGenProcessor, VajramWrapperGenProcessor {
 
   private final CodegenPhase codegenPhase;
+  private final List<TypeElement> vajramDefinitions = new ArrayList<>();
 
   public AbstractVajramCodegenProcessor(CodegenPhase codegenPhase) {
     this.codegenPhase = codegenPhase;
@@ -56,7 +56,14 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
                   CODEGEN_PHASE_KEY));
       return false;
     }
-    List<TypeElement> vajramDefinitions = util.getDefinitionClasses(roundEnv);
+
+    List<TypeElement> vajramDefinitions;
+    if (this.vajramDefinitions.isEmpty()) {
+      vajramDefinitions = util.getDefinitionClasses(roundEnv);
+      this.vajramDefinitions.addAll(vajramDefinitions);
+    } else {
+      vajramDefinitions = new ArrayList<>(this.vajramDefinitions);
+    }
     util.note(
         "Vajrams and Traits received by %s: %s"
             .formatted(
@@ -85,11 +92,15 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
             vajramCodeGeneratorProviders) {
           try {
             customCodeGeneratorProvider.create(creationContext).generate();
-          } catch (VajramValidationException e) {
+          } catch (Exception e) {
             continue;
           }
         }
-      } catch (VajramValidationException e) {
+        this.vajramDefinitions.remove(vajramDefinition);
+      } catch (Exception e) {
+        util.note("****************************************************");
+        util.note("Skipping processing of " + vajramDefinition + " due to " + e);
+        util.note("****************************************************");
         continue;
       }
     }
@@ -101,7 +112,6 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
           .create(new AllVajramCodeGenContext(vajramInfos, util, codegenPhase))
           .generate();
     }
-
     return false;
   }
 }

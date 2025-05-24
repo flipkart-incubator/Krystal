@@ -22,12 +22,12 @@ import lombok.experimental.UtilityClass;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-public @interface InvocableFromOutsideGraph {
+public @interface InvocableOutsideGraph {
 
   @UtilityClass
   final class Creator {
-    public static @AutoAnnotation InvocableFromOutsideGraph create() {
-      return new AutoAnnotation_InvocableFromOutsideGraph_Creator_create();
+    public static @AutoAnnotation InvocableOutsideGraph create() {
+      return new AutoAnnotation_InvocableOutsideGraph_Creator_create();
     }
   }
 }

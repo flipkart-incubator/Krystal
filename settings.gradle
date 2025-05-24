@@ -19,31 +19,35 @@ dependencyResolutionManagement {
 rootProject.name = 'krystal'
 
 include 'code-coverage-report'
-include 'krystal-bom'
-
-include 'krystex'
 include 'honeycomb'
+include 'krystal-bom'
+include 'krystal-codegen-common'
 include 'krystal-common'
 include 'krystal-visualization'
+include 'krystex'
 
-include 'vajram:vajram-java-sdk'
-include 'vajram:vajram-samples'
+
 include 'vajram:vajram-codegen'
-include 'krystal-codegen-common'
+include 'vajram:vajram-codegen-common'
+include 'vajram:vajram-java-sdk'
 include 'vajram:vajram-krystex'
 include 'vajram:vajram-lang'
-include 'vajram:vajram-codegen-common'
+include 'vajram:vajram-samples'
 
 include 'vajram:extensions:guice:vajram-guice'
 include 'vajram:extensions:protobuf:vajram-protobuf-codegen'
 include 'vajram:extensions:protobuf:vajram-protobuf3'
 
+
+include 'lattice:lattice-codegen'
 include 'lattice:lattice-core'
 include 'lattice:lattice-samples'
+include 'lattice:lattice-vajram-sdk'
 
 include 'lattice:extensions:grpc:lattice-grpc'
-include 'lattice:lattice-codegen'
+include 'lattice:extensions:grpc:lattice-grpc-codegen'
+include 'lattice:extensions:guice:lattice-guice'
+include 'lattice:extensions:guice:lattice-guice-servlet'
+include 'lattice:extensions:guice:lattice-guice-codegen'
 include 'lattice:extensions:protobuf:lattice-protobuf-codegen'
-//include 'lattice:extensions:guice:lattice-guice'
-
 

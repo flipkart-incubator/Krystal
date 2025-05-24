@@ -1,5 +1,7 @@
 package com.flipkart.krystal.lattice.core;
 
+import com.flipkart.krystal.lattice.core.doping.Dopant;
+import com.flipkart.krystal.lattice.core.doping.DopantSpecBuilder;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -16,7 +18,7 @@ public final class LatticeAppBootstrap {
    * @param specBuilder creates a spec builder for the dopant to add
    * @return this object
    */
-  public LatticeAppBootstrap addDopant(DopantSpecBuilder specBuilder) {
+  public LatticeAppBootstrap dopeWith(DopantSpecBuilder specBuilder) {
     specBuilders.put(specBuilder.getClass(), specBuilder);
     return this;
   }

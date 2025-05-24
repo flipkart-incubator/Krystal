@@ -14,23 +14,23 @@ import lombok.extern.slf4j.Slf4j;
 /** A interceptor to handle server header. */
 @Singleton
 @Slf4j
-public class HeaderServerInterceptor implements ServerInterceptor {
+public class StandardHeadersInterceptor implements ServerInterceptor {
 
   private final Key<String> requestIdContextKey;
   private final Metadata.Key<String> requestIdMetadataKey;
-  private final Metadata.Key<String> acceptMetadataKey;
+
   private final Key<String> acceptHeaderContextKey;
+  private final Metadata.Key<String> acceptMetadataKey;
 
   @Inject
-  HeaderServerInterceptor(GrpcServerSpec grpcServerSpec, GrpcServerDopant grpcServerDopant) {
+  StandardHeadersInterceptor(GrpcServerSpec grpcServerSpec) {
     this.requestIdContextKey = grpcServerSpec.requestIdContextKey();
     this.requestIdMetadataKey =
         Metadata.Key.of(requestIdContextKey.toString(), Metadata.ASCII_STRING_MARSHALLER);
 
-    this.acceptHeaderContextKey = grpcServerDopant.acceptHeaderContextKey();
+    this.acceptHeaderContextKey = grpcServerSpec.acceptHeaderContextKey();
     this.acceptMetadataKey =
-        Metadata.Key.of(
-            acceptHeaderContextKey.toString(), Metadata.ASCII_STRING_MARSHALLER);
+        Metadata.Key.of(acceptHeaderContextKey.toString(), Metadata.ASCII_STRING_MARSHALLER);
   }
 
   @Override
@@ -47,7 +47,9 @@ public class HeaderServerInterceptor implements ServerInterceptor {
 
     // Put into gRPC context
     Context contextWithHeader =
-        Context.current().withValue(requestIdContextKey, requestId).withValue(acceptHeaderContextKey, acceptHeader);
+        Context.current()
+            .withValue(requestIdContextKey, requestId)
+            .withValue(acceptHeaderContextKey, acceptHeader);
 
     return Contexts.interceptCall(contextWithHeader, call, requestHeaders, next);
   }

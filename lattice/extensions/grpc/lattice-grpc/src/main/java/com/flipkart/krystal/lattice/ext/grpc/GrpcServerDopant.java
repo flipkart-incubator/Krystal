@@ -1,26 +1,36 @@
 package com.flipkart.krystal.lattice.ext.grpc;
 
-import static com.flipkart.krystal.lattice.ext.grpc.GrpcServerConfig.DOPANT_TYPE;
+import static com.flipkart.krystal.lattice.ext.grpc.GrpcServerDopant.DOPANT_TYPE;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
-import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
 import com.flipkart.krystal.data.ImmutableRequest;
-import com.flipkart.krystal.lattice.core.Dopant;
-import com.flipkart.krystal.lattice.core.annos.DopantType;
-import com.flipkart.krystal.lattice.core.vajram.VajramGraphDopant;
+import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder;
+import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder.BindingKey;
+import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder.BindingKey.AnnotationType;
+import com.flipkart.krystal.lattice.core.doping.Dopant;
+import com.flipkart.krystal.lattice.core.doping.DopantType;
+import com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopant;
+import com.flipkart.krystal.lattice.core.headers.Header;
+import com.flipkart.krystal.lattice.core.headers.SimpleHeader;
+import com.flipkart.krystal.lattice.vajram.VajramDopant;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Message;
 import io.grpc.BindableService;
+import io.grpc.Context.Key;
 import io.grpc.Grpc;
 import io.grpc.InsecureServerCredentials;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
+import jakarta.inject.Inject;
+import java.io.Closeable;
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
@@ -31,31 +41,35 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 @DopantType(DOPANT_TYPE)
 @Slf4j
-public abstract class GrpcServerDopant
-    implements Dopant<GrpcServer, GrpcServerConfig, GrpcServerSpec> {
+public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerConfig> {
+
+  public static final String DOPANT_TYPE = "krystal.lattice.grpcServer";
+  private final ThreadingStrategyDopant threadingStrategyDopant;
+  private final GrpcServerSpec grpcServerSpec;
+
+  public static GrpcServerSpecBuilder grpcDopant() {
+    return new GrpcServerSpecBuilder();
+  }
 
   private final GrpcServerConfig config;
   private final GrpcServer annotation;
-  private final VajramGraphDopant vajramGraphDopant;
-  private final HeaderServerInterceptor headerInterceptor;
-  private final ThreadPerRequestExecutorsPool executorPool;
+  private final VajramDopant vajramDopant;
+  private final StandardHeadersInterceptor headerInterceptor;
 
   private @MonotonicNonNull Server server;
 
+  @Inject
   protected GrpcServerDopant(
-      GrpcServerSpec spec,
-      GrpcServerConfig config,
-      GrpcServer annotation,
-      VajramGraphDopant vajramGraphDopant,
-      HeaderServerInterceptor headerInterceptor) {
-    this.config = config;
-    this.annotation = annotation;
-    this.vajramGraphDopant = vajramGraphDopant;
+      GrpcInitData initData,
+      StandardHeadersInterceptor headerInterceptor,
+      VajramDopant vajramDopant,
+      ThreadingStrategyDopant threadingStrategyDopant) {
+    this.grpcServerSpec = initData.spec();
+    this.annotation = initData.annotation();
+    this.config = initData.config();
+    this.vajramDopant = vajramDopant;
     this.headerInterceptor = headerInterceptor;
-    this.executorPool =
-        new ThreadPerRequestExecutorsPool(
-            annotation.serverName() + "-ThreadPerRequestExecutorsPool",
-            config.maxApplicationThreads());
+    this.threadingStrategyDopant = threadingStrategyDopant;
   }
 
   @Override
@@ -96,36 +110,73 @@ public abstract class GrpcServerDopant
   protected abstract ImmutableList<BindableService> serviceDefinitions();
 
   @SuppressWarnings("unchecked")
-  public <ProtoT extends @Nullable Message, RespT> void executeRpc(
-      StreamObserver<@Nullable ProtoT> responseObserver,
+  public <RespT, RespProtoT extends @Nullable Message> void executeRpc(
       ImmutableRequest<RespT> request,
-      Function<@Nullable RespT, ProtoT> protoConverter) {
-    Lease<@NonNull SingleThreadExecutor> lease;
+      StreamObserver<@Nullable RespProtoT> responseObserver,
+      Function<@Nullable RespT, RespProtoT> protoConverter) {
+    Lease<? extends ExecutorService> lease;
     try {
-      lease = executorPool.lease();
+      lease = threadingStrategyDopant.getExecutorService();
     } catch (LeaseUnavailableException e) {
       log.error("Could not lease out single thread executor. Aborting request", e);
       responseObserver.onError(getUnknownInternalError());
       return;
     }
-    try (KrystexVajramExecutor executor = vajramGraphDopant.createExecutor(lease.get())) {
-      executor
-          .execute(request)
-          .whenComplete(
-              (response, throwable) -> {
-                if (throwable != null) {
-                  responseObserver.onError(throwable);
-                } else {
-                  ProtoT proto = protoConverter.apply(response);
-                  if (proto == null) {
-                    responseObserver.onError(getUnknownInternalError());
-                  } else {
-                    responseObserver.onNext(proto);
-                  }
-                }
-                responseObserver.onCompleted();
-                lease.close();
-              });
+    ExecutorService executorService = lease.get();
+    if (!(executorService instanceof SingleThreadExecutor singleThreadExecutor)) {
+      throw new UnsupportedOperationException(
+          "Expected 'SingleThreadExecutor'. Found " + executorService.getClass());
+    }
+    Map<BindingKey, Object> seedMap = getRequestSeeds();
+    executorService.submit(
+        () -> {
+          Closeable requestScope = threadingStrategyDopant.openRequestScope(seedMap);
+          try (KrystexVajramExecutor executor =
+              vajramDopant.createExecutor(singleThreadExecutor)) {
+            executor
+                .execute(request)
+                .whenComplete(
+                    (response, throwable) -> {
+                      try {
+                        if (throwable != null) {
+                          responseObserver.onError(throwable);
+                        } else {
+                          RespProtoT proto = protoConverter.apply(response);
+                          if (proto == null) {
+                            responseObserver.onError(getUnknownInternalError());
+                          } else {
+                            responseObserver.onNext(proto);
+                          }
+                        }
+                      } catch (Throwable e) {
+                        responseObserver.onError(e);
+                      } finally {
+                        responseObserver.onCompleted();
+                        try {
+                          requestScope.close();
+                        } catch (IOException e) {
+                          log.error("Unable to close request scope");
+                        }
+                      }
+                    });
+          }
+        });
+  }
+
+  private Map<BindingKey, Object> getRequestSeeds() {
+    Map<BindingKey, Object> seedMap = new LinkedHashMap<>();
+    addHeader(grpcServerSpec.requestIdContextKey(), seedMap);
+    addHeader(grpcServerSpec.acceptHeaderContextKey(), seedMap);
+    return seedMap;
+  }
+
+  private void addHeader(Key<String> key, Map<BindingKey, Object> map) {
+    String headerValue = key.get();
+    if (headerValue != null) {
+      String headerKey = key.toString();
+      map.put(
+          new AnnotationType(Header.class, DependencyInjectionBinder.named(headerKey)),
+          new SimpleHeader(headerKey, headerValue));
     }
   }
 
@@ -138,6 +189,5 @@ public abstract class GrpcServerDopant
     if (server != null) {
       server.awaitTermination();
     }
-    executorPool.close();
   }
 }

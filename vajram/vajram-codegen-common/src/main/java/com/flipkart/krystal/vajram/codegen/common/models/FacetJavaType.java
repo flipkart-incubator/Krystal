@@ -4,6 +4,8 @@ import static com.flipkart.krystal.facets.FacetType.INPUT;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.EMPTY_CODE_BLOCK;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.FACET_VALUES_VAR;
 
+import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
+import com.flipkart.krystal.codegen.common.models.TypeAndName;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.model.IfAbsent;
@@ -70,7 +72,8 @@ public abstract sealed class FacetJavaType {
 
     @Override
     public TypeName javaTypeName(FacetGenModel facet) {
-      return util.getTypeName(util.getDataType(facet)).typeName();
+      CodeGenType dataType = util.getDataType(facet);
+      return util.codegenUtil().getTypeName(dataType).typeName();
     }
 
     @Override
@@ -113,7 +116,9 @@ public abstract sealed class FacetJavaType {
 
     @Override
     public TypeName javaTypeName(FacetGenModel facet) {
-      return util.box(util.getTypeName(util.getDataType(facet))).typeName();
+      CodeGenType dataType = util.getDataType(facet);
+      TypeAndName javaType = util.codegenUtil().getTypeName(dataType);
+      return util.codegenUtil().box(javaType).typeName();
     }
 
     @Override
@@ -130,7 +135,10 @@ public abstract sealed class FacetJavaType {
 
     @Override
     public TypeName javaTypeName(FacetGenModel facet) {
-      return util.optional(util.box(util.getTypeName(util.getDataType(facet))));
+      CodeGenType dataType = util.getDataType(facet);
+      TypeAndName javaType = util.codegenUtil().getTypeName(dataType);
+      TypeAndName javaType1 = util.codegenUtil().box(javaType);
+      return util.codegenUtil().optional(javaType1);
     }
 
     @Override

@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajramexecutor.krystex.batching;
 
 import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
@@ -174,7 +174,7 @@ public record DepChainBatcherConfig(
 
   private static Iterable<VajramDefinition> externallyInvocableVajrams(VajramKryonGraph graph) {
     return graph.vajramDefinitions().values().stream()
-        .filter(v -> v.vajramTags().getAnnotationByType(ExternallyInvocable.class).isPresent())
+        .filter(v -> v.vajramTags().getAnnotationByType(InvocableOutsideGraph.class).isPresent())
         .toList();
   }
 

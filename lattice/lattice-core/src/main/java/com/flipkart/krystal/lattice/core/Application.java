@@ -9,9 +9,19 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.flipkart.krystal.lattice.core.DopantConfig.NoAnnotation;
-import com.flipkart.krystal.lattice.core.DopantConfig.NoConfiguration;
-import com.flipkart.krystal.lattice.core.annos.DopantType;
+import com.flipkart.krystal.lattice.core.doping.DopantType;
+import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder;
+import com.flipkart.krystal.lattice.core.di.DependencyInjector;
+import com.flipkart.krystal.lattice.core.doping.Dopant;
+import com.flipkart.krystal.lattice.core.doping.DopantConfig;
+import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoAnnotation;
+import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoConfiguration;
+import com.flipkart.krystal.lattice.core.doping.DopantSpec;
+import com.flipkart.krystal.lattice.core.doping.DopantSpecBuilder;
+import com.flipkart.krystal.lattice.core.doping.DopantSpecBuilderWithAnnotation;
+import com.flipkart.krystal.lattice.core.doping.DopantSpecBuilderWithConfig;
+import com.flipkart.krystal.lattice.core.doping.SimpleDopantSpecBuilder;
+import com.flipkart.krystal.lattice.core.doping.SpecBuilders;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableCollection;
@@ -22,6 +32,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Modifier;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -59,6 +70,8 @@ public abstract class Application {
   @SuppressWarnings("unchecked")
   public final void init(String[] args) throws Exception {
     DependencyInjectionBinder dependencyInjectionBinder = getDependencyInjectionBinder();
+    dependencyInjectionBinder.bindToInstance(
+        DependencyInjectionBinder.class, dependencyInjectionBinder);
     Option latticeConfigFileOption =
         new Option("l", "lattice_config_file", true, "display current time");
     CommandLine commandLine =
@@ -97,30 +110,30 @@ public abstract class Application {
 
     ImmutableCollection<DopantSpecBuilder> values = allSpecBuilders.values();
     SpecBuilders specBuilders = new SpecBuilders(allSpecBuilders);
-    values.forEach(builder -> builder.configure(specBuilders));
+    values.forEach(builder -> builder._configure(specBuilders));
     var specs =
         values.stream()
             .<Optional<DopantSpec>>map(
                 builder -> {
                   boolean noAnnotation =
-                      NoAnnotation.class.isAssignableFrom(builder.getAnnotationType());
-                  Class<?> configurationType = builder.getConfigurationType();
+                      NoAnnotation.class.isAssignableFrom(builder._annotationType());
+                  Class<?> configurationType = builder._configurationType();
                   boolean noConfig = NoConfiguration.class.isAssignableFrom(configurationType);
                   if (noAnnotation && noConfig) {
                     if (builder instanceof SimpleDopantSpecBuilder simpleDSB) {
-                      return Optional.of(simpleDSB.build());
+                      return Optional.of(simpleDSB._buildSpec());
                     } else {
                       log.error(
                           "Expected '{}' to extend 'SimpleDopantSpecBuilder' as dopantSpec has no annotation and no configuration",
                           builder.getClass());
                     }
                   } else {
-                    String dopantType = builder.dopantType();
+                    String dopantType = builder._dopantType();
                     if (noAnnotation) {
                       if (builder instanceof DopantSpecBuilderWithConfig builderWithConfig) {
                         DopantConfig dopantConfig =
                             latticeAppConfig.configsByDopantType().get(dopantType);
-                        return Optional.of(builderWithConfig.build(dopantConfig));
+                        return Optional.of(builderWithConfig._buildSpec(dopantConfig));
                       } else {
                         log.error(
                             "Expected '{}' to extend 'DopantSpecBuilderWithConfig' dopantSpec has no annotation and has a configuration",
@@ -129,7 +142,7 @@ public abstract class Application {
                     } else if (noConfig) {
                       if (builder instanceof DopantSpecBuilderWithAnnotation builderWithAnno) {
                         Annotation annotation = annotationsByDopantType.get(dopantType);
-                        return Optional.of(builderWithAnno.build(annotation));
+                        return Optional.of(builderWithAnno._buildSpec(annotation));
                       } else {
                         log.error(
                             "Expected '{}' to extend 'DopantSpecBuilderWithAnnotation' dopantSpec has no configuration and has an annotation",
@@ -139,7 +152,7 @@ public abstract class Application {
                       Annotation annotation = annotationsByDopantType.get(dopantType);
                       DopantConfig dopantConfig =
                           latticeAppConfig.configsByDopantType().get(dopantType);
-                      return Optional.of(builder.build(annotation, dopantConfig));
+                      return Optional.of(builder._buildSpec(annotation, dopantConfig));
                     }
                   }
                   return Optional.empty();
@@ -158,21 +171,21 @@ public abstract class Application {
       }
     }
 
-    DependencyInjector injector = dependencyInjectionBinder.createInjector();
-    List<? extends Dopant<?, ?, ?>> dopants =
+    DependencyInjector injector = dependencyInjectionBinder.getInjector();
+    List<? extends Dopant<?, ?>> dopants =
         specs.stream()
             .map(
                 spec -> {
-                  Class<? extends Dopant<?, ?, ?>> clazz = spec.dopantClass();
-                  Dopant<?, ?, ?> instance = injector.getInstance(clazz);
+                  Class<? extends Dopant<?, ?>> clazz = spec.dopantClass();
+                  Dopant<?, ?> instance = injector.getInstance(clazz);
                   return instance;
                 })
             .toList();
-    for (Dopant<?, ?, ?> dopant : dopants) {
+    for (Dopant<?, ?> dopant : dopants) {
       dopant.start();
     }
-    for (Dopant<?, ?, ?> dopant : dopants) {
-      dopant.tryMainMethodExit();
+    for (var itr = dopants.listIterator(dopants.size()); itr.hasPrevious(); ) {
+      itr.previous().tryMainMethodExit();
     }
   }
 
@@ -188,11 +201,13 @@ public abstract class Application {
     return ImmutableMap.copyOf(dopantAnnotations);
   }
 
+  public abstract void bootstrap(LatticeAppBootstrap bootstrap);
+
   private BiMap<String, Class<? extends DopantConfig>> getConfigTypesByDopantTypes(
       ImmutableMap<Class<? extends DopantSpecBuilder>, DopantSpecBuilder> allSpecBuilders) {
     BiMap<String, Class<? extends DopantConfig>> configTypesByName = HashBiMap.create();
     for (DopantSpecBuilder<?, ?, ?> specBuilder : allSpecBuilders.values()) {
-      Class<? extends DopantConfig> configurationType = specBuilder.getConfigurationType();
+      Class<? extends DopantConfig> configurationType = specBuilder._configurationType();
       @SuppressWarnings("unchecked")
       DopantType dopantTypeAnno = configurationType.getAnnotation(DopantType.class);
       if (dopantTypeAnno == null) {
@@ -218,6 +233,4 @@ public abstract class Application {
     }
     return configTypesByName;
   }
-
-  public abstract void bootstrap(LatticeAppBootstrap bootstrap);
 }

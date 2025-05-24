@@ -156,18 +156,14 @@ public final class JavaModelsGenerator implements CodeGenerator {
     TypeElement modelRootType = codeGenContext.modelRootType();
     CodeGenUtility util = codeGenContext.util();
 
-    ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
-
     // Extract and validate model methods
     List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
     // Get package and class names
-    String packageName =
-        util.processingEnv().getElementUtils().getPackageOf(modelRootType).toString();
-    String modelRootName = modelRootType.getSimpleName().toString();
-    String immutableModelName = modelRootName + modelRoot.suffixSeparator() + IMMUT_SUFFIX;
-    String immutablePojoName =
-        modelRootName + modelRoot.suffixSeparator() + IMMUT_SUFFIX + POJO_SUFFIX;
+    ClassName immutClassName = util.getImmutClassName(modelRootType);
+    String immutableModelName = immutClassName.simpleName();
+    String immutablePojoName = immutableModelName + POJO_SUFFIX;
+    String packageName = immutClassName.packageName();
 
     // Generate the immutable interface and its builder interface
     TypeSpec immutableInterface =
@@ -325,7 +321,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
 
     // Create the builder interface
     TypeSpec.Builder builderInterface =
-        TypeSpec.interfaceBuilder("Builder")
+        util.interfaceBuilder("Builder")
             .addModifiers(PUBLIC, STATIC)
             .addSuperinterface(
                 typeParamTypes.isEmpty()
@@ -342,7 +338,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     }
 
     // Create the immutable interface
-    return TypeSpec.interfaceBuilder(immutableModelName)
+    return util.interfaceBuilder(immutableModelName)
         .addModifiers(PUBLIC)
         .addSuperinterface(ClassName.get(modelRootType))
         .addSuperinterface(
@@ -589,7 +585,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
         generateBuilderClass(modelRootType, modelMethods, immutableModelName, immutablePojoName);
 
     // Create the POJO class
-    return TypeSpec.classBuilder(immutablePojoName)
+    return util.classBuilder(immutablePojoName)
         .addAnnotations(recordAnnotations())
         .addModifiers(PUBLIC, FINAL)
         .addSuperinterface(ClassName.get("", immutableModelName))
@@ -792,7 +788,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     builderCopyMethodBuilder.addCode(";");
 
     // Create the builder class
-    return TypeSpec.classBuilder("Builder")
+    return util.classBuilder("Builder")
         .addModifiers(PUBLIC, STATIC, FINAL)
         .addSuperinterface(ClassName.get("", immutableModelName + ".Builder"))
         .addFields(fields)

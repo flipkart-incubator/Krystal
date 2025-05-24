@@ -1,4 +1,4 @@
-package com.flipkart.krystal.lattice.core.dopants;
+package com.flipkart.krystal.lattice.core.doping;
 
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;

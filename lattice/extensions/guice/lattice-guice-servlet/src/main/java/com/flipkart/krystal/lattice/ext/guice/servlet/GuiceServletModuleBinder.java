@@ -1,0 +1,54 @@
+package com.flipkart.krystal.lattice.ext.guice.servlet;
+
+import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder.BindingKey.AnnotationClassType;
+import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder.BindingKey.AnnotationType;
+import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder.BindingKey.TypeKey;
+import com.flipkart.krystal.lattice.core.execution.ThreadingStrategy;
+import com.flipkart.krystal.lattice.ext.guice.GuiceModuleBinder;
+import com.google.inject.Key;
+import com.google.inject.Module;
+import com.google.inject.servlet.ServletModule;
+import com.google.inject.servlet.ServletScopes;
+import java.io.Closeable;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public final class GuiceServletModuleBinder extends GuiceModuleBinder {
+  public GuiceServletModuleBinder(Module... modules) {
+    super(modules);
+  }
+
+  @Override
+  protected List<Module> getExtensionModules() {
+    return List.of(new ServletModule());
+  }
+
+  @Override
+  public Closeable openRequestScope(
+      Map<BindingKey, Object> seedMap, ThreadingStrategy threadingStrategy) {
+    if (threadingStrategy != ThreadingStrategy.NATIVE_THREAD_PER_REQUEST) {
+      throw new UnsupportedOperationException(
+          threadingStrategy + " is not supported for request scoping");
+    }
+
+    Map<Key<?>, Object> map = new LinkedHashMap<>();
+    seedMap.forEach(
+        (bindingKey, valueO) -> {
+          Key<?> key;
+          if (bindingKey instanceof TypeKey k) {
+            key = Key.get(k.type());
+          } else if (bindingKey instanceof AnnotationClassType k) {
+            key = Key.get(k.type(), k.annotationClass());
+          } else if (bindingKey instanceof AnnotationType k) {
+            key = Key.get(k.type(), k.annotation());
+          } else {
+            throw new UnsupportedOperationException(
+                bindingKey + " cannot be translated to Guice Key");
+          }
+          map.put(key, valueO);
+        });
+
+    return ServletScopes.scopeRequest(map).open();
+  }
+}

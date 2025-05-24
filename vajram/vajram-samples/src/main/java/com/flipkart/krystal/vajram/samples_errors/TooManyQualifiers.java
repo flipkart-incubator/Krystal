@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.samples_errors;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -14,7 +14,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 @SuppressWarnings("initialization.field.uninitialized")
-@ExternallyInvocable
+@InvocableOutsideGraph
 @Vajram
 public abstract class TooManyQualifiers extends ComputeVajramDef<String> {
 

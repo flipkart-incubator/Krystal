@@ -1,5 +1,7 @@
 package com.flipkart.krystal.except;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+
 /**
  * An exception whose stacktrace is not useful. For example, exceptions used for internal purposes
  * or for failing completable futures with a marker exception.
@@ -15,7 +17,7 @@ public class StackTracelessException extends RuntimeException {
     super(message);
   }
 
-  public StackTracelessException(String message, Throwable cause) {
+  public StackTracelessException(String message, @Nullable Throwable cause) {
     super(message, cause);
   }
 

@@ -20,7 +20,6 @@ import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.codegen.common.models.DefaultFacetModel;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
-import com.flipkart.krystal.vajram.codegen.common.models.VajramValidationException;
 import com.flipkart.krystal.vajram.codegen.common.spi.VajramCodeGenContext;
 import com.google.common.base.Splitter;
 import java.io.IOException;
@@ -50,7 +49,7 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
   }
 
   @Override
-  public void generate() throws VajramValidationException {
+  public void generate() {
     if (!isApplicable(creationContext, util)) {
       return;
     }
@@ -198,8 +197,8 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
             util.processingEnv()
                 .getTypeUtils()
                 .erasure(facet.dataType().javaModelType(util.processingEnv()));
-        boolean isRepeated = util.isRawAssignable(rawType, List.class);
-        boolean isMap = util.isRawAssignable(rawType, Map.class);
+        boolean isRepeated = util.codegenUtil().isRawAssignable(rawType, List.class);
+        boolean isMap = util.codegenUtil().isRawAssignable(rawType, Map.class);
         if (!ifAbsentThen.usePlatformDefault() && (isRepeated || isMap)) {
           // Proto3 cannot enforce mandatory fields with FAIL strategy for repeated and
           // map fields

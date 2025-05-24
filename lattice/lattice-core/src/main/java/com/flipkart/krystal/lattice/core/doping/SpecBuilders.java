@@ -1,4 +1,4 @@
-package com.flipkart.krystal.lattice.core.dopants;
+package com.flipkart.krystal.lattice.core.doping;
 
 import com.google.common.collect.ImmutableMap;
 import lombok.AllArgsConstructor;

@@ -1,0 +1,5 @@
+dependencies {
+    api project(':lattice:extensions:guice:lattice-guice')
+
+    api 'com.google.inject.extensions:guice-servlet'
+}

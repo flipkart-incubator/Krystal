@@ -1,0 +1,10 @@
+dependencies {
+    implementation project(':lattice:lattice-codegen')
+    implementation project(':lattice:extensions:guice:lattice-guice-servlet')
+
+    implementation 'com.google.inject:guice'
+    implementation 'com.google.inject.extensions:guice-servlet'
+
+    compileOnly 'com.google.auto.service:auto-service'
+    annotationProcessor 'com.google.auto.service:auto-service'
+}

@@ -1,0 +1,6 @@
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+package org.slf4j;
+interface Logger {
+  public void info(String format, @Nullable Object arg);
+}

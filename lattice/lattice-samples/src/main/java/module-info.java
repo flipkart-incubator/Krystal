@@ -1,10 +1,13 @@
 module flipkart.krystal.lattice.samples {
   requires com.google.common;
+  requires com.google.guice.extensions.servlet;
   requires com.google.guice;
   requires com.google.protobuf;
   requires flipkart.krystal.lattice.core;
-  requires flipkart.krystal.lattice.extensions.grpc;
-  requires flipkart.krystal.vajram.extensions.protobuf;
+  requires flipkart.krystal.lattice.ext.grpc;
+  requires flipkart.krystal.lattice.ext.guice;
+  requires flipkart.krystal.lattice.vajram.sdk;
+  requires flipkart.krystal.vajram.ext.protobuf;
   requires flipkart.krystal.vajram;
   requires flipkart.krystal.vajramexecutor.krystex;
   requires io.grpc.protobuf;
@@ -15,4 +18,5 @@ module flipkart.krystal.lattice.samples {
   requires java.compiler;
   requires org.checkerframework.checker.qual;
   requires static lombok;
+  requires flipkart.krystal.lattice.ext.guice.servlet;
 }

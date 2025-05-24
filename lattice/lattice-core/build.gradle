@@ -1,7 +1,8 @@
 dependencies {
-    implementation project(':krystal-common')
+    api project(':lattice:lattice-vajram-sdk')
     api project(':vajram:vajram-java-sdk')
     api project(':vajram:vajram-krystex')
+    implementation project(':krystal-common')
 
     implementation 'com.fasterxml.jackson.core:jackson-annotations'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
@@ -11,14 +12,4 @@ dependencies {
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
     api 'commons-cli:commons-cli'
-}
-publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId = project.group
-            artifactId = project.name
-            version = project.version
-            from components.java
-        }
-    }
 }

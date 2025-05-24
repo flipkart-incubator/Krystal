@@ -1,4 +1,4 @@
-module flipkart.krystal.lattice.extensions.grpc {
+module flipkart.krystal.lattice.ext.grpc {
   exports com.flipkart.krystal.lattice.ext.grpc;
 
   requires flipkart.krystal.lattice.core;
@@ -14,6 +14,7 @@ module flipkart.krystal.lattice.extensions.grpc {
   requires org.slf4j;
   requires static lombok;
   requires io.grpc.protobuf;
-  requires flipkart.krystal.vajram.extensions.protobuf;
+  requires flipkart.krystal.vajram.ext.protobuf;
   requires flipkart.krystal.krystex;
+  requires com.google.auto.value.annotations;
 }

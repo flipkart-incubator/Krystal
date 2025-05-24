@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajram.samples.greet;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.vajram.samples.greet.Greet_Fac.userInfo_n;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -20,7 +20,7 @@ import java.util.Optional;
  * Given a userId, this Vajram composes and returns a 'Hello!' greeting addressing the user by name
  * (as declared by the user in their profile).
  */
-@ExternallyInvocable
+@InvocableOutsideGraph
 @Vajram
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
 // ComputeVajram means that this Vajram does not directly perform any blocking operations.

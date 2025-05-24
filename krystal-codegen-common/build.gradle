@@ -6,17 +6,6 @@ dependencies {
     implementation 'com.squareup:javapoet'
 }
 
-publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId = project.group
-            artifactId = project.name
-            version = project.version
-            from components.java
-        }
-    }
-}
-
 checkerFramework {
     extraJavacArgs += ['-AresolveReflection',]
 }

@@ -5,8 +5,8 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIONALLY;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
-import com.flipkart.krystal.lattice.core.annos.RemotelyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
+import com.flipkart.krystal.lattice.vajram.sdk.InvocableOutsideProcess;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.serial.ReservedSerialIds;
 import com.flipkart.krystal.serial.SerialId;
@@ -16,6 +16,7 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import com.google.protobuf.ByteString;
+import jakarta.inject.Inject;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,8 +25,8 @@ import java.util.Optional;
  * via a GRPC call by remote clients.
  */
 @SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
-@ExternallyInvocable
-@RemotelyInvocable
+@InvocableOutsideGraph
+@InvocableOutsideProcess
 @SupportedSerdeProtocols(Protobuf3.class)
 @ReservedSerialIds(8)
 @Vajram
@@ -65,6 +66,12 @@ public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3Lattice
     ByteString defaultByteString;
   }
 
+  static class _InternalFacets {
+    @Inject
+    @IfAbsent(FAIL)
+    Proto3LatticeSampleResponse_Immut.Builder reponseBuilder;
+  }
+
   @Output
   static Proto3LatticeSampleResponse output(
       Optional<Integer> optionalInput,
@@ -74,8 +81,9 @@ public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3Lattice
       Optional<Long> optionalLongInput,
       Long mandatoryLongInput,
       Optional<ByteString> optionalByteString,
-      ByteString defaultByteString) {
-    return Proto3LatticeSampleResponse_ImmutPojo._builder()
+      ByteString defaultByteString,
+      Proto3LatticeSampleResponse_Immut.Builder reponseBuilder) {
+    return reponseBuilder
         .string(
             """
               $$ optionalInput: %s $$

@@ -11,7 +11,7 @@ import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.OutputLogicDelegationMode;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
@@ -112,7 +112,7 @@ class Resilience4JBulkheadTest {
             newCreateNewRequestLogic(Set.of(input(1))),
             newFacetsFromRequestLogic(),
             ElementTags.of(
-                ExternallyInvocable.Creator.create(),
+                InvocableOutsideGraph.Creator.create(),
                 OutputLogicDelegationMode.Creator.create(SYNC)));
     Resilience4JBulkheadManager singleBulkhead =
         Resilience4JBulkhead.onePerInstanceId(
@@ -225,7 +225,7 @@ class Resilience4JBulkheadTest {
             newCreateNewRequestLogic(inputs),
             newFacetsFromRequestLogic(),
             ElementTags.of(
-                ExternallyInvocable.Creator.create(),
+                InvocableOutsideGraph.Creator.create(),
                 OutputLogicDelegationMode.Creator.create(SYNC)));
 
     KryonExecutor executor1 =

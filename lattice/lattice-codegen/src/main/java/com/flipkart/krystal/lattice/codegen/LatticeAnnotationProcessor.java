@@ -1,6 +1,7 @@
 package com.flipkart.krystal.lattice.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
+import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.lattice.core.LatticeApp;
@@ -26,17 +27,17 @@ import javax.lang.model.element.TypeElement;
 @SupportedOptions(CODEGEN_PHASE_KEY)
 public class LatticeAnnotationProcessor extends AbstractProcessor {
 
-  private final CodegenPhase codegenPhase = CodegenPhase.MODELS;
+  private static final CodegenPhase DESIRED_PHASE = CodegenPhase.FINAL;
 
   @Override
   public final boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     VajramCodeGenUtility util = new VajramCodeGenUtility(processingEnv, this.getClass());
     String phaseString = processingEnv.getOptions().get(CODEGEN_PHASE_KEY);
     try {
-      if (phaseString == null || !codegenPhase.equals(CodegenPhase.valueOf(phaseString))) {
+      if (phaseString == null || !DESIRED_PHASE.equals(CodegenPhase.valueOf(phaseString))) {
         util.note(
             "Skipping %s since codegen phase is '%s'. This class only supports '%s'"
-                .formatted(getClass().getSimpleName(), String.valueOf(phaseString), codegenPhase));
+                .formatted(getClass().getSimpleName(), phaseString, DESIRED_PHASE));
         return false;
       }
     } catch (IllegalArgumentException e) {
@@ -68,7 +69,12 @@ public class LatticeAnnotationProcessor extends AbstractProcessor {
             .formatted(getClass().getSimpleName(), latticeApp.getQualifiedName()));
 
     LatticeCodegenContext codegenContext =
-        new LatticeCodegenContext(codegenPhase, latticeApp, util);
+        new LatticeCodegenContext(
+            latticeApp,
+            requireNonNull(latticeApp.getAnnotation(LatticeApp.class)),
+            DESIRED_PHASE,
+            util,
+            roundEnv);
     for (LatticeCodeGeneratorProvider customCodeGeneratorProvider :
         ServiceLoader.load(LatticeCodeGeneratorProvider.class, this.getClass().getClassLoader())) {
       try {

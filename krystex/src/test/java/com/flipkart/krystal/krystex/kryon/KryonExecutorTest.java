@@ -18,8 +18,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
-import com.flipkart.krystal.annos.ExternallyInvocable.Creator;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
+import com.flipkart.krystal.annos.InvocableOutsideGraph.Creator;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
 import com.flipkart.krystal.core.OutputLogicExecutionResults;
@@ -121,7 +121,7 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(kryonName, emptySet()),
             newFacetsFromRequestLogic(kryonName, emptySet()),
-            ElementTags.of(ExternallyInvocable.Creator.create()));
+            ElementTags.of(InvocableOutsideGraph.Creator.create()));
 
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
@@ -153,7 +153,7 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(kryonName, emptySet()),
             newFacetsFromRequestLogic(kryonName, emptySet()),
-            ElementTags.of(List.of(ExternallyInvocable.Creator.create())));
+            ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
 
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
@@ -185,7 +185,7 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(kryonName, emptySet()),
             newFacetsFromRequestLogic(kryonName, emptySet()),
-            ElementTags.of(ExternallyInvocable.Creator.create()));
+            ElementTags.of(InvocableOutsideGraph.Creator.create()));
 
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
@@ -221,7 +221,7 @@ class KryonExecutorTest {
                 ImmutableMap.of(),
                 newCreateNewRequestLogic(kryonName, inputDefs),
                 newFacetsFromRequestLogic(kryonName, inputDefs),
-                ElementTags.of(ExternallyInvocable.Creator.create()))
+                ElementTags.of(InvocableOutsideGraph.Creator.create()))
             .vajramID();
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
@@ -275,7 +275,7 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic("n2", emptySet()),
             newFacetsFromRequestLogic("n2", allFacets),
-            ElementTags.of(ExternallyInvocable.Creator.create()));
+            ElementTags.of(InvocableOutsideGraph.Creator.create()));
 
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
@@ -366,7 +366,7 @@ class KryonExecutorTest {
         ImmutableMap.of(),
         newCreateNewRequestLogic(l4Dep, emptySet()),
         newFacetsFromRequestLogic(l4Dep, allFacets),
-        ElementTags.of(List.of(ExternallyInvocable.Creator.create())));
+        ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
 
     String finalKryon = "requestExecution_multiLevelDependencies_final";
     VajramID vajramID =
@@ -563,7 +563,7 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic("n1_logic", emptySet()),
             newFacetsFromRequestLogic("n1_logic", allFacets),
-            ElementTags.of(List.of(ExternallyInvocable.Creator.create())));
+            ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
 
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(

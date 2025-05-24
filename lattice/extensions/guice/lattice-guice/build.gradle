@@ -1,14 +1,4 @@
 dependencies {
-    implementation project(':lattice:lattice-core')
-    implementation 'com.google.inject:guice'
-}
-publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId = project.group
-            artifactId = project.name
-            version = project.version
-            from components.java
-        }
-    }
+    api project(':lattice:lattice-core')
+    api project(':vajram:extensions:guice:vajram-guice')
 }

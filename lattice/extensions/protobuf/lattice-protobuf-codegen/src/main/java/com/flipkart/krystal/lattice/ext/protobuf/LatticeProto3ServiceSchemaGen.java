@@ -18,7 +18,6 @@ import com.flipkart.krystal.lattice.ext.grpc.GrpcServer;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcService;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfoLite;
-import com.flipkart.krystal.vajram.codegen.common.models.VajramValidationException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
@@ -53,7 +52,7 @@ class LatticeProto3ServiceSchemaGen implements CodeGenerator {
 
   public LatticeProto3ServiceSchemaGen(LatticeCodegenContext context) {
     this.context = context;
-    this.util = context.vajramCodeGenUtility();
+    this.util = context.codeGenUtility();
   }
 
   @Override
@@ -89,11 +88,7 @@ class LatticeProto3ServiceSchemaGen implements CodeGenerator {
 
   record GrpcServerAnno(GrpcServer grpcServer, AnnotationMirror mirror) {}
 
-  /**
-   * Validates the Vajram for protobuf compatibility. Throws exceptions if validations fail.
-   *
-   * @throws VajramValidationException if validation fails
-   */
+  /** Validates the Vajram for protobuf compatibility. Throws exceptions if validations fail. */
   void validate(GrpcServerAnno anno) throws CodeValidationException {
     Map<String, ? extends AnnotationValue> elementValues =
         anno.mirror().getElementValues().entrySet().stream()

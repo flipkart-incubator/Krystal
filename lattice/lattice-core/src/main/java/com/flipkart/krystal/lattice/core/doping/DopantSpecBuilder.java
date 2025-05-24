@@ -1,18 +1,18 @@
-package com.flipkart.krystal.lattice.core.dopants;
+package com.flipkart.krystal.lattice.core.doping;
 
 import java.lang.annotation.Annotation;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public abstract class DopantSpecBuilder<
+public interface DopantSpecBuilder<
     A extends Annotation, C extends DopantConfig, DS extends DopantSpec<A, C, DS>> {
 
-  public abstract DS build(@Nullable A annotation, @Nullable C configuration);
+  DS _buildSpec(@Nullable A annotation, @Nullable C configuration);
 
-  public abstract Class<A> getAnnotationType();
+  Class<A> _annotationType();
 
-  public abstract Class<C> getConfigurationType();
+  Class<C> _configurationType();
 
-  public abstract String dopantType();
+  String _dopantType();
 
-  public void configure(SpecBuilders allSpecBuilders) {}
+  default void _configure(SpecBuilders allSpecBuilders) {}
 }

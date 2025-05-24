@@ -1,4 +1,6 @@
 module flipkart.krystal.vajram.guice {
+  exports com.flipkart.krystal.vajram.guice.inputinjection;
+
   requires com.google.guice;
   requires flipkart.krystal.vajramexecutor.krystex;
   requires flipkart.krystal.vajram;

@@ -1,8 +1,8 @@
 package com.flipkart.krystal.lattice.ext.grpc;
 
-import com.flipkart.krystal.lattice.core.DopantSpecBuilder;
-import com.flipkart.krystal.lattice.core.SpecBuilders;
-import com.flipkart.krystal.lattice.core.vajram.VajramGraphSpecBuilder;
+import com.flipkart.krystal.lattice.core.doping.DopantSpecBuilder;
+import com.flipkart.krystal.lattice.core.doping.SpecBuilders;
+import com.flipkart.krystal.lattice.vajram.VajramDopantSpecBuilder;
 import io.grpc.Context;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -11,42 +11,39 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Data
 @EqualsAndHashCode(callSuper = false)
 public class GrpcServerSpecBuilder
-    extends DopantSpecBuilder<GrpcServer, GrpcServerConfig, GrpcServerSpec> {
-  public Context.Key<String> requestIdKey = Context.key("X-Request-Id");
+    implements DopantSpecBuilder<GrpcServer, GrpcServerConfig, GrpcServerSpec> {
+  public Context.Key<String> requestIdContextKey = Context.key("X-Request-Id");
 
-  public static GrpcServerSpecBuilder create() {
-    return new GrpcServerSpecBuilder();
-  }
+  GrpcServerSpecBuilder() {}
 
   @Override
-  protected void configure(SpecBuilders allSpecBuilders) {
-    VajramGraphSpecBuilder vajramGraphSpecBuilder =
-        allSpecBuilders.getSpecBuilder(VajramGraphSpecBuilder.class);
-    vajramGraphSpecBuilder.configureKryonExecutor(
-        configBuilder -> configBuilder.executorId(requestIdKey().get()));
+  public void _configure(SpecBuilders allSpecBuilders) {
+    VajramDopantSpecBuilder vajramDopantSpecBuilder =
+        allSpecBuilders.getSpecBuilder(VajramDopantSpecBuilder.class);
+    vajramDopantSpecBuilder.configureKryonExecutor(
+        configBuilder -> configBuilder.executorId(requestIdContextKey().get()));
   }
 
   @SuppressWarnings("ClassEscapesDefinedScope")
   @Override
-  public GrpcServerSpec build(
+  public GrpcServerSpec _buildSpec(
       @Nullable GrpcServer annotation, @Nullable GrpcServerConfig configuration) {
-    return new GrpcServerSpec(requestIdKey);
+    return new GrpcServerSpec(requestIdContextKey);
   }
 
   @Override
-  public Class<GrpcServer> getAnnotationType() {
+  public Class<GrpcServer> _annotationType() {
     return GrpcServer.class;
   }
 
+  @SuppressWarnings("ClassEscapesDefinedScope")
   @Override
-  public Class<GrpcServerConfig> getConfigurationType() {
+  public Class<GrpcServerConfig> _configurationType() {
     return GrpcServerConfig.class;
   }
 
   @Override
-  public String dopantType() {
-    return GrpcServerConfig.DOPANT_TYPE;
+  public String _dopantType() {
+    return GrpcServerDopant.DOPANT_TYPE;
   }
-
-  private GrpcServerSpecBuilder() {}
 }
