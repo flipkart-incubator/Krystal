@@ -1,6 +1,6 @@
-package com.flipkart.krystal.lattice.ext.protobuf;
+package com.flipkart.krystal.lattice.ext.protobuf.codegen;
 
-import static com.flipkart.krystal.lattice.ext.protobuf.LatticeProtoConstants.PROTO_SERVER_FILE_SUFFIX;
+import static com.flipkart.krystal.lattice.ext.protobuf.codegen.LatticeProtoGenConstants.PROTO_SERVER_FILE_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.createOutputDirectory;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.getSimpleClassName;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_FILE_SUFFIX;
@@ -57,8 +57,15 @@ class LatticeProto3ServiceSchemaGen implements CodeGenerator {
 
   @Override
   public void generate() {
+    if (!CodegenPhase.MODELS.equals(context.codegenPhase())) {
+      util.codegenUtil()
+          .note("Skipping proto service schema codegen since current phase is not MODELS");
+      return;
+    }
+    util.codegenUtil().note("Starting proto service schema gen");
     GrpcServerAnno grpcServer = getGrpcServer();
     if (grpcServer == null) {
+      util.codegenUtil().note("Grpc Server is null");
       return;
     }
     validate(grpcServer);
@@ -66,10 +73,6 @@ class LatticeProto3ServiceSchemaGen implements CodeGenerator {
   }
 
   private @Nullable GrpcServerAnno getGrpcServer() {
-    if (!CodegenPhase.MODELS.equals(context.codegenPhase())) {
-      util.note("Skipping protobuf codegen since current phase is not MODELS");
-      return null;
-    }
     TypeElement latticeAppType = context.latticeAppTypeElement();
     GrpcServer grpcServer = latticeAppType.getAnnotation(GrpcServer.class);
     Optional<? extends AnnotationMirror> mirror =
@@ -326,6 +329,8 @@ class LatticeProto3ServiceSchemaGen implements CodeGenerator {
           String.format(
               "Error generating protobuf service definition for %s: %s",
               deepToString(services), e.getMessage()));
+    } finally {
+      util.codegenUtil().note("Create service proto file");
     }
   }
 }

@@ -4,8 +4,6 @@ import static com.flipkart.krystal.datatypes.Trilean.UNKNOWN;
 
 import com.flipkart.krystal.datatypes.Trilean;
 import com.google.common.collect.ImmutableList;
-import com.squareup.javapoet.CodeBlock;
-import jakarta.inject.Singleton;
 import javax.lang.model.element.TypeElement;
 import lombok.Builder;
 

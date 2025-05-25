@@ -1,11 +1,11 @@
 package com.flipkart.krystal.lattice.ext.grpc.codegen;
 
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.lowerCaseFirstChar;
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.FINAL;
 import static com.flipkart.krystal.lattice.ext.grpc.codegen.LatticeGrpcUtils.getDopantImplName;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_SUFFIX;
-import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.lowerCaseFirstChar;
-import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.Protobuf3.PROTO_SUFFIX;
+import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
 import static java.util.Map.entry;
 import static java.util.Objects.requireNonNull;
 
@@ -155,7 +155,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
           rpcMethodsCode.add(
               CodeBlock.builder()
                   .addNamed(
-"""
+                      """
           @$override:T
           public void $rpcName:L(
               $protoReqMsgType:T request,
@@ -179,7 +179,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
                               "responseMapper",
                               isModel
                                   ? CodeBlock.of(
-"""
+                                      """
                     response == null
                         ? null
                         : (($T<$T>) response)
@@ -193,7 +193,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
 
         servicesCode.add(
             CodeBlock.of(
-"""
+                """
         new $T(){
           $L
         }
@@ -206,7 +206,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
           MethodSpec.overriding(
                   util.codegenUtil().getMethod(GrpcServerDopant.class, "serviceDefinitions", 0))
               .addCode(
-"""
+                  """
     return $T.of(
         $L
     );
@@ -252,7 +252,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
       if (!injectionCtors.isEmpty()) {
         parentCtor = injectionCtors.get(0);
       } else {
-        parentCtor = noArgCtor;
+        parentCtor = requireNonNull(noArgCtor, "Cannot be null here because of the checks above");
       }
       var constructorBuilder = MethodSpec.constructorBuilder().addAnnotation(Inject.class);
 
@@ -275,14 +275,16 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
     private boolean isApplicable(GrpcServer grpcServer) {
       CodegenPhase codegenPhase = context.codegenPhase();
       if (!FINAL.equals(codegenPhase)) {
-        util.note(
-            "Skipping Grpc Dopant Impl generation because this is not codegen phase: " + FINAL);
+        util.codegenUtil()
+            .note(
+                "Skipping Grpc Dopant Impl generation because this is not codegen phase: " + FINAL);
         return false;
       }
       if (grpcServer == null) {
-        util.note(
+        CharSequence message =
             "Skipping Grpc Dopant Impl gen because @GrpcServer missing on lattice app: "
-                + context.latticeAppTypeElement().getSimpleName());
+                + context.latticeAppTypeElement().getSimpleName();
+        util.codegenUtil().note(message);
         return false;
       }
       return true;

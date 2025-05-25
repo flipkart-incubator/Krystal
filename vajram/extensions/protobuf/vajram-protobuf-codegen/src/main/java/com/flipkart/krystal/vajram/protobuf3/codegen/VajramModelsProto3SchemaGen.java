@@ -60,7 +60,7 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
   private static boolean isApplicable(
       VajramCodeGenContext creationContext, VajramCodeGenUtility util) {
     if (!MODELS.equals(creationContext.codegenPhase())) {
-      util.note("Skipping protobuf codegen since current phase is not MODELS");
+      util.codegenUtil().note("Skipping protobuf schema codegen since current phase is not MODELS");
       return false;
     }
     return isProto3Applicable(creationContext.vajramInfo(), util);

@@ -10,7 +10,6 @@ import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.FacetValuesContainer;
 import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.data.Request;
-import com.flipkart.krystal.data.Success;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;

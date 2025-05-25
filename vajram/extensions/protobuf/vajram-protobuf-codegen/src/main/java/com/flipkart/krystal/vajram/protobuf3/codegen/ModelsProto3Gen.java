@@ -1,13 +1,12 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BYTE;
+import static com.flipkart.krystal.vajram.protobuf3.Protobuf3.PROTO_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ModelsProto3SchemaGen.validateModelType;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeMap;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
-import static com.flipkart.krystal.vajram.protobuf3.Protobuf3.PROTO_SUFFIX;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
-import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -74,7 +73,7 @@ public class ModelsProto3Gen implements CodeGenerator {
 
   private boolean isApplicable() {
     if (!CodegenPhase.FINAL.equals(codeGenContext.codegenPhase())) {
-      util.note("Skipping protobuf codegen since current phase is not FINAL");
+      util.note("Skipping protobuf models codegen since current phase is not FINAL");
       return false;
     }
 
@@ -372,8 +371,7 @@ public class ModelsProto3Gen implements CodeGenerator {
       } else {
         getterBuilder
             .addCode(protoPresenceCheck)
-            .addCode(
-                """
+            .addCode("""
                 return null;
               }
               """);

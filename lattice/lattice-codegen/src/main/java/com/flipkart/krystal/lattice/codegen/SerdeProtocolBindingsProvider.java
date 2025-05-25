@@ -9,7 +9,7 @@ import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider.ModelProtocolConfig;
 import com.flipkart.krystal.lattice.codegen.BindingsProvider.BindTo.Provider;
 import com.flipkart.krystal.lattice.core.headers.Header;
-import com.flipkart.krystal.lattice.core.headers.StandardHeaderKeys;
+import com.flipkart.krystal.lattice.core.headers.StandardHeaderNames;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerdeProtocol;
@@ -90,7 +90,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
       for (ModelProtocolConfigProvider configProvider : configProviders) {
         ModelProtocolConfig config = configProvider.getConfig();
         if (config != null) {
-          configs.put(config.modelProtocolType().getCanonicalName(), config);
+          configs.put(requireNonNull(config.modelProtocolType().getCanonicalName()), config);
         }
       }
       List<CodeBlock> providingLogics = new ArrayList<>();
@@ -118,7 +118,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
                 immutClassName.simpleName() + defaultConfig.modelClassesSuffix());
         providingLogics.add(
             CodeBlock.of(
-"""
+                """
 if (null == acceptHeader){
               return $T._builder();
             }
@@ -135,10 +135,10 @@ if (null == acceptHeader){
       for (ModelProtocolConfigProvider configProvider : configProviders) {
         ModelProtocolConfig config = configProvider.getConfig();
         if (config != null) {
-          configs.put(config.modelProtocolType().getCanonicalName(), config);
+          configs.put(requireNonNull(config.modelProtocolType().getCanonicalName()), config);
           providingLogics.add(
               CodeBlock.of(
-"""
+                  """
                 case $L -> $T._builder();\
 """,
                   config.httpContentType(),
@@ -149,20 +149,18 @@ if (null == acceptHeader){
       }
       providingLogics.add(
           CodeBlock.of(
-"""
+              """
                 default -> throw new $T($S + acceptHeader.value());\
 """,
               IllegalStateException.class,
               "API '" + vajramInfoLite.vajramId().id() + "' doesn't support the content type: "));
-      providingLogics.add(
-          CodeBlock.of(
-"""
+      providingLogics.add(CodeBlock.of("""
             };
 """));
       bindings.add(
           new SimpleBinding(
               ClassName.get(Header.class),
-              CodeBlock.of("$T.$L", StandardHeaderKeys.class, "ACCEPT"),
+              CodeBlock.of("$T.$L", StandardHeaderNames.class, "ACCEPT"),
               new Provider(CodeBlock.of("null"), APP_LOGIC_SCOPE)));
 
       bindings.add(
@@ -174,7 +172,7 @@ if (null == acceptHeader){
                       "@$T @$T($T.$L) $T acceptHeader",
                       Nullable.class,
                       Named.class,
-                      StandardHeaderKeys.class,
+                      StandardHeaderNames.class,
                       "ACCEPT",
                       Header.class)),
               providingLogics.stream().collect(CodeBlock.joining("\n")),

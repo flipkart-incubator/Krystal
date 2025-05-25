@@ -73,19 +73,22 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Slf4j
 public class CodeGenUtility {
 
-  private static final boolean DEBUG = true;
+  private static final boolean DEBUG = false;
 
   @Getter private final ProcessingEnvironment processingEnv;
   private final Types typeUtils;
   private final Elements elementUtils;
   private final Class<?> generator;
+  @Nullable private final String phaseString;
   @Getter private final DataTypeRegistry dataTypeRegistry;
 
-  public CodeGenUtility(ProcessingEnvironment processingEnv, Class<?> generator) {
+  public CodeGenUtility(
+      ProcessingEnvironment processingEnv, Class<?> generator, @Nullable String phaseString) {
     this.processingEnv = processingEnv;
     this.typeUtils = processingEnv.getTypeUtils();
     this.elementUtils = processingEnv.getElementUtils();
     this.generator = generator;
+    this.phaseString = phaseString;
     this.dataTypeRegistry = new DataTypeRegistry();
   }
 
@@ -320,7 +323,29 @@ public class CodeGenUtility {
     if (DEBUG) {
       processingEnv
           .getMessager()
-          .printMessage(Kind.NOTE, "[%s] %s".formatted(getTimestamp(), message));
+          .printMessage(
+              Kind.NOTE,
+              "[%s] [%s] %s".formatted(getCallerInfo(), String.valueOf(phaseString), message));
+    }
+  }
+
+  private static String getCallerInfo() {
+    StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+
+    // stackTrace[0] = Thread.getStackTrace()
+    // stackTrace[1] = CodeGenUtility.getCallerInfo()
+    // stackTrace[2] = a util method
+    // stackTrace[3] = the actual caller
+    if (stackTrace.length > 3) {
+      StackTraceElement stackTraceElement = stackTrace[3];
+      String fullClassName = stackTraceElement.getClassName();
+      return fullClassName.substring((fullClassName.lastIndexOf('.') + 1))
+          + ":"
+          + stackTraceElement.getMethodName()
+          + ":"
+          + stackTraceElement.getLineNumber();
+    } else {
+      throw new AssertionError();
     }
   }
 

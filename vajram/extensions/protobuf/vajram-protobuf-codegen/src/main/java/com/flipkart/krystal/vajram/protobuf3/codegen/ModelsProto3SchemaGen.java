@@ -56,7 +56,7 @@ final class ModelsProto3SchemaGen implements CodeGenerator {
 
   private boolean isApplicable() {
     if (!MODELS.equals(codeGenContext.codegenPhase())) {
-      util.note("Skipping protobuf codegen since current phase is not MODELS");
+      util.note("Skipping protobuf models codegen since current phase is not MODELS");
       return false;
     }
 

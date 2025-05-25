@@ -131,8 +131,7 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
     executorService.submit(
         () -> {
           Closeable requestScope = threadingStrategyDopant.openRequestScope(seedMap);
-          try (KrystexVajramExecutor executor =
-              vajramDopant.createExecutor(singleThreadExecutor)) {
+          try (KrystexVajramExecutor executor = vajramDopant.createExecutor(singleThreadExecutor)) {
             executor
                 .execute(request)
                 .whenComplete(

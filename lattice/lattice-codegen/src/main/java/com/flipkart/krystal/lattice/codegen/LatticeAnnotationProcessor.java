@@ -27,18 +27,18 @@ import javax.lang.model.element.TypeElement;
 @SupportedOptions(CODEGEN_PHASE_KEY)
 public class LatticeAnnotationProcessor extends AbstractProcessor {
 
-  private static final CodegenPhase DESIRED_PHASE = CodegenPhase.FINAL;
-
   @Override
   public final boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    VajramCodeGenUtility util = new VajramCodeGenUtility(processingEnv, this.getClass());
     String phaseString = processingEnv.getOptions().get(CODEGEN_PHASE_KEY);
+    VajramCodeGenUtility util =
+        new VajramCodeGenUtility(processingEnv, this.getClass(), phaseString);
+    CodegenPhase codegenPhase;
     try {
-      if (phaseString == null || !DESIRED_PHASE.equals(CodegenPhase.valueOf(phaseString))) {
-        util.note(
-            "Skipping %s since codegen phase is '%s'. This class only supports '%s'"
-                .formatted(getClass().getSimpleName(), phaseString, DESIRED_PHASE));
+      if (phaseString == null) {
+        util.codegenUtil().note("Skipping %s since codegen phase is null");
         return false;
+      } else {
+        codegenPhase = CodegenPhase.valueOf(phaseString);
       }
     } catch (IllegalArgumentException e) {
       util.error(
@@ -62,17 +62,18 @@ public class LatticeAnnotationProcessor extends AbstractProcessor {
     } else if (latticeApps.size() > 1) {
       throw util.errorAndThrow("More than one lattice apps cannot be present in the same module");
     }
-    TypeElement latticeApp = latticeApps.get(0);
+    TypeElement latticeAppTypeElement = latticeApps.get(0);
 
-    util.note(
+    CharSequence message =
         "Lattice detected by %s: %s"
-            .formatted(getClass().getSimpleName(), latticeApp.getQualifiedName()));
+            .formatted(getClass().getSimpleName(), latticeAppTypeElement.getQualifiedName());
+    util.codegenUtil().note(message);
 
     LatticeCodegenContext codegenContext =
         new LatticeCodegenContext(
-            latticeApp,
-            requireNonNull(latticeApp.getAnnotation(LatticeApp.class)),
-            DESIRED_PHASE,
+            latticeAppTypeElement,
+            requireNonNull(latticeAppTypeElement.getAnnotation(LatticeApp.class)),
+            codegenPhase,
             util,
             roundEnv);
     for (LatticeCodeGeneratorProvider customCodeGeneratorProvider :
@@ -80,7 +81,7 @@ public class LatticeAnnotationProcessor extends AbstractProcessor {
       try {
         customCodeGeneratorProvider.create(codegenContext).generate();
       } catch (Exception e) {
-        util.error(e.toString(), latticeApp);
+        util.error(e.toString(), latticeAppTypeElement);
         continue;
       }
     }

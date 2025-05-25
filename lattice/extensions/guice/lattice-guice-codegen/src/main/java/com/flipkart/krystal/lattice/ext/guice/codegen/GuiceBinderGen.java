@@ -1,6 +1,7 @@
 package com.flipkart.krystal.lattice.ext.guice.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.lowerCaseFirstChar;
+import static com.flipkart.krystal.codegen.common.models.Constants.EMPTY_CODE_BLOCK;
 import static com.flipkart.krystal.datatypes.Trilean.FALSE;
 import static com.flipkart.krystal.datatypes.Trilean.TRUE;
 import static com.squareup.javapoet.CodeBlock.joining;
@@ -59,7 +60,7 @@ public final class GuiceBinderGen implements DepInjectBinderGen {
         ServiceLoader.load(BindingsProvider.class, this.getClass().getClassLoader());
     return CodeBlock.builder()
         .addNamed(
-"""
+            """
 return new $guiceModuleBinder:T(
     $customBinderCreator:L
     new $abstractModule:T() {
@@ -151,7 +152,7 @@ $generatedProviders:L
       for (Binding binding : bindingsProvider.bindings(context)) {
         if (binding instanceof DopantBinding dopantBinding) {
           codeBlock.addStatement(
-"""
+              """
            bind($T.class)
                .to($T.class)
                .in($T.class)
@@ -162,26 +163,28 @@ $generatedProviders:L
         } else if (binding instanceof SimpleBinding simpleBinding) {
           if (simpleBinding.bindTo() instanceof Provider provider) {
             CodeBlock named = simpleBinding.named();
+            Class<? extends Annotation> scopeAnnotation = getScopeAnnotation(provider.scope());
             codeBlock.addStatement(
-"""
-           // Actual values will be set in when the RequestScope is opened
-           bind($T.class)$L
-               .toProvider($T.of($L))
-               .in($T.class)
+                """
+           // Actual values will be set when the RequestScope is opened
+           bind($T.class)
+                $L.toProvider($T.of($L))
+                $L
 """,
                 simpleBinding.bindFrom(),
                 named != null
                     ? CodeBlock.of(
-"""
-
+                        """
                 .annotatedWith($T.named($L))
-""",
-                        Names.class,
-                        named)
-                    : CodeBlock.builder().build(),
+""", Names.class, named)
+                    : EMPTY_CODE_BLOCK,
                 Providers.class,
                 provider.bindToCode(),
-                getScopeAnnotation(provider.scope()));
+                scopeAnnotation != null
+                    ? CodeBlock.of("""
+                .in($T.class)
+""", scopeAnnotation)
+                    : EMPTY_CODE_BLOCK);
           }
         }
       }
@@ -196,7 +199,7 @@ $generatedProviders:L
       for (Binding binding : bindingsProvider.bindings(context)) {
         if (binding instanceof ProviderBinding providerBinding) {
           codeBlock.addNamed(
-"""
+              """
       @$provides:T
       $scope:L
       $boundType:T $name:L($args:L){

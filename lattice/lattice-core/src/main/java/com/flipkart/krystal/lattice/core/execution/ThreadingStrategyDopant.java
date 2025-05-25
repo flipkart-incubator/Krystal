@@ -31,10 +31,9 @@ public final class ThreadingStrategyDopant implements DopantWithConfig<ThreadStr
     this.binder = binder;
     this.executorPool =
         switch (threadingStrategy) {
-          case NATIVE_THREAD_PER_REQUEST ->
-              new ThreadPerRequestExecutorsPool(
-                  "ThreadingStrategyDopant-ThreadPerRequestExecutorsPool",
-                  config.maxApplicationThreads());
+          case NATIVE_THREAD_PER_REQUEST -> new ThreadPerRequestExecutorsPool(
+              "ThreadingStrategyDopant-ThreadPerRequestExecutorsPool",
+              config.maxApplicationThreads());
           default -> throw new UnsupportedOperationException(threadingStrategy.toString());
         };
   }

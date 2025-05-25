@@ -1,10 +1,12 @@
 dependencies {
     implementation project(':krystal-codegen-common')
-    implementation project(':vajram:vajram-codegen-common')
-    implementation project(':lattice:lattice-core')
-    implementation project(':lattice:lattice-codegen')
     implementation project(':lattice:extensions:grpc:lattice-grpc')
+    implementation project(':lattice:extensions:protobuf:lattice-protobuf')
+    implementation project(':lattice:lattice-codegen')
+    implementation project(':lattice:lattice-core')
     implementation project(':vajram:extensions:protobuf:vajram-protobuf-codegen')
+    implementation project(':vajram:extensions:protobuf:vajram-protobuf3')
+    implementation project(':vajram:vajram-codegen-common')
 
     compileOnly 'com.google.auto.service:auto-service'
     annotationProcessor 'com.google.auto.service:auto-service'

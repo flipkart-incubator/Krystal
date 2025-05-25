@@ -1,8 +1,8 @@
-package com.flipkart.krystal.lattice.ext.protobuf;
+package com.flipkart.krystal.lattice.ext.protobuf.codegen;
 
 import lombok.experimental.UtilityClass;
 
 @UtilityClass
-public class LatticeProtoConstants {
+public class LatticeProtoGenConstants {
   static final String PROTO_SERVER_FILE_SUFFIX = ".server.proto";
 }

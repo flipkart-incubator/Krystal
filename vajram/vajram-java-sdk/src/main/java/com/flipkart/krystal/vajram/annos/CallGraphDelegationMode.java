@@ -28,9 +28,9 @@ import java.lang.annotation.Target;
  * <p>Since bumping up the CallGraphDelegationMode from {@link ComputeDelegationMode#NONE
  * NO_DELEGATION} to {@link ComputeDelegationMode#SYNC SYNC_DELEGATION} can be backward incompatible
  * especially from the perspective of code which invokes vajrams from outside the Krystal Graph,
- * Vajrams which have the @{@link InvocableOutsideGraph#enable}{@code == true} MUST explicitly specify
- * their CallGraphDelegationMode as part of their contractual obligation to invokers of the Krystal
- * Graph. Tools can catch vialations in backward compatibility in such cases.
+ * Vajrams which have the @{@link InvocableOutsideGraph#enable}{@code == true} MUST explicitly
+ * specify their CallGraphDelegationMode as part of their contractual obligation to invokers of the
+ * Krystal Graph. Tools can catch vialations in backward compatibility in such cases.
  *
  * @see ComputeDelegationMode
  */

@@ -1,4 +1,4 @@
-package com.flipkart.krystal.lattice.ext.protobuf;
+package com.flipkart.krystal.lattice.ext.protobuf.codegen;
 
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.lattice.codegen.LatticeCodeGeneratorProvider;

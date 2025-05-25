@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
+import static com.flipkart.krystal.codegen.common.models.Constants.EMPTY_CODE_BLOCK;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.EMPTY_CODE_BLOCK;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.FACET_VALUES_VAR;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;

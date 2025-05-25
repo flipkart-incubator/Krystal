@@ -35,9 +35,8 @@ public final class ModelGenProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    CodeGenUtility util = new CodeGenUtility(processingEnv, this.getClass());
     String phaseString = processingEnv.getOptions().get(CODEGEN_PHASE_KEY);
-
+    CodeGenUtility util = new CodeGenUtility(processingEnv, this.getClass(), phaseString);
     if (phaseString == null) {
       util.note("Skipping %s since codegen phase is null".formatted(getClass().getSimpleName()));
       return false;

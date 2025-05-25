@@ -35,13 +35,16 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
 
   @Override
   public final boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    VajramCodeGenUtility util = new VajramCodeGenUtility(processingEnv, this.getClass());
     String phaseString = processingEnv.getOptions().get(CODEGEN_PHASE_KEY);
+    VajramCodeGenUtility util =
+        new VajramCodeGenUtility(processingEnv, this.getClass(), phaseString);
     try {
       if (phaseString == null || !codegenPhase.equals(CodegenPhase.valueOf(phaseString))) {
-        util.note(
-            "Skipping %s since codegen phase is '%s'. This class only supports '%s'"
-                .formatted(getClass().getSimpleName(), String.valueOf(phaseString), codegenPhase));
+        util.codegenUtil()
+            .note(
+                "Skipping %s since codegen phase is '%s'. This class only supports '%s'"
+                    .formatted(
+                        getClass().getSimpleName(), String.valueOf(phaseString), codegenPhase));
         return false;
       }
     } catch (IllegalArgumentException e) {
@@ -64,14 +67,15 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
     } else {
       vajramDefinitions = new ArrayList<>(this.vajramDefinitions);
     }
-    util.note(
+    CharSequence message =
         "Vajrams and Traits received by %s: %s"
             .formatted(
                 getClass().getSimpleName(),
                 vajramDefinitions.stream()
                     .map(Objects::toString)
                     .collect(
-                        joining(lineSeparator(), '[' + lineSeparator(), lineSeparator() + ']'))));
+                        joining(lineSeparator(), '[' + lineSeparator(), lineSeparator() + ']')));
+    util.codegenUtil().note(message);
 
     Iterable<VajramCodeGeneratorProvider> vajramCodeGeneratorProviders =
         Iterables.concat(
@@ -98,9 +102,9 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
         }
         this.vajramDefinitions.remove(vajramDefinition);
       } catch (Exception e) {
-        util.note("****************************************************");
-        util.note("Skipping processing of " + vajramDefinition + " due to " + e);
-        util.note("****************************************************");
+        util.codegenUtil().note("****************************************************");
+        util.codegenUtil().note("Skipping processing of " + vajramDefinition + " due to " + e);
+        util.codegenUtil().note("****************************************************");
         continue;
       }
     }

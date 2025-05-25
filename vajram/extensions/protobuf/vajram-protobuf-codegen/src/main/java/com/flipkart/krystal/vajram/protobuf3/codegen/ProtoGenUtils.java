@@ -94,9 +94,10 @@ public class ProtoGenUtils {
     InvocableOutsideProcess invocableOutsideProcess =
         vajramClass.getAnnotation(InvocableOutsideProcess.class);
     if (invocableOutsideProcess == null) {
-      util.note(
+      CharSequence message =
           "Skipping class '%s' since remote invocation is not enabled"
-              .formatted(vajramClass.getQualifiedName()));
+              .formatted(vajramClass.getQualifiedName());
+      util.codegenUtil().note(message);
       return false;
     }
 
@@ -108,9 +109,10 @@ public class ProtoGenUtils {
         .noneMatch(
             serializationProtocol ->
                 util.codegenUtil().isSameRawType(serializationProtocol, Protobuf3.class))) {
-      util.note(
+      CharSequence message =
           "Skipping class '%s' since Protobuf3 is not one of the intended serialization protocols : %s "
-              .formatted(vajramClass.getQualifiedName(), serializationProtocols));
+              .formatted(vajramClass.getQualifiedName(), serializationProtocols);
+      util.codegenUtil().note(message);
       return false;
     }
 

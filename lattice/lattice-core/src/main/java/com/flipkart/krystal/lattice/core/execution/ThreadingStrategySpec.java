@@ -31,7 +31,8 @@ record ThreadingStrategySpec(ThreadingStrategy threadingStrategy, ThreadStrategy
             "Configuration is mandatory for dopant '"
                 + ThreadingStrategyDopant.class.getSimpleName()
                 + "' of dopant type '"
-                + DOPANT_TYPE + "'");
+                + DOPANT_TYPE
+                + "'");
       }
 
       return this.config(config).build();

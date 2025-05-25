@@ -9,4 +9,7 @@ module flipkart.krystal.lattice.ext.protobuf.codegen {
   requires org.checkerframework.checker.qual;
   requires org.slf4j;
   requires static lombok;
+  requires flipkart.krystal.vajram.ext.protobuf;
+  requires com.squareup.javapoet;
+  requires flipkart.krystal.lattice.ext.protobuf;
 }

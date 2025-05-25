@@ -6,11 +6,8 @@ import static com.flipkart.krystal.vajram.utils.Constants.IMMUT_FACETS_CLASS_SUF
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.squareup.javapoet.CodeBlock.joining;
-import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElseGet;
-import static java.util.stream.Collectors.joining;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
@@ -112,12 +109,13 @@ public class VajramCodeGenUtility {
   @Getter private final DataTypeRegistry dataTypeRegistry;
   @Getter private final CodeGenUtility codegenUtil;
 
-  public VajramCodeGenUtility(ProcessingEnvironment processingEnv, Class<?> generator) {
+  public VajramCodeGenUtility(
+      ProcessingEnvironment processingEnv, Class<?> generator, @Nullable String phaseString) {
     this.processingEnv = processingEnv;
     this.typeUtils = processingEnv.getTypeUtils();
     this.elementUtils = processingEnv.getElementUtils();
     this.dataTypeRegistry = new DataTypeRegistry();
-    this.codegenUtil = new CodeGenUtility(processingEnv, generator);
+    this.codegenUtil = new CodeGenUtility(processingEnv, generator, phaseString);
   }
 
   public FacetJavaType getFacetReturnType(FacetGenModel facet, CodeGenParams codeGenParams) {
@@ -242,7 +240,7 @@ public class VajramCodeGenUtility {
                 .map(Optional::get)
                 .collect(toImmutableList()),
             conformsToTraitInfo);
-    note("VajramInfo: %s".formatted(vajramInfo));
+    codegenUtil().note("VajramInfo: %s".formatted(vajramInfo));
     validateVajramInfo(vajramInfo);
     return vajramInfo;
   }
@@ -522,10 +520,6 @@ public class VajramCodeGenUtility {
               .formatted(typeParameters, vajramOrReqType.getQualifiedName()),
           vajramOrReqType);
     }
-  }
-
-  public void note(CharSequence message) {
-    codegenUtil().note(message);
   }
 
   public void error(String message, @Nullable Element... elements) {

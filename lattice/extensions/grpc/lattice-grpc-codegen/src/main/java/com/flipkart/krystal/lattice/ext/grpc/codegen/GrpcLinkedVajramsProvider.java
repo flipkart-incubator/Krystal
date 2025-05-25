@@ -3,19 +3,15 @@ package com.flipkart.krystal.lattice.ext.grpc.codegen;
 import static com.flipkart.krystal.datatypes.Trilean.TRUE;
 import static java.util.Objects.requireNonNull;
 
-import com.flipkart.krystal.datatypes.Trilean;
 import com.flipkart.krystal.lattice.codegen.LatticeAppCodeGenAttrsProvider;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
-import com.flipkart.krystal.lattice.codegen.RemoteApiVajramsProvider;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcServer;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcService;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.type.TypeMirror;
 
 @AutoService(LatticeAppCodeGenAttrsProvider.class)
 public final class GrpcLinkedVajramsProvider implements LatticeAppCodeGenAttrsProvider {

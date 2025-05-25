@@ -1,0 +1,5 @@
+description 'Krystal Lattice <-> Protobuf3'
+
+dependencies {
+    implementation project(':lattice:lattice-core')
+}

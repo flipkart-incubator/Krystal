@@ -50,7 +50,8 @@ public record VajramInfo(
         conformsToTraitInfo != null
             ? conformsToTraitInfo.requestInterfaceType()
             : ParameterizedTypeName.get(
-                ClassName.get(Request.class), util().codegenUtil().toTypeName(lite.responseType()).box()));
+                ClassName.get(Request.class),
+                util().codegenUtil().toTypeName(lite.responseType()).box()));
   }
 
   private VajramCodeGenUtility util() {
