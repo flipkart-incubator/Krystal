@@ -35,6 +35,7 @@ include 'vajram:vajram-lang'
 include 'vajram:vajram-samples'
 
 include 'vajram:extensions:guice:vajram-guice'
+include 'vajram:extensions:json:vajram-json-codegen'
 include 'vajram:extensions:protobuf:vajram-protobuf-codegen'
 include 'vajram:extensions:protobuf:vajram-protobuf3'
 
@@ -53,3 +54,6 @@ include 'lattice:extensions:protobuf:lattice-protobuf'
 include 'lattice:extensions:protobuf:lattice-protobuf-codegen'
 
 
+
+
+include 'vajram:extensions:json:vajram-json'

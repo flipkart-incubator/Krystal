@@ -1,0 +1,9 @@
+description = 'Enables support for protocol buffers in Krystal'
+
+dependencies {
+    implementation project(':krystal-codegen-common')
+    implementation project(':krystal-common')
+    implementation project(':krystal-common')
+    implementation project(':vajram:vajram-codegen')
+    implementation project(':vajram:extensions:json:vajram-json')
+}
