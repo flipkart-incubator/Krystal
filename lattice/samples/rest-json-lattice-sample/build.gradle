@@ -44,5 +44,3 @@ dependencies {
 extraJavaModuleInfo {
     failOnMissingModuleInfo = false
 }
-
-//tasks.named("spotlessJava").configure { dependsOn("codeGenVajramModels") }

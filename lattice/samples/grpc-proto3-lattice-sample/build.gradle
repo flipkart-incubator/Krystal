@@ -59,5 +59,3 @@ protobuf {
 tasks.named('extractIncludeProto').configure { mustRunAfter('codeGenVajramModels') }
 tasks.named('extractProto').configure { mustRunAfter('codeGenVajramModels') }
 tasks.named('generateProto').configure { mustRunAfter('codeGenVajramModels') }
-
-//tasks.named("spotlessJava").configure { dependsOn("codeGenVajramModels") }
