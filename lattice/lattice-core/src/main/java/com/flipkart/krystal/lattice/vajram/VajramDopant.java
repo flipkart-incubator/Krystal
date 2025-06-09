@@ -7,6 +7,7 @@ import com.flipkart.krystal.lattice.core.doping.Dopant;
 import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoAnnotation;
 import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoConfiguration;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
+import com.flipkart.krystal.lattice.core.doping.SimpleDopant;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
@@ -14,7 +15,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import jakarta.inject.Inject;
 
 @DopantType(VajramDopant.DOPANT_TYPE)
-public final class VajramDopant implements Dopant<NoAnnotation, NoConfiguration> {
+public final class VajramDopant implements SimpleDopant {
 
   static final String DOPANT_TYPE = "krystal.lattice.vajram";
 
@@ -31,7 +32,7 @@ public final class VajramDopant implements Dopant<NoAnnotation, NoConfiguration>
     }
   }
 
-  public static VajramDopantSpecBuilder vajramDopant() {
+  public static VajramDopantSpecBuilder vajramGraph() {
     return new VajramDopantSpecBuilder();
   }
 

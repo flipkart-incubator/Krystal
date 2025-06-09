@@ -1,6 +1,6 @@
 package com.flipkart.krystal.lattice.codegen;
 
-import static com.flipkart.krystal.lattice.codegen.LatticeCodegenConstants.LATTICE_APP_IMPL_SUFFIX;
+import static com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils.LATTICE_APP_IMPL_SUFFIX;
 import static com.squareup.javapoet.TypeName.VOID;
 import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -9,7 +9,11 @@ import static javax.lang.model.element.Modifier.STATIC;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
+import com.flipkart.krystal.lattice.codegen.spi.DepInjectBinderGen;
+import com.flipkart.krystal.lattice.codegen.spi.LatticeAppImplContributor;
+import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
 import com.google.auto.service.AutoService;
+import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
@@ -17,11 +21,15 @@ import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeSpec.Builder;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.ServiceLoader.Provider;
+import java.util.stream.Collectors;
 import javax.lang.model.element.TypeElement;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 @AutoService(LatticeCodeGeneratorProvider.class)
 public final class LatticeAppImplGenProvider implements LatticeCodeGeneratorProvider {
@@ -73,17 +81,10 @@ public final class LatticeAppImplGenProvider implements LatticeCodeGeneratorProv
 
       Builder classBuilder =
           util.classBuilder(latticeAppImplClassName.simpleName())
+              .addModifiers(PUBLIC)
               .superclass(latticeApp.asType())
-              .addMethod(
-                  MethodSpec.methodBuilder("main")
-                      .addModifiers(PUBLIC, STATIC)
-                      .returns(VOID)
-                      .addParameter(ParameterSpec.builder(String[].class, "_args").build())
-                      .addException(Exception.class)
-                      .addNamedCode(
-                          "new $implClass:T().init(_args);",
-                          Map.of("implClass", latticeAppImplClassName))
-                      .build())
+              .addMethod(getMainMethod(latticeAppImplClassName, latticeApp, context))
+              .addAnnotations(getTypeAnnotations())
               .addMethod(
                   MethodSpec.overriding(
                           requireNonNull(
@@ -100,6 +101,47 @@ public final class LatticeAppImplGenProvider implements LatticeCodeGeneratorProv
       }
       util.generateSourceFile(
           latticeAppImplClassName.canonicalName(), writer.toString(), latticeApp);
+    }
+
+    private List<AnnotationSpec> getTypeAnnotations() {
+      return ServiceLoader.load(LatticeAppImplContributor.class, this.getClass().getClassLoader())
+          .stream()
+          .map(Provider::get)
+          .map(c -> c.classAnnotations(context))
+          .flatMap(Collection::stream)
+          .toList();
+    }
+
+    private @NonNull MethodSpec getMainMethod(
+        ClassName latticeAppImplClassName, TypeElement latticeApp, LatticeCodegenContext context) {
+      ServiceLoader<LatticeAppImplContributor> contributors =
+          ServiceLoader.load(LatticeAppImplContributor.class, this.getClass().getClassLoader());
+      Map<? extends Class<?>, Optional<MethodSpec>> mainMethods =
+          contributors.stream()
+              .map(Provider::get)
+              .collect(
+                  Collectors.toMap(
+                      Object::getClass, c -> Optional.ofNullable(c.mainMethod(context))));
+      List<MethodSpec> mainMethodsList =
+          mainMethods.values().stream().filter(Optional::isPresent).map(Optional::get).toList();
+      if (mainMethodsList.size() > 1) {
+        util.error(
+            "More than main method providers found for Lattice App impl. Providers are : "
+                + mainMethods.keySet(),
+            latticeApp);
+        return mainMethodsList.get(0);
+      } else if (mainMethodsList.size() == 1) {
+        return mainMethodsList.get(0);
+      } else {
+        return MethodSpec.methodBuilder("main")
+            .addModifiers(PUBLIC, STATIC)
+            .returns(VOID)
+            .addParameter(ParameterSpec.builder(String[].class, "_args").build())
+            .addException(Exception.class)
+            .addNamedCode(
+                "new $implClass:T().init(_args);", Map.of("implClass", latticeAppImplClassName))
+            .build();
+      }
     }
 
     private boolean isApplicable() {

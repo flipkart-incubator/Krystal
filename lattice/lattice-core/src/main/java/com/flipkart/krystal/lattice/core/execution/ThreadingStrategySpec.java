@@ -13,7 +13,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @DopantType(DOPANT_TYPE)
 @Builder(builderClassName = "ThreadingStrategySpecBuilder")
 record ThreadingStrategySpec(ThreadingStrategy threadingStrategy, ThreadStrategyConfig config)
-    implements DopantSpec<NoAnnotation, ThreadStrategyConfig, ThreadingStrategySpec> {
+    implements DopantSpec<NoAnnotation, ThreadStrategyConfig, ThreadingStrategyDopant> {
 
   @Override
   public Class<? extends ThreadingStrategyDopant> dopantClass() {

@@ -3,6 +3,7 @@ package com.flipkart.krystal.lattice.vajram;
 import static com.flipkart.krystal.lattice.vajram.VajramDopant.DOPANT_TYPE;
 
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfigurator;
+import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopantSpecBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig.KrystexVajramExecutorConfigBuilder;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
+@DopantType(DOPANT_TYPE)
 public final class VajramDopantSpecBuilder extends SimpleDopantSpecBuilder<VajramDopantSpec> {
 
   private VajramKryonGraphBuilder graphBuilder = VajramKryonGraph.builder();

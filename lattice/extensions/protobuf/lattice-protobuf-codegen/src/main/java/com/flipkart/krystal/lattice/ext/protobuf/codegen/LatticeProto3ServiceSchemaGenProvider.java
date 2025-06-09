@@ -1,7 +1,7 @@
 package com.flipkart.krystal.lattice.ext.protobuf.codegen;
 
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
-import com.flipkart.krystal.lattice.codegen.LatticeCodeGeneratorProvider;
+import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.google.auto.service.AutoService;
 

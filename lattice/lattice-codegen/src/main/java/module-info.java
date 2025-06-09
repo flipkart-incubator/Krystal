@@ -1,5 +1,6 @@
 module flipkart.krystal.lattice.codegen {
   exports com.flipkart.krystal.lattice.codegen;
+  exports com.flipkart.krystal.lattice.codegen.spi;
 
   requires com.google.auto.common;
   requires com.google.auto.service;

@@ -1,9 +1,9 @@
 package com.flipkart.krystal.lattice.ext.grpc.codegen;
 
-import static com.flipkart.krystal.lattice.ext.grpc.codegen.LatticeGrpcUtils.getDopantImplName;
 import static java.util.Objects.requireNonNull;
 
-import com.flipkart.krystal.lattice.codegen.BindingsProvider;
+import com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils;
+import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcServer;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcServerDopant;
@@ -25,6 +25,8 @@ public final class GrpcBindingsProvider implements BindingsProvider {
   }
 
   private static @NonNull DopantBinding getDopantBinding(LatticeCodegenContext context) {
+    LatticeCodegenUtils latticeCodegenUtils =
+        new LatticeCodegenUtils(context.codeGenUtility().codegenUtil());
     TypeElement latticeAppElem = context.latticeAppTypeElement();
     String packageName =
         requireNonNull(
@@ -37,6 +39,8 @@ public final class GrpcBindingsProvider implements BindingsProvider {
             .toString();
     return new DopantBinding(
         ClassName.get(GrpcServerDopant.class),
-        ClassName.get(packageName, getDopantImplName(latticeAppElem)));
+        ClassName.get(
+            packageName,
+            latticeCodegenUtils.getDopantImplName(latticeAppElem, GrpcServerDopant.class)));
   }
 }

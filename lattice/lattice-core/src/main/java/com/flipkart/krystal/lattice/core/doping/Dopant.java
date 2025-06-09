@@ -8,6 +8,10 @@ import java.lang.annotation.Annotation;
  */
 public interface Dopant<A extends Annotation, C extends DopantConfig> {
 
+  default void start(String... commandLineArgs) throws Exception {
+    start();
+  }
+
   default void start() throws Exception {}
 
   /**

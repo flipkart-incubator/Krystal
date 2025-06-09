@@ -15,25 +15,34 @@ import java.io.Closeable;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 @Slf4j
 @DopantType(DOPANT_TYPE)
 public final class ThreadingStrategyDopant implements DopantWithConfig<ThreadStrategyConfig> {
   static final String DOPANT_TYPE = "krystal.lattice.threadingStrategy";
-  private final ThreadPerRequestExecutorsPool executorPool;
+  private final ThreadStrategyConfig config;
   private final DependencyInjectionBinder binder;
   private final ThreadingStrategy threadingStrategy;
+
+  private @MonotonicNonNull ThreadPerRequestExecutorsPool executorPool;
 
   @Inject
   ThreadingStrategyDopant(
       ThreadingStrategySpec spec, ThreadStrategyConfig config, DependencyInjectionBinder binder) {
     this.threadingStrategy = spec.threadingStrategy();
+    this.config = config;
     this.binder = binder;
+  }
+
+  @Override
+  public void start() throws Exception {
     this.executorPool =
         switch (threadingStrategy) {
-          case NATIVE_THREAD_PER_REQUEST -> new ThreadPerRequestExecutorsPool(
-              "ThreadingStrategyDopant-ThreadPerRequestExecutorsPool",
-              config.maxApplicationThreads());
+          case NATIVE_THREAD_PER_REQUEST ->
+              new ThreadPerRequestExecutorsPool(
+                  "ThreadingStrategyDopant-ThreadPerRequestExecutorsPool",
+                  config.maxApplicationThreads());
           default -> throw new UnsupportedOperationException(threadingStrategy.toString());
         };
   }
@@ -43,16 +52,11 @@ public final class ThreadingStrategyDopant implements DopantWithConfig<ThreadStr
   }
 
   @SuppressWarnings("ClassEscapesDefinedScope")
-  public static ThreadingStrategySpecBuilder threadingStrategyDopant() {
+  public static ThreadingStrategySpecBuilder threadingStrategy() {
     return ThreadingStrategySpec.builder();
   }
 
   public Closeable openRequestScope(Map<BindingKey, Object> seedMap) {
     return binder.openRequestScope(seedMap, threadingStrategy);
-  }
-
-  @Override
-  public void tryMainMethodExit() {
-    executorPool.close();
   }
 }

@@ -7,5 +7,5 @@ public @interface GrpcService {
 
   String doc();
 
-  Class<? extends VajramDef<?>>[] vajrams();
+  Class<? extends VajramDef<?>>[] rpcVajrams();
 }

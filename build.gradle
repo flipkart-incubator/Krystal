@@ -1,5 +1,5 @@
 plugins {
-    id 'com.flipkart.java.code.standard' version '3.6'
+    id 'com.flipkart.java.code.standard' version '3.7-SNAPSHOT'
     id 'org.gradlex.extra-java-module-info' version '1.11'
 }
 
@@ -9,8 +9,9 @@ ext {
     krystal_version = '9.0.0-SNAPSHOT'
     lattice_version = '0.0.1-SNAPSHOT'
 
-    protobuf_version = '4.30.2'
-    grpc_version = '1.72.0'
+    protobuf_version = '4.31.1'
+    grpc_version = '1.73.0'
+    quarkus_version = '3.23.2'
 }
 
 subprojects {
@@ -55,12 +56,15 @@ configure(subprojects.findAll {
     apply plugin: 'java-library'
     apply plugin: 'org.gradlex.extra-java-module-info'
 
-    apply plugin: 'com.flipkart.java.code.standard'
+//    apply plugin: 'com.flipkart.java.code.standard'
 
     dependencies {
         implementation 'com.google.guava:guava'
         implementation 'org.slf4j:slf4j-api'
         implementation 'jakarta.inject:jakarta.inject-api'
+
+        compileOnly 'org.checkerframework:checker-qual'
+        annotationProcessor 'org.checkerframework:checker-qual'
 
         compileOnly 'org.projectlombok:lombok'
         annotationProcessor 'org.projectlombok:lombok'
@@ -70,6 +74,7 @@ configure(subprojects.findAll {
         testImplementation 'org.junit.jupiter:junit-jupiter-params'
         testImplementation 'org.assertj:assertj-core'
         testImplementation 'org.mockito:mockito-core:5.17.0'
+        testImplementation 'org.checkerframework:checker-qual'
 
         compileOnly 'com.google.auto.value:auto-value-annotations'
         annotationProcessor 'com.google.auto.value:auto-value'
@@ -86,6 +91,7 @@ configure(subprojects.findAll {
         api platform('com.fasterxml.jackson:jackson-bom:2.18.3')
         api platform("com.google.protobuf:protobuf-bom:${protobuf_version}")
         api platform("io.grpc:grpc-bom:${grpc_version}")
+        api platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
 
         constraints {
             String lombok_version = '1.18.36'
@@ -93,7 +99,7 @@ configure(subprojects.findAll {
             implementation "org.projectlombok:lombok:$lombok_version"
             implementation 'com.google.auto.service:auto-service:1.1.1'
             implementation 'com.google.code.findbugs:jsr305:3.0.2'
-            implementation 'com.google.guava:guava:33.0.0-jre'
+            implementation 'com.google.guava:guava:33.4.8-jre'
             implementation 'com.google.j2objc:j2objc-annotations:3.0.0'
             implementation 'com.squareup:javapoet:1.13.0'
             implementation 'commons-cli:commons-cli:1.6.0'
@@ -102,17 +108,24 @@ configure(subprojects.findAll {
             implementation 'org.reflections:reflections:0.10.2'
             implementation 'org.slf4j:slf4j-api:2.0.11'
             implementation 'org.yaml:snakeyaml:2.2'
+            implementation 'org.checkerframework:checker-qual:3.49.4'
 
             runtimeOnly 'jakarta.servlet:jakarta.servlet-api:6.1.0'
 
+            compileOnly "org.projectlombok:lombok:$lombok_version"
+            compileOnly 'org.checkerframework:checker-qual:3.49.4'
             compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
             compileOnly 'org.jetbrains:annotations:26.0.2'
 
+            annotationProcessor 'org.checkerframework:checker-qual:3.49.4'
             annotationProcessor "com.flipkart.krystal.lattice:lattice-codegen:$lattice_version"
-            annotationProcessor "com.flipkart.krystal.lattice:lattice-guice-codegen:$lattice_version"
-            annotationProcessor "com.flipkart.krystal.lattice:lattice-protobuf-codegen:$lattice_version"
             annotationProcessor "com.flipkart.krystal.lattice:lattice-grpc-codegen:$lattice_version"
+            annotationProcessor "com.flipkart.krystal.lattice:lattice-guice-codegen:$lattice_version"
+            annotationProcessor "com.flipkart.krystal.lattice:lattice-json-codegen:$lattice_version"
+            annotationProcessor "com.flipkart.krystal.lattice:lattice-protobuf-codegen:$lattice_version"
+            annotationProcessor "com.flipkart.krystal.lattice:lattice-rest-quarkus-codegen:$lattice_version"
             annotationProcessor "com.flipkart.krystal:vajram-codegen:$krystal_version"
+            annotationProcessor "com.flipkart.krystal:vajram-json-codegen:$krystal_version"
             annotationProcessor "com.flipkart.krystal:vajram-protobuf-codegen:$krystal_version"
 
             annotationProcessor "org.projectlombok:lombok:$lombok_version"
@@ -122,6 +135,7 @@ configure(subprojects.findAll {
             annotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
 
             testImplementation 'com.google.j2objc:j2objc-annotations:3.0.0'
+            testImplementation 'org.checkerframework:checker-qual:3.49.4'
 
 
             testAnnotationProcessor "com.flipkart.krystal:vajram-codegen:$krystal_version"
@@ -132,7 +146,11 @@ configure(subprojects.findAll {
         }
     }
 
-    if (!project.name.contains('samples') &&
+    configurations.configureEach {
+        exclude group: 'com.google.guava', module: 'listenablefuture'
+    }
+
+    if (!project.name.contains('sample') &&
             //Exclude modules which should not be published or have custom publishing config
             project.name != 'vajram-lang') {
         publishing {
@@ -169,7 +187,6 @@ configure(subprojects.findAll {
         module('com.google.auto.value:auto-value-annotations', 'com.google.auto.value.annotations')
         module('com.google.auto:auto-common', 'com.google.auto.common')
         module('com.google.code.findbugs:jsr305', 'com.google.code.findbugs.jsr305')
-        module('com.google.guava:listenablefuture', 'com.google.guava.listenablefuture')
 
         module('org.antlr:antlr4', 'org.antlr.antlr4')
         module('javax.inject:javax.inject', 'javax.inject')
@@ -177,9 +194,9 @@ configure(subprojects.findAll {
         module('aopalliance:aopalliance', 'aopalliance')
         module('javax.cache:cache-api', 'javax.cache.api')
         module('org.javassist:javassist', 'javassist')
-        module('gradle-api-8.13.jar', 'gradle.api')
-        module('gradle-installation-beacon-8.13.jar', 'gradle.installation.beacon')
-        module('gradle-test-kit-8.13.jar', 'gradle.test.kit')
+        module('gradle-api-8.14.jar', 'gradle.api')
+        module('gradle-installation-beacon-8.14.jar', 'gradle.installation.beacon')
+        module('gradle-test-kit-8.14.jar', 'gradle.test.kit')
         module('org.antlr:ST4', 'org.antlr.antlr.ST4')
         module('org.abego.treelayout:org.abego.treelayout.core', 'org.abego.treelayout.core')
         module('org.antlr:antlr-runtime', 'org.antlr.antlr.runtime')
@@ -189,10 +206,11 @@ configure(subprojects.findAll {
         module('org.slf4j:slf4j-reload4j', 'org.slf4j.reload4j')
         module('ch.qos.reload4j:reload4j', 'ch.qos.reload4j')
 
-        module('proto-google-common-protos-2.51.0.jar', 'com.google.api.grpc.common.protos')
+        module('proto-google-common-protos-2.56.0.jar', 'com.google.api.grpc.common.protos')
         module('animal-sniffer-annotations-1.24.jar', 'org.codehaus.mojo.animal.sniffer.annotations')
-        module('grpc-context-1.72.0.jar', 'io.grpc.context')
+        module('grpc-context-1.73.0.jar', 'io.grpc.context')
         module('annotations-4.1.1.4.jar', 'com.google.android.annotations')
+
 
         //These already have a module name
         knownModule('com.google.guava:failureaccess', 'com.google.common.util.concurrent.internal')

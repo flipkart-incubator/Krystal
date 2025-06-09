@@ -2,7 +2,6 @@ package com.flipkart.krystal.lattice.ext.grpc.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.lowerCaseFirstChar;
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.FINAL;
-import static com.flipkart.krystal.lattice.ext.grpc.codegen.LatticeGrpcUtils.getDopantImplName;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.Protobuf3.PROTO_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
@@ -11,7 +10,8 @@ import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
-import com.flipkart.krystal.lattice.codegen.LatticeCodeGeneratorProvider;
+import com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils;
+import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcServer;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcServerDopant;
@@ -31,18 +31,13 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeSpec.Builder;
 import io.grpc.stub.StreamObserver;
-import jakarta.inject.Inject;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
-import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
 
@@ -77,14 +72,17 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
       if (!isApplicable(grpcServer)) {
         return;
       }
-      String dopantImplName = getDopantImplName(latticeAppElem);
+      LatticeCodegenUtils latticeCodegenUtils = new LatticeCodegenUtils(util.codegenUtil());
+      String dopantImplName =
+          latticeCodegenUtils.getDopantImplName(latticeAppElem, GrpcServerDopant.class);
       TypeSpec.Builder classBuilder =
           util.codegenUtil()
               .classBuilder(dopantImplName)
               .addModifiers(Modifier.FINAL)
               .superclass(GrpcServerDopant.class);
 
-      constructor(classBuilder);
+      classBuilder.addMethod(
+          latticeCodegenUtils.dopantConstructorOverride(GrpcServerDopant.class).build());
       serviceDefinitions(grpcServer, classBuilder);
 
       StringWriter writer = new StringWriter();
@@ -112,7 +110,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
             ClassName.get(latticePackageName, serviceName + "Grpc", serviceName + "ImplBase");
         List<CodeBlock> rpcMethodsCode = new ArrayList<>();
         for (TypeMirror vajram :
-            util.codegenUtil().getTypesFromAnnotationMember(service::vajrams)) {
+            util.codegenUtil().getTypesFromAnnotationMember(service::rpcVajrams)) {
           VajramInfoLite vajramInfoLite =
               util.computeVajramInfoLite(
                   (TypeElement)
@@ -155,7 +153,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
           rpcMethodsCode.add(
               CodeBlock.builder()
                   .addNamed(
-                      """
+"""
           @$override:T
           public void $rpcName:L(
               $protoReqMsgType:T request,
@@ -179,7 +177,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
                               "responseMapper",
                               isModel
                                   ? CodeBlock.of(
-                                      """
+"""
                     response == null
                         ? null
                         : (($T<$T>) response)
@@ -193,7 +191,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
 
         servicesCode.add(
             CodeBlock.of(
-                """
+"""
         new $T(){
           $L
         }
@@ -206,7 +204,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
           MethodSpec.overriding(
                   util.codegenUtil().getMethod(GrpcServerDopant.class, "serviceDefinitions", 0))
               .addCode(
-                  """
+"""
     return $T.of(
         $L
     );
@@ -218,57 +216,6 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
 
     private boolean isProtoModel(TypeMirror responseType) {
       return util.codegenUtil().isRawAssignable(responseType, Model.class);
-    }
-
-    private void constructor(TypeSpec.Builder classBuilder) {
-      TypeElement grpcDopantClass =
-          requireNonNull(
-              util.processingEnv()
-                  .getElementUtils()
-                  .getTypeElement(GrpcServerDopant.class.getCanonicalName()));
-
-      List<ExecutableElement> injectionCtors = new ArrayList<>();
-      ExecutableElement noArgCtor = null;
-      for (Element element : grpcDopantClass.getEnclosedElements()) {
-        if (!isVisible(element)) {
-          continue;
-        }
-        if (element.getKind() == ElementKind.CONSTRUCTOR) {
-          ExecutableElement c = (ExecutableElement) element;
-          if (c.getAnnotation(Inject.class) != null) {
-            injectionCtors.add(c);
-          }
-          if (c.getParameters().isEmpty()) {
-            noArgCtor = c;
-          }
-        }
-      }
-      ExecutableElement parentCtor;
-      if (injectionCtors.size() > 1 || (injectionCtors.isEmpty() && noArgCtor == null)) {
-        throw util.errorAndThrow(
-            "A dopant must have exactly one public/protected constructor with the @Inject annotation OR a public/protected no arg constructor",
-            grpcDopantClass);
-      }
-      if (!injectionCtors.isEmpty()) {
-        parentCtor = injectionCtors.get(0);
-      } else {
-        parentCtor = requireNonNull(noArgCtor, "Cannot be null here because of the checks above");
-      }
-      var constructorBuilder = MethodSpec.constructorBuilder().addAnnotation(Inject.class);
-
-      List<CodeBlock> params = new ArrayList<>();
-      for (VariableElement parameter : parentCtor.getParameters()) {
-        constructorBuilder.addParameter(
-            TypeName.get(parameter.asType()), parameter.getSimpleName().toString());
-        params.add(CodeBlock.of("$L", parameter.getSimpleName().toString()));
-      }
-      constructorBuilder.addStatement("super($L)", params.stream().collect(CodeBlock.joining(",")));
-      classBuilder.addMethod(constructorBuilder.build());
-    }
-
-    private static boolean isVisible(Element element) {
-      return element.getModifiers().contains(Modifier.PUBLIC)
-          || element.getModifiers().contains(Modifier.PROTECTED);
     }
 
     @EnsuresNonNullIf(expression = "#1", result = true)

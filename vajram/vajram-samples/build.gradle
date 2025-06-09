@@ -25,4 +25,4 @@ test {
     minHeapSize = "128m" // initial heap size
     maxHeapSize = "4g" // maximum heap size
 }
-tasks.named("spotlessJava").configure { dependsOn("codeGenVajramModels") }
+//tasks.named("spotlessJava").configure { dependsOn("codeGenVajramModels") }

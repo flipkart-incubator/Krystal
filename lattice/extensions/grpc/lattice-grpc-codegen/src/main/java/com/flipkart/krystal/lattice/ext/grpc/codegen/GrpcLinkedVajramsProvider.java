@@ -3,7 +3,7 @@ package com.flipkart.krystal.lattice.ext.grpc.codegen;
 import static com.flipkart.krystal.datatypes.Trilean.TRUE;
 import static java.util.Objects.requireNonNull;
 
-import com.flipkart.krystal.lattice.codegen.LatticeAppCodeGenAttrsProvider;
+import com.flipkart.krystal.lattice.codegen.spi.LatticeAppCodeGenAttrsProvider;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcServer;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcService;
@@ -20,7 +20,7 @@ public final class GrpcLinkedVajramsProvider implements LatticeAppCodeGenAttrsPr
   public LatticeAppCodeGenAttributes get(LatticeCodegenContext context) {
     return LatticeAppCodeGenAttributes.builder()
         .needsRequestScopedHeaders(TRUE)
-        .remotelyInvokedVajrams(getRemotelyInvokedVajrams(context))
+        .remotelyInvocableVajrams(getRemotelyInvokedVajrams(context))
         .build();
   }
 
@@ -33,7 +33,11 @@ public final class GrpcLinkedVajramsProvider implements LatticeAppCodeGenAttrsPr
     GrpcService[] services = grpcServer.services();
     List<TypeElement> results = new ArrayList<>();
     for (GrpcService service : services) {
-      context.codeGenUtility().codegenUtil().getTypesFromAnnotationMember(service::vajrams).stream()
+      context
+          .codeGenUtility()
+          .codegenUtil()
+          .getTypesFromAnnotationMember(service::rpcVajrams)
+          .stream()
           .map(
               tm ->
                   (TypeElement)

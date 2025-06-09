@@ -3,7 +3,7 @@ package com.flipkart.krystal.traits.matchers;
 import static com.flipkart.krystal.traits.matchers.AnythingMatcher.ANY_NON_NULL;
 import static com.flipkart.krystal.traits.matchers.AnythingMatcher.ANY_VALUE;
 
-import lombok.NonNull;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SuppressWarnings("NonBooleanMethodNameMayNotStartWithQuestion")
@@ -15,7 +15,7 @@ public sealed interface InputValueMatcher<T>
     return new TypeMatcher<>(type);
   }
 
-  static <T extends Enum<T>> InputValueMatcher<T> equalsEnum(@NonNull Enum<T> enumValue) {
+  static <T extends Enum<T>> InputValueMatcher<T> equalsEnum(Enum<T> enumValue) {
     return new EnumMatcher<>(enumValue);
   }
 

@@ -1,6 +1,6 @@
 package com.flipkart.krystal.lattice.ext.grpc.codegen;
 
-import com.flipkart.krystal.lattice.codegen.DefaultSerdeProtocolProvider;
+import com.flipkart.krystal.lattice.codegen.spi.DefaultSerdeProtocolProvider;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcServer;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;

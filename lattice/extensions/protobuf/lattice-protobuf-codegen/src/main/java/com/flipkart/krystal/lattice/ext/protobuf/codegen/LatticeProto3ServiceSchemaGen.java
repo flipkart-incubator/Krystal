@@ -180,7 +180,7 @@ class LatticeProto3ServiceSchemaGen implements CodeGenerator {
       }
 
       List<? extends TypeMirror> vajrams =
-          util.codegenUtil().getTypesFromAnnotationMember(grpcService::vajrams);
+          util.codegenUtil().getTypesFromAnnotationMember(grpcService::rpcVajrams);
       if (vajrams.isEmpty()) {
         String message = "No vajrams registered with service grpcService. This is not allowed";
         util.processingEnv()
@@ -241,7 +241,7 @@ class LatticeProto3ServiceSchemaGen implements CodeGenerator {
           .forEach(
               serviceAnno -> {
                 for (TypeMirror vajramType :
-                    util.codegenUtil().getTypesFromAnnotationMember(serviceAnno::vajrams)) {
+                    util.codegenUtil().getTypesFromAnnotationMember(serviceAnno::rpcVajrams)) {
                   VajramInfoLite vajramInfo =
                       util.computeVajramInfoLite(
                           requireNonNull(
@@ -267,7 +267,7 @@ class LatticeProto3ServiceSchemaGen implements CodeGenerator {
           .forEach(
               serviceAnno -> {
                 List<VajramInfoLite> vajramInfos =
-                    util.codegenUtil().getTypesFromAnnotationMember(serviceAnno::vajrams).stream()
+                    util.codegenUtil().getTypesFromAnnotationMember(serviceAnno::rpcVajrams).stream()
                         .map(
                             typeMirror ->
                                 util.computeVajramInfoLite(

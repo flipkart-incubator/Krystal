@@ -1,13 +1,16 @@
 package com.flipkart.krystal.lattice.codegen;
 
-import static com.flipkart.krystal.lattice.codegen.BindingsProvider.BindingScope.APP_LOGIC_SCOPE;
-import static com.flipkart.krystal.lattice.codegen.BindingsProvider.BindingScope.NO_SCOPE;
+import static com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.BindingScope.APP_LOGIC_SCOPE;
+import static com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.BindingScope.NO_SCOPE;
 import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider.ModelProtocolConfig;
-import com.flipkart.krystal.lattice.codegen.BindingsProvider.BindTo.Provider;
+import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider;
+import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.BindTo.Provider;
+import com.flipkart.krystal.lattice.codegen.spi.DefaultSerdeProtocolProvider;
+import com.flipkart.krystal.lattice.codegen.spi.LatticeAppCodeGenAttrsProvider;
 import com.flipkart.krystal.lattice.core.headers.Header;
 import com.flipkart.krystal.lattice.core.headers.StandardHeaderNames;
 import com.flipkart.krystal.model.Model;
@@ -41,7 +44,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
         ServiceLoader.load(LatticeAppCodeGenAttrsProvider.class, this.getClass().getClassLoader());
     Set<TypeElement> remotelyInvocableVajrams = new LinkedHashSet<>();
     for (LatticeAppCodeGenAttrsProvider provider : providers) {
-      remotelyInvocableVajrams.addAll(provider.get(context).remotelyInvokedVajrams());
+      remotelyInvocableVajrams.addAll(provider.get(context).remotelyInvocableVajrams());
     }
     List<Binding> bindings = new ArrayList<>();
     for (TypeElement vajram : remotelyInvocableVajrams) {

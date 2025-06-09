@@ -13,7 +13,7 @@ record VajramDopantSpec(
     VajramKryonGraph vajramGraph,
     ImmutableList<Consumer<KrystexVajramExecutorConfigBuilder>> kryonExecConfigProcessors,
     ImmutableList<KryonExecutorConfigurator> kryonExecutorConfigurators)
-    implements DopantSpec<NoAnnotation, NoConfiguration, VajramDopantSpec> {
+    implements DopantSpec<NoAnnotation, NoConfiguration, VajramDopant> {
 
   @Override
   public Class<VajramDopant> dopantClass() {

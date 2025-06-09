@@ -5,7 +5,9 @@ import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoConfiguration;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public abstract class SimpleDopantSpecBuilder<
-        DS extends DopantSpec<NoAnnotation, NoConfiguration, DS>>
+        DS extends
+            DopantSpec<
+                    NoAnnotation, NoConfiguration, ? extends Dopant<NoAnnotation, NoConfiguration>>>
     implements DopantSpecBuilder<NoAnnotation, NoConfiguration, DS> {
 
   public abstract DS _buildSpec();

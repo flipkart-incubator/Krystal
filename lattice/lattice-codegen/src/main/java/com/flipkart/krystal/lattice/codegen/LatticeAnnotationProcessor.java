@@ -4,6 +4,7 @@ import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE
 import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
+import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
 import com.flipkart.krystal.lattice.core.LatticeApp;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.google.auto.service.AutoService;
@@ -57,32 +58,29 @@ public class LatticeAnnotationProcessor extends AbstractProcessor {
             .filter(element -> element.getKind() == ElementKind.CLASS)
             .map(executableElement -> (TypeElement) executableElement)
             .toList();
-    if (latticeApps.isEmpty()) {
-      return false;
-    } else if (latticeApps.size() > 1) {
-      throw util.errorAndThrow("More than one lattice apps cannot be present in the same module");
-    }
-    TypeElement latticeAppTypeElement = latticeApps.get(0);
 
-    CharSequence message =
-        "Lattice detected by %s: %s"
-            .formatted(getClass().getSimpleName(), latticeAppTypeElement.getQualifiedName());
-    util.codegenUtil().note(message);
+    for (TypeElement latticeAppTypeElement : latticeApps) {
+      CharSequence message =
+          "Lattice detected by %s: %s"
+              .formatted(getClass().getSimpleName(), latticeAppTypeElement.getQualifiedName());
+      util.codegenUtil().note(message);
 
-    LatticeCodegenContext codegenContext =
-        new LatticeCodegenContext(
-            latticeAppTypeElement,
-            requireNonNull(latticeAppTypeElement.getAnnotation(LatticeApp.class)),
-            codegenPhase,
-            util,
-            roundEnv);
-    for (LatticeCodeGeneratorProvider customCodeGeneratorProvider :
-        ServiceLoader.load(LatticeCodeGeneratorProvider.class, this.getClass().getClassLoader())) {
-      try {
-        customCodeGeneratorProvider.create(codegenContext).generate();
-      } catch (Exception e) {
-        util.error(e.toString(), latticeAppTypeElement);
-        continue;
+      LatticeCodegenContext codegenContext =
+          new LatticeCodegenContext(
+              latticeAppTypeElement,
+              requireNonNull(latticeAppTypeElement.getAnnotation(LatticeApp.class)),
+              codegenPhase,
+              util,
+              roundEnv);
+      for (LatticeCodeGeneratorProvider customCodeGeneratorProvider :
+          ServiceLoader.load(
+              LatticeCodeGeneratorProvider.class, this.getClass().getClassLoader())) {
+        try {
+          customCodeGeneratorProvider.create(codegenContext).generate();
+        } catch (Exception e) {
+          util.error(e.toString(), latticeAppTypeElement);
+          continue;
+        }
       }
     }
 

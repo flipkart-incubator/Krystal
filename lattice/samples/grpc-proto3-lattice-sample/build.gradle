@@ -1,0 +1,64 @@
+plugins {
+    id 'com.flipkart.krystal' version "${krystal_version}"
+    id 'com.google.protobuf' version '0.9.4'
+}
+
+dependencies {
+    implementation project(':krystal-common')
+    implementation project(':lattice:extensions:grpc:lattice-grpc')
+    implementation project(':lattice:extensions:guice:lattice-guice-servlet')
+    implementation project(':lattice:lattice-core')
+    implementation project(':vajram:extensions:json:vajram-json')
+    implementation project(':vajram:extensions:protobuf:vajram-protobuf3')
+    implementation project(':vajram:vajram-java-sdk')
+
+    runtimeOnly 'jakarta.servlet:jakarta.servlet-api'
+
+    implementation 'com.google.inject.extensions:guice-servlet'
+    implementation 'com.google.protobuf:protobuf-java'
+    implementation 'jakarta.inject:jakarta.inject-api'
+    implementation 'javax.annotation:javax.annotation-api'
+    implementation 'org.checkerframework:checker-qual'
+
+    annotationProcessor 'com.flipkart.krystal.lattice:lattice-codegen'
+    annotationProcessor 'com.flipkart.krystal.lattice:lattice-grpc-codegen'
+    annotationProcessor 'com.flipkart.krystal.lattice:lattice-guice-codegen'
+    annotationProcessor 'com.flipkart.krystal.lattice:lattice-protobuf-codegen'
+    annotationProcessor 'com.flipkart.krystal:vajram-codegen'
+    annotationProcessor 'com.flipkart.krystal:vajram-json-codegen'
+    annotationProcessor 'com.flipkart.krystal:vajram-protobuf-codegen'
+
+    testImplementation project(':vajram:extensions:guice:vajram-guice')
+    testImplementation project(':vajram:vajram-krystex')
+}
+
+sourceSets {
+    main {
+        proto {
+            srcDir 'build/generated/sources/vajramModels/protobuf/main'
+        }
+        java {
+            'build/generated/source/proto/main/java'
+        }
+    }
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${protobuf_version}"
+    }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:${grpc_version}"
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins { grpc {} }
+    }
+}
+
+tasks.named('extractIncludeProto').configure { mustRunAfter('codeGenVajramModels') }
+tasks.named('extractProto').configure { mustRunAfter('codeGenVajramModels') }
+tasks.named('generateProto').configure { mustRunAfter('codeGenVajramModels') }
+
+//tasks.named("spotlessJava").configure { dependsOn("codeGenVajramModels") }

@@ -20,7 +20,8 @@ import lombok.Getter;
  * @param <DV> The dependency vajram
  */
 @Getter
-public final class OptionalFanoutDepSpec<T, CV extends Request<?>, DV extends Request<T>>
+public final
+class OptionalFanoutDepSpec<T, CV extends Request<?>, DV extends Request<T>>
     extends FanoutDepSpec<T, CV, DV> implements OptionalFacetSpec<T, CV> {
 
   public OptionalFanoutDepSpec(

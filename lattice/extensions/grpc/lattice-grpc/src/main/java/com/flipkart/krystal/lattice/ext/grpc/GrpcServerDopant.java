@@ -47,7 +47,7 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
   private final ThreadingStrategyDopant threadingStrategyDopant;
   private final GrpcServerSpec grpcServerSpec;
 
-  public static GrpcServerSpecBuilder grpcDopant() {
+  public static GrpcServerSpecBuilder grpc() {
     return new GrpcServerSpecBuilder();
   }
 

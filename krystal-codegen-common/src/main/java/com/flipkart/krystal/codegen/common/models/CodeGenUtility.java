@@ -8,6 +8,9 @@ import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static javax.lang.model.element.Modifier.ABSTRACT;
+import static javax.lang.model.element.Modifier.NATIVE;
+import static javax.lang.model.element.Modifier.PRIVATE;
+import static javax.lang.model.element.Modifier.PUBLIC;
 
 import com.flipkart.krystal.annos.Generated;
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
@@ -23,10 +26,15 @@ import com.google.common.primitives.Primitives;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
+import com.squareup.javapoet.JavaFile;
+import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.TypeSpec.Builder;
+import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.nio.file.Path;
@@ -39,6 +47,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -63,7 +72,6 @@ import javax.tools.Diagnostic.Kind;
 import javax.tools.FileObject;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -100,15 +108,61 @@ public class CodeGenUtility {
     return str.isEmpty() ? str : Character.toLowerCase(str.charAt(0)) + str.substring(1);
   }
 
+  public void addImmutableModelObjectMethods(
+      ClassName immutInterfaceName,
+      Set<? extends CharSequence> modelFieldNames,
+      TypeSpec.Builder classBuilder) {
+    addCommonObjectMethods(classBuilder);
+
+    classBuilder.addMethod(
+        MethodSpec.overriding(getMethod(Object.class, "equals", 1))
+            .addCode(
+                """
+                if (this == obj) {
+                  return true;
+                }
+                if (!(obj instanceof $T other)) {
+                  return false;
+                }
+                return $L;
+                """,
+                immutInterfaceName,
+                modelFieldNames.isEmpty()
+                    ? "true"
+                    : modelFieldNames.stream()
+                        .map(
+                            name ->
+                                CodeBlock.of(
+                                    "$T.equals(this.$L(), other.$L())", Objects.class, name, name))
+                        .collect(joining("\n&& ")))
+            .build());
+
+    classBuilder.addField(int.class, "_memoizedHashCode", PRIVATE);
+    classBuilder.addMethod(
+        MethodSpec.methodBuilder("hashCode")
+            .addModifiers(PUBLIC)
+            .returns(int.class)
+            .addAnnotation(Override.class)
+            .addCode(
+                "if(_memoizedHashCode == 0) { _memoizedHashCode =  $T.hash($L); }",
+                Objects.class,
+                modelFieldNames.stream()
+                    .map(Object::toString)
+                    .sorted()
+                    .map(name -> CodeBlock.of("this.$L()", name))
+                    .collect(CodeBlock.joining(",\n")))
+            .addStatement("return _memoizedHashCode")
+            .build());
+  }
+
   public ClassName toClassName(String depReqClassName) {
     int lastDotIndex = depReqClassName.lastIndexOf('.');
     return ClassName.get(
         depReqClassName.substring(0, lastDotIndex), depReqClassName.substring(lastDotIndex + 1));
   }
 
-  public static List<AnnotationSpec> recordAnnotations() {
-    return List.of(
-        AnnotationSpec.builder(EqualsAndHashCode.class).build(),
+  public static void addCommonObjectMethods(Builder classBuilder) {
+    classBuilder.addAnnotation(
         AnnotationSpec.builder(ToString.class).addMember("doNotUseGetters", "true").build());
   }
 
@@ -199,7 +253,7 @@ public class CodeGenUtility {
     }
 
     return requireNonNull(
-            processingEnv().getElementUtils().getTypeElement(Optional.class.getCanonicalName()))
+            processingEnv().getElementUtils().getTypeElement(Object.class.getCanonicalName()))
         .asType();
   }
 
@@ -240,17 +294,29 @@ public class CodeGenUtility {
     return typeElement;
   }
 
-  public void generateSourceFile(String className, String code, TypeElement originatingElement) {
+  public void generateSourceFile(
+      String canonicalClassName, JavaFile code, TypeElement originatingElement) {
+    StringWriter writer = new StringWriter();
+    try {
+      code.writeTo(writer);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    generateSourceFile(canonicalClassName, writer.toString(), originatingElement);
+  }
+
+  public void generateSourceFile(
+      String canonicalClassName, String code, TypeElement originatingElement) {
     try {
       JavaFileObject requestFile =
-          processingEnv.getFiler().createSourceFile(className, originatingElement);
-      note("Successfully Create source file %s".formatted(className));
+          processingEnv.getFiler().createSourceFile(canonicalClassName, originatingElement);
+      note("Successfully Create source file %s".formatted(canonicalClassName));
       try (PrintWriter out = new PrintWriter(requestFile.openWriter())) {
         out.println(code);
       }
     } catch (Exception e) {
       error(
-          "Error creating java file for className: %s. Error: %s".formatted(className, e),
+          "Error creating java file for className: %s. Error: %s".formatted(canonicalClassName, e),
           originatingElement);
     }
   }
@@ -628,5 +694,46 @@ public class CodeGenUtility {
     String modelRootName = modelRootType.getSimpleName().toString();
     String packageName = processingEnv().getElementUtils().getPackageOf(modelRootType).toString();
     return ClassName.get(packageName, modelRootName + modelRoot.suffixSeparator() + IMMUT_SUFFIX);
+  }
+
+  /**
+   * Writes a Java file to the source directory.
+   *
+   * @param packageName The package name for the file
+   * @param typeSpec The type specification to write
+   * @param originatingElement The element that caused this file to be generated
+   */
+  public void writeJavaFile(String packageName, TypeSpec typeSpec, TypeElement originatingElement) {
+    try {
+      JavaFile javaFile = JavaFile.builder(packageName, typeSpec).build();
+      String fileName = packageName + "." + typeSpec.name;
+      generateSourceFile(fileName, javaFile.toString(), originatingElement);
+    } catch (Exception e) {
+      error("Error generating Java file: " + e.getMessage(), originatingElement);
+    }
+  }
+
+  /**
+   * Determines the parameter type for a method return type, handling Optional types.
+   *
+   * @param specifiedType The return type of the method
+   * @return The appropriate parameter type
+   */
+  public TypeName getParameterType(TypeMirror specifiedType) {
+    TypeMirror inferredType = specifiedType;
+    if (isOptional(specifiedType)) {
+      // For Optional<T>, use T as the parameter type
+      inferredType = getOptionalInnerType(specifiedType);
+    }
+    TypeName typeName = TypeName.get(inferredType);
+    if (typeName.isPrimitive()) {
+      typeName = typeName.box();
+    }
+    // Add @Nullable annotation for Optional types or methods with @Nullable annotation
+    if (isOptional(specifiedType) || isNullable(specifiedType)) {
+      // Add @Nullable as a type annotation
+      typeName = typeName.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
+    }
+    return typeName;
   }
 }

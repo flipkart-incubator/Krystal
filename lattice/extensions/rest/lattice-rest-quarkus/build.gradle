@@ -1,0 +1,13 @@
+dependencies {
+    implementation project(':lattice:lattice-core')
+
+    implementation 'io.quarkus:quarkus-core'
+    implementation 'io.quarkus:quarkus-vertx'
+    implementation 'io.quarkus.vertx.utils:quarkus-vertx-utils'
+    implementation 'io.vertx:vertx-web'
+
+}
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
+}

@@ -1,0 +1,15 @@
+dependencies {
+    implementation project(":krystal-codegen-common")
+    implementation project(":lattice:lattice-codegen")
+    implementation project(":lattice:extensions:rest:lattice-rest-quarkus")
+    implementation project(':vajram:extensions:json:vajram-json')
+
+    implementation 'io.quarkus:quarkus-core'
+
+    compileOnly 'com.google.auto.service:auto-service'
+    annotationProcessor 'com.google.auto.service:auto-service'
+}
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
+}

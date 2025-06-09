@@ -2,7 +2,7 @@ package com.flipkart.krystal.vajram.codegen.processor;
 
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.annotations;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.getTypeParameters;
-import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.recordAnnotations;
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.addCommonObjectMethods;
 import static com.flipkart.krystal.codegen.common.models.Constants.EMPTY_CODE_BLOCK;
 import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
@@ -77,6 +77,7 @@ import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
+import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.ReservedSerialIds;
 import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.IOVajramDef;
@@ -108,6 +109,7 @@ import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.FacetIdNameMapping;
 import com.flipkart.krystal.vajram.facets.FacetValidation;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
+import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.One2OneCommand;
 import com.flipkart.krystal.vajram.facets.resolution.AbstractFanoutInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.AbstractOne2OneInputResolver;
@@ -165,7 +167,7 @@ import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import lombok.EqualsAndHashCode;
 import lombok.EqualsAndHashCode.Include;
-import lombok.ToString;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -182,7 +184,7 @@ public class VajramCodeGenerator implements CodeGenerator {
 
   private static final ImmutableSet<String> MODEL_CLASS_ANNOTATIONS =
       ImmutableSet.<@NonNull String>copyOf(
-          Stream.of(ReservedSerialIds.class)
+          Stream.of(ReservedSerialIds.class, SupportedModelProtocols.class)
               .<@NonNull String>map(aClass -> requireNonNull(aClass.getCanonicalName()))
               .toList());
 
@@ -1522,18 +1524,25 @@ public class VajramCodeGenerator implements CodeGenerator {
     if (codeGenParams.wrapsRequest() && codeGenParams.isRequest()) {
       throw new IllegalArgumentException("A request cannot wrap another request - this is a bug");
     }
-
+    ClassName immutFacetsType = ClassName.get(packageName, getImmutFacetsClassName(vajramName));
     // TODO : Add checks for subsetRequest
     MethodSpec.Builder fullConstructor = constructorBuilder();
     ClassName immutRequestType = currentVajramInfo.conformsToTraitOrSelf().immutReqInterfaceType();
     if (codeGenParams.withImpl()) {
-      classSpec.addAnnotations(
-          codeGenParams.isBuilder()
-              ? List.of(
-                  AnnotationSpec.builder(ToString.class)
-                      .addMember("doNotUseGetters", "true")
-                      .build())
-              : recordAnnotations());
+      if (codeGenParams.isBuilder()) {
+        addCommonObjectMethods(classSpec);
+      } else {
+        util.codegenUtil()
+            .addImmutableModelObjectMethods(
+                immutFacetsType,
+                Sets.union(
+                    eligibleFacets.stream()
+                        .filter(f -> !(f.facetTypes().contains(INPUT)))
+                        .map(FacetGenModel::name)
+                        .collect(Collectors.toSet()),
+                    Set.of("_request")),
+                classSpec);
+      }
       if (codeGenParams.wrapsRequest()) {
         ClassName requestOrBuilderType =
             codeGenParams.isBuilder() ? immutRequestType.nestedClass("Builder") : immutRequestType;
@@ -1541,7 +1550,8 @@ public class VajramCodeGenerator implements CodeGenerator {
             ParameterSpec.builder(requestOrBuilderType, "_request").build());
         fullConstructor.addStatement("this._request = _request");
         FieldSpec.Builder field =
-            FieldSpec.builder(requestOrBuilderType, "_request", PRIVATE, FINAL);
+            FieldSpec.builder(requestOrBuilderType, "_request", PRIVATE, FINAL)
+                .addAnnotation(Getter.class);
         if (!codeGenParams.isBuilder()) {
           field.addModifiers(FINAL);
         }
@@ -2271,9 +2281,11 @@ public class VajramCodeGenerator implements CodeGenerator {
         }
         initializerCodeBlock.add(String.join(",", params) + "),", args.toArray());
       }
-      initializerCodeBlock.add("""
+      initializerCodeBlock.add(
+          """
                 $T.class,
-              """, vajramReqClass);
+              """,
+          vajramReqClass);
       if (facet instanceof DependencyModel vajramDepDef) {
         ClassName depReqClass = ClassName.bestGuess(vajramDepDef.depReqClassQualifiedName());
         ClassName depReqInterfaceClass =

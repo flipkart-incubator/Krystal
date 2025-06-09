@@ -5,7 +5,7 @@ import com.flipkart.krystal.lattice.core.headers.StandardHeaderNames;
 import io.grpc.Context;
 
 record GrpcServerSpec(Context.Key<String> requestIdContextKey)
-    implements DopantSpec<GrpcServer, GrpcServerConfig, GrpcServerSpec> {
+    implements DopantSpec<GrpcServer, GrpcServerConfig, GrpcServerDopant> {
   private static final Context.Key<String> ACCEPT_HEADER_CONTEXT_KEY =
       Context.key(StandardHeaderNames.ACCEPT);
 

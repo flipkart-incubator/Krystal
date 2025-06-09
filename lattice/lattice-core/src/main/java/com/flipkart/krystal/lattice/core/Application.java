@@ -24,12 +24,13 @@ import com.flipkart.krystal.lattice.core.doping.SimpleDopantSpecBuilder;
 import com.flipkart.krystal.lattice.core.doping.SpecBuilders;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
-import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import jakarta.inject.Singleton;
-import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,7 +73,7 @@ public abstract class Application {
     dependencyInjectionBinder.bindToInstance(
         DependencyInjectionBinder.class, dependencyInjectionBinder);
     Option latticeConfigFileOption =
-        new Option("l", "lattice_config_file", true, "display current time");
+        new Option("l", "lattice_config_file", true, "Lattice app config file");
     CommandLine commandLine =
         new DefaultParser().parse(new Options().addOption(latticeConfigFileOption), args);
     String latticeConfigFile = commandLine.getOptionValue(latticeConfigFileOption);
@@ -94,8 +95,11 @@ public abstract class Application {
             dependencyInjectionBinder.bindToInstance(
                 (Class<Annotation>) annotation.annotationType(), annotation));
 
+    System.err.println("Lattice app args in APP: " + Arrays.deepToString(args));
     LatticeAppConfig latticeAppConfig =
-        configMapper.readValue(new File(latticeConfigFile), LatticeAppConfig.class);
+        configMapper.readValue(
+            this.getClass().getClassLoader().getResource(latticeConfigFile),
+            LatticeAppConfig.class);
     latticeAppConfig
         .configsByDopantType()
         .forEach(
@@ -106,8 +110,25 @@ public abstract class Application {
                 dependencyInjectionBinder.bindToInstance(configType, config);
               }
             });
+    Collection<DopantSpecBuilder> currentIteration = new ArrayList<>(allSpecBuilders.values());
+    Map<Class<? extends DopantSpecBuilder>, DopantSpecBuilder> accumulator =
+        new LinkedHashMap<>(allSpecBuilders);
+    while (!currentIteration.isEmpty()) {
+      Map<Class<? extends DopantSpecBuilder>, DopantSpecBuilder> newBatch = new LinkedHashMap<>();
+      for (DopantSpecBuilder<?, ?, ?> specBuilder : currentIteration) {
+        var additionalDopants = specBuilder.getAdditionalDopants();
+        for (DopantSpecBuilder<?, ?, ?> additionalDopant : additionalDopants) {
+          var newType = additionalDopant.getClass();
+          if (!accumulator.containsKey(newType)) {
+            newBatch.put(newType, additionalDopant);
+            accumulator.put(newType, additionalDopant);
+          }
+        }
+      }
+      currentIteration = newBatch.values();
+    }
 
-    ImmutableCollection<DopantSpecBuilder> values = allSpecBuilders.values();
+    Collection<DopantSpecBuilder> values = accumulator.values();
     SpecBuilders specBuilders = new SpecBuilders(allSpecBuilders);
     values.forEach(builder -> builder._configure(specBuilders));
     var specs =
@@ -181,7 +202,7 @@ public abstract class Application {
                 })
             .toList();
     for (Dopant<?, ?> dopant : dopants) {
-      dopant.start();
+      dopant.start(args);
     }
     for (var itr = dopants.listIterator(dopants.size()); itr.hasPrevious(); ) {
       itr.previous().tryMainMethodExit();

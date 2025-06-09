@@ -7,6 +7,7 @@ import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProt
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_MSG_SUFFIX;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
+import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -20,7 +21,9 @@ import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.ModelRoot;
+import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerializableModel;
+import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import com.flipkart.krystal.vajram.protobuf3.SerializableProtoModel;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
@@ -34,10 +37,13 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -76,6 +82,12 @@ public class ModelsProto3Gen implements CodeGenerator {
       util.note("Skipping protobuf models codegen since current phase is not FINAL");
       return false;
     }
+    if (!isProto3SerdeSupported()) {
+      util.note(
+          "Skipping protobuf models codegen since Protobuf3 is not a supported protocol of the model "
+              + codeGenContext.modelRootType());
+      return false;
+    }
 
     TypeElement modelRootType = codeGenContext.modelRootType();
     // Check if the model root has the ModelRoot annotation
@@ -88,6 +100,26 @@ public class ModelsProto3Gen implements CodeGenerator {
     }
 
     return true;
+  }
+
+  /**
+   * Checks if the model root supports Json serialization.
+   *
+   * @return true if Json is supported, false otherwise
+   */
+  private boolean isProto3SerdeSupported() {
+    TypeElement modelRootType = codeGenContext.modelRootType();
+    SupportedModelProtocols supportedModelProtocols =
+        modelRootType.getAnnotation(SupportedModelProtocols.class);
+    if (supportedModelProtocols == null) {
+      return false;
+    }
+    // Check if Json is mentioned in the annotation value
+    return util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
+        .map(typeMirror -> util.processingEnv().getTypeUtils().asElement(typeMirror))
+        .filter(elem -> elem instanceof QualifiedNameable)
+        .map(element -> requireNonNull((QualifiedNameable) element).getQualifiedName().toString())
+        .anyMatch(Protobuf3.class.getCanonicalName()::equals);
   }
 
   private void validate() {
@@ -117,14 +149,13 @@ public class ModelsProto3Gen implements CodeGenerator {
       TypeElement modelRootType, String packageName, String protoClassName) {
     ClassName immutableProtoType = ClassName.get(packageName, protoClassName);
     String modelRootName = modelRootType.getSimpleName().toString();
-    String immutInterfaceName = util.getImmutClassName(modelRootType).simpleName();
+    ClassName immutModelName = util.getImmutClassName(modelRootType);
     String protoMsgClassName = modelRootName + MODELS_PROTO_MSG_SUFFIX;
 
     // Extract model methods
     List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
 
     // Create class interfaces
-    ClassName immutInterfaceClassName = ClassName.get(packageName, immutInterfaceName);
     TypeName serializableTypeName =
         ParameterizedTypeName.get(
             ClassName.get(SerializableProtoModel.class),
@@ -133,19 +164,27 @@ public class ModelsProto3Gen implements CodeGenerator {
     // Create field types
     TypeName byteArrayType = ArrayTypeName.of(TypeName.BYTE);
     ClassName protoMsgType = ClassName.get(packageName, protoMsgClassName);
-    TypeName nullableProtoMsgType =
-        protoMsgType.annotated(AnnotationSpec.builder(Nullable.class).build());
 
     // Create class builder
     TypeSpec.Builder classBuilder =
         util.classBuilder(protoClassName)
             .addModifiers(PUBLIC)
-            .addSuperinterface(immutInterfaceClassName)
+            .addSuperinterface(immutModelName)
             .addSuperinterface(serializableTypeName);
 
     // Add fields
-    classBuilder.addField(FieldSpec.builder(byteArrayType, "_serializedPayload", PRIVATE).build());
-    classBuilder.addField(FieldSpec.builder(nullableProtoMsgType, "_proto", PRIVATE).build());
+    classBuilder.addField(
+        FieldSpec.builder(
+                byteArrayType.annotated(AnnotationSpec.builder(MonotonicNonNull.class).build()),
+                "_serializedPayload",
+                PRIVATE)
+            .build());
+    classBuilder.addField(
+        FieldSpec.builder(
+                protoMsgType.annotated(AnnotationSpec.builder(MonotonicNonNull.class).build()),
+                "_proto",
+                PRIVATE)
+            .build());
 
     // Add constructor for serialized payload
     classBuilder.addMethod(
@@ -182,7 +221,7 @@ public class ModelsProto3Gen implements CodeGenerator {
         MethodSpec.methodBuilder("_build")
             .addAnnotation(Override.class)
             .addModifiers(PUBLIC)
-            .returns(immutInterfaceClassName)
+            .returns(immutModelName)
             .addStatement("return this")
             .build());
 
@@ -247,37 +286,11 @@ public class ModelsProto3Gen implements CodeGenerator {
     }
 
     // Add equals method that delegates to the proto object
-    MethodSpec equalsMethod =
-        MethodSpec.methodBuilder("equals")
-            .addAnnotation(Override.class)
-            .addModifiers(PUBLIC)
-            .returns(boolean.class)
-            .addParameter(Object.class, "obj")
-            .addCode(
-                """
-                if (this == obj) {
-                  return true;
-                }
-                if (obj == null || getClass() != obj.getClass()) {
-                  return false;
-                }
-                $L other = ($L) obj;
-                return _proto().equals(other._proto());
-                """,
-                protoClassName,
-                protoClassName)
-            .build();
-    classBuilder.addMethod(equalsMethod);
 
-    // Add hashCode method that delegates to the proto object
-    MethodSpec hashCodeMethod =
-        MethodSpec.methodBuilder("hashCode")
-            .addAnnotation(Override.class)
-            .addModifiers(PUBLIC)
-            .returns(int.class)
-            .addStatement("return _proto().hashCode()")
-            .build();
-    classBuilder.addMethod(hashCodeMethod);
+    util.addImmutableModelObjectMethods(
+        immutModelName,
+        modelMethods.stream().map(ExecutableElement::getSimpleName).collect(Collectors.toSet()),
+        classBuilder);
 
     // Add Builder inner class
     TypeSpec builderTypeSpec =
@@ -286,7 +299,7 @@ public class ModelsProto3Gen implements CodeGenerator {
             packageName,
             protoClassName,
             protoMsgClassName,
-            immutInterfaceName,
+            immutModelName,
             modelMethods);
     classBuilder.addType(builderTypeSpec);
     classBuilder.addMethod(
@@ -371,7 +384,8 @@ public class ModelsProto3Gen implements CodeGenerator {
       } else {
         getterBuilder
             .addCode(protoPresenceCheck)
-            .addCode("""
+            .addCode(
+                """
                 return null;
               }
               """);
@@ -393,15 +407,14 @@ public class ModelsProto3Gen implements CodeGenerator {
       String packageName,
       String protoClassName,
       String protoMsgClassName,
-      String immutInterfaceName,
+      ClassName immutInterfaceName,
       List<ExecutableElement> modelMethods) {
     ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
 
     ClassName immutableProtoType = ClassName.get(packageName, protoClassName);
 
     // Create class interfaces
-    ClassName builderInterfaceClassName =
-        ClassName.get(packageName, immutInterfaceName).nestedClass("Builder");
+    ClassName builderInterfaceClassName = immutInterfaceName.nestedClass("Builder");
 
     ClassName protoBuilderClassName =
         ClassName.get(packageName, protoMsgClassName).nestedClass("Builder");

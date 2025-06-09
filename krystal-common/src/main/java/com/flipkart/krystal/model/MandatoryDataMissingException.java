@@ -23,7 +23,7 @@ public class MandatoryDataMissingException extends StackTracelessException {
   }
 
   private String createMessage() {
-    return "Mandatory data field '%s' of type '%s' does not have a value"
+    return "Mandatory data field '%s' of the model '%s' does not have a value"
         .formatted(dataFieldName, modelType);
   }
 }

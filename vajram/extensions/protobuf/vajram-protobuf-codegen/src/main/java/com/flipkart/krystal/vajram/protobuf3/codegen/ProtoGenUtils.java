@@ -23,7 +23,6 @@ import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.lattice.vajram.sdk.InvocableOutsideProcess;
 import com.flipkart.krystal.model.SupportedModelProtocols;
-import com.flipkart.krystal.serial.SupportedSerdeProtocols;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
 import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
@@ -101,8 +100,8 @@ public class ProtoGenUtils {
       return false;
     }
 
-    SupportedSerdeProtocols supportedSerdeProtocols =
-        vajramClass.getAnnotation(SupportedSerdeProtocols.class);
+    SupportedModelProtocols supportedSerdeProtocols =
+        vajramClass.getAnnotation(SupportedModelProtocols.class);
     List<? extends TypeMirror> serializationProtocols =
         getSerializationProtocols(supportedSerdeProtocols, util);
     if (serializationProtocols.stream()
@@ -266,7 +265,7 @@ public class ProtoGenUtils {
   }
 
   static List<? extends TypeMirror> getSerializationProtocols(
-      @Nullable SupportedSerdeProtocols supportedSerdeProtocols, VajramCodeGenUtility util) {
+      @Nullable SupportedModelProtocols supportedSerdeProtocols, VajramCodeGenUtility util) {
     return supportedSerdeProtocols == null
         ? List.of()
         : util.codegenUtil().getTypesFromAnnotationMember(supportedSerdeProtocols::value);
