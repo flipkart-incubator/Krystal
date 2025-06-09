@@ -20,7 +20,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Message;
 import io.grpc.BindableService;
-import io.grpc.Context.Key;
+import io.grpc.Context;
 import io.grpc.Grpc;
 import io.grpc.InsecureServerCredentials;
 import io.grpc.Server;
@@ -169,7 +169,7 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
     return seedMap;
   }
 
-  private void addHeader(Key<String> key, Map<BindingKey, Object> map) {
+  private void addHeader(Context.Key<String> key, Map<BindingKey, Object> map) {
     String headerValue = key.get();
     if (headerValue != null) {
       String headerKey = key.toString();

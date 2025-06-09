@@ -82,7 +82,7 @@ class FkJavaCodeStandard implements Plugin<Project> {
         project.tasks.named('spotlessJava').configure { mustRunAfter('compileTestJava') }
 
         project.afterEvaluate(p -> {
-            p.tasks.named('spotlessCheck') {
+            p.tasks.named('assemble') {
                 it.dependsOn('spotlessApply')
             }
         })

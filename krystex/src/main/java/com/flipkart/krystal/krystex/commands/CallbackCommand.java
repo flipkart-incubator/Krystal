@@ -30,6 +30,7 @@ public record CallbackCommand(
     return Set.of(dependency);
   }
 
+  @Override
   public Dependency dependency() {
     return dependency;
   }
