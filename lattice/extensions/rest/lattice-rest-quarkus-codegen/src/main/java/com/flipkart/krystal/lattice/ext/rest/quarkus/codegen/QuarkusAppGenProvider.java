@@ -1,20 +1,18 @@
 package com.flipkart.krystal.lattice.ext.rest.quarkus.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.FINAL;
-import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
 import static javax.lang.model.element.Modifier.PUBLIC;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
-import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
+import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
 import com.google.auto.service.AutoService;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import io.quarkus.runtime.QuarkusApplication;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.TypeElement;
 

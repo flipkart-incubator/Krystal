@@ -3,7 +3,6 @@ package com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.app;
 import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategy.NATIVE_THREAD_PER_REQUEST;
 import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopant.threadingStrategy;
 import static com.flipkart.krystal.lattice.vajram.VajramDopant.vajramGraph;
-import static flipkart.krystal.lattice.ext.rest.quarkus.app.QuarkusApplicationDopant.quarkusApplication;
 import static flipkart.krystal.lattice.ext.rest.quarkus.restServer.QuarkusRestServerDopant.quarkusRestServer;
 
 import com.flipkart.krystal.lattice.core.Application;

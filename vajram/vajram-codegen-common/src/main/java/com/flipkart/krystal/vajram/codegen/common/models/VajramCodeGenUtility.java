@@ -546,7 +546,7 @@ public class VajramCodeGenUtility {
     return vajramId + Constants.IMPL_SUFFIX;
   }
 
-  public static String  getFacetsInterfaceName(String vajramName) {
+  public static String getFacetsInterfaceName(String vajramName) {
     return vajramName + Constants.FACETS_CLASS_SUFFIX;
   }
 

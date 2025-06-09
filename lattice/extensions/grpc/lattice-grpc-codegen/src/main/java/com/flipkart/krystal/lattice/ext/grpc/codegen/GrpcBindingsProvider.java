@@ -2,9 +2,9 @@ package com.flipkart.krystal.lattice.ext.grpc.codegen;
 
 import static java.util.Objects.requireNonNull;
 
+import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils;
 import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider;
-import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcServer;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcServerDopant;
 import com.google.auto.service.AutoService;
@@ -15,6 +15,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 @AutoService(BindingsProvider.class)
 public final class GrpcBindingsProvider implements BindingsProvider {
+  @Override
   public ImmutableList<Binding> bindings(LatticeCodegenContext context) {
     TypeElement latticeAppElem = context.latticeAppTypeElement();
     GrpcServer grpcServer = latticeAppElem.getAnnotation(GrpcServer.class);

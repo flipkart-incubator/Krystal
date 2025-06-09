@@ -2,6 +2,7 @@ package com.flipkart.krystal.lattice.samples.rest.json.sampleRestService;
 
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 public record ByteArray(byte[] b) {
 
@@ -10,7 +11,7 @@ public record ByteArray(byte[] b) {
   }
 
   @Override
-  public boolean equals(Object obj) {
+  public boolean equals(@Nullable Object obj) {
     return obj instanceof ByteArray byteArray && Arrays.equals(this.b, byteArray.b);
   }
 

@@ -10,7 +10,6 @@ import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.PlainJavaObject;
 import com.flipkart.krystal.model.SupportedModelProtocols;
-import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.json.Json;
 import java.util.List;
 import java.util.Map;

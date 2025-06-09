@@ -24,7 +24,6 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-import jakarta.enterprise.inject.spi.CDI;
 import jakarta.inject.Inject;
 import java.io.Closeable;
 import java.io.IOException;
@@ -111,7 +110,7 @@ public abstract class QuarkusRestServerDopant
             return;
           }
           ImmutableRequest<RespT> request = requestDeserializer.apply(buffer.getBytes());
-          executorService.submit(
+          executorService.execute(
               () -> {
                 Closeable requestScope = threadingStrategyDopant.openRequestScope(seedMap);
                 try (KrystexVajramExecutor executor =

@@ -8,7 +8,6 @@ import static java.util.Arrays.stream;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static javax.lang.model.element.Modifier.ABSTRACT;
-import static javax.lang.model.element.Modifier.NATIVE;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
 
@@ -31,7 +30,6 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-import com.squareup.javapoet.TypeSpec.Builder;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -87,7 +85,7 @@ public class CodeGenUtility {
   private final Types typeUtils;
   private final Elements elementUtils;
   private final Class<?> generator;
-  @Nullable private final String phaseString;
+  private final @Nullable String phaseString;
   @Getter private final DataTypeRegistry dataTypeRegistry;
 
   public CodeGenUtility(
@@ -161,7 +159,7 @@ public class CodeGenUtility {
         depReqClassName.substring(0, lastDotIndex), depReqClassName.substring(lastDotIndex + 1));
   }
 
-  public static void addCommonObjectMethods(Builder classBuilder) {
+  public static void addCommonObjectMethods(TypeSpec.Builder classBuilder) {
     classBuilder.addAnnotation(
         AnnotationSpec.builder(ToString.class).addMember("doNotUseGetters", "true").build());
   }

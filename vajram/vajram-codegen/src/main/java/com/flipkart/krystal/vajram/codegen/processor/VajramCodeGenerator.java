@@ -1,8 +1,8 @@
 package com.flipkart.krystal.vajram.codegen.processor;
 
+import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.addCommonObjectMethods;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.annotations;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.getTypeParameters;
-import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.addCommonObjectMethods;
 import static com.flipkart.krystal.codegen.common.models.Constants.EMPTY_CODE_BLOCK;
 import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
@@ -66,6 +66,7 @@ import com.flipkart.krystal.data.FacetValuesContainer;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
+import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
@@ -109,7 +110,6 @@ import com.flipkart.krystal.vajram.facets.DependencyCommand;
 import com.flipkart.krystal.vajram.facets.FacetIdNameMapping;
 import com.flipkart.krystal.vajram.facets.FacetValidation;
 import com.flipkart.krystal.vajram.facets.FanoutCommand;
-import com.flipkart.krystal.vajram.facets.Input;
 import com.flipkart.krystal.vajram.facets.One2OneCommand;
 import com.flipkart.krystal.vajram.facets.resolution.AbstractFanoutInputResolver;
 import com.flipkart.krystal.vajram.facets.resolution.AbstractOne2OneInputResolver;
@@ -1429,7 +1429,7 @@ public class VajramCodeGenerator implements CodeGenerator {
             "var $L = new $T()",
             RESOLVER_REQUESTS,
             ParameterizedTypeName.get(ClassName.get(ArrayList.class), requestBuilderType));
-        if (util.codegenUtil().isRawAssignable(actualReturnType, Builder.class)) {
+        if (util.codegenUtil().isRawAssignable(actualReturnType, ImmutableRequest.Builder.class)) {
           if (depInputNames.size() <= 1) {
             util.error(
                 "Resolver method that returns a request builder object must resolve multiple dependency inputs. Otherwise this can lead to unnecessary creation of request builder objects.",
@@ -1537,7 +1537,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                 immutFacetsType,
                 Sets.union(
                     eligibleFacets.stream()
-                        .filter(f -> !(f.facetTypes().contains(INPUT)))
+                        .filter(f -> !f.facetTypes().contains(INPUT))
                         .map(FacetGenModel::name)
                         .collect(Collectors.toSet()),
                     Set.of("_request")),
@@ -2281,11 +2281,9 @@ public class VajramCodeGenerator implements CodeGenerator {
         }
         initializerCodeBlock.add(String.join(",", params) + "),", args.toArray());
       }
-      initializerCodeBlock.add(
-          """
+      initializerCodeBlock.add("""
                 $T.class,
-              """,
-          vajramReqClass);
+              """, vajramReqClass);
       if (facet instanceof DependencyModel vajramDepDef) {
         ClassName depReqClass = ClassName.bestGuess(vajramDepDef.depReqClassQualifiedName());
         ClassName depReqInterfaceClass =

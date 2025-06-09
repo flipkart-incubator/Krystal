@@ -15,6 +15,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 @AutoService(BindingsProvider.class)
 public final class QuarkusRestBindingsProvider implements BindingsProvider {
+  @Override
   public ImmutableList<Binding> bindings(LatticeCodegenContext context) {
     TypeElement latticeAppElem = context.latticeAppTypeElement();
     RestService restService = latticeAppElem.getAnnotation(RestService.class);

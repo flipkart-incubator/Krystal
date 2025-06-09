@@ -10,7 +10,6 @@ dependencies {
     annotationProcessor 'com.flipkart.krystal:vajram-codegen'
 
     implementation 'jakarta.inject:jakarta.inject-api'
-    implementation 'org.checkerframework:checker-qual'
 
     testImplementation project(':vajram:vajram-krystex')
     testImplementation project(':vajram:extensions:guice:vajram-guice')

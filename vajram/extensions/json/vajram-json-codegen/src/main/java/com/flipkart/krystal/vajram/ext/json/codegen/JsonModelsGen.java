@@ -29,7 +29,6 @@ import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-import com.squareup.javapoet.TypeSpec.Builder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -73,7 +72,7 @@ final class JsonModelsGen implements CodeGenerator {
   /**
    * Generates the immutable Json model class that implements the immutable interface.
    *
-   * @param packageName
+   * @param packageName The package name of the model root type
    * @param modelRootType The model root type
    * @param modelMethods The methods from the model root
    * @param immutableModelName The name of the immutable interface
@@ -86,7 +85,7 @@ final class JsonModelsGen implements CodeGenerator {
       List<ExecutableElement> modelMethods,
       ClassName immutableModelName,
       ClassName immutableJsonModelName) {
-    Builder classBuilder =
+    TypeSpec.Builder classBuilder =
         util.classBuilder(immutableJsonModelName.simpleName())
             .addAnnotation(
                 AnnotationSpec.builder(JsonDeserialize.class)
@@ -120,7 +119,7 @@ final class JsonModelsGen implements CodeGenerator {
             .addModifiers(PUBLIC)
             .returns(byteArrayType)
             .addCode(
-"""
+                """
 if (_serializedPayload == null) {
   try{
     this._serializedPayload = _WRITER.writeValueAsBytes(this);
@@ -153,7 +152,7 @@ return _serializedPayload;
             .addModifiers(PRIVATE)
             .returns(immutablePojoName)
             .addCode(
-"""
+                """
         if (_pojo == null && _serializedPayload != null) {
           try{
             _pojo = _READER.readValue(_serializedPayload, $T.class)._pojo();

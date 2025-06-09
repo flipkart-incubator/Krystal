@@ -1,6 +1,7 @@
 package com.flipkart.krystal.lattice.core;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+import static java.util.Objects.requireNonNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -28,6 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import jakarta.inject.Singleton;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Modifier;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -95,11 +97,20 @@ public abstract class Application {
             dependencyInjectionBinder.bindToInstance(
                 (Class<Annotation>) annotation.annotationType(), annotation));
 
+    LatticeAppConfig latticeAppConfig;
     System.err.println("Lattice app args in APP: " + Arrays.deepToString(args));
-    LatticeAppConfig latticeAppConfig =
-        configMapper.readValue(
-            this.getClass().getClassLoader().getResource(latticeConfigFile),
-            LatticeAppConfig.class);
+    if (latticeConfigFile == null) {
+      latticeAppConfig = new LatticeAppConfig();
+    } else {
+      URL configResource =
+          requireNonNull(this.getClass().getClassLoader()).getResource(latticeConfigFile);
+      if (configResource == null) {
+        latticeAppConfig = new LatticeAppConfig();
+
+      } else {
+        latticeAppConfig = configMapper.readValue(configResource, LatticeAppConfig.class);
+      }
+    }
     latticeAppConfig
         .configsByDopantType()
         .forEach(
@@ -114,11 +125,13 @@ public abstract class Application {
     Map<Class<? extends DopantSpecBuilder>, DopantSpecBuilder> accumulator =
         new LinkedHashMap<>(allSpecBuilders);
     while (!currentIteration.isEmpty()) {
-      Map<Class<? extends DopantSpecBuilder>, DopantSpecBuilder> newBatch = new LinkedHashMap<>();
+      Map<Class<? extends DopantSpecBuilder<?, ?, ?>>, DopantSpecBuilder> newBatch =
+          new LinkedHashMap<>();
       for (DopantSpecBuilder<?, ?, ?> specBuilder : currentIteration) {
         var additionalDopants = specBuilder.getAdditionalDopants();
         for (DopantSpecBuilder<?, ?, ?> additionalDopant : additionalDopants) {
-          var newType = additionalDopant.getClass();
+          Class<? extends DopantSpecBuilder<?, ?, ?>> newType =
+              (Class<? extends DopantSpecBuilder<?, ?, ?>>) additionalDopant.getClass();
           if (!accumulator.containsKey(newType)) {
             newBatch.put(newType, additionalDopant);
             accumulator.put(newType, additionalDopant);
@@ -236,7 +249,6 @@ public abstract class Application {
             configurationType,
             specBuilder.getClass(),
             DopantType.class);
-        continue;
       } else {
         String dopantType = dopantTypeAnno.value();
         if (configTypesByName.containsKey(dopantType)) {
@@ -245,7 +257,6 @@ public abstract class Application {
               dopantType,
               configurationType,
               configTypesByName.get(dopantType));
-          continue;
         } else {
           configTypesByName.put(dopantType, configurationType);
         }

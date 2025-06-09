@@ -658,7 +658,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
           DependentChain dependentChain) {
     NavigableSet<OutputLogicDecorator> sortedDecorators =
         getSortedOutputLogicDecorators(dependentChain);
-    OutputLogic<Object> logic = outputLogicDefinition.logic()::execute;
+    OutputLogic<Object> logic = outputLogicDefinition.logic();
 
     for (OutputLogicDecorator outputLogicDecorator : sortedDecorators) {
       logic = outputLogicDecorator.decorateLogic(logic, outputLogicDefinition);

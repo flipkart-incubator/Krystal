@@ -16,13 +16,11 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
-import lombok.experimental.UtilityClass;
 
 public class LatticeCodegenUtils {
   public static final String LATTICE_APP_IMPL_SUFFIX = "_Impl";
   public static final String APP_DOPANT_NAME_SEPARATOR = "_";
   public static final String DOPANT_IMPL_SUFFIX = "_Impl";
-
 
   private final CodeGenUtility util;
 
@@ -30,17 +28,20 @@ public class LatticeCodegenUtils {
     this.util = util;
   }
 
-  public String getDopantImplName(TypeElement latticeAppElem, Class<? extends Dopant<?,?>> dopantClass) {
+  public String getDopantImplName(
+      TypeElement latticeAppElem, Class<? extends Dopant<?, ?>> dopantClass) {
     return latticeAppElem.getSimpleName().toString()
-           + APP_DOPANT_NAME_SEPARATOR
-           + dopantClass.getSimpleName()
-           + DOPANT_IMPL_SUFFIX;
+        + APP_DOPANT_NAME_SEPARATOR
+        + dopantClass.getSimpleName()
+        + DOPANT_IMPL_SUFFIX;
   }
 
   public MethodSpec.Builder dopantConstructorOverride(Class<? extends Dopant<?, ?>> dopantClass) {
     TypeElement dopantElement =
         requireNonNull(
-            util.processingEnv().getElementUtils().getTypeElement(dopantClass.getCanonicalName()));
+            util.processingEnv()
+                .getElementUtils()
+                .getTypeElement(requireNonNull(dopantClass.getCanonicalName())));
 
     List<ExecutableElement> injectionCtors = new ArrayList<>();
     ExecutableElement noArgCtor = null;

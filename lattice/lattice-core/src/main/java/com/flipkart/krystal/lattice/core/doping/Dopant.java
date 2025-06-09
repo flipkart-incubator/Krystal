@@ -19,7 +19,7 @@ public interface Dopant<A extends Annotation, C extends DopantConfig> {
    * prevent the application from exiting. If this method returns for all dopants, then the
    * application is terminated.
    *
-   * @throws InterruptedException
+   * @throws InterruptedException if thread is interrupted when this method blocks
    */
   default void tryMainMethodExit() throws InterruptedException {}
 }

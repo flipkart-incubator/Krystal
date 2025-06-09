@@ -97,7 +97,7 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
           try {
             customCodeGeneratorProvider.create(creationContext).generate();
           } catch (Exception e) {
-            continue;
+            util.codegenUtil().note(e.toString());
           }
         }
         this.vajramDefinitions.remove(vajramDefinition);
@@ -105,7 +105,6 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
         util.codegenUtil().note("****************************************************");
         util.codegenUtil().note("Skipping processing of " + vajramDefinition + " due to " + e);
         util.codegenUtil().note("****************************************************");
-        continue;
       }
     }
 

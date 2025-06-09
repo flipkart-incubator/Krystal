@@ -7,7 +7,7 @@ import lombok.AllArgsConstructor;
 public class SpecBuilders {
   private ImmutableMap<Class<? extends DopantSpecBuilder>, DopantSpecBuilder> allSpecBuilders;
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({"unchecked", "cast.unsafe"})
   public <T extends DopantSpecBuilder<?, ?, ?>> T getSpecBuilder(Class<T> type) {
     return (T) allSpecBuilders.get(type);
   }

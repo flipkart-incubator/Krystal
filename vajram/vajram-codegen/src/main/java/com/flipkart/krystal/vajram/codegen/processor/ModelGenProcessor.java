@@ -3,7 +3,6 @@ package com.flipkart.krystal.vajram.codegen.processor;
 import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
 import static com.flipkart.krystal.vajram.codegen.processor.Constants.DEFAULT_MODELS_CODEGEN_PROVIDER;
 import static java.lang.System.lineSeparator;
-import static java.util.Objects.requireNonNullElse;
 import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
@@ -86,7 +85,6 @@ public final class ModelGenProcessor extends AbstractProcessor {
           customCodeGeneratorProvider.create(creationContext).generate();
         } catch (Exception e) {
           util.error(e.toString(), creationContext.modelRootType());
-          continue;
         }
       }
     }

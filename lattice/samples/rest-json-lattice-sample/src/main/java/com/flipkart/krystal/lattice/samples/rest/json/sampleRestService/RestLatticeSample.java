@@ -15,7 +15,6 @@ import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.json.Json;
-import com.google.protobuf.ByteString;
 import jakarta.inject.Inject;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +31,7 @@ import java.util.Optional;
 @Vajram
 public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
   static class _Inputs {
-    @SerialId(1)
+
     int optionalInput;
 
     @SerialId(2)

@@ -25,7 +25,7 @@ public final class Json implements SerdeProtocol {
 
   public static final ObjectReader OBJECT_READER = OBJECT_MAPPER.reader();
   public static final ObjectWriter OBJECT_WRITER = OBJECT_MAPPER.writer();
-  
+
   public static final String JSON_SUFFIX = "Json";
 
   private Json() {}

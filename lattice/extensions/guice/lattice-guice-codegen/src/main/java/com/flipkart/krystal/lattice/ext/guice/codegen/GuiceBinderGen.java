@@ -11,8 +11,9 @@ import static java.util.stream.Collectors.joining;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.datatypes.Trilean;
+import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider;
-import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.BindTo.Provider;
+import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.BindTo;
 import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.Binding;
 import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.BindingScope;
 import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.DopantBinding;
@@ -20,7 +21,6 @@ import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.ProviderBinding
 import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.SimpleBinding;
 import com.flipkart.krystal.lattice.codegen.spi.DepInjectBinderGen;
 import com.flipkart.krystal.lattice.codegen.spi.LatticeAppCodeGenAttrsProvider;
-import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.core.Application;
 import com.flipkart.krystal.lattice.ext.guice.GuiceModuleBinder;
 import com.flipkart.krystal.lattice.ext.guice.servlet.GuiceServletModuleBinder;
@@ -31,7 +31,6 @@ import com.google.inject.name.Names;
 import com.google.inject.servlet.RequestScoped;
 import com.google.inject.util.Providers;
 import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.CodeBlock.Builder;
 import jakarta.inject.Singleton;
 import java.lang.annotation.Annotation;
 import java.util.List;
@@ -126,7 +125,7 @@ $generatedProviders:L
 
   private CodeBlock getBindingsCode(LatticeCodegenContext context) {
     CodeGenUtility util = context.codeGenUtility().codegenUtil();
-    Builder codeBlock = CodeBlock.builder();
+    CodeBlock.Builder codeBlock = CodeBlock.builder();
     List<LatticeAppCodeGenAttrsProvider> providers =
         StreamSupport.stream(
                 ServiceLoader.load(
@@ -161,7 +160,7 @@ $generatedProviders:L
               dopantBinding.dopantImplType(),
               Singleton.class);
         } else if (binding instanceof SimpleBinding simpleBinding) {
-          if (simpleBinding.bindTo() instanceof Provider provider) {
+          if (simpleBinding.bindTo() instanceof BindTo.Provider provider) {
             CodeBlock named = simpleBinding.named();
             Class<? extends Annotation> scopeAnnotation = getScopeAnnotation(provider.scope());
             codeBlock.addStatement(
@@ -194,7 +193,7 @@ $generatedProviders:L
 
   private CodeBlock getProviderMethods(
       LatticeCodegenContext context, ServiceLoader<BindingsProvider> bindingGens) {
-    Builder codeBlock = CodeBlock.builder();
+    CodeBlock.Builder codeBlock = CodeBlock.builder();
     for (BindingsProvider bindingsProvider : bindingGens) {
       for (Binding binding : bindingsProvider.bindings(context)) {
         if (binding instanceof ProviderBinding providerBinding) {

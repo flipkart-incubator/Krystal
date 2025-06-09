@@ -736,15 +736,14 @@ public final class JavaModelsGenerator implements CodeGenerator {
 
         IfAbsentThen ifAbsentThen = util.getIfAbsent(method).value();
         switch (ifAbsentThen) {
-          case FAIL:
-            // FAIL strategy - throw exception when value is null
-            buildMethodBuilder.addStatement(
-                "throw new $T($S, $S)",
-                MandatoryDataMissingException.class,
-                immutableModelName.simpleName(),
-                fieldName);
-            break;
-          case ASSUME_DEFAULT_VALUE:
+          case FAIL ->
+          // FAIL strategy - throw exception when value is null
+          buildMethodBuilder.addStatement(
+              "throw new $T($S, $S)",
+              MandatoryDataMissingException.class,
+              immutableModelName.simpleName(),
+              fieldName);
+          case ASSUME_DEFAULT_VALUE -> {
             try {
               buildMethodBuilder.addStatement(
                   "this.$N = $L", fieldName, dataType.defaultValueExpr(util.processingEnv()));
@@ -753,9 +752,8 @@ public final class JavaModelsGenerator implements CodeGenerator {
                   "Could not find default value expression for type '%s'".formatted(dataType),
                   method);
             }
-            break;
-          default:
-            throw new AssertionError("Unexpected IfAbsentThen = " + ifAbsentThen);
+          }
+          default -> throw new AssertionError("Unexpected IfAbsentThen = " + ifAbsentThen);
         }
         buildMethodBuilder.endControlFlow();
       }

@@ -1,7 +1,6 @@
 package com.flipkart.krystal.lattice.ext.grpc;
 
 import io.grpc.Context;
-import io.grpc.Context.Key;
 import io.grpc.Contexts;
 import io.grpc.Metadata;
 import io.grpc.ServerCall;
@@ -16,10 +15,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class StandardHeadersInterceptor implements ServerInterceptor {
 
-  private final Key<String> requestIdContextKey;
+  private final Context.Key<String> requestIdContextKey;
   private final Metadata.Key<String> requestIdMetadataKey;
 
-  private final Key<String> acceptHeaderContextKey;
+  private final Context.Key<String> acceptHeaderContextKey;
   private final Metadata.Key<String> acceptMetadataKey;
 
   @Inject

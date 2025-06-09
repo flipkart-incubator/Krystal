@@ -46,7 +46,7 @@ class FkJavaCodeStandard implements Plugin<Project> {
         ]
         checkerFramework.extraJavacArgs.add("-Astubs=${project.rootDir}/config/checker/stubs")
         checkerFramework.extraJavacArgs.add("-AskipFiles=/build/generated/")
-        def checker_version = '3.49.4'
+        def checker_version = '3.48.4'
         project.dependencies.add('checkerFramework', "org.checkerframework:checker:${checker_version}")
         project.dependencies.add('compileOnly', "org.checkerframework:checker-qual:${checker_version}")
         project.dependencies.add('annotationProcessor', "org.checkerframework:checker-qual:${checker_version}")
@@ -118,6 +118,8 @@ class FkJavaCodeStandard implements Plugin<Project> {
     }
 
     private static void junitPlatform(Project project) {
+        project.dependencies.add('testImplementation', project.getDependencies().platform('org.junit:junit-bom:5.13.0'))
+        project.dependencies.add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher:1.13.0')
         project.test {
             useJUnitPlatform()
         }

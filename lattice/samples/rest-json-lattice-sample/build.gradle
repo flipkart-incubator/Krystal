@@ -19,6 +19,8 @@ dependencies {
     implementation project(':vajram:extensions:json:vajram-json')
     implementation project(':vajram:vajram-java-sdk')
 
+    api platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
+
     runtimeOnly 'jakarta.servlet:jakarta.servlet-api'
 
     implementation 'com.google.inject.extensions:guice-servlet'

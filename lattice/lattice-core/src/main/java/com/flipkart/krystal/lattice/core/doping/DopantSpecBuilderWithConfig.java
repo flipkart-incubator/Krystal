@@ -1,7 +1,6 @@
 package com.flipkart.krystal.lattice.core.doping;
 
 import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoAnnotation;
-import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoConfiguration;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public abstract class DopantSpecBuilderWithConfig<
@@ -16,7 +15,6 @@ public abstract class DopantSpecBuilderWithConfig<
     return NoAnnotation.class;
   }
 
-  @Deprecated
   @Override
   public final DS _buildSpec(@Nullable NoAnnotation annotation, @Nullable C configuration) {
     return _buildSpec(configuration);

@@ -6,6 +6,8 @@ dependencies {
     implementation 'io.quarkus.vertx.utils:quarkus-vertx-utils'
     implementation 'io.vertx:vertx-web'
 
+    api platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
+
 }
 
 extraJavaModuleInfo {

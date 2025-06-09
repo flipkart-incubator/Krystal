@@ -1,8 +1,10 @@
 dependencies {
-    implementation project(":krystal-codegen-common")
-    implementation project(":lattice:lattice-codegen")
-    implementation project(":lattice:extensions:rest:lattice-rest-quarkus")
+    implementation project(':krystal-codegen-common')
+    implementation project(':lattice:lattice-codegen')
+    implementation project(':lattice:extensions:rest:lattice-rest-quarkus')
     implementation project(':vajram:extensions:json:vajram-json')
+
+    api platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
 
     implementation 'io.quarkus:quarkus-core'
 

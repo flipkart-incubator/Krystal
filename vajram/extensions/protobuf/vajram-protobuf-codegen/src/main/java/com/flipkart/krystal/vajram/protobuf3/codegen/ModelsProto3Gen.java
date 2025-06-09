@@ -384,8 +384,7 @@ public class ModelsProto3Gen implements CodeGenerator {
       } else {
         getterBuilder
             .addCode(protoPresenceCheck)
-            .addCode(
-                """
+            .addCode("""
                 return null;
               }
               """);

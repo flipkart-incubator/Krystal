@@ -3,8 +3,8 @@ package com.flipkart.krystal.lattice.ext.grpc.codegen;
 import static com.flipkart.krystal.datatypes.Trilean.TRUE;
 import static java.util.Objects.requireNonNull;
 
-import com.flipkart.krystal.lattice.codegen.spi.LatticeAppCodeGenAttrsProvider;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
+import com.flipkart.krystal.lattice.codegen.spi.LatticeAppCodeGenAttrsProvider;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcServer;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcService;
 import com.google.auto.service.AutoService;

@@ -10,9 +10,9 @@ import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
+import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils;
 import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
-import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcServer;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcServerDopant;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcService;
@@ -29,7 +29,6 @@ import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-import com.squareup.javapoet.TypeSpec.Builder;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -96,7 +95,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
               packageName + '.' + dopantImplName, writer.toString(), latticeAppElem);
     }
 
-    private void serviceDefinitions(GrpcServer grpcServer, Builder classBuilder) {
+    private void serviceDefinitions(GrpcServer grpcServer, TypeSpec.Builder classBuilder) {
       TypeElement latticeAppElem = context.latticeAppTypeElement();
       String latticePackageName =
           requireNonNull(util.processingEnv().getElementUtils().getPackageOf(latticeAppElem))
@@ -153,7 +152,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
           rpcMethodsCode.add(
               CodeBlock.builder()
                   .addNamed(
-"""
+                      """
           @$override:T
           public void $rpcName:L(
               $protoReqMsgType:T request,
@@ -177,7 +176,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
                               "responseMapper",
                               isModel
                                   ? CodeBlock.of(
-"""
+                                      """
                     response == null
                         ? null
                         : (($T<$T>) response)
@@ -191,7 +190,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
 
         servicesCode.add(
             CodeBlock.of(
-"""
+                """
         new $T(){
           $L
         }
@@ -204,7 +203,7 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
           MethodSpec.overriding(
                   util.codegenUtil().getMethod(GrpcServerDopant.class, "serviceDefinitions", 0))
               .addCode(
-"""
+                  """
     return $T.of(
         $L
     );

@@ -3,7 +3,6 @@ package com.flipkart.krystal.traits.matchers;
 import static com.flipkart.krystal.traits.matchers.AnythingMatcher.ANY_NON_NULL;
 import static com.flipkart.krystal.traits.matchers.AnythingMatcher.ANY_VALUE;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @SuppressWarnings("NonBooleanMethodNameMayNotStartWithQuestion")

@@ -12,8 +12,12 @@ public interface LatticeAppCodeGenAttrsProvider {
   LatticeAppCodeGenAttributes get(LatticeCodegenContext context);
 
   /**
-   * @param needsRequestScopedHeaders
-   * @param remotelyInvocableVajrams
+   * Attributes which are using the Lattice Application code generation
+   *
+   * @param needsRequestScopedHeaders Whether the lattice app needs support for request scoping in
+   *     its Dependency Injection
+   * @param remotelyInvocableVajrams The set of remotely invocable vajrams which are exposed as APIs
+   *     in a server
    */
   @Builder
   record LatticeAppCodeGenAttributes(

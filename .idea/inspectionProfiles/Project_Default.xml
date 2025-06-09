@@ -506,6 +506,7 @@
           <option value="ClassEscapesDefinedScope" />
           <option value="TestOnlyProblems" />
           <option value="JavaReflectionMemberAccess" />
+          <option value="cast.unsafe" />
         </list>
       </option>
     </inspection_tool>

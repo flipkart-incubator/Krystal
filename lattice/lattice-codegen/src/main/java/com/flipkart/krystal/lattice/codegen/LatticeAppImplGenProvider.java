@@ -18,7 +18,7 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.TypeSpec.Builder;
+import com.squareup.javapoet.TypeSpec;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.Collection;
@@ -29,7 +29,6 @@ import java.util.ServiceLoader;
 import java.util.ServiceLoader.Provider;
 import java.util.stream.Collectors;
 import javax.lang.model.element.TypeElement;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 @AutoService(LatticeCodeGeneratorProvider.class)
 public final class LatticeAppImplGenProvider implements LatticeCodeGeneratorProvider {
@@ -50,7 +49,7 @@ public final class LatticeAppImplGenProvider implements LatticeCodeGeneratorProv
       this.util = context.codeGenUtility().codegenUtil();
       List<DepInjectBinderGen> services =
           ServiceLoader.load(DepInjectBinderGen.class, this.getClass().getClassLoader()).stream()
-              .map(Provider::get)
+              .map(ServiceLoader.Provider::get)
               .filter(s -> s.isApplicable(context))
               .toList();
       if (services.size() > 1) {
@@ -79,7 +78,7 @@ public final class LatticeAppImplGenProvider implements LatticeCodeGeneratorProv
           ClassName.get(
               packageName, latticeApp.getSimpleName().toString() + LATTICE_APP_IMPL_SUFFIX);
 
-      Builder classBuilder =
+      TypeSpec.Builder classBuilder =
           util.classBuilder(latticeAppImplClassName.simpleName())
               .addModifiers(PUBLIC)
               .superclass(latticeApp.asType())
@@ -106,13 +105,13 @@ public final class LatticeAppImplGenProvider implements LatticeCodeGeneratorProv
     private List<AnnotationSpec> getTypeAnnotations() {
       return ServiceLoader.load(LatticeAppImplContributor.class, this.getClass().getClassLoader())
           .stream()
-          .map(Provider::get)
+          .map(ServiceLoader.Provider::get)
           .map(c -> c.classAnnotations(context))
           .flatMap(Collection::stream)
           .toList();
     }
 
-    private @NonNull MethodSpec getMainMethod(
+    private MethodSpec getMainMethod(
         ClassName latticeAppImplClassName, TypeElement latticeApp, LatticeCodegenContext context) {
       ServiceLoader<LatticeAppImplContributor> contributors =
           ServiceLoader.load(LatticeAppImplContributor.class, this.getClass().getClassLoader());
@@ -121,7 +120,9 @@ public final class LatticeAppImplGenProvider implements LatticeCodeGeneratorProv
               .map(Provider::get)
               .collect(
                   Collectors.toMap(
-                      Object::getClass, c -> Optional.ofNullable(c.mainMethod(context))));
+                      (LatticeAppImplContributor latticeAppImplContributor) ->
+                          (Class<?>) latticeAppImplContributor.getClass(),
+                      c -> Optional.ofNullable(c.mainMethod(context))));
       List<MethodSpec> mainMethodsList =
           mainMethods.values().stream().filter(Optional::isPresent).map(Optional::get).toList();
       if (mainMethodsList.size() > 1) {

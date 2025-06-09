@@ -79,7 +79,6 @@ public class LatticeAnnotationProcessor extends AbstractProcessor {
           customCodeGeneratorProvider.create(codegenContext).generate();
         } catch (Exception e) {
           util.error(e.toString(), latticeAppTypeElement);
-          continue;
         }
       }
     }

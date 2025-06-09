@@ -56,7 +56,7 @@ configure(subprojects.findAll {
     apply plugin: 'java-library'
     apply plugin: 'org.gradlex.extra-java-module-info'
 
-//    apply plugin: 'com.flipkart.java.code.standard'
+    apply plugin: 'com.flipkart.java.code.standard'
 
     dependencies {
         implementation 'com.google.guava:guava'
@@ -82,7 +82,6 @@ configure(subprojects.findAll {
         testCompileOnly 'org.projectlombok:lombok'
         testAnnotationProcessor 'org.projectlombok:lombok'
 
-        api platform('org.junit:junit-bom:5.10.1')
         api platform('org.mockito:mockito-bom:5.17.0')
         api platform('org.assertj:assertj-bom:3.25.2')
         api platform('io.github.resilience4j:resilience4j-bom:2.2.0')
@@ -91,7 +90,6 @@ configure(subprojects.findAll {
         api platform('com.fasterxml.jackson:jackson-bom:2.18.3')
         api platform("com.google.protobuf:protobuf-bom:${protobuf_version}")
         api platform("io.grpc:grpc-bom:${grpc_version}")
-        api platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
 
         constraints {
             String lombok_version = '1.18.36'
@@ -108,16 +106,14 @@ configure(subprojects.findAll {
             implementation 'org.reflections:reflections:0.10.2'
             implementation 'org.slf4j:slf4j-api:2.0.11'
             implementation 'org.yaml:snakeyaml:2.2'
-            implementation 'org.checkerframework:checker-qual:3.49.4'
+            implementation 'com.google.api.grpc:proto-google-common-protos:2.56.0'
 
             runtimeOnly 'jakarta.servlet:jakarta.servlet-api:6.1.0'
 
             compileOnly "org.projectlombok:lombok:$lombok_version"
-            compileOnly 'org.checkerframework:checker-qual:3.49.4'
             compileOnly 'com.google.auto.value:auto-value-annotations:1.11.0'
             compileOnly 'org.jetbrains:annotations:26.0.2'
 
-            annotationProcessor 'org.checkerframework:checker-qual:3.49.4'
             annotationProcessor "com.flipkart.krystal.lattice:lattice-codegen:$lattice_version"
             annotationProcessor "com.flipkart.krystal.lattice:lattice-grpc-codegen:$lattice_version"
             annotationProcessor "com.flipkart.krystal.lattice:lattice-guice-codegen:$lattice_version"
@@ -135,8 +131,6 @@ configure(subprojects.findAll {
             annotationProcessor 'com.google.j2objc:j2objc-annotations:3.0.0'
 
             testImplementation 'com.google.j2objc:j2objc-annotations:3.0.0'
-            testImplementation 'org.checkerframework:checker-qual:3.49.4'
-
 
             testAnnotationProcessor "com.flipkart.krystal:vajram-codegen:$krystal_version"
             testAnnotationProcessor "org.projectlombok:lombok:$lombok_version"

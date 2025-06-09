@@ -17,6 +17,10 @@ public final class LatticeAppConfig {
   @JsonIgnore @NonFinal @MonotonicNonNull
   private ImmutableMap<String, DopantConfig> dopantConfigsAsMap;
 
+  public LatticeAppConfig() {
+    this(ImmutableList.of());
+  }
+
   @JsonCreator
   public LatticeAppConfig(@JsonProperty("dopants") ImmutableList<DopantConfig> dopants) {
     this.dopants = dopants;

@@ -8,7 +8,6 @@ import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider;
 import com.flipkart.krystal.codegen.common.spi.ModelProtocolConfigProvider.ModelProtocolConfig;
 import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider;
-import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.BindTo.Provider;
 import com.flipkart.krystal.lattice.codegen.spi.DefaultSerdeProtocolProvider;
 import com.flipkart.krystal.lattice.codegen.spi.LatticeAppCodeGenAttrsProvider;
 import com.flipkart.krystal.lattice.core.headers.Header;
@@ -164,7 +163,7 @@ if (null == acceptHeader){
           new SimpleBinding(
               ClassName.get(Header.class),
               CodeBlock.of("$T.$L", StandardHeaderNames.class, "ACCEPT"),
-              new Provider(CodeBlock.of("null"), APP_LOGIC_SCOPE)));
+              new BindTo.Provider(CodeBlock.of("null"), APP_LOGIC_SCOPE)));
 
       bindings.add(
           new ProviderBinding(

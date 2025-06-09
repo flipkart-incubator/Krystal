@@ -45,7 +45,7 @@ public class QuarkusAppImplContributor implements LatticeAppImplContributor {
   }
 
   @Override
-  public @Nullable List<AnnotationSpec> classAnnotations(LatticeCodegenContext context) {
+  public List<AnnotationSpec> classAnnotations(LatticeCodegenContext context) {
     return List.of(AnnotationSpec.builder(QuarkusMain.class).build());
   }
 }

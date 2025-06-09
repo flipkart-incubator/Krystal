@@ -22,10 +22,12 @@ public interface BindingsProvider {
   record DopantBinding(ClassName dopantType, ClassName dopantImplType) implements Binding {}
 
   /**
+   * A binding whose value is provided by a provider method
+   *
    * @param name The name of this binding logic. Should be globally unique.
-   * @param boundType
-   * @param dependencies
-   * @param providingLogic
+   * @param boundType The type which is bound
+   * @param dependencies Other bindings this provider depends on
+   * @param providingLogic The actual provision logic
    * @param scope The scope of the binding (RequestScoped, Singleton etc). Empty if no scope
    */
   record ProviderBinding(

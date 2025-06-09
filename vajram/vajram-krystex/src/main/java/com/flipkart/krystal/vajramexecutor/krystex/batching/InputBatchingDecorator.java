@@ -72,8 +72,8 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
           input.facetValues().stream()
               .map(
                   f -> {
-                    if (f instanceof BatchEnabledFacetValues) {
-                      return (BatchEnabledFacetValues) f;
+                    if (f instanceof BatchEnabledFacetValues bef) {
+                      return bef;
                     } else {
                       throw new IllegalStateException(
                           "Expected to receive instance of BatchEnabledFacetValues in batcher %s but received %s"

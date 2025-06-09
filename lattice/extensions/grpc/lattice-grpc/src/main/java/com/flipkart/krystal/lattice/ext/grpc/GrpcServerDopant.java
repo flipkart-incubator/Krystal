@@ -128,7 +128,7 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
           "Expected 'SingleThreadExecutor'. Found " + executorService.getClass());
     }
     Map<BindingKey, Object> seedMap = getRequestSeeds();
-    executorService.submit(
+    executorService.execute(
         () -> {
           Closeable requestScope = threadingStrategyDopant.openRequestScope(seedMap);
           try (KrystexVajramExecutor executor = vajramDopant.createExecutor(singleThreadExecutor)) {

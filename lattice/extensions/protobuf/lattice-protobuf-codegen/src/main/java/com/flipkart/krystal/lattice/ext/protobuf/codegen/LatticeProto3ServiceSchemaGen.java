@@ -267,7 +267,10 @@ class LatticeProto3ServiceSchemaGen implements CodeGenerator {
           .forEach(
               serviceAnno -> {
                 List<VajramInfoLite> vajramInfos =
-                    util.codegenUtil().getTypesFromAnnotationMember(serviceAnno::rpcVajrams).stream()
+                    util
+                        .codegenUtil()
+                        .getTypesFromAnnotationMember(serviceAnno::rpcVajrams)
+                        .stream()
                         .map(
                             typeMirror ->
                                 util.computeVajramInfoLite(

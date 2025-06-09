@@ -6,7 +6,6 @@ class CustomGuiceModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    bind(
-        CustomInjectionSample.class).toInstance(new CustomInjectionSample() {});
+    bind(CustomInjectionSample.class).toInstance(new CustomInjectionSample() {});
   }
 }
