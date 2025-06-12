@@ -5,7 +5,7 @@ import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopan
 import static com.flipkart.krystal.lattice.vajram.VajramDopant.vajramGraph;
 import static flipkart.krystal.lattice.ext.rest.quarkus.restServer.QuarkusRestServerDopant.quarkusRestServer;
 
-import com.flipkart.krystal.lattice.core.Application;
+import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.core.LatticeApp;
 import com.flipkart.krystal.lattice.core.LatticeAppBootstrap;
 import com.flipkart.krystal.lattice.ext.guice.GuiceModuleBinder;
@@ -18,7 +18,7 @@ import flipkart.krystal.lattice.ext.rest.quarkus.restServer.RestService;
 @LatticeApp(
     description = "A sample Lattice Application",
     dependencyInjectionBinder = GuiceServletModuleBinder.class)
-public abstract class SampleRestfulLatticeApp extends Application {
+public abstract class SampleRestfulLatticeApp extends LatticeApplication {
 
   @Override
   public void bootstrap(LatticeAppBootstrap app) {

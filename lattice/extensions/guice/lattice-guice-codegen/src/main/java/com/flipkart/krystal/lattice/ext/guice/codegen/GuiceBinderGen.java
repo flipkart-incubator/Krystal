@@ -6,7 +6,7 @@ import static java.util.Objects.requireNonNull;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.spi.DepInjectBinderGen;
-import com.flipkart.krystal.lattice.core.Application;
+import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.ext.guice.GuiceModuleBinder;
 import com.flipkart.krystal.lattice.ext.guice.servlet.GuiceServletModuleBinder;
 import com.google.auto.service.AutoService;
@@ -94,7 +94,7 @@ return new $guiceModuleBinder:T(
     CodeGenUtility util = context.codeGenUtility().codegenUtil();
     try {
       return util.getMethod(
-          typeElement, Application.class.getMethod("getDependencyInjectionBinder").getName(), 0);
+          typeElement, LatticeApplication.class.getMethod("getDependencyInjectionBinder").getName(), 0);
     } catch (Exception e) {
       throw util.errorAndThrow(
           "Application class has no 'getDependencyInjectionBinder' method. "

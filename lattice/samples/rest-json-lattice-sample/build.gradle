@@ -1,11 +1,6 @@
 plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
-    id 'application'
     id 'io.quarkus' version "${quarkus_version}"
-}
-
-application {
-    mainClassName = 'com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.app.SampleRestfulLatticeApp_ImplTrial'
 }
 
 dependencies {

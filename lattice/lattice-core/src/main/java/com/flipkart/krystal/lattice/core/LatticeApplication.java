@@ -54,7 +54,7 @@ import org.apache.commons.cli.Options;
  */
 @Singleton
 @Slf4j
-public abstract class Application {
+public abstract class LatticeApplication {
 
   private final ObjectMapper configMapper =
       YAMLMapper.builder()

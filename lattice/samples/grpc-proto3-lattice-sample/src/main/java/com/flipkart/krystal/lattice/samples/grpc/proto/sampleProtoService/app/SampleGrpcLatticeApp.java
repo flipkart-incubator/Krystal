@@ -5,7 +5,7 @@ import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopan
 import static com.flipkart.krystal.lattice.ext.grpc.GrpcServerDopant.grpc;
 import static com.flipkart.krystal.lattice.vajram.VajramDopant.vajramGraph;
 
-import com.flipkart.krystal.lattice.core.Application;
+import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.core.LatticeApp;
 import com.flipkart.krystal.lattice.core.LatticeAppBootstrap;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcServer;
@@ -30,7 +30,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 @LatticeApp(
     description = "A sample Lattice Application",
     dependencyInjectionBinder = GuiceServletModuleBinder.class)
-public abstract class SampleGrpcLatticeApp extends Application {
+public abstract class SampleGrpcLatticeApp extends LatticeApplication {
 
   @Override
   public void bootstrap(LatticeAppBootstrap app) {
