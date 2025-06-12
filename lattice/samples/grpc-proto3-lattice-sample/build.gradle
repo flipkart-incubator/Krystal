@@ -1,6 +1,11 @@
 plugins {
     id 'com.flipkart.krystal' version "${krystal_version}"
     id 'com.google.protobuf' version '0.9.4'
+    id 'application'
+}
+
+application {
+    mainClassName = 'com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.app.SampleGrpcLatticeApp_Impl'
 }
 
 dependencies {

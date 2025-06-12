@@ -124,6 +124,7 @@ public class GuiceModuleGenProvider implements LatticeCodeGeneratorProvider {
           } else if (binding instanceof SimpleBinding simpleBinding) {
             if (simpleBinding.bindTo() instanceof BindTo.Provider provider) {
               Class<? extends Annotation> scopeAnnotation = getScopeAnnotation(provider.scope());
+              CodeBlock annotatedWith = simpleBinding.qualifier();
               codeBlock.addStatement(
                   """
                                // Actual values will be set when the RequestScope is opened
@@ -132,7 +133,13 @@ public class GuiceModuleGenProvider implements LatticeCodeGeneratorProvider {
                                     $L
                     """,
                   simpleBinding.bindFrom(),
-                  simpleBinding.qualifier(),
+                  annotatedWith != null
+                      ? CodeBlock.of(
+                          """
+                                    .annotatedWith($L)
+                    """,
+                          annotatedWith)
+                      : EMPTY_CODE_BLOCK,
                   Providers.class,
                   provider.bindToCode(),
                   scopeAnnotation != null

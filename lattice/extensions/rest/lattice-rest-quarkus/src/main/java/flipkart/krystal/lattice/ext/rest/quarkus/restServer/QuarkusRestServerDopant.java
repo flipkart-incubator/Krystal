@@ -124,7 +124,13 @@ public abstract class QuarkusRestServerDopant
                 try (KrystexVajramExecutor executor =
                     vajramDopant.createExecutor(
                         singleThreadExecutor,
-                        List.of(configBuilder -> configBuilder.executorId(requestIdHeader.value())),
+                        List.of(
+                            configBuilder -> {
+                              String requestId = requestIdHeader.value();
+                              if (requestId != null) {
+                                configBuilder.executorId(requestId);
+                              }
+                            }),
                         List.of())) {
                   executor
                       .execute(request)

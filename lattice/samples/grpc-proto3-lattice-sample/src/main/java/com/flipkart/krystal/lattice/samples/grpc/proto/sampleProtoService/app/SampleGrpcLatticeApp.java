@@ -5,9 +5,9 @@ import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopan
 import static com.flipkart.krystal.lattice.ext.grpc.GrpcServerDopant.grpc;
 import static com.flipkart.krystal.lattice.vajram.VajramDopant.vajramGraph;
 
-import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.core.LatticeApp;
 import com.flipkart.krystal.lattice.core.LatticeAppBootstrap;
+import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcServer;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcService;
 import com.flipkart.krystal.lattice.ext.guice.GuiceModuleBinder;

@@ -121,7 +121,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
                 immutClassName.simpleName() + defaultConfig.serdeProtocol().modelClassesSuffix());
         providingLogics.add(
             CodeBlock.of(
-"""
+                """
 if (null == acceptHeader){
               return $T._builder();
             }
@@ -141,7 +141,7 @@ if (null == acceptHeader){
           configs.put(requireNonNull(config.serdeProtocol().getClass().getCanonicalName()), config);
           providingLogics.add(
               CodeBlock.of(
-"""
+                  """
                 case $S -> $T._builder();\
 """,
                   config.serdeProtocol().contentType(),
@@ -152,14 +152,12 @@ if (null == acceptHeader){
       }
       providingLogics.add(
           CodeBlock.of(
-"""
+              """
                 default -> throw new $T($S + acceptHeader.value());\
 """,
               IllegalStateException.class,
               "API '" + vajramInfoLite.vajramId().id() + "' doesn't support the content type: "));
-      providingLogics.add(
-          CodeBlock.of(
-"""
+      providingLogics.add(CodeBlock.of("""
             };
 """));
       bindings.add(

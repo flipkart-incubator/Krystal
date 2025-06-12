@@ -94,7 +94,9 @@ return new $guiceModuleBinder:T(
     CodeGenUtility util = context.codeGenUtility().codegenUtil();
     try {
       return util.getMethod(
-          typeElement, LatticeApplication.class.getMethod("getDependencyInjectionBinder").getName(), 0);
+          typeElement,
+          LatticeApplication.class.getMethod("getDependencyInjectionBinder").getName(),
+          0);
     } catch (Exception e) {
       throw util.errorAndThrow(
           "Application class has no 'getDependencyInjectionBinder' method. "

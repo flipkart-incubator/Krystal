@@ -1,7 +1,5 @@
 package com.flipkart.krystal.lattice.codegen.spi;
 
-import static com.flipkart.krystal.codegen.common.models.Constants.EMPTY_CODE_BLOCK;
-
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.ClassName;
@@ -42,13 +40,7 @@ public interface BindingsProvider {
       implements Binding {}
 
   record SimpleBinding(ClassName bindFrom, @Nullable CodeBlock qualifier, BindTo bindTo)
-      implements Binding {
-
-    @Override
-    public CodeBlock qualifier() {
-      return qualifier != null ? qualifier : EMPTY_CODE_BLOCK;
-    }
-  }
+      implements Binding {}
 
   sealed interface BindTo {
     CodeBlock bindToCode();

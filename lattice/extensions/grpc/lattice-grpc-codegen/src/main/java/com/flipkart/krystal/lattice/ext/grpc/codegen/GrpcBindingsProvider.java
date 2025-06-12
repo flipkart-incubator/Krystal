@@ -10,13 +10,12 @@ import com.flipkart.krystal.lattice.core.headers.Header;
 import com.flipkart.krystal.lattice.core.headers.StandardHeaderNames;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcServer;
 import com.flipkart.krystal.lattice.ext.grpc.GrpcServerDopant;
+import com.flipkart.krystal.tags.Names;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
-import jakarta.inject.Named;
 import javax.lang.model.element.TypeElement;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 @AutoService(BindingsProvider.class)
 public final class GrpcBindingsProvider implements BindingsProvider {
@@ -44,7 +43,7 @@ public final class GrpcBindingsProvider implements BindingsProvider {
   private static Binding bindAcceptHeaderInRequestScope() {
     return new SimpleBinding(
         ClassName.get(Header.class),
-        CodeBlock.of("@$T($T.$L)", Named.class, StandardHeaderNames.class, "ACCEPT"),
+        CodeBlock.of("$T.$L($T.$L)", Names.class, "named", StandardHeaderNames.class, "ACCEPT"),
         new BindTo.Provider(CodeBlock.of("null"), REQUEST));
   }
 }

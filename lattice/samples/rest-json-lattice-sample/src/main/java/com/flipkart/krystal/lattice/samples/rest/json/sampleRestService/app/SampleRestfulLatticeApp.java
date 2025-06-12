@@ -5,9 +5,9 @@ import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopan
 import static com.flipkart.krystal.lattice.vajram.VajramDopant.vajramGraph;
 import static flipkart.krystal.lattice.ext.rest.quarkus.restServer.QuarkusRestServerDopant.quarkusRestServer;
 
-import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.core.LatticeApp;
 import com.flipkart.krystal.lattice.core.LatticeAppBootstrap;
+import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.ext.guice.GuiceModuleBinder;
 import com.flipkart.krystal.lattice.ext.guice.servlet.GuiceServletModuleBinder;
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.RestLatticeSample;
