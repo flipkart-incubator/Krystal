@@ -1,5 +1,7 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
+import static com.flipkart.krystal.model.PlainJavaObject.POJO;
+
 public final class Constants {
   public static final String DEP_RESP = "depResp";
   public static final String RESOLVABLE_INPUTS = "resolvableInputs";
@@ -41,11 +43,10 @@ public final class Constants {
   public static final String FACETS_FIELDS_VAR = "facetsFields";
 
   public static final String IMMUT_SUFFIX = "Immut";
-  public static final String POJO_SUFFIX = "Pojo";
   public static final String REQUEST_SUFFIX = "_Req";
   public static final String IMMUT_REQUEST_SUFFIX = REQUEST_SUFFIX + IMMUT_SUFFIX;
   public static final String IMMUT_REQUEST_POJO_SUFFIX =
-      REQUEST_SUFFIX + IMMUT_SUFFIX + POJO_SUFFIX;
+      REQUEST_SUFFIX + IMMUT_SUFFIX + POJO.modelClassesSuffix();
   public static final String IMPL_SUFFIX = "_Wrpr";
 
   public static final String INPUT_SPECS_CLASS_SUFFIX = "_InputSpecs";

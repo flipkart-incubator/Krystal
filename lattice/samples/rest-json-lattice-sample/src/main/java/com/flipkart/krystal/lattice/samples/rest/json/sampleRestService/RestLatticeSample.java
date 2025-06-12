@@ -92,7 +92,7 @@ public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
               $$ optionalLongInput: %s $$
               $$ mandatoryLongInput: %s $$
               $$ optionalByteString: %s $$
-              $$ defaultByteString: %s $$
+              $$ defaultByteString: %s ---- $$
               """
                 .formatted(
                     optionalInput,

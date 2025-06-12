@@ -106,6 +106,12 @@ public class CodeGenUtility {
     return str.isEmpty() ? str : Character.toLowerCase(str.charAt(0)) + str.substring(1);
   }
 
+  public String getPackageName(Element element) {
+    return requireNonNull(processingEnv().getElementUtils().getPackageOf(element))
+        .getQualifiedName()
+        .toString();
+  }
+
   public void addImmutableModelObjectMethods(
       ClassName immutInterfaceName,
       Set<? extends CharSequence> modelFieldNames,
@@ -495,19 +501,19 @@ public class CodeGenUtility {
   }
 
   /**
-   * Creates a class builder with the given class name. If the className is a blank string, then the
-   * builder represents an anonymous class.
+   * Creates a class builder with the given class name. If the simpleName is a blank string, then
+   * the builder represents an anonymous class.
    *
-   * @param className fully qualified class name
+   * @param simpleName simple name of class
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
-  public TypeSpec.Builder classBuilder(String className) {
+  public TypeSpec.Builder classBuilder(String simpleName) {
     TypeSpec.Builder classBuilder;
-    if (className.isBlank()) {
+    if (simpleName.isBlank()) {
       classBuilder = TypeSpec.anonymousClassBuilder("");
     } else {
-      classBuilder = TypeSpec.classBuilder(className);
+      classBuilder = TypeSpec.classBuilder(simpleName);
     }
     addDefaultAnnotations(classBuilder);
     return classBuilder;
@@ -690,7 +696,7 @@ public class CodeGenUtility {
     }
 
     String modelRootName = modelRootType.getSimpleName().toString();
-    String packageName = processingEnv().getElementUtils().getPackageOf(modelRootType).toString();
+    String packageName = getPackageName(modelRootType);
     return ClassName.get(packageName, modelRootName + modelRoot.suffixSeparator() + IMMUT_SUFFIX);
   }
 

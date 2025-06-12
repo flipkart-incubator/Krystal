@@ -7,9 +7,8 @@ dependencies {
     api platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
 
     implementation 'io.quarkus:quarkus-core'
+    implementation 'io.vertx:vertx-web'
 
-    compileOnly 'com.google.auto.service:auto-service'
-    annotationProcessor 'com.google.auto.service:auto-service'
 }
 
 extraJavaModuleInfo {

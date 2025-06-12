@@ -10,6 +10,7 @@ application {
 
 dependencies {
     implementation 'io.quarkus:quarkus-core'
+    implementation 'io.quarkus:quarkus-arc'
     implementation 'io.vertx:vertx-web'
 
     implementation project(':krystal-common')

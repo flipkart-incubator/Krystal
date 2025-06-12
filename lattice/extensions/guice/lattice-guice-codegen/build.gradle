@@ -5,6 +5,5 @@ dependencies {
     implementation 'com.google.inject:guice'
     implementation 'com.google.inject.extensions:guice-servlet'
 
-    compileOnly 'com.google.auto.service:auto-service'
-    annotationProcessor 'com.google.auto.service:auto-service'
+    implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api'
 }

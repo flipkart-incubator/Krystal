@@ -11,7 +11,7 @@ import java.util.function.Consumer;
 
 record VajramDopantSpec(
     VajramKryonGraph vajramGraph,
-    ImmutableList<Consumer<KrystexVajramExecutorConfigBuilder>> kryonExecConfigProcessors,
+    ImmutableList<Consumer<KrystexVajramExecutorConfigBuilder>> krystexExecutorConfigurators,
     ImmutableList<KryonExecutorConfigurator> kryonExecutorConfigurators)
     implements DopantSpec<NoAnnotation, NoConfiguration, VajramDopant> {
 

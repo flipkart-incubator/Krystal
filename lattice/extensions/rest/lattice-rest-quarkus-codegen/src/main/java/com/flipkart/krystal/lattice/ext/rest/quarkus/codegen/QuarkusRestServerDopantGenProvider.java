@@ -2,6 +2,7 @@ package com.flipkart.krystal.lattice.ext.rest.quarkus.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.lowerCaseFirstChar;
 import static com.flipkart.krystal.codegen.common.models.CodegenPhase.FINAL;
+import static com.flipkart.krystal.vajram.json.Json.JSON;
 import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
@@ -12,7 +13,6 @@ import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils;
 import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfoLite;
-import com.flipkart.krystal.vajram.json.Json;
 import com.google.auto.service.AutoService;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
@@ -100,12 +100,15 @@ public class QuarkusRestServerDopantGenProvider implements LatticeCodeGeneratorP
               router
                   .post($S)
                   .handler(
-                      event -> executeHttpRequest(event, $T::new));
+                      routingContext -> executeHttpRequest(routingContext, $T::new));
             """,
             pathPrefix + "/" + lowerCaseFirstChar(vajramId),
             ClassName.get(
                 packageName,
-                vajramId + Constants.REQUEST_SUFFIX + Constants.IMMUT_SUFFIX + Json.JSON_SUFFIX));
+                vajramId
+                    + Constants.REQUEST_SUFFIX
+                    + Constants.IMMUT_SUFFIX
+                    + JSON.modelClassesSuffix()));
       }
       classBuilder.addMethod(methodSpec.build());
     }

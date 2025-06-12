@@ -5,4 +5,5 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class StandardHeaderNames {
   public static final String ACCEPT = "Accept";
+  public static final String REQUEST_ID = "X-Request-Id";
 }

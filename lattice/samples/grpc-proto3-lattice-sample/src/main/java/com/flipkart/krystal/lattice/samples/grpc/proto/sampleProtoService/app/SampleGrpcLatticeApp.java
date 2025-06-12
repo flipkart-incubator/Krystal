@@ -28,7 +28,6 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
           doc = "A super service"),
     })
 @LatticeApp(
-    name = "LatticeSampleApplication",
     description = "A sample Lattice Application",
     dependencyInjectionBinder = GuiceServletModuleBinder.class)
 public abstract class SampleGrpcLatticeApp extends Application {

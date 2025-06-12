@@ -1,5 +1,6 @@
 description 'Krystal Lattice <-> Protobuf3'
 
 dependencies {
+    implementation project(':vajram:extensions:protobuf:vajram-protobuf3')
     implementation project(':lattice:lattice-core')
 }

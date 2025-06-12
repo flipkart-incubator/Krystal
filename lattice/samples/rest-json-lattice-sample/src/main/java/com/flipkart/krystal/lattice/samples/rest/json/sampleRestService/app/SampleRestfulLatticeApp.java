@@ -16,7 +16,6 @@ import flipkart.krystal.lattice.ext.rest.quarkus.restServer.RestService;
 
 @RestService(pathPrefix = "sample", resourceVajrams = RestLatticeSample.class)
 @LatticeApp(
-    name = "LatticeSampleApplication",
     description = "A sample Lattice Application",
     dependencyInjectionBinder = GuiceServletModuleBinder.class)
 public abstract class SampleRestfulLatticeApp extends Application {

@@ -1,7 +1,6 @@
 package com.flipkart.krystal.lattice.codegen;
 
-import static com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.BindingScope.APP_LOGIC_SCOPE;
-import static com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.BindingScope.NO_SCOPE;
+import static com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.BindingScope.REQUEST;
 import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
@@ -19,8 +18,10 @@ import com.flipkart.krystal.vajram.codegen.common.models.VajramCodeGenUtility;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfoLite;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
+import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
+import com.squareup.javapoet.ParameterSpec;
 import jakarta.inject.Named;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -92,7 +93,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
       for (ModelProtocolConfigProvider configProvider : configProviders) {
         ModelProtocolConfig config = configProvider.getConfig();
         if (config != null) {
-          configs.put(requireNonNull(config.modelProtocolType().getCanonicalName()), config);
+          configs.put(requireNonNull(config.serdeProtocol().getClass().getCanonicalName()), config);
         }
       }
       List<CodeBlock> providingLogics = new ArrayList<>();
@@ -117,15 +118,15 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
         ClassName defaultModelBuilderName =
             ClassName.get(
                 immutClassName.packageName(),
-                immutClassName.simpleName() + defaultConfig.modelClassesSuffix());
+                immutClassName.simpleName() + defaultConfig.serdeProtocol().modelClassesSuffix());
         providingLogics.add(
             CodeBlock.of(
-                """
+"""
 if (null == acceptHeader){
               return $T._builder();
             }
             $T acceptHeaderValue = acceptHeader.value();
-            if (null == acceptHeaderValue){
+            if (null == acceptHeaderValue || "*/*".equals(acceptHeaderValue)){
               return $T._builder();
             }
             return switch (acceptHeaderValue) {
@@ -137,48 +138,47 @@ if (null == acceptHeader){
       for (ModelProtocolConfigProvider configProvider : configProviders) {
         ModelProtocolConfig config = configProvider.getConfig();
         if (config != null) {
-          configs.put(requireNonNull(config.modelProtocolType().getCanonicalName()), config);
+          configs.put(requireNonNull(config.serdeProtocol().getClass().getCanonicalName()), config);
           providingLogics.add(
               CodeBlock.of(
-                  """
-                case $L -> $T._builder();\
+"""
+                case $S -> $T._builder();\
 """,
-                  config.httpContentType(),
+                  config.serdeProtocol().contentType(),
                   ClassName.get(
                       immutClassName.packageName(),
-                      immutClassName.simpleName() + config.modelClassesSuffix())));
+                      immutClassName.simpleName() + config.serdeProtocol().modelClassesSuffix())));
         }
       }
       providingLogics.add(
           CodeBlock.of(
-              """
+"""
                 default -> throw new $T($S + acceptHeader.value());\
 """,
               IllegalStateException.class,
               "API '" + vajramInfoLite.vajramId().id() + "' doesn't support the content type: "));
-      providingLogics.add(CodeBlock.of("""
+      providingLogics.add(
+          CodeBlock.of(
+"""
             };
 """));
       bindings.add(
-          new SimpleBinding(
-              ClassName.get(Header.class),
-              CodeBlock.of("$T.$L", StandardHeaderNames.class, "ACCEPT"),
-              new BindTo.Provider(CodeBlock.of("null"), APP_LOGIC_SCOPE)));
-
-      bindings.add(
-          new ProviderBinding(
+          new ProviderMethod(
               immutClassName.simpleName() + "_Builder",
               immutBuilderClassName,
               List.of(
-                  CodeBlock.of(
-                      "@$T @$T($T.$L) $T acceptHeader",
-                      Nullable.class,
-                      Named.class,
-                      StandardHeaderNames.class,
-                      "ACCEPT",
-                      Header.class)),
+                  ParameterSpec.builder(
+                      ClassName.get(Header.class)
+                          .annotated(AnnotationSpec.builder(Nullable.class).build())
+                          .annotated(
+                              AnnotationSpec.builder(Named.class)
+                                  .addMember(
+                                      "value",
+                                      CodeBlock.of("$T.$L", StandardHeaderNames.class, "ACCEPT"))
+                                  .build()),
+                      "acceptHeader")),
               providingLogics.stream().collect(CodeBlock.joining("\n")),
-              NO_SCOPE));
+              REQUEST));
     }
 
     return ImmutableList.copyOf(bindings);

@@ -7,8 +7,6 @@ import java.lang.annotation.Target;
 
 @Target(TYPE)
 public @interface LatticeApp {
-  String name();
-
   String description();
 
   Class<? extends DependencyInjectionBinder> dependencyInjectionBinder() default

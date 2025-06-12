@@ -2,8 +2,6 @@ package com.flipkart.krystal.lattice.core.di;
 
 import com.flipkart.krystal.lattice.core.execution.ThreadingStrategy;
 import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
-import com.google.auto.value.AutoAnnotation;
-import jakarta.inject.Named;
 import java.io.Closeable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
@@ -30,10 +28,5 @@ public interface DependencyInjectionBinder {
         implements BindingKey {}
 
     record AnnotationType(Type type, Annotation annotation) implements BindingKey {}
-  }
-
-  @AutoAnnotation
-  static Named named(String value) {
-    return new AutoAnnotation_DependencyInjectionBinder_named(value);
   }
 }

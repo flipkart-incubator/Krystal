@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.protobuf3.codegen;
 
 import static com.flipkart.krystal.codegen.common.datatypes.StandardJavaType.BYTE;
-import static com.flipkart.krystal.vajram.protobuf3.Protobuf3.PROTO_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ModelsProto3SchemaGen.validateModelType;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeMap;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.isProtoTypeRepeated;
@@ -131,7 +130,7 @@ public class ModelsProto3Gen implements CodeGenerator {
     TypeElement modelRootType = codeGenContext.modelRootType();
     ClassName immutClassName = util.getImmutClassName(modelRootType);
 
-    String protoClassName = immutClassName.simpleName() + PROTO_SUFFIX;
+    String protoClassName = immutClassName.simpleName() + Protobuf3.PROTOBUF_3.modelClassesSuffix();
     String packageName = immutClassName.packageName();
 
     // Generate the implementation class using JavaPoet

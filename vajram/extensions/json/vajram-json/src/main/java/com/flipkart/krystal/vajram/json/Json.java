@@ -13,6 +13,8 @@ import com.flipkart.krystal.serial.SerdeProtocol;
 
 public final class Json implements SerdeProtocol {
 
+  public static final Json JSON = new Json();
+
   private static final ObjectMapper OBJECT_MAPPER =
       new ObjectMapper()
           .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
@@ -26,7 +28,15 @@ public final class Json implements SerdeProtocol {
   public static final ObjectReader OBJECT_READER = OBJECT_MAPPER.reader();
   public static final ObjectWriter OBJECT_WRITER = OBJECT_MAPPER.writer();
 
-  public static final String JSON_SUFFIX = "Json";
-
   private Json() {}
+
+  @Override
+  public String modelClassesSuffix() {
+    return "Json";
+  }
+
+  @Override
+  public String contentType() {
+    return "application/json";
+  }
 }

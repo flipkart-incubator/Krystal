@@ -1,7 +1,8 @@
 package com.flipkart.krystal.vajram.codegen.common.generators;
 
+import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
+import static com.flipkart.krystal.model.PlainJavaObject.POJO;
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_SUFFIX;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.POJO_SUFFIX;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 import static java.util.Objects.requireNonNullElse;
@@ -15,7 +16,6 @@ import static javax.lang.model.element.Modifier.STATIC;
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.codegen.common.models.CodeGenerationException;
-import com.flipkart.krystal.codegen.common.models.CodegenPhase;
 import com.flipkart.krystal.codegen.common.models.DeclaredTypeVisitor;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
@@ -159,7 +159,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
 
     // Get package and class names
     ClassName immutModelName = util.getImmutClassName(modelRootType);
-    String immutablePojoName = immutModelName.simpleName() + POJO_SUFFIX;
+    String immutablePojoName = immutModelName.simpleName() + POJO.modelClassesSuffix();
     String packageName = immutModelName.packageName();
 
     // Generate the immutable interface and its builder interface
@@ -175,7 +175,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
   }
 
   private boolean isApplicable() {
-    return CodegenPhase.MODELS.equals(codeGenContext.codegenPhase());
+    return MODELS.equals(codeGenContext.codegenPhase());
   }
 
   private void validate() {

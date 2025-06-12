@@ -1,9 +1,12 @@
 package com.flipkart.krystal.lattice.codegen.spi;
 
+import static com.flipkart.krystal.codegen.common.models.Constants.EMPTY_CODE_BLOCK;
+
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
+import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
 import java.util.List;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -15,7 +18,7 @@ public interface BindingsProvider {
 
   enum BindingScope {
     NO_SCOPE,
-    APP_LOGIC_SCOPE,
+    REQUEST,
     SINGLETON
   }
 
@@ -30,16 +33,22 @@ public interface BindingsProvider {
    * @param providingLogic The actual provision logic
    * @param scope The scope of the binding (RequestScoped, Singleton etc). Empty if no scope
    */
-  record ProviderBinding(
+  record ProviderMethod(
       String name,
       TypeName boundType,
-      List<CodeBlock> dependencies,
+      List<ParameterSpec.Builder> dependencies,
       CodeBlock providingLogic,
       BindingScope scope)
       implements Binding {}
 
-  record SimpleBinding(ClassName bindFrom, @Nullable CodeBlock named, BindTo bindTo)
-      implements Binding {}
+  record SimpleBinding(ClassName bindFrom, @Nullable CodeBlock qualifier, BindTo bindTo)
+      implements Binding {
+
+    @Override
+    public CodeBlock qualifier() {
+      return qualifier != null ? qualifier : EMPTY_CODE_BLOCK;
+    }
+  }
 
   sealed interface BindTo {
     CodeBlock bindToCode();

@@ -8,6 +8,4 @@ dependencies {
     implementation project(':vajram:extensions:protobuf:vajram-protobuf3')
     implementation project(':vajram:vajram-codegen-common')
 
-    compileOnly 'com.google.auto.service:auto-service'
-    annotationProcessor 'com.google.auto.service:auto-service'
 }

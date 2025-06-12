@@ -1,5 +1,6 @@
 package flipkart.krystal.lattice.ext.rest.quarkus.restServer;
 
+import static com.flipkart.krystal.lattice.core.headers.StandardHeaderNames.REQUEST_ID;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 
@@ -9,11 +10,15 @@ import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder.BindingKey
 import com.flipkart.krystal.lattice.core.doping.Dopant;
 import com.flipkart.krystal.lattice.core.doping.DopantInitData;
 import com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopant;
+import com.flipkart.krystal.lattice.core.headers.Header;
+import com.flipkart.krystal.lattice.core.headers.SimpleHeader;
 import com.flipkart.krystal.lattice.vajram.VajramDopant;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.serial.SerializableModel;
+import com.flipkart.krystal.tags.Names;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
+import com.google.common.collect.ImmutableMap;
 import flipkart.krystal.lattice.ext.rest.quarkus.StatusCodes;
 import flipkart.krystal.lattice.ext.rest.quarkus.app.QuarkusApplicationDopant;
 import flipkart.krystal.lattice.ext.rest.quarkus.restServer.QuarkusRestServerSpec.QuarkusRestServerSpecBuilder;
@@ -27,6 +32,7 @@ import io.vertx.ext.web.RoutingContext;
 import jakarta.inject.Inject;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
@@ -101,7 +107,9 @@ public abstract class QuarkusRestServerDopant
       throw new UnsupportedOperationException(
           "Expected 'SingleThreadExecutor'. Found " + executorService.getClass());
     }
-    Map<BindingKey, Object> seedMap = getRequestSeeds();
+    SimpleHeader requestIdHeader =
+        new SimpleHeader(REQUEST_ID, routingContext.request().getHeader(REQUEST_ID));
+    Map<BindingKey, Object> seedMap = getRequestScopeSeedBindings(routingContext, requestIdHeader);
     CompletionStage<Buffer> body = httpRequest.body().toCompletionStage();
     body.whenComplete(
         (buffer, readError) -> {
@@ -114,7 +122,10 @@ public abstract class QuarkusRestServerDopant
               () -> {
                 Closeable requestScope = threadingStrategyDopant.openRequestScope(seedMap);
                 try (KrystexVajramExecutor executor =
-                    vajramDopant.createExecutor(singleThreadExecutor)) {
+                    vajramDopant.createExecutor(
+                        singleThreadExecutor,
+                        List.of(configBuilder -> configBuilder.executorId(requestIdHeader.value())),
+                        List.of())) {
                   executor
                       .execute(request)
                       .whenComplete(
@@ -142,6 +153,11 @@ public abstract class QuarkusRestServerDopant
                               } catch (IOException e) {
                                 log.error("Unable to close request scope");
                               }
+                              try {
+                                lease.close();
+                              } catch (Exception e) {
+                                log.error("Unable to close executor Service lease");
+                              }
                             }
                           });
                 }
@@ -149,8 +165,13 @@ public abstract class QuarkusRestServerDopant
         });
   }
 
-  private Map<BindingKey, Object> getRequestSeeds() {
-    return Map.of();
+  private ImmutableMap<BindingKey, Object> getRequestScopeSeedBindings(
+      RoutingContext routingContext, SimpleHeader requestIdHeader) {
+    return ImmutableMap.of(
+        new BindingKey.TypeKey(RoutingContext.class),
+        routingContext,
+        new BindingKey.AnnotationType(Header.class, Names.named(REQUEST_ID)),
+        requestIdHeader);
   }
 
   protected record QuarkusRestDopantInitData(

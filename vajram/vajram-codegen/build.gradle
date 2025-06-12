@@ -32,9 +32,6 @@ dependencies {
     implementation project(':vajram:vajram-codegen-common')
     implementation 'com.squareup:javapoet'
     implementation 'org.projectlombok:lombok'
-
-    compileOnly 'com.google.auto.service:auto-service'
-    annotationProcessor 'com.google.auto.service:auto-service'
 }
 
 checkerFramework {

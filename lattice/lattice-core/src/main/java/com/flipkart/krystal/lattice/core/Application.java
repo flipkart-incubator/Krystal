@@ -241,6 +241,9 @@ public abstract class Application {
     BiMap<String, Class<? extends DopantConfig>> configTypesByName = HashBiMap.create();
     for (DopantSpecBuilder<?, ?, ?> specBuilder : allSpecBuilders.values()) {
       Class<? extends DopantConfig> configurationType = specBuilder._configurationType();
+      if (NoConfiguration.class.isAssignableFrom(configurationType)) {
+        continue;
+      }
       @SuppressWarnings("unchecked")
       DopantType dopantTypeAnno = configurationType.getAnnotation(DopantType.class);
       if (dopantTypeAnno == null) {

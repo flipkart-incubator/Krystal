@@ -5,7 +5,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.data.ImmutableRequest;
-import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder;
 import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder.BindingKey;
 import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder.BindingKey.AnnotationType;
 import com.flipkart.krystal.lattice.core.doping.Dopant;
@@ -16,6 +15,7 @@ import com.flipkart.krystal.lattice.core.headers.SimpleHeader;
 import com.flipkart.krystal.lattice.vajram.VajramDopant;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
+import com.flipkart.krystal.tags.Names;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Message;
@@ -30,13 +30,13 @@ import jakarta.inject.Inject;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @DopantType(DOPANT_TYPE)
@@ -131,30 +131,45 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
     executorService.execute(
         () -> {
           Closeable requestScope = threadingStrategyDopant.openRequestScope(seedMap);
-          try (KrystexVajramExecutor executor = vajramDopant.createExecutor(singleThreadExecutor)) {
+          try (KrystexVajramExecutor executor =
+              vajramDopant.createExecutor(
+                  singleThreadExecutor,
+                  List.of(
+                      configBuilder ->
+                          configBuilder.executorId(grpcServerSpec.requestIdContextKey().get())),
+                  List.of())) {
             executor
                 .execute(request)
                 .whenComplete(
                     (response, throwable) -> {
                       try {
-                        if (throwable != null) {
-                          responseObserver.onError(throwable);
-                        } else {
-                          RespProtoT proto = protoConverter.apply(response);
-                          if (proto == null) {
-                            responseObserver.onError(getUnknownInternalError());
+
+                        try {
+                          if (throwable != null) {
+                            responseObserver.onError(throwable);
                           } else {
-                            responseObserver.onNext(proto);
+                            RespProtoT proto = protoConverter.apply(response);
+                            if (proto == null) {
+                              responseObserver.onError(getUnknownInternalError());
+                            } else {
+                              responseObserver.onNext(proto);
+                            }
                           }
+                        } catch (Throwable e) {
+                          responseObserver.onError(e);
+                        } finally {
+                          responseObserver.onCompleted();
                         }
-                      } catch (Throwable e) {
-                        responseObserver.onError(e);
                       } finally {
-                        responseObserver.onCompleted();
                         try {
                           requestScope.close();
-                        } catch (IOException e) {
+                        } catch (Exception e) {
                           log.error("Unable to close request scope");
+                        }
+                        try {
+                          lease.close();
+                        } catch (Exception e) {
+                          log.error("Unable to close executor Service lease");
                         }
                       }
                     });
@@ -174,12 +189,12 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
     if (headerValue != null) {
       String headerKey = key.toString();
       map.put(
-          new AnnotationType(Header.class, DependencyInjectionBinder.named(headerKey)),
+          new AnnotationType(Header.class, Names.named(headerKey)),
           new SimpleHeader(headerKey, headerValue));
     }
   }
 
-  private static @NonNull IllegalArgumentException getUnknownInternalError() {
+  private static IllegalArgumentException getUnknownInternalError() {
     return new IllegalArgumentException("Unknown internal error");
   }
 

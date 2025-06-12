@@ -1,6 +1,7 @@
 package com.flipkart.krystal.vajram.ext.json.codegen;
 
-import static com.flipkart.krystal.codegen.common.models.Constants.POJO_SUFFIX;
+import static com.flipkart.krystal.model.PlainJavaObject.POJO;
+import static com.flipkart.krystal.vajram.json.Json.JSON;
 import static java.util.Objects.requireNonNull;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
@@ -57,7 +58,8 @@ final class JsonModelsGen implements CodeGenerator {
     ClassName immutClassName = util.getImmutClassName(modelRootType);
     String packageName = immutClassName.packageName();
     String immutableModelName = immutClassName.simpleName();
-    ClassName immutableJsonName = ClassName.get(packageName, immutableModelName + Json.JSON_SUFFIX);
+    ClassName immutableJsonName =
+        ClassName.get(packageName, immutableModelName + JSON.modelClassesSuffix());
 
     // Extract and validate model methods
     List<ExecutableElement> modelMethods = util.extractAndValidateModelMethods(modelRootType);
@@ -94,7 +96,7 @@ final class JsonModelsGen implements CodeGenerator {
 
     // Create constructor for the class
     ClassName immutablePojoName =
-        ClassName.get(packageName, immutableModelName.simpleName() + POJO_SUFFIX);
+        ClassName.get(packageName, immutableModelName.simpleName() + POJO.modelClassesSuffix());
 
     TypeName byteArrayType = ArrayTypeName.of(TypeName.BYTE);
 
@@ -279,7 +281,8 @@ return _serializedPayload;
     ModelRoot modelRoot = modelRootType.getAnnotation(ModelRoot.class);
     ClassName immutablePojoName =
         ClassName.get(
-            immutableJsonName.packageName(), immutableModelName.simpleName() + POJO_SUFFIX);
+            immutableJsonName.packageName(),
+            immutableModelName.simpleName() + POJO.modelClassesSuffix());
 
     builderSpec.addField(
         FieldSpec.builder(immutablePojoName.nestedClass("Builder"), "_pojo", PRIVATE, FINAL)

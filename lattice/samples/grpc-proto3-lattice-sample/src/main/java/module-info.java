@@ -21,4 +21,5 @@ module flipkart.krystal.lattice.samples {
   requires flipkart.krystal.lattice.ext.guice.servlet;
   requires flipkart.krystal.vajram.ext.json;
   requires com.fasterxml.jackson.databind;
+  requires jakarta.cdi;
 }

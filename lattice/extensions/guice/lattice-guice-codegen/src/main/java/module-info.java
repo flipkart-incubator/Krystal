@@ -12,4 +12,5 @@ module flipkart.krystal.lattice.ext.guice.codegen {
   requires flipkart.krystal.vajram.codegen.common;
   requires jakarta.inject;
   requires org.checkerframework.checker.qual;
+  requires jakarta.cdi;
 }
