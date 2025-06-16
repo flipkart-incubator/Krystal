@@ -1,6 +1,5 @@
-package com.flipkart.krystal.lattice.ext.protobuf.codegen;
+package com.flipkart.krystal.lattice.ext.grpc.codegen;
 
-import static com.flipkart.krystal.lattice.ext.protobuf.codegen.LatticeProtoGenConstants.PROTO_SERVER_FILE_SUFFIX;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.createOutputDirectory;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.ProtoGenUtils.getSimpleClassName;
 import static com.flipkart.krystal.vajram.protobuf3.codegen.VajramProtoConstants.MODELS_PROTO_FILE_SUFFIX;
@@ -45,12 +44,12 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * a vajram
  */
 @Slf4j
-class LatticeProto3ServiceSchemaGen implements CodeGenerator {
+class Proto3ServiceSchemaGen implements CodeGenerator {
 
   private final LatticeCodegenContext context;
   private final VajramCodeGenUtility util;
 
-  public LatticeProto3ServiceSchemaGen(LatticeCodegenContext context) {
+  public Proto3ServiceSchemaGen(LatticeCodegenContext context) {
     this.context = context;
     this.util = context.codeGenUtility();
   }
@@ -215,7 +214,8 @@ class LatticeProto3ServiceSchemaGen implements CodeGenerator {
             .toString();
     try {
       // Create output directory if it doesn't exist
-      String serviceProtoFileName = grpcServer.serverName() + PROTO_SERVER_FILE_SUFFIX;
+      String serviceProtoFileName =
+          grpcServer.serverName() + ProtoGenConstants.PROTO_SERVER_FILE_SUFFIX;
       Path outputDir = createOutputDirectory(util.detectSourceOutputPath(null), util.codegenUtil());
       StringBuilder protoBuilder = new StringBuilder();
       // Add auto-generated comment

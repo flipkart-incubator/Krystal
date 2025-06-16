@@ -3,7 +3,6 @@ module flipkart.krystal.lattice.ext.protobuf.codegen {
   requires flipkart.krystal.codegen.common;
   requires flipkart.krystal.lattice.core;
   requires flipkart.krystal.lattice.codegen;
-  requires flipkart.krystal.lattice.ext.grpc;
   requires flipkart.krystal.vajram.ext.protobuf.codegen;
   requires flipkart.krystal.vajram.codegen.common;
   requires org.checkerframework.checker.qual;

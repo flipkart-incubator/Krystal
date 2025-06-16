@@ -1,6 +1,5 @@
 dependencies {
     implementation project(':krystal-codegen-common')
-    implementation project(':lattice:extensions:grpc:lattice-grpc')
     implementation project(':lattice:extensions:protobuf:lattice-protobuf')
     implementation project(':lattice:lattice-codegen')
     implementation project(':lattice:lattice-core')
