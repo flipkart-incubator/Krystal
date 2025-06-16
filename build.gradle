@@ -1,5 +1,5 @@
 plugins {
-    id 'com.flipkart.java.code.standard' version '3.8-SNAPSHOT'
+    id 'com.flipkart.java.code.standard' version '3.8'
     id 'org.gradlex.extra-java-module-info' version '1.11'
 }
 
@@ -184,23 +184,25 @@ configure(subprojects.findAll {
         module('com.google.auto:auto-common', 'com.google.auto.common')
         module('com.google.code.findbugs:jsr305', 'com.google.code.findbugs.jsr305')
 
-        module('org.antlr:antlr4', 'org.antlr.antlr4')
-        module('javax.inject:javax.inject', 'javax.inject')
-        module('com.github.kevinstern:software-and-algorithms', 'com.github.kevinstern.software.and.algorithms')
         module('aopalliance:aopalliance', 'aopalliance')
+        module('com.github.kevinstern:software-and-algorithms', 'com.github.kevinstern.software.and.algorithms')
         module('javax.cache:cache-api', 'javax.cache.api')
+        module('javax.inject:javax.inject', 'javax.inject')
         module('org.javassist:javassist', 'javassist')
-        module('gradle-api-8.14.jar', 'gradle.api')
-        module('gradle-installation-beacon-8.14.jar', 'gradle.installation.beacon')
-        module('gradle-test-kit-8.14.jar', 'gradle.test.kit')
-        module('org.antlr:ST4', 'org.antlr.antlr.ST4')
+
+        module('gradle-api-8.14.2.jar', 'gradle.api')
+        module('gradle-installation-beacon-8.14.2.jar', 'gradle.installation.beacon')
+        module('gradle-test-kit-8.14.2.jar', 'gradle.test.kit')
+
+        module('ch.qos.reload4j:reload4j', 'ch.qos.reload4j')
+        module('com.flipkart.krystal:vajram-codegen', 'com.flipkart.krystal.vajram.codegen')
         module('org.abego.treelayout:org.abego.treelayout.core', 'org.abego.treelayout.core')
+        module('org.antlr:ST4', 'org.antlr.antlr.ST4')
         module('org.antlr:antlr-runtime', 'org.antlr.antlr.runtime')
+        module('org.antlr:antlr4', 'org.antlr.antlr4')
         module('org.hdrhistogram:HdrHistogram', 'org.hdrhistogram')
         module('org.latencyutils:LatencyUtils', 'org.latencyutils')
-        module('com.flipkart.krystal:vajram-codegen', 'com.flipkart.krystal.vajram.codegen')
         module('org.slf4j:slf4j-reload4j', 'org.slf4j.reload4j')
-        module('ch.qos.reload4j:reload4j', 'ch.qos.reload4j')
 
         //These already have a module name
         knownModule('org.checkerframework:checker-qual', 'org.checkerframework.checker.qual')

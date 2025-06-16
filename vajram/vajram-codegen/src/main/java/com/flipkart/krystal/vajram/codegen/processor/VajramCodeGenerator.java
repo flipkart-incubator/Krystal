@@ -1438,7 +1438,7 @@ public class VajramCodeGenerator implements CodeGenerator {
         }
         methodCodeBuilder.beginControlFlow(
             "for($T $L: $L.inputs())", actualReturnType, RESOLVER_RESULT, RESOLVER_RESULTS);
-        if (util.codegenUtil().isRawAssignable(actualReturnType, Builder.class)) {
+        if (util.codegenUtil().isRawAssignable(actualReturnType, ImmutableRequest.Builder.class)) {
           /*
            * TODO: Add validation that this vajramDef request is of the same type as the
            * request of the dependency Vajram
