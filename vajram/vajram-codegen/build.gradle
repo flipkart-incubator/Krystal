@@ -3,10 +3,6 @@ buildscript {
         mavenLocal()
         mavenCentral()
     }
-    dependencies {
-        classpath 'com.flipkart.krystal:vajram-java-sdk:' + project.krystal_version
-        classpath 'com.flipkart.krystal:krystal-codegen-common:' + project.krystal_version
-    }
 }
 
 plugins {

@@ -1,5 +1,5 @@
 plugins {
-    id 'com.flipkart.java.code.standard' version '3.7'
+    id 'com.flipkart.java.code.standard' version '3.8-SNAPSHOT'
     id 'org.gradlex.extra-java-module-info' version '1.11'
 }
 
@@ -12,6 +12,7 @@ ext {
     protobuf_version = '4.31.1'
     grpc_version = '1.73.0'
     quarkus_version = '3.23.2'
+    lombok_version = '1.18.36'
 }
 
 subprojects {
@@ -66,7 +67,6 @@ configure(subprojects.findAll {
         annotationProcessor 'com.google.auto.service:auto-service'
 
         implementation 'org.checkerframework:checker-qual'
-        annotationProcessor 'org.checkerframework:checker-qual'
 
         compileOnly 'org.projectlombok:lombok'
         annotationProcessor 'org.projectlombok:lombok'
@@ -94,8 +94,6 @@ configure(subprojects.findAll {
         api platform("io.grpc:grpc-bom:${grpc_version}")
 
         constraints {
-            String lombok_version = '1.18.36'
-
             implementation "org.projectlombok:lombok:$lombok_version"
             implementation 'com.google.auto.service:auto-service-annotations:1.1.1'
             implementation 'com.google.code.findbugs:jsr305:3.0.2'
@@ -211,6 +209,7 @@ configure(subprojects.findAll {
 
 
         //These already have a module name
+        knownModule('org.checkerframework:checker-qual', 'org.checkerframework.checker.qual')
         knownModule('com.google.guava:failureaccess', 'com.google.common.util.concurrent.internal')
         knownModule('org.slf4j:slf4j-api', 'org.slf4j')
         knownModule('jakarta.inject:jakarta.inject-api', 'jakarta.inject')

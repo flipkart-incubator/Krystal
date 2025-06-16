@@ -15,7 +15,7 @@ plugins {
 }
 
 group 'com.flipkart.java.code.standard'
-version '3.7'
+version '3.8-SNAPSHOT'
 
 gradlePlugin {
     plugins {

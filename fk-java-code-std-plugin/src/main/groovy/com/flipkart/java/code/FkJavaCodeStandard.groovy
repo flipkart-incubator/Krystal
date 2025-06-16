@@ -48,9 +48,15 @@ class FkJavaCodeStandard implements Plugin<Project> {
         checkerFramework.extraJavacArgs.add("-AskipFiles=/build/generated/")
         def checker_version = '3.48.4'
         project.dependencies.add('checkerFramework', "org.checkerframework:checker:${checker_version}")
+
         project.dependencies.add('compileOnly', "org.checkerframework:checker-qual:${checker_version}")
         project.dependencies.add('annotationProcessor', "org.checkerframework:checker-qual:${checker_version}")
+        project.dependencies.constraints.add('implementation', "org.checkerframework:checker-qual:${checker_version}")
+        project.dependencies.constraints.add('testImplementation', "org.checkerframework:checker-qual:${checker_version}")
+        project.dependencies.constraints.add('testAnnotationProcessor', "org.checkerframework:checker-qual:${checker_version}")
+
         project.dependencies.add('annotationProcessor', "org.checkerframework:dataflow-errorprone:${checker_version}")
+
         project.dependencies.add('annotationProcessor', 'com.google.guava:guava')
         project.dependencies.add('annotationProcessor', 'javax.inject:javax.inject:1')
         project.dependencies.add('annotationProcessor', 'com.google.auto.value:auto-value-annotations:1.11.0')
