@@ -7,4 +7,6 @@ dependencies {
     api 'io.grpc:grpc-stub'
     runtimeOnly 'io.grpc:grpc-netty-shaded'
 }
-
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
+}

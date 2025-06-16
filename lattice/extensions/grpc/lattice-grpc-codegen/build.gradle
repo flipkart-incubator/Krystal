@@ -8,3 +8,6 @@ dependencies {
 
     implementation 'com.squareup:javapoet'
 }
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
+}
