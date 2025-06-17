@@ -34,34 +34,26 @@ public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
 
     int optionalInput;
 
-    @SerialId(2)
     @IfAbsent(FAIL)
     int mandatoryInput;
 
-    @SerialId(3)
     @IfAbsent(value = MAY_FAIL_CONDITIONALLY, conditionalFailureInfo = "In some scenarios")
     int conditionallyMandatoryInput;
 
-    @SerialId(4)
     @IfAbsent(ASSUME_DEFAULT_VALUE)
     int inputWithDefaultValue;
 
-    @SerialId(5)
     long optionalLongInput;
 
-    @SerialId(6)
     @IfAbsent(FAIL)
     long mandatoryLongInput;
 
-    @SerialId(7)
     ByteArray optionalByteString;
 
     @IfAbsent(ASSUME_DEFAULT_VALUE)
-    @SerialId(9)
     List<Integer> repeatedInts;
 
     @IfAbsent(FAIL)
-    @SerialId(10)
     ByteArray defaultByteString;
   }
 
