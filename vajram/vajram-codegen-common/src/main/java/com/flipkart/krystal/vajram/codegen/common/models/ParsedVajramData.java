@@ -35,10 +35,11 @@ public record ParsedVajramData(
       VajramInfo vajramInfo, VajramCodeGenUtility util) {
     validate(vajramInfo, util);
     String packageName = vajramInfo.lite().packageName();
-    ImmutableList<ExecutableElement> allMethods = getAllMethods(vajramInfo.vajramClass());
+    ImmutableList<ExecutableElement> allMethods = getAllMethods(vajramInfo.vajramClassElem());
     if (vajramInfo.lite().isTrait()) {
       if (!allMethods.isEmpty()) {
-        util.error("A trait definition must not have any methods.", vajramInfo.vajramClass());
+        util.codegenUtil()
+            .error("A trait definition must not have any methods.", vajramInfo.vajramClassElem());
       }
     }
     for (ExecutableElement method : allMethods) {
@@ -47,7 +48,7 @@ public record ParsedVajramData(
               || hasAnnotation(method, Output.Batched.class)
               || hasAnnotation(method, Output.Unbatch.class))
           && !isStatic(method)) {
-        util.error("@Resolve methods and @Output methods must be static", method);
+        util.codegenUtil().error("@Resolve methods and @Output methods must be static", method);
       }
     }
     LogicMethods logicMethods = null;
@@ -63,7 +64,7 @@ public record ParsedVajramData(
       CallGraphDelegationMode callGraphDelegationMode =
           typeElement.getAnnotation(CallGraphDelegationMode.class);
       if (callGraphDelegationMode == null) {
-        util.error("A trait must specify a @CallGraphDelegationMode.", typeElement);
+        util.codegenUtil().error("A trait must specify a @CallGraphDelegationMode.", typeElement);
       }
     }
   }
@@ -95,7 +96,7 @@ public record ParsedVajramData(
           String errorMessage =
               "Two Resolver resolving same input (%s) for dependency name (%s)"
                   .formatted(depInputName, dep);
-          throw util.errorAndThrow(errorMessage, method);
+          throw util.codegenUtil().errorAndThrow(errorMessage, method);
         }
       }
     }
@@ -110,41 +111,45 @@ public record ParsedVajramData(
     ExecutableElement batchedOutputLogic = null;
     ExecutableElement unbatchOutputLogic = null;
     OutputLogics outputLogics;
-    TypeElement vajramClass = vajramInfo.vajramClass();
+    TypeElement vajramClass = vajramInfo.vajramClassElem();
     List<ExecutableElement> methods = getStaticMethods(vajramClass);
     for (ExecutableElement method : methods) {
       if (isResolver(method)) {
         resolverMethods.add(method);
       } else if (isNonBatchedOutputLogic(method)) {
         if (nonBatchedOutputLogic != null) {
-          util.error(
-              "Duplicate @Output annotated method %s".formatted(method.getSimpleName()), method);
+          String message =
+              "Duplicate @Output annotated method %s".formatted(method.getSimpleName());
+          util.codegenUtil().error(message, method);
         } else if (vajramSupportsBatching) {
-          util.error(
-              "Vajram which support batching must use @Output.Batched and @Output.Unbatch instead of @Output",
-              method);
+          util.codegenUtil()
+              .error(
+                  "Vajram which support batching must use @Output.Batched and @Output.Unbatch instead of @Output",
+                  method);
         } else {
           nonBatchedOutputLogic = method;
         }
       } else if (hasAnnotation(method, Output.Batched.class)) {
         if (batchedOutputLogic != null) {
-          util.error(
-              "Duplicate @Output.Batched annotated method %s".formatted(method.getSimpleName()),
-              method);
+          String message =
+              "Duplicate @Output.Batched annotated method %s".formatted(method.getSimpleName());
+          util.codegenUtil().error(message, method);
         } else if (!vajramSupportsBatching) {
-          util.error(
-              "Vajram which does not support batching must use @Output instead of @Output.Batched",
-              method);
+          util.codegenUtil()
+              .error(
+                  "Vajram which does not support batching must use @Output instead of @Output.Batched",
+                  method);
         } else {
           batchedOutputLogic = method;
         }
       } else if (hasAnnotation(method, Output.Unbatch.class)) {
         if (unbatchOutputLogic != null) {
-          util.error("Duplicate @Output.Unbatch annotated method", method);
+          util.codegenUtil().error("Duplicate @Output.Unbatch annotated method", method);
         } else if (!vajramSupportsBatching) {
-          util.error(
-              "Vajram which does not support batching must use @Output instead of @Output.Unbatch",
-              method);
+          util.codegenUtil()
+              .error(
+                  "Vajram which does not support batching must use @Output instead of @Output.Unbatch",
+                  method);
         } else {
           unbatchOutputLogic = method;
         }
@@ -152,16 +157,18 @@ public record ParsedVajramData(
     }
     if (!vajramSupportsBatching) {
       if (nonBatchedOutputLogic == null) {
-        throw util.errorAndThrow(
-            "Vajram which does not support batching must have @Output annotated method",
-            vajramClass);
+        throw util.codegenUtil()
+            .errorAndThrow(
+                "Vajram which does not support batching must have @Output annotated method",
+                vajramClass);
       }
       outputLogics = new NoBatching(nonBatchedOutputLogic);
     } else {
       if (batchedOutputLogic == null || unbatchOutputLogic == null) {
-        throw util.errorAndThrow(
-            "Vajram which supports batching must have @Output.Unbatch annotated method",
-            vajramClass);
+        throw util.codegenUtil()
+            .errorAndThrow(
+                "Vajram which supports batching must have @Output.Unbatch annotated method",
+                vajramClass);
       }
       outputLogics = new WithBatching(batchedOutputLogic, unbatchOutputLogic);
     }

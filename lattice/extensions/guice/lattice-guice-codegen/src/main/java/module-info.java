@@ -13,4 +13,5 @@ module flipkart.krystal.lattice.ext.guice.codegen {
   requires jakarta.inject;
   requires org.checkerframework.checker.qual;
   requires jakarta.cdi;
+  requires static lombok;
 }

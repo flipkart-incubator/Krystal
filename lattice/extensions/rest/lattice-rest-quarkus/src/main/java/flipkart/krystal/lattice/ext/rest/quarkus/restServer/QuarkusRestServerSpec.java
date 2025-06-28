@@ -6,6 +6,7 @@ import static flipkart.krystal.lattice.ext.rest.quarkus.restServer.QuarkusRestSe
 import com.flipkart.krystal.lattice.core.doping.Dopant;
 import com.flipkart.krystal.lattice.core.doping.DopantSpec;
 import com.flipkart.krystal.lattice.core.doping.DopantSpecBuilder;
+import com.flipkart.krystal.lattice.rest.RestService;
 import java.util.List;
 import lombok.Builder;
 import org.checkerframework.checker.nullness.qual.Nullable;

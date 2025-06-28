@@ -3,8 +3,8 @@ package com.flipkart.krystal.lattice.core.execution;
 import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopant.DOPANT_TYPE;
 
 import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
+import com.flipkart.krystal.lattice.core.di.Bindings;
 import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder;
-import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder.BindingKey;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.doping.DopantWithConfig;
 import com.flipkart.krystal.lattice.core.execution.ThreadingStrategySpec.ThreadingStrategySpecBuilder;
@@ -12,7 +12,6 @@ import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import jakarta.inject.Inject;
 import java.io.Closeable;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -48,7 +47,7 @@ public final class ThreadingStrategyDopant implements DopantWithConfig<ThreadStr
     return ThreadingStrategySpec.builder();
   }
 
-  public Closeable openRequestScope(Map<BindingKey, Object> seedMap) {
+  public Closeable openRequestScope(Bindings seedMap) {
     return binder.openRequestScope(seedMap, threadingStrategy);
   }
 }

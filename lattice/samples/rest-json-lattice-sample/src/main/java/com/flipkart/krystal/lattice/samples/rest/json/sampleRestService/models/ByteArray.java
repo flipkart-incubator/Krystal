@@ -1,4 +1,4 @@
-package com.flipkart.krystal.lattice.samples.rest.json.sampleRestService;
+package com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models;
 
 import java.nio.charset.Charset;
 import java.util.Arrays;

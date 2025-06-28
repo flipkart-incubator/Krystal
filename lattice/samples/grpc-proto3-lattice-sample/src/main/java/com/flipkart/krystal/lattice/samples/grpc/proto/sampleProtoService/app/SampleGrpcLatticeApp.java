@@ -2,7 +2,7 @@ package com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.app;
 
 import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategy.NATIVE_THREAD_PER_REQUEST;
 import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopant.threadingStrategy;
-import static com.flipkart.krystal.lattice.ext.grpc.GrpcServerDopant.grpc;
+import static com.flipkart.krystal.lattice.ext.grpc.GrpcServerDopant.grpcServer;
 import static com.flipkart.krystal.lattice.vajram.VajramDopant.vajramGraph;
 
 import com.flipkart.krystal.lattice.core.LatticeApp;
@@ -42,7 +42,7 @@ public abstract class SampleGrpcLatticeApp extends LatticeApplication {
                         .loadFromPackage(
                             "com.flipkart.krystal.lattice.samples.proto3.sampleProtoService.app")
                         .loadClasses(Proto3LatticeSample.class)))
-        .dopeWith(grpc());
+        .dopeWith(grpcServer());
   }
 
   @Override

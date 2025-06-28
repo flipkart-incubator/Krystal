@@ -28,8 +28,11 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.ServiceLoader;
+import java.util.ServiceLoader.Provider;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -46,7 +49,18 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
     for (LatticeAppCodeGenAttrsProvider provider : providers) {
       remotelyInvocableVajrams.addAll(provider.get(context).remotelyInvocableVajrams());
     }
-    List<Binding> bindings = new ArrayList<>();
+    Map<String, ModelProtocolConfig> configs =
+        ServiceLoader.load(ModelProtocolConfigProvider.class, this.getClass().getClassLoader())
+            .stream()
+            .map(Provider::get)
+            .collect(
+                Collectors.toMap(
+                    cp ->
+                        requireNonNull(
+                            cp.getConfig().serdeProtocol().getClass().getCanonicalName()),
+                    ModelProtocolConfigProvider::getConfig));
+    Map<String, TypeElement> responseTypeElems = new LinkedHashMap<>();
+    Map<String, List<String>> responseToVajramsMapping = new LinkedHashMap<>();
     for (TypeElement vajram : remotelyInvocableVajrams) {
       VajramInfoLite vajramInfoLite = util.computeVajramInfoLite(vajram);
       CodeGenType responseType = vajramInfoLite.responseType();
@@ -54,10 +68,20 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
       if (!util.codegenUtil().isRawAssignable(responseMirror, Model.class)) {
         continue;
       }
-      TypeElement responseElement =
+      TypeElement responseTypeElem =
           (TypeElement)
               requireNonNull(
                   util.codegenUtil().processingEnv().getTypeUtils().asElement(responseMirror));
+      String responseCanonicalName = responseTypeElem.getQualifiedName().toString();
+      responseTypeElems.put(responseCanonicalName, responseTypeElem);
+      responseToVajramsMapping
+          .computeIfAbsent(responseCanonicalName, s -> new ArrayList<>())
+          .add(vajramInfoLite.vajramId().id());
+    }
+    List<Binding> bindings = new ArrayList<>();
+    for (Entry<String, TypeElement> entry : responseTypeElems.entrySet()) {
+      String responseCanonicalName = entry.getKey();
+      TypeElement responseElement = entry.getValue();
       SupportedModelProtocols supportedModelProtocols =
           responseElement.getAnnotation(SupportedModelProtocols.class);
       if (supportedModelProtocols == null) {
@@ -81,38 +105,37 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
       ClassName immutClassName = util.codegenUtil().getImmutClassName(responseElement);
       ClassName immutBuilderClassName =
           ClassName.get(immutClassName.packageName(), immutClassName.simpleName(), "Builder");
-      ServiceLoader<ModelProtocolConfigProvider> configProviders =
-          ServiceLoader.load(ModelProtocolConfigProvider.class, this.getClass().getClassLoader());
       TypeElement defaultSerializationProtocol = getDefaultSerializationProtocol(context);
       if (defaultSerializationProtocol == null) {
-        throw util.errorAndThrow(
-            "Could not determine default Serialization protocol of lattice app.",
-            context.latticeAppTypeElement());
-      }
-      Map<String, ModelProtocolConfig> configs = new LinkedHashMap<>();
-      for (ModelProtocolConfigProvider configProvider : configProviders) {
-        ModelProtocolConfig config = configProvider.getConfig();
-        if (config != null) {
-          configs.put(requireNonNull(config.serdeProtocol().getClass().getCanonicalName()), config);
-        }
+        throw util.codegenUtil()
+            .errorAndThrow(
+                "Could not determine default Serialization protocol of lattice app.",
+                context.latticeAppTypeElement());
       }
       List<CodeBlock> providingLogics = new ArrayList<>();
       if (!supportedModelProtocolElems.contains(defaultSerializationProtocol)) {
-        throw util.errorAndThrow(
-            "Response type "
-                + responseElement
-                + " of vajram "
-                + vajram
-                + " does not support the default serialization protocol "
-                + defaultSerializationProtocol,
-            vajram);
+        throw util.codegenUtil()
+            .errorAndThrow(
+                "Response type "
+                    + responseElement
+                    + " of vajram(s): "
+                    + responseToVajramsMapping.get(responseCanonicalName)
+                    + " does not support the default serialization protocol "
+                    + defaultSerializationProtocol,
+                responseElement);
       } else {
         ModelProtocolConfig defaultConfig =
             configs.get(defaultSerializationProtocol.getQualifiedName().toString());
         if (defaultConfig == null) {
-          throw util.errorAndThrow(
-              "Unrecognized Serde protocol:  " + defaultSerializationProtocol,
-              context.latticeAppTypeElement());
+          throw util.codegenUtil()
+              .errorAndThrow(
+                  """
+              Unrecognized Serde protocol: %s. \
+              Please check if the relevant protocol \
+              specific libraries are added to the annotationProcessor \
+              classpath of the project."""
+                      .formatted(defaultSerializationProtocol),
+                  context.latticeAppTypeElement());
         }
 
         ClassName defaultModelBuilderName =
@@ -122,44 +145,54 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
         providingLogics.add(
             CodeBlock.of(
                 """
-if (null == acceptHeader){
-              return $T._builder();
-            }
-            $T acceptHeaderValue = acceptHeader.value();
-            if (null == acceptHeaderValue || "*/*".equals(acceptHeaderValue)){
-              return $T._builder();
-            }
-            return switch (acceptHeaderValue) {
-""",
+                if (null == acceptHeader){
+                  return $T._builder();
+                }
+                var acceptHeaderValues = new $T<>(acceptHeader.values());
+                if (acceptHeaderValues.contains("*/*")){
+                  return $T._builder();
+                }
+                """,
                 defaultModelBuilderName,
-                String.class,
+                LinkedHashSet.class,
                 defaultModelBuilderName));
       }
-      for (ModelProtocolConfigProvider configProvider : configProviders) {
-        ModelProtocolConfig config = configProvider.getConfig();
-        if (config != null) {
-          configs.put(requireNonNull(config.serdeProtocol().getClass().getCanonicalName()), config);
-          providingLogics.add(
-              CodeBlock.of(
+      for (TypeElement modelProtocol : supportedModelProtocolElems) {
+        ModelProtocolConfig config = configs.get(modelProtocol.getQualifiedName().toString());
+        if (config == null) {
+          util.codegenUtil()
+              .note(
                   """
-                case $S -> $T._builder();\
-""",
-                  config.serdeProtocol().contentType(),
-                  ClassName.get(
-                      immutClassName.packageName(),
-                      immutClassName.simpleName() + config.serdeProtocol().modelClassesSuffix())));
+              Skipping creation of binding for %s as protocol config for this \
+              protocol was not found in the annotation processor class path"""
+                      .formatted(modelProtocol.getQualifiedName()));
+          continue;
         }
+        configs.put(requireNonNull(config.serdeProtocol().getClass().getCanonicalName()), config);
+        providingLogics.add(
+            CodeBlock.of(
+                """
+                if(acceptHeaderValues.contains($S)) {
+                  return $T._builder();
+                }""",
+                config.serdeProtocol().contentType(),
+                ClassName.get(
+                    immutClassName.packageName(),
+                    immutClassName.simpleName() + config.serdeProtocol().modelClassesSuffix())));
       }
       providingLogics.add(
           CodeBlock.of(
               """
-                default -> throw new $T($S + acceptHeader.value());\
-""",
+              {
+                throw new $T($S + acceptHeader.values());
+              }
+              """,
               IllegalStateException.class,
-              "API '" + vajramInfoLite.vajramId().id() + "' doesn't support the content type: "));
-      providingLogics.add(CodeBlock.of("""
-            };
-"""));
+              "Response type "
+                  + responseCanonicalName
+                  + " of vajrams: "
+                  + responseToVajramsMapping.get(responseCanonicalName)
+                  + " doesn't support any of the content types: "));
       bindings.add(
           new ProviderMethod(
               immutClassName.simpleName() + "_Builder",
@@ -175,7 +208,7 @@ if (null == acceptHeader){
                                       CodeBlock.of("$T.$L", StandardHeaderNames.class, "ACCEPT"))
                                   .build()),
                       "acceptHeader")),
-              providingLogics.stream().collect(CodeBlock.joining("\n")),
+              providingLogics.stream().collect(CodeBlock.joining(" else ")),
               REQUEST));
     }
 
@@ -196,6 +229,7 @@ if (null == acceptHeader){
     } else if (protocols.size() > 1) {
       context
           .codeGenUtility()
+          .codegenUtil()
           .error(
               "Found more than one default serialization protocol: " + protocols,
               context.latticeAppTypeElement());

@@ -60,3 +60,6 @@ include 'lattice:samples:rest-json-lattice-sample'
 
 include 'lattice:extensions:json'
 include 'lattice:extensions:json:lattice-json-codegen'
+include 'lattice:extensions:rest:lattice-rest'
+include 'lattice:extensions:rest:lattice-rest-api'
+include 'lattice:extensions:rest:lattice-rest-codegen'

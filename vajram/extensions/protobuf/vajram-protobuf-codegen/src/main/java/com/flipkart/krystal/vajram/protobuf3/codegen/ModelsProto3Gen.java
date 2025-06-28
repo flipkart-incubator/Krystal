@@ -205,14 +205,14 @@ public class ModelsProto3Gen implements CodeGenerator {
 
     // Add _serialize method from Serializable interface with lazy initialization
     classBuilder.addMethod(
-        MethodSpec.methodBuilder("_serialize")
-            .addAnnotation(Override.class)
-            .addModifiers(PUBLIC)
-            .returns(byteArrayType)
-            .beginControlFlow("if (_serializedPayload == null)")
-            .addStatement("this._serializedPayload = _proto.toByteArray()")
-            .endControlFlow()
-            .addStatement("return _serializedPayload")
+        MethodSpec.overriding(util.getMethod(SerializableModel.class, "_serialize", 0))
+            .addCode(
+                """
+if (_serializedPayload == null){
+  this._serializedPayload = _proto.toByteArray();
+}
+return _serializedPayload;
+""")
             .build());
 
     // Add _build method from ImmutableModel interface

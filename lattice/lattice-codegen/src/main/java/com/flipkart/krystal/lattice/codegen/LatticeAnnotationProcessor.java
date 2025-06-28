@@ -1,6 +1,7 @@
 package com.flipkart.krystal.lattice.codegen;
 
 import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
+import static com.google.common.base.Throwables.getStackTraceAsString;
 import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.models.CodegenPhase;
@@ -42,15 +43,16 @@ public class LatticeAnnotationProcessor extends AbstractProcessor {
         codegenPhase = CodegenPhase.valueOf(phaseString);
       }
     } catch (IllegalArgumentException e) {
-      util.error(
-          ("%s could not parse phase string '%s'. "
-                  + "Exactly one of %s must be passed as value to the java compiler "
-                  + "via the annotation processor argument '-A%s='")
-              .formatted(
-                  getClass().getSimpleName(),
-                  String.valueOf(phaseString),
-                  Arrays.toString(CodegenPhase.values()),
-                  CODEGEN_PHASE_KEY));
+      util.codegenUtil()
+          .error(
+              ("%s could not parse phase string '%s'. "
+                      + "Exactly one of %s must be passed as value to the java compiler "
+                      + "via the annotation processor argument '-A%s='")
+                  .formatted(
+                      getClass().getSimpleName(),
+                      String.valueOf(phaseString),
+                      Arrays.toString(CodegenPhase.values()),
+                      CODEGEN_PHASE_KEY));
       return false;
     }
     List<TypeElement> latticeApps =
@@ -78,7 +80,7 @@ public class LatticeAnnotationProcessor extends AbstractProcessor {
         try {
           customCodeGeneratorProvider.create(codegenContext).generate();
         } catch (Exception e) {
-          util.error(e.toString(), latticeAppTypeElement);
+          util.codegenUtil().error(getStackTraceAsString(e), latticeAppTypeElement);
         }
       }
     }

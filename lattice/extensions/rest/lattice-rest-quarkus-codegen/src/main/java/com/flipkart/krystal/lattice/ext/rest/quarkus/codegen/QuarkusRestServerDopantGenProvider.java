@@ -12,14 +12,17 @@ import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils;
 import com.flipkart.krystal.lattice.codegen.spi.LatticeCodeGeneratorProvider;
+import com.flipkart.krystal.lattice.rest.RestService;
+import com.flipkart.krystal.lattice.rest.api.Path;
+import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfoLite;
+import com.flipkart.krystal.vajram.json.Json;
 import com.google.auto.service.AutoService;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeSpec;
 import flipkart.krystal.lattice.ext.rest.quarkus.restServer.QuarkusRestServerDopant;
-import flipkart.krystal.lattice.ext.rest.quarkus.restServer.RestService;
 import java.util.List;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
@@ -61,10 +64,10 @@ public class QuarkusRestServerDopantGenProvider implements LatticeCodeGeneratorP
               .toString();
 
       LatticeCodegenUtils latticeCodegenUtils = new LatticeCodegenUtils(util);
-      String dopantImplName =
+      ClassName dopantImplName =
           latticeCodegenUtils.getDopantImplName(latticeAppElem, QuarkusRestServerDopant.class);
       TypeSpec.Builder classBuilder =
-          util.classBuilder(dopantImplName)
+          util.classBuilder(dopantImplName.simpleName())
               .addModifiers(Modifier.FINAL)
               .superclass(QuarkusRestServerDopant.class);
       classBuilder.addMethod(
@@ -72,7 +75,7 @@ public class QuarkusRestServerDopantGenProvider implements LatticeCodeGeneratorP
       RestService restService = latticeAppElem.getAnnotation(RestService.class);
       addRoutes(restService, classBuilder);
       util.generateSourceFile(
-          ClassName.get(packageName, dopantImplName).canonicalName(),
+          dopantImplName.canonicalName(),
           JavaFile.builder(packageName, classBuilder.build()).build(),
           latticeAppElem);
     }
@@ -94,23 +97,62 @@ public class QuarkusRestServerDopantGenProvider implements LatticeCodeGeneratorP
                 .getPackageOf(vajramElement)
                 .getQualifiedName()
                 .toString();
+        SupportedModelProtocols supportedModelProtocols =
+            vajramElement.getAnnotation(SupportedModelProtocols.class);
         String vajramId = vajramInfoLite.vajramId().id();
-        methodSpec.addCode(
-            """
-              router
-                  .post($S)
-                  .handler(
-                      routingContext -> executeHttpRequest(routingContext, $T::new));
-            """,
-            pathPrefix + "/" + lowerCaseFirstChar(vajramId),
-            ClassName.get(
-                packageName,
-                vajramId
-                    + Constants.REQUEST_SUFFIX
-                    + Constants.IMMUT_SUFFIX
-                    + JSON.modelClassesSuffix()));
+        if (supportedModelProtocols != null) {
+          List<? extends TypeMirror> modelProtocols =
+              util.getTypesFromAnnotationMember(supportedModelProtocols::value);
+          if (modelProtocols.stream()
+              .anyMatch(
+                  typeMirror ->
+                      util.processingEnv()
+                          .getTypeUtils()
+                          .isSameType(
+                              typeMirror,
+                              util.processingEnv()
+                                  .getElementUtils()
+                                  .getTypeElement(Json.class.getCanonicalName())
+                                  .asType()))) {
+            methodSpec.addCode(
+                """
+                router
+                    .post($S)
+                    .handler(
+                        routingContext -> executeHttpRequest(
+                          routingContext,
+                          routingContext
+                          .request()
+                          .body()
+                          .toCompletionStage()
+                          .thenApply(
+                              buffer -> new $T(buffer.getBytes()))));
+              """,
+                pathPrefix + "/" + lowerCaseFirstChar(vajramId),
+                ClassName.get(
+                    packageName,
+                    vajramId
+                        + Constants.REQUEST_SUFFIX
+                        + Constants.IMMUT_SUFFIX
+                        + JSON.modelClassesSuffix()));
+          }
+        }
+        Path path = vajramElement.getAnnotation(Path.class);
+        if (isSimplePath(path)) {
+          // TODO: Add simple paths to router directly for better performance
+        }
       }
       classBuilder.addMethod(methodSpec.build());
+    }
+
+    private boolean isSimplePath(Path path) {
+      if (path == null) {
+        return false;
+      }
+      if (path.value().matches("[a-zA-Z0-9_/]*")) {
+        return true;
+      }
+      return false;
     }
   }
 }

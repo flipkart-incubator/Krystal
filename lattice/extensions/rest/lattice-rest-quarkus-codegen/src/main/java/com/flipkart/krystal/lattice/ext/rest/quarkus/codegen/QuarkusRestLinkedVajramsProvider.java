@@ -5,9 +5,9 @@ import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.spi.LatticeAppCodeGenAttrsProvider;
+import com.flipkart.krystal.lattice.rest.RestService;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
-import flipkart.krystal.lattice.ext.rest.quarkus.restServer.RestService;
 import java.util.ArrayList;
 import java.util.List;
 import javax.lang.model.element.TypeElement;
@@ -42,7 +42,7 @@ public final class QuarkusRestLinkedVajramsProvider implements LatticeAppCodeGen
                 (TypeElement)
                     requireNonNull(
                         context.codeGenUtility().processingEnv().getTypeUtils().asElement(tm)))
-        .forEach(typeElement -> results.add(typeElement));
+        .forEach(results::add);
     return ImmutableList.copyOf(results);
   }
 }

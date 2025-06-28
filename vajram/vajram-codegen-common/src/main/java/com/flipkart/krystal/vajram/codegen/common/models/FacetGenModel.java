@@ -34,6 +34,11 @@ public sealed interface FacetGenModel permits DefaultFacetModel, DependencyModel
     return ifAbsent != null && ifAbsent.value().isMandatoryOnServer();
   }
 
+  default boolean isOptionalForClient() {
+    IfAbsent ifAbsent = facetField().getAnnotation(IfAbsent.class);
+    return ifAbsent == null || ifAbsent.value().isOptionalForClient();
+  }
+
   @Nullable String documentation();
 
   default boolean isBatched() {

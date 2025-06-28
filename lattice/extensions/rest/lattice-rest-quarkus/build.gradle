@@ -1,10 +1,15 @@
 dependencies {
+    api project(':lattice:extensions:rest:lattice-rest')
+    api project(':lattice:extensions:rest:lattice-rest-api')
     implementation project(':lattice:lattice-core')
+    implementation project(':vajram:extensions:json:vajram-json')
 
     implementation 'io.quarkus:quarkus-core'
     implementation 'io.quarkus:quarkus-vertx'
     implementation 'io.quarkus.vertx.utils:quarkus-vertx-utils'
     implementation 'io.vertx:vertx-web'
+    implementation 'jakarta.ws.rs:jakarta.ws.rs-api'
+    api 'org.jboss.resteasy:resteasy-vertx'
 
     api platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
 

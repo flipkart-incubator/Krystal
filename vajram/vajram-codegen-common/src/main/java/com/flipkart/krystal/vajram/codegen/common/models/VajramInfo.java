@@ -24,11 +24,15 @@ public record VajramInfo(
     if (lite.isTrait()) {
       for (DefaultFacetModel defaultFacet : givenFacets) {
         if (!defaultFacet.facetTypes().equals(Set.of(INPUT))) {
-          lite.util().error("Only INPUT facets are supported in Traits", defaultFacet.facetField());
+          lite.util()
+              .codegenUtil()
+              .error("Only INPUT facets are supported in Traits", defaultFacet.facetField());
         }
       }
       if (!dependencies.isEmpty()) {
-        lite.util().error("Traits cannot have dependencies", dependencies.get(0).facetField());
+        lite.util()
+            .codegenUtil()
+            .error("Traits cannot have dependencies", dependencies.get(0).facetField());
       }
     }
   }
@@ -37,7 +41,7 @@ public record VajramInfo(
     return Stream.concat(givenFacets.stream(), dependencies.stream());
   }
 
-  public TypeElement vajramClass() {
+  public TypeElement vajramClassElem() {
     return lite.vajramOrReqClass();
   }
 

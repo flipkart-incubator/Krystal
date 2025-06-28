@@ -3,35 +3,30 @@ package com.flipkart.krystal.lattice.ext.grpc;
 import static com.flipkart.krystal.lattice.ext.grpc.GrpcServerDopant.DOPANT_TYPE;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
-import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.data.ImmutableRequest;
-import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder.BindingKey;
-import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder.BindingKey.AnnotationType;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
+import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
+import com.flipkart.krystal.lattice.core.di.Bindings;
 import com.flipkart.krystal.lattice.core.doping.Dopant;
+import com.flipkart.krystal.lattice.core.doping.DopantInitData;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
-import com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopant;
 import com.flipkart.krystal.lattice.core.headers.Header;
 import com.flipkart.krystal.lattice.core.headers.SimpleHeader;
 import com.flipkart.krystal.lattice.vajram.VajramDopant;
-import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.tags.Names;
-import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Message;
 import io.grpc.BindableService;
-import io.grpc.Context;
+import io.grpc.Context.Key;
 import io.grpc.Grpc;
 import io.grpc.InsecureServerCredentials;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 import jakarta.inject.Inject;
-import java.io.Closeable;
+import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
@@ -44,11 +39,10 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerConfig> {
 
   public static final String DOPANT_TYPE = "krystal.lattice.grpcServer";
-  private final ThreadingStrategyDopant threadingStrategyDopant;
   private final GrpcServerSpec grpcServerSpec;
 
-  public static GrpcServerSpecBuilder grpc() {
-    return new GrpcServerSpecBuilder();
+  public static GrpcServerSpec.GrpcServerSpecBuilder grpcServer() {
+    return new GrpcServerSpec.GrpcServerSpecBuilder();
   }
 
   private final GrpcServerConfig config;
@@ -59,17 +53,12 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
   private @MonotonicNonNull Server server;
 
   @Inject
-  protected GrpcServerDopant(
-      GrpcInitData initData,
-      StandardHeadersInterceptor headerInterceptor,
-      VajramDopant vajramDopant,
-      ThreadingStrategyDopant threadingStrategyDopant) {
+  protected GrpcServerDopant(GrpcInitData initData) {
     this.grpcServerSpec = initData.spec();
     this.annotation = initData.annotation();
     this.config = initData.config();
-    this.vajramDopant = vajramDopant;
-    this.headerInterceptor = headerInterceptor;
-    this.threadingStrategyDopant = threadingStrategyDopant;
+    this.vajramDopant = initData.vajramDopant();
+    this.headerInterceptor = initData.headerInterceptor();
   }
 
   @Override
@@ -114,83 +103,52 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
       ImmutableRequest<RespT> request,
       StreamObserver<@Nullable RespProtoT> responseObserver,
       Function<@Nullable RespT, RespProtoT> protoConverter) {
-    Lease<? extends ExecutorService> lease;
+    Bindings seedMap = getRequestSeeds();
+    KryonExecutorConfigBuilder configBuilder = KryonExecutorConfig.builder();
+    String requestId = grpcServerSpec.requestIdContextKey().get();
+    if (requestId != null) {
+      configBuilder.executorId(requestId);
+    }
     try {
-      lease = threadingStrategyDopant.getExecutorService();
+      vajramDopant
+          .executeRequest(request, seedMap, configBuilder)
+          .whenComplete(
+              (response, throwable) -> {
+                try {
+                  if (throwable != null) {
+                    responseObserver.onError(throwable);
+                  } else {
+                    RespProtoT proto = protoConverter.apply(response);
+                    if (proto == null) {
+                      responseObserver.onError(getUnknownInternalError());
+                    } else {
+                      responseObserver.onNext(proto);
+                    }
+                  }
+                } catch (Throwable e) {
+                  responseObserver.onError(e);
+                } finally {
+                  responseObserver.onCompleted();
+                }
+              });
     } catch (LeaseUnavailableException e) {
       log.error("Could not lease out single thread executor. Aborting request", e);
       responseObserver.onError(getUnknownInternalError());
       return;
     }
-    ExecutorService executorService = lease.get();
-    if (!(executorService instanceof SingleThreadExecutor singleThreadExecutor)) {
-      throw new UnsupportedOperationException(
-          "Expected 'SingleThreadExecutor'. Found " + executorService.getClass());
-    }
-    Map<BindingKey, Object> seedMap = getRequestSeeds();
-    executorService.execute(
-        () -> {
-          Closeable requestScope = threadingStrategyDopant.openRequestScope(seedMap);
-          try (KrystexVajramExecutor executor =
-              vajramDopant.createExecutor(
-                  singleThreadExecutor,
-                  List.of(
-                      configBuilder ->
-                          configBuilder.executorId(grpcServerSpec.requestIdContextKey().get())),
-                  List.of())) {
-            executor
-                .execute(request)
-                .whenComplete(
-                    (response, throwable) -> {
-                      try {
-
-                        try {
-                          if (throwable != null) {
-                            responseObserver.onError(throwable);
-                          } else {
-                            RespProtoT proto = protoConverter.apply(response);
-                            if (proto == null) {
-                              responseObserver.onError(getUnknownInternalError());
-                            } else {
-                              responseObserver.onNext(proto);
-                            }
-                          }
-                        } catch (Throwable e) {
-                          responseObserver.onError(e);
-                        } finally {
-                          responseObserver.onCompleted();
-                        }
-                      } finally {
-                        try {
-                          requestScope.close();
-                        } catch (Exception e) {
-                          log.error("Unable to close request scope");
-                        }
-                        try {
-                          lease.close();
-                        } catch (Exception e) {
-                          log.error("Unable to close executor Service lease");
-                        }
-                      }
-                    });
-          }
-        });
   }
 
-  private Map<BindingKey, Object> getRequestSeeds() {
-    Map<BindingKey, Object> seedMap = new LinkedHashMap<>();
-    addHeader(grpcServerSpec.requestIdContextKey(), seedMap);
-    addHeader(grpcServerSpec.acceptHeaderContextKey(), seedMap);
-    return seedMap;
+  private Bindings getRequestSeeds() {
+    Bindings bindings = new Bindings();
+    addHeader(grpcServerSpec.acceptHeaderContextKey(), bindings);
+    return bindings;
   }
 
-  private void addHeader(Context.Key<String> key, Map<BindingKey, Object> map) {
+  private void addHeader(Key<String> key, Bindings bindings) {
     String headerValue = key.get();
     if (headerValue != null) {
       String headerKey = key.toString();
-      map.put(
-          new AnnotationType(Header.class, Names.named(headerKey)),
-          new SimpleHeader(headerKey, headerValue));
+      bindings.bind(Header.class, Names.named(headerKey), new SimpleHeader(headerKey, headerValue));
     }
   }
 
@@ -203,5 +161,17 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
     if (server != null) {
       server.awaitTermination();
     }
+  }
+
+  @Singleton
+  protected record GrpcInitData(
+      GrpcServer annotation,
+      GrpcServerConfig config,
+      GrpcServerSpec spec,
+      StandardHeadersInterceptor headerInterceptor,
+      VajramDopant vajramDopant)
+      implements DopantInitData<GrpcServer, GrpcServerConfig, GrpcServerSpec> {
+    @Inject
+    public GrpcInitData {}
   }
 }

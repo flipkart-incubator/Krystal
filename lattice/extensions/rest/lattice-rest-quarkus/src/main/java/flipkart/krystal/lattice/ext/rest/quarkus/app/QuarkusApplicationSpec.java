@@ -1,15 +1,18 @@
 package flipkart.krystal.lattice.ext.rest.quarkus.app;
 
+import static com.flipkart.krystal.lattice.rest.RestServiceDopant.restService;
 import static flipkart.krystal.lattice.ext.rest.quarkus.app.QuarkusApplicationDopant.APPLICATION_DOPANT_TYPE;
 
 import com.flipkart.krystal.lattice.core.doping.Dopant;
 import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoAnnotation;
 import com.flipkart.krystal.lattice.core.doping.DopantConfig.NoConfiguration;
 import com.flipkart.krystal.lattice.core.doping.DopantSpec;
+import com.flipkart.krystal.lattice.core.doping.DopantSpecBuilder;
 import com.flipkart.krystal.lattice.core.doping.SimpleDopantSpecBuilder;
+import java.util.List;
 import lombok.Builder;
 
-@Builder
+@Builder(buildMethodName = "_buildSpec")
 record QuarkusApplicationSpec()
     implements DopantSpec<NoAnnotation, NoConfiguration, QuarkusApplicationDopant> {
 
@@ -20,6 +23,11 @@ record QuarkusApplicationSpec()
 
   public static class QuarkusApplicationSpecBuilder
       extends SimpleDopantSpecBuilder<QuarkusApplicationSpec> {
+
+    @Override
+    public List<DopantSpecBuilder<?, ?, ?>> getAdditionalDopants() {
+      return List.of(restService());
+    }
 
     @Override
     public QuarkusApplicationSpec _buildSpec() {

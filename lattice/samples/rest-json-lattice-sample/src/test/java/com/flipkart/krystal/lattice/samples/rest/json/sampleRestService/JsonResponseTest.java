@@ -1,8 +1,9 @@
 package com.flipkart.krystal.lattice.samples.rest.json.sampleRestService;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 
+import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.ByteArray;
+import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonResponse_ImmutJson;
 import com.google.common.base.Charsets;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +12,7 @@ import org.junit.jupiter.api.Test;
 class JsonResponseTest {
 
   @Test
-  void jsonSerde_success() {
+  void jsonSerde_success() throws Exception {
     JsonResponse_ImmutJson immutJson =
         JsonResponse_ImmutJson._builder()
             .string("Hello")

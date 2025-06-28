@@ -35,9 +35,7 @@ public final class GrpcBindingsProvider implements BindingsProvider {
     TypeElement latticeAppElem = context.latticeAppTypeElement();
     return new DopantBinding(
         ClassName.get(GrpcServerDopant.class),
-        ClassName.get(
-            util.getPackageName(latticeAppElem),
-            latticeCodegenUtils.getDopantImplName(latticeAppElem, GrpcServerDopant.class)));
+        latticeCodegenUtils.getDopantImplName(latticeAppElem, GrpcServerDopant.class));
   }
 
   private static Binding bindAcceptHeaderInRequestScope() {

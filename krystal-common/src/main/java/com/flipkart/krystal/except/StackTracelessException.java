@@ -11,20 +11,15 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  */
 public class StackTracelessException extends RuntimeException {
 
-  protected StackTracelessException() {}
+  protected StackTracelessException() {
+    this(null);
+  }
 
   public StackTracelessException(String message) {
-    super(message);
+    this(message, null);
   }
 
   public StackTracelessException(String message, @Nullable Throwable cause) {
-    super(message, cause);
-  }
-
-  @SuppressWarnings("NonSynchronizedMethodOverridesSynchronizedMethod")
-  @Override
-  public final Throwable fillInStackTrace() {
-    // This exception is used to complete exceptions. Stack trace is not useful.
-    return this;
+    super(message, cause, true, false);
   }
 }

@@ -10,14 +10,21 @@ import com.flipkart.krystal.lattice.core.LatticeAppBootstrap;
 import com.flipkart.krystal.lattice.core.LatticeApplication;
 import com.flipkart.krystal.lattice.ext.guice.GuiceModuleBinder;
 import com.flipkart.krystal.lattice.ext.guice.servlet.GuiceServletModuleBinder;
-import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.RestLatticeSample;
+import com.flipkart.krystal.lattice.rest.RestService;
+import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.logic.RestGetMappingLatticeSample;
+import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.logic.RestLatticeSample;
+import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.logic.RestPostMappingLatticeSample;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
-import flipkart.krystal.lattice.ext.rest.quarkus.restServer.RestService;
 
-@RestService(pathPrefix = "sample", resourceVajrams = RestLatticeSample.class)
 @LatticeApp(
     description = "A sample Lattice Application",
     dependencyInjectionBinder = GuiceServletModuleBinder.class)
+@RestService(
+    resourceVajrams = {
+      RestLatticeSample.class,
+      RestPostMappingLatticeSample.class,
+      RestGetMappingLatticeSample.class
+    })
 public abstract class SampleRestfulLatticeApp extends LatticeApplication {
 
   @Override
@@ -27,9 +34,10 @@ public abstract class SampleRestfulLatticeApp extends LatticeApplication {
             vajramGraph()
                 .graphBuilder(
                     VajramKryonGraph.builder()
-                        .loadFromPackage(
-                            "com.flipkart.krystal.lattice.samples.proto3.sampleProtoService.app")
-                        .loadClasses(RestLatticeSample.class)))
+                        .loadClasses(
+                            RestLatticeSample.class,
+                            RestPostMappingLatticeSample.class,
+                            RestGetMappingLatticeSample.class)))
         .dopeWith(quarkusRestServer());
   }
 

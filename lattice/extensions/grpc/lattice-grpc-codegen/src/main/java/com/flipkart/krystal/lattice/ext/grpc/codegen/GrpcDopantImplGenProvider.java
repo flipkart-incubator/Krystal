@@ -30,14 +30,13 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import io.grpc.stub.StreamObserver;
-import java.io.IOException;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
+import lombok.SneakyThrows;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNullIf;
 
 @AutoService(LatticeCodeGeneratorProvider.class)
@@ -72,11 +71,11 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
         return;
       }
       LatticeCodegenUtils latticeCodegenUtils = new LatticeCodegenUtils(util.codegenUtil());
-      String dopantImplName =
+      ClassName dopantImplName =
           latticeCodegenUtils.getDopantImplName(latticeAppElem, GrpcServerDopant.class);
       TypeSpec.Builder classBuilder =
           util.codegenUtil()
-              .classBuilder(dopantImplName)
+              .classBuilder(dopantImplName.simpleName())
               .addModifiers(Modifier.FINAL)
               .superclass(GrpcServerDopant.class);
 
@@ -84,17 +83,14 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
           latticeCodegenUtils.dopantConstructorOverride(GrpcServerDopant.class).build());
       serviceDefinitions(grpcServer, classBuilder);
 
-      StringWriter writer = new StringWriter();
-      try {
-        JavaFile.builder(packageName, classBuilder.build()).build().writeTo(writer);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
       util.codegenUtil()
           .generateSourceFile(
-              packageName + '.' + dopantImplName, writer.toString(), latticeAppElem);
+              dopantImplName.canonicalName(),
+              JavaFile.builder(packageName, classBuilder.build()).build(),
+              latticeAppElem);
     }
 
+    @SneakyThrows
     private void serviceDefinitions(GrpcServer grpcServer, TypeSpec.Builder classBuilder) {
       TypeElement latticeAppElem = context.latticeAppTypeElement();
       String latticePackageName =
@@ -141,12 +137,13 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
           } else {
             protoRespMsgType = TypeName.get(responseType);
             if (!util.codegenUtil().isRawAssignable(responseType, MessageLite.class)) {
-              util.error(
-                  "Response type of a vajram added to a grpc service must either be a '"
-                      + Model.class
-                      + "' with annotation @SupportedModelProtocols({..., Protobuf3.class, ...}) or it must be a "
-                      + MessageLite.class,
-                  vajramInfoLite.vajramOrReqClass());
+              util.codegenUtil()
+                  .error(
+                      "Response type of a vajram added to a grpc service must either be a '"
+                          + Model.class
+                          + "' with annotation @SupportedModelProtocols({..., Protobuf3.class, ...}) or it must be a "
+                          + MessageLite.class,
+                      vajramInfoLite.vajramOrReqClass());
             }
           }
           rpcMethodsCode.add(
@@ -201,7 +198,11 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
 
       classBuilder.addMethod(
           MethodSpec.overriding(
-                  util.codegenUtil().getMethod(GrpcServerDopant.class, "serviceDefinitions", 0))
+                  util.codegenUtil()
+                      .getMethod(
+                          GrpcServerDopant.class,
+                          GrpcServerDopant.class.getDeclaredMethod("serviceDefinitions").getName(),
+                          0))
               .addCode(
                   """
     return $T.of(

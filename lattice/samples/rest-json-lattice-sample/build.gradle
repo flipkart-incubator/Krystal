@@ -28,6 +28,7 @@ dependencies {
     annotationProcessor 'com.flipkart.krystal.lattice:lattice-guice-codegen'
     annotationProcessor 'com.flipkart.krystal.lattice:lattice-json-codegen'
     annotationProcessor 'com.flipkart.krystal.lattice:lattice-rest-quarkus-codegen'
+    annotationProcessor 'com.flipkart.krystal.lattice:lattice-rest-codegen'
     annotationProcessor 'com.flipkart.krystal:vajram-codegen'
     annotationProcessor 'com.flipkart.krystal:vajram-json'
     annotationProcessor 'com.flipkart.krystal:vajram-json-codegen'

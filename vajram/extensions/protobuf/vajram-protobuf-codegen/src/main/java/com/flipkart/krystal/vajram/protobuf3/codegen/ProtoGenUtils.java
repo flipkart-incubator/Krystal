@@ -89,7 +89,7 @@ public class ProtoGenUtils {
    */
   public static boolean isProto3Applicable(VajramInfo vajramInfo, VajramCodeGenUtility util) {
 
-    TypeElement vajramClass = vajramInfo.vajramClass();
+    TypeElement vajramClass = vajramInfo.vajramClassElem();
     InvocableOutsideProcess invocableOutsideProcess =
         vajramClass.getAnnotation(InvocableOutsideProcess.class);
     if (invocableOutsideProcess == null) {
@@ -260,7 +260,7 @@ public class ProtoGenUtils {
               "Vajram '%s' has return type '%s' which is not a supported model protocol. "
                   + "RPC methods must return a message type that is compatible with Protobuf3.",
               vajramInfo.vajramName(), returnType),
-          vajramInfo.vajramClass());
+          vajramInfo.vajramClassElem());
     }
   }
 

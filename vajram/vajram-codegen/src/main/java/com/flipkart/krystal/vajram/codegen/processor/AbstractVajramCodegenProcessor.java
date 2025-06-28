@@ -48,15 +48,16 @@ abstract sealed class AbstractVajramCodegenProcessor extends AbstractProcessor
         return false;
       }
     } catch (IllegalArgumentException e) {
-      util.error(
-          ("%s could not parse phase string '%s'. "
-                  + "Exactly one of %s must be passed as value to the java compiler "
-                  + "via the annotation processor argument '-A%s='")
-              .formatted(
-                  getClass().getSimpleName(),
-                  String.valueOf(phaseString),
-                  Arrays.toString(CodegenPhase.values()),
-                  CODEGEN_PHASE_KEY));
+      util.codegenUtil()
+          .error(
+              ("%s could not parse phase string '%s'. "
+                      + "Exactly one of %s must be passed as value to the java compiler "
+                      + "via the annotation processor argument '-A%s='")
+                  .formatted(
+                      getClass().getSimpleName(),
+                      String.valueOf(phaseString),
+                      Arrays.toString(CodegenPhase.values()),
+                      CODEGEN_PHASE_KEY));
       return false;
     }
 

@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import javax.lang.model.element.TypeElement;
+import lombok.SneakyThrows;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @AutoService(LatticeCodeGeneratorProvider.class)
@@ -54,6 +55,7 @@ public class GuiceModuleGenProvider implements LatticeCodeGeneratorProvider {
 
   private record GuiceModuleGen(LatticeCodegenContext context) implements CodeGenerator {
 
+    @SneakyThrows
     @Override
     public void generate() {
       if (!isApplicable()) {
@@ -71,7 +73,11 @@ public class GuiceModuleGenProvider implements LatticeCodeGeneratorProvider {
               .addAnnotation(Vetoed.class)
               .superclass(AbstractModule.class)
               .addMethod(
-                  MethodSpec.overriding(util.getMethod(AbstractModule.class, "configure", 0))
+                  MethodSpec.overriding(
+                          util.getMethod(
+                              AbstractModule.class,
+                              AbstractModule.class.getDeclaredMethod("configure").getName(),
+                              0))
                       .addCode(getBindingsCode(context))
                       .build())
               .addMethods(getProviderMethods(context, bindingGens));

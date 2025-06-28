@@ -325,13 +325,15 @@ class Proto3ServiceSchemaGen implements CodeGenerator {
       try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(serviceProtoFilePath))) {
         out.println(protoBuilder);
       } catch (IOException e) {
-        util.error("Failed to generate service proto file %s".formatted(serviceProtoFilePath));
+        util.codegenUtil()
+            .error("Failed to generate service proto file %s".formatted(serviceProtoFilePath));
       }
     } catch (IOException e) {
-      util.error(
+      String message =
           String.format(
               "Error generating protobuf service definition for %s: %s",
-              deepToString(services), e.getMessage()));
+              deepToString(services), e.getMessage());
+      util.codegenUtil().error(message);
     } finally {
       util.codegenUtil().note("Create service proto file");
     }

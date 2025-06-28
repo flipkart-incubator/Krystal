@@ -1,5 +1,6 @@
 package com.flipkart.krystal.lattice.ext.guice;
 
+import com.flipkart.krystal.lattice.core.di.Bindings;
 import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder;
 import com.flipkart.krystal.lattice.core.execution.ThreadingStrategy;
 import com.flipkart.krystal.vajram.guice.inputinjection.VajramGuiceInputInjector;
@@ -13,7 +14,6 @@ import jakarta.inject.Singleton;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 public class GuiceModuleBinder implements DependencyInjectionBinder {
@@ -82,8 +82,7 @@ public class GuiceModuleBinder implements DependencyInjectionBinder {
   }
 
   @Override
-  public Closeable openRequestScope(
-      Map<BindingKey, Object> seedMap, ThreadingStrategy threadingStrategy) {
+  public Closeable openRequestScope(Bindings seedMap, ThreadingStrategy threadingStrategy) {
     return () -> {};
   }
 

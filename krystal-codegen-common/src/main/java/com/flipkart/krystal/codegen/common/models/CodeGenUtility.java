@@ -19,6 +19,7 @@ import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.Creator;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.ModelRoot;
+import com.flipkart.krystal.serial.SerdeProtocol;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Primitives;
@@ -71,6 +72,7 @@ import javax.tools.FileObject;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -112,6 +114,7 @@ public class CodeGenUtility {
         .toString();
   }
 
+  @SneakyThrows
   public void addImmutableModelObjectMethods(
       ClassName immutInterfaceName,
       Set<? extends CharSequence> modelFieldNames,
@@ -390,12 +393,42 @@ public class CodeGenUtility {
   }
 
   public void note(CharSequence message) {
+    _note(message, null);
+  }
+
+  public void note(CharSequence message, TypeElement typeElement) {
+    _note(message, typeElement);
+  }
+
+  private void _note(CharSequence message, TypeElement typeElement) {
     if (DEBUG) {
       processingEnv
           .getMessager()
           .printMessage(
               Kind.NOTE,
-              "[%s] [%s] %s".formatted(getCallerInfo(), String.valueOf(phaseString), message));
+              "[%s] [%s] %s".formatted(getCallerInfo(), String.valueOf(phaseString), message),
+              typeElement);
+    }
+  }
+
+  public CodeValidationException errorAndThrow(String message, @Nullable Element... elements) {
+    _error(message, elements);
+    return new CodeValidationException(message);
+  }
+
+  public void error(String message, @Nullable Element... elements) {
+    _error(message, elements);
+  }
+
+  private void _error(String message, @Nullable Element... elements) {
+    String enrichedMessage =
+        "[%s] [%s] %s".formatted(getCallerInfo(), String.valueOf(phaseString), message);
+    if (elements.length == 0) {
+      processingEnv.getMessager().printMessage(Kind.ERROR, enrichedMessage);
+    } else {
+      for (Element element : elements) {
+        processingEnv.getMessager().printMessage(Kind.ERROR, enrichedMessage, element);
+      }
     }
   }
 
@@ -404,33 +437,25 @@ public class CodeGenUtility {
 
     // stackTrace[0] = Thread.getStackTrace()
     // stackTrace[1] = CodeGenUtility.getCallerInfo()
-    // stackTrace[2] = a util method
-    // stackTrace[3] = the actual caller
-    if (stackTrace.length > 3) {
-      StackTraceElement stackTraceElement = stackTrace[3];
-      String fullClassName = stackTraceElement.getClassName();
-      return fullClassName.substring((fullClassName.lastIndexOf('.') + 1))
-          + ":"
-          + stackTraceElement.getMethodName()
-          + ":"
-          + stackTraceElement.getLineNumber();
+    // stackTrace[2] = a private util method (_note/_error)
+    // stackTrace[3] = a public util method
+    // stackTrace[4 and above] = the actual callers
+    if (stackTrace.length > 4) {
+      StringBuilder callerInfo = new StringBuilder();
+      for (int i = Math.min(5, stackTrace.length - 1); i >= 4; i--) {
+        StackTraceElement stackTraceElement = stackTrace[i];
+        String fullClassName = stackTraceElement.getClassName();
+        callerInfo
+            .append(fullClassName.substring((fullClassName.lastIndexOf('.') + 1)))
+            .append(":")
+            .append(stackTraceElement.getMethodName())
+            .append(":")
+            .append(stackTraceElement.getLineNumber())
+            .append("=>");
+      }
+      return callerInfo.toString();
     } else {
       throw new AssertionError();
-    }
-  }
-
-  public CodeValidationException errorAndThrow(String message, @Nullable Element... elements) {
-    error(message, elements);
-    return new CodeValidationException(message);
-  }
-
-  public void error(String message, @Nullable Element... elements) {
-    if (elements.length == 0) {
-      processingEnv.getMessager().printMessage(Kind.ERROR, message);
-    } else {
-      for (Element element : elements) {
-        processingEnv.getMessager().printMessage(Kind.ERROR, message, element);
-      }
     }
   }
 
@@ -698,6 +723,13 @@ public class CodeGenUtility {
     String modelRootName = modelRootType.getSimpleName().toString();
     String packageName = getPackageName(modelRootType);
     return ClassName.get(packageName, modelRootName + modelRoot.suffixSeparator() + IMMUT_SUFFIX);
+  }
+
+  public ClassName getImmutSerdeClassName(TypeElement modelRootType, SerdeProtocol serdeProtocol) {
+    ClassName immutClassName = getImmutClassName(modelRootType);
+    return ClassName.get(
+        immutClassName.packageName(),
+        immutClassName.simpleName() + serdeProtocol.modelClassesSuffix());
   }
 
   /**

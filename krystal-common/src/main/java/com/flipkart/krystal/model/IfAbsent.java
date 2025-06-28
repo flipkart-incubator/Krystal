@@ -12,6 +12,7 @@ import com.google.auto.value.AutoAnnotation;
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.util.EnumSet;
 import lombok.Getter;
 import lombok.experimental.UtilityClass;
 
@@ -97,6 +98,12 @@ public @interface IfAbsent {
      */
     ASSUME_DEFAULT_VALUE(true, true);
 
+    private static final EnumSet<IfAbsentThen> ALWAYS_OPTIONAL_FOR_CLIENTS =
+        EnumSet.of(WILL_NEVER_FAIL, ASSUME_DEFAULT_VALUE);
+
+    private static final EnumSet<IfAbsentThen> ALWAYS_MANDATORY_ON_SERVER =
+        EnumSet.of(FAIL, ASSUME_DEFAULT_VALUE);
+
     /**
      * true if the platform default value should be used for the facet with this ifNotSet strategy.
      */
@@ -107,6 +114,14 @@ public @interface IfAbsent {
     IfAbsentThen(boolean usePlatformDefault, boolean isMandatoryOnServer) {
       this.usePlatformDefault = usePlatformDefault;
       this.isMandatoryOnServer = isMandatoryOnServer;
+    }
+
+    public boolean isMandatoryOnServer() {
+      return ALWAYS_MANDATORY_ON_SERVER.contains(this);
+    }
+
+    public boolean isOptionalForClient() {
+      return ALWAYS_OPTIONAL_FOR_CLIENTS.contains(this);
     }
   }
 

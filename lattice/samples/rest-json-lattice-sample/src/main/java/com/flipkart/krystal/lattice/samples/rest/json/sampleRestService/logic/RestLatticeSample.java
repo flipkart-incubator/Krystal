@@ -1,4 +1,4 @@
-package com.flipkart.krystal.lattice.samples.rest.json.sampleRestService;
+package com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.logic;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
@@ -6,11 +6,12 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.MAY_FAIL_CONDITIO
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
+import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.ByteArray;
+import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonResponse;
+import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonResponse_Immut;
 import com.flipkart.krystal.lattice.vajram.sdk.InvocableOutsideProcess;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.SupportedModelProtocols;
-import com.flipkart.krystal.serial.ReservedSerialIds;
-import com.flipkart.krystal.serial.SerialId;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
@@ -27,7 +28,6 @@ import java.util.Optional;
 @InvocableOutsideGraph
 @InvocableOutsideProcess
 @SupportedModelProtocols(Json.class)
-@ReservedSerialIds(8)
 @Vajram
 public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
   static class _Inputs {

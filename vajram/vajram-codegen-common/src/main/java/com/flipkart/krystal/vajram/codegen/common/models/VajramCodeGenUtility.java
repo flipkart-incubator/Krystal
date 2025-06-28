@@ -13,7 +13,6 @@ import static javax.lang.model.element.Modifier.ABSTRACT;
 import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.codegen.common.datatypes.DataTypeRegistry;
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
-import com.flipkart.krystal.codegen.common.models.CodeValidationException;
 import com.flipkart.krystal.codegen.common.models.DeclaredTypeVisitor;
 import com.flipkart.krystal.codegen.common.models.TypeAndName;
 import com.flipkart.krystal.core.VajramID;
@@ -150,12 +149,13 @@ public class VajramCodeGenUtility {
           resolverMethod);
     }
     if (!vajramId.equals(parts.get(0))) {
-      error(
-          "Expected vajram id '"
-              + vajramId
-              + "' does not match with the given qualified facet: "
-              + qualifiedFacet,
-          resolverMethod);
+      codegenUtil()
+          .error(
+              "Expected vajram id '"
+                  + vajramId
+                  + "' does not match with the given qualified facet: "
+                  + qualifiedFacet,
+              resolverMethod);
     }
     return parts.get(1);
   }
@@ -251,9 +251,11 @@ public class VajramCodeGenUtility {
         .forEach(
             facetGenModel -> {
               if (facetGenModel.name().startsWith("_")) {
-                error(
-                    "Facet names cannot start with an underscore (_). These are reserved for platform specific identifiers",
-                    facetGenModel.facetField());
+                @Nullable Element[] elements = new Element[] {facetGenModel.facetField()};
+                codegenUtil()
+                    .error(
+                        "Facet names cannot start with an underscore (_). These are reserved for platform specific identifiers",
+                        elements);
               }
             });
   }
@@ -288,7 +290,8 @@ public class VajramCodeGenUtility {
     }
     if (facetField.getAnnotation(Inject.class) != null) {
       if (isInput) {
-        error("Inject facet '%s' cannot be an input facet".formatted(facetName), facetField);
+        codegenUtil()
+            .error("Inject facet '%s' cannot be an input facet".formatted(facetName), facetField);
       }
       facetTypes.add(INJECTION);
     }
@@ -345,20 +348,20 @@ public class VajramCodeGenUtility {
             .or(() -> vajramType)
             .orElseThrow(
                 () -> {
-                  error(
+                  String message =
                       "At least one of `onVajram` or `withVajramReq` is needed in dependency declaration '%s' of vajram '%s'"
-                          .formatted(depField.getSimpleName(), vajramId),
-                      depField);
+                          .formatted(depField.getSimpleName(), vajramId);
+                  codegenUtil().error(message, depField);
                   return new VajramDefinitionException("Invalid Dependency specification");
                 });
     depBuilder.documentation(elementUtils.getDocComment(depField));
     if (vajramReqType.isPresent() && vajramType.isPresent()) {
-      error(
+      String message =
           ("Both `withVajramReq` and `onVajram` cannot be set."
                   + " Please set only one of them for dependency '%s' of vajram '%s'."
                   + " Found withVajramReq=%s and onVajram=%s")
-              .formatted(depField.getSimpleName(), vajramId, vajramReqType.get(), vajramType.get()),
-          depField);
+              .formatted(depField.getSimpleName(), vajramId, vajramReqType.get(), vajramType.get());
+      codegenUtil().error(message, depField);
     } else {
       CodeGenType declaredDataType =
           new DeclaredTypeVisitor(codegenUtil, depField, DISALLOWED_FACET_TYPES)
@@ -371,21 +374,22 @@ public class VajramCodeGenUtility {
           .depReqClassQualifiedName(getVajramReqClassName(vajramOrReqElement))
           .canFanout(dependency.canFanout());
       if (!declaredDataType.equals(depVajramInfoLite.responseType())) {
-        error(
-            "Declared dependency type %s does not match dependency vajram response type %s"
-                .formatted(declaredDataType, depVajramInfoLite.responseType()),
-            depField);
+        codegenUtil()
+            .error(
+                "Declared dependency type %s does not match dependency vajram response type %s"
+                    .formatted(declaredDataType, depVajramInfoLite.responseType()),
+                depField);
       }
       DependencyModel depModel =
           depBuilder.dataType(declaredDataType).vajramInfo(depVajramInfoLite).build();
       givenIdsByName.putIfAbsent(facetName, depModel.id());
       return depModel;
     }
-    error(
+    String message =
         ("Invalid dependency spec of dependency '%s' of vajram '%s'."
                 + " Found withVajramReq=%s and onVajram=%s")
-            .formatted(depField.getSimpleName(), vajramId, vajramReqType.get(), vajramType.get()),
-        depField);
+            .formatted(depField.getSimpleName(), vajramId, vajramReqType.get(), vajramType.get());
+    codegenUtil().error(message, depField);
     return null;
   }
 
@@ -520,14 +524,6 @@ public class VajramCodeGenUtility {
               .formatted(typeParameters, vajramOrReqType.getQualifiedName()),
           vajramOrReqType);
     }
-  }
-
-  public void error(String message, @Nullable Element... elements) {
-    codegenUtil().error(message, elements);
-  }
-
-  public CodeValidationException errorAndThrow(String message, @Nullable Element... elements) {
-    return codegenUtil.errorAndThrow(message, elements);
   }
 
   public static String getRequestInterfaceName(String vajramName) {

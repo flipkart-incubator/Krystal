@@ -1,4 +1,4 @@
-package com.flipkart.krystal.lattice.samples.rest.json.sampleRestService;
+package com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models;
 
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
@@ -19,6 +19,15 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @ModelRoot(type = RESPONSE)
 @SupportedModelProtocols({PlainJavaObject.class, Json.class})
 public interface JsonResponse extends Model {
+
+  @Nullable String path();
+
+  @Nullable String qp_name();
+
+  @Nullable String qp_age();
+
+  @Nullable String uriInfo();
+
   @IfAbsent(FAIL)
   String string();
 

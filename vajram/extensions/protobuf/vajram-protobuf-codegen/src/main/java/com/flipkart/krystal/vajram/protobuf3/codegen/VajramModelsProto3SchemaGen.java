@@ -67,7 +67,7 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
   }
 
   private void generateProtobufSchema(VajramInfo vajramInfo) {
-    String vajramName = vajramInfo.vajramClass().getSimpleName().toString();
+    String vajramName = vajramInfo.vajramClassElem().getSimpleName().toString();
     String packageName = vajramInfo.lite().packageName();
     String reqProtoFileName = vajramName + VAJRAM_REQ_PROTO_FILE_SUFFIX;
 
@@ -75,7 +75,7 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
       // Create output directory if it doesn't exist
       Path outputDir =
           createOutputDirectory(
-              util.detectSourceOutputPath(vajramInfo.vajramClass()), util.codegenUtil());
+              util.detectSourceOutputPath(vajramInfo.vajramClassElem()), util.codegenUtil());
 
       // Generate request proto file content
       String reqProtoContent = generateRequestProtoFileContent(vajramInfo, packageName);
@@ -89,9 +89,9 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
       log.info("Generated request protobuf schema file: {}", reqProtoFilePath);
 
     } catch (IOException e) {
-      util.error(
-          String.format("Error generating protobuf schema for %s: %s", vajramName, e.getMessage()),
-          vajramInfo.vajramClass());
+      String message =
+          String.format("Error generating protobuf schema for %s: %s", vajramName, e.getMessage());
+      util.codegenUtil().error(message, vajramInfo.vajramClassElem());
     }
   }
 
@@ -106,7 +106,7 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
   private String generateRequestProtoFileContent(VajramInfo vajramInfo, String packageName) {
     StringBuilder protoBuilder = new StringBuilder();
     String vajramId = vajramInfo.vajramName();
-    String vajramClassName = vajramInfo.vajramClass().getQualifiedName().toString();
+    String vajramClassName = vajramInfo.vajramClassElem().getQualifiedName().toString();
 
     // Add auto-generated comment
     protoBuilder
@@ -146,11 +146,12 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
       SerialId serialId = facet.facetField().getAnnotation(SerialId.class);
       int fieldNumber;
       if (serialId == null) {
-        util.error(
-            String.format(
-                "Missing @SerialId annotation on input '%s' in Vajram '%s'",
-                facet.name(), vajramId),
-            facet.facetField());
+        util.codegenUtil()
+            .error(
+                String.format(
+                    "Missing @SerialId annotation on input '%s' in Vajram '%s'",
+                    facet.name(), vajramId),
+                facet.facetField());
         fieldNumber = -1;
       } else {
 
@@ -160,20 +161,22 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
 
       // Validate the field number
       if (fieldNumber <= 0) {
-        util.error(
-            String.format(
-                "Invalid SerialId %d for input '%s' in Vajram '%s'. SerialId must be positive.",
-                fieldNumber, facet.name(), vajramId),
-            facet.facetField());
+        util.codegenUtil()
+            .error(
+                String.format(
+                    "Invalid SerialId %d for input '%s' in Vajram '%s'. SerialId must be positive.",
+                    fieldNumber, facet.name(), vajramId),
+                facet.facetField());
       }
 
       // Check for duplicate field numbers
       if (!usedFieldNumbers.add(fieldNumber)) {
-        util.error(
-            String.format(
-                "Duplicate SerialId %d for input '%s' in Vajram '%s'",
-                fieldNumber, facet.name(), vajramId),
-            facet.facetField());
+        util.codegenUtil()
+            .error(
+                String.format(
+                    "Duplicate SerialId %d for input '%s' in Vajram '%s'",
+                    fieldNumber, facet.name(), vajramId),
+                facet.facetField());
       }
 
       // Check if the field has the @Mandatory annotation
@@ -202,12 +205,12 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
         if (!ifAbsentThen.usePlatformDefault() && (isRepeated || isMap)) {
           // Proto3 cannot enforce mandatory fields with FAIL strategy for repeated and
           // map fields
-          util.error(
+          String message =
               String.format(
                   "Input '%s' in Vajram '%s' is a %s field, and has @IfAbsent(%s) which is not supported in protobuf3. "
                       + "Use a different IfAbsent strategy or remove @IfAbsent annotation.",
-                  facet.name(), vajramId, isRepeated ? "repeated" : "map", ifAbsentThen),
-              facet.facetField());
+                  facet.name(), vajramId, isRepeated ? "repeated" : "map", ifAbsentThen);
+          util.codegenUtil().error(message, facet.facetField());
         } else if (ifAbsentThen.usePlatformDefault()) {
           // If the strategy allows defaulting, we can make it a required field in proto3
           isOptional = false;

@@ -4,6 +4,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import com.flipkart.krystal.lattice.core.doping.Dopant;
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
@@ -28,12 +29,21 @@ public class LatticeCodegenUtils {
     this.util = util;
   }
 
-  public String getDopantImplName(
+  public ClassName getDopantImplName(
       TypeElement latticeAppElem, Class<? extends Dopant<?, ?>> dopantClass) {
-    return latticeAppElem.getSimpleName().toString()
-        + APP_DOPANT_NAME_SEPARATOR
-        + dopantClass.getSimpleName()
-        + DOPANT_IMPL_SUFFIX;
+    String packageName =
+        util.processingEnv()
+            .getElementUtils()
+            .getPackageOf(latticeAppElem)
+            .getQualifiedName()
+            .toString();
+
+    return ClassName.get(
+        packageName,
+        latticeAppElem.getSimpleName().toString()
+            + APP_DOPANT_NAME_SEPARATOR
+            + dopantClass.getSimpleName()
+            + DOPANT_IMPL_SUFFIX);
   }
 
   public MethodSpec.Builder dopantConstructorOverride(Class<? extends Dopant<?, ?>> dopantClass) {

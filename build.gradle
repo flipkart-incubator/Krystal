@@ -95,6 +95,7 @@ configure(subprojects.findAll {
 
         constraints {
             implementation "org.projectlombok:lombok:$lombok_version"
+            implementation 'com.google.api.grpc:proto-google-common-protos:2.56.0'
             implementation 'com.google.auto.service:auto-service-annotations:1.1.1'
             implementation 'com.google.code.findbugs:jsr305:3.0.2'
             implementation 'com.google.guava:guava:33.4.8-jre'
@@ -102,11 +103,13 @@ configure(subprojects.findAll {
             implementation 'com.squareup:javapoet:1.13.0'
             implementation 'commons-cli:commons-cli:1.6.0'
             implementation 'jakarta.inject:jakarta.inject-api:2.0.1'
+            implementation 'jakarta.ws.rs:jakarta.ws.rs-api:4.0.0'
             implementation 'javax.annotation:javax.annotation-api:1.3.2'
             implementation 'org.reflections:reflections:0.10.2'
             implementation 'org.slf4j:slf4j-api:2.0.11'
             implementation 'org.yaml:snakeyaml:2.2'
-            implementation 'com.google.api.grpc:proto-google-common-protos:2.56.0'
+            implementation 'org.jboss.resteasy:resteasy-vertx:7.0.0.Beta1'
+            implementation 'org.jboss.resteasy:resteasy-core:7.0.0.Beta1'
 
             runtimeOnly 'jakarta.servlet:jakarta.servlet-api:6.1.0'
             implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0'
@@ -122,6 +125,7 @@ configure(subprojects.findAll {
             annotationProcessor "com.flipkart.krystal.lattice:lattice-json-codegen:$lattice_version"
             annotationProcessor "com.flipkart.krystal.lattice:lattice-protobuf-codegen:$lattice_version"
             annotationProcessor "com.flipkart.krystal.lattice:lattice-rest-quarkus-codegen:$lattice_version"
+            annotationProcessor "com.flipkart.krystal.lattice:lattice-rest-codegen:$lattice_version"
             annotationProcessor "com.flipkart.krystal:vajram-codegen:$krystal_version"
             annotationProcessor "com.flipkart.krystal:vajram-json-codegen:$krystal_version"
             annotationProcessor "com.flipkart.krystal:vajram-protobuf-codegen:$krystal_version"

@@ -10,6 +10,7 @@ import static javax.lang.model.element.Modifier.STATIC;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -21,6 +22,7 @@ import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.vajram.json.Json;
 import com.flipkart.krystal.vajram.json.SerializableJsonModel;
 import com.squareup.javapoet.AnnotationSpec;
@@ -116,18 +118,12 @@ final class JsonModelsGen implements CodeGenerator {
 
     // Add _serialize method from Serializable interface with lazy initialization
     classBuilder.addMethod(
-        MethodSpec.methodBuilder("_serialize")
-            .addAnnotation(Override.class)
-            .addModifiers(PUBLIC)
-            .returns(byteArrayType)
+        MethodSpec.overriding(util.getMethod(SerializableModel.class, "_serialize", 0))
+            .addException(JsonProcessingException.class)
             .addCode(
                 """
 if (_serializedPayload == null) {
-  try{
-    this._serializedPayload = _WRITER.writeValueAsBytes(this);
-  } catch (Exception e) {
-    throw new RuntimeException("Failed to serialize model to json", e);
-  }
+  this._serializedPayload = _WRITER.writeValueAsBytes(this);
 }
 return _serializedPayload;
 """)

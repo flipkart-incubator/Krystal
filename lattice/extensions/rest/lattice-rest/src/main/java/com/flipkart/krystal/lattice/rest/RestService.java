@@ -1,6 +1,5 @@
-package flipkart.krystal.lattice.ext.rest.quarkus.restServer;
+package com.flipkart.krystal.lattice.rest;
 
-import static flipkart.krystal.lattice.ext.rest.quarkus.restServer.QuarkusRestServerDopant.REST_SERVER_DOPANT_TYPE;
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
@@ -13,7 +12,7 @@ import java.lang.annotation.Target;
 @Retention(RUNTIME)
 @Inherited
 @Target(TYPE)
-@DopantType(REST_SERVER_DOPANT_TYPE)
+@DopantType(RestServiceDopant.REST_SERVICE_DOPANT_TYPE)
 public @interface RestService {
 
   Class<? extends VajramDef<?>>[] resourceVajrams();
