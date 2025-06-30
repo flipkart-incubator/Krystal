@@ -10,11 +10,12 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.lattice.core.di.Bindings;
+import com.flipkart.krystal.lattice.core.di.Bindings.BindingsBuilder;
 import com.flipkart.krystal.lattice.core.doping.Dopant;
 import com.flipkart.krystal.lattice.core.doping.DopantInitData;
 import com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopant;
 import com.flipkart.krystal.lattice.core.headers.Header;
-import com.flipkart.krystal.lattice.core.headers.SimpleHeader;
+import com.flipkart.krystal.lattice.core.headers.SingleValueHeader;
 import com.flipkart.krystal.lattice.rest.RestService;
 import com.flipkart.krystal.lattice.rest.RestServiceDopant;
 import com.flipkart.krystal.lattice.rest.api.status.HttpResponseStatusException;
@@ -36,6 +37,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jboss.resteasy.plugins.server.vertx.VertxRegistry;
 import org.jboss.resteasy.plugins.server.vertx.VertxRequestHandler;
 import org.jboss.resteasy.plugins.server.vertx.VertxResteasyDeployment;
 
@@ -99,7 +102,8 @@ public abstract class QuarkusRestServerDopant
     deployment.start();
 
     closeables.add(deployment::stop);
-    restServiceDopant.getResources().forEach(deployment.getRegistry()::addSingletonResource);
+    VertxRegistry registry = deployment.getRegistry();
+    restServiceDopant.getResources().forEach(registry::addSingletonResource);
     return new VertxRequestHandler(vertx, deployment, restService.pathPrefix());
   }
 
@@ -130,7 +134,11 @@ public abstract class QuarkusRestServerDopant
         .thenAccept(
             response -> {
               try {
-                if (response instanceof SerializableModel serializableResponse) {
+                if (response == null) {
+                  httpResponse.end();
+                } else if (response instanceof byte[] bytes) {
+                  httpResponse.end(new NoBoundChecksBuffer(wrappedBuffer(bytes)));
+                } else if (response instanceof SerializableModel serializableResponse) {
                   httpResponse
                       .putHeader(CONTENT_TYPE, serializableResponse._serdeProtocol().contentType())
                       .end(
@@ -172,13 +180,15 @@ public abstract class QuarkusRestServerDopant
         });
   }
 
-  private Bindings getRequestScopeSeedBindings(RoutingContext routingContext, String requestId) {
-    Bindings seeds = new Bindings();
+  private Bindings getRequestScopeSeedBindings(
+      RoutingContext routingContext, @Nullable String requestId) {
+    BindingsBuilder seeds = Bindings.builder();
     seeds.bind(RoutingContext.class, routingContext);
     if (requestId != null) {
-      seeds.bind(Header.class, Names.named(REQUEST_ID), new SimpleHeader(REQUEST_ID, requestId));
+      seeds.bind(
+          Header.class, Names.named(REQUEST_ID), new SingleValueHeader(REQUEST_ID, requestId));
     }
-    return seeds;
+    return seeds.build();
   }
 
   protected record QuarkusRestDopantInitData(

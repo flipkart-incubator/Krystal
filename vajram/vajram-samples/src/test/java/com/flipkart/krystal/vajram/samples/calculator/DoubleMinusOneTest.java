@@ -49,7 +49,7 @@ class DoubleMinusOneTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId("doubleMinusOne")
-                        .executor(executorLease.get())
+                        .executorService(executorLease.get())
                         ._riskyOpenAllKryonsForExternalInvocation(true))
                 .build())) {
       future =
@@ -68,7 +68,7 @@ class DoubleMinusOneTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId("doubleMinusOne")
-                        .executor(executorLease.get())
+                        .executorService(executorLease.get())
                         ._riskyOpenAllKryonsForExternalInvocation(true))
                 .build())) {
       future =
@@ -87,7 +87,7 @@ class DoubleMinusOneTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId("doubleMinusOne")
-                        .executor(executorLease.get())
+                        .executorService(executorLease.get())
                         ._riskyOpenAllKryonsForExternalInvocation(true))
                 .build())) {
       future =

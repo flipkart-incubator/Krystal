@@ -143,7 +143,9 @@ class AddUsingTraitsTest {
   private KrystexVajramExecutorConfigBuilder executorConfig() {
     return KrystexVajramExecutorConfig.builder()
         .kryonExecutorConfigBuilder(
-            KryonExecutorConfig.builder().executorId(REQUEST_ID).executor(executorLease.get()));
+            KryonExecutorConfig.builder()
+                .executorId(REQUEST_ID)
+                .executorService(executorLease.get()));
   }
 
   @Test

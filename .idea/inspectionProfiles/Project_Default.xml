@@ -75,7 +75,6 @@
     <inspection_tool class="DeprecatedClassUsageInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="DeprecatedConfigurations" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="DeprecatedIsStillUsed" enabled="false" level="WARNING" enabled_by_default="false" />
-    <inspection_tool class="DeprecatedLombok" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="DeprecatedViewBound" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="Deprecation" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="DevKitPropertiesMessageValidation" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -234,8 +233,6 @@
     <inspection_tool class="LogStatementGuardedByLogCondition" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="LoggingConditionDisagreesWithLogStatement" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="LoggingPlaceholderCountMatchesArgumentCount" enabled="false" level="WARNING" enabled_by_default="false" />
-    <inspection_tool class="LombokGetterMayBeUsed" enabled="true" level="INFORMATION" enabled_by_default="true" editorAttributes="INFORMATION_ATTRIBUTES" />
-    <inspection_tool class="LombokSetterMayBeUsed" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="LoopConditionNotUpdatedInsideLoop" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="LoopStatementsThatDontLoop" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="LossyConversionCompoundAssignment" enabled="false" level="WARNING" enabled_by_default="false" />
@@ -378,8 +375,6 @@
     <inspection_tool class="RedundantHeadOrLastOption" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="RedundantLengthCheck" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="RedundantMethodOverride" enabled="false" level="WARNING" enabled_by_default="false" />
-    <inspection_tool class="RedundantModifiersValLombok" enabled="false" level="WARNING" enabled_by_default="false" />
-    <inspection_tool class="RedundantModifiersValueLombok" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="RedundantRecordConstructor" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="RedundantScheduledForRemovalAnnotation" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="RedundantStringOperation" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -435,7 +430,6 @@
     <inspection_tool class="SingleImport" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="SingleStatementInBlock" enabled="false" level="INFORMATION" enabled_by_default="false" />
     <inspection_tool class="SourceToSinkFlow" enabled="false" level="WARNING" enabled_by_default="false" />
-    <inspection_tool class="SpringQualifierCopyableLombok" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="StaticCallOnSubclass" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="StaticInitializerReferencesSubClass" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="StringBufferToStringInConcatenation" enabled="true" level="WARNING" enabled_by_default="true" />
@@ -507,6 +501,7 @@
           <option value="TestOnlyProblems" />
           <option value="JavaReflectionMemberAccess" />
           <option value="cast.unsafe" />
+          <option value="assignment" />
         </list>
       </option>
     </inspection_tool>

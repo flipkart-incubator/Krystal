@@ -33,8 +33,8 @@ import org.jetbrains.annotations.TestOnly;
  * @param graphTraversalStrategy DEPTH is more performant and memory efficient. BREADTH is sometimes
  *     useful for debugging
  * @param kryonDecoratorConfigs The request scoped kryon decorators to be applied
- * @param executor MANDATORY! This is used as the event loop for the message passing within this
- *     execution.
+ * @param executorService MANDATORY! This is used as the event loop for the message passing within
+ *     this execution.
  * @param traitDispatchDecorator used to determine the conformant vajrams bound to traits
  * @param debug If true, more human-readable names are give to entities - might be memory
  *     ineffecient.
@@ -52,7 +52,7 @@ public record KryonExecutorConfig(
     @Singular ImmutableMap<String, OutputLogicDecoratorConfig> outputLogicDecoratorConfigs,
     @Singular ImmutableMap<String, KryonDecoratorConfig> kryonDecoratorConfigs,
     @Singular ImmutableMap<String, DependencyDecoratorConfig> dependencyDecoratorConfigs,
-    @NonNull SingleThreadExecutor executor,
+    @NonNull SingleThreadExecutor executorService,
     TraitDispatchDecorator traitDispatchDecorator,
     boolean debug,
     /* ****** Risky Flags ********/

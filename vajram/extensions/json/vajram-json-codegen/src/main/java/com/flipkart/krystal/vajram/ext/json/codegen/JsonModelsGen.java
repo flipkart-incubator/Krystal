@@ -307,7 +307,7 @@ return _serializedPayload;
       dataAccessMethods.add(
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC)
-              .addParameter(util.getParameterType(method.getReturnType()), methodName)
+              .addParameter(util.getParameterType(method), methodName)
               .returns(immutableJsonName.nestedClass("Builder"))
               .addStatement("this._pojo.$L($L)", methodName, methodName)
               .addStatement("return this")

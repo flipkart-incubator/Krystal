@@ -68,7 +68,7 @@ class AddZeroTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
-                        .executor(executorLease.get()))
+                        .executorService(executorLease.get()))
                 .build())) {
       future =
           krystexVajramExecutor.execute(

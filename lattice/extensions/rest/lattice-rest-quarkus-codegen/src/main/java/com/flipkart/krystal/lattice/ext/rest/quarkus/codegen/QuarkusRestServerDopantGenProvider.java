@@ -110,9 +110,11 @@ public class QuarkusRestServerDopantGenProvider implements LatticeCodeGeneratorP
                           .getTypeUtils()
                           .isSameType(
                               typeMirror,
-                              util.processingEnv()
-                                  .getElementUtils()
-                                  .getTypeElement(Json.class.getCanonicalName())
+                              requireNonNull(
+                                      util.processingEnv()
+                                          .getElementUtils()
+                                          .getTypeElement(
+                                              requireNonNull(Json.class.getCanonicalName())))
                                   .asType()))) {
             methodSpec.addCode(
                 """
@@ -149,10 +151,7 @@ public class QuarkusRestServerDopantGenProvider implements LatticeCodeGeneratorP
       if (path == null) {
         return false;
       }
-      if (path.value().matches("[a-zA-Z0-9_/]*")) {
-        return true;
-      }
-      return false;
+      return path.value().matches("[\\w/]*");
     }
   }
 }

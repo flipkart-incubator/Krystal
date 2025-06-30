@@ -6,7 +6,8 @@ import lombok.NonNull;
 import org.checkerframework.checker.calledmethods.qual.CalledMethods;
 
 public record KrystexVajramExecutorConfig(
-    @NonNull @CalledMethods("executor") KryonExecutorConfigBuilder kryonExecutorConfigBuilder) {
+    @NonNull @CalledMethods("executorService")
+        KryonExecutorConfigBuilder kryonExecutorConfigBuilder) {
 
   @Builder
   public KrystexVajramExecutorConfig {}

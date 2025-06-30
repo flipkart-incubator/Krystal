@@ -53,7 +53,7 @@ class A2MinusB2Test {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
-                        .executor(executorLease.get()))
+                        .executorService(executorLease.get()))
                 .build())) {
       future =
           executeVajram(

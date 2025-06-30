@@ -4,10 +4,10 @@ import com.google.common.collect.ImmutableList;
 import lombok.Getter;
 
 @Getter
-public final class SimpleHeader extends HeaderImpl {
+public final class SingleValueHeader extends HeaderImpl {
   String value;
 
-  public SimpleHeader(String name, String value) {
+  public SingleValueHeader(String name, String value) {
     super(name, ImmutableList.of(value));
     this.value = value;
   }

@@ -135,7 +135,7 @@ public final class KryonExecutor implements KrystalExecutor {
       KryonDefinitionRegistry kryonDefinitionRegistry, KryonExecutorConfig executorConfig) {
     this.kryonDefinitionRegistry = kryonDefinitionRegistry;
     this.executorConfig = executorConfig;
-    this.commandQueue = executorConfig.executor();
+    this.commandQueue = executorConfig.executorService();
     this.executorId = executorConfig.executorId();
     this.outputLogicDecoratorConfigs = executorConfig.outputLogicDecoratorConfigs();
     this.dependencyDecoratorConfigs = makeDependencyDecorConfigs(executorConfig);

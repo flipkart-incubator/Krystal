@@ -60,6 +60,7 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
 import lombok.SneakyThrows;
+import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @AutoService(LatticeCodeGeneratorProvider.class)
@@ -94,11 +95,12 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
       RestService restService = latticeAppElem.getAnnotation(RestService.class);
       String pathPrefix = restService.pathPrefix().isEmpty() ? "" : "/" + restService.pathPrefix();
       List<ClassName> resourceClasses = new ArrayList<>();
-      for (var vajramElem :
+      for (TypeElement vajramElem :
           util.getTypesFromAnnotationMember(restService::resourceVajrams).stream()
-              .map(
+              .<@NonNull TypeElement>map(
                   typeMirror ->
-                      (TypeElement) util.processingEnv().getTypeUtils().asElement(typeMirror))
+                      requireNonNull(
+                          (TypeElement) util.processingEnv().getTypeUtils().asElement(typeMirror)))
               .toList()) {
         Path path = vajramElem.getAnnotation(Path.class);
         if (path == null) {
@@ -258,16 +260,18 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
             requestSerdeProtocols =
                 util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
                     .filter(t -> util.isRawAssignable(t, SerdeProtocol.class))
-                    .map(
+                    .<@NonNull TypeElement>map(
                         typeMirror ->
-                            (TypeElement) util.processingEnv().getTypeUtils().asElement(typeMirror))
+                            requireNonNull(
+                                (TypeElement)
+                                    util.processingEnv().getTypeUtils().asElement(typeMirror)))
                     .collect(toImmutableList());
             if (requestSerdeProtocols.isEmpty()) {
               util.error(
                   "Rest request Body facet "
                       + facet.name()
                       + " doesn't support any SerdeProtocols. Found: "
-                      + supportedModelProtocols.value(),
+                      + Arrays.toString(supportedModelProtocols.value()),
                   facet.facetField());
             }
           }
@@ -302,10 +306,11 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
               body.facetField());
         }
         TypeElement requestClass =
-            (TypeElement)
-                util.processingEnv()
-                    .getTypeUtils()
-                    .asElement(body.dataType().javaModelType(util.processingEnv()));
+            requireNonNull(
+                (TypeElement)
+                    util.processingEnv()
+                        .getTypeUtils()
+                        .asElement(body.dataType().javaModelType(util.processingEnv())));
         for (TypeElement serdeProtocolType : requestSerdeProtocols) {
           SerdeProtocol serdeProtocol =
               configProviders.get(serdeProtocolType.getQualifiedName().toString());

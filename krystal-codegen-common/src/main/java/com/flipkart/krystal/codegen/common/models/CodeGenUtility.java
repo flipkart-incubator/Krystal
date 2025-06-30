@@ -55,7 +55,6 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.QualifiedNameable;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.MirroredTypeException;
@@ -234,14 +233,16 @@ public class CodeGenUtility {
     }
   }
 
-  public boolean isNullable(TypeMirror typeMirror) {
-    return typeMirror.getAnnotationMirrors().stream()
+  public boolean isAnyNullable(TypeMirror type, Element elementToCheck) {
+    return isAnyNullable(type::getAnnotationMirrors)
+        || isAnyNullable(elementToCheck::getAnnotationMirrors);
+  }
+
+  private boolean isAnyNullable(Supplier<List<? extends AnnotationMirror>> annotationMirrors) {
+    return annotationMirrors.get().stream()
         .map(AnnotationMirror::getAnnotationType)
         .map(DeclaredType::asElement)
-        .filter(type -> type instanceof QualifiedNameable)
-        .map(type -> (QualifiedNameable) type)
-        .anyMatch(
-            element -> element.getQualifiedName().contentEquals(Nullable.class.getCanonicalName()));
+        .anyMatch(element -> element.getSimpleName().contentEquals("Nullable"));
   }
 
   public boolean isOptional(TypeMirror returnType) {
@@ -400,7 +401,7 @@ public class CodeGenUtility {
     _note(message, typeElement);
   }
 
-  private void _note(CharSequence message, TypeElement typeElement) {
+  private void _note(CharSequence message, @Nullable TypeElement typeElement) {
     if (DEBUG) {
       processingEnv
           .getMessager()
@@ -752,10 +753,11 @@ public class CodeGenUtility {
   /**
    * Determines the parameter type for a method return type, handling Optional types.
    *
-   * @param specifiedType The return type of the method
+   * @param method The method
    * @return The appropriate parameter type
    */
-  public TypeName getParameterType(TypeMirror specifiedType) {
+  public TypeName getParameterType(ExecutableElement method) {
+    TypeMirror specifiedType = method.getReturnType();
     TypeMirror inferredType = specifiedType;
     if (isOptional(specifiedType)) {
       // For Optional<T>, use T as the parameter type
@@ -766,7 +768,7 @@ public class CodeGenUtility {
       typeName = typeName.box();
     }
     // Add @Nullable annotation for Optional types or methods with @Nullable annotation
-    if (isOptional(specifiedType) || isNullable(specifiedType)) {
+    if (isOptional(specifiedType) || isAnyNullable(specifiedType, method)) {
       // Add @Nullable as a type annotation
       typeName = typeName.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
     }

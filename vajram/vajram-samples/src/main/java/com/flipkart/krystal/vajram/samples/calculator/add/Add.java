@@ -3,6 +3,7 @@ package com.flipkart.krystal.vajram.samples.calculator.add;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.ASSUME_DEFAULT_VALUE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.lang.Boolean.TRUE;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.function.Function.identity;
 
@@ -19,15 +20,15 @@ import com.google.common.collect.ImmutableMap;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.LongAdder;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Adds two numbers - {@code numberOne} and {@code numberTwo} and returns the result. While {@code
  * numberOne} is a mandatory input, {@code numberTwo} is optional and defaults to zero if not set.
  */
-@SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
+@SuppressWarnings("initialization.field.uninitialized")
 @Vajram
 public abstract class Add extends IOVajramDef<Integer> {
 
@@ -60,9 +61,9 @@ public abstract class Add extends IOVajramDef<Integer> {
 
   @Output.Batched
   static CompletableFuture<BatchAddResult> batchedOutput(
-      ImmutableCollection<Add_BatchItem> _batchItems, Optional<Boolean> fail) {
+      ImmutableCollection<Add_BatchItem> _batchItems, @Nullable Boolean fail) {
     CALL_COUNTER.increment();
-    if (fail.orElse(false)) {
+    if (TRUE.equals(fail)) {
       throw new RuntimeException("Adder failed because fail flag was set");
     }
     return completedFuture(

@@ -1,6 +1,14 @@
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+package java.lang;
+
+class String {
+  public String formatted(@Nullable Object... args) {
+
+  }
+}
+
 package java.util.concurrent;
 
 class ForkJoinPool{

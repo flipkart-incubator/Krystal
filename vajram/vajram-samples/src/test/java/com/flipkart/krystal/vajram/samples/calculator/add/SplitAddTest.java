@@ -87,7 +87,7 @@ class SplitAddTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId("chainAdderTest")
-                        .executor(executorLease.get())
+                        .executorService(executorLease.get())
                         .configureWith(new MainLogicExecReporter(kryonExecutionReport))
                         // Tests whether executor level disabled dependant chains is working
                         .disabledDependentChains(disabledDepChains(graph)))
@@ -108,7 +108,7 @@ class SplitAddTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId("splitAdderTest")
-                        .executor(executorLease.get()))
+                        .executorService(executorLease.get()))
                 .build())) {
       future =
           krystexVajramExecutor.execute(
@@ -140,7 +140,7 @@ class SplitAddTest {
                   .kryonExecutorConfigBuilder(
                       KryonExecutorConfig.builder()
                           .executorId("splitAdderTest")
-                          .executor(executorLease.get())
+                          .executorService(executorLease.get())
                           .disabledDependentChains(disabledDepChains(graph)))
                   .build())) {
         metrics[value] =
@@ -212,7 +212,7 @@ class SplitAddTest {
                   .kryonExecutorConfigBuilder(
                       KryonExecutorConfig.builder()
                           .executorId("splitAdderTest")
-                          .executor(executorLease.get())
+                          .executorService(executorLease.get())
                           .disabledDependentChains(disabledDepChains(graph)))
                   .build())) {
         timeToCreateExecutors += System.nanoTime() - iterStartTime;

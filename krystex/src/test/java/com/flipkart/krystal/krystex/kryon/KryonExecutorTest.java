@@ -621,7 +621,7 @@ class KryonExecutorTest {
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     var config =
         KryonExecutorConfig.builder()
-            .executor(executorLease.get())
+            .executorService(executorLease.get())
             .kryonExecStrategy(kryonExecStrategy)
             .graphTraversalStrategy(graphTraversalStrategy)
             .configureWith(requestLevelCache)

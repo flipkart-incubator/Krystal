@@ -67,7 +67,6 @@ import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValuesContainer;
 import com.flipkart.krystal.data.ImmutableRequest;
-import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.FacetType;
@@ -682,8 +681,7 @@ public class VajramCodeGenerator implements CodeGenerator {
         .getParameters()
         .forEach(
             parameter ->
-                generateFacetLocalVariable(
-                    outputLogic, parameter, returnBuilder, FACET_VALUES_VAR));
+                facetLocalVariable(outputLogic, parameter, returnBuilder, FACET_VALUES_VAR));
 
     String methodCallSuffix;
     if (isIOVajram) {
@@ -1099,7 +1097,7 @@ public class VajramCodeGenerator implements CodeGenerator {
         @Nullable Element[] elements = param.elementArray();
         util.codegenUtil().error(message, elements);
       }
-      generateFacetLocalVariable(
+      facetLocalVariable(
           withBatchingOutputLogic.batchedOutput(), param.element(), codeBuilder, BATCH_KEY_NAME);
     }
   }
@@ -1149,9 +1147,7 @@ public class VajramCodeGenerator implements CodeGenerator {
     // Iterate over the method params and call respective binding methods
     method
         .getParameters()
-        .forEach(
-            parameter ->
-                generateFacetLocalVariable(method, parameter, codeBuilder, FACET_VALUES_VAR));
+        .forEach(parameter -> facetLocalVariable(method, parameter, codeBuilder, FACET_VALUES_VAR));
 
     buildResolverInvocation(
         codeBuilder,
@@ -1168,7 +1164,7 @@ public class VajramCodeGenerator implements CodeGenerator {
     return codeBuilder;
   }
 
-  private void generateFacetLocalVariable(
+  private void facetLocalVariable(
       ExecutableElement method,
       VariableElement parameter,
       CodeBlock.Builder codeBuilder,
@@ -1177,10 +1173,9 @@ public class VajramCodeGenerator implements CodeGenerator {
     // check if the bind param has multiple resolvers
     FacetGenModel usingFacetModel = checkNotNull(facetModels.get(usingFacetId));
     if (usingFacetModel instanceof DependencyModel) {
-      generateDependencyResolutions(method, usingFacetId, codeBuilder, parameter);
+      depFacetLocalVariable(method, usingFacetId, codeBuilder, parameter);
     } else if (usingFacetModel instanceof DefaultFacetModel defaultFacetModel) {
       TypeMirror facetType = defaultFacetModel.dataType().javaModelType(util.processingEnv());
-      String variable = usingFacetModel.name();
       TypeMirror parameterTypeMirror = parameter.asType();
       final TypeName parameterType = TypeName.get(parameterTypeMirror);
       if (defaultFacetModel.isMandatoryOnServer()) {
@@ -1195,27 +1190,34 @@ public class VajramCodeGenerator implements CodeGenerator {
             CodeBlock.builder()
                 .addStatement(
                     "var $L = $T.validateMandatoryFacet($L.$L(), $S, $S)",
-                    variable,
+                    usingFacetModel.name(),
                     FacetValidation.class,
                     facetsVar,
                     usingFacetModel.name(),
                     currentVajramInfo.lite().vajramId().id(),
                     usingFacetModel.name())
                 .build());
-      } else if (util.codegenUtil().isRawAssignable(parameterTypeMirror, Optional.class)) {
+      } else if (util.codegenUtil().isOptional(parameterTypeMirror)) {
         codeBuilder.add(
             CodeBlock.builder()
                 .addStatement(
                     "var $L = $T.ofNullable($L.$L())",
-                    variable,
+                    usingFacetModel.name(),
                     Optional.class,
                     facetsVar,
                     usingFacetModel.name())
                 .build());
+      } else if (util.codegenUtil().isAnyNullable(parameterTypeMirror, parameter)) {
+        codeBuilder.add(
+            CodeBlock.builder()
+                .addStatement(
+                    "var $L = $L.$L()", usingFacetModel.name(), facetsVar, usingFacetModel.name())
+                .build());
       } else {
         String message =
             String.format(
-                "Optional dependency %s must have type as Optional", usingFacetModel.name());
+                "Optional facet '%s' must be accessed via a @Nullable param or an Optional<> param",
+                usingFacetModel.name());
         util.codegenUtil().error(message, parameter);
       }
     } else {
@@ -1232,7 +1234,7 @@ public class VajramCodeGenerator implements CodeGenerator {
    * @param codeBuilder The {@link CodeBlock.Builder}
    * @param parameter the bind parameter in the resolver method
    */
-  private void generateDependencyResolutions(
+  private void depFacetLocalVariable(
       ExecutableElement method,
       final int usingFacetId,
       CodeBlock.Builder codeBuilder,
@@ -1276,8 +1278,8 @@ public class VajramCodeGenerator implements CodeGenerator {
             usingFacetName);
       } else {
         // This means the dependency being consumed used is not a fanout dependency
-        String depAccessLhs = "$1T $2L";
-        String depAccessRhs = "$3L.$4L()";
+        String depAccessLhs = "var $1L";
+        String depAccessRhs = "$2L.$3L()";
         String depValueAccessorCode = depAccessLhs + " = " + depAccessRhs;
         if (usingFacetDef.isMandatoryOnServer()) {
           if (unboxedDepType.equals(TypeName.get(parameterType))) {
@@ -1287,10 +1289,9 @@ public class VajramCodeGenerator implements CodeGenerator {
             // dependencyDef response and provide it.
             codeBuilder.addStatement(
                 depAccessLhs
-                    + "= $5T.validateMandatoryFacet("
+                    + "= $4T.validateMandatoryFacet("
                     + depAccessRhs
-                    + ".response().valueOpt().orElse(null), $6S, $7S)",
-                unboxedDepType,
+                    + ".response().value(), $5S, $6S)",
                 variableName,
                 FACET_VALUES_VAR,
                 usingFacetName,
@@ -1316,7 +1317,6 @@ public class VajramCodeGenerator implements CodeGenerator {
             // response and provide it.
             codeBuilder.addStatement(
                 depValueAccessorCode + ".response()",
-                ParameterizedTypeName.get(ClassName.get(Errable.class), boxedDepType),
                 variableName,
                 FACET_VALUES_VAR,
                 usingFacetName);
@@ -1325,30 +1325,25 @@ public class VajramCodeGenerator implements CodeGenerator {
             // dev has  requested an 'Optional'. So we retrieve the Errable from the
             // response, extract the optional and provide it.
             String code = depValueAccessorCode + ".response().valueOpt()";
+            codeBuilder.addStatement(code, variableName, FACET_VALUES_VAR, usingFacetName);
+          } else if (util.codegenUtil().isAnyNullable(parameterType, parameter)) {
+            // This means this dependencyDef being consumed is not a fanout and the
+            // dev has  requested a @Nullable value. So we retrieve the Errable from the
+            // response, extract the nullable and provide it.
+            String code = depValueAccessorCode + ".response().value()";
+            codeBuilder.addStatement(code, variableName, FACET_VALUES_VAR, usingFacetName);
+          } else if (util.codegenUtil().isRawAssignable(parameterType, One2OneDepResponse.class)) {
+            // This means this dependencyDef being consumed is not a fanout and the  dev has
+            // requested a 'One2OneDepResponse'.
             codeBuilder.addStatement(
-                code,
-                ParameterizedTypeName.get(ClassName.get(Optional.class), boxedDepType),
-                variableName,
-                FACET_VALUES_VAR,
-                usingFacetName);
+                depValueAccessorCode, variableName, FACET_VALUES_VAR, usingFacetName);
           } else {
-            if (util.codegenUtil().isRawAssignable(parameterType, One2OneDepResponse.class)) {
-              // This means this dependencyDef being consumed is not a fanout and the  dev has
-              // requested a 'One2OneDepResponse'.
-              codeBuilder.addStatement(
-                  depValueAccessorCode,
-                  ParameterizedTypeName.get(ClassName.get(Optional.class), boxedDepType),
-                  variableName,
-                  FACET_VALUES_VAR,
-                  usingFacetName);
-            } else {
-              util.codegenUtil()
-                  .error(
-                      ("A resolver ('%s') must not access an optional dependency ('%s') directly."
-                              + "Use Optional<>, Errable<>, or DependencyResponse<> instead")
-                          .formatted(logicName, usingFacetName),
-                      parameter);
-            }
+            util.codegenUtil()
+                .error(
+                    ("A resolver ('%s') must not access an optional dependency ('%s') directly."
+                            + "Use @Nullable, Optional<>, Errable<>, One2OneDepResponse<> or FanoutDepResponses<> instead")
+                        .formatted(logicName, usingFacetName),
+                    parameter);
           }
         }
       }
@@ -1485,7 +1480,7 @@ public class VajramCodeGenerator implements CodeGenerator {
             util.codegenUtil()
                 .error(
                     "Resolver method which resolves multiple dependency inputs must return a %s object"
-                        .formatted(Builder.class),
+                        .formatted(ImmutableRequest.Builder.class),
                     resolverMethod);
           }
           // Here we are assuming that the method is returning an MultiExecute of the type

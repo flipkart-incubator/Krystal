@@ -366,7 +366,7 @@ class KrystexVajramExecutorTest {
             KrystexVajramExecutorConfig.builder()
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
-                        .executor(executorLease.get())
+                        .executorService(executorLease.get())
                         .kryonExecStrategy(BATCH)
                         .graphTraversalStrategy(graphTraversalStrategy)
                         .configureWith(new MainLogicExecReporter(kryonExecutionReport)))
@@ -487,7 +487,8 @@ class KrystexVajramExecutorTest {
         .configureWith(Resilience4JCircuitBreaker.onePerIOVajram());
 
     return KrystexVajramExecutorConfig.builder()
-        .kryonExecutorConfigBuilder(kryonExecutorConfigBuilder.executor(executorLease.get()));
+        .kryonExecutorConfigBuilder(
+            kryonExecutorConfigBuilder.executorService(executorLease.get()));
   }
 
   @ParameterizedTest

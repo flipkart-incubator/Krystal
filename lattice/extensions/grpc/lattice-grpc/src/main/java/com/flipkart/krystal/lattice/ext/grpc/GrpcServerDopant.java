@@ -7,12 +7,14 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.lattice.core.di.Bindings;
+import com.flipkart.krystal.lattice.core.di.Bindings.BindingsBuilder;
 import com.flipkart.krystal.lattice.core.doping.Dopant;
 import com.flipkart.krystal.lattice.core.doping.DopantInitData;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.headers.Header;
-import com.flipkart.krystal.lattice.core.headers.SimpleHeader;
+import com.flipkart.krystal.lattice.core.headers.SingleValueHeader;
 import com.flipkart.krystal.lattice.vajram.VajramDopant;
+import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.tags.Names;
 import com.google.common.collect.ImmutableList;
@@ -23,6 +25,8 @@ import io.grpc.Grpc;
 import io.grpc.InsecureServerCredentials;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.Status;
+import io.grpc.StatusException;
 import io.grpc.stub.StreamObserver;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -111,7 +115,12 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
     }
     try {
       vajramDopant
-          .executeRequest(request, seedMap, configBuilder)
+          .executeRequest(
+              VajramRequestExecutionContext.<RespT>builder()
+                  .vajramRequest(request)
+                  .requestScopeSeeds(seedMap)
+                  .executorConfigBuilder(configBuilder)
+                  .build())
           .whenComplete(
               (response, throwable) -> {
                 try {
@@ -133,22 +142,23 @@ public abstract class GrpcServerDopant implements Dopant<GrpcServer, GrpcServerC
               });
     } catch (LeaseUnavailableException e) {
       log.error("Could not lease out single thread executor. Aborting request", e);
-      responseObserver.onError(getUnknownInternalError());
+      responseObserver.onError(new StatusException(Status.RESOURCE_EXHAUSTED));
       return;
     }
   }
 
   private Bindings getRequestSeeds() {
-    Bindings bindings = new Bindings();
+    BindingsBuilder bindings = Bindings.builder();
     addHeader(grpcServerSpec.acceptHeaderContextKey(), bindings);
-    return bindings;
+    return bindings.build();
   }
 
-  private void addHeader(Key<String> key, Bindings bindings) {
+  private void addHeader(Key<String> key, BindingsBuilder bindings) {
     String headerValue = key.get();
     if (headerValue != null) {
       String headerKey = key.toString();
-      bindings.bind(Header.class, Names.named(headerKey), new SimpleHeader(headerKey, headerValue));
+      bindings.bind(
+          Header.class, Names.named(headerKey), new SingleValueHeader(headerKey, headerValue));
     }
   }
 

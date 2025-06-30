@@ -100,7 +100,7 @@ class Proto3LatticeSampleTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
-                        .executor(executorLease.get()))
+                        .executorService(executorLease.get()))
                 .build())) {
       result =
           executor.execute(
@@ -109,13 +109,13 @@ class Proto3LatticeSampleTest {
 
     // Verify the result
     Proto3LatticeSampleResponse output = result.get();
-    assertThat(output.string()).contains("$$ optionalInput: Optional[42] $$");
+    assertThat(output.string()).contains("$$ optionalInput: 42 $$");
     assertThat(output.string()).contains("$$ mandatoryInput: 100 $$");
-    assertThat(output.string()).contains("$$ conditionallyMandatoryInput: Optional[200] $$");
+    assertThat(output.string()).contains("$$ conditionallyMandatoryInput: 200 $$");
     assertThat(output.string()).contains("$$ inputWithDefaultValue: 300 $$");
-    assertThat(output.string()).contains("$$ optionalLongInput: Optional[10] $$");
+    assertThat(output.string()).contains("$$ optionalLongInput: 10 $$");
     assertThat(output.string()).contains("$$ mandatoryLongInput: 20 $$");
-    assertThat(output.string()).contains("$$ optionalByteString: Optional[test] $$");
+    assertThat(output.string()).contains("$$ optionalByteString: test $$");
     assertThat(output.string()).contains("$$ defaultByteString: hello $$");
   }
 
@@ -138,7 +138,7 @@ class Proto3LatticeSampleTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
-                        .executor(executorLease.get()))
+                        .executorService(executorLease.get()))
                 .build())) {
       result =
           executor.execute(
@@ -147,12 +147,12 @@ class Proto3LatticeSampleTest {
 
     // Verify the result
     Proto3LatticeSampleResponse output = result.get();
-    assertThat(output.string()).contains("$$ optionalInput: Optional.empty $$");
+    assertThat(output.string()).contains("$$ optionalInput: null $$");
     assertThat(output.string()).contains("$$ mandatoryInput: 100 $$");
     assertThat(output.string()).contains("$$ inputWithDefaultValue: 300 $$");
-    assertThat(output.string()).contains("$$ optionalLongInput: Optional.empty $$");
+    assertThat(output.string()).contains("$$ optionalLongInput: null $$");
     assertThat(output.string()).contains("$$ mandatoryLongInput: 20 $$");
-    assertThat(output.string()).contains("$$ optionalByteString: Optional.empty $$");
+    assertThat(output.string()).contains("$$ optionalByteString: null $$");
     assertThat(output.string()).contains("$$ defaultByteString:  $$");
   }
 
@@ -174,7 +174,7 @@ class Proto3LatticeSampleTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
-                        .executor(executorLease.get()))
+                        .executorService(executorLease.get()))
                 .build())) {
       result =
           executor.execute(
@@ -205,7 +205,7 @@ class Proto3LatticeSampleTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
-                        .executor(executorLease.get()))
+                        .executorService(executorLease.get()))
                 .build())) {
       result =
           executor.execute(
@@ -237,7 +237,7 @@ class Proto3LatticeSampleTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
-                        .executor(executorLease.get()))
+                        .executorService(executorLease.get()))
                 .build())) {
       result =
           executor.execute(
@@ -274,7 +274,7 @@ class Proto3LatticeSampleTest {
                         .kryonExecutorConfigBuilder(
                             KryonExecutorConfig.builder()
                                 .executorId(REQUEST_ID)
-                                .executor(executorLease.get()))
+                                .executorService(executorLease.get()))
                         .build(),
                     requestLevelCache)
                 .withMock(
@@ -314,7 +314,7 @@ class Proto3LatticeSampleTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
-                        .executor(executorLease.get()))
+                        .executorService(executorLease.get()))
                 .build())) {
       result =
           executor.execute(
@@ -323,6 +323,6 @@ class Proto3LatticeSampleTest {
 
     // Verify the result
     Proto3LatticeSampleResponse output = result.get();
-    assertThat(output.string()).contains("$$ optionalByteString: Optional[Hello, World!] $$");
+    assertThat(output.string()).contains("$$ optionalByteString: Hello, World! $$");
   }
 }

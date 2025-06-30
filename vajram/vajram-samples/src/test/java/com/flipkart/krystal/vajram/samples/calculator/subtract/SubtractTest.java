@@ -48,7 +48,7 @@ class SubtractTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId("subtract")
-                        .executor(executorLease.get()))
+                        .executorService(executorLease.get()))
                 .build())) {
       future =
           krystexVajramExecutor.execute(

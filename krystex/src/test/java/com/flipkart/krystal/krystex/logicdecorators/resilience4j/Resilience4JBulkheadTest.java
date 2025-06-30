@@ -132,7 +132,7 @@ class Resilience4JBulkheadTest {
             kryonDefinitionRegistry,
             KryonExecutorConfig.builder()
                 .executorId("executor1")
-                .executor(executorLease.get())
+                .executorService(executorLease.get())
                 .configureWith(singleBulkhead)
                 .executorId("executor1")
                 .build());
@@ -146,7 +146,7 @@ class Resilience4JBulkheadTest {
         new KryonExecutor(
             kryonDefinitionRegistry,
             KryonExecutorConfig.builder()
-                .executor(executorLease.get())
+                .executorService(executorLease.get())
                 .configureWith(singleBulkhead)
                 .executorId("executor2")
                 .build());
@@ -160,7 +160,7 @@ class Resilience4JBulkheadTest {
         new KryonExecutor(
             kryonDefinitionRegistry,
             KryonExecutorConfig.builder()
-                .executor(executorLease.get())
+                .executorService(executorLease.get())
                 .configureWith(singleBulkhead)
                 .executorId("executor3")
                 .build());
@@ -232,7 +232,7 @@ class Resilience4JBulkheadTest {
         new KryonExecutor(
             kryonDefinitionRegistry,
             KryonExecutorConfig.builder()
-                .executor(executorLease.get())
+                .executorService(executorLease.get())
                 .configureWith(resilience4JBulkhead)
                 .executorId("executor1")
                 .build());
@@ -246,7 +246,7 @@ class Resilience4JBulkheadTest {
         new KryonExecutor(
             kryonDefinitionRegistry,
             KryonExecutorConfig.builder()
-                .executor(executorLease.get())
+                .executorService(executorLease.get())
                 .configureWith(resilience4JBulkhead)
                 .executorId("executor2")
                 .build());
@@ -260,7 +260,7 @@ class Resilience4JBulkheadTest {
         new KryonExecutor(
             kryonDefinitionRegistry,
             KryonExecutorConfig.builder()
-                .executor(executorLease.get())
+                .executorService(executorLease.get())
                 .configureWith(resilience4JBulkhead)
                 .executorId("executor3")
                 .build());

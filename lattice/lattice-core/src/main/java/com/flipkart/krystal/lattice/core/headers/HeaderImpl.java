@@ -7,7 +7,7 @@ import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Getter
-sealed class HeaderImpl implements Header permits SimpleHeader {
+sealed class HeaderImpl implements Header permits SingleValueHeader {
   String name;
   ImmutableList<String> values;
 
@@ -20,5 +20,10 @@ sealed class HeaderImpl implements Header permits SimpleHeader {
   public boolean equals(@Nullable Object o) {
     if (!(o instanceof Header that)) return false;
     return Objects.equals(name, that.name()) && Objects.equals(values, that.values());
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(name(), values());
   }
 }

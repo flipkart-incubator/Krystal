@@ -55,7 +55,7 @@ public @interface IfAbsent {
      * The author of the code guarantees that the code will never fail because of this value not
      * being set. For example, the code might always default to some value when there is no value.
      */
-    WILL_NEVER_FAIL(false, false),
+    WILL_NEVER_FAIL(false),
 
     /**
      * Specifies that the facet is mandatory but only in specific conditions - otherwise, it's
@@ -68,13 +68,13 @@ public @interface IfAbsent {
      *
      * <p>If IfAbsent annotation is missing, then this is considered the default.
      */
-    MAY_FAIL_CONDITIONALLY(false, false),
+    MAY_FAIL_CONDITIONALLY(false),
 
     /**
      * The application will fail if the value is not set. In colloquial terms, it is said that the
      * value is "mandatory"
      */
-    FAIL(false, true),
+    FAIL(false),
 
     /**
      * If the data field is not set, then assume that a default value has been set. The default
@@ -96,7 +96,7 @@ public @interface IfAbsent {
      *   <li>boolean: false
      * </ul>
      */
-    ASSUME_DEFAULT_VALUE(true, true);
+    ASSUME_DEFAULT_VALUE(true);
 
     private static final EnumSet<IfAbsentThen> ALWAYS_OPTIONAL_FOR_CLIENTS =
         EnumSet.of(WILL_NEVER_FAIL, ASSUME_DEFAULT_VALUE);
@@ -109,11 +109,8 @@ public @interface IfAbsent {
      */
     @Getter private final boolean usePlatformDefault;
 
-    @Getter private final boolean isMandatoryOnServer;
-
-    IfAbsentThen(boolean usePlatformDefault, boolean isMandatoryOnServer) {
+    IfAbsentThen(boolean usePlatformDefault) {
       this.usePlatformDefault = usePlatformDefault;
-      this.isMandatoryOnServer = isMandatoryOnServer;
     }
 
     public boolean isMandatoryOnServer() {

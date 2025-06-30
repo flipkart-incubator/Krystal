@@ -135,7 +135,8 @@ class MultiAgentContactTest {
 
   private KrystexVajramExecutorConfig getExecutorConfig() {
     return KrystexVajramExecutorConfig.builder()
-        .kryonExecutorConfigBuilder(KryonExecutorConfig.builder().executor(executorLease.get()))
+        .kryonExecutorConfigBuilder(
+            KryonExecutorConfig.builder().executorService(executorLease.get()))
         .build();
   }
 }

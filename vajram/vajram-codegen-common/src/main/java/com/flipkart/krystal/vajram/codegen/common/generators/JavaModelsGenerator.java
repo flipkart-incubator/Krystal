@@ -432,11 +432,10 @@ public final class JavaModelsGenerator implements CodeGenerator {
       validateOptionalField(method);
       String methodName = method.getSimpleName().toString();
 
-      TypeMirror returnType = method.getReturnType();
       MethodSpec.Builder methodBuilder =
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC, ABSTRACT)
-              .addParameter(util.getParameterType(returnType), methodName)
+              .addParameter(util.getParameterType(method), methodName)
               .returns(ClassName.get("", "Builder"));
       if (hasParentModelRoot) {
         methodBuilder.addAnnotation(Override.class);
@@ -505,7 +504,8 @@ public final class JavaModelsGenerator implements CodeGenerator {
       }
 
       // Add @Nullable annotation for Optional types or methods with @Nullable annotation
-      if (util.isOptional(method.getReturnType()) || util.isNullable(method.getReturnType())) {
+      if (util.isOptional(method.getReturnType())
+          || util.isAnyNullable(method.getReturnType(), method)) {
         // Add @Nullable as a type annotation
         fieldType =
             fieldType.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
@@ -520,7 +520,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
       String fieldName = method.getSimpleName().toString();
 
       constructorBuilder.addParameter(
-          ParameterSpec.builder(util.getParameterType(method.getReturnType()), fieldName).build());
+          ParameterSpec.builder(util.getParameterType(method), fieldName).build());
 
       // For all field types, just assign the parameter directly
       constructorBuilder.addStatement("this.$N = $N", fieldName, fieldName);
@@ -683,7 +683,8 @@ public final class JavaModelsGenerator implements CodeGenerator {
       }
 
       // Add @Nullable annotation for Optional types or methods with @Nullable annotation
-      if (util.isOptional(method.getReturnType()) || util.isNullable(method.getReturnType())) {
+      if (util.isOptional(method.getReturnType())
+          || util.isAnyNullable(method.getReturnType(), method)) {
         // Add @Nullable as a type annotation
         TypeName annotatedType =
             fieldType.annotated(AnnotationSpec.builder(ClassName.get(Nullable.class)).build());
@@ -704,7 +705,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
       dataAccessMethods.add(
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC)
-              .addParameter(util.getParameterType(method.getReturnType()), methodName)
+              .addParameter(util.getParameterType(method), methodName)
               .returns(ClassName.get("", "Builder"))
               .addStatement("this.$L = $L", methodName, methodName)
               .addStatement("return this")
@@ -731,7 +732,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
 
       // If IfAbsent annotation was found, handle according to strategy
       // Only generate null check if validation is needed or error needs to be thrown
-      if (!typeSupportsAbsentValues(returnType)) {
+      if (!typeSupportsAbsentValues(method)) {
         buildMethodBuilder.beginControlFlow("if (this.$N == null)", fieldName);
 
         IfAbsentThen ifAbsentThen = util.getIfAbsent(method).value();
@@ -811,7 +812,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
   private void validateOptionalField(ExecutableElement method) {
     IfAbsentThen ifAbsentThen = util.getIfAbsent(method).value();
     if (!ifAbsentThen.isMandatoryOnServer()) {
-      if (!typeSupportsAbsentValues(method.getReturnType())) {
+      if (!typeSupportsAbsentValues(method)) {
         util.error(
             "Field '%s' with @IfAbsent(%s) must be an Optional or annotated with %s: "
                 .formatted(method.getSimpleName(), ifAbsentThen, Nullable.class.getCanonicalName()),
@@ -820,8 +821,9 @@ public final class JavaModelsGenerator implements CodeGenerator {
     }
   }
 
-  private boolean typeSupportsAbsentValues(TypeMirror returnType) {
+  private boolean typeSupportsAbsentValues(ExecutableElement method) {
+    TypeMirror returnType = method.getReturnType();
     return !returnType.getKind().isPrimitive()
-        && (util.isOptional(returnType) || util.isNullable(returnType));
+        && (util.isOptional(returnType) || util.isAnyNullable(returnType, method));
   }
 }

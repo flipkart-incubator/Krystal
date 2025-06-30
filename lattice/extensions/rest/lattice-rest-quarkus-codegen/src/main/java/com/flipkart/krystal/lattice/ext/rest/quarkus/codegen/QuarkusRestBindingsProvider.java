@@ -7,7 +7,7 @@ import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils;
 import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider;
 import com.flipkart.krystal.lattice.core.headers.Header;
-import com.flipkart.krystal.lattice.core.headers.SimpleHeader;
+import com.flipkart.krystal.lattice.core.headers.SingleValueHeader;
 import com.flipkart.krystal.lattice.core.headers.StandardHeaderNames;
 import com.flipkart.krystal.lattice.rest.RestService;
 import com.google.auto.service.AutoService;
@@ -61,7 +61,7 @@ public final class QuarkusRestBindingsProvider implements BindingsProvider {
         List.of(ParameterSpec.builder(RoutingContext.class, "routingContext")),
         CodeBlock.of(
             "return new $T($T.ACCEPT, routingContext.request().getHeader($T.ACCEPT));",
-            SimpleHeader.class,
+            SingleValueHeader.class,
             StandardHeaderNames.class,
             StandardHeaderNames.class),
         REQUEST);

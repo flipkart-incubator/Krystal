@@ -48,7 +48,7 @@ class MultiplyTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId("multiply")
-                        .executor(executorLease.get()))
+                        .executorService(executorLease.get()))
                 .build())) {
       future =
           krystexVajramExecutor.execute(

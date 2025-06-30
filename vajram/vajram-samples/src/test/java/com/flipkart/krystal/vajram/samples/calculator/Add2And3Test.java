@@ -49,7 +49,7 @@ class Add2And3Test {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId("add2and3")
-                        .executor(executorLease.get()))
+                        .executorService(executorLease.get()))
                 .build())) {
       future = krystexVajramExecutor.execute(Add2And3_ReqImmutPojo._builder()._build());
     }

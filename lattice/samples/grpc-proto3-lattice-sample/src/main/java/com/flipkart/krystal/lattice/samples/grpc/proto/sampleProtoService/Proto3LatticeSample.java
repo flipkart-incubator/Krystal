@@ -18,13 +18,13 @@ import com.flipkart.krystal.vajram.protobuf3.Protobuf3;
 import com.google.protobuf.ByteString;
 import jakarta.inject.Inject;
 import java.util.List;
-import java.util.Optional;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A sample vajram to demonstrate integration between grpc and vajrams. This vajram can be invoked
  * via a GRPC call by remote clients.
  */
-@SuppressWarnings({"initialization.field.uninitialized", "optional.parameter"})
+@SuppressWarnings("initialization.field.uninitialized")
 @InvocableOutsideGraph
 @InvocableOutsideProcess
 @SupportedModelProtocols(Protobuf3.class)
@@ -74,13 +74,13 @@ public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3Lattice
 
   @Output
   static Proto3LatticeSampleResponse output(
-      Optional<Integer> optionalInput,
+      @Nullable Integer optionalInput,
       int mandatoryInput,
-      Optional<Integer> conditionallyMandatoryInput,
+      @Nullable Integer conditionallyMandatoryInput,
       int inputWithDefaultValue,
-      Optional<Long> optionalLongInput,
+      @Nullable Long optionalLongInput,
       Long mandatoryLongInput,
-      Optional<ByteString> optionalByteString,
+      @Nullable ByteString optionalByteString,
       ByteString defaultByteString,
       Proto3LatticeSampleResponse_Immut.Builder responseBuilder) {
     return responseBuilder
@@ -102,7 +102,7 @@ public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3Lattice
                     inputWithDefaultValue,
                     optionalLongInput,
                     mandatoryLongInput,
-                    optionalByteString.map(bytes -> bytes.toString(UTF_8)),
+                    optionalByteString == null ? null : optionalByteString.toString(UTF_8),
                     defaultByteString.toString(UTF_8)))
         .mandatoryInt(1)
         ._build();

@@ -16,7 +16,7 @@ import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.core.UriInfo;
-import java.util.Optional;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A sample vajram to demonstrate integration between rest and vajrams. This vajram can be invoked
@@ -52,14 +52,14 @@ public abstract class RestGetMappingLatticeSample extends ComputeVajramDef<JsonR
   @Output
   static JsonResponse output(
       String fullPath,
-      Optional<String> name,
-      Optional<String> age,
+      @Nullable String name,
+      @Nullable String age,
       UriInfo uriInfo,
       JsonResponse_Immut.Builder reponseBuilder) {
     return reponseBuilder
         .path(fullPath)
-        .qp_name(name.orElse(null))
-        .qp_age(age.orElse(null))
+        .qp_name(name)
+        .qp_age(age)
         .uriInfo(uriInfo.getPath())
         .string(uriInfo.getQueryParameters().toString())
         .mandatoryInt(1)

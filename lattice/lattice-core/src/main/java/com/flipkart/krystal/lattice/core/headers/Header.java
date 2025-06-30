@@ -9,7 +9,7 @@ public sealed interface Header permits HeaderImpl {
 
   static Header of(String name, List<String> value) {
     if (value.size() == 1) {
-      return new SimpleHeader(name, value.get(0));
+      return new SingleValueHeader(name, value.get(0));
     } else {
       return new HeaderImpl(name, value);
     }

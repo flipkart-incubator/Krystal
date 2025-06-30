@@ -47,7 +47,7 @@ class DivideTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId("subtract")
-                        .executor(executorLease.get()))
+                        .executorService(executorLease.get()))
                 .build())) {
       assertThatThrownBy(
               () ->

@@ -23,7 +23,7 @@ class AddTest {
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
                     .executorId("adderTest")
-                    .executor(new SingleThreadExecutor("adderTest"))
+                    .executorService(new SingleThreadExecutor("adderTest"))
                     ._riskyOpenAllKryonsForExternalInvocation(true))
             .build();
     CompletableFuture<Integer> future;

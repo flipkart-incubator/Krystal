@@ -15,11 +15,11 @@ public class StackTracelessException extends RuntimeException {
     this(null);
   }
 
-  public StackTracelessException(String message) {
+  public StackTracelessException(@Nullable String message) {
     this(message, null);
   }
 
-  public StackTracelessException(String message, @Nullable Throwable cause) {
+  public StackTracelessException(@Nullable String message, @Nullable Throwable cause) {
     super(message, cause, true, false);
   }
 }

@@ -7,13 +7,16 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.lattice.core.di.Bindings;
+import com.flipkart.krystal.lattice.core.di.Bindings.BindingsBuilder;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
 import com.flipkart.krystal.lattice.core.doping.DopantWithAnnotation;
 import com.flipkart.krystal.lattice.core.headers.Header;
-import com.flipkart.krystal.lattice.core.headers.SimpleHeader;
+import com.flipkart.krystal.lattice.core.headers.SingleValueHeader;
 import com.flipkart.krystal.lattice.rest.RestServiceSpec.RestServiceSpecBuilder;
 import com.flipkart.krystal.lattice.rest.api.status.HttpResponseStatusException;
 import com.flipkart.krystal.lattice.vajram.VajramDopant;
+import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext;
+import com.flipkart.krystal.lattice.vajram.VajramRequestExecutionContext.VajramRequestExecutionContextBuilder;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.tags.Names;
@@ -23,9 +26,12 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.Response.ResponseBuilder;
 import jakarta.ws.rs.core.UriInfo;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletionStage;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jboss.resteasy.core.ResteasyContext;
 
 @Slf4j
 @DopantType(RestServiceDopant.REST_SERVICE_DOPANT_TYPE)
@@ -48,14 +54,16 @@ public abstract class RestServiceDopant implements DopantWithAnnotation<RestServ
       executorConfigBuilder.executorId(requestIds.get(0));
     }
     return executeHttpRequest(
-            vajramRequest,
-            getRequestScopeSeeds(headers, new UriInfoImpl(uriInfo)),
-            executorConfigBuilder)
+            vajramRequest, getRequestScopeSeeds(headers, uriInfo), executorConfigBuilder)
         .thenApply(
             response -> {
               ResponseBuilder responseBuilder;
               try {
-                if (response instanceof SerializableModel serializableResponse) {
+                if (response == null) {
+                  responseBuilder = Response.ok();
+                } else if (response instanceof byte[] bytes) {
+                  responseBuilder = Response.ok(bytes);
+                } else if (response instanceof SerializableModel serializableResponse) {
                   responseBuilder =
                       Response.ok(serializableResponse._serialize())
                           .header(
@@ -80,16 +88,35 @@ public abstract class RestServiceDopant implements DopantWithAnnotation<RestServ
       KryonExecutorConfigBuilder kryonExecutorConfigBuilder)
       throws HttpResponseStatusException {
     try {
-      return vajramDopant.executeRequest(
-          vajramRequest, requestScopeSeeds, kryonExecutorConfigBuilder);
+      VajramRequestExecutionContextBuilder<RespT> contextBuilder =
+          VajramRequestExecutionContext.<RespT>builder()
+              .vajramRequest(vajramRequest)
+              .requestScopeSeeds(requestScopeSeeds)
+              .executorConfigBuilder(kryonExecutorConfigBuilder);
+      transferResteasyContext(contextBuilder);
+      return vajramDopant.executeRequest(contextBuilder.build());
     } catch (LeaseUnavailableException e) {
       log.error("Could not lease out single thread executor. Aborting request", e);
       throw new HttpResponseStatusException(StatusCodes.LEASE_UNAVAILABLE);
     }
   }
 
+  /**
+   * Transfer the RESTEasy context to Krystal thread so that request scope data accesses work as
+   * expected.
+   */
+  private static <RespT> void transferResteasyContext(
+      VajramRequestExecutionContextBuilder<RespT> contextBuilder) {
+
+    Map<Class<?>, Object> contextDataMap = ResteasyContext.getContextDataMap(false);
+    if (contextDataMap != null) {
+      contextBuilder.requestScopeInitializer(
+          () -> ResteasyContext.addCloseableContextDataLevel(contextDataMap));
+    }
+  }
+
   private static Bindings getRequestScopeSeeds(HttpHeaders headers, UriInfo uriInfo) {
-    Bindings seeds = new Bindings();
+    BindingsBuilder seeds = Bindings.builder();
     seeds.bind(HttpHeaders.class, headers);
     seeds.bind(UriInfo.class, uriInfo);
     for (Entry<String, List<String>> entry : headers.getRequestHeaders().entrySet()) {
@@ -98,15 +125,15 @@ public abstract class RestServiceDopant implements DopantWithAnnotation<RestServ
       if (value != null) {
         Header header = Header.of(name, value);
         seeds.bind(Header.class, Names.named(name), header);
-        if (header instanceof SimpleHeader simpleHeader) {
-          seeds.bind(SimpleHeader.class, Names.named(name), simpleHeader);
+        if (header instanceof SingleValueHeader singleValueHeader) {
+          seeds.bind(SingleValueHeader.class, Names.named(name), singleValueHeader);
         }
       }
     }
-    return seeds;
+    return seeds.build();
   }
 
-  public List<?> getResources() {
+  public List<? extends @NonNull Object> getResources() {
     return List.of();
   }
 

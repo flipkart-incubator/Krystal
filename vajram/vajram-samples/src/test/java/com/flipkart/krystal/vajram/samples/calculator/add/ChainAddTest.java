@@ -87,7 +87,7 @@ class ChainAddTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId("chainAdderTest")
-                        .executor(executorLease.get())
+                        .executorService(executorLease.get())
                         .configureWith(new MainLogicExecReporter(kryonExecutionReport)))
                 .build())) {
 
@@ -252,7 +252,7 @@ class ChainAddTest {
         .kryonExecutorConfigBuilder(
             KryonExecutorConfig.builder()
                 .executorId("chainAdderTest")
-                .executor(executorLease.get()));
+                .executorService(executorLease.get()));
   }
 
   private CompletableFuture<Integer> executeVajram(

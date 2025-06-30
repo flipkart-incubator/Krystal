@@ -187,7 +187,7 @@ class RequestLevelCacheTest {
       boolean withCache) {
     KryonExecutorConfigBuilder configBuilder =
         KryonExecutorConfig.builder()
-            .executor(executorLease.get())
+            .executorService(executorLease.get())
             .kryonExecStrategy(kryonExecStrategy)
             .graphTraversalStrategy(graphTraversalStrategy);
     if (withCache) {

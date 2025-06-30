@@ -18,7 +18,7 @@ import com.flipkart.krystal.vajram.facets.Output;
 import com.flipkart.krystal.vajram.json.Json;
 import jakarta.inject.Inject;
 import java.util.List;
-import java.util.Optional;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A sample vajram to demonstrate integration between grpc and vajrams. This vajram can be invoked
@@ -65,13 +65,13 @@ public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
 
   @Output
   static JsonResponse output(
-      Optional<Integer> optionalInput,
+      @Nullable Integer optionalInput,
       int mandatoryInput,
-      Optional<Integer> conditionallyMandatoryInput,
+      @Nullable Integer conditionallyMandatoryInput,
       int inputWithDefaultValue,
-      Optional<Long> optionalLongInput,
+      @Nullable Long optionalLongInput,
       Long mandatoryLongInput,
-      Optional<ByteArray> optionalByteString,
+      @Nullable ByteArray optionalByteString,
       ByteArray defaultByteString,
       JsonResponse_Immut.Builder reponseBuilder) {
     return reponseBuilder
@@ -93,7 +93,7 @@ public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
                     inputWithDefaultValue,
                     optionalLongInput,
                     mandatoryLongInput,
-                    optionalByteString.map(bytes -> bytes.toString(UTF_8)),
+                    optionalByteString == null ? null : optionalByteString.toString(UTF_8),
                     defaultByteString.toString(UTF_8)))
         .mandatoryInt(1)
         ._build();

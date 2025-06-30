@@ -137,7 +137,7 @@ class GreetTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
-                        .executor(executorLease.get())
+                        .executorService(executorLease.get())
                         .decorationOrdering(decorationOrdering)
                         .configureWith(new MainLogicExecReporter(kryonExecutionReport)))
                 .build())) {
@@ -184,7 +184,7 @@ class GreetTest {
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
                     .executorId(REQUEST_ID)
-                    .executor(executorLease.get())
+                    .executorService(executorLease.get())
                     .kryonExecStrategy(KryonExecStrategy.BATCH)
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH));
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);
@@ -210,7 +210,7 @@ class GreetTest {
             .kryonExecutorConfigBuilder(
                 KryonExecutorConfig.builder()
                     .executorId(REQUEST_ID)
-                    .executor(executorLease.get())
+                    .executorService(executorLease.get())
                     .kryonExecStrategy(KryonExecStrategy.BATCH)
                     .graphTraversalStrategy(GraphTraversalStrategy.DEPTH));
     RequestContext requestContext = new RequestContext(REQUEST_ID, USER_ID);

@@ -219,8 +219,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
         new OutputLogicDecoratorConfig(
             InputBatchingDecorator.DECORATOR_TYPE,
             logicExecutionContext ->
-                DepChainBatcherConfig.NO_BATCHING
-                    != inputBatcherForLogicExecContext.apply(logicExecutionContext),
+                !DepChainBatcherConfig.NO_BATCHING.equals(
+                    inputBatcherForLogicExecContext.apply(logicExecutionContext)),
             logicExecutionContext ->
                 requireNonNull(inputBatcherForLogicExecContext.apply(logicExecutionContext))
                     .instanceIdGenerator()
