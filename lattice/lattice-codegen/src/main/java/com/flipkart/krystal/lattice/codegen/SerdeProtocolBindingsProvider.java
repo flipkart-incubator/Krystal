@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.ServiceLoader;
-import java.util.ServiceLoader.Provider;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.lang.model.element.TypeElement;
@@ -52,7 +51,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
     Map<String, ModelProtocolConfig> configs =
         ServiceLoader.load(ModelProtocolConfigProvider.class, this.getClass().getClassLoader())
             .stream()
-            .map(Provider::get)
+            .map(ServiceLoader.Provider::get)
             .collect(
                 Collectors.toMap(
                     cp ->

@@ -30,7 +30,7 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec.Builder;
+import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeSpec;
 import jakarta.enterprise.inject.Vetoed;
 import jakarta.inject.Singleton;
@@ -174,7 +174,9 @@ public class GuiceModuleGenProvider implements LatticeCodeGeneratorProvider {
                 MethodSpec.methodBuilder(lowerCaseFirstChar(providerMethod.name()))
                     .returns(providerMethod.boundType())
                     .addParameters(
-                        providerMethod.dependencies().stream().map(Builder::build).toList())
+                        providerMethod.dependencies().stream()
+                            .map(ParameterSpec.Builder::build)
+                            .toList())
                     .addAnnotation(Provides.class)
                     .addCode(providerMethod.providingLogic());
             if (scopeAnnotation != null) {

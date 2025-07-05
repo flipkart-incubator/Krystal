@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.ServiceLoader;
-import java.util.ServiceLoader.Provider;
 import java.util.stream.Collectors;
 import javax.lang.model.element.TypeElement;
 
@@ -117,7 +116,7 @@ public final class LatticeAppImplGenProvider implements LatticeCodeGeneratorProv
           ServiceLoader.load(LatticeAppImplContributor.class, this.getClass().getClassLoader());
       Map<? extends Class<?>, Optional<MethodSpec>> mainMethods =
           contributors.stream()
-              .map(Provider::get)
+              .map(ServiceLoader.Provider::get)
               .collect(
                   Collectors.toMap(
                       (LatticeAppImplContributor latticeAppImplContributor) ->

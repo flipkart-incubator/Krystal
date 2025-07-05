@@ -50,7 +50,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.ServiceLoader;
-import java.util.ServiceLoader.Provider;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -199,7 +198,7 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
       Map<String, SerdeProtocol> configProviders =
           ServiceLoader.load(ModelProtocolConfigProvider.class, this.getClass().getClassLoader())
               .stream()
-              .map(Provider::get)
+              .map(ServiceLoader.Provider::get)
               .map(ModelProtocolConfigProvider::getConfig)
               .map(ModelProtocolConfig::serdeProtocol)
               .collect(
