@@ -6,8 +6,8 @@ plugins {
 ext {
     clojarsusername = project.properties['clojarsusername'] ?: ""
     clojarspassword = project.properties['clojarspassword'] ?: ""
-    krystal_version = '9.0.0'
-    lattice_version = '0.0.1-SNAPSHOT'
+    krystal_version = '10.0.0-SNAPSHOT'
+    lattice_version = '0.0.2'
 
     protobuf_version = '4.31.1'
     grpc_version = '1.73.0'
@@ -20,7 +20,7 @@ subprojects {
     apply plugin: 'idea'
 
     group = 'com.flipkart.krystal'
-    if (project.path.startsWith(":lattice:")) {
+    if (project.path.startsWith(':lattice:')) {
         version = project.lattice_version
     } else {
         version = project.krystal_version
@@ -51,7 +51,7 @@ subprojects {
 
 configure(subprojects.findAll {
     //Exclude non java projects
-    it.name !in (['krystal-bom', 'code-coverage-report'] as Set)
+    it.name !in (['krystal-bom', 'lattice-bom', 'code-coverage-report'] as Set)
 }) {
     apply plugin: 'java-library'
     apply plugin: 'org.gradlex.extra-java-module-info'
@@ -151,7 +151,8 @@ configure(subprojects.findAll {
 
     if (!project.name.contains('sample') &&
             //Exclude modules which should not be published or have custom publishing config
-            project.name != 'vajram-lang') {
+            project.name != 'vajram-lang' &&
+            project.subprojects.isEmpty()) {
         publishing {
             publications {
                 maven(MavenPublication) {
