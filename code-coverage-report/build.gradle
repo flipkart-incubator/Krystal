@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     jacocoAggregation project(':vajram:vajram-samples')
+    jacocoAggregation project(':lattice:samples')
     jacocoAggregation project(':vajram:vajram-krystex')
 }
 
