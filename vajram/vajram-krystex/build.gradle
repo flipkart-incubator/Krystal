@@ -14,7 +14,7 @@ dependencies {
     testAnnotationProcessor project(':krystal-common')
     testAnnotationProcessor project(':krystal-codegen-common')
     testAnnotationProcessor project(':krystal-codegen-common')
-    testAnnotationProcessor 'com.flipkart.krystal:vajram-codegen'
+    testAnnotationProcessor "com.flipkart.krystal:vajram-codegen:${krystal_version}"
     testAnnotationProcessor 'org.checkerframework:checker-qual'
 
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations'

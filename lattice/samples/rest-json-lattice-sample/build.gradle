@@ -4,18 +4,31 @@ plugins {
 }
 
 dependencies {
-    implementation 'io.quarkus:quarkus-core'
-    implementation 'io.quarkus:quarkus-arc'
-    implementation 'io.vertx:vertx-web'
+    /** START: Lattice dependencies **/
 
-    implementation project(':krystal-common')
-    implementation project(':lattice:extensions:guice:lattice-guice-servlet')
-    implementation project(':lattice:extensions:rest:lattice-rest-quarkus')
-    implementation project(':lattice:lattice-core')
-    implementation project(':vajram:extensions:json:vajram-json')
-    implementation project(':vajram:vajram-java-sdk')
-
+    api platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
     api platform("io.quarkus.platform:quarkus-bom:${quarkus_version}")
+    annotationProcessor platform("com.flipkart.krystal:lattice-bom:${lattice_version}")
+
+    implementation 'com.flipkart.krystal:lattice-rest-quarkus'
+    implementation 'com.flipkart.krystal:lattice-guice-servlet'
+    implementation 'com.flipkart.krystal:lattice-core'
+    implementation 'com.flipkart.krystal:vajram-json'
+    implementation 'com.flipkart.krystal:vajram-java-sdk'
+
+    annotationProcessor 'com.flipkart.krystal:lattice-codegen'
+    annotationProcessor 'com.flipkart.krystal:lattice-guice-codegen'
+    annotationProcessor 'com.flipkart.krystal:lattice-json-codegen'
+    annotationProcessor 'com.flipkart.krystal:lattice-rest-quarkus-codegen'
+    annotationProcessor 'com.flipkart.krystal:lattice-rest-codegen'
+    annotationProcessor 'com.flipkart.krystal:vajram-codegen'
+    annotationProcessor 'com.flipkart.krystal:vajram-json'
+    annotationProcessor 'com.flipkart.krystal:vajram-json-codegen'
+
+    testImplementation 'com.flipkart.krystal:vajram-guice'
+    testImplementation 'com.flipkart.krystal:vajram-krystex'
+
+    /** END: Lattice dependencies **/
 
     runtimeOnly 'jakarta.servlet:jakarta.servlet-api'
 
@@ -23,18 +36,6 @@ dependencies {
     implementation 'com.google.protobuf:protobuf-java'
     implementation 'jakarta.inject:jakarta.inject-api'
     implementation 'javax.annotation:javax.annotation-api'
-
-    annotationProcessor 'com.flipkart.krystal.lattice:lattice-codegen'
-    annotationProcessor 'com.flipkart.krystal.lattice:lattice-guice-codegen'
-    annotationProcessor 'com.flipkart.krystal.lattice:lattice-json-codegen'
-    annotationProcessor 'com.flipkart.krystal.lattice:lattice-rest-quarkus-codegen'
-    annotationProcessor 'com.flipkart.krystal.lattice:lattice-rest-codegen'
-    annotationProcessor 'com.flipkart.krystal:vajram-codegen'
-    annotationProcessor 'com.flipkart.krystal:vajram-json'
-    annotationProcessor 'com.flipkart.krystal:vajram-json-codegen'
-
-    testImplementation project(':vajram:extensions:guice:vajram-guice')
-    testImplementation project(':vajram:vajram-krystex')
 
 }
 

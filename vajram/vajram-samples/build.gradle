@@ -3,16 +3,22 @@ plugins {
 }
 
 dependencies {
-    implementation project(':krystal-common')
-    implementation project(':vajram:vajram-java-sdk')
-    implementation project(':krystal-visualization')
+    /** START: Krystal dependencies **/
+    api platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
+    annotationProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
+    testAnnotationProcessor platform("com.flipkart.krystal:krystal-bom:${krystal_version}")
+    
+    implementation 'com.flipkart.krystal:krystal-common'
+    implementation 'com.flipkart.krystal:vajram-java-sdk'
+    implementation 'com.flipkart.krystal:krystal-visualization'
 
     annotationProcessor 'com.flipkart.krystal:vajram-codegen'
+    /** END: Krystal dependencies **/
 
     implementation 'jakarta.inject:jakarta.inject-api'
 
-    testImplementation project(':vajram:vajram-krystex')
-    testImplementation project(':vajram:extensions:guice:vajram-guice')
+    testImplementation 'com.flipkart.krystal:vajram-krystex'
+    testImplementation 'com.flipkart.krystal:vajram-guice'
 
     testImplementation 'com.fasterxml.jackson.core:jackson-annotations'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind'
