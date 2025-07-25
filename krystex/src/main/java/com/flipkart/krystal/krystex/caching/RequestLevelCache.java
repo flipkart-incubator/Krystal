@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.caching;
 
+import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static com.flipkart.krystal.utils.Futures.linkFutures;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.allOf;
@@ -123,7 +124,7 @@ public class RequestLevelCache implements KryonDecorator {
                   (requestId, response) -> {
                     newCacheEntries
                         .computeIfAbsent(requestId, _r -> new CompletableFuture<@Nullable Object>())
-                        .completeExceptionally(throwable);
+                        .completeExceptionally(stackTracelessWrap(throwable));
                   });
             } else {
               RuntimeException e =
