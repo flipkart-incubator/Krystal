@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static com.flipkart.krystal.krystex.kryon.FacetType.INPUT;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.utils.Futures.linkFutures;
@@ -214,9 +215,10 @@ public final class KryonExecutor implements KrystalExecutor {
                   CompletableFuture<@Nullable Object> future = new CompletableFuture<>();
                   if (allExecutions.containsKey(requestId)) {
                     future.completeExceptionally(
-                        new IllegalArgumentException(
-                            "Received duplicate requests for same instanceId '%s' and execution Id '%s'"
-                                .formatted(instanceId, executionId)));
+                        stackTracelessWrap(
+                            new IllegalArgumentException(
+                                "Received duplicate requests for same instanceId '%s' and execution Id '%s'"
+                                    .formatted(instanceId, executionId))));
                   } else {
                     allExecutions.put(
                         requestId,
@@ -476,7 +478,9 @@ public final class KryonExecutor implements KrystalExecutor {
                       (responses, throwable) -> {
                         for (KryonExecution kryonExecution : kryonResults) {
                           if (throwable != null) {
-                            kryonExecution.future().completeExceptionally(throwable);
+                            kryonExecution
+                                .future()
+                                .completeExceptionally(stackTracelessWrap(throwable));
                           } else {
                             Errable<Object> result =
                                 responses.getOrDefault(

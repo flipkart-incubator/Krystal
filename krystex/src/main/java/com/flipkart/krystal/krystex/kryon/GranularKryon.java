@@ -1,6 +1,7 @@
 package com.flipkart.krystal.krystex.kryon;
 
 import static com.flipkart.krystal.data.Errable.withError;
+import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static com.flipkart.krystal.krystex.kryon.KryonUtils.enqueueOrExecuteCommand;
 import static com.google.common.base.Functions.identity;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -142,7 +143,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
       }
       executeOutputLogicIfPossible(requestId, resultForRequest);
     } catch (Throwable e) {
-      resultForRequest.completeExceptionally(e);
+      resultForRequest.completeExceptionally(stackTracelessWrap(e));
     }
     return resultForRequest;
   }
