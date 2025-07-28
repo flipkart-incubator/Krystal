@@ -162,9 +162,7 @@ public final class KryonExecutor implements KrystalExecutor {
               if (decorators.containsKey(decoratorType)) {
                 return;
               }
-              List<OutputLogicDecoratorConfig> decoratorConfigList =
-                  new ArrayList<>(entry.getValue());
-              for (OutputLogicDecoratorConfig decoratorConfig : decoratorConfigList) {
+              for (OutputLogicDecoratorConfig decoratorConfig : entry.getValue()) {
                 String instanceId =
                     decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
                 if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
