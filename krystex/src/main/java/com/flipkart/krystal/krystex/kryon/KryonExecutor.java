@@ -8,6 +8,7 @@ import static com.flipkart.krystal.utils.Futures.propagateCancellation;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Sets.union;
+import static java.util.Collections.unmodifiableSet;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
@@ -43,6 +44,7 @@ import com.flipkart.krystal.utils.MultiLeasePool.Lease;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -166,23 +168,27 @@ public final class KryonExecutor implements KrystalExecutor {
                 String instanceId =
                     decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
                 if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
-                  OutputLogicDecorator outputLogicDecorator =
+                  decorators.put(
+                      decoratorType,
                       requestScopedOutputLogicDecorators
                           .computeIfAbsent(decoratorType, t -> new LinkedHashMap<>())
                           .computeIfAbsent(
                               instanceId,
-                              _i ->
-                                  decoratorConfig
-                                      .factory()
-                                      .apply(
-                                          new LogicDecoratorContext(
-                                              instanceId, logicExecutionContext)));
-                  outputLogicDecorator.executeCommand(
-                      new InitiateActiveDepChains(
-                          kryonId,
-                          ImmutableSet.copyOf(
-                              dependantChainsPerKryon.getOrDefault(kryonId, ImmutableSet.of()))));
-                  decorators.put(decoratorType, outputLogicDecorator);
+                              _i -> {
+                                OutputLogicDecorator outputLogicDecorator =
+                                    decoratorConfig
+                                        .factory()
+                                        .apply(
+                                            new LogicDecoratorContext(
+                                                instanceId, logicExecutionContext));
+                                outputLogicDecorator.executeCommand(
+                                    new InitiateActiveDepChains(
+                                        kryonId,
+                                        unmodifiableSet(
+                                            dependantChainsPerKryon.getOrDefault(
+                                                kryonId, ImmutableSet.of()))));
+                                return outputLogicDecorator;
+                              }));
                   break;
                 }
               }
