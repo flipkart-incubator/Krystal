@@ -57,7 +57,9 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NavigableSet;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
@@ -170,10 +172,11 @@ public final class KryonExecutor implements KrystalExecutor {
     return builder.build();
   }
 
-  private ImmutableMap<String, OutputLogicDecorator> getOutputLogicDecorators(
+  private NavigableSet<OutputLogicDecorator> getOutputLogicDecorators(
       LogicExecutionContext logicExecutionContext) {
     VajramID vajramID = logicExecutionContext.vajramID();
-    Map<String, OutputLogicDecorator> decorators = new LinkedHashMap<>();
+    TreeSet<OutputLogicDecorator> decorators =
+        new TreeSet<>(executorConfig.decorationOrdering().encounterOrder().reversed());
     outputLogicDecoratorConfigs.forEach(
         (decoratorType, decoratorConfig) -> {
           if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
@@ -198,10 +201,10 @@ public final class KryonExecutor implements KrystalExecutor {
                                           vajramID, ImmutableSet.of()))));
                           return logicDecorator;
                         });
-            decorators.put(decoratorType, outputLogicDecorator);
+            decorators.add(outputLogicDecorator);
           }
         });
-    return ImmutableMap.copyOf(decorators);
+    return decorators;
   }
 
   private ImmutableMap<String, DependencyDecorator> getDependencyDecorators(
