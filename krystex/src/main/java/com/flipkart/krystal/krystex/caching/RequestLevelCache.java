@@ -1,6 +1,7 @@
 package com.flipkart.krystal.krystex.caching;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
+import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.allOf;
 
@@ -135,11 +136,9 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
                   });
             } else if (throwable != null) {
               cacheMisses.forEach(
-                  (requestId, response) ->
-                      newCacheEntries
-                          .computeIfAbsent(
-                              requestId, _r -> new CompletableFuture<@Nullable Object>())
-                          .completeExceptionally(throwable));
+                  (requestId, response) -> newCacheEntries
+                      .computeIfAbsent(requestId, _r -> new CompletableFuture<@Nullable Object>())
+                      .completeExceptionally(stackTracelessWrap(throwable)));
             } else {
               RuntimeException e =
                   new RuntimeException("Expecting BatchResponse. Found " + kryonResponse);

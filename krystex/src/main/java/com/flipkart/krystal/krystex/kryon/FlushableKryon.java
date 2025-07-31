@@ -3,6 +3,7 @@ package com.flipkart.krystal.krystex.kryon;
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.data.Errable.nil;
 import static com.flipkart.krystal.data.Errable.withError;
+import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static com.flipkart.krystal.facets.resolution.ResolverCommand.executeWithRequests;
 import static com.flipkart.krystal.facets.resolution.ResolverCommand.skip;
 import static com.flipkart.krystal.krystex.kryon.KryonUtils.enqueueOrExecuteCommand;
@@ -30,6 +31,7 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
+import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.FacetUtils;
@@ -192,7 +194,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
           executeOutputLogicIfPossible(dependentChain);
       outputLogicFuture.ifPresent(f -> linkFutures(f, resultForDepChain));
     } catch (Throwable e) {
-      resultForDepChain.completeExceptionally(e);
+      resultForDepChain.completeExceptionally(stackTracelessWrap(e));
     }
     return resultForDepChain;
   }
