@@ -55,10 +55,6 @@ class MultiAgentContactTest {
             .loadFromPackage(MultiAgentContact.class.getPackageName())
             .build();
 
-    VajramID traitId = graph.getVajramIdByVajramDefType(CustomerServiceAgent.class);
-
-    // Get the facets to use for dispatch
-
     // Create and register dispatch policy
     graph.registerTraitDispatchPolicies(
         dispatchTrait(CustomerServiceAgent_Req.class, graph)

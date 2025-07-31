@@ -2,7 +2,6 @@ package flipkart.krystal.lattice.ext.rest.quarkus.restServer;
 
 import static com.flipkart.krystal.lattice.core.headers.StandardHeaderNames.CONTENT_TYPE;
 import static com.flipkart.krystal.lattice.core.headers.StandardHeaderNames.REQUEST_ID;
-import static com.flipkart.krystal.lattice.rest.api.status.HttpResponseStatus.NOT_FOUND;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 
@@ -12,14 +11,11 @@ import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfi
 import com.flipkart.krystal.lattice.core.di.Bindings;
 import com.flipkart.krystal.lattice.core.di.Bindings.BindingsBuilder;
 import com.flipkart.krystal.lattice.core.doping.Dopant;
-import com.flipkart.krystal.lattice.core.doping.DopantInitData;
-import com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopant;
 import com.flipkart.krystal.lattice.core.headers.Header;
 import com.flipkart.krystal.lattice.core.headers.SingleValueHeader;
 import com.flipkart.krystal.lattice.rest.RestService;
 import com.flipkart.krystal.lattice.rest.RestServiceDopant;
 import com.flipkart.krystal.lattice.rest.api.status.HttpResponseStatusException;
-import com.flipkart.krystal.lattice.vajram.VajramDopant;
 import com.flipkart.krystal.serial.SerializableModel;
 import com.flipkart.krystal.tags.Names;
 import flipkart.krystal.lattice.ext.rest.quarkus.app.QuarkusApplicationDopant;
@@ -30,7 +26,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
-import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.inject.Inject;
 import java.util.ArrayList;
@@ -43,8 +38,7 @@ import org.jboss.resteasy.plugins.server.vertx.VertxRequestHandler;
 import org.jboss.resteasy.plugins.server.vertx.VertxResteasyDeployment;
 
 @Slf4j
-public abstract class QuarkusRestServerDopant
-    implements Dopant<RestService, QuarkusRestServerConfig> {
+public final class QuarkusRestServerDopant implements Dopant<RestService, QuarkusRestServerConfig> {
   static final String REST_SERVER_DOPANT_TYPE = "krystal.lattice.restServer.quarkus";
 
   private final QuarkusRestServerConfig config;
@@ -54,11 +48,15 @@ public abstract class QuarkusRestServerDopant
   private final List<AutoCloseable> closeables = new ArrayList<>();
 
   @Inject
-  protected QuarkusRestServerDopant(QuarkusRestDopantInitData initData) {
-    this.config = initData.config();
-    this.restService = initData.annotation();
-    this.quarkusApplicationDopant = initData.quarkusApplicationDopant();
-    this.restServiceDopant = initData.restServiceDopant();
+  QuarkusRestServerDopant(
+      RestService restService,
+      QuarkusRestServerConfig config,
+      RestServiceDopant restServiceDopant,
+      QuarkusApplicationDopant quarkusApplicationDopant) {
+    this.config = config;
+    this.restService = restService;
+    this.quarkusApplicationDopant = quarkusApplicationDopant;
+    this.restServiceDopant = restServiceDopant;
   }
 
   public static QuarkusRestServerSpecBuilder quarkusRestServer() {
@@ -73,7 +71,7 @@ public abstract class QuarkusRestServerDopant
     httpServerOptions.setPort(config.port());
     vertx
         .createHttpServer(httpServerOptions)
-        .requestHandler(getRouter(vertx))
+        .requestHandler(jaxRsRequestHandler(vertx))
         .listen(
             result -> {
               if (result.succeeded()) {
@@ -82,19 +80,6 @@ public abstract class QuarkusRestServerDopant
                 log.error("", result.cause());
               }
             });
-  }
-
-  private Router getRouter(Vertx vertx) {
-    Handler<HttpServerRequest> jaxRsRequestHandler = jaxRsRequestHandler(vertx);
-    Router router =
-        Router.router(vertx)
-            .errorHandler(
-                NOT_FOUND.statusCode(),
-                routingContext -> jaxRsRequestHandler.handle(routingContext.request()));
-
-    // Add non-JaxRs routes which do not need any reflection and hence are more performant
-    addRoutes(router);
-    return router;
   }
 
   private Handler<HttpServerRequest> jaxRsRequestHandler(Vertx vertx) {
@@ -106,8 +91,6 @@ public abstract class QuarkusRestServerDopant
     restServiceDopant.getResources().forEach(registry::addSingletonResource);
     return new VertxRequestHandler(vertx, deployment, restService.pathPrefix());
   }
-
-  protected abstract void addRoutes(Router router);
 
   protected final String getPathPrefix() {
     String pathPrefix = restService.pathPrefix();
@@ -189,19 +172,5 @@ public abstract class QuarkusRestServerDopant
           Header.class, Names.named(REQUEST_ID), new SingleValueHeader(REQUEST_ID, requestId));
     }
     return seeds.build();
-  }
-
-  protected record QuarkusRestDopantInitData(
-      RestService annotation,
-      QuarkusRestServerConfig config,
-      QuarkusRestServerSpec spec,
-      VajramDopant vajramDopant,
-      ThreadingStrategyDopant threadingStrategyDopant,
-      RestServiceDopant restServiceDopant,
-      QuarkusApplicationDopant quarkusApplicationDopant)
-      implements DopantInitData<RestService, QuarkusRestServerConfig, QuarkusRestServerSpec> {
-
-    @Inject
-    public QuarkusRestDopantInitData {}
   }
 }

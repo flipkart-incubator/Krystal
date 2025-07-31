@@ -73,6 +73,7 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
   private static class JakartaRestServiceResourceGen implements CodeGenerator {
 
     private final LatticeCodegenContext context;
+
     private final CodeGenUtility util;
 
     public JakartaRestServiceResourceGen(LatticeCodegenContext context) {
@@ -114,8 +115,7 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
         if (resourceMethods.isEmpty()) {
           continue;
         }
-        ClassName jaxRsResourceName =
-            getJaxRsResourceName(vajramInfo.lite().packageName(), vajramElem);
+        ClassName jaxRsResourceName = getJaxRsResourceName(vajramInfo, vajramElem);
         TypeSpec.Builder resourceClassBuilder =
             util.classBuilder(jaxRsResourceName.simpleName()).addModifiers(PUBLIC);
         resourceClassBuilder
@@ -139,11 +139,6 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
         resourceClasses.add(jaxRsResourceName);
       }
       return resourceClasses;
-    }
-
-    private static ClassName getJaxRsResourceName(String packageName, TypeElement vajramElem) {
-      return ClassName.get(
-          packageName, vajramElem.getSimpleName().toString() + "_JakartaRestResource");
     }
 
     @SneakyThrows
@@ -392,5 +387,11 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
       }
       return true;
     }
+  }
+
+  public static ClassName getJaxRsResourceName(VajramInfo vajramInfo, TypeElement vajramElem) {
+    return ClassName.get(
+        vajramInfo.lite().packageName(),
+        vajramElem.getSimpleName().toString() + "_JakartaRestResource");
   }
 }

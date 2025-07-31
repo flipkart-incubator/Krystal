@@ -1,0 +1,8 @@
+dependencies {
+    implementation project(':krystal-codegen-common')
+    implementation project(':lattice:extensions:rest:lattice-rest-codegen')
+    implementation project(':lattice:lattice-codegen')
+    implementation project(':vajram:extensions:json:vajram-json')
+
+    implementation 'io.dropwizard:dropwizard-core:4.0.15'
+}

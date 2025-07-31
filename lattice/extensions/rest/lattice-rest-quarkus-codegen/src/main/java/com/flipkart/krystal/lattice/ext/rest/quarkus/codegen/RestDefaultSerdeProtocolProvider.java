@@ -9,7 +9,7 @@ import javax.lang.model.element.TypeElement;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @AutoService(DefaultSerdeProtocolProvider.class)
-public final class QuarkusRestDefaultSerdeProtocolProvider implements DefaultSerdeProtocolProvider {
+public final class RestDefaultSerdeProtocolProvider implements DefaultSerdeProtocolProvider {
 
   @Override
   public @Nullable TypeElement getDefaultSerializationProtocol(LatticeCodegenContext context) {

@@ -198,9 +198,9 @@ public abstract class LatticeApplication {
       Class<DopantSpec<?, ?, ?>> aClass = (Class<DopantSpec<?, ?, ?>>) spec.getClass();
       dependencyInjectionBinder.bindToInstance(aClass, spec);
       var dopantClass = spec.dopantClass();
-      if (!Modifier.isAbstract(dopantClass.getModifiers())) {
-        // abstract classes would need to bound to their implementations by clients
-        dependencyInjectionBinder.bindInSingleton(dopantClass);
+      Singleton annotation = dopantClass.getAnnotation(Singleton.class);
+      if (annotation == null) {
+        throw new RuntimeException("Dopant class must have @Singleton annotation");
       }
     }
 
@@ -217,7 +217,8 @@ public abstract class LatticeApplication {
     for (Dopant<?, ?> dopant : dopants) {
       dopant.start(args);
     }
-    for (var itr = dopants.listIterator(dopants.size()); itr.hasPrevious(); ) {
+    var itr = dopants.listIterator(dopants.size());
+    while (itr.hasPrevious()) {
       itr.previous().tryMainMethodExit();
     }
   }

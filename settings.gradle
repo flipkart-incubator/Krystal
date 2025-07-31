@@ -57,9 +57,11 @@ include 'lattice:extensions:protobuf:lattice-protobuf-codegen'
 include 'lattice:extensions:rest:lattice-rest'
 include 'lattice:extensions:rest:lattice-rest-api'
 include 'lattice:extensions:rest:lattice-rest-codegen'
+include 'lattice:extensions:rest:lattice-rest-dropwizard-codegen'
 include 'lattice:extensions:rest:lattice-rest-quarkus'
 include 'lattice:extensions:rest:lattice-rest-quarkus-codegen'
 
 include 'lattice:samples:grpc-proto3-lattice-sample'
 include 'lattice:samples:rest-json-lattice-sample'
+
 
