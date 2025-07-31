@@ -5,6 +5,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.function.Function.identity;
+import static java.util.Collections.unmodifiableSet;
 
 import com.flipkart.krystal.config.ConfigProvider;
 import com.flipkart.krystal.config.NestedConfig;
@@ -33,6 +34,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class InputBatchingDecorator<
@@ -46,8 +48,9 @@ public final class InputBatchingDecorator<
   private final FacetsConverter<I, C> facetsConverter;
   private final Predicate<DependantChain> isApplicableToDependantChain;
   private final Map<Facets, CompletableFuture<@Nullable Object>> futureCache = new HashMap<>();
-  private ImmutableSet<DependantChain> activeDependantChains = ImmutableSet.of();
-  private final Set<DependantChain> flushedDependantChains = new LinkedHashSet<>();
+  private final Set<DependantChain> dependantChainsToFlush = new LinkedHashSet<>();
+
+  private @MonotonicNonNull Set<DependantChain> activeDependantChains;
 
   public InputBatchingDecorator(
       String instanceId,
@@ -98,19 +101,29 @@ public final class InputBatchingDecorator<
 
   @Override
   public void executeCommand(LogicDecoratorCommand logicDecoratorCommand) {
-    if (logicDecoratorCommand instanceof InitiateActiveDepChains initiateActiveDepChains) {
-      LinkedHashSet<DependantChain> allActiveDepChains =
-          new LinkedHashSet<>(initiateActiveDepChains.dependantsChains());
+    if (activeDependantChains == null
+        && logicDecoratorCommand instanceof InitiateActiveDepChains initiateActiveDepChains) {
+      Set<DependantChain> allActiveDepChains = initiateActiveDepChains.dependantsChains();
+      Set<DependantChain> builder = new LinkedHashSet<>(allActiveDepChains.size());
       // Retain only the ones which are applicable for this input batching decorator
-      allActiveDepChains.removeIf(isApplicableToDependantChain.negate());
-      this.activeDependantChains = ImmutableSet.copyOf(allActiveDepChains);
+      for (DependantChain activeDepChain : allActiveDepChains) {
+        if (isApplicableToDependantChain.test(activeDepChain)) {
+          builder.add(activeDepChain);
+        }
+      }
+      this.activeDependantChains = unmodifiableSet(builder);
+      this.dependantChainsToFlush.addAll(this.activeDependantChains);
     } else if (logicDecoratorCommand instanceof FlushCommand flushCommand) {
-      flushedDependantChains.add(flushCommand.dependantsChain());
-      if (flushedDependantChains.containsAll(activeDependantChains)) {
+      dependantChainsToFlush.remove(flushCommand.dependantsChain());
+      if (dependantChainsToFlush.isEmpty()) {
         inputBatcher.batch();
-        flushedDependantChains.clear();
+        dependantChainsToFlush.addAll(activeDependantChains());
       }
     }
+  }
+
+  private Set<DependantChain> activeDependantChains() {
+    return activeDependantChains == null ? ImmutableSet.of() : activeDependantChains;
   }
 
   private void batchFacetsList(

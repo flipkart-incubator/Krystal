@@ -3,6 +3,7 @@ package com.flipkart.krystal.krystex.kryon;
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.data.Errable.empty;
 import static com.flipkart.krystal.data.Errable.withError;
+import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static com.flipkart.krystal.krystex.kryon.KryonUtils.enqueueOrExecuteCommand;
 import static com.flipkart.krystal.krystex.resolution.ResolverCommand.multiExecuteWith;
 import static com.flipkart.krystal.krystex.resolution.ResolverCommand.skip;
@@ -148,7 +149,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
           executeOutputLogicIfPossible(dependantChain);
       outputLogicFuture.ifPresent(f -> linkFutures(f, resultForDepChain));
     } catch (Throwable e) {
-      resultForDepChain.completeExceptionally(e);
+      resultForDepChain.completeExceptionally(stackTracelessWrap(e));
     }
     return resultForDepChain;
   }

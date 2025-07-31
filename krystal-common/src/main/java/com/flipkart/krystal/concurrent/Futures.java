@@ -1,5 +1,8 @@
 package com.flipkart.krystal.concurrent;
 
+import static com.flipkart.krystal.except.StackTracelessCancellationException.stackTracelessCancellation;
+import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
+
 import java.util.concurrent.CompletableFuture;
 import org.checkerframework.checker.nullness.qual.PolyNull;
 
@@ -9,7 +12,7 @@ public final class Futures {
     from.whenComplete(
         (unused, throwable) -> {
           if (from.isDone() && !to.isDone()) {
-            to.cancel(true);
+            to.completeExceptionally(stackTracelessCancellation());
           }
         });
   }
@@ -19,7 +22,7 @@ public final class Futures {
     from.whenComplete(
         (result, error) -> {
           if (error != null) {
-            to.completeExceptionally(error);
+            to.completeExceptionally(stackTracelessWrap(error));
           } else {
             to.complete(result);
           }
@@ -30,12 +33,10 @@ public final class Futures {
    * Sets up completable Futures such that
    *
    * <ul>
-   *   when {@code sourceFuture} completes, its completion is propagated to {@code
-   *   destinationFuture}.
-   * </ul>
-   *
-   * <ul>
-   *   when {@code destinationFuture} is cancelled, {@code sourceFuture is cancelled}
+   *   <li>when {@code sourceFuture} completes, its completion is propagated to {@code
+   *       destinationFuture}.
+   *   <li>when {@code destinationFuture} is completed, {@code sourceFuture} is cancelled if it is
+   *       not yet completed
    * </ul>
    *
    * Calling this method is equivalent to calling {@link #propagateCompletion(CompletableFuture,
