@@ -13,7 +13,6 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 import com.flipkart.krystal.data.Errable;
@@ -42,6 +41,7 @@ import com.flipkart.krystal.krystex.resolution.ResolverDefinition;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Sets.SetView;
 import java.util.Collection;
@@ -56,7 +56,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
-import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -155,39 +154,37 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
   }
 
   private Map<String, Set<ResolverDefinition>> getTriggerableDependencies(
-      DependantChain dependantChain, Set<String> newInputNames) {
+      DependantChain dependantChain, Set<String> newFacetNames) {
     Set<String> availableInputs = availableInputsByDepChain.getOrDefault(dependantChain, Set.of());
     Set<String> executedDeps = executedDependencies.getOrDefault(dependantChain, Set.of());
-
-    return Stream.concat(
-            Stream.concat(
-                    Stream.of(Optional.<String>empty()), newInputNames.stream().map(Optional::of))
-                .map(
-                    key ->
-                        kryonDefinition
-                            .resolverDefinitionsByInput()
-                            .getOrDefault(key, ImmutableSet.of()))
-                .flatMap(Collection::stream)
-                .map(ResolverDefinition::dependencyName),
-            kryonDefinition.dependenciesWithNoResolvers().stream())
-        .distinct()
-        .filter(depName -> !executedDeps.contains(depName))
-        .filter(
-            depName ->
-                kryonDefinition
-                    .resolverDefinitionsByDependencies()
-                    .getOrDefault(depName, ImmutableSet.of())
-                    .stream()
-                    .map(ResolverDefinition::boundFrom)
-                    .flatMap(Collection::stream)
-                    .allMatch(availableInputs::contains))
-        .collect(
-            toMap(
-                identity(),
-                depName ->
-                    kryonDefinition
-                        .resolverDefinitionsByDependencies()
-                        .getOrDefault(depName, ImmutableSet.of())));
+    Set<String> dependenciesForNewFacetNames = new LinkedHashSet<>();
+    for (String newFacetName : newFacetNames) {
+      ImmutableMap<String, ImmutableSet<String>> dependenciesByBoundFacet =
+          kryonDefinition.dependenciesByBoundFacet();
+      dependenciesForNewFacetNames.addAll(
+          dependenciesByBoundFacet.getOrDefault(newFacetName, ImmutableSet.of()));
+    }
+    Map<String, Set<ResolverDefinition>> triggerableDependencies = new LinkedHashMap<>();
+    for (String depName :
+        Iterables.concat(
+            dependenciesForNewFacetNames,
+            kryonDefinition.dependenciesWithNoFacetResolvers(),
+            kryonDefinition.dependenciesWithNoResolvers())) {
+      if (executedDeps.contains(depName)) {
+        continue;
+      }
+      if (availableInputs.containsAll(
+          kryonDefinition
+              .dependencyToBoundFacetsMapping()
+              .getOrDefault(depName, ImmutableSet.of()))) {
+        triggerableDependencies.put(
+            depName,
+            kryonDefinition
+                .resolverDefinitionsByDependencies()
+                .getOrDefault(depName, ImmutableSet.of()));
+      }
+    }
+    return triggerableDependencies;
   }
 
   private void triggerDependencies(
@@ -637,7 +634,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     }
     availableInputsByDepChain
         .computeIfAbsent(forwardBatch.dependantChain(), _k -> new LinkedHashSet<>())
-        .addAll(allInputNames);
+        .addAll(providedInputNames);
   }
 
   private static String getSkipMessage(ForwardBatch forwardBatch) {
