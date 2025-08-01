@@ -42,6 +42,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Sets.SetView;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -597,15 +599,29 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
           "Duplicate batch request received for dependant chain %s"
               .formatted(forwardBatch.dependantChain()));
     }
-    ImmutableSet<String> inputNames = forwardBatch.inputNames();
+    ImmutableSet<String> providedInputNames = forwardBatch.inputNames();
     if (inputsValueCollector.putIfAbsent(forwardBatch.dependantChain(), forwardBatch) != null) {
       throw new DuplicateRequestException(
           "Duplicate data for inputs %s of kryon %s in dependant chain %s"
-              .formatted(inputNames, kryonId, forwardBatch.dependantChain()));
+              .formatted(providedInputNames, kryonId, forwardBatch.dependantChain()));
+    }
+    SetView<String> allInputNames =
+        Sets.difference(kryonDefinition.facetNames(), kryonDefinition.dependencyKryons().keySet());
+    if (log.isInfoEnabled()) {
+      if (!providedInputNames.containsAll(allInputNames)) {
+        log.info(
+            """
+                Kryon '{}' invoked via depChain '{}' did not receive these inputs: {}. \
+                Proceeding with kryon execution. \
+                If any of these inputs is manadatory, the kryon is expected to throw relevant exceptions.""",
+            kryonId,
+            forwardBatch.dependantChain(),
+            Sets.difference(allInputNames, providedInputNames));
+      }
     }
     availableInputsByDepChain
         .computeIfAbsent(forwardBatch.dependantChain(), _k -> new LinkedHashSet<>())
-        .addAll(inputNames);
+        .addAll(providedInputNames);
   }
 
   private static String getSkipMessage(ForwardBatch forwardBatch) {
