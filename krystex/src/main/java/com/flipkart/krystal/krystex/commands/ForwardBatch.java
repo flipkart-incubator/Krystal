@@ -7,14 +7,14 @@ import com.flipkart.krystal.krystex.request.RequestId;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import java.util.Map;
 import java.util.Set;
 
 public record ForwardBatch(
     KryonId kryonId,
-    ImmutableSet<String> inputNames,
-    ImmutableMap<RequestId, Facets> executableRequests,
+    Map<RequestId, Facets> executableRequests,
     DependantChain dependantChain,
-    ImmutableMap<RequestId, String> skippedRequests)
+    Map<RequestId, String> skippedRequests)
     implements BatchCommand {
 
   @Override

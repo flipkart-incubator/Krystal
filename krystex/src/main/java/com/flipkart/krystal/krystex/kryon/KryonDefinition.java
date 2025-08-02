@@ -14,6 +14,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -71,13 +72,29 @@ public record KryonDefinition(
     return view.dependenciesWithNoResolvers();
   }
 
+  public ImmutableSet<String> dependenciesWithNoFacetResolvers() {
+    return view.dependenciesWithNoFacetResolvers();
+  }
+
   public ImmutableMap<String, ImmutableSet<ResolverDefinition>>
       resolverDefinitionsByDependencies() {
     return view.resolverDefinitionsByDependencies();
   }
 
+  public ImmutableMap<String, ImmutableSet<String>> dependencyToBoundFacetsMapping() {
+    return view.dependencyToBoundFacetsMapping();
+  }
+
+  public ImmutableMap<String, ImmutableSet<String>> dependenciesByBoundFacet() {
+    return view.dependenciesByBoundFacet();
+  }
+
   public ImmutableSet<String> facetNames() {
     return view.facetNames();
+  }
+
+  public ImmutableSet<String> givenFacets() {
+    return view.givenFacets();
   }
 
   /**
@@ -92,10 +109,14 @@ public record KryonDefinition(
    */
   private record KryonDefinitionView(
       ImmutableMap<FacetType, ImmutableSet<String>> facetsByType,
+      ImmutableSet<String> givenFacets,
       ImmutableSet<String> facetNames,
       ImmutableMap<Optional<String>, ImmutableSet<ResolverDefinition>> resolverDefinitionsByInput,
       ImmutableMap<String, ImmutableSet<ResolverDefinition>> resolverDefinitionsByDependencies,
-      ImmutableSet<String> dependenciesWithNoResolvers) {
+      ImmutableSet<String> dependenciesWithNoResolvers,
+      ImmutableSet<String> dependenciesWithNoFacetResolvers,
+      ImmutableMap<String, ImmutableSet<String>> dependencyToBoundFacetsMapping,
+      ImmutableMap<String, ImmutableSet<String>> dependenciesByBoundFacet) {
     private static KryonDefinitionView createView(
         Set<String> inputs,
         ImmutableList<ResolverDefinition> resolverDefinitions,
@@ -113,17 +134,63 @@ public record KryonDefinition(
                           .getOrDefault(depName, ImmutableSet.of())
                           .isEmpty())
               .collect(toImmutableSet());
+      ImmutableMap<Optional<String>, ImmutableSet<ResolverDefinition>> resolverDefinitionsByFacets =
+          createResolverDefinitionsByFacets(resolverDefinitions);
       return new KryonDefinitionView(
           ImmutableMap.of(
               INPUT, ImmutableSet.copyOf(inputs), DEPENDENCY, dependencyKryons.keySet()),
+          ImmutableSet.copyOf(inputs),
           ImmutableSet.<String>builder().addAll(inputs).addAll(dependencyKryons.keySet()).build(),
-          createResolverDefinitionsByInputs(resolverDefinitions),
+          resolverDefinitionsByFacets,
           resolverDefinitionsByDependencies,
-          dependenciesWithNoResolvers);
+          dependenciesWithNoResolvers,
+          resolverDefinitionsByFacets
+              .getOrDefault(Optional.<String>empty(), ImmutableSet.of())
+              .stream()
+              .map(ResolverDefinition::dependencyName)
+              .collect(toImmutableSet()),
+          getDependencyToBoundFacetsMapping(resolverDefinitionsByDependencies),
+          getDependenciesByBoundFacet(resolverDefinitionsByFacets));
+    }
+
+    private static ImmutableMap<String, ImmutableSet<String>> getDependenciesByBoundFacet(
+        ImmutableMap<Optional<String>, ImmutableSet<ResolverDefinition>>
+            resolverDefinitionsByFacets) {
+      Map<String, ImmutableSet<String>> dependenciesByBoundFacet = new LinkedHashMap<>();
+      for (Entry<Optional<String>, ImmutableSet<ResolverDefinition>> e :
+          resolverDefinitionsByFacets.entrySet()) {
+        Optional<String> facetNameOpt = e.getKey();
+        if (facetNameOpt.isEmpty()) {
+          continue;
+        }
+        String facetName = facetNameOpt.get();
+        Set<String> dependenciesForFacet = new LinkedHashSet<>();
+        for (ResolverDefinition resolverDefinition : e.getValue()) {
+          dependenciesForFacet.add(resolverDefinition.dependencyName());
+        }
+        dependenciesByBoundFacet.put(facetName, ImmutableSet.copyOf(dependenciesForFacet));
+      }
+      return ImmutableMap.copyOf(dependenciesByBoundFacet);
+    }
+
+    private static ImmutableMap<String, ImmutableSet<String>> getDependencyToBoundFacetsMapping(
+        ImmutableMap<String, ImmutableSet<ResolverDefinition>> resolverDefinitionsByDependencies) {
+      Map<String, ImmutableSet<String>> dependencyToBoundFacetsMapping = new LinkedHashMap<>();
+      for (Entry<String, ImmutableSet<ResolverDefinition>> e :
+          resolverDefinitionsByDependencies.entrySet()) {
+        String depName = e.getKey();
+        ImmutableSet<ResolverDefinition> resolvers = e.getValue();
+        Set<String> boundFromInputs = new LinkedHashSet<>();
+        for (ResolverDefinition resolverDefinition : resolvers) {
+          boundFromInputs.addAll(resolverDefinition.boundFrom());
+        }
+        dependencyToBoundFacetsMapping.put(depName, ImmutableSet.copyOf(boundFromInputs));
+      }
+      return ImmutableMap.copyOf(dependencyToBoundFacetsMapping);
     }
 
     private static ImmutableMap<Optional<String>, ImmutableSet<ResolverDefinition>>
-        createResolverDefinitionsByInputs(ImmutableList<ResolverDefinition> resolverDefinitions) {
+        createResolverDefinitionsByFacets(ImmutableList<ResolverDefinition> resolverDefinitions) {
       Map<Optional<String>, Builder<ResolverDefinition>> resolverDefinitionsByInput =
           new LinkedHashMap<>();
       resolverDefinitions.forEach(

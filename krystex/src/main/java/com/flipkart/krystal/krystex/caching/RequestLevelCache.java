@@ -1,7 +1,8 @@
 package com.flipkart.krystal.krystex.caching;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
+import static java.util.Collections.unmodifiableMap;
 import static java.util.concurrent.CompletableFuture.allOf;
 
 import com.flipkart.krystal.data.Errable;
@@ -18,12 +19,11 @@ import com.flipkart.krystal.krystex.kryon.KryonResponse;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorationInput;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.krystex.request.RequestId;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -77,7 +77,7 @@ public class RequestLevelCache implements KryonDecorator {
 
     private CompletableFuture<KryonResponse> readFromCache(
         Kryon<KryonCommand, KryonResponse> kryon, ForwardBatch forwardBatch) {
-      ImmutableMap<RequestId, Facets> executableRequests = forwardBatch.executableRequests();
+      Map<RequestId, Facets> executableRequests = forwardBatch.executableRequests();
       Map<RequestId, Facets> cacheMisses = new LinkedHashMap<>();
       Map<RequestId, CompletableFuture<@Nullable Object>> cacheHits = new LinkedHashMap<>();
       Map<RequestId, CompletableFuture<@Nullable Object>> newCacheEntries = new LinkedHashMap<>();
@@ -101,15 +101,14 @@ public class RequestLevelCache implements KryonDecorator {
           kryon.executeCommand(
               new ForwardBatch(
                   forwardBatch.kryonId(),
-                  forwardBatch.inputNames(),
-                  ImmutableMap.copyOf(cacheMisses),
+                  unmodifiableMap(cacheMisses),
                   forwardBatch.dependantChain(),
-                  ImmutableMap.copyOf(skippedRequests)));
+                  unmodifiableMap(skippedRequests)));
 
       cacheMissesResponse.whenComplete(
           (kryonResponse, throwable) -> {
             if (kryonResponse instanceof BatchResponse batchResponse) {
-              ImmutableMap<RequestId, Errable<Object>> responses = batchResponse.responses();
+              Map<RequestId, Errable<Object>> responses = batchResponse.responses();
               responses.forEach(
                   (requestId, response) -> {
                     CompletableFuture<@Nullable Object> future = response.toFuture();
@@ -123,7 +122,7 @@ public class RequestLevelCache implements KryonDecorator {
                   (requestId, response) -> {
                     newCacheEntries
                         .computeIfAbsent(requestId, _r -> new CompletableFuture<@Nullable Object>())
-                        .completeExceptionally(throwable);
+                        .completeExceptionally(stackTracelessWrap(throwable));
                   });
             } else {
               RuntimeException e =
@@ -133,27 +132,22 @@ public class RequestLevelCache implements KryonDecorator {
             }
           });
       CompletableFuture<KryonResponse> finalResponse = new CompletableFuture<>();
-      var allFutures =
-          Stream.concat(cacheHits.entrySet().stream(), newCacheEntries.entrySet().stream())
-              .toList();
-      var allFuturesArray = new CompletableFuture[allFutures.size()];
-      for (int i = 0; i < allFutures.size(); i++) {
-        allFuturesArray[i] = allFutures.get(i).getValue();
+      Iterable<Entry<RequestId, CompletableFuture<@Nullable Object>>> allFutures =
+          Iterables.concat(cacheHits.entrySet(), newCacheEntries.entrySet());
+      var allFuturesArray = new CompletableFuture[cacheHits.size() + newCacheEntries.size()];
+      int i = 0;
+      for (Entry<RequestId, CompletableFuture<@Nullable Object>> e : allFutures) {
+        allFuturesArray[i++] = e.getValue();
       }
       allOf(allFuturesArray)
           .whenComplete(
               (unused, throwable) -> {
-                finalResponse.complete(
-                    new BatchResponse(
-                        allFutures.stream()
-                            .collect(
-                                toImmutableMap(
-                                    Entry::getKey,
-                                    entry ->
-                                        entry
-                                            .getValue()
-                                            .handle(Errable::errableFrom)
-                                            .getNow(UNKNOWN_ERROR)))));
+                Map<RequestId, Errable<Object>> responses = new LinkedHashMap<>();
+                for (Entry<RequestId, CompletableFuture<@Nullable Object>> e : allFutures) {
+                  responses.put(
+                      e.getKey(), e.getValue().handle(Errable::errableFrom).getNow(UNKNOWN_ERROR));
+                }
+                finalResponse.complete(new BatchResponse(unmodifiableMap(responses)));
               });
       return finalResponse;
     }

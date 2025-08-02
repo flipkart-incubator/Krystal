@@ -80,9 +80,8 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
 
   private CompletableFuture<KryonResponse> injectFacets(
       ForwardBatch forwardBatch, VajramDefinition vajramDefinition) {
-    ImmutableMap<RequestId, Facets> requestIdToFacets = forwardBatch.executableRequests();
+    Map<RequestId, Facets> requestIdToFacets = forwardBatch.executableRequests();
 
-    Set<String> newInputsNames = new LinkedHashSet<>(forwardBatch.inputNames());
     ImmutableMap.Builder<RequestId, Facets> newRequests = ImmutableMap.builder();
     Set<InputDef<?>> injectableFacetDefs = new LinkedHashSet<>();
     for (VajramFacetDefinition facetDefinition : vajramDefinition.vajram().getFacetDefinitions()) {
@@ -90,9 +89,6 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
           && inputDef.sources().contains(InputSource.SESSION)) {
         injectableFacetDefs.add(inputDef);
       }
-    }
-    for (InputDef<?> injectableFacet : injectableFacetDefs) {
-      newInputsNames.add(injectableFacet.name());
     }
 
     Map<String, Errable<Object>> newInputsValues = new LinkedHashMap<>();
@@ -106,7 +102,6 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonResponse> {
     return kryon.executeCommand(
         new ForwardBatch(
             forwardBatch.kryonId(),
-            ImmutableSet.copyOf(newInputsNames),
             newRequests.build(),
             forwardBatch.dependantChain(),
             forwardBatch.skippedRequests()));
