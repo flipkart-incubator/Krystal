@@ -27,7 +27,14 @@ public class StackTracelessException extends CompletionException {
   }
 
   public StackTracelessException(@Nullable String message, @Nullable Throwable cause) {
-    super(message, cause, true, false);
+    super(message, cause);
+  }
+
+  @SuppressWarnings("NonSynchronizedMethodOverridesSynchronizedMethod")
+  @Override
+  public final Throwable fillInStackTrace() {
+    // This exception is used to complete exceptions. Stack trace is not useful.
+    return this;
   }
 
   public static CompletionException stackTracelessWrap(Throwable t) {
