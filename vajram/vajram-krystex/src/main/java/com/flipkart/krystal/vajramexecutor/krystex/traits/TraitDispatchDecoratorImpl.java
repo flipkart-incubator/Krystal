@@ -91,7 +91,8 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
               forwardSend.executableRequests();
           ImmutableMap<InvocationId, String> originalSkippedInvocations =
               forwardSend.skippedInvocations();
-          Map<VajramID, Map<InvocationId, Request<?>>> dispatchRequests = new LinkedHashMap<>();
+          Map<VajramID, Map<InvocationId, Request<Object>>> dispatchRequests =
+              new LinkedHashMap<>();
           Map<VajramID, CompletableFuture<BatchResponse>> dispatchResponses = new LinkedHashMap<>();
           Set<InvocationId> orphanedRequests = new LinkedHashSet<>();
           for (Entry<InvocationId, ? extends Request<?>> requestEntry :
@@ -137,7 +138,7 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
                                           + traitId)))
                   .build();
           for (VajramID dispatchTarget : dispatchTargets) {
-            Map<InvocationId, Request<?>> requestsForTarget =
+            Map<InvocationId, Request<Object>> requestsForTarget =
                 dispatchRequests.getOrDefault(dispatchTarget, Map.of());
             ClientSideCommand<BatchResponse> commandToDispatch;
             if (requestsForTarget.isEmpty()) {
@@ -160,12 +161,12 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
                       dispatchTarget,
                       ImmutableMap.of(),
                       forwardSend.dependentChain(),
-                      ImmutableMap.copyOf(skipRequests));
+                      skipRequests);
             } else {
               commandToDispatch =
                   new ForwardSend(
                       dispatchTarget,
-                      ImmutableMap.copyOf(requestsForTarget),
+                      requestsForTarget,
                       forwardSend.dependentChain(),
                       requestsToSkip);
             }
@@ -232,8 +233,8 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
   }
 
   @SuppressWarnings("unchecked")
-  private static <R extends KryonCommandResponse> @Nullable
-      ClientSideCommand<R> transformCommandForDispatch(
+  private static <R extends KryonCommandResponse>
+      @Nullable ClientSideCommand<R> transformCommandForDispatch(
           ClientSideCommand<R> kryonCommand, VajramID boundVajram) {
     ClientSideCommand<R> commandToDispatch = null;
     if (kryonCommand instanceof ForwardSend forwardSend) {

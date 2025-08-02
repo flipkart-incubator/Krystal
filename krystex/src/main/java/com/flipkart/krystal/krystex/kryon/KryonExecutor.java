@@ -2,10 +2,12 @@ package com.flipkart.krystal.krystex.kryon;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.concurrent.Futures.propagateCancellation;
+import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Sets.union;
+import static java.util.Collections.unmodifiableSet;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
@@ -196,7 +198,7 @@ public final class KryonExecutor implements KrystalExecutor {
                           logicDecorator.executeCommand(
                               new InitiateActiveDepChains(
                                   vajramID,
-                                  ImmutableSet.copyOf(
+                                  unmodifiableSet(
                                       dependentChainsPerKryon.getOrDefault(
                                           vajramID, ImmutableSet.of()))));
                           return logicDecorator;
@@ -265,9 +267,10 @@ public final class KryonExecutor implements KrystalExecutor {
                   CompletableFuture<@Nullable Object> future = new CompletableFuture<>();
                   if (allExecutions.containsKey(invocationId)) {
                     future.completeExceptionally(
-                        new IllegalArgumentException(
-                            "Received duplicate requests for same instanceId '%s' and execution Id '%s'"
-                                .formatted(executorId, executionId)));
+                        stackTracelessWrap(
+                            new IllegalArgumentException(
+                                "Received duplicate requests for same instanceId '%s' and execution Id '%s'"
+                                    .formatted(executorId, executionId))));
                   } else {
                     //noinspection unchecked
                     allExecutions.put(
@@ -553,9 +556,10 @@ public final class KryonExecutor implements KrystalExecutor {
                             kryonExecutions.stream()
                                 .collect(
                                     ImmutableMap
-                                        .<KryonExecution, InvocationId, Request<?>>toImmutableMap(
-                                            KryonExecution::instanceExecutionId,
-                                            KryonExecution::request)),
+                                        .<KryonExecution, InvocationId, Request<Object>>
+                                            toImmutableMap(
+                                                KryonExecution::instanceExecutionId,
+                                                KryonExecution::request)),
                             kryonDefinitionRegistry.getDependentChainsStart(),
                             ImmutableMap.of()));
           } catch (Throwable throwable) {
@@ -574,7 +578,9 @@ public final class KryonExecutor implements KrystalExecutor {
                   (responses, throwable) -> {
                     for (KryonExecution kryonExecution : kryonExecutions) {
                       if (throwable != null) {
-                        kryonExecution.future().completeExceptionally(throwable);
+                        kryonExecution
+                            .future()
+                            .completeExceptionally(stackTracelessWrap(throwable));
                       } else {
                         linkFutures(
                             responses
