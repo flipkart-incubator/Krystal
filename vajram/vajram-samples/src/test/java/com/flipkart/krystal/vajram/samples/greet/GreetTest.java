@@ -59,7 +59,7 @@ import org.junit.jupiter.api.Test;
 
 class GreetTest {
 
-  private static final Duration TIMEOUT = Duration.ofSeconds(100);
+  private static final Duration TIMEOUT = Duration.ofSeconds(1);
   private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll
