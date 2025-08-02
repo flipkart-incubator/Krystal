@@ -43,8 +43,6 @@ import com.flipkart.krystal.utils.MultiLeasePool;
 import com.flipkart.krystal.utils.MultiLeasePool.Lease;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -464,12 +462,10 @@ public final class KryonExecutor implements KrystalExecutor {
         .collect(groupingBy(KryonExecution::kryonId))
         .forEach(
             (kryonId, kryonResults) -> {
-              KryonDefinition kryonDefinition = kryonDefinitionRegistry.get(kryonId);
               CompletableFuture<BatchResponse> batchResponseFuture =
                   this.executeCommand(
                       new ForwardBatch(
                           kryonId,
-                          kryonDefinition.facetsByType(INPUT),
                           kryonResults.stream()
                               .collect(
                                   toImmutableMap(
