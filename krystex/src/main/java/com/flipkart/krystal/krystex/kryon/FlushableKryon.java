@@ -33,7 +33,6 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
-import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.FacetUtils;
@@ -365,6 +364,9 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
             commandsByDependency
                 .computeIfAbsent(dep, _k -> new LinkedHashMap<>())
                 .put(Set.of(invocationId), resolverCommand);
+            requestIdsByDependency
+                .computeIfAbsent(dep, _k -> new LinkedHashSet<>())
+                .add(invocationId);
           });
     }
     for (var entry : commandsByDependency.entrySet()) {
@@ -602,7 +604,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
   }
 
   private CompletableFuture<BatchResponse> executeOutputLogic(
-      Set<InvocationId> invocationIds, DependentChain dependentChain) {
+      Set<? extends InvocationId> invocationIds, DependentChain dependentChain) {
 
     OutputLogicDefinition<Object> outputLogicDefinition =
         kryonDefinition.getOutputLogicDefinition();

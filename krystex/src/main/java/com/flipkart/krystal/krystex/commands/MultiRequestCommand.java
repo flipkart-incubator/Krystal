@@ -7,5 +7,6 @@ import java.util.Set;
 public sealed interface MultiRequestCommand<R extends KryonCommandResponse> extends KryonCommand<R>
     permits CallbackCommand, ForwardReceive, ForwardSend {
 
-  Set<InvocationId> invocationIds();
+  // <? extends InvocationId> is used so that Map Ke
+  Set<? extends InvocationId> invocationIds();
 }

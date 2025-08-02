@@ -12,6 +12,7 @@ import com.google.common.collect.Sets;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Command created at the client vajram end to send the requests to invoke the server vajram.
@@ -23,7 +24,7 @@ import java.util.Set;
  */
 public record ForwardSend(
     VajramID vajramID,
-    Map<InvocationId, Request<Object>> executableRequests,
+    Map<InvocationId, Request<@Nullable Object>> executableRequests,
     DependentChain dependentChain,
     Map<InvocationId, String> skippedInvocations)
     implements MultiRequestCommand<BatchResponse>, ClientSideCommand<BatchResponse> {

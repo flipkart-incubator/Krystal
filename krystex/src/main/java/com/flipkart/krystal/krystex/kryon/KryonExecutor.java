@@ -54,6 +54,7 @@ import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -67,6 +68,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -546,6 +548,11 @@ public final class KryonExecutor implements KrystalExecutor {
         (kryonId, kryonExecutions) -> {
           CompletableFuture<BatchResponse> batchResponseFuture;
           try {
+            Map<InvocationId, Request<@Nullable Object>> requests =
+                new LinkedHashMap<>(kryonExecutions.size());
+            for (KryonExecution kryonExecution : kryonExecutions) {
+              requests.put(kryonExecution.instanceExecutionId(), kryonExecution.request());
+            }
             batchResponseFuture =
                 executorConfig
                     .traitDispatchDecorator()
@@ -553,13 +560,7 @@ public final class KryonExecutor implements KrystalExecutor {
                     .invokeDependency(
                         new ForwardSend(
                             kryonId,
-                            kryonExecutions.stream()
-                                .collect(
-                                    ImmutableMap
-                                        .<KryonExecution, InvocationId, Request<Object>>
-                                            toImmutableMap(
-                                                KryonExecution::instanceExecutionId,
-                                                KryonExecution::request)),
+                            requests,
                             kryonDefinitionRegistry.getDependentChainsStart(),
                             ImmutableMap.of()));
           } catch (Throwable throwable) {
@@ -667,7 +668,7 @@ public final class KryonExecutor implements KrystalExecutor {
   private record KryonExecution(
       VajramID vajramID,
       InvocationId instanceExecutionId,
-      ImmutableRequest request,
+      ImmutableRequest<@Nullable Object> request,
       KryonExecutionConfig executionConfig,
       CompletableFuture<@Nullable Object> future) {}
 }

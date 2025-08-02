@@ -72,7 +72,7 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
           boundVajram = staticDispatchDefinition.get(dependency);
         } else {
           throw new AssertionError(
-              "This is not possible. A dependency decorator can only be invoked when there is a depednency present.");
+              "This is not possible. A dependency decorator can only be invoked when there is a dependency present.");
         }
         commandToDispatch = transformCommandForDispatch(kryonCommand, boundVajram);
         if (commandToDispatch == null) {
@@ -87,18 +87,16 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
                 .collect(toSet());
         ImmutableList<DispatchCase> dispatchCases = dynamicPolicy.dispatchCases();
         if (kryonCommand instanceof ForwardSend forwardSend) {
-          ImmutableMap<InvocationId, ? extends Request<?>> originalExecutableRequests =
-              forwardSend.executableRequests();
-          ImmutableMap<InvocationId, String> originalSkippedInvocations =
-              forwardSend.skippedInvocations();
-          Map<VajramID, Map<InvocationId, Request<Object>>> dispatchRequests =
+          var originalExecutableRequests = forwardSend.executableRequests();
+          Map<InvocationId, String> originalSkippedInvocations = forwardSend.skippedInvocations();
+          Map<VajramID, Map<InvocationId, Request<@Nullable Object>>> dispatchRequests =
               new LinkedHashMap<>();
           Map<VajramID, CompletableFuture<BatchResponse>> dispatchResponses = new LinkedHashMap<>();
           Set<InvocationId> orphanedRequests = new LinkedHashSet<>();
-          for (Entry<InvocationId, ? extends Request<?>> requestEntry :
+          for (Entry<InvocationId, ? extends Request<@Nullable Object>> requestEntry :
               originalExecutableRequests.entrySet()) {
             InvocationId invocationId = requestEntry.getKey();
-            Request<?> originalRequest = requestEntry.getValue();
+            Request<@Nullable Object> originalRequest = requestEntry.getValue();
             boolean dispatchTargetNotFound = true;
             for (DispatchCase dispatchCase : dispatchCases) {
               boolean caseMatches = true;
@@ -138,7 +136,7 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
                                           + traitId)))
                   .build();
           for (VajramID dispatchTarget : dispatchTargets) {
-            Map<InvocationId, Request<Object>> requestsForTarget =
+            Map<InvocationId, Request<@Nullable Object>> requestsForTarget =
                 dispatchRequests.getOrDefault(dispatchTarget, Map.of());
             ClientSideCommand<BatchResponse> commandToDispatch;
             if (requestsForTarget.isEmpty()) {
