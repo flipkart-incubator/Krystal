@@ -89,6 +89,10 @@ public record KryonDefinition(
     return view.facetNames();
   }
 
+  public ImmutableSet<String> givenFacets() {
+    return view.givenFacets();
+  }
+
   /**
    * Useful data views over {@link KryonDefinition}'s data
    *
@@ -101,6 +105,7 @@ public record KryonDefinition(
    */
   private record KryonDefinitionView(
       ImmutableMap<FacetType, ImmutableSet<String>> facetsByType,
+      ImmutableSet<String> givenFacets,
       ImmutableSet<String> facetNames,
       ImmutableMap<Optional<String>, ImmutableSet<ResolverDefinition>> resolverDefinitionsByInput,
       ImmutableMap<String, ImmutableSet<ResolverDefinition>> resolverDefinitionsByDependencies,
@@ -130,6 +135,7 @@ public record KryonDefinition(
       return new KryonDefinitionView(
           ImmutableMap.of(
               INPUT, ImmutableSet.copyOf(inputs), DEPENDENCY, dependencyKryons.keySet()),
+          ImmutableSet.copyOf(inputs),
           ImmutableSet.<String>builder().addAll(inputs).addAll(dependencyKryons.keySet()).build(),
           resolverDefinitionsByFacets,
           resolverDefinitionsByDependencies,
