@@ -1,5 +1,6 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.data.Errable.withError;
 import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static com.flipkart.krystal.krystex.kryon.KryonUtils.enqueueOrExecuteCommand;
