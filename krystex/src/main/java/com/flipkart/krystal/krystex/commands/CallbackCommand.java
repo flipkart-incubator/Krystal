@@ -29,7 +29,7 @@ public record CallbackCommand(
   }
 
   @Override
-  public Set<InvocationId> invocationIds() {
-    return resultsByRequest().keySet();
+  public Set<? extends InvocationId> invocationIds() {
+    return resultsByRequest.keySet();
   }
 }

@@ -158,7 +158,7 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
       allOf(allFuturesArray)
           .whenComplete(
               (unused, throwable) -> {
-                Map<InvocationId, Errable<Object>> responses = new LinkedHashMap<>();
+                Map<InvocationId, Errable<@Nullable Object>> responses = new LinkedHashMap<>();
                 for (Entry<InvocationId, CompletableFuture<@Nullable Object>> e : allFutures) {
                   responses.put(
                       e.getKey(), e.getValue().handle(Errable::errableFrom).getNow(UNKNOWN_ERROR));

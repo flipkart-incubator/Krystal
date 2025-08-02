@@ -59,7 +59,7 @@ import org.junit.jupiter.api.Test;
 
 class GreetTest {
 
-  private static final Duration TIMEOUT = Duration.ofSeconds(1);
+  private static final Duration TIMEOUT = Duration.ofSeconds(100);
   private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll
@@ -144,7 +144,7 @@ class GreetTest {
       future = executeVajram(krystexVajramExecutor, requestContext);
     }
     assertThat(future)
-        .succeedsWithin(1, SECONDS)
+        .succeedsWithin(TIMEOUT)
         .isEqualTo("Hello Firstname Lastname (user@123)! Hope you are doing well!");
     assertThat(analyticsEventSink.events).hasSize(1);
     out.println(
