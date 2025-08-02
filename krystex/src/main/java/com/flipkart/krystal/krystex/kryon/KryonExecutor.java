@@ -458,12 +458,10 @@ public final class KryonExecutor implements KrystalExecutor {
         .collect(groupingBy(KryonExecution::kryonId))
         .forEach(
             (kryonId, kryonResults) -> {
-              KryonDefinition kryonDefinition = kryonDefinitionRegistry.get(kryonId);
               CompletableFuture<BatchResponse> batchResponseFuture =
                   this.executeCommand(
                       new ForwardBatch(
                           kryonId,
-                          kryonDefinition.facetsByType(INPUT),
                           kryonResults.stream()
                               .collect(
                                   toImmutableMap(
