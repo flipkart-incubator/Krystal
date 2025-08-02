@@ -2,10 +2,12 @@ package com.flipkart.krystal.data;
 
 import static com.flipkart.krystal.data.Errable.nil;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.Collections.unmodifiableList;
 
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.util.List;
 import java.util.function.BiConsumer;
 import lombok.Getter;
 import lombok.ToString;
@@ -28,13 +30,12 @@ public final class FanoutDepResponses<R extends Request<T>, T> implements DepRes
     return (FanoutDepResponses<R, T>) EMPTY;
   }
 
-  @ToString.Include @Getter
-  private final ImmutableCollection<RequestResponse<R, T>> requestResponsePairs;
+  @ToString.Include @Getter private final List<RequestResponse<R, T>> requestResponsePairs;
 
   private @MonotonicNonNull ImmutableMap<ImmutableRequest<T>, Errable<T>> responsesAsMap;
 
-  public FanoutDepResponses(ImmutableList<RequestResponse<R, T>> requestResponsePairs) {
-    this.requestResponsePairs = requestResponsePairs;
+  public FanoutDepResponses(List<RequestResponse<R, T>> requestResponsePairs) {
+    this.requestResponsePairs = unmodifiableList(requestResponsePairs);
   }
 
   public Errable<T> getForRequest(Request<T> request) {

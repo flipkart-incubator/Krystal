@@ -12,6 +12,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.Collections.unmodifiableMap;
+import static java.util.Collections.unmodifiableSet;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
@@ -31,7 +33,7 @@ import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
-import com.flipkart.krystal.except.StackTracelessException;
+import com.flipkart.krystal.data.Results;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.FacetUtils;
@@ -61,12 +63,15 @@ import com.flipkart.krystal.krystex.resolution.Resolver;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Sets.SetView;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Set;
@@ -199,47 +204,41 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
     return resultForDepChain;
   }
 
-  private Map<Dependency, ImmutableSet<ResolverDefinition>> getTriggerableDependencies(
+  private Map<Dependency, ImmutableSet<Resolver>> getTriggerableDependencies(
       DependentChain dependentChain, Set<? extends Facet> newFacets) {
     Set<Facet> availableFacets = availableFacetsByDepChain.getOrDefault(dependentChain, Set.of());
     Set<Facet> executedDeps = executedDependencies.getOrDefault(dependentChain, Set.of());
-
-    return Stream.concat(
-            Stream.concat(Stream.of(Optional.<Facet>empty()), newFacets.stream().map(Optional::of))
-                .map(
-                    key ->
-                        kryonDefinition
-                            .resolverDefinitionsByInput()
-                            .getOrDefault(key, ImmutableSet.of()))
-                .flatMap(Collection::stream)
-                .map(resolver -> resolver.definition().target().dependency()),
-            kryonDefinition.dependenciesWithNoResolvers().stream())
-        .distinct()
-        .filter(depName -> !executedDeps.contains(depName))
-        .filter(
-            dep ->
-                kryonDefinition
-                    .resolverDefinitionsByDependencies()
-                    .getOrDefault(dep, ImmutableSet.of())
-                    .stream()
-                    .map(resolver -> resolver.definition().sources())
-                    .flatMap(Collection::stream)
-                    .allMatch(availableFacets::contains))
-        .collect(
-            toMap(
-                identity(),
-                depFacetId ->
-                    kryonDefinition
-                        .resolverDefinitionsByDependencies()
-                        .getOrDefault(depFacetId, ImmutableSet.of())
-                        .stream()
-                        .map(Resolver::definition)
-                        .collect(toImmutableSet())));
+    Set<Dependency> dependenciesForNewFacetNames = new LinkedHashSet<>();
+    for (Facet newFacetName : newFacets) {
+      dependenciesForNewFacetNames.addAll(
+          kryonDefinition.dependenciesByBoundFacet().getOrDefault(newFacetName, ImmutableSet.of()));
+    }
+    Map<Dependency, ImmutableSet<Resolver>> triggerableDependencies = new LinkedHashMap<>();
+    for (Dependency depName :
+        Iterables.concat(
+            dependenciesForNewFacetNames,
+            kryonDefinition.dependenciesWithNoFacetResolvers(),
+            kryonDefinition.dependenciesWithNoResolvers())) {
+      if (executedDeps.contains(depName)) {
+        continue;
+      }
+      if (availableFacets.containsAll(
+          kryonDefinition
+              .dependencyToBoundFacetsMapping()
+              .getOrDefault(depName, ImmutableSet.of()))) {
+        triggerableDependencies.put(
+            depName,
+            kryonDefinition
+                .resolverDefinitionsByDependencies()
+                .getOrDefault(depName, ImmutableSet.of()));
+      }
+    }
+    return triggerableDependencies;
   }
 
   private void triggerDependencies(
       DependentChain dependentChain,
-      Map<Dependency, ImmutableSet<ResolverDefinition>> triggerableDependencies) {
+      Map<Dependency, ImmutableSet<Resolver>> triggerableDependencies) {
     ForwardReceive forwardBatch = getForwardCommand(dependentChain);
     if (log.isDebugEnabled()) {
       log.debug(
@@ -249,31 +248,36 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
           vajramID,
           forwardBatch.dependentChain());
     }
-    ImmutableMap<InvocationId, String> skippedRequests = forwardBatch.invocationsToSkip();
-    ImmutableSet<InvocationId> executableRequests = forwardBatch.executableInvocations().keySet();
+    Map<InvocationId, String> skippedRequests = forwardBatch.invocationsToSkip();
+    Set<InvocationId> executableRequests = forwardBatch.executableInvocations().keySet();
     Map<Dependency, Map<Set<InvocationId>, ResolverCommand>> commandsByDependency =
         new LinkedHashMap<>();
+    Map<Dependency, Set<InvocationId>> requestIdsByDependency = new LinkedHashMap<>();
     if (!skippedRequests.isEmpty()) {
       SkipDependency skip = skip(String.join(", ", skippedRequests.values()));
       for (Dependency depName : triggerableDependencies.keySet()) {
         commandsByDependency
             .computeIfAbsent(depName, _k -> new LinkedHashMap<>())
-            .put(skippedRequests.keySet(), skip);
+            .put(unmodifiableSet(skippedRequests.keySet()), skip);
+        requestIdsByDependency
+            .computeIfAbsent(depName, _k -> new LinkedHashSet<>())
+            .addAll(skippedRequests.keySet());
       }
     }
 
-    Set<Dependency> dependenciesWithNoResolvers =
-        triggerableDependencies.entrySet().stream()
-            .filter(e -> e.getValue().isEmpty())
-            .map(Entry::getKey)
-            .collect(toSet());
+    SetView<Dependency> triggerablesWithNoResolvers =
+        Sets.intersection(
+            kryonDefinition.dependenciesWithNoResolvers(), triggerableDependencies.keySet());
     for (InvocationId invocationId : executableRequests) {
-      dependenciesWithNoResolvers.forEach(
+      triggerablesWithNoResolvers.forEach(
           depName -> {
             // For such dependencies, trigger them with empty inputs
             commandsByDependency
                 .computeIfAbsent(depName, _k -> new LinkedHashMap<>())
                 .put(Set.of(invocationId), executeWithRequests(ImmutableList.of(emptyRequest())));
+            requestIdsByDependency
+                .computeIfAbsent(depName, _k -> new LinkedHashSet<>())
+                .add(invocationId);
           });
       FacetValues facetValues = getFacetsFor(dependentChain, invocationId);
       triggerableDependencies.forEach(
@@ -289,27 +293,26 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
                       skip("Could not find dependency with vajram ID " + depVajramId));
               return;
             }
-            List<ResolverDefinition> fanoutResolvers =
-                resolverDefs.stream().filter(ResolverDefinition::canFanout).toList();
-            List<ResolverDefinition> oneToOneResolvers =
-                resolverDefs.stream()
-                    .filter(resolverDefinition -> !resolverDefinition.canFanout())
-                    .toList();
-            ResolverDefinition fanoutResolverDef = null;
-            if (fanoutResolvers.size() > 1) {
-              throw new IllegalStateException(
-                  "Multiple fanout resolvers found for dependency %s of vajram %s. This is not supported."
-                      .formatted(dep, vajramID.id()));
-            } else if (fanoutResolvers.size() == 1) {
-              fanoutResolverDef = fanoutResolvers.get(0);
+            Resolver fanoutResolver = null;
+            List<Resolver> oneToOneResolvers = new ArrayList<>(resolverDefs.size());
+            for (Resolver resolver : resolverDefs) {
+              if (resolver.definition().canFanout()) {
+                if (fanoutResolver != null) {
+                  throw new IllegalStateException(
+                      "Multiple fanout resolvers found for dependency %s of vajram %s. This is not supported."
+                          .formatted(dep, vajramID.id()));
+                }
+                fanoutResolver = resolver;
+              } else {
+                oneToOneResolvers.add(resolver);
+              }
             }
             Supplier<ImmutableRequest.Builder<?>> newDepRequestBuilder =
                 () -> depKryonDefinition.createNewRequest().logic().newRequestBuilder();
             ImmutableList<? extends ImmutableRequest.Builder<?>> depRequestBuilders =
                 ImmutableList.of(newDepRequestBuilder.get());
             ResolverCommand resolverCommand = null;
-            for (ResolverDefinition resolverDef : oneToOneResolvers) {
-              Resolver resolver = kryonDefinition.resolversByDefinition().get(resolverDef);
+            for (Resolver resolver : oneToOneResolvers) {
               if (resolver == null) {
                 continue;
               }
@@ -331,29 +334,25 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
               }
               depRequestBuilders = resolverCommand.getRequests();
             }
-            if (fanoutResolverDef != null && !(resolverCommand instanceof SkipDependency)) {
-              Resolver fanoutResolver =
-                  kryonDefinition.resolversByDefinition().get(fanoutResolverDef);
-              if (fanoutResolver != null) {
-                resolverCommand =
-                    kryonDefinition
-                        .kryonDefinitionRegistry()
-                        .logicDefinitionRegistry()
-                        .getResolver(fanoutResolver.resolverKryonLogicId())
-                        .logic()
-                        .resolve(depRequestBuilders, facetValues);
-                if (resolverCommand instanceof ExecuteDependency
-                    && resolverCommand.getRequests().isEmpty()) {
-                  // This means the resolvers did not resolve any input. This can occur, for
-                  // example if a fanout resolver returns empty inputs. When a fanout resolver
-                  // returns empty results, we continue to execute the dependency as if the fanout
-                  // resolver returned one null value. This is done so that developers don't
-                  // accidentally end up skipping a dependency by resolving an empty list. We
-                  // interpret such a resolution as the following developer intent: "I want to
-                  // execute the dependency, but I do not know what value to resolve - so execute
-                  // with some default value"
-                  resolverCommand = executeWithRequests(depRequestBuilders);
-                }
+            if (fanoutResolver != null && !(resolverCommand instanceof SkipDependency)) {
+              resolverCommand =
+                  kryonDefinition
+                      .kryonDefinitionRegistry()
+                      .logicDefinitionRegistry()
+                      .getResolver(fanoutResolver.resolverKryonLogicId())
+                      .logic()
+                      .resolve(depRequestBuilders, facetValues);
+              if (resolverCommand instanceof ExecuteDependency
+                  && resolverCommand.getRequests().isEmpty()) {
+                // This means the resolvers did not resolve any input. This can occur, for
+                // example if a fanout resolver returns empty inputs. When a fanout resolver
+                // returns empty results, we continue to execute the dependency as if the fanout
+                // resolver returned one null value. This is done so that developers don't
+                // accidentally end up skipping a dependency by resolving an empty list. We
+                // interpret such a resolution as the following developer intent: "I want to
+                // execute the dependency, but I do not know what value to resolve - so execute
+                // with some default value"
+                resolverCommand = executeWithRequests(depRequestBuilders);
               }
             }
             if (resolverCommand == null) {
@@ -371,12 +370,12 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
     for (var entry : commandsByDependency.entrySet()) {
       Dependency dependency = entry.getKey();
       var resolverCommandsForDep = entry.getValue();
-      triggerDependency(dependency, dependentChain, resolverCommandsForDep);
+      triggerDependency(
+          dependency,
+          dependentChain,
+          resolverCommandsForDep,
+          requestIdsByDependency.getOrDefault(dependency, Set.of()));
     }
-  }
-
-  private FacetValuesBuilder facetsFromRequest(Request req) {
-    return kryonDefinition.facetsFromRequest().logic().facetsFromRequest(req);
   }
 
   private FacetValuesBuilder emptyFacets() {
@@ -412,7 +411,8 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
   private void triggerDependency(
       Dependency dependency,
       DependentChain dependentChain,
-      Map<Set<InvocationId>, ResolverCommand> resolverCommandsByReq) {
+      Map<Set<InvocationId>, ResolverCommand> resolverCommandsByReq,
+      Set<InvocationId> allInvocationIds) {
     if (executedDependencies.getOrDefault(dependentChain, Set.of()).contains(dependency)) {
       return;
     }
@@ -425,8 +425,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
           """
               .formatted(dependency, vajramID));
     }
-    Map<InvocationId, ImmutableRequest<@Nullable Object>> depRequestsByDepInvocId =
-        new LinkedHashMap<>();
+    Map<InvocationId, Request<@Nullable Object>> depRequestsByDepInvocId = new LinkedHashMap<>();
     Map<InvocationId, String> skipReasonsByReq = new LinkedHashMap<>();
     Map<InvocationId, Set<InvocationId>> depReqsByIncomingReq = new LinkedHashMap<>();
     for (var entry : resolverCommandsByReq.entrySet()) {
@@ -484,66 +483,49 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
     CompletableFuture<BatchResponse> depResponse =
         kryonResponseVajramInvocation.invokeDependency(
             new ForwardSend(
-                depVajramID,
-                ImmutableMap.copyOf(depRequestsByDepInvocId),
-                extendedDependentChain,
-                ImmutableMap.copyOf(skipReasonsByReq)));
+                depVajramID, depRequestsByDepInvocId, extendedDependentChain, skipReasonsByReq));
 
     depResponse.whenComplete(
         (batchResponse, throwable) -> {
-          Set<InvocationId> invocationIds =
-              resolverCommandsByReq.keySet().stream().flatMap(Collection::stream).collect(toSet());
+          Map<InvocationId, DepResponse<Request<@Nullable Object>, @Nullable Object>> results =
+              new LinkedHashMap<>();
+          for (InvocationId invocationId : allInvocationIds) {
+            DepResponse<Request<@Nullable Object>, @Nullable Object> result;
+            if (throwable != null) {
+              RequestResponse<Request<@Nullable Object>, @Nullable Object> fail =
+                  new RequestResponse<>(
+                      depRequestsByDepInvocId.getOrDefault(
+                          invocationId, emptyRequestForVajram(depVajramID)._build()),
+                      withError(throwable));
+              if (dependency.canFanout()) {
+                result = new FanoutDepResponses<>(ImmutableList.of(fail));
+              } else {
+                result = fail;
+              }
+            } else {
+              Set<InvocationId> depReqIds =
+                  depReqsByIncomingReq.getOrDefault(invocationId, Set.of());
+              List<RequestResponse<Request<@Nullable Object>, @Nullable Object>> collect =
+                  new ArrayList<>(depReqIds.size());
+              for (InvocationId depReqId : depReqIds) {
+                collect.add(
+                    new RequestResponse<>(
+                        depRequestsByDepInvocId.getOrDefault(
+                            depReqId, emptyRequestForVajram(depVajramID)._build()),
+                        batchResponse.responses().getOrDefault(depReqId, nil())));
+              }
 
-          ImmutableMap<InvocationId, DepResponse<Request<@Nullable Object>, @Nullable Object>>
-              results =
-                  invocationIds.stream()
-                      .collect(
-                          toImmutableMap(
-                              identity(),
-                              invocationId -> {
-                                if (throwable != null) {
-                                  RequestResponse<Request<@Nullable Object>, @Nullable Object>
-                                      fail =
-                                          new RequestResponse<>(
-                                              depRequestsByDepInvocId.getOrDefault(
-                                                  invocationId,
-                                                  emptyRequestForVajram(depVajramID)._build()),
-                                              withError(throwable));
-                                  if (dependency.canFanout()) {
-                                    return new FanoutDepResponses<>(ImmutableList.of(fail));
-                                  } else {
-                                    return fail;
-                                  }
-                                } else {
-                                  Set<InvocationId> depReqIds =
-                                      depReqsByIncomingReq.getOrDefault(invocationId, Set.of());
-                                  ImmutableList<
-                                          RequestResponse<
-                                              Request<@Nullable Object>, @Nullable Object>>
-                                      collect =
-                                          depReqIds.stream()
-                                              .map(
-                                                  depReqId ->
-                                                      new RequestResponse<>(
-                                                          (Request<@Nullable Object>)
-                                                              depRequestsByDepInvocId.getOrDefault(
-                                                                  depReqId,
-                                                                  emptyRequestForVajram(depVajramID)
-                                                                      ._build()),
-                                                          batchResponse
-                                                              .responses()
-                                                              .getOrDefault(depReqId, nil())))
-                                              .collect(toImmutableList());
-                                  if (dependency.canFanout()) {
-                                    return new FanoutDepResponses<>(collect);
-                                  } else if (collect.size() == 1) {
-                                    return collect.get(0);
-                                  } else {
-                                    // This means this non-fanout dependency was skipped
-                                    return One2OneDepResponse.noRequest();
-                                  }
-                                }
-                              }));
+              if (dependency.canFanout()) {
+                result = new FanoutDepResponses<>(collect);
+              } else if (collect.size() == 1) {
+                result = collect.get(0);
+              } else {
+                // This means this non-fanout dependency was skipped
+                result = One2OneDepResponse.noRequest();
+              }
+            }
+            results.put(invocationId, result);
+          }
 
           enqueueOrExecuteCommand(
               () -> new CallbackCommand(vajramID, dependency, results, dependentChain),
@@ -631,23 +613,23 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
       outputLogicInputs.put(invocationId, getFacetsForOutputLogic(dependentChain, invocationId));
     }
     CompletableFuture<BatchResponse> resultForBatch = new CompletableFuture<>();
-    Map<InvocationId, CompletableFuture<Errable<@Nullable Object>>> results =
+    Map<InvocationId, CompletableFuture<Errable<@Nullable Object>>> resultFutures =
         executeDecoratedOutputLogic(outputLogicDefinition, outputLogicInputs, dependentChain);
 
     var ignored =
-        allOf(results.values().toArray(CompletableFuture[]::new))
+        allOf(resultFutures.values().toArray(CompletableFuture[]::new))
             .whenComplete(
-                (unused, throwable) ->
-                    resultForBatch.complete(
-                        new BatchResponse(
-                            outputLogicInputs.keySet().stream()
-                                .collect(
-                                    toImmutableMap(
-                                        identity(),
-                                        requestId ->
-                                            results
-                                                .getOrDefault(requestId, new CompletableFuture<>())
-                                                .getNow(nil()))))));
+                (unused, throwable) -> {
+                  Map<InvocationId, Errable<@Nullable Object>> responses = new LinkedHashMap<>();
+                  for (InvocationId invocationId : outputLogicInputs.keySet()) {
+                    responses.put(
+                        invocationId,
+                        resultFutures
+                            .getOrDefault(invocationId, new CompletableFuture<>())
+                            .getNow(nil()));
+                  }
+                  resultForBatch.complete(new BatchResponse(responses));
+                });
     outputLogicExecuted.put(dependentChain, true);
     flushDecoratorsIfNeeded(dependentChain);
     return resultForBatch;
@@ -743,33 +725,22 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
 
   private FacetValues getFacetsFor(DependentChain dependentChain, InvocationId invocationId) {
     return facetsCollector
-        .getOrDefault(dependentChain, Map.of())
-        .getOrDefault(invocationId, emptyFacets());
+        .computeIfAbsent(dependentChain, _k -> new LinkedHashMap<>())
+        .computeIfAbsent(invocationId, _k -> emptyFacets());
   }
 
   private OutputLogicFacets getFacetsForOutputLogic(
       DependentChain dependentChain, InvocationId invocationId) {
     return new OutputLogicFacets(
         facetsCollector
-            .getOrDefault(dependentChain, Map.of())
-            .getOrDefault(
+            .computeIfAbsent(dependentChain, _k -> new LinkedHashMap<>())
+            .computeIfAbsent(
                 invocationId,
-                facetsBuilderFromContainer(
-                    getForwardCommand(dependentChain).executableInvocations().get(invocationId))));
-  }
-
-  private FacetValuesBuilder facetsBuilderFromContainer(
-      @Nullable FacetValuesContainer facetValuesContainer) {
-    if (facetValuesContainer == null) {
-      return emptyFacets();
-    } else if (facetValuesContainer instanceof Request request) {
-      return facetsFromRequest(request);
-    } else if (facetValuesContainer instanceof FacetValues facetValues) {
-      return facetValues._asBuilder();
-    } else {
-      throw new UnsupportedOperationException(
-          "Unknown container type " + facetValuesContainer.getClass());
-    }
+                _k ->
+                    getForwardCommand(dependentChain)
+                        .executableInvocations()
+                        .getOrDefault(invocationId, emptyFacets())
+                        ._asBuilder()));
   }
 
   private void collectInputValues(ForwardReceive forwardBatch) {
@@ -791,7 +762,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
     }
     availableFacetsByDepChain
         .computeIfAbsent(forwardBatch.dependentChain(), _k -> new LinkedHashSet<>())
-        .addAll(facetsOfCommand(forwardBatch));
+        .addAll(kryonDefinition.givenFacets());
 
     forwardBatch
         .executableInvocations()
@@ -799,14 +770,14 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
             (requestId, container) ->
                 facetsCollector
                     .computeIfAbsent(forwardBatch.dependentChain(), _d -> new LinkedHashMap<>())
-                    .put(requestId, facetsBuilderFromContainer(container)));
+                    .put(requestId, container._asBuilder()));
   }
 
   private Set<? extends Facet> facetsOfCommand(KryonCommand command) {
     if (command instanceof CallbackCommand callbackBatch) {
-      return callbackBatch.facets();
+      return Set.of(callbackBatch.dependency());
     } else if (command instanceof ForwardReceive) {
-      return kryonDefinition.facets().stream().filter(FacetUtils::isGiven).collect(toSet());
+      return kryonDefinition.givenFacets();
     } else {
       throw new UnsupportedOperationException("" + command);
     }

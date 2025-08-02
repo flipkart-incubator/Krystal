@@ -3,6 +3,7 @@ package com.flipkart.krystal.krystex.kryon;
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.concurrent.Futures.propagateCancellation;
 import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Sets.union;
@@ -52,6 +53,7 @@ import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -553,9 +555,10 @@ public final class KryonExecutor implements KrystalExecutor {
                             kryonExecutions.stream()
                                 .collect(
                                     ImmutableMap
-                                        .<KryonExecution, InvocationId, Request<?>>toImmutableMap(
-                                            KryonExecution::instanceExecutionId,
-                                            KryonExecution::request)),
+                                        .<KryonExecution, InvocationId, Request<Object>>
+                                            toImmutableMap(
+                                                KryonExecution::instanceExecutionId,
+                                                KryonExecution::request)),
                             kryonDefinitionRegistry.getDependentChainsStart(),
                             ImmutableMap.of()));
           } catch (Throwable throwable) {
