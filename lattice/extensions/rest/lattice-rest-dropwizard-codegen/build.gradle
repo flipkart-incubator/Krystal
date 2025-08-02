@@ -6,3 +6,7 @@ dependencies {
 
     implementation 'io.dropwizard:dropwizard-core:4.0.15'
 }
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
+}

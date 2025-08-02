@@ -112,6 +112,7 @@ configure(subprojects.findAll {
             implementation 'org.yaml:snakeyaml:2.2'
             implementation 'org.jboss.resteasy:resteasy-vertx:7.0.0.Beta1'
             implementation 'org.jboss.resteasy:resteasy-core:7.0.0.Beta1'
+            implementation 'org.javassist:javassist:3.30.2-GA'
 
             runtimeOnly 'jakarta.servlet:jakarta.servlet-api:6.1.0'
             implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api:4.1.0'
@@ -181,7 +182,6 @@ configure(subprojects.findAll {
         module('com.github.kevinstern:software-and-algorithms', 'com.github.kevinstern.software.and.algorithms')
         module('javax.cache:cache-api', 'javax.cache.api')
         module('javax.inject:javax.inject', 'javax.inject')
-        module('org.javassist:javassist', 'javassist')
 
         module('gradle-api-8.14.2.jar', 'gradle.api')
         module('gradle-installation-beacon-8.14.2.jar', 'gradle.installation.beacon')
@@ -209,6 +209,7 @@ configure(subprojects.findAll {
         knownModule('org.projectlombok:lombok', 'lombok')
         knownModule('com.google.j2objc:j2objc-annotations', 'com.google.j2objc.annotations')
         knownModule('org.reflections:reflections', 'org.reflections')
+        knownModule('org.javassist:javassist', 'org.javassist')
 
         knownModule('com.flipkart.krystal:vajram-java-sdk', 'flipkart.krystal.vajram')
         knownModule('com.flipkart.krystal:krystal-codegen-common', 'flipkart.krystal.codegen.common')
