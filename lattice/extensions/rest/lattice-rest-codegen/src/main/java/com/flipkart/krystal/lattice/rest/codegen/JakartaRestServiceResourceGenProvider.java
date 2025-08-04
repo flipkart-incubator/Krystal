@@ -39,6 +39,8 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.WildcardTypeName;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.container.AsyncResponse;
+import jakarta.ws.rs.container.Suspended;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.UriInfo;
@@ -273,6 +275,10 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
       }
       methodBuilder
           .addParameter(
+              ParameterSpec.builder(AsyncResponse.class, "_asyncResponse")
+                  .addAnnotation(Suspended.class)
+                  .build())
+          .addParameter(
               ParameterSpec.builder(HttpHeaders.class, "_httpHeaders")
                   .addAnnotation(Context.class)
                   .build())
@@ -340,13 +346,17 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
           .map(
               r ->
                   r.addStatement(
-                      "return this._restServiceDopant.executeHttpRequest(_vajramRequest._build(), _httpHeaders, _uriInfo)"))
-          .map(
-              b ->
-                  b.returns(
-                      ParameterizedTypeName.get(
-                          ClassName.get(CompletionStage.class),
-                          WildcardTypeName.subtypeOf(Object.class))))
+                      """
+                          this._restServiceDopant
+                            .executeHttpRequest(_vajramRequest._build(), _httpHeaders, _uriInfo)
+                            .whenComplete((_result, _error) -> {
+                              if (_error != null) {
+                                _asyncResponse.resume(_error);
+                              } else {
+                                _asyncResponse.resume(_result);
+                              }
+                            })
+                      """))
           .map(MethodSpec.Builder::build)
           .toList();
     }

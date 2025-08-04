@@ -32,8 +32,7 @@ public final class QuarkusRestBindingsProvider implements BindingsProvider {
     if (restService == null) {
       return ImmutableList.of();
     }
-    return ImmutableList.of(
-        restServerDopantBinding(context), acceptHeaderBinding(), routingContextBinding());
+    return ImmutableList.of(acceptHeaderBinding(), routingContextBinding());
   }
 
   private Binding routingContextBinding() {
@@ -41,15 +40,6 @@ public final class QuarkusRestBindingsProvider implements BindingsProvider {
         ClassName.get(RoutingContext.class),
         null,
         new BindTo.Provider(CodeBlock.of("null"), REQUEST));
-  }
-
-  private DopantBinding restServerDopantBinding(LatticeCodegenContext context) {
-    LatticeCodegenUtils latticeCodegenUtils =
-        new LatticeCodegenUtils(context.codeGenUtility().codegenUtil());
-    TypeElement latticeAppElem = context.latticeAppTypeElement();
-    return new DopantBinding(
-        ClassName.get(QuarkusRestServerDopant.class),
-        latticeCodegenUtils.getDopantImplName(latticeAppElem, QuarkusRestServerDopant.class));
   }
 
   private Binding acceptHeaderBinding() {
