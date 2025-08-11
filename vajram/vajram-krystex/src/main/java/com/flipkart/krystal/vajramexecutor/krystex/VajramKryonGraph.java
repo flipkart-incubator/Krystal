@@ -144,11 +144,14 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
     for (InputBatcherConfig inputBatcherConfig : inputBatcherConfigs) {
       Predicate<LogicExecutionContext> biFunction =
           logicExecutionContext -> {
-            return vajram.getFacetDefinitions().stream()
-                    .filter(facetDefinition -> facetDefinition instanceof InputDef<?>)
-                    .map(facetDefinition -> (InputDef<?>) facetDefinition)
-                    .anyMatch(InputDef::isBatched)
-                && inputBatcherConfig.shouldBatch().test(logicExecutionContext);
+            for (VajramFacetDefinition facetDefinition : vajram.getFacetDefinitions()) {
+              if (facetDefinition instanceof InputDef<?> definition) {
+                if (definition.isBatched()) {
+                  return inputBatcherConfig.shouldBatch().test(logicExecutionContext);
+                }
+              }
+            }
+            return false;
           };
       outputLogicDecoratorConfigList.add(
           new OutputLogicDecoratorConfig(
@@ -158,7 +161,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
               decoratorContext ->
                   inputBatcherConfig
                       .decoratorFactory()
-                      .apply(new BatcherContext(vajram, decoratorContext))));
+                      .apply(new BatcherContext(vajram, decoratorContext)),
+              true));
     }
     outputLogicDefinition.registerRequestScopedDecorator(outputLogicDecoratorConfigList);
   }

@@ -4,6 +4,7 @@ import com.flipkart.krystal.config.Tag;
 import com.flipkart.krystal.data.Facets;
 import com.flipkart.krystal.krystex.kryon.DependantChain;
 import com.flipkart.krystal.krystex.kryon.KryonDefinition;
+import com.flipkart.krystal.krystex.kryon.KryonId;
 import com.flipkart.krystal.krystex.kryon.KryonLogicId;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
@@ -21,11 +22,28 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 @Slf4j
 public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<OutputLogic<T>>
     permits IOLogicDefinition, ComputeLogicDefinition {
+
+  private @MonotonicNonNull Boolean decoratorsNeedFlushing;
+
+  @Getter
+  private ImmutableMap<String, List<OutputLogicDecoratorConfig>>
+      requestScopedLogicDecoratorConfigs = ImmutableMap.of();
+
+  /** LogicDecorator Id -> LogicDecorator */
+  private final Map<String, OutputLogicDecoratorConfig> sessionScopedLogicDecoratorConfigs =
+      new HashMap<>();
+
+  private final Map<String, Map<String, OutputLogicDecorator>> sessionScopedDecorators =
+      new LinkedHashMap<>();
+
+  private final Map<KryonId, ImmutableMap<String, OutputLogicDecorator>>
+      sessionScopedDecoratorsByKryon = new HashMap<>();
 
   protected OutputLogicDefinition(
       KryonLogicId kryonLogicId,
@@ -40,59 +58,77 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
     return logic().execute(inputs);
   }
 
-  @Getter
-  private ImmutableMap<String, List<OutputLogicDecoratorConfig>>
-      requestScopedLogicDecoratorConfigs = ImmutableMap.of();
-
-  /** LogicDecorator Id -> LogicDecorator */
-  private final Map<String, OutputLogicDecoratorConfig> sessionScopedLogicDecoratorConfigs =
-      new HashMap<>();
-
-  private final Map<String, Map<String, OutputLogicDecorator>> sessionScopedDecorators =
-      new LinkedHashMap<>();
-
   public ImmutableMap<String, OutputLogicDecorator> getSessionScopedLogicDecorators(
       KryonDefinition kryonDefinition, DependantChain dependants) {
-    Map<String, OutputLogicDecorator> decorators = new LinkedHashMap<>();
-    sessionScopedLogicDecoratorConfigs.forEach(
-        (s, decoratorConfig) -> {
-          try {
-            LogicExecutionContext logicExecutionContext =
-                new LogicExecutionContext(
-                    kryonDefinition.kryonId(),
-                    logicTags(),
-                    dependants,
-                    kryonDefinition.kryonDefinitionRegistry());
-            String instanceId = decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
+    return sessionScopedDecoratorsByKryon.computeIfAbsent(
+        kryonDefinition.kryonId(),
+        _k -> {
+          Map<String, OutputLogicDecorator> decorators = new LinkedHashMap<>();
+          sessionScopedLogicDecoratorConfigs.forEach(
+              (s, decoratorConfig) -> {
+                try {
+                  LogicExecutionContext logicExecutionContext =
+                      new LogicExecutionContext(
+                          kryonDefinition.kryonId(),
+                          logicTags(),
+                          dependants,
+                          kryonDefinition.kryonDefinitionRegistry());
+                  String instanceId =
+                      decoratorConfig.instanceIdGenerator().apply(logicExecutionContext);
 
-            if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
-              decorators.put(
-                  s,
-                  sessionScopedDecorators
-                      .computeIfAbsent(s, k -> new LinkedHashMap<>())
-                      .computeIfAbsent(
-                          instanceId,
-                          k ->
-                              decoratorConfig
-                                  .factory()
-                                  .apply(
-                                      new LogicDecoratorContext(
-                                          instanceId, logicExecutionContext))));
-            }
-          } catch (Exception e) {
-            log.error(
-                "Error in getSessionScopedLogicDecorators for decorator : {} and config : {}",
-                s,
-                decoratorConfig,
-                e);
-          }
+                  if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
+                    decorators.put(
+                        s,
+                        sessionScopedDecorators
+                            .computeIfAbsent(s, k -> new LinkedHashMap<>())
+                            .computeIfAbsent(
+                                instanceId,
+                                k ->
+                                    decoratorConfig
+                                        .factory()
+                                        .apply(
+                                            new LogicDecoratorContext(
+                                                instanceId, logicExecutionContext))));
+                  }
+                } catch (Exception e) {
+                  log.error(
+                      "Error in getSessionScopedLogicDecorators for decorator : {} and config : {}",
+                      s,
+                      decoratorConfig,
+                      e);
+                }
+              });
+          return ImmutableMap.copyOf(decorators);
         });
-    return ImmutableMap.copyOf(decorators);
+  }
+
+  public boolean doDecoratorsNeedFlushing() {
+    if (decoratorsNeedFlushing == null) {
+      for (List<OutputLogicDecoratorConfig> value : requestScopedLogicDecoratorConfigs.values()) {
+        for (OutputLogicDecoratorConfig outputLogicDecoratorConfig : value) {
+          if (outputLogicDecoratorConfig.enableFlushing()) {
+            decoratorsNeedFlushing = true;
+            break;
+          }
+        }
+      }
+      if (decoratorsNeedFlushing == null) {
+        for (OutputLogicDecoratorConfig value : sessionScopedLogicDecoratorConfigs.values()) {
+          if (value.enableFlushing()) {
+            decoratorsNeedFlushing = true;
+            break;
+          }
+        }
+      }
+      if (decoratorsNeedFlushing == null) {
+        decoratorsNeedFlushing = false;
+      }
+    }
+    return decoratorsNeedFlushing;
   }
 
   public void registerRequestScopedDecorator(
       Collection<OutputLogicDecoratorConfig> decoratorConfigs) {
-    //noinspection UnstableApiUsage
     requestScopedLogicDecoratorConfigs =
         ImmutableMap.<String, List<OutputLogicDecoratorConfig>>builderWithExpectedSize(
                 requestScopedLogicDecoratorConfigs.size() + decoratorConfigs.size())

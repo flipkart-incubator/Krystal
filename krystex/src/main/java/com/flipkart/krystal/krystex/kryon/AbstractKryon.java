@@ -6,8 +6,7 @@ import com.flipkart.krystal.krystex.logicdecoration.LogicDecorationOrdering;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
-import com.google.common.collect.ImmutableMap;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.TreeSet;
@@ -21,8 +20,11 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
   protected final KryonExecutor kryonExecutor;
 
   /** decoratorType -> Decorator */
-  protected final Function<LogicExecutionContext, ImmutableMap<String, OutputLogicDecorator>>
+  protected final Function<LogicExecutionContext, Map<String, OutputLogicDecorator>>
       requestScopedDecoratorsSupplier;
+
+  private final Map<DependantChain, NavigableSet<OutputLogicDecorator>>
+      requestScopedDecoratorsByDepChain = new HashMap<>();
 
   protected final LogicDecorationOrdering logicDecorationOrdering;
 
@@ -31,7 +33,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
   AbstractKryon(
       KryonDefinition definition,
       KryonExecutor kryonExecutor,
-      Function<LogicExecutionContext, ImmutableMap<String, OutputLogicDecorator>>
+      Function<LogicExecutionContext, Map<String, OutputLogicDecorator>>
           requestScopedDecoratorsSupplier,
       LogicDecorationOrdering logicDecorationOrdering,
       RequestIdGenerator requestIdGenerator) {
@@ -44,28 +46,35 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
   }
 
   protected NavigableSet<OutputLogicDecorator> getSortedDecorators(DependantChain dependantChain) {
-    OutputLogicDefinition<Object> outputLogicDefinition =
-        kryonDefinition.getOutputLogicDefinition();
-    Map<String, OutputLogicDecorator> decorators =
-        new LinkedHashMap<>(
-            outputLogicDefinition.getSessionScopedLogicDecorators(kryonDefinition, dependantChain));
-    // If the same decoratorType is configured for session and request scope, request scope
-    // overrides session scope.
-    decorators.putAll(
-        requestScopedDecoratorsSupplier.apply(
-            new LogicExecutionContext(
-                kryonId,
-                outputLogicDefinition.logicTags(),
-                dependantChain,
-                kryonDefinition.kryonDefinitionRegistry())));
-    TreeSet<OutputLogicDecorator> sortedDecorators =
-        new TreeSet<>(
-            logicDecorationOrdering
-                .encounterOrder()
-                // Reverse the ordering so that the ones with the highest index are applied first.
-                .reversed());
-    sortedDecorators.addAll(decorators.values());
-    return sortedDecorators;
+    return requestScopedDecoratorsByDepChain.computeIfAbsent(
+        dependantChain,
+        _d -> {
+          TreeSet<OutputLogicDecorator> sortedDecorators =
+              new TreeSet<>(
+                  logicDecorationOrdering
+                      .encounterOrder()
+                      // Reverse the ordering so that the ones with the highest index are applied
+                      // first.
+                      .reversed());
+          OutputLogicDefinition<Object> outputLogicDefinition =
+              kryonDefinition.getOutputLogicDefinition();
+          sortedDecorators.addAll(
+              outputLogicDefinition
+                  .getSessionScopedLogicDecorators(kryonDefinition, dependantChain)
+                  .values());
+          // If the same decoratorType is configured for session and request scope, it will get
+          // applied twice. This is not ideal and will be fixed in future Krystal versions
+          sortedDecorators.addAll(
+              requestScopedDecoratorsSupplier
+                  .apply(
+                      new LogicExecutionContext(
+                          kryonId,
+                          outputLogicDefinition.logicTags(),
+                          dependantChain,
+                          kryonDefinition.kryonDefinitionRegistry()))
+                  .values());
+          return sortedDecorators;
+        });
   }
 
   @Override
