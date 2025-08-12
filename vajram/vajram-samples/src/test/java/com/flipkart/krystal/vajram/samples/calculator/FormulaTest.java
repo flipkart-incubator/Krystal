@@ -441,7 +441,7 @@ class FormulaTest {
   }
 
   @Test
-  void formula_success_with_mockedDependencyDivider() throws Exception {
+  void formula_success_with_mockedDependencyDivider() {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
@@ -466,7 +466,7 @@ class FormulaTest {
                 .buildConfig())) {
       future = executeVajram(graph, krystexVajramExecutor, 0, requestContext);
     }
-    assertThat(future.get()).isEqualTo(4);
+    assertThat(future).succeedsWithin(ofSeconds(1)).isEqualTo(4);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
   }
 

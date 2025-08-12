@@ -9,6 +9,7 @@ import static com.flipkart.krystal.vajram.samples.calculator.adder.ChainAdderReq
 import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderRequest.splitSum1_n;
 import static com.flipkart.krystal.vajram.samples.calculator.adder.SplitAdderRequest.splitSum2_n;
 import static com.flipkart.krystal.vajramexecutor.krystex.InputBatcherConfig.autoRegisterSharedBatchers;
+import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -110,7 +111,7 @@ class ChainAdderTest {
 
       future = executeVajram(krystexVajramExecutor, 0);
     }
-    assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(55);
+    assertThat(future).succeedsWithin(ofSeconds(1)).isEqualTo(55);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
     System.out.println(
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));

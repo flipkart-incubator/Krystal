@@ -88,7 +88,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
   GranularKryon(
       KryonDefinition kryonDefinition,
       KryonExecutor kryonExecutor,
-      Function<LogicExecutionContext, ImmutableMap<String, OutputLogicDecorator>>
+      Function<LogicExecutionContext, Map<String, OutputLogicDecorator>>
           requestScopedDecoratorsSupplier,
       LogicDecorationOrdering logicDecorationOrdering) {
     super(
