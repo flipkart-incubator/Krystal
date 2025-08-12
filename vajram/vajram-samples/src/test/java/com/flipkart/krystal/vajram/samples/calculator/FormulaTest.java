@@ -34,6 +34,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph.Builder;
 import com.flipkart.krystal.vajramexecutor.krystex.testharness.VajramTestHarness;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -360,7 +361,7 @@ class FormulaTest {
   }
 
   @Test
-  void formula_success_with_mockedDependencyDivider() throws Exception {
+  void formula_success_with_mockedDependencyDivider() {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
@@ -384,7 +385,7 @@ class FormulaTest {
                 .buildConfig())) {
       future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
-    assertThat(future.get()).isEqualTo(4);
+    assertThat(future).succeedsWithin(ofSeconds(1)).isEqualTo(4);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
   }
 

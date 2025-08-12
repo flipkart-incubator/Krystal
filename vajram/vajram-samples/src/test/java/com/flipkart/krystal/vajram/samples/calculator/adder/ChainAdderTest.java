@@ -93,7 +93,7 @@ class ChainAdderTest {
 
       future = executeVajram(krystexVajramExecutor, 0);
     }
-    assertThat(future).succeedsWithin(ofSeconds(1000)).isEqualTo(55);
+    assertThat(future).succeedsWithin(ofSeconds(1)).isEqualTo(55);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
     System.out.println(
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(kryonExecutionReport));
