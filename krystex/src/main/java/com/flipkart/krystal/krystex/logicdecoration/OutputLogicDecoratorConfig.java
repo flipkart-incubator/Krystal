@@ -15,12 +15,24 @@ import java.util.function.Predicate;
  *     {@link ConfigProvider} interface.
  * @param factory A factory which creates an instance of the logic decorator with the given
  *     instanceId.
+ * @param enableFlushing true if the decorator needs to know when a dependant chain is {@link
+ *     FlushCommand flushed}
  */
 public record OutputLogicDecoratorConfig(
     String decoratorType,
     Predicate<LogicExecutionContext> shouldDecorate,
     Function<LogicExecutionContext, String> instanceIdGenerator,
-    Function<LogicDecoratorContext, OutputLogicDecorator> factory) {
+    Function<LogicDecoratorContext, OutputLogicDecorator> factory,
+    boolean enableFlushing) {
+
+  public OutputLogicDecoratorConfig(
+      String decoratorType,
+      Predicate<LogicExecutionContext> shouldDecorate,
+      Function<LogicExecutionContext, String> instanceIdGenerator,
+      Function<LogicDecoratorContext, OutputLogicDecorator> factory) {
+    this(decoratorType, shouldDecorate, instanceIdGenerator, factory, false);
+  }
+
   public record LogicDecoratorContext(
       String instanceId, LogicExecutionContext logicExecutionContext) {}
 }

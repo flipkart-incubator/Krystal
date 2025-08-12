@@ -6,7 +6,6 @@ import static com.flipkart.krystal.except.StackTracelessException.stackTraceless
 import static com.flipkart.krystal.krystex.kryon.KryonUtils.enqueueOrExecuteCommand;
 import static com.flipkart.krystal.krystex.resolution.ResolverCommand.multiExecuteWith;
 import static com.flipkart.krystal.krystex.resolution.ResolverCommand.skip;
-import static com.google.common.base.Functions.identity;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Collections.unmodifiableSet;
@@ -76,13 +75,12 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
   private final Map<DependantChain, Set<RequestId>> requestsByDependantChain =
       new LinkedHashMap<>();
 
-  private final Set<DependantChain> flushedDependantChain = new LinkedHashSet<>();
   private final Map<DependantChain, Boolean> outputLogicExecuted = new LinkedHashMap<>();
 
   BatchKryon(
       KryonDefinition kryonDefinition,
       KryonExecutor kryonExecutor,
-      Function<LogicExecutionContext, ImmutableMap<String, OutputLogicDecorator>>
+      Function<LogicExecutionContext, Map<String, OutputLogicDecorator>>
           requestScopedDecoratorsSupplier,
       LogicDecorationOrdering logicDecorationOrdering,
       RequestIdGenerator requestIdGenerator) {
@@ -95,11 +93,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
   }
 
   @Override
-  public void executeCommand(Flush flushCommand) {
-    flushedDependantChain.add(flushCommand.dependantChain());
-    flushAllDependenciesIfNeeded(flushCommand.dependantChain());
-    flushDecoratorsIfNeeded(flushCommand.dependantChain());
-  }
+  public void executeCommand(Flush flushCommand) {}
 
   @Override
   public CompletableFuture<BatchResponse> executeCommand(BatchCommand kryonCommand) {
@@ -109,6 +103,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     try {
       Set<String> newFacetNames = ImmutableSet.of();
       if (kryonCommand instanceof ForwardBatch forwardBatch) {
+        // In a batch kryon, invoking the kryon is equivalent to flushing the dependant chain
         newFacetNames = kryonDefinition.givenFacets();
         if (log.isDebugEnabled()) {
           forwardBatch
@@ -144,10 +139,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
       }
       triggerDependencies(
           dependantChain, getTriggerableDependencies(dependantChain, newFacetNames));
-
-      Optional<CompletableFuture<BatchResponse>> outputLogicFuture =
-          executeOutputLogicIfPossible(dependantChain);
-      outputLogicFuture.ifPresent(f -> linkFutures(f, resultForDepChain));
+      executeOutputLogicIfPossible(dependantChain);
     } catch (Throwable e) {
       resultForDepChain.completeExceptionally(stackTracelessWrap(e));
     }
@@ -409,33 +401,38 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
                   }
                 });
       }
-    flushDependencyIfNeeded(depName, dependantChain);
   }
 
-  private Optional<CompletableFuture<BatchResponse>> executeOutputLogicIfPossible(
-      DependantChain dependantChain) {
-
+  private void executeOutputLogicIfPossible(DependantChain dependantChain) {
     if (outputLogicExecuted.getOrDefault(dependantChain, false)) {
       // Output logic aleady executed
-      return Optional.empty();
+      return;
     }
-
+    CompletableFuture<BatchResponse> outputLogicResult = null;
     ForwardBatch forwardCommand = getForwardCommand(dependantChain);
+    if (forwardCommand.shouldSkip()) {
+      outputLogicResult =
+          failedFuture(new SkippedExecutionException(getSkipMessage(forwardCommand)));
+    }
     // If all the inputs and dependency values needed by the output logic are available, then
     // prepare to run outputLogic
-    ImmutableSet<String> inputNames = kryonDefinition.getOutputLogicDefinition().inputNames();
     if (availableInputsByDepChain
         .getOrDefault(dependantChain, ImmutableSet.of())
-        .containsAll(inputNames)) { // All the inputs of the kryon logic have data present
-      if (forwardCommand.shouldSkip()) {
-        return Optional.of(
-            failedFuture(new SkippedExecutionException(getSkipMessage(forwardCommand))));
-      }
-      return Optional.of(
+        .containsAll(
+            kryonDefinition
+                .getOutputLogicDefinition()
+                .inputNames())) { // All the inputs of the kryon logic have data present
+      outputLogicResult =
           executeOutputLogic(
-              unmodifiableSet(forwardCommand.executableRequests().keySet()), dependantChain));
+              unmodifiableSet(forwardCommand.executableRequests().keySet()), dependantChain);
     }
-    return Optional.empty();
+    if (outputLogicResult != null) {
+      outputLogicExecuted.put(dependantChain, true);
+      flushDecoratorsIfNeeded(dependantChain);
+      linkFutures(
+          outputLogicResult,
+          resultsByDepChain.computeIfAbsent(dependantChain, r -> new CompletableFuture<>()));
+    }
   }
 
   private CompletableFuture<BatchResponse> executeOutputLogic(
@@ -464,8 +461,6 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
               }
               resultForBatch.complete(new BatchResponse(unmodifiableMap(responses)));
             });
-    outputLogicExecuted.put(dependantChain, true);
-    flushDecoratorsIfNeeded(dependantChain);
     return resultForBatch;
   }
 
@@ -499,33 +494,8 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     return resultsByRequest;
   }
 
-  private void flushAllDependenciesIfNeeded(DependantChain dependantChain) {
-    kryonDefinition
-        .dependencyKryons()
-        .keySet()
-        .forEach(dependencyName -> flushDependencyIfNeeded(dependencyName, dependantChain));
-  }
-
-  private void flushDependencyIfNeeded(String dependencyName, DependantChain dependantChain) {
-    if (!flushedDependantChain.contains(dependantChain)) {
-      return;
-    }
-    if (executedDependencies.getOrDefault(dependantChain, Set.of()).contains(dependencyName)) {
-      kryonExecutor.executeCommand(
-          new Flush(
-              Optional.ofNullable(kryonDefinition.dependencyKryons().get(dependencyName))
-                  .orElseThrow(
-                      () ->
-                          new AssertionError(
-                              "Could not find KryonId for dependency "
-                                  + dependencyName
-                                  + ". This is a bug")),
-              dependantChain.extend(kryonId, dependencyName)));
-    }
-  }
-
   private void flushDecoratorsIfNeeded(DependantChain dependantChain) {
-    if (!flushedDependantChain.contains(dependantChain)) {
+    if (!kryonDefinition.getOutputLogicDefinition().doDecoratorsNeedFlushing()) {
       return;
     }
     if (outputLogicExecuted.getOrDefault(dependantChain, false)

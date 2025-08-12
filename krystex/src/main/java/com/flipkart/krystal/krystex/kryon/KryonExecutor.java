@@ -41,6 +41,7 @@ import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.flipkart.krystal.krystex.request.StringReqGenerator;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -102,6 +103,7 @@ public final class KryonExecutor implements KrystalExecutor {
       requestScopedKryonDecorators = new LinkedHashMap<>();
 
   private final KryonRegistry<?> kryonRegistry = new KryonRegistry<>();
+  private final Map<KryonId, Kryon<?, ?>> decoratedKryons = new HashMap<>();
   private final KryonExecutorMetrics kryonMetrics;
   private final Map<RequestId, KryonExecution> allExecutions = new LinkedHashMap<>();
   private final Set<RequestId> unFlushedExecutions = new LinkedHashSet<>();
@@ -127,7 +129,7 @@ public final class KryonExecutor implements KrystalExecutor {
         executorConfig.debug() ? new StringReqGenerator() : new IntReqGenerator();
   }
 
-  private ImmutableMap<String, OutputLogicDecorator> getRequestScopedDecorators(
+  private Map<String, OutputLogicDecorator> getRequestScopedDecorators(
       LogicExecutionContext logicExecutionContext) {
     KryonId kryonId = logicExecutionContext.kryonId();
     KryonDefinition kryonDefinition = kryonDefinitionRegistry.get(kryonId);
@@ -171,7 +173,7 @@ public final class KryonExecutor implements KrystalExecutor {
                 }
               }
             });
-    return ImmutableMap.copyOf(decorators);
+    return decorators;
   }
 
   @Override
@@ -318,16 +320,7 @@ public final class KryonExecutor implements KrystalExecutor {
       return failedFuture(e);
     }
     KryonId kryonId = kryonCommand.kryonId();
-    @SuppressWarnings("unchecked")
-    Kryon<KryonCommand, R> kryon = (Kryon<KryonCommand, R>) kryonRegistry.get(kryonId);
-    for (KryonDecorator kryonDecorator : getSortedKryonDecorators(kryonId, kryonCommand)) {
-      @SuppressWarnings("unchecked")
-      Kryon<KryonCommand, R> decoratedKryon =
-          (Kryon<KryonCommand, R>)
-              kryonDecorator.decorateKryon(
-                  new KryonDecorationInput((Kryon<KryonCommand, KryonResponse>) kryon, this));
-      kryon = decoratedKryon;
-    }
+    Kryon<KryonCommand, R> kryon = getDecoratedKryon(kryonCommand, kryonId);
     if (kryonCommand instanceof Flush flush) {
       kryon.executeCommand(flush);
       @SuppressWarnings("unchecked")
@@ -336,6 +329,25 @@ public final class KryonExecutor implements KrystalExecutor {
     } else {
       return kryon.executeCommand(kryonCommand);
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private <R extends KryonResponse> Kryon<KryonCommand, R> getDecoratedKryon(
+      KryonCommand kryonCommand, KryonId kryonId) {
+    return (Kryon<KryonCommand, R>)
+        decoratedKryons.computeIfAbsent(
+            kryonId,
+            _n -> {
+              Kryon<? extends KryonCommand, ? extends KryonResponse> kryon =
+                  kryonRegistry.get(kryonId);
+              for (KryonDecorator kryonDecorator :
+                  getSortedKryonDecorators(kryonId, kryonCommand)) {
+                kryon =
+                    kryonDecorator.decorateKryon(
+                        new KryonDecorationInput((Kryon<KryonCommand, KryonResponse>) kryon, this));
+              }
+              return kryon;
+            });
   }
 
   private TreeSet<KryonDecorator> getSortedKryonDecorators(
