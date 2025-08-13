@@ -580,7 +580,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
     }
     if (outputLogicResult != null) {
       outputLogicExecuted.put(dependentChain, true);
-      flushDecoratorsIfNeeded(dependentChain);
+      flushDecorators(dependentChain);
       linkFutures(
           outputLogicResult,
           resultsByDepChain.computeIfAbsent(dependentChain, r -> new CompletableFuture<>()));
@@ -656,24 +656,21 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
     return resultsByRequest;
   }
 
-  private void flushDecoratorsIfNeeded(DependentChain dependentChain) {
-    if (outputLogicExecuted.getOrDefault(dependentChain, false)
-        || getForwardCommand(dependentChain).shouldSkip()) {
-      Iterable<OutputLogicDecorator> reverseSortedDecorators =
-          getSortedOutputLogicDecorators(dependentChain)::descendingIterator;
-      for (OutputLogicDecorator decorator : reverseSortedDecorators) {
-        try {
-          decorator.executeCommand(new FlushCommand(dependentChain));
-        } catch (Throwable e) {
-          log.error(
-              """
-                  Error while flushing decorator: {}. \
-                  This is most probably a bug since decorator methods are not supposed to throw exceptions. \
-                  This can cause unpredictable behaviour in the krystal graph execution. \
-                  Please fix!""",
-              decorator,
-              e);
-        }
+  private void flushDecorators(DependentChain dependentChain) {
+    Iterable<OutputLogicDecorator> reverseSortedDecorators =
+        getSortedOutputLogicDecorators(dependentChain)::descendingIterator;
+    for (OutputLogicDecorator decorator : reverseSortedDecorators) {
+      try {
+        decorator.executeCommand(new FlushCommand(dependentChain));
+      } catch (Throwable e) {
+        log.error(
+            """
+                Error while flushing decorator: {}. \
+                This is most probably a bug since decorator methods are not supposed to throw exceptions. \
+                This can cause unpredictable behaviour in the krystal graph execution. \
+                Please fix!""",
+            decorator,
+            e);
       }
     }
   }
