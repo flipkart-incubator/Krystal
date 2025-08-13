@@ -176,8 +176,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                           .depChainBatcherConfigs()
                           .getOrDefault(vajramID, ImmutableList.of())) {
                     boolean shouldDecorate =
-                        depChainBatcherConfig.shouldBatch().test(logicExecutionContext)
-                            && vajramDefinition.metadata().isBatched();
+                        vajramDefinition.metadata().isBatched()
+                            && depChainBatcherConfig.shouldBatch().test(logicExecutionContext);
                     if (shouldDecorate) {
                       return depChainBatcherConfig;
                     }
