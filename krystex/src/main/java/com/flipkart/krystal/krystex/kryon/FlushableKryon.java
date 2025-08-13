@@ -513,7 +513,6 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
               () -> new CallbackCommand(vajramID, dependency, results, dependentChain),
               kryonExecutor);
         });
-    flushDependencyIfNeeded(dependency, depVajramID, dependentChain);
     if (log.isDebugEnabled()) {
       logWaitingMessage(dependency, dependentChain, depResponse, depVajramID);
     }
