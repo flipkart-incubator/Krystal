@@ -6,5 +6,4 @@ import java.util.Set;
 public sealed interface BatchCommand extends KryonCommand permits ForwardBatch, CallbackBatch {
 
   Set<RequestId> requestIds();
-
 }

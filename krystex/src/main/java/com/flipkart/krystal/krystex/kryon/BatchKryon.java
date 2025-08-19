@@ -411,8 +411,7 @@ final class BatchKryon extends AbstractKryon<BatchCommand, BatchResponse> {
     CompletableFuture<BatchResponse> outputLogicResult = null;
     ForwardBatch forwardCommand = getForwardCommand(dependantChain);
     if (forwardCommand.shouldSkip()) {
-      outputLogicResult =
-          failedFuture(new SkippedExecutionException(getSkipMessage(forwardCommand)));
+      outputLogicResult = failedFuture(SkippedExecutionException.SKIPPED_EXECUTION_EXCEPTION);
     }
     // If all the inputs and dependency values needed by the output logic are available, then
     // prepare to run outputLogic

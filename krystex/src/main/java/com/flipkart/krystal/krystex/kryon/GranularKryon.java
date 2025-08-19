@@ -100,7 +100,7 @@ final class GranularKryon extends AbstractKryon<GranularCommand, GranuleResponse
   }
 
   private static SkippedExecutionException skipKryonException(SkipGranule skip) {
-    return new SkippedExecutionException(skip.skipDependencyCommand().reason());
+    return SkippedExecutionException.SKIPPED_EXECUTION_EXCEPTION;
   }
 
   @Override
