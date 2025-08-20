@@ -8,9 +8,11 @@ import static com.flipkart.krystal.lattice.rest.codegen.JakartaRestServiceResour
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils;
 import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider;
-import com.flipkart.krystal.lattice.rest.JakartaRestResources;
+import com.flipkart.krystal.lattice.core.headers.Header;
+import com.flipkart.krystal.lattice.core.headers.StandardHeaderNames;
 import com.flipkart.krystal.lattice.rest.RestService;
 import com.flipkart.krystal.lattice.rest.RestServiceDopant;
+import com.flipkart.krystal.tags.Names;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -36,35 +38,7 @@ public final class RestServiceBindingsProvider implements BindingsProvider {
         restServerDopantBinding(context),
         httpHeadersBinding(),
         uriInfoBinding(),
-        jakartaResources(context));
-  }
-
-  private Binding jakartaResources(LatticeCodegenContext context) {
-    List<ClassName> resourceClassNames = resourceClasses(context);
-    BiMap<ClassName, String> paramNames = HashBiMap.create();
-    for (ClassName resourceClassName : resourceClassNames) {
-      String prefix = lowerCaseFirstChar(resourceClassName.simpleName());
-      String paramName = prefix;
-      int i = 1;
-      while (paramNames.containsValue(paramName)) {
-        paramName = prefix + "_" + i;
-        i++;
-      }
-      paramNames.put(resourceClassName, paramName);
-    }
-    return new ProviderMethod(
-        "jakartaRestResources",
-        ClassName.get(JakartaRestResources.class),
-        paramNames.entrySet().stream()
-            .map(e -> ParameterSpec.builder(e.getKey(), e.getValue()))
-            .toList(),
-        CodeBlock.of(
-            "new $T($L);",
-            JakartaRestResources.class,
-            paramNames.values().stream()
-                .map(c -> CodeBlock.of("$L", c))
-                .collect(CodeBlock.joining(", "))),
-        SINGLETON);
+        bindAcceptHeaderInRequestScope());
   }
 
   private DopantBinding restServerDopantBinding(LatticeCodegenContext context) {
@@ -84,5 +58,12 @@ public final class RestServiceBindingsProvider implements BindingsProvider {
   private Binding uriInfoBinding() {
     return new SimpleBinding(
         ClassName.get(UriInfo.class), null, new BindTo.Provider(CodeBlock.of("null"), REQUEST));
+  }
+
+  private static Binding bindAcceptHeaderInRequestScope() {
+    return new SimpleBinding(
+        ClassName.get(Header.class),
+        CodeBlock.of("$T.$L($T.$L)", Names.class, "named", StandardHeaderNames.class, "ACCEPT"),
+        new BindTo.Provider(CodeBlock.of("null"), REQUEST));
   }
 }

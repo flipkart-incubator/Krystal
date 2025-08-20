@@ -2,6 +2,7 @@ package com.flipkart.krystal.lattice.rest;
 
 import static com.flipkart.krystal.lattice.core.headers.StandardHeaderNames.CONTENT_TYPE;
 import static com.flipkart.krystal.lattice.core.headers.StandardHeaderNames.REQUEST_ID;
+import static jakarta.ws.rs.core.HttpHeaders.CONTENT_LENGTH;
 
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
@@ -58,14 +59,18 @@ public abstract class RestServiceDopant implements DopantWithAnnotation<RestServ
         .thenApply(
             response -> {
               ResponseBuilder responseBuilder;
+              int contentLength = 0;
               try {
                 if (response == null) {
                   responseBuilder = Response.ok();
                 } else if (response instanceof byte[] bytes) {
+                  contentLength = bytes.length;
                   responseBuilder = Response.ok(bytes);
                 } else if (response instanceof SerializableModel serializableResponse) {
+                  byte[] bytes = serializableResponse._serialize();
+                  contentLength = bytes.length;
                   responseBuilder =
-                      Response.ok(serializableResponse._serialize())
+                      Response.ok(bytes)
                           .header(
                               CONTENT_TYPE, serializableResponse._serdeProtocol().contentType());
                 } else {
@@ -78,7 +83,7 @@ public abstract class RestServiceDopant implements DopantWithAnnotation<RestServ
               } catch (Throwable e) {
                 responseBuilder = Response.serverError();
               }
-              return responseBuilder.build();
+              return responseBuilder.header(CONTENT_LENGTH, contentLength).build();
             });
   }
 

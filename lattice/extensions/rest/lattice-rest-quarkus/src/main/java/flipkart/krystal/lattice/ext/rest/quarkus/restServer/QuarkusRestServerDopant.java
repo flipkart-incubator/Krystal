@@ -92,11 +92,6 @@ public final class QuarkusRestServerDopant implements Dopant<RestService, Quarku
     return new VertxRequestHandler(vertx, deployment, restService.pathPrefix());
   }
 
-  protected String getPathPrefix() {
-    String pathPrefix = restService.pathPrefix();
-    return pathPrefix.isEmpty() ? "" : "/" + pathPrefix;
-  }
-
   protected <RespT> void executeHttpRequest(
       RoutingContext routingContext, CompletionStage<ImmutableRequest<RespT>> requestFuture) {
 
