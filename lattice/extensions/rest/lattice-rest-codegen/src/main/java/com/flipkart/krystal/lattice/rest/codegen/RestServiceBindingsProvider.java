@@ -1,9 +1,6 @@
 package com.flipkart.krystal.lattice.rest.codegen;
 
-import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.lowerCaseFirstChar;
 import static com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.BindingScope.REQUEST;
-import static com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.BindingScope.SINGLETON;
-import static com.flipkart.krystal.lattice.rest.codegen.JakartaRestServiceResourceGenProvider.resourceClasses;
 
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils;
@@ -14,15 +11,11 @@ import com.flipkart.krystal.lattice.rest.RestService;
 import com.flipkart.krystal.lattice.rest.RestServiceDopant;
 import com.flipkart.krystal.tags.Names;
 import com.google.auto.service.AutoService;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.ParameterSpec;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.UriInfo;
-import java.util.List;
 import javax.lang.model.element.TypeElement;
 
 @AutoService(BindingsProvider.class)

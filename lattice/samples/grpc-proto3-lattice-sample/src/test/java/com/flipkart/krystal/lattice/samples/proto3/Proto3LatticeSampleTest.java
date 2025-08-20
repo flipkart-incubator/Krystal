@@ -17,7 +17,6 @@ import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample_Req;
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample_ReqImmut;
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample_ReqImmutProto;
-import com.flipkart.krystal.model.MandatoryFieldMissingException;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.VajramDef;

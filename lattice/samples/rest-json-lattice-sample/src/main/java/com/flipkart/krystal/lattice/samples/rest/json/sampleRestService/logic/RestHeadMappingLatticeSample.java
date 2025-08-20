@@ -6,7 +6,6 @@ import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.lattice.rest.api.Path;
 import com.flipkart.krystal.lattice.rest.api.PathParam;
 import com.flipkart.krystal.lattice.rest.api.QueryParam;
-import com.flipkart.krystal.lattice.rest.api.methods.GET;
 import com.flipkart.krystal.lattice.rest.api.methods.HEAD;
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonResponse;
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonResponse_Immut;

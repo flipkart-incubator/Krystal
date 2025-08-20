@@ -1,9 +1,9 @@
 package flipkart.krystal.lattice.ext.rest.quarkus.restServer;
 
-import static com.flipkart.krystal.lattice.core.headers.StandardHeaderNames.CONTENT_TYPE;
 import static com.flipkart.krystal.lattice.core.headers.StandardHeaderNames.REQUEST_ID;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
+import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;

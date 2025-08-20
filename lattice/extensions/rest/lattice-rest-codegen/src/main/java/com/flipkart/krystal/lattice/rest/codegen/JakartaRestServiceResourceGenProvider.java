@@ -158,7 +158,7 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
               .getTypesFromAnnotationMember(
                   latticeAppElem.getAnnotation(RestService.class)::resourceVajrams)
               .stream()
-              .map(
+              .<@NonNull TypeElement>map(
                   typeMirror ->
                       requireNonNull(
                           (TypeElement) util.processingEnv().getTypeUtils().asElement(typeMirror)))
@@ -358,7 +358,7 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
           requestSerdeProtocols =
               util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
                   .filter(t -> util.isRawAssignable(t, SerdeProtocol.class))
-                  .map(
+                  .<@NonNull TypeElement>map(
                       typeMirror ->
                           requireNonNull(
                               (TypeElement)
@@ -371,7 +371,6 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
                 bodyFacet == null ? vajramElem : bodyFacet.facetField());
           }
         }
-        TypeElement requestClass = null;
         if (bodyFacet != null) {
           if (!restMethod.supportsRequestBody()) {
             util.error(
@@ -382,12 +381,6 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
                     .formatted(vajramInfo.vajramName(), restMethod),
                 bodyFacet.facetField());
           }
-          requestClass =
-              requireNonNull(
-                  (TypeElement)
-                      util.processingEnv()
-                          .getTypeUtils()
-                          .asElement(bodyFacet.dataType().javaModelType(util.processingEnv())));
         }
         for (TypeElement serdeProtocolType : requestSerdeProtocols) {
           SerdeProtocol serdeProtocol =
@@ -413,21 +406,29 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
                       .build());
 
           if (bodyFacet != null) {
+            TypeElement bodyFacetModelType =
+                requireNonNull(
+                    (TypeElement)
+                        util.processingEnv()
+                            .getTypeUtils()
+                            .asElement(bodyFacet.dataType().javaModelType(util.processingEnv())));
+
             serdeSpecificMethodBuilder.addStatement(
                 CodeBlock.of(
                     "_vajramRequest.$L(new $T($L))",
                     bodyFacet.name(),
-                    util.getImmutSerdeClassName(requestClass, serdeProtocol),
+                    util.getImmutSerdeClassName(bodyFacetModelType, serdeProtocol),
                     bodyFacet.name()));
           } else {
             serdeSpecificMethodBuilder.addStatement(
                 CodeBlock.of(
                     "var _vajramRequest = new $T(_body)",
                     util.getImmutSerdeClassName(
-                        util.processingEnv()
-                            .getElementUtils()
-                            .getTypeElement(
-                                vajramInfo.lite().requestInterfaceType().canonicalName()),
+                        requireNonNull(
+                            util.processingEnv()
+                                .getElementUtils()
+                                .getTypeElement(
+                                    vajramInfo.lite().requestInterfaceType().canonicalName())),
                         serdeProtocol)));
           }
           resourceMethods.add(serdeSpecificMethodBuilder);

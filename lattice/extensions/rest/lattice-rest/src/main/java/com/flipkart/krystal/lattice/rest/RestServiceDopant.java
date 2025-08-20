@@ -1,8 +1,8 @@
 package com.flipkart.krystal.lattice.rest;
 
-import static com.flipkart.krystal.lattice.core.headers.StandardHeaderNames.CONTENT_TYPE;
 import static com.flipkart.krystal.lattice.core.headers.StandardHeaderNames.REQUEST_ID;
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_LENGTH;
+import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
