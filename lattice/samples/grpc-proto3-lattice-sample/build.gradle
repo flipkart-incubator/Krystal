@@ -87,3 +87,7 @@ tasks.named('generateProto').configure { mustRunAfter('codeGenVajramModels') }
 extraJavaModuleInfo {
     failOnMissingModuleInfo = false
 }
+
+checkerFramework {
+    excludeTests = true
+}

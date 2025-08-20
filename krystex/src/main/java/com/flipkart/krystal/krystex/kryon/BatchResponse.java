@@ -5,7 +5,6 @@ import static java.util.Collections.unmodifiableMap;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.krystex.request.InvocationId;
 import com.google.common.collect.ImmutableMap;
-import java.util.Collections;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 

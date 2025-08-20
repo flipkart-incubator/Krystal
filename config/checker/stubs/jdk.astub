@@ -4,9 +4,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 package java.lang;
 
 class String {
-  public String formatted(@Nullable Object... args) {
-
-  }
+  public String formatted(@Nullable Object... args);
 }
 
 package java.util.concurrent;
@@ -23,6 +21,10 @@ class ForkJoinPool{
       @Nullable Predicate<? super ForkJoinPool> saturate,
       long keepAliveTime,
       TimeUnit unit);
+}
+
+public class CompletionException {
+  CompletionException(@Nullable String message, @Nullable Throwable cause);
 }
 
 package java.util;

@@ -1,6 +1,7 @@
 package com.flipkart.krystal.lattice.core;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+import static java.lang.reflect.Modifier.isAbstract;
 import static java.util.Objects.requireNonNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,7 +29,6 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableMap;
 import jakarta.inject.Singleton;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -198,9 +198,9 @@ public abstract class LatticeApplication {
       Class<DopantSpec<?, ?, ?>> aClass = (Class<DopantSpec<?, ?, ?>>) spec.getClass();
       dependencyInjectionBinder.bindToInstance(aClass, spec);
       var dopantClass = spec.dopantClass();
-      Singleton annotation = dopantClass.getAnnotation(Singleton.class);
-      if (annotation == null) {
-        throw new RuntimeException("Dopant class must have @Singleton annotation");
+      if (!isAbstract(dopantClass.getModifiers())) {
+        // abstract classes would need to bound to their implementations by clients
+        dependencyInjectionBinder.bindInSingleton(dopantClass);
       }
     }
 

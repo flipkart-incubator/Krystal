@@ -6,6 +6,10 @@ plugins {
     id 'io.quarkus' version "${quarkus_version}"
 }
 
+application {
+    mainClass = 'com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.app.SampleRestfulLatticeApp_Impl'
+}
+
 dependencies {
     /** START: Lattice dependencies **/
 

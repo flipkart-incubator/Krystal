@@ -53,6 +53,10 @@ test {
     maxHeapSize = "4g" // maximum heap size
 }
 
+checkerFramework {
+    excludeTests = true
+}
+
 //Needed only if you want your project to be modularized using JPMS
 /** START: JPMS compatibility configurations **/
 configurations.configureEach {

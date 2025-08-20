@@ -1,7 +1,6 @@
 package com.flipkart.krystal.except;
 
 import java.util.concurrent.CompletionException;
-
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
@@ -38,8 +37,8 @@ public class StackTracelessException extends CompletionException {
   }
 
   public static CompletionException stackTracelessWrap(Throwable t) {
-    if (t instanceof CompletionException) {
-      return (CompletionException) t;
+    if (t instanceof CompletionException c) {
+      return c;
     }
     String message = t.getMessage();
     return new StackTracelessException(message != null ? message : t.getClass().getName(), t);

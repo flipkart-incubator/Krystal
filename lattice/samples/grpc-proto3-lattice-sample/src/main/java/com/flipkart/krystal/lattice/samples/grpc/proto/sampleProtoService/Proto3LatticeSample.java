@@ -86,6 +86,7 @@ public abstract class Proto3LatticeSample extends ComputeVajramDef<Proto3Lattice
     return responseBuilder
         .string(
             """
+              Ding Ding Ding
               $$ optionalInput: %s $$
               $$ mandatoryInput: %s $$
               $$ conditionallyMandatoryInput: %s $$

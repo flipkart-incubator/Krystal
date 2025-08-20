@@ -4,7 +4,6 @@ import static com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.BindingS
 import static com.flipkart.krystal.lattice.core.headers.StandardHeaderNames.ACCEPT;
 
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
-import com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils;
 import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider;
 import com.flipkart.krystal.lattice.core.headers.Header;
 import com.flipkart.krystal.lattice.core.headers.SingleValueHeader;
@@ -17,7 +16,6 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
-import flipkart.krystal.lattice.ext.rest.quarkus.restServer.QuarkusRestServerDopant;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.inject.Named;
 import java.util.List;

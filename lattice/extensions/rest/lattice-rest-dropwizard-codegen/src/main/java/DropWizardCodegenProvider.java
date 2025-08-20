@@ -6,8 +6,6 @@ public class DropWizardCodegenProvider implements LatticeCodeGeneratorProvider {
 
   @Override
   public CodeGenerator create(LatticeCodegenContext context) {
-    return () -> {
-      
-    };
+    return () -> {};
   }
 }

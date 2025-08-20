@@ -13,7 +13,6 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.UriInfo;
-
 import javax.lang.model.element.TypeElement;
 
 @AutoService(BindingsProvider.class)
