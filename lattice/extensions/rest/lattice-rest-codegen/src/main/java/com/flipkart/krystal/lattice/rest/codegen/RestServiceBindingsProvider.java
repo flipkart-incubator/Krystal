@@ -11,8 +11,9 @@ import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
+import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.UriInfo;
-import java.net.http.HttpHeaders;
+
 import javax.lang.model.element.TypeElement;
 
 @AutoService(BindingsProvider.class)
