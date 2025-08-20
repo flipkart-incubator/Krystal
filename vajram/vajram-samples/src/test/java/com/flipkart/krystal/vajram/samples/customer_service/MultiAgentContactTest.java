@@ -17,7 +17,6 @@ import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
-import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;

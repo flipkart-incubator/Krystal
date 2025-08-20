@@ -69,6 +69,26 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
     return new JakartaRestServiceResourceGen(latticeCodegenContext);
   }
 
+  public static List<ClassName> resourceClasses(LatticeCodegenContext context) {
+    TypeElement latticeAppElem = context.latticeAppTypeElement();
+    List<ClassName> resourceClasses = new ArrayList<>();
+    CodeGenUtility util = context.codeGenUtility().codegenUtil();
+    for (TypeElement vajramElem :
+        JakartaRestServiceResourceGen.getRestResourceVajramElems(latticeAppElem, util)) {
+      Path path = vajramElem.getAnnotation(Path.class);
+      if (path == null) {
+        continue;
+      }
+      if (path.value().startsWith("/") || path.value().endsWith("/")) {
+        util.error("Path value in @Path annotation cannot start of end with '/'", vajramElem);
+      }
+      VajramInfo vajramInfo = context.codeGenUtility().computeVajramInfo(vajramElem);
+      ClassName jaxRsResourceName = getJaxRsResourceName(vajramInfo, vajramElem);
+      resourceClasses.add(jaxRsResourceName);
+    }
+    return resourceClasses;
+  }
+
   private static class JakartaRestServiceResourceGen implements CodeGenerator {
 
     private final LatticeCodegenContext context;
@@ -86,33 +106,25 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
         return;
       }
       TypeElement latticeAppElem = context.latticeAppTypeElement();
-      List<ClassName> resourceClasses = resourceClasses(latticeAppElem);
-      dopantImpl(latticeAppElem, resourceClasses);
+      jakartaResources(latticeAppElem);
+      dopantImpl(latticeAppElem);
     }
 
-    private List<ClassName> resourceClasses(TypeElement latticeAppElem) {
+    private void jakartaResources(TypeElement latticeAppElem) {
       RestService restService = latticeAppElem.getAnnotation(RestService.class);
       String pathPrefix = restService.pathPrefix().isEmpty() ? "" : "/" + restService.pathPrefix();
-      List<ClassName> resourceClasses = new ArrayList<>();
-      for (TypeElement vajramElem :
-          util.getTypesFromAnnotationMember(restService::resourceVajrams).stream()
-              .<@NonNull TypeElement>map(
-                  typeMirror ->
-                      requireNonNull(
-                          (TypeElement) util.processingEnv().getTypeUtils().asElement(typeMirror)))
-              .toList()) {
-        Path path = vajramElem.getAnnotation(Path.class);
-        if (path == null) {
-          continue;
-        }
-        if (path.value().startsWith("/") || path.value().endsWith("/")) {
-          util.error("Path value in @Path annotation cannot start of end with '/'", vajramElem);
-        }
-
+      for (TypeElement vajramElem : getRestResourceVajramElems(latticeAppElem, util)) {
         VajramInfo vajramInfo = context.codeGenUtility().computeVajramInfo(vajramElem);
-        var resourceMethods = resourceMethods(vajramInfo);
+        var resourceMethods = resourceMethods(vajramElem, vajramInfo);
         if (resourceMethods.isEmpty()) {
           continue;
+        }
+        Path path = vajramElem.getAnnotation(Path.class);
+        String pathValue;
+        if (path == null) {
+          pathValue = vajramInfo.vajramName();
+        } else {
+          pathValue = path.value();
         }
         ClassName jaxRsResourceName = getJaxRsResourceName(vajramInfo, vajramElem);
         TypeSpec.Builder resourceClassBuilder =
@@ -121,7 +133,7 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
             .addField(RestServiceDopant.class, "_restServiceDopant", PRIVATE, FINAL)
             .addAnnotation(
                 AnnotationSpec.builder(jakarta.ws.rs.Path.class)
-                    .addMember("value", "$S", pathPrefix + "/" + path.value())
+                    .addMember("value", "$S", pathPrefix + "/" + pathValue)
                     .build())
             .addMethod(
                 MethodSpec.constructorBuilder()
@@ -135,13 +147,28 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
             jaxRsResourceName.canonicalName(),
             JavaFile.builder(jaxRsResourceName.packageName(), resourceClassBuilder.build()).build(),
             latticeAppElem);
-        resourceClasses.add(jaxRsResourceName);
       }
-      return resourceClasses;
+    }
+
+    private static List<TypeElement> getRestResourceVajramElems(
+        TypeElement latticeAppElem, CodeGenUtility util) {
+      List<TypeElement> restResourceVajramElems =
+          util
+              .getTypesFromAnnotationMember(
+                  latticeAppElem.getAnnotation(RestService.class)::resourceVajrams)
+              .stream()
+              .map(
+                  typeMirror ->
+                      requireNonNull(
+                          (TypeElement) util.processingEnv().getTypeUtils().asElement(typeMirror)))
+              .toList();
+      return restResourceVajramElems;
     }
 
     @SneakyThrows
-    private void dopantImpl(TypeElement latticeAppElem, List<ClassName> resourceClasses) {
+    private void dopantImpl(TypeElement latticeAppElem) {
+      List<ClassName> resourceClassNames = resourceClasses(context);
+
       String packageName =
           util.processingEnv()
               .getElementUtils()
@@ -157,7 +184,7 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
               .superclass(RestServiceDopant.class)
               .addMethod(
                   latticeCodegenUtils.dopantConstructorOverride(RestServiceDopant.class).build());
-      if (!resourceClasses.isEmpty()) {
+      if (!resourceClassNames.isEmpty()) {
         dopantImplBuilder.addMethod(
             MethodSpec.overriding(
                     util.getMethod(
@@ -167,7 +194,7 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
                 .addStatement(
                     "return $T.of($L)",
                     List.class,
-                    resourceClasses.stream()
+                    resourceClassNames.stream()
                         .map(rc -> CodeBlock.of("new $T(this)", rc))
                         .collect(CodeBlock.joining(",\n")))
                 .build());
@@ -178,17 +205,13 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
           latticeAppElem);
     }
 
-    private List<MethodSpec> resourceMethods(VajramInfo vajramInfo) {
+    private List<MethodSpec> resourceMethods(TypeElement vajramElem, VajramInfo vajramInfo) {
       List<MethodSpec.Builder> resourceMethods = new ArrayList<>();
       @Nullable RestMethod jaxRsRestMethod = getJaxRsRestMethod(vajramInfo);
       if (jaxRsRestMethod == null) {
-        util.error(
-            "A vajram with the @Path annotation must also have one of the rest method annotations: "
-                + Arrays.stream(RestMethod.values()).map(RestMethod::latticeAnnotation).toList(),
-            vajramInfo.vajramClassElem());
-        return List.of();
+        jaxRsRestMethod = RestMethod.POST;
       }
-
+      boolean explicitPath = vajramElem.getAnnotation(Path.class) != null;
       Map<String, SerdeProtocol> configProviders =
           ServiceLoader.load(ModelProtocolConfigProvider.class, this.getClass().getClassLoader())
               .stream()
@@ -199,26 +222,51 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
                   Collectors.toMap(
                       c -> requireNonNull(c.getClass().getCanonicalName()), Function.identity()));
 
-      Map<FacetGenModel, FacetParamType> params = new LinkedHashMap<>();
-      FacetGenModel body = null;
-      for (FacetGenModel facet : vajramInfo.facetStream().toList()) {
-        VariableElement facetField = facet.facetField();
-        if (facetField.getAnnotation(PathParam.class) != null) {
-          assignTypeToFacet(facet, FacetParamType.PATH, params);
-        }
-        if (facetField.getAnnotation(QueryParam.class) != null) {
-          assignTypeToFacet(facet, FacetParamType.QUERY, params);
-        }
-        if (facetField.getAnnotation(Body.class) != null) {
-          assignTypeToFacet(facet, FacetParamType.BODY, params);
-          body = facet;
-        }
-      }
-
       MethodSpec.Builder methodBuilder =
           MethodSpec.methodBuilder(lowerCaseFirstChar(vajramInfo.vajramName()))
               .addAnnotation(jaxRsRestMethod.jakartaAnnotation())
-              .addModifiers(PUBLIC);
+              .addModifiers(PUBLIC)
+              .addParameter(
+                  ParameterSpec.builder(AsyncResponse.class, "_asyncResponse")
+                      .addAnnotation(Suspended.class)
+                      .build())
+              .addParameter(
+                  ParameterSpec.builder(HttpHeaders.class, "_httpHeaders")
+                      .addAnnotation(Context.class)
+                      .build())
+              .addParameter(
+                  ParameterSpec.builder(UriInfo.class, "_uriInfo")
+                      .addAnnotation(Context.class)
+                      .build());
+
+      Map<FacetGenModel, FacetParamType> params = new LinkedHashMap<>();
+      FacetGenModel bodyFacet = null;
+      for (FacetGenModel facet : vajramInfo.facetStream().toList()) {
+        VariableElement facetField = facet.facetField();
+        if (facetField.getAnnotation(PathParam.class) != null) {
+          if (!explicitPath) {
+            util.error("Path param cannot be used without @Path annotation", facetField);
+          } else {
+            assignTypeToFacet(facet, FacetParamType.PATH, params);
+          }
+        }
+        if (facetField.getAnnotation(QueryParam.class) != null) {
+          if (!explicitPath) {
+            util.error("Query param cannot be used without @Path annotation", facetField);
+          } else {
+            assignTypeToFacet(facet, FacetParamType.QUERY, params);
+          }
+        }
+        if (facetField.getAnnotation(Body.class) != null) {
+          if (!explicitPath) {
+            util.error("Body param cannot be used without @Path annotation", facetField);
+          } else {
+            assignTypeToFacet(facet, FacetParamType.BODY, params);
+            bodyFacet = facet;
+          }
+        }
+      }
+
       ImmutableList<TypeElement> requestSerdeProtocols = ImmutableList.of();
       for (Entry<FacetGenModel, FacetParamType> entry : params.entrySet()) {
         FacetGenModel facet = entry.getKey();
@@ -270,44 +318,71 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
           }
         }
       }
-      methodBuilder
-          .addParameter(
-              ParameterSpec.builder(AsyncResponse.class, "_asyncResponse")
-                  .addAnnotation(Suspended.class)
-                  .build())
-          .addParameter(
-              ParameterSpec.builder(HttpHeaders.class, "_httpHeaders")
-                  .addAnnotation(Context.class)
-                  .build())
-          .addParameter(
-              ParameterSpec.builder(UriInfo.class, "_uriInfo")
-                  .addAnnotation(Context.class)
-                  .build());
-      methodBuilder.addStatement(
-          """
-  var _vajramRequest = $T._builder()
-    $L""",
-          vajramInfo.lite().immutReqPojoType(),
-          params.keySet().stream()
-              .filter(p -> params.get(p) != FacetParamType.BODY)
-              .map(facet -> CodeBlock.builder().add(".$L($L)", facet.name(), facet.name()).build())
-              .collect(CodeBlock.joining("\n")));
-      if (body != null) {
-        if (!jaxRsRestMethod.supportsRequestBody()) {
+      if (bodyFacet != null || !explicitPath) {
+        SupportedModelProtocols supportedModelProtocols;
+        if (bodyFacet != null) {
+          TypeMirror facetType = bodyFacet.dataType().javaModelType(util.processingEnv());
+          Element bodyTypeElem =
+              requireNonNull(util.processingEnv().getTypeUtils().asElement(facetType));
+          supportedModelProtocols = bodyTypeElem.getAnnotation(SupportedModelProtocols.class);
+        } else {
+          supportedModelProtocols = vajramElem.getAnnotation(SupportedModelProtocols.class);
+        }
+        if (supportedModelProtocols == null) {
           util.error(
+              "Rest request body doesn't support any ModelProtocol.",
+              bodyFacet == null ? vajramElem : bodyFacet.facetField());
+        } else {
+          requestSerdeProtocols =
+              util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
+                  .filter(t -> util.isRawAssignable(t, SerdeProtocol.class))
+                  .map(
+                      typeMirror ->
+                          requireNonNull(
+                              (TypeElement)
+                                  util.processingEnv().getTypeUtils().asElement(typeMirror)))
+                  .collect(toImmutableList());
+          if (requestSerdeProtocols.isEmpty()) {
+            util.error(
+                "Rest request Body facet doesn't support any SerdeProtocols. Found: "
+                    + Arrays.toString(supportedModelProtocols.value()),
+                bodyFacet == null ? vajramElem : bodyFacet.facetField());
+          }
+        }
+      }
+      if (bodyFacet != null || explicitPath) {
+        if (bodyFacet != null) {
+          methodBuilder.addStatement(
               """
+            var _vajramRequest = $T._builder()
+              $L
+            """,
+              vajramInfo.lite().immutReqPojoType(),
+              params.keySet().stream()
+                  .filter(p -> params.get(p) != FacetParamType.BODY)
+                  .map(
+                      facet ->
+                          CodeBlock.builder().add(".$L($L)", facet.name(), facet.name()).build())
+                  .collect(CodeBlock.joining("\n")));
+          if (!jaxRsRestMethod.supportsRequestBody()) {
+            util.error(
+                """
                   Vajram %s is mapped to the rest method %s which \
                   doesn't support request body, but the vajram has a \
                   facet with the @Body annotation."""
-                  .formatted(vajramInfo.vajramName(), jaxRsRestMethod),
-              body.facetField());
+                    .formatted(vajramInfo.vajramName(), jaxRsRestMethod),
+                bodyFacet.facetField());
+          }
         }
-        TypeElement requestClass =
-            requireNonNull(
-                (TypeElement)
-                    util.processingEnv()
-                        .getTypeUtils()
-                        .asElement(body.dataType().javaModelType(util.processingEnv())));
+        TypeElement requestClass = null;
+        if (bodyFacet != null) {
+          requestClass =
+              requireNonNull(
+                  (TypeElement)
+                      util.processingEnv()
+                          .getTypeUtils()
+                          .asElement(bodyFacet.dataType().javaModelType(util.processingEnv())));
+        }
         for (TypeElement serdeProtocolType : requestSerdeProtocols) {
           SerdeProtocol serdeProtocol =
               configProviders.get(serdeProtocolType.getQualifiedName().toString());
@@ -326,14 +401,29 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
                   AnnotationSpec.builder(Consumes.class)
                       .addMember("value", "$S", serdeProtocol.contentType())
                       .build())
-              .addParameter(ParameterSpec.builder(byte[].class, body.name()).build());
+              .addParameter(
+                  ParameterSpec.builder(
+                          byte[].class, bodyFacet == null ? "_body" : bodyFacet.name())
+                      .build());
 
-          serdeSpecificMethodBuilder.addStatement(
-              CodeBlock.of(
-                  "_vajramRequest.$L(new $T($L))",
-                  body.name(),
-                  util.getImmutSerdeClassName(requestClass, serdeProtocol),
-                  body.name()));
+          if (bodyFacet != null) {
+            serdeSpecificMethodBuilder.addStatement(
+                CodeBlock.of(
+                    "_vajramRequest.$L(new $T($L))",
+                    bodyFacet.name(),
+                    util.getImmutSerdeClassName(requestClass, serdeProtocol),
+                    bodyFacet.name()));
+          } else {
+            serdeSpecificMethodBuilder.addStatement(
+                CodeBlock.of(
+                    "var _vajramRequest = new $T(_body)",
+                    util.getImmutSerdeClassName(
+                        util.processingEnv()
+                            .getElementUtils()
+                            .getTypeElement(
+                                vajramInfo.lite().requestInterfaceType().canonicalName()),
+                        serdeProtocol)));
+          }
           resourceMethods.add(serdeSpecificMethodBuilder);
         }
       } else {
@@ -378,7 +468,7 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
     private void assignTypeToFacet(
         FacetGenModel facet, FacetParamType type, Map<FacetGenModel, FacetParamType> params) {
       FacetParamType facetParamType = params.get(facet);
-      if (facetParamType != null) {
+      if (facetParamType != type) {
         util.error(
             "The facet " + facet.name() + " cannot be both " + facetParamType + " and " + type,
             facet.facetField());
