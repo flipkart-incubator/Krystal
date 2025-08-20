@@ -8,6 +8,8 @@ public enum RestMethod {
   GET(GET.class, jakarta.ws.rs.GET.class),
   POST(POST.class, jakarta.ws.rs.POST.class),
   PUT(PUT.class, jakarta.ws.rs.PUT.class),
+  PATCH(PATCH.class, jakarta.ws.rs.PATCH.class),
+  HEAD(HEAD.class, jakarta.ws.rs.HEAD.class),
   DELETE(DELETE.class, jakarta.ws.rs.DELETE.class);
 
   private final Class<? extends Annotation> latticeAnnotation;
@@ -21,6 +23,6 @@ public enum RestMethod {
   }
 
   public boolean supportsRequestBody() {
-    return this != GET;
+    return this != GET && this != HEAD;
   }
 }
