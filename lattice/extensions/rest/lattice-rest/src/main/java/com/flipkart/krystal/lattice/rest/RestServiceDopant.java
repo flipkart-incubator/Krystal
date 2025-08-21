@@ -5,6 +5,7 @@ import static jakarta.ws.rs.core.HttpHeaders.CONTENT_LENGTH;
 import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 
 import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.data.Unit;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig.KryonExecutorConfigBuilder;
 import com.flipkart.krystal.lattice.core.di.Bindings;
@@ -61,7 +62,7 @@ public abstract class RestServiceDopant implements DopantWithAnnotation<RestServ
               ResponseBuilder responseBuilder;
               int contentLength = 0;
               try {
-                if (response == null) {
+                if (response == null || response instanceof Unit) {
                   responseBuilder = Response.ok();
                 } else if (response instanceof byte[] bytes) {
                   contentLength = bytes.length;
