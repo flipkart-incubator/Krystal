@@ -11,10 +11,12 @@ import com.flipkart.krystal.lattice.core.execution.ThreadingStrategySpec.Threadi
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import java.io.Closeable;
 import java.util.concurrent.ExecutorService;
 import lombok.extern.slf4j.Slf4j;
 
+@Singleton
 @Slf4j
 @DopantType(DOPANT_TYPE)
 public final class ThreadingStrategyDopant implements DopantWithConfig<ThreadStrategyConfig> {

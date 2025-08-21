@@ -4,7 +4,6 @@ import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.google.inject.Guice.createInjector;
 import static java.lang.System.*;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
@@ -144,7 +143,7 @@ class GreetTest {
       future = executeVajram(krystexVajramExecutor, requestContext);
     }
     assertThat(future)
-        .succeedsWithin(1, SECONDS)
+        .succeedsWithin(TIMEOUT)
         .isEqualTo("Hello Firstname Lastname (user@123)! Hope you are doing well!");
     assertThat(analyticsEventSink.events).hasSize(1);
     out.println(

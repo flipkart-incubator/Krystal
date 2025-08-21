@@ -192,6 +192,7 @@ class Proto3LatticeSampleTest {
     Proto3LatticeSample_ReqImmut request =
         Proto3LatticeSample_ReqImmutProto._builder()
             // Missing mandatoryInput
+            // .mandatoryInput(100)
             .conditionallyMandatoryInput(200)
             .inputWithDefaultValue(300)
             .mandatoryLongInput(20L)

@@ -16,6 +16,7 @@ import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutor;
 import com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorConfig;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.builder.qual.CalledMethods;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
+@Singleton
 @Slf4j
 @DopantType(VajramDopant.DOPANT_TYPE)
 public final class VajramDopant implements SimpleDopant {

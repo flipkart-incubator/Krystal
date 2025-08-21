@@ -5,15 +5,17 @@ import static com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.BindingS
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils;
 import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider;
+import com.flipkart.krystal.lattice.core.headers.Header;
+import com.flipkart.krystal.lattice.core.headers.StandardHeaderNames;
 import com.flipkart.krystal.lattice.rest.RestService;
 import com.flipkart.krystal.lattice.rest.RestServiceDopant;
+import com.flipkart.krystal.tags.Names;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.UriInfo;
-
 import javax.lang.model.element.TypeElement;
 
 @AutoService(BindingsProvider.class)
@@ -26,7 +28,10 @@ public final class RestServiceBindingsProvider implements BindingsProvider {
       return ImmutableList.of();
     }
     return ImmutableList.of(
-        restServerDopantBinding(context), httpHeadersBinding(), uriInfoBinding());
+        restServerDopantBinding(context),
+        httpHeadersBinding(),
+        uriInfoBinding(),
+        bindAcceptHeaderInRequestScope());
   }
 
   private DopantBinding restServerDopantBinding(LatticeCodegenContext context) {
@@ -46,5 +51,12 @@ public final class RestServiceBindingsProvider implements BindingsProvider {
   private Binding uriInfoBinding() {
     return new SimpleBinding(
         ClassName.get(UriInfo.class), null, new BindTo.Provider(CodeBlock.of("null"), REQUEST));
+  }
+
+  private static Binding bindAcceptHeaderInRequestScope() {
+    return new SimpleBinding(
+        ClassName.get(Header.class),
+        CodeBlock.of("$T.$L($T.$L)", Names.class, "named", StandardHeaderNames.class, "ACCEPT"),
+        new BindTo.Provider(CodeBlock.of("null"), REQUEST));
   }
 }

@@ -2,10 +2,12 @@ package com.flipkart.krystal.krystex.kryon;
 
 import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.concurrent.Futures.propagateCancellation;
+import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Sets.union;
+import static java.util.Collections.unmodifiableSet;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
@@ -57,6 +59,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
@@ -170,10 +173,11 @@ public final class KryonExecutor implements KrystalExecutor {
     return builder.build();
   }
 
-  private ImmutableMap<String, OutputLogicDecorator> getOutputLogicDecorators(
+  private NavigableSet<OutputLogicDecorator> getOutputLogicDecorators(
       LogicExecutionContext logicExecutionContext) {
     VajramID vajramID = logicExecutionContext.vajramID();
-    Map<String, OutputLogicDecorator> decorators = new LinkedHashMap<>();
+    TreeSet<OutputLogicDecorator> decorators =
+        new TreeSet<>(executorConfig.decorationOrdering().encounterOrder().reversed());
     outputLogicDecoratorConfigs.forEach(
         (decoratorType, decoratorConfig) -> {
           if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
@@ -193,15 +197,15 @@ public final class KryonExecutor implements KrystalExecutor {
                           logicDecorator.executeCommand(
                               new InitiateActiveDepChains(
                                   vajramID,
-                                  ImmutableSet.copyOf(
+                                  unmodifiableSet(
                                       dependentChainsPerKryon.getOrDefault(
                                           vajramID, ImmutableSet.of()))));
                           return logicDecorator;
                         });
-            decorators.put(decoratorType, outputLogicDecorator);
+            decorators.add(outputLogicDecorator);
           }
         });
-    return ImmutableMap.copyOf(decorators);
+    return decorators;
   }
 
   private ImmutableMap<String, DependencyDecorator> getDependencyDecorators(
@@ -262,9 +266,10 @@ public final class KryonExecutor implements KrystalExecutor {
                   CompletableFuture<@Nullable Object> future = new CompletableFuture<>();
                   if (allExecutions.containsKey(invocationId)) {
                     future.completeExceptionally(
-                        new IllegalArgumentException(
-                            "Received duplicate requests for same instanceId '%s' and execution Id '%s'"
-                                .formatted(executorId, executionId)));
+                        stackTracelessWrap(
+                            new IllegalArgumentException(
+                                "Received duplicate requests for same instanceId '%s' and execution Id '%s'"
+                                    .formatted(executorId, executionId))));
                   } else {
                     //noinspection unchecked
                     allExecutions.put(
@@ -540,6 +545,11 @@ public final class KryonExecutor implements KrystalExecutor {
         (kryonId, kryonExecutions) -> {
           CompletableFuture<BatchResponse> batchResponseFuture;
           try {
+            Map<InvocationId, Request<@Nullable Object>> requests =
+                new LinkedHashMap<>(kryonExecutions.size());
+            for (KryonExecution kryonExecution : kryonExecutions) {
+              requests.put(kryonExecution.instanceExecutionId(), kryonExecution.request());
+            }
             batchResponseFuture =
                 executorConfig
                     .traitDispatchDecorator()
@@ -547,12 +557,7 @@ public final class KryonExecutor implements KrystalExecutor {
                     .invokeDependency(
                         new ForwardSend(
                             kryonId,
-                            kryonExecutions.stream()
-                                .collect(
-                                    ImmutableMap
-                                        .<KryonExecution, InvocationId, Request<?>>toImmutableMap(
-                                            KryonExecution::instanceExecutionId,
-                                            KryonExecution::request)),
+                            requests,
                             kryonDefinitionRegistry.getDependentChainsStart(),
                             ImmutableMap.of()));
           } catch (Throwable throwable) {
@@ -571,7 +576,9 @@ public final class KryonExecutor implements KrystalExecutor {
                   (responses, throwable) -> {
                     for (KryonExecution kryonExecution : kryonExecutions) {
                       if (throwable != null) {
-                        kryonExecution.future().completeExceptionally(throwable);
+                        kryonExecution
+                            .future()
+                            .completeExceptionally(stackTracelessWrap(throwable));
                       } else {
                         linkFutures(
                             responses
@@ -658,7 +665,7 @@ public final class KryonExecutor implements KrystalExecutor {
   private record KryonExecution(
       VajramID vajramID,
       InvocationId instanceExecutionId,
-      ImmutableRequest request,
+      ImmutableRequest<@Nullable Object> request,
       KryonExecutionConfig executionConfig,
       CompletableFuture<@Nullable Object> future) {}
 }

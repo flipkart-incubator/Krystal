@@ -1,26 +1,15 @@
 package com.flipkart.krystal.lattice.ext.rest.quarkus.codegen;
 
 import static com.flipkart.krystal.lattice.codegen.spi.BindingsProvider.BindingScope.REQUEST;
-import static com.flipkart.krystal.lattice.core.headers.StandardHeaderNames.ACCEPT;
 
 import com.flipkart.krystal.lattice.codegen.LatticeCodegenContext;
-import com.flipkart.krystal.lattice.codegen.LatticeCodegenUtils;
 import com.flipkart.krystal.lattice.codegen.spi.BindingsProvider;
-import com.flipkart.krystal.lattice.core.headers.Header;
-import com.flipkart.krystal.lattice.core.headers.SingleValueHeader;
-import com.flipkart.krystal.lattice.core.headers.StandardHeaderNames;
 import com.flipkart.krystal.lattice.rest.RestService;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.ImmutableList;
-import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
-import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.TypeName;
-import flipkart.krystal.lattice.ext.rest.quarkus.restServer.QuarkusRestServerDopant;
 import io.vertx.ext.web.RoutingContext;
-import jakarta.inject.Named;
-import java.util.List;
 import javax.lang.model.element.TypeElement;
 
 @AutoService(BindingsProvider.class)
@@ -32,8 +21,7 @@ public final class QuarkusRestBindingsProvider implements BindingsProvider {
     if (restService == null) {
       return ImmutableList.of();
     }
-    return ImmutableList.of(
-        restServerDopantBinding(context), acceptHeaderBinding(), routingContextBinding());
+    return ImmutableList.of(routingContextBinding());
   }
 
   private Binding routingContextBinding() {
@@ -41,29 +29,5 @@ public final class QuarkusRestBindingsProvider implements BindingsProvider {
         ClassName.get(RoutingContext.class),
         null,
         new BindTo.Provider(CodeBlock.of("null"), REQUEST));
-  }
-
-  private DopantBinding restServerDopantBinding(LatticeCodegenContext context) {
-    LatticeCodegenUtils latticeCodegenUtils =
-        new LatticeCodegenUtils(context.codeGenUtility().codegenUtil());
-    TypeElement latticeAppElem = context.latticeAppTypeElement();
-    return new DopantBinding(
-        ClassName.get(QuarkusRestServerDopant.class),
-        latticeCodegenUtils.getDopantImplName(latticeAppElem, QuarkusRestServerDopant.class));
-  }
-
-  private Binding acceptHeaderBinding() {
-    return new ProviderMethod(
-        "acceptHttpHeader",
-        TypeName.get(Header.class)
-            .annotated(
-                AnnotationSpec.builder(Named.class).addMember("value", "$S", ACCEPT).build()),
-        List.of(ParameterSpec.builder(RoutingContext.class, "routingContext")),
-        CodeBlock.of(
-            "return new $T($T.ACCEPT, routingContext.request().getHeader($T.ACCEPT));",
-            SingleValueHeader.class,
-            StandardHeaderNames.class,
-            StandardHeaderNames.class),
-        REQUEST);
   }
 }

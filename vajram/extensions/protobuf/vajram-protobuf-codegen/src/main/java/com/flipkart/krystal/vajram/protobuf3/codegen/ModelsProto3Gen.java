@@ -19,6 +19,7 @@ import com.flipkart.krystal.codegen.common.models.DeclaredTypeVisitor;
 import com.flipkart.krystal.codegen.common.spi.CodeGenerator;
 import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
+import com.flipkart.krystal.model.MandatoryFieldMissingException;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.SupportedModelProtocols;
 import com.flipkart.krystal.serial.SerializableModel;
@@ -130,7 +131,7 @@ public class ModelsProto3Gen implements CodeGenerator {
     TypeElement modelRootType = codeGenContext.modelRootType();
     ClassName immutClassName = util.getImmutClassName(modelRootType);
 
-    String protoClassName = immutClassName.simpleName() + Protobuf3.PROTOBUF_3.modelClassesSuffix();
+    String protoClassName = getProtoClassName();
     String packageName = immutClassName.packageName();
 
     // Generate the implementation class using JavaPoet
@@ -142,6 +143,11 @@ public class ModelsProto3Gen implements CodeGenerator {
     util.generateSourceFile(packageName + "." + protoClassName, javaFile.toString(), modelRootType);
 
     log.info("Generated protobuf implementation class: {}", protoClassName);
+  }
+
+  private String getProtoClassName() {
+    return util.getImmutClassName(codeGenContext.modelRootType()).simpleName()
+        + Protobuf3.PROTOBUF_3.modelClassesSuffix();
   }
 
   private TypeSpec generateImplementationTypeSpec(
@@ -368,9 +374,11 @@ return _serializedPayload;
             .addCode(protoPresenceCheck)
             .addCode(
                 """
-                throw new IllegalStateException("Field $L is mandatory but has no value");
+                throw new $T($S, $S);
               }
               """,
+                MandatoryFieldMissingException.class,
+                getProtoClassName(),
                 methodName);
       } else if (isOptionalReturnType) {
         getterBuilder

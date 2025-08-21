@@ -1,7 +1,8 @@
 package com.flipkart.krystal.lattice.rest;
 
-import static com.flipkart.krystal.lattice.core.headers.StandardHeaderNames.CONTENT_TYPE;
 import static com.flipkart.krystal.lattice.core.headers.StandardHeaderNames.REQUEST_ID;
+import static jakarta.ws.rs.core.HttpHeaders.CONTENT_LENGTH;
+import static jakarta.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 
 import com.flipkart.krystal.data.ImmutableRequest;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
@@ -58,27 +59,40 @@ public abstract class RestServiceDopant implements DopantWithAnnotation<RestServ
         .thenApply(
             response -> {
               ResponseBuilder responseBuilder;
+              int contentLength = 0;
               try {
                 if (response == null) {
                   responseBuilder = Response.ok();
                 } else if (response instanceof byte[] bytes) {
+                  contentLength = bytes.length;
                   responseBuilder = Response.ok(bytes);
                 } else if (response instanceof SerializableModel serializableResponse) {
+                  byte[] bytes = serializableResponse._serialize();
+                  contentLength = bytes.length;
                   responseBuilder =
-                      Response.ok(serializableResponse._serialize())
+                      Response.ok(bytes)
                           .header(
                               CONTENT_TYPE, serializableResponse._serdeProtocol().contentType());
+                } else if (response instanceof ResponseBuilder rb) {
+                  return rb.build();
+                } else if (response instanceof Response r) {
+                  return r;
                 } else {
                   log.error(
-                      "Executing vajram request of type {} returned a non-serializable response model of type {}",
+                      "Executing vajram request of type {} an unsupported response model of type {}. Supported types are: {}",
                       vajramRequest.getClass(),
-                      response.getClass());
+                      response.getClass(),
+                      List.of(
+                          byte[].class,
+                          SerializableModel.class,
+                          ResponseBuilder.class,
+                          Response.class));
                   responseBuilder = Response.serverError();
                 }
               } catch (Throwable e) {
                 responseBuilder = Response.serverError();
               }
-              return responseBuilder.build();
+              return responseBuilder.header(CONTENT_LENGTH, contentLength).build();
             });
   }
 

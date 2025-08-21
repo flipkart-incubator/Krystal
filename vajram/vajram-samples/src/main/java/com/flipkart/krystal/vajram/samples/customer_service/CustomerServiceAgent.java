@@ -13,7 +13,7 @@ import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 /**
  * Sample trait demonstrating dynamic predicate dispatch capability of krystal
  *
- * <p>Takes in a customer Communication an responds to it
+ * <p>Takes in a customer Communication and responds to it
  */
 @Trait
 @CallGraphDelegationMode(NONE)
@@ -30,7 +30,6 @@ public interface CustomerServiceAgent extends TraitRoot<String> {
     InitialCommunication initialCommunication;
 
     @IfAbsent(FAIL)
-    @UseForDispatch
     String customerName;
   }
 

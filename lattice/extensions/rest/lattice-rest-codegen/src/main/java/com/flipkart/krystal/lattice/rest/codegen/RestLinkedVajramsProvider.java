@@ -1,4 +1,4 @@
-package com.flipkart.krystal.lattice.ext.rest.quarkus.codegen;
+package com.flipkart.krystal.lattice.rest.codegen;
 
 import static com.flipkart.krystal.datatypes.Trilean.TRUE;
 import static java.util.Objects.requireNonNull;
@@ -13,7 +13,7 @@ import java.util.List;
 import javax.lang.model.element.TypeElement;
 
 @AutoService(LatticeAppCodeGenAttrsProvider.class)
-public final class QuarkusRestLinkedVajramsProvider implements LatticeAppCodeGenAttrsProvider {
+public final class RestLinkedVajramsProvider implements LatticeAppCodeGenAttrsProvider {
 
   @Override
   public LatticeAppCodeGenAttributes get(LatticeCodegenContext context) {

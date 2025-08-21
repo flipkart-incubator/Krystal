@@ -8,10 +8,13 @@ import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.FacetType;
+import com.flipkart.krystal.facets.FacetUtils;
 import com.flipkart.krystal.facets.resolution.ResolverDefinition;
 import com.flipkart.krystal.krystex.resolution.Resolver;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSet.Builder;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -33,9 +36,13 @@ import java.util.function.Function;
 record KryonDefinitionView(
     ImmutableMap<Integer, Facet> facetsById,
     ImmutableMap<FacetType, ImmutableSet<Facet>> facetsByType,
+    ImmutableSet<Facet> givenFacets,
     ImmutableMap<Optional<Facet>, ImmutableSet<Resolver>> resolverDefinitionsBySource,
     ImmutableMap<Dependency, ImmutableSet<Resolver>> resolverDefinitionsByDependencies,
-    ImmutableSet<Dependency> dependenciesWithNoResolvers) {
+    ImmutableSet<Dependency> dependenciesWithNoResolvers,
+    ImmutableSet<Dependency> dependenciesWithNoFacetResolvers,
+    ImmutableMap<Dependency, ImmutableSet<Facet>> dependencyToBoundFacetsMapping,
+    ImmutableMap<Facet, ImmutableSet<Dependency>> dependenciesByBoundFacet) {
   static KryonDefinitionView createView(
       Set<? extends Facet> allFacets,
       ImmutableMap<ResolverDefinition, Resolver> resolversByDefinition,
@@ -59,13 +66,23 @@ record KryonDefinitionView(
         facetsByType.computeIfAbsent(facetType, _t -> new LinkedHashSet<>()).add(facet);
       }
     }
+    ImmutableMap<Optional<Facet>, ImmutableSet<ResolverDefinition>> resolverDefinitionsByFacets =
+        createResolverDefinitionsByFacets(resolversByDefinition.keySet());
     return new KryonDefinitionView(
         allFacets.stream().collect(toImmutableMap(Facet::id, Function.identity())),
         facetsByType.entrySet().stream()
             .collect(toImmutableMap(Entry::getKey, e -> ImmutableSet.copyOf(e.getValue()))),
+        allFacets.stream().filter(FacetUtils::isGiven).collect(toImmutableSet()),
         createResolverDefinitionsBySource(resolversByDefinition),
         resolverDefinitionsByDependencies,
-        dependenciesWithNoResolvers);
+        dependenciesWithNoResolvers,
+        resolverDefinitionsByFacets
+            .getOrDefault(Optional.<Facet>empty(), ImmutableSet.of())
+            .stream()
+            .map(rd -> rd.target().dependency())
+            .collect(toImmutableSet()),
+        getDependencyToBoundFacetsMapping(resolverDefinitionsByDependencies),
+        getDependenciesByBoundFacet(resolverDefinitionsByFacets));
   }
 
   private static ImmutableMap<Optional<Facet>, ImmutableSet<Resolver>>
@@ -92,5 +109,65 @@ record KryonDefinitionView(
             });
     return resolverDefinitionsByInput.entrySet().stream()
         .collect(toImmutableMap(Entry::getKey, e -> e.getValue().build()));
+  }
+
+  private static ImmutableMap<Optional<Facet>, ImmutableSet<ResolverDefinition>>
+      createResolverDefinitionsByFacets(
+          ImmutableCollection<ResolverDefinition> resolverDefinitions) {
+    Map<Optional<Facet>, Builder<ResolverDefinition>> resolverDefinitionsBySource =
+        new LinkedHashMap<>();
+    resolverDefinitions.forEach(
+        resolverDefinition -> {
+          if (!resolverDefinition.sources().isEmpty()) {
+            resolverDefinition
+                .sources()
+                .forEach(
+                    input ->
+                        resolverDefinitionsBySource
+                            .computeIfAbsent(Optional.of(input), s -> ImmutableSet.builder())
+                            .add(resolverDefinition));
+          } else {
+            resolverDefinitionsBySource
+                .computeIfAbsent(Optional.empty(), s -> ImmutableSet.builder())
+                .add(resolverDefinition);
+          }
+        });
+    return resolverDefinitionsBySource.entrySet().stream()
+        .collect(toImmutableMap(Entry::getKey, e -> e.getValue().build()));
+  }
+
+  private static ImmutableMap<Dependency, ImmutableSet<Facet>> getDependencyToBoundFacetsMapping(
+      ImmutableMap<Dependency, ImmutableSet<Resolver>> resolverDefinitionsByDependencies) {
+    Map<Dependency, ImmutableSet<Facet>> dependencyToBoundFacetsMapping = new LinkedHashMap<>();
+    for (Entry<Dependency, ImmutableSet<Resolver>> e :
+        resolverDefinitionsByDependencies.entrySet()) {
+      Dependency depName = e.getKey();
+      ImmutableSet<Resolver> resolvers = e.getValue();
+      Set<Facet> boundFromInputs = new LinkedHashSet<>();
+      for (Resolver resolver : resolvers) {
+        boundFromInputs.addAll(resolver.definition().sources());
+      }
+      dependencyToBoundFacetsMapping.put(depName, ImmutableSet.copyOf(boundFromInputs));
+    }
+    return ImmutableMap.copyOf(dependencyToBoundFacetsMapping);
+  }
+
+  private static ImmutableMap<Facet, ImmutableSet<Dependency>> getDependenciesByBoundFacet(
+      ImmutableMap<Optional<Facet>, ImmutableSet<ResolverDefinition>> resolverDefinitionsByFacets) {
+    Map<Facet, ImmutableSet<Dependency>> dependenciesByBoundFacet = new LinkedHashMap<>();
+    for (Entry<Optional<Facet>, ImmutableSet<ResolverDefinition>> e :
+        resolverDefinitionsByFacets.entrySet()) {
+      Optional<Facet> facetNameOpt = e.getKey();
+      if (facetNameOpt.isEmpty()) {
+        continue;
+      }
+      Facet facetName = facetNameOpt.get();
+      Set<Dependency> dependenciesForFacet = new LinkedHashSet<>();
+      for (ResolverDefinition resolverDefinition : e.getValue()) {
+        dependenciesForFacet.add(resolverDefinition.target().dependency());
+      }
+      dependenciesByBoundFacet.put(facetName, ImmutableSet.copyOf(dependenciesForFacet));
+    }
+    return ImmutableMap.copyOf(dependenciesByBoundFacet);
   }
 }

@@ -77,6 +77,7 @@ public abstract class RestLatticeSample extends ComputeVajramDef<JsonResponse> {
     return reponseBuilder
         .string(
             """
+              Ding Ding Ding
               $$ optionalInput: %s $$
               $$ mandatoryInput: %s $$
               $$ conditionallyMandatoryInput: %s $$

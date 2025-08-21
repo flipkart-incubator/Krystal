@@ -12,6 +12,7 @@ import com.flipkart.krystal.lattice.ext.guice.GuiceModuleBinder;
 import com.flipkart.krystal.lattice.ext.guice.servlet.GuiceServletModuleBinder;
 import com.flipkart.krystal.lattice.rest.RestService;
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.logic.RestGetMappingLatticeSample;
+import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.logic.RestHeadMappingLatticeSample;
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.logic.RestLatticeSample;
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.logic.RestPostComplexPathMatching;
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.logic.RestPostMappingLatticeSample;
@@ -23,9 +24,10 @@ import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 @RestService(
     resourceVajrams = {
       RestLatticeSample.class,
-      RestPostMappingLatticeSample.class,
       RestGetMappingLatticeSample.class,
-      RestPostComplexPathMatching.class
+      RestPostMappingLatticeSample.class,
+      RestPostComplexPathMatching.class,
+      RestHeadMappingLatticeSample.class
     })
 public abstract class SampleRestfulLatticeApp extends LatticeApplication {
 
@@ -38,9 +40,10 @@ public abstract class SampleRestfulLatticeApp extends LatticeApplication {
                     VajramKryonGraph.builder()
                         .loadClasses(
                             RestLatticeSample.class,
-                            RestPostMappingLatticeSample.class,
                             RestGetMappingLatticeSample.class,
-                            RestPostComplexPathMatching.class)))
+                            RestPostMappingLatticeSample.class,
+                            RestPostComplexPathMatching.class,
+                            RestHeadMappingLatticeSample.class)))
         .dopeWith(quarkusRestServer());
   }
 

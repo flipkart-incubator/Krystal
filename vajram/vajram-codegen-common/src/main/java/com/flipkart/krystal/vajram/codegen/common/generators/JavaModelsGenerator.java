@@ -23,7 +23,7 @@ import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
 import com.flipkart.krystal.model.ImmutableModel;
 import com.flipkart.krystal.model.ImmutableModel.Builder;
-import com.flipkart.krystal.model.MandatoryDataMissingException;
+import com.flipkart.krystal.model.MandatoryFieldMissingException;
 import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelClusterRoot;
 import com.flipkart.krystal.model.ModelRoot;
@@ -741,7 +741,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
           // FAIL strategy - throw exception when value is null
           buildMethodBuilder.addStatement(
               "throw new $T($S, $S)",
-              MandatoryDataMissingException.class,
+              MandatoryFieldMissingException.class,
               immutableModelName.simpleName(),
               fieldName);
           case ASSUME_DEFAULT_VALUE -> {

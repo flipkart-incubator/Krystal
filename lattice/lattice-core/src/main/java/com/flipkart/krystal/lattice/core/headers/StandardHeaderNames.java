@@ -6,5 +6,4 @@ import lombok.experimental.UtilityClass;
 public class StandardHeaderNames {
   public static final String ACCEPT = "Accept";
   public static final String REQUEST_ID = "X-Request-Id";
-  public static final String CONTENT_TYPE = "Content-type";
 }

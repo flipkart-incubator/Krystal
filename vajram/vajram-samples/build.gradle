@@ -53,6 +53,10 @@ test {
     maxHeapSize = "4g" // maximum heap size
 }
 
+checkerFramework {
+    excludeTests = true
+}
+
 //Needed only if you want your project to be modularized using JPMS
 /** START: JPMS compatibility configurations **/
 configurations.configureEach {
@@ -61,7 +65,6 @@ configurations.configureEach {
 extraJavaModuleInfo {
     module('com.google.auto.value:auto-value-annotations', 'com.google.auto.value.annotations')
     module('com.flipkart.krystal:vajram-codegen', 'com.flipkart.krystal.vajram.codegen')
-    module('org.javassist:javassist', 'javassist')
     module('com.google.code.findbugs:jsr305', 'com.google.code.findbugs.jsr305')
     module('com.github.kevinstern:software-and-algorithms', 'com.github.kevinstern.software.and.algorithms')
     module('javax.inject:javax.inject', 'javax.inject')
@@ -84,7 +87,7 @@ extraJavaModuleInfo {
     knownModule('org.projectlombok:lombok', 'lombok')
     knownModule('com.google.j2objc:j2objc-annotations', 'com.google.j2objc.annotations')
     knownModule('org.reflections:reflections', 'org.reflections')
-
+    knownModule('org.javassist:javassist', 'org.javassist')
 
 }
 /** END: JPMS compatibility configurations **/
