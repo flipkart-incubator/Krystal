@@ -73,11 +73,20 @@ public abstract class RestServiceDopant implements DopantWithAnnotation<RestServ
                       Response.ok(bytes)
                           .header(
                               CONTENT_TYPE, serializableResponse._serdeProtocol().contentType());
+                } else if (response instanceof ResponseBuilder rb) {
+                  return rb.build();
+                } else if (response instanceof Response r) {
+                  return r;
                 } else {
                   log.error(
-                      "Executing vajram request of type {} returned a non-serializable response model of type {}",
+                      "Executing vajram request of type {} an unsupported response model of type {}. Supported types are: {}",
                       vajramRequest.getClass(),
-                      response.getClass());
+                      response.getClass(),
+                      List.of(
+                          byte[].class,
+                          SerializableModel.class,
+                          ResponseBuilder.class,
+                          Response.class));
                   responseBuilder = Response.serverError();
                 }
               } catch (Throwable e) {
