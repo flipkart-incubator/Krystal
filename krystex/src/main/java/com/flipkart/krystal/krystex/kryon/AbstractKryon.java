@@ -15,6 +15,12 @@ import java.util.function.Function;
 abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonResponse>
     implements Kryon<C, R> permits BatchKryon, GranularKryon {
 
+  /**
+   * Initial capacity for maps and sets. In load tests in real-world applications, substantial CPU
+   * was observed to be spent in resizing collections.
+   */
+  static final int INITIAL_CAPACITY = 64;
+
   protected final KryonDefinition kryonDefinition;
   protected final KryonId kryonId;
   protected final KryonExecutor kryonExecutor;
@@ -24,7 +30,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonRespo
       requestScopedDecoratorsSupplier;
 
   private final Map<DependantChain, NavigableSet<OutputLogicDecorator>>
-      requestScopedDecoratorsByDepChain = new HashMap<>();
+      requestScopedDecoratorsByDepChain = new HashMap<>(INITIAL_CAPACITY);
 
   protected final LogicDecorationOrdering logicDecorationOrdering;
 

@@ -73,12 +73,11 @@ class FormulaTest {
         graph.createExecutor(KrystexVajramExecutorConfig.builder().requestId(REQUEST_ID).build())) {
       future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
-    //noinspection AssertBetweenInconvertibleTypes https://youtrack.jetbrains.com/issue/IDEA-342354
     assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(4);
     assertThat(Adder.CALL_COUNTER.sum()).isEqualTo(1);
   }
 
-  @Disabled("Long running benchmark (~40s)")
+  @Disabled("Long running benchmark (~26s)")
   @Test
   void millionExecutors_oneCallEach_singleCore_benchmark() throws Exception {
     int loopCount = 1_000_000;
@@ -145,18 +144,18 @@ class FormulaTest {
      * Processor: Apple M1 Pro
      *
      * Benchmark results;
-     *    Total java method time: 6,814,167
-     *    Total java futures time: 80,636,209
+     *    Total java method time: 24,155,208
+     *    Total java futures time: 236,425,042
      *    Outer Loop Count: 1,000,000
      *    Inner Loop Count: 1
-     *    Avg. time to Create Executors:444 ns
-     *    Avg. time to Enqueue vajrams:1,147 ns
-     *    Avg. time to execute vajrams:35,673 ns
-     *    Throughput executions/s: 28031
+     *    Avg. time to Create Executors: 594 ns
+     *    Avg. time to Enqueue vajrams: 1,130 ns
+     *    Avg. time to execute vajrams: 27,797 ns
+     *    Throughput executions/s: 35974
      *    CommandsQueuedCount: 3,000,000
-     *    CommandQueueBypassedCount: 8,000,000
-     *    Platform overhead over native code: 35,667 ns per request
-     *    Platform overhead over reactive code: 35,593 ns per request
+     *    CommandQueueBypassedCount: 6,000,000
+     *    Platform overhead over native code: 27,774 ns per request
+     *    Platform overhead over reactive code: 27,561 ns per request
      *    maxActiveLeasesPerObject: 1, peakAvgActiveLeasesPerObject: 1.0, maxPoolSize: 1
      */
     printStats(
