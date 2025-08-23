@@ -19,6 +19,11 @@ import java.util.function.Function;
 
 abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonCommandResponse>
     implements Kryon<C, R> permits FlushableKryon {
+  /**
+   * Initial capacity for maps and sets. In load tests in real-world applications, substantial CPU
+   * was observed to be spent in resizing collections.
+   */
+  static final int INITIAL_CAPACITY = 64;
 
   protected final VajramKryonDefinition kryonDefinition;
   protected final VajramID vajramID;
@@ -32,7 +37,7 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
       depDecoratorSuppliers;
 
   private final Map<DependentChain, NavigableSet<OutputLogicDecorator>>
-      requestScopedDecoratorsByDepChain = new HashMap<>();
+      requestScopedDecoratorsByDepChain = new HashMap<>(INITIAL_CAPACITY);
 
   protected final DecorationOrdering decorationOrdering;
 
