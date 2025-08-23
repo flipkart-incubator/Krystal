@@ -30,7 +30,7 @@ public abstract sealed class FacetJavaType {
     }
     final boolean facetInCurrentClass =
         (codeGenParams.isRequest()
-            || !facet.facetTypes().contains(INPUT)
+            || !facet.facetType().equals(INPUT)
             || !codeGenParams.wrapsRequest());
     if (facetInCurrentClass) {
       return CodeBlock.of("return this.$L", facet.name());

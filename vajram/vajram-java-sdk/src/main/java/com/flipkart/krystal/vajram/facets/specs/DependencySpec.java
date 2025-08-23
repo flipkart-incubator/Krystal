@@ -11,7 +11,6 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.tags.ElementTags;
-import com.google.common.collect.ImmutableSet;
 import java.util.concurrent.Callable;
 import lombok.Getter;
 
@@ -42,15 +41,7 @@ public abstract sealed class DependencySpec<T, CV extends Request, DV extends Re
       boolean isBatched,
       Callable<ElementTags> tagsParser) {
     super(
-        id,
-        name,
-        ofVajramID,
-        dataType,
-        ImmutableSet.of(DEPENDENCY),
-        ofVajram,
-        documentation,
-        isBatched,
-        tagsParser);
+        id, name, ofVajramID, dataType, DEPENDENCY, ofVajram, documentation, isBatched, tagsParser);
     this.onVajram = onVajram;
     this.onVajramId = onVajramId;
   }

@@ -1,7 +1,6 @@
 package com.flipkart.krystal.vajram.codegen.processor;
 
 import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
-import static com.flipkart.krystal.facets.FacetType.INJECTION;
 import static com.flipkart.krystal.facets.FacetType.INPUT;
 import static com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility.annotations;
 import static com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility.getFacetsInterfaceName;
@@ -265,7 +264,7 @@ public class VajramCodeGenerator implements CodeGenerator {
     ClassName immutReqInterfaceType = currentVajramInfo.lite().immutReqInterfaceType();
     List<DefaultFacetModel> inputs =
         currentVajramInfo.givenFacets().stream()
-            .filter(facetDef -> facetDef.facetTypes().contains(INPUT))
+            .filter(facetDef -> facetDef.facetType().equals(INPUT))
             .toList();
 
     TypeSpec.Builder requestInterface =
@@ -1542,7 +1541,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                 .addAnnotation(NonNull.class)
                 .build());
         for (FacetGenModel facet : eligibleFacets) {
-          if (facet.facetTypes().contains(INPUT)) {
+          if (facet.facetType().equals(INPUT)) {
             requestConstructor.addStatement(
                 "this.$L = $T.$L.getFromRequest(_request)",
                 facet.name(),
@@ -1563,7 +1562,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                       .annotated(annotations(facetFieldType.typeAnnotations(facet, codeGenParams))),
                   facet.name())
               .build();
-      boolean isInput = facet.facetTypes().contains(INPUT);
+      boolean isInput = facet.facetType().equals(INPUT);
       if (codeGenParams.withImpl()) {
         if (!isInput || !codeGenParams.wrapsRequest()) {
           FieldSpec.Builder facetField =
@@ -1760,7 +1759,7 @@ public class VajramCodeGenerator implements CodeGenerator {
       if (ifAbsent != null) {
         IfAbsentThen ifAbsentThen = ifAbsent.value();
         if (ifAbsentThen.usePlatformDefault()) {
-          if (facet.facetTypes().contains(DEPENDENCY)) {
+          if (facet.facetType().equals(DEPENDENCY)) {
             util.error(
                 "Defaulting to a platform default value is not supported for dependency facets.",
                 facetField);
@@ -1787,7 +1786,7 @@ public class VajramCodeGenerator implements CodeGenerator {
                     ? Stream.concat(
                         Stream.of("%s"),
                         eligibleFacets.stream()
-                            .filter(f -> !f.facetTypes().contains(INPUT))
+                            .filter(f -> !f.facetType().equals(INPUT))
                             .map(FacetGenModel::name))
                     : eligibleFacets.stream().map(FacetGenModel::name))
             .collect(Collectors.joining(", "));
@@ -2234,18 +2233,9 @@ public class VajramCodeGenerator implements CodeGenerator {
               util.getJavaTypeCreationCode(facet.dataType(), collectClassNames) + ",",
               collectClassNames.toArray());
       if (facet instanceof DefaultFacetModel && !codeGenParams.isRequest()) {
-        initializerCodeBlock.add("$T.of(", ImmutableSet.class);
-        List<String> params = new ArrayList<>();
-        List<Object> args = new ArrayList<>();
-        if (facet.facetTypes().contains(INPUT)) {
-          params.add("$T.$L");
-          args.addAll(List.of(FacetType.class, "INPUT"));
+        if (!DEPENDENCY.equals(facet.facetType())) {
+          initializerCodeBlock.add("$T.$L,", FacetType.class, facet.facetType().name());
         }
-        if (facet.facetTypes().contains(INJECTION)) {
-          params.add("$T.$L");
-          args.addAll(List.of(FacetType.class, "INJECTION"));
-        }
-        initializerCodeBlock.add(String.join(",", params) + "),", args.toArray());
       }
       initializerCodeBlock.add("""
                 $T.class,
@@ -2319,7 +2309,7 @@ public class VajramCodeGenerator implements CodeGenerator {
             facet.facetField().getAnnotation(Batched.class) != null,
             FacetUtils.class,
             currentVajramInfo.vajramClass(),
-            facet.facetTypes().contains(INPUT) ? _INPUTS_CLASS : _INTERNAL_FACETS_CLASS,
+            facet.facetType().equals(INPUT) ? _INPUTS_CLASS : _INTERNAL_FACETS_CLASS,
             facet.name(),
             getFacetsInterfaceType(),
             facet.name() + FACET_SPEC_SUFFIX,

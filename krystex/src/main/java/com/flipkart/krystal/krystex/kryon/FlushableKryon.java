@@ -692,7 +692,8 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
               .formatted(inputsValueCollector.get(dependentChain), vajramID, dependentChain));
     }
     outputLogicPendingFacets.put(
-        dependentChain, kryonDefinition.getOutputLogicDefinition().usedFacets());
+        dependentChain,
+        new HashSet<>(kryonDefinition.getOutputLogicDefinition().usedComputedFacets()));
 
     forwardBatch
         .executableInvocations()

@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.exec;
 
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
 
+import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.vajram.facets.specs.FacetSpec;
 import com.google.common.collect.ImmutableSet;
 import lombok.Value;
@@ -14,8 +15,7 @@ public final class VajramMetadata {
 
   VajramMetadata(ImmutableSet<FacetSpec> facetSpecs) {
     this.isInputInjectionNeeded =
-        facetSpecs.stream()
-            .anyMatch(facetDefinition -> facetDefinition.facetTypes().contains(INJECTION));
+        facetSpecs.stream().map(Facet::facetType).anyMatch(INJECTION::equals);
     this.isBatched = facetSpecs.stream().anyMatch(FacetSpec::isBatched);
   }
 }
