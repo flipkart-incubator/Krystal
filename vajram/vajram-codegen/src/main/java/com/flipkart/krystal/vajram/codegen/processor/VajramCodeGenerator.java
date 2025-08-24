@@ -909,7 +909,9 @@ public class VajramCodeGenerator implements CodeGenerator {
             unbatchOutputParamsCode.add(
                 CodeBlock.of(
                     "$T.errableFrom($L, $L)", Errable.class, BATCHED_OUTPUT_VAR, "_throwable"));
+            valueMap.put("nullCheckCode", "");
           } else {
+            valueMap.put("nullCheckCode", "if(_batchedOutput != null) ");
             unbatchOutputParamsCode.add(CodeBlock.of("$L", BATCHED_OUTPUT_VAR));
           }
         } else {
@@ -933,28 +935,35 @@ public class VajramCodeGenerator implements CodeGenerator {
                         });
                 _batchedOutputFuture.whenCompleteAsync(
                     (_batchedOutput, _throwable) -> {
-                      $unbatchOutputExpectedType:T _unbatchedOutput =
-                          _batchedOutput != null ? $unbatchOutputLogic:L($unbatchOutputParams:L) : ImmutableMap.of();
-                      _batchItems.forEach(
-                          (_batchItem, _facetValues) -> {
-                            var _result = _unbatchedOutput.get(_batchItem);
-                            if (_result != null) {
-                              $futuresUtil:T.linkFutures(
-                                  _result.toFuture(),
-                                  _returnValue.computeIfAbsent(
-                                      _facetValues, _k -> new $comFuture:T<>()));
-                            } else {
-                              if (_throwable == null) {
-                                _returnValue
-                                    .computeIfAbsent(_facetValues, _k -> new CompletableFuture<>())
-                                    .complete(null);
-                              } else {
-                                _returnValue
-                                  .computeIfAbsent(_facetValues, _k -> new $comFuture:T<>())
-                                  .completeExceptionally(_throwable);
-                              }
-                            }
-                          });
+                      $unbatchOutputExpectedType:T _unbatchedOutput = $imMap:T.of();
+                      $nullCheckCode:L{
+                        try {
+                          _unbatchedOutput = $unbatchOutputLogic:L($unbatchOutputParams:L);
+                        } catch (Throwable _e) {
+                          _throwable = _e;
+                        }
+                      }
+                      for(var _entry : _batchItems.entrySet()) {
+                        var _batchItem = _entry.getKey();
+                        var _facetValues = _entry.getValue();
+                        var _result = _unbatchedOutput.get(_batchItem);
+                        if (_result != null) {
+                          $futuresUtil:T.linkFutures(
+                              _result.toFuture(),
+                              _returnValue.computeIfAbsent(
+                                  _facetValues, _k -> new $comFuture:T<>()));
+                        } else {
+                          if (_throwable == null) {
+                            _returnValue
+                                .computeIfAbsent(_facetValues, _k -> new $comFuture:T<>())
+                                .complete(null);
+                          } else {
+                            _returnValue
+                              .computeIfAbsent(_facetValues, _k -> new $comFuture:T<>())
+                              .completeExceptionally(_throwable);
+                          }
+                        }
+                      }
                     }, $logicInput:L.graphExecutor());
                 return new $outputLogicExecutionResult:T<>($imMap:T.copyOf(_returnValue));
             """,
@@ -2237,9 +2246,11 @@ public class VajramCodeGenerator implements CodeGenerator {
           initializerCodeBlock.add("$T.$L,", FacetType.class, facet.facetType().name());
         }
       }
-      initializerCodeBlock.add("""
+      initializerCodeBlock.add(
+          """
                 $T.class,
-              """, vajramReqClass);
+              """,
+          vajramReqClass);
       if (facet instanceof DependencyModel vajramDepDef) {
         ClassName depReqClass = ClassName.bestGuess(vajramDepDef.depReqClassQualifiedName());
         ClassName depReqInterfaceClass =
