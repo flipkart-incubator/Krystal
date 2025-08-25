@@ -329,7 +329,9 @@
     <inspection_tool class="ProcedureDefinition" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="PropsFactoryMethodExists" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="ProtectedMemberInFinalClass" enabled="false" level="WARNING" enabled_by_default="false" />
-    <inspection_tool class="PublicStaticCollectionField" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="PublicStaticCollectionField" enabled="true" level="WARNING" enabled_by_default="true">
+      <scope name="Tests" level="INFORMATION" enabled="true" editorAttributes="INFORMATION_ATTRIBUTES" />
+    </inspection_tool>
     <inspection_tool class="PyAbstractClassInspection" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
     <inspection_tool class="PyArgumentListInspection" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="PyAssignmentToLoopOrWithParameterInspection" enabled="false" level="WEAK WARNING" enabled_by_default="false" />

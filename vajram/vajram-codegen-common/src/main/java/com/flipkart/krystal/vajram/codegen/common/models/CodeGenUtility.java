@@ -869,18 +869,43 @@ public class CodeGenUtility {
    * builder represents an anonymous class.
    *
    * @param className fully qualified class name
+   * @param generatedForCanonicalName canonical name of the originating class for which the class is
+   *     being generated
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
-  public TypeSpec.Builder classBuilder(String className) {
+  public TypeSpec.Builder classBuilder(String className, String generatedForCanonicalName) {
     TypeSpec.Builder classBuilder;
     if (className.isBlank()) {
       classBuilder = TypeSpec.anonymousClassBuilder("");
     } else {
       classBuilder = TypeSpec.classBuilder(className);
     }
+    classBuilder.addJavadoc("@see $L", generatedForCanonicalName);
     addDefaultAnnotations(classBuilder);
     return classBuilder;
+  }
+
+  /**
+   * Creates a class builder with the given class name. If the interfaceName is a blank string, then
+   * the builder represents an anonymous class.
+   *
+   * @param interfaceName fully qualified class name
+   * @param generatedForCanonicalName canonical name of the originating class for which the
+   *     interface is being generated
+   * @return a class builder with the given class name, with the {@link Generated} annotation
+   *     applied on the class
+   */
+  public TypeSpec.Builder interfaceBuilder(String interfaceName, String generatedForCanonicalName) {
+    TypeSpec.Builder interfaceBuilder;
+    if (interfaceName.isBlank()) {
+      throw new RuntimeException("interface name cannot be blank");
+    } else {
+      interfaceBuilder = TypeSpec.interfaceBuilder(interfaceName);
+    }
+    addDefaultAnnotations(interfaceBuilder);
+    interfaceBuilder.addJavadoc("@see $L", generatedForCanonicalName);
+    return interfaceBuilder;
   }
 
   private void addDefaultAnnotations(TypeSpec.Builder classBuilder) {
@@ -907,25 +932,6 @@ public class CodeGenUtility {
                 .addMember("value", "$S", generator.getName())
                 .addMember("date", "$S", getTimestamp())
                 .build());
-  }
-
-  /**
-   * Creates a class builder with the given class name. If the interfaceName is a blank string, then
-   * the builder represents an anonymous class.
-   *
-   * @param interfaceName fully qualified class name
-   * @return a class builder with the given class name, with the {@link Generated} annotation
-   *     applied on the class
-   */
-  public TypeSpec.Builder interfaceBuilder(String interfaceName) {
-    TypeSpec.Builder interfaceBuilder;
-    if (interfaceName.isBlank()) {
-      throw new RuntimeException("interface name cannot be blank");
-    } else {
-      interfaceBuilder = TypeSpec.interfaceBuilder(interfaceName);
-    }
-    addDefaultAnnotations(interfaceBuilder);
-    return interfaceBuilder;
   }
 
   public TypeAndName box(TypeAndName javaType) {
