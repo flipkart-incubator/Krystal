@@ -71,29 +71,32 @@ final class Vajrams {
         : ImmutableMap.of();
   }
 
-  private static FacetSpec inferFacetId(
-      Parameter parameter,
-      ImmutableMap<String, FacetSpec> facetsByName,
-      VajramDefRoot<?> vajramDef) {
+  private static Optional<FacetSpec> inferFacetId(
+      Parameter parameter, ImmutableMap<String, FacetSpec> facetsByName) {
     FacetSpec facetSpec = facetsByName.get(parameter.getName());
     if (facetSpec == null) {
-      throw new IllegalArgumentException(
-          "Unable to infer facet id for parameter %s of vajram %s"
-              .formatted(parameter.getName(), vajramDef.getClass()));
+      // This means the parameter is not a facet, but is some platform specified special param like
+      // "_batchItems"
+      return Optional.empty();
     }
-    return facetSpec;
+    return Optional.of(facetSpec);
   }
 
   static ElementTags parseOutputLogicTags(VajramDefRoot<?> vajramDef) {
     return vajramDef instanceof VajramDef<?> v
         ? ElementTags.of(
             Arrays.stream(getVajramDefClass(v.getClass()).getDeclaredMethods())
-                .filter(method -> method.getAnnotation(Output.class) != null)
+                .filter(Vajrams::isOutputMethod)
                 .findFirst()
                 .stream()
                 .flatMap(method -> Arrays.stream(method.getAnnotations()))
                 .toList())
         : ElementTags.emptyTags();
+  }
+
+  private static boolean isOutputMethod(Method method) {
+    return method.getAnnotation(Output.class) != null
+        || method.getAnnotation(Output.Batched.class) != null;
   }
 
   private static Stream<Annotation> enrich(Annotation annotation, VajramDefRoot<?> vajramDefRoot) {
@@ -150,24 +153,20 @@ final class Vajrams {
       ImmutableMap<String, FacetSpec> facetsByName) {
     Optional<Method> outputLogicMethod =
         Arrays.stream(getVajramDefClass(vajramDefRoot.getClass()).getDeclaredMethods())
-            .filter(method -> method.getAnnotation(Output.class) != null)
+            .filter(Vajrams::isOutputMethod)
             .findFirst();
     if (outputLogicMethod.isEmpty()) {
       // It is possible this is a vajram trait which does not have output logic
       return ImmutableSet.of();
     }
-    if (facetSpecs.stream().noneMatch(FacetSpec::isBatched)) {
-      // This is a vajram which doesn't have batched facets. So we can infer the output logic's
-      // sources from the parameters
-      Parameter[] outputLogicParams = outputLogicMethod.get().getParameters();
-      ImmutableSet.Builder<FacetSpec> facetIds = ImmutableSet.builder();
-      for (Parameter param : outputLogicParams) {
-        facetIds.add(Vajrams.inferFacetId(param, facetsByName, vajramDefRoot));
-      }
-      return facetIds.build();
-    } else {
-      //  The output logic consumes all facets
-      return facetSpecs;
+    Parameter[] outputLogicParams = outputLogicMethod.get().getParameters();
+    ImmutableSet.Builder<FacetSpec> facetIds = ImmutableSet.builder();
+    // Batched facets are assumed to be used in Output Logic
+    facetSpecs.stream().filter(FacetSpec::isBatched).forEach(facetIds::add);
+
+    for (Parameter param : outputLogicParams) {
+      Vajrams.inferFacetId(param, facetsByName).ifPresent(facetIds::add);
     }
+    return facetIds.build();
   }
 }

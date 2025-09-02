@@ -13,9 +13,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * not pollute the runtime of the client and hence preserving server-client abstraction.
  */
 public interface InputMirror extends BasicFacetInfo {
-  @Nullable Object getFromRequest(Request request);
+  @Nullable Object getFromRequest(Request<?> request);
 
-  void setToRequest(ImmutableRequest.Builder request, @Nullable Object value);
+  void setToRequest(ImmutableRequest.Builder<?> request, @Nullable Object value);
 
   DataType<?> type();
 }

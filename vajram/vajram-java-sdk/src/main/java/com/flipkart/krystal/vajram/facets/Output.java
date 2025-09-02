@@ -24,11 +24,15 @@ public @interface Output {
    * annotation should accept batch inputs, perform the IO operation, and return a single {@link
    * java.util.concurrent.CompletableFuture} corresponding to the complete batch operation.
    */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target(ElementType.METHOD)
   @interface Batched {}
 
   /**
    * Marks a method that converts a batched output back to individual results corresponding to each
    * batch item. Any missing results are automatically set to null
    */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target(ElementType.METHOD)
   @interface Unbatch {}
 }
