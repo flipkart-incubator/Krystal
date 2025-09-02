@@ -60,6 +60,7 @@ import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import jakarta.inject.Inject;
 import java.io.PrintWriter;
+import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.nio.file.Path;
@@ -73,9 +74,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
@@ -102,6 +105,7 @@ import javax.tools.JavaFileObject;
 import javax.tools.StandardLocation;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -142,12 +146,6 @@ public class CodeGenUtility {
     this.elementUtils = processingEnv.getElementUtils();
     this.generator = generator;
     this.dataTypeRegistry = new DataTypeRegistry();
-  }
-
-  public static ClassName toClassName(String depReqClassName) {
-    int lastDotIndex = depReqClassName.lastIndexOf('.');
-    return ClassName.get(
-        depReqClassName.substring(0, lastDotIndex), depReqClassName.substring(lastDotIndex + 1));
   }
 
   public static List<AnnotationSpec> recordAnnotations() {
@@ -551,7 +549,7 @@ public class CodeGenUtility {
       VajramInfoLite depVajramInfoLite = computeVajramInfoLite(vajramOrReqElement);
       depBuilder
           .depVajramInfo(depVajramInfoLite)
-          .depReqClassQualifiedName(getVajramReqClassName(vajramOrReqElement))
+          .depReqClassName(getVajramReqClassName(vajramOrReqElement))
           .canFanout(dependency.canFanout());
       if (!declaredDataType.equals(depVajramInfoLite.responseType())) {
         error(
@@ -660,11 +658,15 @@ public class CodeGenUtility {
     return Optional.empty();
   }
 
-  private String getVajramReqClassName(TypeElement vajramClass) {
+  private ClassName getVajramReqClassName(TypeElement vajramClass) {
     if (isRawAssignable(vajramClass.asType(), VajramDefRoot.class)) {
-      return vajramClass.getQualifiedName().toString() + Constants.REQUEST_SUFFIX;
+      return ClassName.get(
+          elementUtils.getPackageOf(vajramClass).getQualifiedName().toString(),
+          vajramClass.getSimpleName().toString() + Constants.REQUEST_SUFFIX);
     } else if (isRawAssignable(vajramClass.asType(), Request.class)) {
-      return vajramClass.getQualifiedName().toString();
+      return ClassName.get(
+          elementUtils.getPackageOf(vajramClass).getQualifiedName().toString(),
+          vajramClass.getSimpleName().toString());
     } else {
       throw new AssertionError("This should not happen! Found:" + vajramClass);
     }
@@ -963,8 +965,7 @@ public class CodeGenUtility {
   }
 
   TypeName responseType(DependencyModel dep) {
-    return responseType(
-        new TypeAndName(toClassName(dep.depReqClassQualifiedName())), getTypeName(dep.dataType()));
+    return responseType(new TypeAndName(dep.depReqClassName()), getTypeName(dep.dataType()));
   }
 
   private TypeName responseType(TypeAndName requestType, TypeAndName facetType) {
@@ -973,8 +974,7 @@ public class CodeGenUtility {
   }
 
   public TypeName responsesType(DependencyModel dep) {
-    return responsesType(
-        new TypeAndName(toClassName(dep.depReqClassQualifiedName())), getTypeName(dep.dataType()));
+    return responsesType(new TypeAndName(dep.depReqClassName()), getTypeName(dep.dataType()));
   }
 
   private TypeName responsesType(TypeAndName requestType, TypeAndName facetType) {
@@ -1001,6 +1001,40 @@ public class CodeGenUtility {
       throw new UnsupportedOperationException(
           "Unable to extract datatype from facet : %s".formatted(abstractInput));
     }
+  }
+
+  @SneakyThrows
+  public ExecutableElement getMethod(Callable<Method> methodSupplier) {
+    Method method = methodSupplier.call();
+    String methodName = method.getName();
+    return requireNonNull(
+            processingEnv()
+                .getElementUtils()
+                .getTypeElement(requireNonNull(method.getDeclaringClass().getCanonicalName())))
+        .getEnclosedElements()
+        .stream()
+        .filter(element -> element instanceof ExecutableElement)
+        .map(element -> (ExecutableElement) element)
+        .filter(
+            element ->
+                element.getSimpleName().contentEquals(methodName)
+                    && element.getParameters().size() == method.getParameterCount()
+                    && IntStream.range(0, method.getParameterCount())
+                        .allMatch(
+                            index ->
+                                isSameRawType(
+                                    element.getParameters().get(index).asType(),
+                                    method.getParameterTypes()[index])))
+        .findAny()
+        .orElseThrow(
+            () ->
+                new IllegalArgumentException(
+                    "Could not find method '"
+                        + methodName
+                        + "' with param types '"
+                        + method.getParameterTypes()
+                        + "' in class "
+                        + method.getDeclaringClass()));
   }
 
   @SuppressWarnings("method.invocation")

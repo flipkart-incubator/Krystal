@@ -1,5 +1,6 @@
 package com.flipkart.krystal.vajram;
 
+import com.flipkart.krystal.core.GraphExecutionData;
 import com.flipkart.krystal.core.OutputLogicExecutionInput;
 import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.data.FacetValuesBuilder;
@@ -62,5 +63,7 @@ public sealed interface VajramDef<T> extends VajramDefRoot<T>
 
   OutputLogicExecutionResults<T> execute(OutputLogicExecutionInput _logicInput);
 
-  FacetValuesBuilder facetsFromRequest(Request<?> request);
+  void executeGraph(GraphExecutionData<T> _graphExecInput);
+
+  FacetValuesBuilder facetsFromRequest(Request<?> _request);
 }

@@ -264,7 +264,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
             }
             Supplier<ImmutableRequest.Builder<?>> newDepRequestBuilder =
                 () -> depKryonDefinition.createNewRequest().logic().newRequestBuilder();
-            ImmutableList<? extends ImmutableRequest.Builder<?>> depRequestBuilders =
+            List<? extends ImmutableRequest.Builder<?>> depRequestBuilders =
                 ImmutableList.of(newDepRequestBuilder.get());
             ResolverCommand resolverCommand = null;
             for (Resolver resolver : oneToOneResolvers) {

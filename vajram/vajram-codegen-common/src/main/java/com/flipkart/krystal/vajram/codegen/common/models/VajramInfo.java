@@ -79,4 +79,8 @@ public record VajramInfo(
   public VajramInfoLite conformsToTraitOrSelf() {
     return conformsToTraitInfo == null ? lite : conformsToTraitInfo;
   }
+
+  public ClassName facetsInterfaceType() {
+    return ClassName.get(lite.packageName(), vajramName() + Constants.FACETS_CLASS_SUFFIX);
+  }
 }
