@@ -73,6 +73,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
 import lombok.Getter;
@@ -85,10 +86,10 @@ public final class VajramKryonGraph implements VajramExecutableGraph {
 
   private final LogicDefRegistryDecorator logicRegistryDecorator;
 
-  private final Map<VajramID, VajramDefinition> vajramDefinitions = new LinkedHashMap<>();
+  private final Map<VajramID, VajramDefinition> vajramDefinitions = new ConcurrentHashMap<>();
 
   /** These are those call graphs of a vajram where no other vajram depends on this. */
-  private final Map<VajramID, KryonId> vajramExecutables = new LinkedHashMap<>();
+  private final Map<VajramID, KryonId> vajramExecutables = new ConcurrentHashMap<>();
 
   private final VajramIndex vajramIndex = new VajramIndex();
 

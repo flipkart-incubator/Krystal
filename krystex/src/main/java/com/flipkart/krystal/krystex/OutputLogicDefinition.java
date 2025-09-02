@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -37,10 +38,10 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
 
   /** LogicDecorator Id -> LogicDecorator */
   private final Map<String, OutputLogicDecoratorConfig> sessionScopedLogicDecoratorConfigs =
-      new HashMap<>();
+      new ConcurrentHashMap<>();
 
-  private final Map<String, Map<String, OutputLogicDecorator>> sessionScopedDecorators =
-      new LinkedHashMap<>();
+  private final Map<String, ConcurrentHashMap<String, OutputLogicDecorator>> sessionScopedDecorators =
+      new ConcurrentHashMap<>();
 
   private final Map<KryonId, ImmutableMap<String, OutputLogicDecorator>>
       sessionScopedDecoratorsByKryon = new HashMap<>();
@@ -80,7 +81,7 @@ public abstract sealed class OutputLogicDefinition<T> extends LogicDefinition<Ou
                     decorators.put(
                         s,
                         sessionScopedDecorators
-                            .computeIfAbsent(s, k -> new LinkedHashMap<>())
+                            .computeIfAbsent(s, k -> new ConcurrentHashMap<>())
                             .computeIfAbsent(
                                 instanceId,
                                 k ->

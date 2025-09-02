@@ -6,14 +6,15 @@ import com.flipkart.krystal.krystex.resolution.ResolverLogicDefinition;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class LogicDefinitionRegistry {
   private final Map<KryonLogicId, OutputLogicDefinition<?>> outputLogicDefinitions =
-      new HashMap<>();
+      new ConcurrentHashMap<>();
   private final Map<KryonLogicId, ResolverLogicDefinition> resolverLogicDefinitions =
-      new HashMap<>();
+      new ConcurrentHashMap<>();
   private final Map<KryonLogicId, MultiResolverDefinition> multiResolverDefinitions =
-      new HashMap<>();
+      new ConcurrentHashMap<>();
 
   public <T> OutputLogicDefinition<T> getOutputLogic(KryonLogicId kryonLogicId) {
     OutputLogicDefinition<?> outputLogicDefinition = outputLogicDefinitions.get(kryonLogicId);
