@@ -210,6 +210,28 @@ public final class JavaModelsGenerator implements CodeGenerator {
     checkArgument(
         modelRootType.getTypeParameters().isEmpty(),
         "Generic model roots are not currently supported.");
+
+    if (!extendsModel(modelRootType, util)) {
+      util.error(
+          "Interface with @ModelRoot annotation must extend Model: "
+          + modelRootType.getQualifiedName(),
+          modelRootType);
+    }
+  }
+
+  private static boolean extendsModel(TypeElement modelRootType, CodeGenUtility util) {
+    boolean extendsModel = false;
+    for (TypeMirror superInterface : modelRootType.getInterfaces()) {
+      TypeElement superElement =
+          requireNonNull(
+              (TypeElement) util.processingEnv().getTypeUtils().asElement(superInterface));
+      if (superElement.getQualifiedName().contentEquals(Model.class.getCanonicalName())
+          || extendsModel(superElement, util)) {
+        extendsModel = true;
+        break;
+      }
+    }
+    return extendsModel;
   }
 
   /**
