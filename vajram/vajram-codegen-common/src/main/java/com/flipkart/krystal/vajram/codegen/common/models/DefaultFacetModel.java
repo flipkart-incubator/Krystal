@@ -8,7 +8,6 @@ import javax.lang.model.element.VariableElement;
 import lombok.Builder;
 import lombok.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.checkerframework.common.returnsreceiver.qual.This;
 
 /**
  * Represents any face which is "given" to the vajram from outside - like client provided inputs and
@@ -21,7 +20,7 @@ public record DefaultFacetModel(
     @NonNull VajramInfoLite vajramInfo,
     @NonNull CodeGenType dataType,
     @Nullable String documentation,
-    ImmutableSet<FacetType> facetTypes,
+    FacetType facetType,
     @NonNull VariableElement facetField)
     implements FacetGenModel {
 
@@ -29,24 +28,14 @@ public record DefaultFacetModel(
       ImmutableSet.copyOf(EnumSet.of(FacetType.INPUT, FacetType.INJECTION));
 
   public DefaultFacetModel {
-    if (!ALLOWED_FACET_TYPES.containsAll(facetTypes)) {
+    if (!ALLOWED_FACET_TYPES.contains(facetType)) {
       throw new IllegalArgumentException(
-          "Allowed Facet types: " + ALLOWED_FACET_TYPES + ". Found: " + facetTypes);
+          "Allowed Facet types: " + ALLOWED_FACET_TYPES + ". Found: " + facetType);
     }
   }
 
   @Override
   public boolean isGiven() {
     return true;
-  }
-
-  public static class DefaultFacetModelBuilder {
-
-    public @This DefaultFacetModelBuilder facetTypes(EnumSet<FacetType> facetTypes) {
-      if (facetTypes != null) {
-        this.facetTypes = ImmutableSet.copyOf(facetTypes);
-      }
-      return this;
-    }
   }
 }

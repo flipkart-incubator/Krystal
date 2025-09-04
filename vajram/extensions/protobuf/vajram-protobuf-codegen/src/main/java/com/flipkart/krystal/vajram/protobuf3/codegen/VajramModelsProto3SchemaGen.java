@@ -141,7 +141,7 @@ class VajramModelsProto3SchemaGen implements CodeGenerator {
     Set<Integer> usedFieldNumbers = new HashSet<>();
 
     for (DefaultFacetModel facet :
-        vajramInfo.givenFacets().stream().filter(f -> f.facetTypes().contains(INPUT)).toList()) {
+        vajramInfo.givenFacets().stream().filter(f -> f.facetType().equals(INPUT)).toList()) {
       // Get the SerialId annotation from the facet field
       SerialId serialId = facet.facetField().getAnnotation(SerialId.class);
       int fieldNumber;

@@ -90,7 +90,8 @@ final class JsonModelsGen implements CodeGenerator {
       ClassName immutableModelName,
       ClassName immutableJsonModelName) {
     TypeSpec.Builder classBuilder =
-        util.classBuilder(immutableJsonModelName.simpleName())
+        util.classBuilder(
+                immutableJsonModelName.simpleName(), modelRootType.getQualifiedName().toString())
             .addAnnotation(
                 AnnotationSpec.builder(JsonDeserialize.class)
                     .addMember("builder", "$T.class", immutableJsonModelName.nestedClass("Builder"))
@@ -268,7 +269,7 @@ return _serializedPayload;
       ClassName immutableModelName,
       ClassName immutableJsonName) {
     var builderSpec =
-        util.classBuilder("Builder")
+        util.classBuilder("Builder", modelRootType.getQualifiedName().toString())
             .addAnnotation(
                 AnnotationSpec.builder(JsonPOJOBuilder.class)
                     .addMember("buildMethodName", "$S", "_build")
@@ -307,7 +308,7 @@ return _serializedPayload;
       dataAccessMethods.add(
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC)
-              .addParameter(util.getParameterType(method), methodName)
+              .addParameter(util.getParameterType(method, true), methodName)
               .returns(immutableJsonName.nestedClass("Builder"))
               .addStatement("this._pojo.$L($L)", methodName, methodName)
               .addStatement("return this")

@@ -13,7 +13,7 @@ import static java.util.Arrays.asList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
-import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
+import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
 import com.flipkart.krystal.krystex.kryon.KryonExecutorConfig;
@@ -49,7 +49,7 @@ class AddUsingTraitsTest {
 
   @BeforeAll
   static void beforeAll() throws LeaseUnavailableException {
-    ThreadPerRequestExecutorsPool execPool = new ThreadPerRequestExecutorsPool("Test", MAX_THREADS);
+    SingleThreadExecutorsPool execPool = new SingleThreadExecutorsPool("Test", MAX_THREADS);
     for (int i = 0; i < MAX_THREADS; i++) {
       EXECUTOR_LEASES[i] = execPool.lease();
     }

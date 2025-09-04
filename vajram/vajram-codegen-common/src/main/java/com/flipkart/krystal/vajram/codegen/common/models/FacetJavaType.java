@@ -31,9 +31,10 @@ public abstract sealed class FacetJavaType {
       return CodeBlock.of("return this.$L.$L()", FACET_VALUES_VAR, facet.name());
     }
     final boolean facetInCurrentClass =
-        (codeGenParams.isRequest()
-            || !facet.facetTypes().contains(INPUT)
-            || !codeGenParams.wrapsRequest());
+        codeGenParams.isRequest()
+            || !facet.facetType().equals(INPUT)
+            || !codeGenParams.wrapsRequest()
+            || codeGenParams.isFacetsSubset();
     if (facetInCurrentClass) {
       return CodeBlock.of("return this.$L", facet.name());
     }

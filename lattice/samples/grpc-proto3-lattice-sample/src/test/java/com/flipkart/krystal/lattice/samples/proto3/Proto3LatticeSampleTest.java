@@ -1,10 +1,11 @@
 package com.flipkart.krystal.lattice.samples.proto3;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
-import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
+import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
 import com.flipkart.krystal.krystex.kryon.KryonExecutionConfig;
@@ -39,7 +40,7 @@ import org.junit.jupiter.api.Test;
 
 class Proto3LatticeSampleTest {
 
-  private static ThreadPerRequestExecutorsPool EXEC_POOL;
+  private static SingleThreadExecutorsPool EXEC_POOL;
   private static final String REQUEST_ID = "protoExhaustiveTest";
   private final TestRequestLevelCache requestLevelCache = new TestRequestLevelCache();
 
@@ -48,7 +49,7 @@ class Proto3LatticeSampleTest {
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new ThreadPerRequestExecutorsPool("Test", 1);
+    EXEC_POOL = new SingleThreadExecutorsPool("Test", 1);
   }
 
   @AfterAll
@@ -78,7 +79,7 @@ class Proto3LatticeSampleTest {
   }
 
   @Test
-  void allInputsProvided_success() throws Exception {
+  void allInputsProvided_success() {
     // Create a request with all inputs provided
     Proto3LatticeSample_ReqImmut request =
         Proto3LatticeSample_ReqImmutProto._builder()
@@ -108,19 +109,22 @@ class Proto3LatticeSampleTest {
     }
 
     // Verify the result
-    Proto3LatticeSampleResponse output = result.get();
-    assertThat(output.string()).contains("$$ optionalInput: 42 $$");
-    assertThat(output.string()).contains("$$ mandatoryInput: 100 $$");
-    assertThat(output.string()).contains("$$ conditionallyMandatoryInput: 200 $$");
-    assertThat(output.string()).contains("$$ inputWithDefaultValue: 300 $$");
-    assertThat(output.string()).contains("$$ optionalLongInput: 10 $$");
-    assertThat(output.string()).contains("$$ mandatoryLongInput: 20 $$");
-    assertThat(output.string()).contains("$$ optionalByteString: test $$");
-    assertThat(output.string()).contains("$$ defaultByteString: hello $$");
+    assertThat(result)
+        .succeedsWithin(1, SECONDS)
+        .extracting(Proto3LatticeSampleResponse::string, STRING)
+        .contains(
+            "$$ optionalInput: 42 $$",
+            "$$ mandatoryInput: 100 $$",
+            "$$ conditionallyMandatoryInput: 200 $$",
+            "$$ inputWithDefaultValue: 300 $$",
+            "$$ optionalLongInput: 10 $$",
+            "$$ mandatoryLongInput: 20 $$",
+            "$$ optionalByteString: test $$",
+            "$$ defaultByteString: hello $$");
   }
 
   @Test
-  void optionalInputsOmitted_success() throws Exception {
+  void optionalInputsOmitted_success() {
     // Create a request with only mandatory inputs
     Proto3LatticeSample_ReqImmut request =
         Proto3LatticeSample_ReqImmutProto._builder()
@@ -146,18 +150,21 @@ class Proto3LatticeSampleTest {
     }
 
     // Verify the result
-    Proto3LatticeSampleResponse output = result.get();
-    assertThat(output.string()).contains("$$ optionalInput: null $$");
-    assertThat(output.string()).contains("$$ mandatoryInput: 100 $$");
-    assertThat(output.string()).contains("$$ inputWithDefaultValue: 300 $$");
-    assertThat(output.string()).contains("$$ optionalLongInput: null $$");
-    assertThat(output.string()).contains("$$ mandatoryLongInput: 20 $$");
-    assertThat(output.string()).contains("$$ optionalByteString: null $$");
-    assertThat(output.string()).contains("$$ defaultByteString:  $$");
+    assertThat(result)
+        .succeedsWithin(1, SECONDS)
+        .extracting(Proto3LatticeSampleResponse::string, STRING)
+        .contains(
+            "$$ optionalInput: null $$",
+            "$$ mandatoryInput: 100 $$",
+            "$$ inputWithDefaultValue: 300 $$",
+            "$$ optionalLongInput: null $$",
+            "$$ mandatoryLongInput: 20 $$",
+            "$$ optionalByteString: null $$",
+            "$$ defaultByteString:  $$");
   }
 
   @Test
-  void defaultValueStrategy() throws Exception {
+  void defaultValueStrategy() {
     // Create a request without the input that has a default value strategy
     Proto3LatticeSample_ReqImmut request =
         Proto3LatticeSample_ReqImmutProto._builder()
@@ -182,8 +189,10 @@ class Proto3LatticeSampleTest {
     }
 
     // Verify the result - inputWithDefaultValue should be 0 (default for int)
-    Proto3LatticeSampleResponse output = result.get();
-    assertThat(output.string()).contains("inputWithDefaultValue: 0");
+    assertThat(result)
+        .succeedsWithin(1, SECONDS)
+        .extracting(Proto3LatticeSampleResponse::string, STRING)
+        .contains("inputWithDefaultValue: 0");
   }
 
   @Test
@@ -213,10 +222,11 @@ class Proto3LatticeSampleTest {
               request,
               KryonExecutionConfig.builder().executionId("test_missing_mandatory").build());
     }
-    assertThatThrownBy(result::get)
-        .isInstanceOf(ExecutionException.class)
-        .hasCauseInstanceOf(MandatoryFacetsMissingException.class)
-        .hasMessageContaining("mandatoryInput");
+    assertThat(result)
+        .failsWithin(1, SECONDS)
+        .withThrowableOfType(ExecutionException.class)
+        .withCauseInstanceOf(MandatoryFacetsMissingException.class)
+        .withMessageContaining("mandatoryInput");
   }
 
   @Test
@@ -245,14 +255,15 @@ class Proto3LatticeSampleTest {
               request,
               KryonExecutionConfig.builder().executionId("test_missing_mandatory_byte").build());
     }
-    assertThatThrownBy(result::get)
-        .isInstanceOf(ExecutionException.class)
-        .hasCauseInstanceOf(MandatoryFacetsMissingException.class)
-        .hasMessageContaining("mandatoryLongInput");
+    assertThat(result)
+        .failsWithin(1, SECONDS)
+        .withThrowableOfType(ExecutionException.class)
+        .withCauseInstanceOf(MandatoryFacetsMissingException.class)
+        .withMessageContaining("mandatoryLongInput");
   }
 
   @Test
-  void mockedResponse_success() throws Exception {
+  void mockedResponse_success() {
     // Create a test harness with a mocked response
     Proto3LatticeSample_ReqImmut request =
         Proto3LatticeSample_ReqImmutProto._builder()
@@ -291,11 +302,11 @@ class Proto3LatticeSampleTest {
     }
 
     // Verify the mocked result
-    assertThat(result.get()).isEqualTo(mockedOutput);
+    assertThat(result).succeedsWithin(1, SECONDS).isEqualTo(mockedOutput);
   }
 
   @Test
-  void byteStringInput_success() throws Exception {
+  void byteStringInput_success() {
     // Create a request with ByteString input
     ByteString byteString = ByteString.copyFromUtf8("Hello, World!");
     Proto3LatticeSample_ReqImmut request =
@@ -323,7 +334,9 @@ class Proto3LatticeSampleTest {
     }
 
     // Verify the result
-    Proto3LatticeSampleResponse output = result.get();
-    assertThat(output.string()).contains("$$ optionalByteString: Hello, World! $$");
+    assertThat(result)
+        .succeedsWithin(100, SECONDS)
+        .extracting(Proto3LatticeSampleResponse::string, STRING)
+        .contains("$$ optionalByteString: Hello, World! $$");
   }
 }

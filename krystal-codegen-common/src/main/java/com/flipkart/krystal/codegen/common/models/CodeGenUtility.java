@@ -531,16 +531,19 @@ public class CodeGenUtility {
    * the builder represents an anonymous class.
    *
    * @param simpleName simple name of class
+   * @param generatedForCanonicalName canonical name of the originating class for which the class is
+   *     being generated
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
-  public TypeSpec.Builder classBuilder(String simpleName) {
+  public TypeSpec.Builder classBuilder(String simpleName, String generatedForCanonicalName) {
     TypeSpec.Builder classBuilder;
     if (simpleName.isBlank()) {
       classBuilder = TypeSpec.anonymousClassBuilder("");
     } else {
       classBuilder = TypeSpec.classBuilder(simpleName);
     }
+    classBuilder.addJavadoc("@see $L", generatedForCanonicalName);
     addDefaultAnnotations(classBuilder);
     return classBuilder;
   }
@@ -576,10 +579,12 @@ public class CodeGenUtility {
    * the builder represents an anonymous class.
    *
    * @param interfaceName fully qualified class name
+   * @param generatedForCanonicalName canonical name of the originating class for which the
+   *     interface is being generated
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
-  public TypeSpec.Builder interfaceBuilder(String interfaceName) {
+  public TypeSpec.Builder interfaceBuilder(String interfaceName, String generatedForCanonicalName) {
     TypeSpec.Builder interfaceBuilder;
     if (interfaceName.isBlank()) {
       throw new RuntimeException("interface name cannot be blank");
@@ -587,6 +592,7 @@ public class CodeGenUtility {
       interfaceBuilder = TypeSpec.interfaceBuilder(interfaceName);
     }
     addDefaultAnnotations(interfaceBuilder);
+    interfaceBuilder.addJavadoc("@see $L", generatedForCanonicalName);
     return interfaceBuilder;
   }
 
@@ -754,9 +760,10 @@ public class CodeGenUtility {
    * Determines the parameter type for a method return type, handling Optional types.
    *
    * @param method The method
+   * @param isBuilder
    * @return The appropriate parameter type
    */
-  public TypeName getParameterType(ExecutableElement method) {
+  public TypeName getParameterType(ExecutableElement method, boolean isBuilder) {
     TypeMirror specifiedType = method.getReturnType();
     TypeMirror inferredType = specifiedType;
     if (isOptional(specifiedType)) {
@@ -764,7 +771,7 @@ public class CodeGenUtility {
       inferredType = getOptionalInnerType(specifiedType);
     }
     TypeName typeName = TypeName.get(inferredType);
-    if (typeName.isPrimitive()) {
+    if (isBuilder && typeName.isPrimitive()) {
       typeName = typeName.box();
     }
     // Add @Nullable annotation for Optional types or methods with @Nullable annotation

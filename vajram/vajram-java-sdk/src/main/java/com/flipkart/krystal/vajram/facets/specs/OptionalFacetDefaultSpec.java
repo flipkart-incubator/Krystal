@@ -6,7 +6,6 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.tags.ElementTags;
-import com.google.common.collect.ImmutableSet;
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -20,7 +19,7 @@ public final class OptionalFacetDefaultSpec<T, CV extends Request> extends Defau
       String name,
       VajramID ofVajramID,
       DataType<T> type,
-      ImmutableSet<FacetType> facetTypes,
+      FacetType facetType,
       Class<CV> ofVajram,
       String documentation,
       boolean isBatched,
@@ -32,7 +31,7 @@ public final class OptionalFacetDefaultSpec<T, CV extends Request> extends Defau
         name,
         ofVajramID,
         type,
-        facetTypes,
+        facetType,
         ofVajram,
         documentation,
         isBatched,

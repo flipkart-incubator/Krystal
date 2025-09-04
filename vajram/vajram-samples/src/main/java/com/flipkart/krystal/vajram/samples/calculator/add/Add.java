@@ -5,7 +5,6 @@ import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.lang.Boolean.TRUE;
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.function.Function.identity;
 
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.NonNil;
@@ -16,6 +15,7 @@ import com.flipkart.krystal.vajram.batching.Batched;
 import com.flipkart.krystal.vajram.batching.BatchesGroupedBy;
 import com.flipkart.krystal.vajram.facets.Output;
 import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -71,7 +71,9 @@ public abstract class Add extends IOVajramDef<Integer> {
             _batchItems.stream()
                 .collect(
                     toImmutableMap(
-                        identity(), batch -> add(batch.numberOne(), batch.numberTwo())))));
+                        addBatchItem ->
+                            ImmutableList.of(addBatchItem.numberOne(), addBatchItem.numberTwo()),
+                        batch -> add(batch.numberOne(), batch.numberTwo())))));
   }
 
   @Output.Unbatch
@@ -81,12 +83,19 @@ public abstract class Add extends IOVajramDef<Integer> {
       return ImmutableMap.of();
     }
     return nonNil.value().result().entrySet().stream()
-        .collect(toImmutableMap(Map.Entry::getKey, entry -> Errable.withValue(entry.getValue())));
+        .collect(
+            toImmutableMap(
+                entry ->
+                    Add_BatchItem._pojoBuilder()
+                        .numberOne(entry.getKey().get(0))
+                        .numberTwo(entry.getKey().get(1))
+                        ._build(),
+                entry -> Errable.withValue(entry.getValue())));
   }
 
   public static int add(int a, int b) {
     return a + b;
   }
 
-  record BatchAddResult(ImmutableMap<Add_BatchItem, Integer> result) {}
+  record BatchAddResult(ImmutableMap<ImmutableList<Integer>, Integer> result) {}
 }

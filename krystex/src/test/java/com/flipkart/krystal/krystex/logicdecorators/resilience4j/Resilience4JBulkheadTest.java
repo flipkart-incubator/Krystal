@@ -7,14 +7,13 @@ import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
-import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.OutputLogicDelegationMode;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
-import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
+import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.config.MapConfigProvider;
 import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.core.VajramID;
@@ -59,11 +58,11 @@ import org.junit.jupiter.api.Test;
 class Resilience4JBulkheadTest {
 
   private static final Duration TIMEOUT = ofSeconds(1);
-  private static ThreadPerRequestExecutorsPool EXEC_POOL;
+  private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new ThreadPerRequestExecutorsPool("Test", 4);
+    EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
   private Lease<SingleThreadExecutor> executorLease;
@@ -274,7 +273,7 @@ class Resilience4JBulkheadTest {
     executor2.close();
     executor3.close();
     assertThat(callAfterBulkheadExhaustion)
-        .failsWithin(1, HOURS)
+        .failsWithin(1, SECONDS)
         .withThrowableOfType(Exception.class)
         .withMessageContaining(
             "Bulkhead 'threadpoolBulkhead_restrictsConcurrency.bulkhead' is full and does not permit further calls");

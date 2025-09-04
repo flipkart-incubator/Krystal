@@ -26,7 +26,7 @@ public enum RestMethod {
     return this != GET && this != HEAD;
   }
 
-  public boolean supportsResponseBody(){
+  public boolean supportsResponseBody() {
     return this != HEAD;
   }
 }

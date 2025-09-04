@@ -62,9 +62,7 @@ record KryonDefinitionView(
             .collect(toImmutableSet());
     Map<FacetType, Set<Facet>> facetsByType = new LinkedHashMap<>();
     for (Facet facet : allFacets) {
-      for (FacetType facetType : facet.facetTypes()) {
-        facetsByType.computeIfAbsent(facetType, _t -> new LinkedHashSet<>()).add(facet);
-      }
+      facetsByType.computeIfAbsent(facet.facetType(), _t -> new LinkedHashSet<>()).add(facet);
     }
     ImmutableMap<Optional<Facet>, ImmutableSet<ResolverDefinition>> resolverDefinitionsByFacets =
         createResolverDefinitionsByFacets(resolversByDefinition.keySet());

@@ -172,7 +172,7 @@ public class ModelsProto3Gen implements CodeGenerator {
 
     // Create class builder
     TypeSpec.Builder classBuilder =
-        util.classBuilder(protoClassName)
+        util.classBuilder(protoClassName, modelRootType.getQualifiedName().toString())
             .addModifiers(PUBLIC)
             .addSuperinterface(immutModelName)
             .addSuperinterface(serializableTypeName);
@@ -428,7 +428,7 @@ return _serializedPayload;
 
     // Create Builder class
     TypeSpec.Builder builderClassBuilder =
-        util.classBuilder("Builder")
+        util.classBuilder("Builder", modelRootType.getQualifiedName().toString())
             .addModifiers(PUBLIC, STATIC)
             .addSuperinterface(builderInterfaceClassName);
 

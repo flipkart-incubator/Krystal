@@ -2,7 +2,7 @@ package com.flipkart.krystal.lattice.core.execution;
 
 import static com.flipkart.krystal.lattice.core.execution.ThreadingStrategyDopant.DOPANT_TYPE;
 
-import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
+import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.lattice.core.di.Bindings;
 import com.flipkart.krystal.lattice.core.di.DependencyInjectionBinder;
 import com.flipkart.krystal.lattice.core.doping.DopantType;
@@ -24,7 +24,7 @@ public final class ThreadingStrategyDopant implements DopantWithConfig<ThreadStr
   private final DependencyInjectionBinder binder;
   private final ThreadingStrategy threadingStrategy;
 
-  private final ThreadPerRequestExecutorsPool executorPool;
+  private final SingleThreadExecutorsPool executorPool;
 
   @Inject
   ThreadingStrategyDopant(
@@ -33,7 +33,7 @@ public final class ThreadingStrategyDopant implements DopantWithConfig<ThreadStr
     this.binder = binder;
     this.executorPool =
         switch (threadingStrategy) {
-          case NATIVE_THREAD_PER_REQUEST -> new ThreadPerRequestExecutorsPool(
+          case NATIVE_THREAD_PER_REQUEST -> new SingleThreadExecutorsPool(
               "ThreadingStrategyDopant-ThreadPerRequestExecutorsPool",
               config.maxApplicationThreads());
           default -> throw new UnsupportedOperationException(threadingStrategy.toString());

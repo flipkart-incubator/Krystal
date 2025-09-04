@@ -36,7 +36,7 @@ public class VajramGuiceInputInjector implements VajramInjectionProvider {
 
   @Override
   public <T> Errable<@NonNull T> get(VajramID vajramID, FacetSpec<T, ?> facetDef) {
-    if (!facetDef.facetTypes().contains(INJECTION)) {
+    if (!INJECTION.equals(facetDef.facetType())) {
       return nil();
     }
     return errableFrom(

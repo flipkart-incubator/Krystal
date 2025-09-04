@@ -128,7 +128,9 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
         }
         ClassName jaxRsResourceName = getJaxRsResourceName(vajramInfo, vajramElem);
         TypeSpec.Builder resourceClassBuilder =
-            util.classBuilder(jaxRsResourceName.simpleName()).addModifiers(PUBLIC);
+            util.classBuilder(
+                    jaxRsResourceName.simpleName(), latticeAppElem.getQualifiedName().toString())
+                .addModifiers(PUBLIC);
         resourceClassBuilder
             .addField(RestServiceDopant.class, "_restServiceDopant", PRIVATE, FINAL)
             .addAnnotation(
@@ -180,7 +182,8 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
       ClassName dopantImplName =
           latticeCodegenUtils.getDopantImplName(latticeAppElem, RestServiceDopant.class);
       TypeSpec.Builder dopantImplBuilder =
-          util.classBuilder(dopantImplName.simpleName())
+          util.classBuilder(
+                  dopantImplName.simpleName(), latticeAppElem.getQualifiedName().toString())
               .addModifiers(Modifier.FINAL)
               .superclass(RestServiceDopant.class)
               .addMethod(

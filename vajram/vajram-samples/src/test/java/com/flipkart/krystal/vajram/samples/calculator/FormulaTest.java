@@ -23,7 +23,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
-import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
+import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
@@ -71,11 +71,11 @@ class FormulaTest {
   @SuppressWarnings("unchecked")
   private static final Lease<SingleThreadExecutor>[] EXECUTOR_LEASES = new Lease[MAX_THREADS];
 
-  private static ThreadPerRequestExecutorsPool EXEC_POOL;
+  private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll
   static void beforeAll() throws LeaseUnavailableException {
-    EXEC_POOL = new ThreadPerRequestExecutorsPool("Test", MAX_THREADS);
+    EXEC_POOL = new SingleThreadExecutorsPool("Test", MAX_THREADS);
     for (int i = 0; i < MAX_THREADS; i++) {
       EXECUTOR_LEASES[i] = EXEC_POOL.lease();
     }

@@ -67,7 +67,8 @@ public class GuiceModuleGenProvider implements LatticeCodeGeneratorProvider {
       TypeElement latticeAppTypeElement = context.latticeAppTypeElement();
       ClassName moduleClassName = getModuleClassName(context);
       TypeSpec.Builder classBuilder =
-          util.classBuilder(moduleClassName.simpleName())
+          util.classBuilder(
+                  moduleClassName.simpleName(), latticeAppTypeElement.getQualifiedName().toString())
               .addModifiers(PUBLIC)
               // Add vetoed to prevent jakarta CDI from picking up the producer methods
               .addAnnotation(Vetoed.class)

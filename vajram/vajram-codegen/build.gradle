@@ -4,10 +4,11 @@ buildscript {
         mavenCentral()
     }
 }
-
 plugins {
     id 'java-gradle-plugin'
 }
+
+//version = //inherited from root
 
 description = '''Gradle plugin for projects using the Krystal framework. 
 Includes Vajram code generator and validator. 
@@ -21,6 +22,7 @@ gradlePlugin {
         }
     }
 }
+
 
 dependencies {
     api project(':vajram:vajram-java-sdk')

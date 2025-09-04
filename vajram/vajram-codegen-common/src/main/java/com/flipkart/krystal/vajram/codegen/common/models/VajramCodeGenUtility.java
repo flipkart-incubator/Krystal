@@ -50,7 +50,6 @@ import com.squareup.javapoet.TypeName;
 import jakarta.inject.Inject;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -203,28 +202,13 @@ public class VajramCodeGenUtility {
     VajramInfo vajramInfo =
         new VajramInfo(
             vajramInfoLite,
-            Streams.concat(
-                    inputFields.stream()
-                        .map(
-                            inputField ->
-                                toGivenFacetModel(
-                                    inputField,
-                                    true,
-                                    givenIdsByName,
-                                    takenFacetIds,
-                                    nextFacetId,
-                                    vajramInfoLite)),
-                    internalFacetFields.stream()
-                        .map(
-                            internalField ->
-                                toGivenFacetModel(
-                                    internalField,
-                                    false,
-                                    givenIdsByName,
-                                    takenFacetIds,
-                                    nextFacetId,
-                                    vajramInfoLite))
-                        .filter(facet -> facet.facetTypes().contains(INJECTION)))
+            Streams.concat(inputFields.stream(), internalFacetFields.stream())
+                .map(
+                    inputField ->
+                        toGivenFacetModel(
+                            inputField, givenIdsByName, takenFacetIds, nextFacetId, vajramInfoLite))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .collect(toImmutableList()),
             dependencyFields.stream()
                 .map(
@@ -260,9 +244,8 @@ public class VajramCodeGenUtility {
             });
   }
 
-  private DefaultFacetModel toGivenFacetModel(
+  private Optional<DefaultFacetModel> toGivenFacetModel(
       VariableElement facetField,
-      boolean isInput,
       BiMap<String, Integer> givenIdsByName,
       Set<Integer> takenFacetIds,
       AtomicInteger nextFacetId,
@@ -284,21 +267,25 @@ public class VajramCodeGenUtility {
         facetFieldType.accept(
             new DeclaredTypeVisitor(codegenUtil, facetField, DISALLOWED_FACET_TYPES), null);
     facetBuilder.dataType(dataType);
-    EnumSet<FacetType> facetTypes = EnumSet.noneOf(FacetType.class);
+    FacetType facetType = null;
+    boolean isInput = "_Inputs".contentEquals(facetField.getEnclosingElement().getSimpleName());
     if (isInput) {
-      facetTypes.add(FacetType.INPUT);
+      facetType = FacetType.INPUT;
     }
     if (facetField.getAnnotation(Inject.class) != null) {
       if (isInput) {
         codegenUtil()
             .error("Inject facet '%s' cannot be an input facet".formatted(facetName), facetField);
       }
-      facetTypes.add(INJECTION);
+      facetType = INJECTION;
+    }
+    if (facetType == null) {
+      return Optional.empty();
     }
     DefaultFacetModel facetModel =
-        facetBuilder.facetTypes(facetTypes).vajramInfo(vajramInfoLite).build();
+        facetBuilder.facetType(facetType).vajramInfo(vajramInfoLite).build();
     givenIdsByName.putIfAbsent(facetName, facetModel.id());
-    return facetModel;
+    return Optional.of(facetModel);
   }
 
   private static int getNextAvailableFacetId(

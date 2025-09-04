@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
-import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
+import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.FacetValues;
@@ -61,7 +61,7 @@ class RequestLevelCacheTest {
 
   private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
-  private static ThreadPerRequestExecutorsPool EXEC_POOL;
+  private static SingleThreadExecutorsPool EXEC_POOL;
 
   private KryonDefinitionRegistry kryonDefinitionRegistry;
   private LogicDefinitionRegistry logicDefinitionRegistry;
@@ -71,7 +71,7 @@ class RequestLevelCacheTest {
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new ThreadPerRequestExecutorsPool("RequestLevelCacheTest", 4);
+    EXEC_POOL = new SingleThreadExecutorsPool("RequestLevelCacheTest", 4);
   }
 
   @BeforeEach

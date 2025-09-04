@@ -42,7 +42,8 @@ public class QuarkusAppGenProvider implements LatticeCodeGeneratorProvider {
           ClassName.get(packageName, quarkusAppClassName).canonicalName(),
           JavaFile.builder(
                   packageName,
-                  util.classBuilder(quarkusAppClassName)
+                  util.classBuilder(
+                          quarkusAppClassName, latticeAppTypeElement.getQualifiedName().toString())
                       .addModifiers(PUBLIC)
                       .addSuperinterface(QuarkusApplication.class)
                       .addMethod(

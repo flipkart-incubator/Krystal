@@ -16,7 +16,7 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
-import com.flipkart.krystal.concurrent.ThreadPerRequestExecutorsPool;
+import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.krystex.caching.RequestLevelCache;
 import com.flipkart.krystal.krystex.caching.TestRequestLevelCache;
@@ -59,11 +59,11 @@ import org.junit.jupiter.api.Test;
 class GreetTest {
 
   private static final Duration TIMEOUT = Duration.ofSeconds(1);
-  private static ThreadPerRequestExecutorsPool EXEC_POOL;
+  private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll
   static void beforeAll() {
-    EXEC_POOL = new ThreadPerRequestExecutorsPool("Test", 4);
+    EXEC_POOL = new SingleThreadExecutorsPool("Test", 4);
   }
 
   private VajramKryonGraphBuilder graph;

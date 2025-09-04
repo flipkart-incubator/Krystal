@@ -78,7 +78,8 @@ public final class LatticeAppImplGenProvider implements LatticeCodeGeneratorProv
               packageName, latticeApp.getSimpleName().toString() + LATTICE_APP_IMPL_SUFFIX);
 
       TypeSpec.Builder classBuilder =
-          util.classBuilder(latticeAppImplClassName.simpleName())
+          util.classBuilder(
+                  latticeAppImplClassName.simpleName(), latticeApp.getQualifiedName().toString())
               .addModifiers(PUBLIC)
               .superclass(latticeApp.asType())
               .addMethod(getMainMethod(latticeAppImplClassName, latticeApp, context))

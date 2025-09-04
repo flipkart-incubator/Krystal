@@ -11,12 +11,19 @@ import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.google.common.collect.ImmutableMap;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.function.Function;
 
 abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonCommandResponse>
     implements Kryon<C, R> permits FlushableKryon {
+  /**
+   * Initial capacity for maps and sets. In load tests in real-world applications, substantial CPU
+   * was observed to be spent in resizing collections.
+   */
+  static final int INITIAL_CAPACITY = 64;
 
   protected final VajramKryonDefinition kryonDefinition;
   protected final VajramID vajramID;
@@ -28,6 +35,10 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
 
   private final Function<DependencyExecutionContext, ImmutableMap<String, DependencyDecorator>>
       depDecoratorSuppliers;
+
+  private final Map<DependentChain, NavigableSet<OutputLogicDecorator>>
+      requestScopedDecoratorsByDepChain = new HashMap<>(INITIAL_CAPACITY);
+
   protected final DecorationOrdering decorationOrdering;
 
   protected final RequestIdGenerator requestIdGenerator;
@@ -54,18 +65,19 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
       DependentChain dependentChain) {
     OutputLogicDefinition<Object> outputLogicDefinition =
         kryonDefinition.getOutputLogicDefinition();
-    return sortedOutputLogicDecoratorsSupplier.apply(
-        new LogicExecutionContext(
-            vajramID,
-            outputLogicDefinition.tags(),
-            dependentChain,
-            kryonDefinition.kryonDefinitionRegistry()));
+    return requestScopedDecoratorsByDepChain.computeIfAbsent(
+        dependentChain,
+        _d ->
+            sortedOutputLogicDecoratorsSupplier.apply(
+                new LogicExecutionContext(
+                    vajramID,
+                    outputLogicDefinition.tags(),
+                    dependentChain,
+                    kryonDefinition.kryonDefinitionRegistry())));
   }
 
   protected NavigableSet<DependencyDecorator> getSortedDependencyDecorators(
       VajramID depVajramId, DependentChain dependentChain) {
-    // If the same decoratorType is configured for session and request scope, request scope
-    // overrides session scope.
     TreeSet<DependencyDecorator> sortedDecorators =
         new TreeSet<>(
             decorationOrdering

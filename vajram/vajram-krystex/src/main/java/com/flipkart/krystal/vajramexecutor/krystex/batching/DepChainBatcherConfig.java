@@ -292,7 +292,7 @@ public record DepChainBatcherConfig(
     for (InputResolver resolver : resolvers) {
       ResolverDefinition resolverDefinition = resolver.definition();
       for (Facet facet : inputDefinitions) {
-        if (facet.facetTypes().contains(DEPENDENCY)) {
+        if (DEPENDENCY.equals(facet.facetType())) {
           if (resolverDefinition.sources().contains(facet)) {
             Facet dependingVID =
                 getInputDefinitionDep(resolverDefinition.target().dependency(), inputDefinitions);
@@ -307,7 +307,7 @@ public record DepChainBatcherConfig(
     Set<Facet> visited = new HashSet<>();
     Queue<Facet> queue = new ArrayDeque<>();
     for (Facet vid : inputDefinitions) {
-      if (vid.facetTypes().contains(DEPENDENCY)) {
+      if (DEPENDENCY.equals(vid.facetType())) {
         if (!visited.contains(vid)) {
           topologicalSortUtil(vid, visited, graph, queue);
         }
@@ -319,7 +319,7 @@ public record DepChainBatcherConfig(
   private static @Nullable Facet getInputDefinitionDep(
       Facet dep, ImmutableCollection<? extends Facet> inputDefinitions) {
     for (Facet facet : inputDefinitions) {
-      if (facet.facetTypes().contains(DEPENDENCY)) {
+      if (DEPENDENCY.equals(facet.facetType())) {
         if (facet.id() == dep.id()) {
           return facet;
         }
@@ -336,7 +336,7 @@ public record DepChainBatcherConfig(
         topologicalSortUtil(i, visited, graph, stack);
       }
     }
-    if (vid.facetTypes().contains(DEPENDENCY)) {
+    if (vid.facetType().equals(DEPENDENCY)) {
       stack.add(vid);
     }
   }

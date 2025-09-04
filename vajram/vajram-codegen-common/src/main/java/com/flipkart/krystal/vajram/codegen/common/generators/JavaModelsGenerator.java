@@ -316,7 +316,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
 
     // Create the builder interface
     TypeSpec.Builder builderInterface =
-        util.interfaceBuilder("Builder")
+        util.interfaceBuilder("Builder", modelRootType.getQualifiedName().toString())
             .addModifiers(PUBLIC, STATIC)
             .addSuperinterface(
                 typeParamTypes.isEmpty()
@@ -333,7 +333,8 @@ public final class JavaModelsGenerator implements CodeGenerator {
     }
 
     // Create the immutable interface
-    return util.interfaceBuilder(immutableModelName.simpleName())
+    return util.interfaceBuilder(
+            immutableModelName.simpleName(), modelRootType.getQualifiedName().toString())
         .addModifiers(PUBLIC)
         .addSuperinterface(ClassName.get(modelRootType))
         .addSuperinterface(
@@ -435,7 +436,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
       MethodSpec.Builder methodBuilder =
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC, ABSTRACT)
-              .addParameter(util.getParameterType(method), methodName)
+              .addParameter(util.getParameterType(method, true), methodName)
               .returns(ClassName.get("", "Builder"));
       if (hasParentModelRoot) {
         methodBuilder.addAnnotation(Override.class);
@@ -520,7 +521,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
       String fieldName = method.getSimpleName().toString();
 
       constructorBuilder.addParameter(
-          ParameterSpec.builder(util.getParameterType(method), fieldName).build());
+          ParameterSpec.builder(util.getParameterType(method, false), fieldName).build());
 
       // For all field types, just assign the parameter directly
       constructorBuilder.addStatement("this.$N = $N", fieldName, fieldName);
@@ -581,7 +582,8 @@ public final class JavaModelsGenerator implements CodeGenerator {
     TypeSpec builderClass =
         generateBuilderClass(modelRootType, modelMethods, immutableModelName, immutablePojoName);
 
-    TypeSpec.Builder classBuilder = util.classBuilder(immutablePojoName);
+    TypeSpec.Builder classBuilder =
+        util.classBuilder(immutablePojoName, modelRootType.getQualifiedName().toString());
     util.addImmutableModelObjectMethods(
         immutableModelName,
         modelMethods.stream().map(ExecutableElement::getSimpleName).collect(Collectors.toSet()),
@@ -705,7 +707,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
       dataAccessMethods.add(
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC)
-              .addParameter(util.getParameterType(method), methodName)
+              .addParameter(util.getParameterType(method, true), methodName)
               .returns(ClassName.get("", "Builder"))
               .addStatement("this.$L = $L", methodName, methodName)
               .addStatement("return this")
@@ -788,7 +790,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     builderCopyMethodBuilder.addCode(";");
 
     // Create the builder class
-    return util.classBuilder("Builder")
+    return util.classBuilder("Builder", modelRootType.getQualifiedName().toString())
         .addModifiers(PUBLIC, STATIC, FINAL)
         .addSuperinterface(immutableModelName.nestedClass("Builder"))
         .addFields(fields)

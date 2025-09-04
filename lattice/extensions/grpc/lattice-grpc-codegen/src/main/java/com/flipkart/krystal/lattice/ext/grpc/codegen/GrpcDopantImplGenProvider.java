@@ -75,7 +75,8 @@ public class GrpcDopantImplGenProvider implements LatticeCodeGeneratorProvider {
           latticeCodegenUtils.getDopantImplName(latticeAppElem, GrpcServerDopant.class);
       TypeSpec.Builder classBuilder =
           util.codegenUtil()
-              .classBuilder(dopantImplName.simpleName())
+              .classBuilder(
+                  dopantImplName.simpleName(), latticeAppElem.getQualifiedName().toString())
               .addModifiers(Modifier.FINAL)
               .superclass(GrpcServerDopant.class);
 

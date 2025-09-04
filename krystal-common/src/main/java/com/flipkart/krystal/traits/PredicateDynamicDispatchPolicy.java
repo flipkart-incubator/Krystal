@@ -1,16 +1,8 @@
 package com.flipkart.krystal.traits;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
-
-import com.flipkart.krystal.core.VajramID;
-import com.flipkart.krystal.facets.InputMirror;
+import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.traits.matchers.InputValueMatcher;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import java.util.Collection;
-import lombok.Getter;
 
 /**
  * A {@link TraitDispatchPolicy} which allows trait invocations to be dispatched to conformant
@@ -39,28 +31,8 @@ import lombok.Getter;
  *     href="https://en.wikipedia.org/wiki/Multiple_dispatch#Efficiency">wikipedia</a> : Efficient
  *     implementation of multiple-dispatch remains an ongoing research problem.)
  */
-public final class PredicateDynamicDispatchPolicy implements TraitDispatchPolicy {
+public non-sealed interface PredicateDynamicDispatchPolicy extends TraitDispatchPolicy {
+  ImmutableList<DispatchCase> dispatchCases();
 
-  @Getter private final VajramID traitID;
-  @Getter private final ImmutableList<DispatchCase> dispatchCases;
-  @Getter private final ImmutableList<VajramID> dispatchTargets;
-
-  public PredicateDynamicDispatchPolicy(
-      VajramID traitID, ImmutableList<DispatchCase> traitDispatcheCases) {
-    this.traitID = traitID;
-    this.dispatchCases = traitDispatcheCases;
-    this.dispatchTargets =
-        dispatchCases.stream().map(DispatchCase::dispatchTarget).collect(toImmutableList());
-  }
-
-  public ImmutableSet<InputMirror> facets() {
-    return dispatchCases.stream()
-        .map(DispatchCase::inputPredicates)
-        .map(ImmutableMap::keySet)
-        .flatMap(Collection::stream)
-        .collect(toImmutableSet());
-  }
-
-  public record DispatchCase(
-      ImmutableMap<InputMirror, InputValueMatcher<?>> inputPredicates, VajramID dispatchTarget) {}
+  ImmutableList<Class<? extends Request<?>>> dispatchTargetReqs();
 }

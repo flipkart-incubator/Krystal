@@ -82,8 +82,8 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
     vajramDefinition
         .facetSpecs()
         .forEach(
-            (facetSpec) -> {
-              if (facetSpec.facetTypes().contains(INJECTION)) {
+            facetSpec -> {
+              if (INJECTION.equals(facetSpec.facetType())) {
                 injectableFacets.add(facetSpec);
               }
             });

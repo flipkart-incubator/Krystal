@@ -1,5 +1,8 @@
 package com.flipkart.krystal.facets;
 
+import static com.flipkart.krystal.facets.FacetType.INJECTION;
+import static com.flipkart.krystal.facets.FacetType.INPUT;
+
 import com.flipkart.krystal.tags.ElementTags;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -12,8 +15,8 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class FacetUtils {
   public static boolean isGiven(Facet facet) {
-    return facet.facetTypes().contains(FacetType.INPUT)
-        || facet.facetTypes().contains(FacetType.INJECTION);
+    FacetType facetType = facet.facetType();
+    return INPUT.equals(facetType) || INJECTION.equals(facetType);
   }
 
   @SafeVarargs
