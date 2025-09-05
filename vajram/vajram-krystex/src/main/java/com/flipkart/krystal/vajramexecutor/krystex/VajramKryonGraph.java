@@ -176,8 +176,8 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                           .depChainBatcherConfigs()
                           .getOrDefault(vajramID, ImmutableList.of())) {
                     boolean shouldDecorate =
-                        depChainBatcherConfig.shouldBatch().test(logicExecutionContext)
-                            && vajramDefinition.metadata().isBatched();
+                        vajramDefinition.metadata().isBatched()
+                            && depChainBatcherConfig.shouldBatch().test(logicExecutionContext);
                     if (shouldDecorate) {
                       return depChainBatcherConfig;
                     }
@@ -560,13 +560,17 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     return vajramDefinition.vajramId();
   }
 
-  public VajramID getVajramIdByVajramReqType(Class<? extends Request<?>> vajramDefClass) {
-    VajramDefinition vajramDefinition = definitionByReqType.get(vajramDefClass);
+  public VajramID getVajramIdByVajramReqType(Class<? extends Request<?>> vajramReqClass) {
+    VajramDefinition vajramDefinition = definitionByReqType.get(vajramReqClass);
     if (vajramDefinition == null) {
       throw new IllegalArgumentException(
-          "Could not find vajram definition for request type %s".formatted(vajramDefClass));
+          "Could not find vajram definition for request type %s".formatted(vajramReqClass));
     }
     return vajramDefinition.vajramId();
+  }
+
+  public Optional<Class<? extends Request<?>>> getVajramReqByVajramId(VajramID vajramID) {
+    return Optional.ofNullable(vajramDefinitions.get(vajramID)).map(VajramDefinition::reqRootType);
   }
 
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")

@@ -35,6 +35,7 @@ public abstract class TestUserService extends IOVajramDef<TestUserInfo> {
       newSingleThreadScheduledExecutor();
 
   public static final LongAdder CALL_COUNTER = new LongAdder();
+
   public static final Set<TestUserService_Req> REQUESTS = new LinkedHashSet<>();
 
   @Output.Batched

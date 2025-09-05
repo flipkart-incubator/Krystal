@@ -27,6 +27,7 @@ import com.flipkart.krystal.vajram.inputinjection.VajramInjectionProvider;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -74,16 +75,16 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
 
   private CompletableFuture<KryonCommandResponse> injectFacets(
       ForwardReceive forwardBatch, VajramDefinition vajramDefinition, VajramDef<?> vajramDef) {
-    ImmutableMap<InvocationId, ? extends FacetValuesContainer> requestIdToFacets =
+    Map<InvocationId, ? extends FacetValuesContainer> requestIdToFacets =
         forwardBatch.executableInvocations();
 
-    ImmutableMap.Builder<InvocationId, FacetValuesBuilder> newRequests = ImmutableMap.builder();
+    ImmutableMap.Builder<InvocationId, FacetValues> newRequests = ImmutableMap.builder();
     Set<FacetSpec<?, ?>> injectableFacets = new LinkedHashSet<>();
     vajramDefinition
         .facetSpecs()
         .forEach(
-            (facetSpec) -> {
-              if (facetSpec.facetTypes().contains(INJECTION)) {
+            facetSpec -> {
+              if (INJECTION.equals(facetSpec.facetType())) {
                 injectableFacets.add(facetSpec);
               }
             });

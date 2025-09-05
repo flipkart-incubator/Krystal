@@ -70,7 +70,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 @SuppressWarnings("unchecked")
 class KryonExecutorTest {
 
-  private static final Duration TIMEOUT = Duration.ofSeconds(10);
+  private static final Duration TIMEOUT = Duration.ofSeconds(1);
   private static SingleThreadExecutorsPool EXEC_POOL;
 
   @BeforeAll

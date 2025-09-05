@@ -214,7 +214,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     if (!extendsModel(modelRootType, util)) {
       util.error(
           "Interface with @ModelRoot annotation must extend Model: "
-              + modelRootType.getQualifiedName(),
+          + modelRootType.getQualifiedName(),
           modelRootType);
     }
   }
@@ -443,7 +443,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
       MethodSpec.Builder methodBuilder =
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC, ABSTRACT)
-              .addParameter(getParameterType(returnType), methodName)
+              .addParameter(getParameterType(returnType, true), methodName)
               .returns(ClassName.get("", "Builder"));
       if (hasParentModelRoot) {
         methodBuilder.addAnnotation(Override.class);
@@ -527,7 +527,8 @@ public final class JavaModelsGenerator implements CodeGenerator {
       String fieldName = method.getSimpleName().toString();
 
       constructorBuilder.addParameter(
-          ParameterSpec.builder(getParameterType(method.getReturnType()), fieldName).build());
+          ParameterSpec.builder(getParameterType(method.getReturnType(), false), fieldName)
+              .build());
 
       // For all field types, just assign the parameter directly
       constructorBuilder.addStatement("this.$N = $N", fieldName, fieldName);
@@ -707,7 +708,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
       dataAccessMethods.add(
           MethodSpec.methodBuilder(methodName)
               .addModifiers(PUBLIC)
-              .addParameter(getParameterType(method.getReturnType()), methodName)
+              .addParameter(getParameterType(method.getReturnType(), true), methodName)
               .returns(ClassName.get("", "Builder"))
               .addStatement("this.$N = $N", methodName, methodName)
               .addStatement("return this")
@@ -841,16 +842,17 @@ public final class JavaModelsGenerator implements CodeGenerator {
    * Determines the parameter type for a method return type, handling Optional types.
    *
    * @param specifiedType The return type of the method
+   * @param isBuilder
    * @return The appropriate parameter type
    */
-  private TypeName getParameterType(TypeMirror specifiedType) {
+  private TypeName getParameterType(TypeMirror specifiedType, boolean isBuilder) {
     TypeMirror inferredType = specifiedType;
     if (util.isOptional(specifiedType)) {
       // For Optional<T>, use T as the parameter type
       inferredType = util.getOptionalInnerType(specifiedType);
     }
     TypeName typeName = TypeName.get(inferredType);
-    if (typeName.isPrimitive()) {
+    if (isBuilder && typeName.isPrimitive()) {
       typeName = typeName.box();
     }
     // Add @Nullable annotation for Optional types or methods with @Nullable annotation

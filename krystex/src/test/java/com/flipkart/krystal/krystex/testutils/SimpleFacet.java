@@ -15,7 +15,6 @@ import com.flipkart.krystal.datatypes.JavaType;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.facets.InputMirror;
-import com.google.common.collect.ImmutableSet;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.EqualsAndHashCode.Include;
@@ -43,9 +42,8 @@ public @NonFinal sealed class SimpleFacet implements Facet, InputMirror permits 
 
   FacetType facetType;
 
-  @Override
-  public ImmutableSet<FacetType> facetTypes() {
-    return ImmutableSet.of(facetType);
+  public FacetType facetType() {
+    return facetType;
   }
 
   @Override

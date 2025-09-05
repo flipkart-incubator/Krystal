@@ -1,10 +1,8 @@
 package com.flipkart.krystal.vajramexecutor.krystex.traits;
 
-import static com.flipkart.krystal.traits.matchers.InputValueMatcher.isAnyValue;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
@@ -19,12 +17,11 @@ import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 import com.flipkart.krystal.krystex.request.InvocationId;
+import com.flipkart.krystal.traits.DispatchCase;
 import com.flipkart.krystal.traits.PredicateDynamicDispatchPolicy;
-import com.flipkart.krystal.traits.PredicateDynamicDispatchPolicy.DispatchCase;
 import com.flipkart.krystal.traits.StaticDispatchPolicy;
 import com.flipkart.krystal.traits.TraitDispatchPolicy;
 import com.flipkart.krystal.vajram.exec.VajramDefinition;
-import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -34,6 +31,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import lombok.Getter;
@@ -72,7 +70,7 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
           boundVajram = staticDispatchDefinition.get(dependency);
         } else {
           throw new AssertionError(
-              "This is not possible. A dependency decorator can only be invoked when there is a depednency present.");
+              "This is not possible. A dependency decorator can only be invoked when there is a dependency present.");
         }
         commandToDispatch = transformCommandForDispatch(kryonCommand, boundVajram);
         if (commandToDispatch == null) {
@@ -80,40 +78,27 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
         }
         return invocationToDecorate.invokeDependency(commandToDispatch);
       } else if (traitDispatchPolicy instanceof PredicateDynamicDispatchPolicy dynamicPolicy) {
-        Set<? extends InputMirrorSpec<?, ?>> dispatchEnabledFacets =
-            dynamicPolicy.facets().stream()
-                .filter(facet -> facet instanceof InputMirrorSpec<?, ?>)
-                .map(facet -> (InputMirrorSpec<?, ?>) facet)
-                .collect(toSet());
         ImmutableList<DispatchCase> dispatchCases = dynamicPolicy.dispatchCases();
         if (kryonCommand instanceof ForwardSend forwardSend) {
-          ImmutableMap<InvocationId, ? extends Request<?>> originalExecutableRequests =
-              forwardSend.executableRequests();
-          ImmutableMap<InvocationId, String> originalSkippedInvocations =
-              forwardSend.skippedInvocations();
-          Map<VajramID, Map<InvocationId, Request<?>>> dispatchRequests = new LinkedHashMap<>();
+          var originalExecutableRequests = forwardSend.executableRequests();
+          Map<InvocationId, String> originalSkippedInvocations = forwardSend.skippedInvocations();
+          Map<VajramID, Map<InvocationId, Request<@Nullable Object>>> dispatchRequests =
+              new LinkedHashMap<>();
           Map<VajramID, CompletableFuture<BatchResponse>> dispatchResponses = new LinkedHashMap<>();
           Set<InvocationId> orphanedRequests = new LinkedHashSet<>();
-          for (Entry<InvocationId, ? extends Request<?>> requestEntry :
+          for (Entry<InvocationId, ? extends Request<@Nullable Object>> requestEntry :
               originalExecutableRequests.entrySet()) {
             InvocationId invocationId = requestEntry.getKey();
-            Request<?> originalRequest = requestEntry.getValue();
+            Request<@Nullable Object> originalRequest = requestEntry.getValue();
             boolean dispatchTargetNotFound = true;
             for (DispatchCase dispatchCase : dispatchCases) {
-              boolean caseMatches = true;
-              for (InputMirrorSpec<?, ?> dispatchEnabledFacet : dispatchEnabledFacets) {
-                Object inputValue = dispatchEnabledFacet.getFromRequest(originalRequest);
-                if (!dispatchCase
-                    .inputPredicates()
-                    .getOrDefault(dispatchEnabledFacet, isAnyValue())
-                    .matches(inputValue)) {
-                  caseMatches = false;
-                  break;
-                }
-              }
-              if (caseMatches) {
+              Optional<? extends Class<? extends Request<?>>> dispatchTarget =
+                  dispatchCase.computeDispatchTarget(originalRequest);
+              if (dispatchTarget.isPresent()) {
+                VajramID dispatchTargetId =
+                    vajramKryonGraph.getVajramIdByVajramReqType(dispatchTarget.get());
                 dispatchRequests
-                    .computeIfAbsent(dispatchCase.dispatchTarget(), k -> new LinkedHashMap<>())
+                    .computeIfAbsent(dispatchTargetId, k -> new LinkedHashMap<>())
                     .put(invocationId, originalRequest);
                 dispatchTargetNotFound = false;
                 break;
@@ -123,7 +108,8 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
               orphanedRequests.add(invocationId);
             }
           }
-          ImmutableList<VajramID> dispatchTargets = dynamicPolicy.dispatchTargets();
+          ImmutableList<Class<? extends Request<?>>> dispatchTargets =
+              dynamicPolicy.dispatchTargetReqs();
           ImmutableMap<InvocationId, String> requestsToSkip =
               ImmutableMap.<InvocationId, String>builder()
                   .putAll(originalSkippedInvocations)
@@ -136,9 +122,10 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
                                       "The request did not match any of the configured dynamic dispatch targets of trait: "
                                           + traitId)))
                   .build();
-          for (VajramID dispatchTarget : dispatchTargets) {
-            Map<InvocationId, Request<?>> requestsForTarget =
-                dispatchRequests.getOrDefault(dispatchTarget, Map.of());
+          for (Class<? extends Request<?>> dispatchTarget : dispatchTargets) {
+            VajramID dispatchTargetId = vajramKryonGraph.getVajramIdByVajramReqType(dispatchTarget);
+            Map<InvocationId, Request<@Nullable Object>> requestsForTarget =
+                dispatchRequests.getOrDefault(dispatchTargetId, Map.of());
             ClientSideCommand<BatchResponse> commandToDispatch;
             if (requestsForTarget.isEmpty()) {
               Map<InvocationId, String> skipRequests = new LinkedHashMap<>();
@@ -157,15 +144,15 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
 
               commandToDispatch =
                   new ForwardSend(
-                      dispatchTarget,
+                      dispatchTargetId,
                       ImmutableMap.of(),
                       forwardSend.dependentChain(),
-                      ImmutableMap.copyOf(skipRequests));
+                      skipRequests);
             } else {
               commandToDispatch =
                   new ForwardSend(
-                      dispatchTarget,
-                      ImmutableMap.copyOf(requestsForTarget),
+                      dispatchTargetId,
+                      requestsForTarget,
                       forwardSend.dependentChain(),
                       requestsToSkip);
             }
@@ -173,7 +160,7 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
             CompletableFuture<BatchResponse> depResponse =
                 (CompletableFuture<BatchResponse>)
                     invocationToDecorate.invokeDependency((ClientSideCommand<R>) commandToDispatch);
-            dispatchResponses.put(dispatchTarget, depResponse);
+            dispatchResponses.put(dispatchTargetId, depResponse);
           }
           CompletableFuture<BatchResponse> mergedResponse = new CompletableFuture<>();
           allOf(dispatchResponses.values().toArray(CompletableFuture[]::new))
@@ -232,8 +219,8 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
   }
 
   @SuppressWarnings("unchecked")
-  private static <R extends KryonCommandResponse> @Nullable
-      ClientSideCommand<R> transformCommandForDispatch(
+  private static <R extends KryonCommandResponse>
+      @Nullable ClientSideCommand<R> transformCommandForDispatch(
           ClientSideCommand<R> kryonCommand, VajramID boundVajram) {
     ClientSideCommand<R> commandToDispatch = null;
     if (kryonCommand instanceof ForwardSend forwardSend) {

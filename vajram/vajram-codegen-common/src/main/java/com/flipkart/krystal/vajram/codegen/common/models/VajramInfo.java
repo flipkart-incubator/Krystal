@@ -9,7 +9,6 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Stream;
 import javax.lang.model.element.TypeElement;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -23,7 +22,7 @@ public record VajramInfo(
   public VajramInfo {
     if (lite.isTrait()) {
       for (DefaultFacetModel defaultFacet : givenFacets) {
-        if (!defaultFacet.facetTypes().equals(Set.of(INPUT))) {
+        if (!defaultFacet.facetType().equals(INPUT)) {
           lite.util().error("Only INPUT facets are supported in Traits", defaultFacet.facetField());
         }
       }

@@ -1,26 +1,30 @@
 package com.flipkart.krystal.vajramexecutor.krystex.traits;
 
+import static com.flipkart.krystal.traits.matchers.InputValueMatcher.isAnyValue;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static lombok.AccessLevel.PRIVATE;
 
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.InputMirror;
+import com.flipkart.krystal.traits.DispatchCase;
 import com.flipkart.krystal.traits.PredicateDynamicDispatchPolicy;
-import com.flipkart.krystal.traits.PredicateDynamicDispatchPolicy.DispatchCase;
 import com.flipkart.krystal.traits.UseForDispatch;
 import com.flipkart.krystal.traits.matchers.InputValueMatcher;
 import com.flipkart.krystal.vajram.TraitRequestRoot;
 import com.flipkart.krystal.vajram.VajramRequestRoot;
 import com.flipkart.krystal.vajram.facets.specs.InputMirrorSpec;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import java.util.Arrays;
+import com.google.common.collect.ImmutableSet;
 import java.util.LinkedHashMap;
+import java.util.Optional;
+import java.util.function.Function;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 
 public class PredicateDispatchUtil {
+
   public static <R extends Request<?>> InputDispatcherBuilder<R> dispatchTrait(
       Class<R> traitReq, VajramKryonGraph graph) {
     checkArgument(
@@ -29,8 +33,8 @@ public class PredicateDispatchUtil {
     return new InputDispatcherBuilder<>(traitReq, graph);
   }
 
-  public static <T, R extends Request<?>> DispatchCaseBuilder<R> when(
-      InputMirrorSpec<T, R> input, InputValueMatcher<T> inputValueMatcher) {
+  public static <T, R> DispatchCaseBuilder<R> when(
+      InputMirrorSpec<T, ? extends Request<R>> input, InputValueMatcher<T> inputValueMatcher) {
     checkArgument(
         input.tags().getAnnotationByType(UseForDispatch.class).isPresent(),
         "Only the trait Inputs annotated as @UseForDispatch can be used for dynamic dispatching");
@@ -45,25 +49,29 @@ public class PredicateDispatchUtil {
 
     @SafeVarargs
     public final PredicateDynamicDispatchPolicy conditionally(
-        DispatchCaseFinal<R>... dispatchCases) {
-      return new PredicateDynamicDispatchPolicy(
-          graph.getVajramIdByVajramReqType(traitReq),
-          Arrays.stream(dispatchCases)
-              .map(
-                  d ->
-                      new DispatchCase(
-                          d.inputPredicates(),
-                          graph.getVajramIdByVajramReqType(d.dispatchTarget())))
-              .collect(toImmutableList()));
+        PredicatesDispatchCase<? extends Request<?>>... dispatchCases) {
+      return new PredicateDispatchPolicyImpl(traitReq, ImmutableList.copyOf(dispatchCases), graph);
+    }
+
+    public final PredicateDispatchPolicyImpl computingTargetWith(
+        Function<? super R, Optional<? extends Class<? extends R>>> dispatchTargetSelector,
+        ImmutableSet<? extends Class<? extends R>> dispatchTargets) {
+      return new PredicateDispatchPolicyImpl(
+          traitReq,
+          ImmutableList.of(
+              new ComputedDispatchCase<>(
+                  dispatchTargetSelector, ImmutableSet.copyOf(dispatchTargets))),
+          graph);
     }
   }
 
   @AllArgsConstructor(access = PRIVATE)
-  public static class DispatchCaseBuilder<R extends Request<?>> {
+  public static class DispatchCaseBuilder<T> {
+
     private ImmutableMap<InputMirror, InputValueMatcher<?>> facetPredicates;
 
-    public <P> DispatchCaseBuilder<R> and(
-        InputMirrorSpec<P, R> input, InputValueMatcher<P> dataType) {
+    public <P> DispatchCaseBuilder<T> and(
+        InputMirrorSpec<P, ? extends Request<T>> input, InputValueMatcher<P> dataType) {
       checkArgument(
           !facetPredicates.containsKey(input),
           "Facet " + input + " already has a type check in this case");
@@ -73,19 +81,67 @@ public class PredicateDispatchUtil {
       return new DispatchCaseBuilder<>(ImmutableMap.copyOf(newMap));
     }
 
-    public DispatchCaseFinal<R> to(Class<? extends R> dispatchTarget) {
+    public PredicatesDispatchCase<? extends Request<T>> to(
+        Class<? extends Request<T>> dispatchTarget) {
       checkArgument(
           dispatchTarget.getAnnotation(VajramRequestRoot.class) != null,
           "Expecting a Vajram request root class, i.e. one with the @VajramRequestRoot annotation");
-      return new DispatchCaseFinal<>(facetPredicates, dispatchTarget);
+      return new PredicatesDispatchCase<>(facetPredicates, dispatchTarget);
     }
   }
 
   @Value
   @AllArgsConstructor(access = PRIVATE)
-  public static final class DispatchCaseFinal<T extends Request<?>> {
+  public static class PredicatesDispatchCase<T extends Request<?>> implements DispatchCase {
+
     ImmutableMap<InputMirror, InputValueMatcher<?>> inputPredicates;
     Class<? extends T> dispatchTarget;
+
+    public ImmutableSet<InputMirror> dispatchEnabledInputs() {
+      return inputPredicates.keySet();
+    }
+
+    @Override
+    public Optional<Class<? extends T>> computeDispatchTarget(Request<?> request) {
+      boolean caseMatches = true;
+      for (InputMirror dispatchEnabledInput : dispatchEnabledInputs()) {
+        Object inputValue = dispatchEnabledInput.getFromRequest(request);
+        if (!inputPredicates()
+            .getOrDefault(dispatchEnabledInput, isAnyValue())
+            .matches(inputValue)) {
+          caseMatches = false;
+          break;
+        }
+      }
+      if (caseMatches) {
+        return Optional.of(dispatchTarget);
+      } else {
+        return Optional.empty();
+      }
+    }
+
+    @Override
+    public ImmutableSet<Class<? extends Request<?>>> dispatchTargets() {
+      return ImmutableSet.of(dispatchTarget);
+    }
+  }
+
+  private record ComputedDispatchCase<R extends Request<?>>(
+      Function<? super R, Optional<? extends Class<? extends R>>> dispatchTargetSelector,
+      ImmutableSet<Class<? extends Request<?>>> dispatchTargets)
+      implements DispatchCase {
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public Optional<? extends Class<? extends Request<?>>> computeDispatchTarget(
+        Request<?> request) {
+      var dispatchTarget = dispatchTargetSelector.apply((R) request);
+      if (dispatchTarget.isPresent() && dispatchTargets.contains(dispatchTarget.get())) {
+        return dispatchTarget;
+      } else {
+        return Optional.empty();
+      }
+    }
   }
 
   private PredicateDispatchUtil() {}

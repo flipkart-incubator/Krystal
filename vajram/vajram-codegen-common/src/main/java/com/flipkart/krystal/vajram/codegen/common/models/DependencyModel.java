@@ -1,9 +1,9 @@
 package com.flipkart.krystal.vajram.codegen.common.models;
 
+import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
+
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
-import com.google.common.collect.ImmutableSet;
-import java.util.EnumSet;
 import javax.lang.model.element.VariableElement;
 import lombok.Builder;
 import lombok.NonNull;
@@ -22,12 +22,9 @@ public record DependencyModel(
     @NonNull VariableElement facetField)
     implements FacetGenModel {
 
-  private static final ImmutableSet<FacetType> DEP_FACET_TYPE =
-      ImmutableSet.copyOf(EnumSet.of(FacetType.DEPENDENCY));
-
   @Override
-  public ImmutableSet<FacetType> facetTypes() {
-    return DEP_FACET_TYPE;
+  public FacetType facetType() {
+    return DEPENDENCY;
   }
 
   public String depReqPackageName() {

@@ -26,6 +26,7 @@ public record CodeGenParams(
     boolean isBuilder,
     boolean isBuilderRoot,
     boolean wrapsRequest,
+    boolean wrapsFacets,
     boolean isSubsetBatch,
     boolean isSubsetCommon,
     boolean withImpl) {

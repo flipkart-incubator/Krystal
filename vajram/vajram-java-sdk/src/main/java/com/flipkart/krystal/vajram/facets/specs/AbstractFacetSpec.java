@@ -8,7 +8,6 @@ import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.AbstractFacet;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.tags.ElementTags;
-import com.google.common.collect.ImmutableSet;
 import java.util.concurrent.Callable;
 import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -35,12 +34,12 @@ public abstract sealed class AbstractFacetSpec<T, CV extends Request> extends Ab
       String name,
       VajramID ofVajramID,
       DataType<T> type,
-      ImmutableSet<FacetType> facetTypes,
+      FacetType facetType,
       Class<CV> ofVajram,
       String documentation,
       boolean isBatched,
       Callable<ElementTags> tagsParser) {
-    super(id, name, ofVajramID, facetTypes, documentation);
+    super(id, name, ofVajramID, facetType, documentation);
     this.type = type;
     this.ofVajram = ofVajram;
     this.tagsParser = tagsParser;

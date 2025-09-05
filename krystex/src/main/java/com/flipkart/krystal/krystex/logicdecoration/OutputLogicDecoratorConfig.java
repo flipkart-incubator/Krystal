@@ -1,6 +1,7 @@
 package com.flipkart.krystal.krystex.logicdecoration;
 
 import com.flipkart.krystal.config.ConfigProvider;
+import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -17,12 +18,24 @@ import java.util.function.Predicate;
  *     {@link ConfigProvider} interface.
  * @param factory A factory which creates an instance of the logic decorator with the given
  *     instanceId.
+ * @param enableFlushing true if the decorator needs to know when a dependant chain is {@link
+ *     FlushCommand flushed}
  */
 public record OutputLogicDecoratorConfig(
     String decoratorType,
     Predicate<LogicExecutionContext> shouldDecorate,
     Function<LogicExecutionContext, String> instanceIdGenerator,
-    Function<OutputLogicDecoratorContext, OutputLogicDecorator> factory) {
+    Function<OutputLogicDecoratorContext, OutputLogicDecorator> factory,
+    boolean enableFlushing) {
+
+  public OutputLogicDecoratorConfig(
+      String decoratorType,
+      Predicate<LogicExecutionContext> shouldDecorate,
+      Function<LogicExecutionContext, String> instanceIdGenerator,
+      Function<OutputLogicDecoratorContext, OutputLogicDecorator> factory) {
+    this(decoratorType, shouldDecorate, instanceIdGenerator, factory, false);
+  }
+
   public record OutputLogicDecoratorContext(
       String instanceId, LogicExecutionContext logicExecutionContext) {}
 }

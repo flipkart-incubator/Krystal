@@ -11,7 +11,6 @@ import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.datatypes.DataType;
 import com.flipkart.krystal.facets.FacetType;
 import com.flipkart.krystal.tags.ElementTags;
-import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
@@ -29,14 +28,14 @@ public abstract sealed class DefaultFacetSpec<T, CV extends Request>
       String name,
       VajramID ofVajramID,
       DataType<T> type,
-      ImmutableSet<FacetType> facetTypes,
+      FacetType facetType,
       Class<CV> ofVajram,
       String documentation,
       boolean isBatched,
       Callable<ElementTags> tagsParser,
       Function<FacetValues, @Nullable T> getFromFacets,
       BiConsumer<FacetValues, @Nullable T> setToFacets) {
-    super(id, name, ofVajramID, type, facetTypes, ofVajram, documentation, isBatched, tagsParser);
+    super(id, name, ofVajramID, type, facetType, ofVajram, documentation, isBatched, tagsParser);
     this.getFromFacets = getFromFacets;
     this.setToFacets = setToFacets;
   }

@@ -7,7 +7,6 @@ import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
-import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -273,7 +272,7 @@ class Resilience4JBulkheadTest {
     executor2.close();
     executor3.close();
     assertThat(callAfterBulkheadExhaustion)
-        .failsWithin(1, HOURS)
+        .failsWithin(1, SECONDS)
         .withThrowableOfType(Exception.class)
         .withMessageContaining(
             "Bulkhead 'threadpoolBulkhead_restrictsConcurrency.bulkhead' is full and does not permit further calls");

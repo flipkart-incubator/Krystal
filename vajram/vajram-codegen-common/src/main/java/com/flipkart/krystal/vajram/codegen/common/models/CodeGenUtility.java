@@ -2,6 +2,7 @@ package com.flipkart.krystal.vajram.codegen.common.models;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
+import static com.flipkart.krystal.facets.FacetType.INPUT;
 import static com.flipkart.krystal.vajram.utils.Constants.IMMUT_FACETS_CLASS_SUFFIX;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
@@ -66,7 +67,6 @@ import java.nio.file.Paths;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -380,6 +380,10 @@ public class CodeGenUtility {
         internalFacetFields.stream()
             .filter(variableElement -> variableElement.getAnnotation(Dependency.class) != null)
             .toList();
+    List<VariableElement> injectionFields =
+        internalFacetFields.stream()
+            .filter(variableElement -> variableElement.getAnnotation(Inject.class) != null)
+            .toList();
     AtomicInteger nextFacetId = new AtomicInteger(1);
     VajramInfo vajramInfo =
         new VajramInfo(
@@ -395,7 +399,7 @@ public class CodeGenUtility {
                                     takenFacetIds,
                                     nextFacetId,
                                     vajramInfoLite)),
-                    internalFacetFields.stream()
+                    injectionFields.stream()
                         .map(
                             internalField ->
                                 toGivenFacetModel(
@@ -405,7 +409,7 @@ public class CodeGenUtility {
                                     takenFacetIds,
                                     nextFacetId,
                                     vajramInfoLite))
-                        .filter(facet -> facet.facetTypes().contains(INJECTION)))
+                        .filter(facet -> facet.facetType().equals(INJECTION)))
                 .collect(toImmutableList()),
             dependencyFields.stream()
                 .map(
@@ -459,18 +463,23 @@ public class CodeGenUtility {
             .asType()
             .accept(new DeclaredTypeVisitor(this, facetField, DISALLOWED_FACET_TYPES), null);
     facetBuilder.dataType(dataType);
-    EnumSet<FacetType> facetTypes = EnumSet.noneOf(FacetType.class);
+    FacetType facetType = null;
     if (isInput) {
-      facetTypes.add(FacetType.INPUT);
+      facetType = INPUT;
     }
     if (facetField.getAnnotation(Inject.class) != null) {
       if (isInput) {
         error("Inject facet '%s' cannot be an input facet".formatted(facetName), facetField);
       }
-      facetTypes.add(INJECTION);
+      facetType = INJECTION;
+    }
+    if (facetType == null) {
+      throw errorAndThrow(
+          "Facet '%s' is not an input facet or an injection facet".formatted(facetName),
+          facetField);
     }
     DefaultFacetModel facetModel =
-        facetBuilder.facetTypes(facetTypes).vajramInfo(vajramInfoLite).build();
+        facetBuilder.facetType(requireNonNull(facetType)).vajramInfo(vajramInfoLite).build();
     givenIdsByName.putIfAbsent(facetName, facetModel.id());
     return facetModel;
   }
@@ -860,18 +869,43 @@ public class CodeGenUtility {
    * builder represents an anonymous class.
    *
    * @param className fully qualified class name
+   * @param generatedForCanonicalName canonical name of the originating class for which the class is
+   *     being generated
    * @return a class builder with the given class name, with the {@link Generated} annotation
    *     applied on the class
    */
-  public TypeSpec.Builder classBuilder(String className) {
+  public TypeSpec.Builder classBuilder(String className, String generatedForCanonicalName) {
     TypeSpec.Builder classBuilder;
     if (className.isBlank()) {
       classBuilder = TypeSpec.anonymousClassBuilder("");
     } else {
       classBuilder = TypeSpec.classBuilder(className);
     }
+    classBuilder.addJavadoc("@see $L", generatedForCanonicalName);
     addDefaultAnnotations(classBuilder);
     return classBuilder;
+  }
+
+  /**
+   * Creates a class builder with the given class name. If the interfaceName is a blank string, then
+   * the builder represents an anonymous class.
+   *
+   * @param interfaceName fully qualified class name
+   * @param generatedForCanonicalName canonical name of the originating class for which the
+   *     interface is being generated
+   * @return a class builder with the given class name, with the {@link Generated} annotation
+   *     applied on the class
+   */
+  public TypeSpec.Builder interfaceBuilder(String interfaceName, String generatedForCanonicalName) {
+    TypeSpec.Builder interfaceBuilder;
+    if (interfaceName.isBlank()) {
+      throw new RuntimeException("interface name cannot be blank");
+    } else {
+      interfaceBuilder = TypeSpec.interfaceBuilder(interfaceName);
+    }
+    addDefaultAnnotations(interfaceBuilder);
+    interfaceBuilder.addJavadoc("@see $L", generatedForCanonicalName);
+    return interfaceBuilder;
   }
 
   private void addDefaultAnnotations(TypeSpec.Builder classBuilder) {
@@ -898,25 +932,6 @@ public class CodeGenUtility {
                 .addMember("value", "$S", generator.getName())
                 .addMember("date", "$S", getTimestamp())
                 .build());
-  }
-
-  /**
-   * Creates a class builder with the given class name. If the interfaceName is a blank string, then
-   * the builder represents an anonymous class.
-   *
-   * @param interfaceName fully qualified class name
-   * @return a class builder with the given class name, with the {@link Generated} annotation
-   *     applied on the class
-   */
-  public TypeSpec.Builder interfaceBuilder(String interfaceName) {
-    TypeSpec.Builder interfaceBuilder;
-    if (interfaceName.isBlank()) {
-      throw new RuntimeException("interface name cannot be blank");
-    } else {
-      interfaceBuilder = TypeSpec.interfaceBuilder(interfaceName);
-    }
-    addDefaultAnnotations(interfaceBuilder);
-    return interfaceBuilder;
   }
 
   public TypeAndName box(TypeAndName javaType) {

@@ -57,6 +57,18 @@ public record VajramKryonDefinition(
         tags);
   }
 
+  public VajramKryonDefinition {
+    view.resolverDefinitionsByDependencies()
+        .forEach(
+            (dep, resolvers) -> {
+              if (resolvers.stream().filter(r -> r.definition().canFanout()).count() > 1) {
+                throw new IllegalStateException(
+                    "Multiple fanout resolvers found for dependency %s of vajram %s. This is not supported."
+                        .formatted(dep, vajramID.id()));
+              }
+            });
+  }
+
   public <T> OutputLogicDefinition<T> getOutputLogicDefinition() {
     return kryonDefinitionRegistry().logicDefinitionRegistry().getOutputLogic(outputLogicId());
   }
@@ -81,5 +93,21 @@ public record VajramKryonDefinition(
 
   public ImmutableMap<Dependency, ImmutableSet<Resolver>> resolverDefinitionsByDependencies() {
     return view.resolverDefinitionsByDependencies();
+  }
+
+  public Set<Facet> givenFacets() {
+    return view.givenFacets();
+  }
+
+  public ImmutableMap<Facet, ImmutableSet<Dependency>> dependenciesByBoundFacet() {
+    return view.dependenciesByBoundFacet();
+  }
+
+  public ImmutableSet<Dependency> dependenciesWithNoFacetResolvers() {
+    return view.dependenciesWithNoFacetResolvers();
+  }
+
+  public ImmutableMap<Dependency, ImmutableSet<Facet>> dependencyToBoundFacetsMapping() {
+    return view.dependencyToBoundFacetsMapping();
   }
 }

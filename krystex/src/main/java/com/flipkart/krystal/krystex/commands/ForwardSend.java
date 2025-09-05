@@ -1,13 +1,16 @@
 package com.flipkart.krystal.krystex.commands;
 
+import static java.util.Collections.unmodifiableMap;
+
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.DependentChain;
 import com.flipkart.krystal.krystex.request.InvocationId;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import java.util.Map;
 import java.util.Set;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Command created at the client vajram end to send the requests to invoke the server vajram.
@@ -19,10 +22,21 @@ import java.util.Set;
  */
 public record ForwardSend(
     VajramID vajramID,
-    ImmutableMap<InvocationId, Request<?>> executableRequests,
+    Map<InvocationId, Request<@Nullable Object>> executableRequests,
     DependentChain dependentChain,
-    ImmutableMap<InvocationId, String> skippedInvocations)
+    Map<InvocationId, String> skippedInvocations)
     implements MultiRequestCommand<BatchResponse>, ClientSideCommand<BatchResponse> {
+
+  /**
+   * @param vajramID
+   * @param executableRequests Must not be mutated after passing to this constructor
+   * @param dependentChain
+   * @param skippedInvocations Must not be mutated after passing to this constructor
+   */
+  public ForwardSend {
+    executableRequests = unmodifiableMap(executableRequests);
+    skippedInvocations = unmodifiableMap(skippedInvocations);
+  }
 
   @Override
   public Set<InvocationId> invocationIds() {
