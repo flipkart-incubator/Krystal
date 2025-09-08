@@ -1,0 +1,7 @@
+import org.checkerframework.checker.nullness.qual.Nullable;
+
+package io.grpc;
+
+class Context {
+  public <V> Context withValue(Key<V> k1, @Nullable V v1);
+}

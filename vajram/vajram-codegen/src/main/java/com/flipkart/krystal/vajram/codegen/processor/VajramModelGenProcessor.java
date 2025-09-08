@@ -1,7 +1,7 @@
 package com.flipkart.krystal.vajram.codegen.processor;
 
-import static com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase.MODELS;
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
+import static com.flipkart.krystal.codegen.common.models.CodegenPhase.MODELS;
+import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
 
 import com.google.auto.service.AutoService;
 import javax.annotation.processing.Processor;
@@ -12,7 +12,8 @@ import javax.lang.model.SourceVersion;
 
 @SupportedAnnotationTypes({
   "com.flipkart.krystal.vajram.Vajram",
-  "com.flipkart.krystal.vajram.Trait"
+  "com.flipkart.krystal.vajram.Trait",
+  "com.flipkart.krystal.annos.Generated"
 })
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
 @AutoService(Processor.class)

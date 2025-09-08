@@ -18,7 +18,7 @@ public @interface ModelRoot {
 
   enum ModelType {
     /** This model is a neither a request model nor a response model */
-    NONE,
+    DEFAULT,
     /** This model is designed to be used as part of requests */
     REQUEST,
     /** This model is designed to be used as part of responses */

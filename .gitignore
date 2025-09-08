@@ -56,3 +56,5 @@ out/
 .idea/sonarlint/
 
 lib/
+
+.quarkus/

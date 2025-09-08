@@ -1,0 +1,12 @@
+dependencies {
+    implementation project(':lattice:extensions:rest:lattice-rest-api')
+    implementation project(':lattice:lattice-core')
+    implementation project(':vajram:vajram-java-sdk')
+
+    implementation 'org.jboss.resteasy:resteasy-core'
+    api 'jakarta.ws.rs:jakarta.ws.rs-api'
+}
+
+extraJavaModuleInfo {
+    failOnMissingModuleInfo = false
+}

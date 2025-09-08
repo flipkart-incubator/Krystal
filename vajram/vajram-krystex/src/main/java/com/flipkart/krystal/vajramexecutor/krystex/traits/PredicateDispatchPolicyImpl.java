@@ -9,8 +9,6 @@ import com.flipkart.krystal.traits.PredicateDynamicDispatchPolicy;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableList;
 import java.util.Collection;
-import java.util.List;
-import java.util.stream.Stream;
 import lombok.Getter;
 
 public final class PredicateDispatchPolicyImpl implements PredicateDynamicDispatchPolicy {

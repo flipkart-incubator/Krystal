@@ -3,9 +3,6 @@ buildscript {
         mavenLocal()
         mavenCentral()
     }
-    dependencies {
-        classpath 'com.flipkart.krystal:vajram-java-sdk:' + project.krystal_version
-    }
 }
 plugins {
     id 'java-gradle-plugin'
@@ -29,13 +26,10 @@ gradlePlugin {
 
 dependencies {
     api project(':vajram:vajram-java-sdk')
+    implementation project(':krystal-codegen-common')
     implementation project(':vajram:vajram-codegen-common')
     implementation 'com.squareup:javapoet'
-    implementation 'commons-cli:commons-cli'
     implementation 'org.projectlombok:lombok'
-
-    compileOnly 'com.google.auto.service:auto-service'
-    annotationProcessor 'com.google.auto.service:auto-service'
 }
 
 checkerFramework {

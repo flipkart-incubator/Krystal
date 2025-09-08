@@ -1,0 +1,9 @@
+dependencies {
+    implementation project(':lattice:lattice-codegen')
+    implementation project(':lattice:extensions:guice:lattice-guice-servlet')
+
+    implementation 'com.google.inject:guice'
+    implementation 'com.google.inject.extensions:guice-servlet'
+
+    implementation 'jakarta.enterprise:jakarta.enterprise.cdi-api'
+}

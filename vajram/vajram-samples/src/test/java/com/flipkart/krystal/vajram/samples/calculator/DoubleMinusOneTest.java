@@ -45,10 +45,10 @@ class DoubleMinusOneTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .requestId("doubleMinusOne")
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
-                        .singleThreadExecutor(executorLease.get())
+                        .executorId("doubleMinusOne")
+                        .executorService(executorLease.get())
                         ._riskyOpenAllKryonsForExternalInvocation(true))
                 .build())) {
       future =
@@ -64,10 +64,10 @@ class DoubleMinusOneTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .requestId("doubleMinusOne")
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
-                        .singleThreadExecutor(executorLease.get())
+                        .executorId("doubleMinusOne")
+                        .executorService(executorLease.get())
                         ._riskyOpenAllKryonsForExternalInvocation(true))
                 .build())) {
       future =
@@ -83,10 +83,10 @@ class DoubleMinusOneTest {
     try (KrystexVajramExecutor krystexVajramExecutor =
         graph.createExecutor(
             KrystexVajramExecutorConfig.builder()
-                .requestId("doubleMinusOne")
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
-                        .singleThreadExecutor(executorLease.get())
+                        .executorId("doubleMinusOne")
+                        .executorService(executorLease.get())
                         ._riskyOpenAllKryonsForExternalInvocation(true))
                 .build())) {
       future =

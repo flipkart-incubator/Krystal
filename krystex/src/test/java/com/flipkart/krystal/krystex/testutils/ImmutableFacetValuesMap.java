@@ -18,28 +18,28 @@ public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableF
   @Getter private final ImmutableSet<? extends Facet> _facets;
   @Getter private final VajramID _vajramID;
 
-  private final SimpleImmutRequest<Object> request;
+  @Getter private final SimpleImmutRequest<Object> _request;
   private final ImmutableMap<Integer, FacetValue> otherFacetValues;
 
   public ImmutableFacetValuesMap(
-      SimpleRequestBuilder<Object> request, Set<? extends Facet> _facets, VajramID vajramID) {
-    this(request, _facets, ImmutableMap.of(), vajramID);
+      SimpleRequestBuilder<Object> _request, Set<? extends Facet> _facets, VajramID vajramID) {
+    this(_request, _facets, ImmutableMap.of(), vajramID);
   }
 
   public ImmutableFacetValuesMap(
-      SimpleRequestBuilder<Object> request,
+      SimpleRequestBuilder<Object> _request,
       Set<? extends Facet> _facets,
       ImmutableMap<Integer, FacetValue> otherFacetValues,
       VajramID vajramID) {
-    this.request = request._build();
+    this._request = _request._build();
     this._facets = ImmutableSet.copyOf(_facets);
     this.otherFacetValues = otherFacetValues;
     this._vajramID = vajramID;
   }
 
   public FacetValue _get(int facetId) {
-    if (request._hasValue(facetId)) {
-      Errable<Object> v = request._get(facetId);
+    if (_request._hasValue(facetId)) {
+      Errable<Object> v = _request._get(facetId);
       if (v != null) {
         return v;
       } else {
@@ -51,8 +51,8 @@ public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableF
 
   @Override
   public Errable<?> _getErrable(int facetId) {
-    if (request._hasValue(facetId)) {
-      return request._get(facetId);
+    if (_request._hasValue(facetId)) {
+      return _request._get(facetId);
     } else {
       FacetValue datum = otherFacetValues.getOrDefault(facetId, Errable.nil());
       if (datum instanceof Errable<?> errable) {
@@ -77,18 +77,18 @@ public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableF
   @Override
   public ImmutableMap<Integer, FacetValue> _asMap() {
     return ImmutableMap.<Integer, FacetValue>builder()
-        .putAll(request._asMap())
+        .putAll(_request._asMap())
         .putAll(otherFacetValues)
         .build();
   }
 
   public boolean _hasValue(int facetId) {
-    return request._hasValue(facetId) || otherFacetValues.containsKey(facetId);
+    return _request._hasValue(facetId) || otherFacetValues.containsKey(facetId);
   }
 
   @Override
   public FacetValuesMapBuilder _asBuilder() {
-    return new FacetValuesMapBuilder(request._asBuilder(), _facets, otherFacetValues, _vajramID);
+    return new FacetValuesMapBuilder(_request._asBuilder(), _facets, otherFacetValues, _vajramID);
   }
 
   @Override

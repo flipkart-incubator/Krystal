@@ -20,6 +20,8 @@ public sealed interface Errable<T> extends FacetValue<T>, SingleFacetValue<T>
    */
   CompletableFuture<@Nullable T> toFuture();
 
+  @Nullable T value();
+
   /**
    * Returns an {@link Optional} which is has the value inside this Errable. The returned Optional
    * is present only if and only if this Errable is of the type {@link NonNil}. In all other cases,

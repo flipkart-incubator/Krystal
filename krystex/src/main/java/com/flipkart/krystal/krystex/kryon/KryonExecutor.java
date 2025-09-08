@@ -16,7 +16,7 @@ import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.groupingBy;
 import static lombok.AccessLevel.PACKAGE;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.TraitDependency;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.core.VajramID;
@@ -60,6 +60,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
@@ -89,7 +90,7 @@ public final class KryonExecutor implements KrystalExecutor {
   @Getter(PACKAGE)
   private final SingleThreadExecutor commandQueue;
 
-  private final String instanceId;
+  private final String executorId;
 
   /**
    * We need to have a list of request scope global decorators corresponding to each type, in case
@@ -136,13 +137,11 @@ public final class KryonExecutor implements KrystalExecutor {
   private boolean shutdownRequested;
 
   public KryonExecutor(
-      KryonDefinitionRegistry kryonDefinitionRegistry,
-      KryonExecutorConfig executorConfig,
-      String instanceId) {
+      KryonDefinitionRegistry kryonDefinitionRegistry, KryonExecutorConfig executorConfig) {
     this.kryonDefinitionRegistry = kryonDefinitionRegistry;
     this.executorConfig = executorConfig;
-    this.commandQueue = executorConfig.singleThreadExecutor();
-    this.instanceId = instanceId;
+    this.commandQueue = executorConfig.executorService();
+    this.executorId = executorConfig.executorId();
     this.outputLogicDecoratorConfigs = executorConfig.outputLogicDecoratorConfigs();
     this.dependencyDecoratorConfigs = makeDependencyDecorConfigs(executorConfig);
     this.kryonDecoratorConfigs = executorConfig.kryonDecoratorConfigs();
@@ -176,10 +175,11 @@ public final class KryonExecutor implements KrystalExecutor {
     return builder.build();
   }
 
-  private Map<String, OutputLogicDecorator> getOutputLogicDecorators(
+  private NavigableSet<OutputLogicDecorator> getOutputLogicDecorators(
       LogicExecutionContext logicExecutionContext) {
     VajramID vajramID = logicExecutionContext.vajramID();
-    Map<String, OutputLogicDecorator> decorators = new LinkedHashMap<>();
+    TreeSet<OutputLogicDecorator> decorators =
+        new TreeSet<>(executorConfig.decorationOrdering().encounterOrder().reversed());
     outputLogicDecoratorConfigs.forEach(
         (decoratorType, decoratorConfig) -> {
           if (decoratorConfig.shouldDecorate().test(logicExecutionContext)) {
@@ -204,7 +204,7 @@ public final class KryonExecutor implements KrystalExecutor {
                                           vajramID, ImmutableSet.of()))));
                           return logicDecorator;
                         });
-            decorators.put(decoratorType, outputLogicDecorator);
+            decorators.add(outputLogicDecorator);
           }
         });
     return decorators;
@@ -238,14 +238,14 @@ public final class KryonExecutor implements KrystalExecutor {
     }
     checkArgument(executionConfig != null, "executionConfig can not be null");
     VajramID vajramID = request._vajramID();
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "TestOnlyProblems"})
     boolean openAllKryonsForExternalInvocation =
         executorConfig._riskyOpenAllKryonsForExternalInvocation();
     if (!openAllKryonsForExternalInvocation) {
       if (kryonDefinitionRegistry
           .getOrThrow(vajramID)
           .tags()
-          .getAnnotationByType(ExternallyInvocable.class)
+          .getAnnotationByType(InvocableOutsideGraph.class)
           .isEmpty()) {
         throw new RejectedExecutionException(
             "External invocation is not allowed for vajramId: " + vajramID);
@@ -255,7 +255,7 @@ public final class KryonExecutor implements KrystalExecutor {
     String executionId = executionConfig.executionId();
     checkArgument(executionId != null, "executionConfig.executionId can not be null");
     InvocationId invocationId =
-        preferredReqGenerator.newRequest("%s:%s".formatted(instanceId, executionId));
+        preferredReqGenerator.newRequest("%s:%s".formatted(executorId, executionId));
 
     //noinspection RedundantCast: This is to avoid nullChecker failing compilation.
     return enqueueCommand(
@@ -271,7 +271,7 @@ public final class KryonExecutor implements KrystalExecutor {
                         stackTracelessWrap(
                             new IllegalArgumentException(
                                 "Received duplicate requests for same instanceId '%s' and execution Id '%s'"
-                                    .formatted(instanceId, executionId))));
+                                    .formatted(executorId, executionId))));
                   } else {
                     //noinspection unchecked
                     allExecutions.put(

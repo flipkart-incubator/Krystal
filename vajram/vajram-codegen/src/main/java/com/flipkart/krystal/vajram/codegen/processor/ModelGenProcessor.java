@@ -1,16 +1,15 @@
 package com.flipkart.krystal.vajram.codegen.processor;
 
-import static com.flipkart.krystal.vajram.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
+import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE_KEY;
 import static com.flipkart.krystal.vajram.codegen.processor.Constants.DEFAULT_MODELS_CODEGEN_PROVIDER;
 import static java.lang.System.lineSeparator;
 import static java.util.stream.Collectors.joining;
 
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
+import com.flipkart.krystal.codegen.common.models.CodegenPhase;
+import com.flipkart.krystal.codegen.common.spi.ModelsCodeGenContext;
+import com.flipkart.krystal.codegen.common.spi.ModelsCodeGeneratorProvider;
 import com.flipkart.krystal.model.ModelRoot;
-import com.flipkart.krystal.vajram.codegen.common.models.CodeGenUtility;
-import com.flipkart.krystal.vajram.codegen.common.models.CodegenPhase;
-import com.flipkart.krystal.vajram.codegen.common.models.VajramValidationException;
-import com.flipkart.krystal.vajram.codegen.common.spi.ModelsCodeGenContext;
-import com.flipkart.krystal.vajram.codegen.common.spi.ModelsCodeGeneratorProvider;
 import com.google.auto.service.AutoService;
 import com.google.common.collect.Iterables;
 import java.util.Arrays;
@@ -36,9 +35,8 @@ public final class ModelGenProcessor extends AbstractProcessor {
 
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    CodeGenUtility util = new CodeGenUtility(processingEnv, this.getClass());
     String phaseString = processingEnv.getOptions().get(CODEGEN_PHASE_KEY);
-
+    CodeGenUtility util = new CodeGenUtility(processingEnv, this.getClass(), phaseString);
     if (phaseString == null) {
       util.note("Skipping %s since codegen phase is null".formatted(getClass().getSimpleName()));
       return false;
@@ -85,8 +83,8 @@ public final class ModelGenProcessor extends AbstractProcessor {
       for (ModelsCodeGeneratorProvider customCodeGeneratorProvider : codeGeneratorProviders) {
         try {
           customCodeGeneratorProvider.create(creationContext).generate();
-        } catch (VajramValidationException e) {
-          continue;
+        } catch (Exception e) {
+          util.error(e.toString(), creationContext.modelRootType());
         }
       }
     }

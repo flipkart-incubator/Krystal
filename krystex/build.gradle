@@ -3,25 +3,14 @@ description = 'The default execution engine to execute synchronous workflows'
 dependencies {
     api project(':krystal-common')
 
-    implementation 'io.github.resilience4j:resilience4j-all'
-    implementation 'io.github.resilience4j:resilience4j-circuitbreaker'
-    implementation 'io.github.resilience4j:resilience4j-bulkhead'
-
     implementation 'com.fasterxml.jackson.core:jackson-annotations'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    implementation 'io.github.resilience4j:resilience4j-all'
+    implementation 'io.github.resilience4j:resilience4j-bulkhead'
+    implementation 'io.github.resilience4j:resilience4j-circuitbreaker'
 
-}
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            groupId = project.group
-            artifactId = project.name
-            version = project.version
-            from components.java
-        }
-    }
+    compileOnly 'org.jetbrains:annotations'
 }

@@ -1,0 +1,12 @@
+description = 'Enables support for protocol buffers in Krystal'
+
+dependencies {
+    implementation project(':krystal-codegen-common')
+    implementation project(':krystal-common')
+    implementation project(':krystal-common')
+    implementation project(':vajram:extensions:json:vajram-json')
+
+    implementation 'com.squareup:javapoet'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+}

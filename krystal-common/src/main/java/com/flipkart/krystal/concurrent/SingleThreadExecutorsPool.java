@@ -19,6 +19,7 @@ public class SingleThreadExecutorsPool extends RandomMultiLeasePool<@NonNull Sin
    * @param maxThreads No more than this number of {@link SingleThreadExecutor}s are created
    */
   public SingleThreadExecutorsPool(String name, int maxThreads) {
-    super(() -> new SingleThreadExecutor(name), 1, maxThreads, SingleThreadExecutor::shutdown);
+    super(
+        name, () -> new SingleThreadExecutor(name), 1, maxThreads, SingleThreadExecutor::shutdown);
   }
 }

@@ -8,7 +8,7 @@ import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofrie
 import static com.flipkart.krystal.vajramexecutor.krystex.test_vajrams.hellofriendsv2.HelloFriendsV2_Fac.userId_s;
 import static java.util.stream.Collectors.joining;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.Objects;
 import java.util.Set;
 
-@ExternallyInvocable
+@InvocableOutsideGraph
 @Vajram
 public abstract class HelloFriendsV2 extends ComputeVajramDef<String> {
   static class _Inputs {

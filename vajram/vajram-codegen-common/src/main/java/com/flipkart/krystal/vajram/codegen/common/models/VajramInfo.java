@@ -23,11 +23,15 @@ public record VajramInfo(
     if (lite.isTrait()) {
       for (DefaultFacetModel defaultFacet : givenFacets) {
         if (!defaultFacet.facetType().equals(INPUT)) {
-          lite.util().error("Only INPUT facets are supported in Traits", defaultFacet.facetField());
+          lite.util()
+              .codegenUtil()
+              .error("Only INPUT facets are supported in Traits", defaultFacet.facetField());
         }
       }
       if (!dependencies.isEmpty()) {
-        lite.util().error("Traits cannot have dependencies", dependencies.get(0).facetField());
+        lite.util()
+            .codegenUtil()
+            .error("Traits cannot have dependencies", dependencies.get(0).facetField());
       }
     }
   }
@@ -36,7 +40,7 @@ public record VajramInfo(
     return Stream.concat(givenFacets.stream(), dependencies.stream());
   }
 
-  public TypeElement vajramClass() {
+  public TypeElement vajramClassElem() {
     return lite.vajramOrReqClass();
   }
 
@@ -49,10 +53,11 @@ public record VajramInfo(
         conformsToTraitInfo != null
             ? conformsToTraitInfo.requestInterfaceType()
             : ParameterizedTypeName.get(
-                ClassName.get(Request.class), util().toTypeName(lite.responseType()).box()));
+                ClassName.get(Request.class),
+                util().codegenUtil().toTypeName(lite.responseType()).box()));
   }
 
-  private CodeGenUtility util() {
+  private VajramCodeGenUtility util() {
     return lite.util();
   }
 
@@ -63,7 +68,7 @@ public record VajramInfo(
             ? conformsToTraitInfo.immutReqInterfaceType()
             : ParameterizedTypeName.get(
                 ClassName.get(ImmutableRequest.class),
-                util().toTypeName(lite.responseType()).box()));
+                util().codegenUtil().toTypeName(lite.responseType()).box()));
   }
 
   public Iterable<TypeName> reqBuilderInterfaceSuperTypes() {
@@ -73,7 +78,7 @@ public record VajramInfo(
             ? conformsToTraitInfo.immutReqInterfaceType().nestedClass("Builder")
             : ParameterizedTypeName.get(
                 ClassName.get(ImmutableRequest.Builder.class),
-                util().toTypeName(lite.responseType()).box()));
+                util().codegenUtil().toTypeName(lite.responseType()).box()));
   }
 
   public VajramInfoLite conformsToTraitOrSelf() {

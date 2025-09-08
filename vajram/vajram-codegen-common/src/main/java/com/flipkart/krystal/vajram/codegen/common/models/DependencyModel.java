@@ -2,8 +2,8 @@ package com.flipkart.krystal.vajram.codegen.common.models;
 
 import static com.flipkart.krystal.facets.FacetType.DEPENDENCY;
 
+import com.flipkart.krystal.codegen.common.datatypes.CodeGenType;
 import com.flipkart.krystal.facets.FacetType;
-import com.flipkart.krystal.vajram.codegen.common.datatypes.CodeGenType;
 import com.squareup.javapoet.ClassName;
 import javax.lang.model.element.VariableElement;
 import lombok.Builder;

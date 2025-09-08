@@ -4,7 +4,7 @@ import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.model.Model;
 import com.google.common.collect.ImmutableSet;
 
-/** An facets object contains some or all the facet values of a given Vajram/Kryon. */
+/** A facet values object contains the values of all the facets a given Vajram. */
 @SuppressWarnings("ClassReferencesSubclass") // This is by design.
 public non-sealed interface FacetValues extends FacetValuesContainer, Model {
 
@@ -16,6 +16,9 @@ public non-sealed interface FacetValues extends FacetValuesContainer, Model {
 
   @Override
   FacetValues _newCopy();
+
+  /** Returns the request sent to the vajram whose facets this class represents. */
+  Request<?> _request();
 
   /** Returns the facet definitions of the facets whose values this container potentially holds. */
   @Override

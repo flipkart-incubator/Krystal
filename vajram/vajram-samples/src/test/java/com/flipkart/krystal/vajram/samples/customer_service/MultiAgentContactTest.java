@@ -12,7 +12,6 @@ import static com.flipkart.krystal.vajram.samples.customer_service.CustomerServi
 import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.dispatchTrait;
 import static com.flipkart.krystal.vajramexecutor.krystex.traits.PredicateDispatchUtil.when;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.in;
 import static org.assertj.core.api.InstanceOfAssertFactories.LIST;
 import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
@@ -216,7 +215,7 @@ class MultiAgentContactTest {
   private KrystexVajramExecutorConfig getExecutorConfig() {
     return KrystexVajramExecutorConfig.builder()
         .kryonExecutorConfigBuilder(
-            KryonExecutorConfig.builder().singleThreadExecutor(executorLease.get()))
+            KryonExecutorConfig.builder().executorService(executorLease.get()))
         .build();
   }
 }

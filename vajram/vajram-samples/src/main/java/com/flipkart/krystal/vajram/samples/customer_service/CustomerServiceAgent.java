@@ -3,7 +3,7 @@ package com.flipkart.krystal.vajram.samples.customer_service;
 import static com.flipkart.krystal.annos.ComputeDelegationMode.NONE;
 import static com.flipkart.krystal.model.IfAbsent.IfAbsentThen.FAIL;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.traits.UseForDispatch;
 import com.flipkart.krystal.vajram.Trait;
@@ -13,11 +13,11 @@ import com.flipkart.krystal.vajram.annos.CallGraphDelegationMode;
 /**
  * Sample trait demonstrating dynamic predicate dispatch capability of krystal
  *
- * <p>Takes in a customer Communication an responds to it
+ * <p>Takes in a customer Communication and responds to it
  */
 @Trait
 @CallGraphDelegationMode(NONE)
-@ExternallyInvocable
+@InvocableOutsideGraph
 public interface CustomerServiceAgent extends TraitRoot<String> {
   @SuppressWarnings("initialization.field.uninitialized")
   class _Inputs {
@@ -30,7 +30,6 @@ public interface CustomerServiceAgent extends TraitRoot<String> {
     InitialCommunication initialCommunication;
 
     @IfAbsent(FAIL)
-    @UseForDispatch
     String customerName;
   }
 

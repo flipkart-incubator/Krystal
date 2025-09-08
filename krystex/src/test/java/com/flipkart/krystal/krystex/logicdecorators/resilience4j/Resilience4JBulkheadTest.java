@@ -10,7 +10,7 @@ import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.annos.OutputLogicDelegationMode;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
@@ -111,7 +111,7 @@ class Resilience4JBulkheadTest {
             newCreateNewRequestLogic(Set.of(input(1))),
             newFacetsFromRequestLogic(),
             ElementTags.of(
-                ExternallyInvocable.Creator.create(),
+                InvocableOutsideGraph.Creator.create(),
                 OutputLogicDelegationMode.Creator.create(SYNC)));
     Resilience4JBulkheadManager singleBulkhead =
         Resilience4JBulkhead.onePerInstanceId(
@@ -130,10 +130,11 @@ class Resilience4JBulkheadTest {
         new KryonExecutor(
             kryonDefinitionRegistry,
             KryonExecutorConfig.builder()
-                .singleThreadExecutor(executorLease.get())
+                .executorId("executor1")
+                .executorService(executorLease.get())
                 .configureWith(singleBulkhead)
-                .build(),
-            "executor1");
+                .executorId("executor1")
+                .build());
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         executor1.executeKryon(
             new SimpleRequestBuilder<>(
@@ -144,10 +145,10 @@ class Resilience4JBulkheadTest {
         new KryonExecutor(
             kryonDefinitionRegistry,
             KryonExecutorConfig.builder()
-                .singleThreadExecutor(executorLease.get())
+                .executorService(executorLease.get())
                 .configureWith(singleBulkhead)
-                .build(),
-            "executor2");
+                .executorId("executor2")
+                .build());
     CompletableFuture<Object> call2BeforeBulkheadExhaustion =
         executor2.executeKryon(
             new SimpleRequestBuilder<>(
@@ -158,10 +159,10 @@ class Resilience4JBulkheadTest {
         new KryonExecutor(
             kryonDefinitionRegistry,
             KryonExecutorConfig.builder()
-                .singleThreadExecutor(executorLease.get())
+                .executorService(executorLease.get())
                 .configureWith(singleBulkhead)
-                .build(),
-            "executor3");
+                .executorId("executor3")
+                .build());
     CompletableFuture<Object> callAfterBulkheadExhaustion =
         executor3.executeKryon(
             new SimpleRequestBuilder<>(
@@ -223,17 +224,17 @@ class Resilience4JBulkheadTest {
             newCreateNewRequestLogic(inputs),
             newFacetsFromRequestLogic(),
             ElementTags.of(
-                ExternallyInvocable.Creator.create(),
+                InvocableOutsideGraph.Creator.create(),
                 OutputLogicDelegationMode.Creator.create(SYNC)));
 
     KryonExecutor executor1 =
         new KryonExecutor(
             kryonDefinitionRegistry,
             KryonExecutorConfig.builder()
-                .singleThreadExecutor(executorLease.get())
+                .executorService(executorLease.get())
                 .configureWith(resilience4JBulkhead)
-                .build(),
-            "executor1");
+                .executorId("executor1")
+                .build());
     CompletableFuture<Object> call1BeforeBulkheadExhaustion =
         executor1.executeKryon(
             new SimpleRequestBuilder<>(
@@ -244,10 +245,10 @@ class Resilience4JBulkheadTest {
         new KryonExecutor(
             kryonDefinitionRegistry,
             KryonExecutorConfig.builder()
-                .singleThreadExecutor(executorLease.get())
+                .executorService(executorLease.get())
                 .configureWith(resilience4JBulkhead)
-                .build(),
-            "executor2");
+                .executorId("executor2")
+                .build());
     CompletableFuture<Object> call2BeforeBulkheadExhaustion =
         executor2.executeKryon(
             new SimpleRequestBuilder<>(
@@ -258,10 +259,10 @@ class Resilience4JBulkheadTest {
         new KryonExecutor(
             kryonDefinitionRegistry,
             KryonExecutorConfig.builder()
-                .singleThreadExecutor(executorLease.get())
+                .executorService(executorLease.get())
                 .configureWith(resilience4JBulkhead)
-                .build(),
-            "executor3");
+                .executorId("executor3")
+                .build());
     CompletableFuture<Object> callAfterBulkheadExhaustion =
         executor3.executeKryon(
             new SimpleRequestBuilder<>(

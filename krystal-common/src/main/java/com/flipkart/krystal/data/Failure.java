@@ -26,6 +26,11 @@ public final class Failure<T> implements Errable<T> {
   }
 
   @Override
+  public @Nullable T value() {
+    return null;
+  }
+
+  @Override
   public Optional<@NonNull T> valueOptOrThrow() {
     throw asRuntimException();
   }

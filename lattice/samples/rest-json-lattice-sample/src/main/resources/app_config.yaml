@@ -1,0 +1,5 @@
+dopants:
+  - krystal.lattice.threadingStrategy:
+      maxApplicationThreads: 400
+  - krystal.lattice.restServer.quarkus:
+      port: 8789

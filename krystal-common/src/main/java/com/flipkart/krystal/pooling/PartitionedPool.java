@@ -89,9 +89,9 @@ class PartitionedPool<T> implements Iterable<PooledObject<T>> {
    * @return The object at the given index
    * @throws IllegalArgumentException if the index is not available for leasing
    */
-  PooledObject<T> getForLeasing(int i) throws LeaseUnavailableException {
+  PooledObject<T> getForLeasing(int i) throws IllegalArgumentException {
     if (i >= unavailableStartIndex || i < 0) {
-      throw new LeaseUnavailableException("Index [" + i + "] is not available for leasing");
+      throw new IllegalArgumentException("Index [" + i + "] is not available for leasing");
     }
     PooledObject<T> toLease = partitionedList.get(i);
     toLease.incrementActiveLeases();
@@ -161,10 +161,10 @@ class PartitionedPool<T> implements Iterable<PooledObject<T>> {
 
     PooledObject<T> toMove = partitionedList.get(indexToMakeAvailable);
     PooledObject<T> other = partitionedList.get(unavailableStartIndex);
-    partitionedList.set(indexToMakeAvailable, other);
-    partitionedList.set(unavailableStartIndex, toMove);
     toMove.index(unavailableStartIndex);
     other.index(indexToMakeAvailable);
+    partitionedList.set(other.index(), other);
+    partitionedList.set(toMove.index(), toMove);
     this.unavailableStartIndex++;
   }
 
@@ -178,23 +178,21 @@ class PartitionedPool<T> implements Iterable<PooledObject<T>> {
         indexToMakeUnavailable < partitionedList.size(),
         "Index to make unavailable should be < elements.size()");
 
-    final int unavailableStartIndex = this.unavailableStartIndex;
-
     if (indexToMakeUnavailable >= unavailableStartIndex) {
       // This index is already unavailable!
       return;
     }
+    final int newUnavailableStartIndex = this.unavailableStartIndex - 1;
     if (partitionedList.get(indexToMakeUnavailable).activeLeases < hardMaxLeasesPerObject) {
       // Object at index has not reached the hard max leases yet. So it cannot be made unavailable
       return;
     }
     PooledObject<T> toMove = partitionedList.get(indexToMakeUnavailable);
-    int otherIndex = unavailableStartIndex - 1;
-    PooledObject<T> other = partitionedList.get(otherIndex);
-    partitionedList.set(indexToMakeUnavailable, other);
-    partitionedList.set(otherIndex, toMove);
-    toMove.index(unavailableStartIndex);
+    PooledObject<T> other = partitionedList.get(newUnavailableStartIndex);
     other.index(indexToMakeUnavailable);
+    toMove.index(newUnavailableStartIndex);
+    partitionedList.set(other.index(), other);
+    partitionedList.set(toMove.index(), toMove);
     this.unavailableStartIndex--;
   }
 

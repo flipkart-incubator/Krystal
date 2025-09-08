@@ -124,8 +124,8 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
   FlushableKryon(
       VajramKryonDefinition kryonDefinition,
       KryonExecutor kryonExecutor,
-      Function<LogicExecutionContext, Map<String, OutputLogicDecorator>>
-          outputLogicDecoratorSuppliers,
+      Function<LogicExecutionContext, NavigableSet<OutputLogicDecorator>>
+          sortedOutputLogicDecoratorSupplier,
       Function<DependencyExecutionContext, ImmutableMap<String, DependencyDecorator>>
           depDecoratorSuppliers,
       DecorationOrdering decorationOrdering,
@@ -133,7 +133,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
     super(
         kryonDefinition,
         kryonExecutor,
-        outputLogicDecoratorSuppliers,
+        sortedOutputLogicDecoratorSupplier,
         depDecoratorSuppliers,
         decorationOrdering,
         requestIdGenerator);
@@ -609,7 +609,7 @@ final class FlushableKryon extends AbstractKryon<MultiRequestCommand, BatchRespo
           DependentChain dependentChain) {
     NavigableSet<OutputLogicDecorator> sortedDecorators =
         getSortedOutputLogicDecorators(dependentChain);
-    OutputLogic<Object> logic = outputLogicDefinition.logic()::execute;
+    OutputLogic<Object> logic = outputLogicDefinition.logic();
 
     for (OutputLogicDecorator outputLogicDecorator : sortedDecorators) {
       logic = outputLogicDecorator.decorateLogic(logic, outputLogicDefinition);

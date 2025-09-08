@@ -7,7 +7,7 @@ import static com.flipkart.krystal.vajram.facets.resolution.InputResolvers.resol
 import static com.flipkart.krystal.vajram.samples.calculator.addzero.AddZero_Fac.number_s;
 import static com.flipkart.krystal.vajram.samples.calculator.addzero.AddZero_Fac.sum_s;
 
-import com.flipkart.krystal.annos.ExternallyInvocable;
+import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
@@ -19,7 +19,7 @@ import com.flipkart.krystal.vajram.samples.calculator.add.Add_Req;
 import com.google.common.collect.ImmutableCollection;
 
 @Vajram
-@ExternallyInvocable
+@InvocableOutsideGraph
 public abstract class AddZero extends ComputeVajramDef<Integer> {
   static class _Inputs {
     @IfAbsent(FAIL)
