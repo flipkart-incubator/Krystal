@@ -73,7 +73,8 @@ public abstract class RestServiceDopant implements DopantWithAnnotation<RestServ
                   responseBuilder =
                       Response.ok(bytes)
                           .header(
-                              CONTENT_TYPE, serializableResponse._serdeProtocol().contentType());
+                              CONTENT_TYPE,
+                              serializableResponse._serdeProtocol().defaultContentType());
                 } else if (response instanceof ResponseBuilder rb) {
                   return rb.build();
                 } else if (response instanceof Response r) {

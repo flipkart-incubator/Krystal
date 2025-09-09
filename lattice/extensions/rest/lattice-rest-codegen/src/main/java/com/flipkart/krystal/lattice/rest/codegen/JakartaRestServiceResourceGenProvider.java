@@ -3,6 +3,7 @@ package com.flipkart.krystal.lattice.rest.codegen;
 import static com.flipkart.krystal.codegen.common.models.CodeGenUtility.lowerCaseFirstChar;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toMap;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.PUBLIC;
@@ -23,6 +24,7 @@ import com.flipkart.krystal.lattice.rest.api.PathParam;
 import com.flipkart.krystal.lattice.rest.api.QueryParam;
 import com.flipkart.krystal.lattice.rest.api.methods.RestMethod;
 import com.flipkart.krystal.model.SupportedModelProtocols;
+import com.flipkart.krystal.serial.SerdeConfig;
 import com.flipkart.krystal.serial.SerdeProtocol;
 import com.flipkart.krystal.vajram.codegen.common.models.FacetGenModel;
 import com.flipkart.krystal.vajram.codegen.common.models.VajramInfo;
@@ -46,13 +48,13 @@ import jakarta.ws.rs.core.UriInfo;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.ServiceLoader;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
@@ -223,8 +225,7 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
               .map(ModelProtocolConfigProvider::getConfig)
               .map(ModelProtocolConfig::serdeProtocol)
               .collect(
-                  Collectors.toMap(
-                      c -> requireNonNull(c.getClass().getCanonicalName()), Function.identity()));
+                  toMap(c -> requireNonNull(c.getClass().getCanonicalName()), Function.identity()));
 
       MethodSpec.Builder methodBuilder =
           MethodSpec.methodBuilder(lowerCaseFirstChar(vajramInfo.vajramName()))
@@ -271,7 +272,6 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
         }
       }
 
-      ImmutableList<TypeElement> requestSerdeProtocols = ImmutableList.of();
       for (Entry<FacetGenModel, FacetParamType> entry : params.entrySet()) {
         FacetGenModel facet = entry.getKey();
         FacetParamType facetParamType = entry.getValue();
@@ -292,42 +292,14 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
                           .addMember("value", "$S", facet.name())
                           .build())
                   .build());
-        } else if (facetParamType == FacetParamType.BODY) {
-          Element bodyTypeElem =
-              requireNonNull(util.processingEnv().getTypeUtils().asElement(facetType));
-          SupportedModelProtocols supportedModelProtocols =
-              bodyTypeElem.getAnnotation(SupportedModelProtocols.class);
-          if (supportedModelProtocols == null) {
-            util.error(
-                "Rest request Body facet " + facet.name() + " doesn't support any ModelProtocol.",
-                facet.facetField());
-          } else {
-            requestSerdeProtocols =
-                util.getTypesFromAnnotationMember(supportedModelProtocols::value).stream()
-                    .filter(t -> util.isRawAssignable(t, SerdeProtocol.class))
-                    .<@NonNull TypeElement>map(
-                        typeMirror ->
-                            requireNonNull(
-                                (TypeElement)
-                                    util.processingEnv().getTypeUtils().asElement(typeMirror)))
-                    .collect(toImmutableList());
-            if (requestSerdeProtocols.isEmpty()) {
-              util.error(
-                  "Rest request Body facet "
-                      + facet.name()
-                      + " doesn't support any SerdeProtocols. Found: "
-                      + Arrays.toString(supportedModelProtocols.value()),
-                  facet.facetField());
-            }
-          }
         }
       }
       if (explicitPath) {
         methodBuilder.addStatement(
             """
-          var _vajramRequest = $T._builder()
-            $L
-          """,
+            var _vajramRequest = $T._builder()
+              $L
+            """,
             vajramInfo.lite().immutReqPojoType(),
             params.keySet().stream()
                 .filter(p -> params.get(p) != FacetParamType.BODY)
@@ -345,14 +317,54 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
           !explicitPath) {
 
         SupportedModelProtocols supportedModelProtocols;
+        Map<Element, SerdeConfig> serdeConfigsMap = new HashMap<>();
         if (bodyFacet != null) {
-          TypeMirror facetType = bodyFacet.dataType().javaModelType(util.processingEnv());
+          Map<@NonNull Element, SerdeConfig> collect =
+              Arrays.stream(bodyFacet.facetField().getAnnotationsByType(SerdeConfig.class))
+                  .collect(
+                      toMap(
+                          s ->
+                              requireNonNull(
+                                  util.processingEnv()
+                                      .getTypeUtils()
+                                      .asElement(
+                                          util.getTypeFromAnnotationMember(s::protocol)
+                                              .orElseThrow(AssertionError::new))),
+                          s -> s));
+          serdeConfigsMap.putAll(collect);
           Element bodyTypeElem =
-              requireNonNull(util.processingEnv().getTypeUtils().asElement(facetType));
+              requireNonNull(
+                  util.processingEnv()
+                      .getTypeUtils()
+                      .asElement(bodyFacet.dataType().javaModelType(util.processingEnv())));
+          for (SerdeConfig serdeConfig : bodyTypeElem.getAnnotationsByType(SerdeConfig.class)) {
+            serdeConfigsMap.putIfAbsent(
+                requireNonNull(
+                    util.processingEnv()
+                        .getTypeUtils()
+                        .asElement(
+                            util.getTypeFromAnnotationMember(serdeConfig::protocol)
+                                .orElseThrow(AssertionError::new))),
+                serdeConfig);
+          }
           supportedModelProtocols = bodyTypeElem.getAnnotation(SupportedModelProtocols.class);
         } else {
           supportedModelProtocols = vajramElem.getAnnotation(SupportedModelProtocols.class);
+          Map<@NonNull Element, SerdeConfig> collect =
+              Arrays.stream(vajramElem.getAnnotationsByType(SerdeConfig.class))
+                  .collect(
+                      toMap(
+                          s ->
+                              requireNonNull(
+                                  util.processingEnv()
+                                      .getTypeUtils()
+                                      .asElement(
+                                          util.getTypeFromAnnotationMember(s::protocol)
+                                              .orElseThrow(AssertionError::new))),
+                          s -> s));
+          serdeConfigsMap.putAll(collect);
         }
+        ImmutableList<TypeElement> requestSerdeProtocols = ImmutableList.of();
         if (supportedModelProtocols == null) {
           util.error(
               "Rest request body doesn't support any ModelProtocol.",
@@ -391,6 +403,13 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
           if (serdeProtocol == null) {
             continue;
           }
+          String[] contentTypes;
+          SerdeConfig serdeConfig = serdeConfigsMap.get(serdeProtocolType);
+          if (serdeConfig != null) {
+            contentTypes = serdeConfig.contentTypes();
+          } else {
+            contentTypes = new String[] {serdeProtocol.defaultContentType()};
+          }
           MethodSpec.Builder serdeSpecificMethodBuilder =
               methodBuilder.build().toBuilder()
                   .setName(
@@ -401,7 +420,12 @@ public class JakartaRestServiceResourceGenProvider implements LatticeCodeGenerat
           serdeSpecificMethodBuilder
               .addAnnotation(
                   AnnotationSpec.builder(Consumes.class)
-                      .addMember("value", "$S", serdeProtocol.contentType())
+                      .addMember(
+                          "value",
+                          "{$L}",
+                          Arrays.stream(contentTypes)
+                              .map(c -> CodeBlock.of("$S", c))
+                              .collect(CodeBlock.joining(", ")))
                       .build())
               .addParameter(
                   ParameterSpec.builder(
