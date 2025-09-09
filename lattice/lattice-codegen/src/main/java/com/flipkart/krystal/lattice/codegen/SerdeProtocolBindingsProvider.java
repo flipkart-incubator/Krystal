@@ -174,7 +174,7 @@ public final class SerdeProtocolBindingsProvider implements BindingsProvider {
                 if(acceptHeaderValues.contains($S)) {
                   return $T._builder();
                 }""",
-                config.serdeProtocol().contentType(),
+                config.serdeProtocol().defaultContentType(),
                 ClassName.get(
                     immutClassName.packageName(),
                     immutClassName.simpleName() + config.serdeProtocol().modelClassesSuffix())));

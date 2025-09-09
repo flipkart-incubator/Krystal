@@ -118,7 +118,8 @@ public final class QuarkusRestServerDopant implements Dopant<RestService, Quarku
                   httpResponse.end(new NoBoundChecksBuffer(wrappedBuffer(bytes)));
                 } else if (response instanceof SerializableModel serializableResponse) {
                   httpResponse
-                      .putHeader(CONTENT_TYPE, serializableResponse._serdeProtocol().contentType())
+                      .putHeader(
+                          CONTENT_TYPE, serializableResponse._serdeProtocol().defaultContentType())
                       .end(
                           new NoBoundChecksBuffer(
                               wrappedBuffer(serializableResponse._serialize())));

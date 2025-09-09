@@ -11,5 +11,5 @@ import lombok.experimental.UtilityClass;
 public class LatticeProtoConstants {
 
   public static final Header PROTOBUF_ACCEPT_HEADER =
-      new SingleValueHeader(ACCEPT, PROTOBUF_3.contentType());
+      new SingleValueHeader(ACCEPT, PROTOBUF_3.defaultContentType());
 }

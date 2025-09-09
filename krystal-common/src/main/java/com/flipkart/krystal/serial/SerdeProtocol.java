@@ -10,5 +10,5 @@ public interface SerdeProtocol extends ModelProtocol {
    * "Accept" request header and "Content-Type" response header in client-server communication
    * protocols.
    */
-  String contentType();
+  String defaultContentType();
 }

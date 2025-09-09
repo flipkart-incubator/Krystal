@@ -13,9 +13,11 @@ import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.J
 import com.flipkart.krystal.lattice.samples.rest.json.sampleRestService.models.JsonResponse_Immut;
 import com.flipkart.krystal.lattice.vajram.sdk.InvocableOutsideProcess;
 import com.flipkart.krystal.model.IfAbsent;
+import com.flipkart.krystal.serial.SerdeConfig;
 import com.flipkart.krystal.vajram.ComputeVajramDef;
 import com.flipkart.krystal.vajram.Vajram;
 import com.flipkart.krystal.vajram.facets.Output;
+import com.flipkart.krystal.vajram.json.Json;
 import jakarta.inject.Inject;
 import java.util.Optional;
 
@@ -33,6 +35,9 @@ public abstract class RestPostMappingLatticeSample extends ComputeVajramDef<Json
   static class _Inputs {
     @IfAbsent(FAIL)
     @Body
+    @SerdeConfig(
+        protocol = Json.class,
+        contentTypes = {"application/json", "application/x-json-test"})
     JsonRequest jsonRequest;
 
     @IfAbsent(FAIL)

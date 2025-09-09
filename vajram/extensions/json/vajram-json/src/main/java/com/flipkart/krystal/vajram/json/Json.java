@@ -36,7 +36,7 @@ public final class Json implements SerdeProtocol {
   }
 
   @Override
-  public String contentType() {
+  public String defaultContentType() {
     return "application/json";
   }
 
