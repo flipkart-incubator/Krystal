@@ -740,13 +740,17 @@ That's enough theory, let's look at an example. Let us start with the customary 
 
 ## Hello\! World…
 
-**package** org.krystal.vajram.lang.samples.helloWorld;
+```java
 
-**void** helloWorld(**@inject** ConsoleWriter writer){  
+package org.krystal.vajram.lang.samples.helloWorld;
+
+void helloWorld(@inject ConsoleWriter writer){  
  {  
    writer.Out.println("Hello\! World…")  
  }  
 }
+```
+
 An interesting thing to note here is that the `println` line is inside not just one, but two pairs of curly braces. This allows the vajram to have both control plane and data plane code \- more on this later. Let's look at a more complicated, yet familiar, example:
 
 ## Compute delegation (ProductDetailsFetcher)
@@ -771,15 +775,17 @@ public record ProductDetailsFetcher(
 }
 ```
 
-Vajram:  
+Vajram:
+```java
 ProductDetails? getProductDetails(  
-  **@input string** productId,  
-  **@inject** ProductDB productDB){
+  @input string productId,  
+  @inject ProductDB productDB){
 
-  **@output @Concurrency(30)** \~{  
-    **return** productDB.getProductDetails(productId);  
+  @output @Concurrency(30) ~{  
+    return productDB.getProductDetails(productId);  
   }  
 }
+```
 
 Let us understand the above code.
 
@@ -811,26 +817,27 @@ We can make the code more concise:
 * The last statement of any data plane code block is allowed not to end with a `;`. Such a statement is considered to be the return statement of the code block.
 
 The above code can be shortened as  
+```java
 ProductDetails? getProductDetails(  
-  **string** productId,  
-  **@inject** ProductDB productDB){
+  string productId,  
+  @inject ProductDB productDB){
 
- \~{  
+ ~{  
    productDB.getProductDetails(productId)  
  }  
 }
-
+```
 Similarly, we write an `isProductAvailable` vajram which delegates to the availability DB over network:
+```java
+bool? isProductAvailable(  
+  string productId,  
+  @inject AvailabilityDB availabilityDB){
 
-**bool**? isProductAvailable(  
-  **string** productId,  
-  **@inject** AvailabilityDB availabilityDB){
-
- \~{  
+ ~{  
    availabilityDB.isAvailable(productId)  
  }  
 }
-
+```
 Points to note:
 
 * The `?` in `bool?` indicates that `isProductAvailable` might fail or return `nil`.  
@@ -840,25 +847,25 @@ Points to note:
 ## Dependency declaration
 
 With `getProductDetails` and `isProductAvailable` vajrams ready, we can now write `getAvailableProductsDetails` vajram which depends on these two vajrams:
-
+```java
 ProductDetails? getAvailableProductDetails(  
-   **string** productId){
+   string productId){
 
-  **@dep bool**? isAvailable \=  
-     isProductAvailable(productId \= productId.trim());
+  @dep bool? isAvailable =  
+     isProductAvailable(productId = productId.trim());
 
-  **@dep** ProductDetails productDetails \=  
-     getProductDetails(productId \= productId.trim());
+  @dep ProductDetails productDetails =  
+     getProductDetails(productId = productId.trim());
 
   {  
-    **if**(isAvailable?default(**false**)) {  
+    if(isAvailable?default(false)) {  
       productDetails  
-    } **else** {  
-      **nil**  
+    } else {  
+      nil  
     }  
   }  
 }
-
+```
 Points to note:
 
 * `getAvailableProductDetails` has one input but no injections  
@@ -877,20 +884,21 @@ Again, the above code can be made more concise.
 * `@dep` is optional  
 * when using the `bool?` type, we can skip `default(false)` \- the compiler will infer this for us \- since false is the default value for booleans.  
 * `if ... else` can be used as a ternary operator
-
+```java
 ProductDetails? getAvailableProductDetails(  
-    **string** productId){
+    string productId){
 
-  **bool**? isAvailable \=  
-     isProductAvailable(productId \= productId.trim());
+  bool? isAvailable =  
+     isProductAvailable(productId = productId.trim());
 
-  ProductDetails productDetails \=  
-     getProductDetails(productId \= productId.trim());
+  ProductDetails productDetails =  
+     getProductDetails(productId = productId.trim());
 
   {  
-    **if**(isAvailable?) productDetails **else nil**  
+    if(isAvailable?) productDetails else nil  
   }  
 }
+```
 
 Summarizing the execution flow, `getAvailableProductDetails` invokes `isProductAvailable` and `getProductDetails` concurrently by forwarding its input `productId` to both these vajrams. If `getProductDetails` fails or returns `nil`, then this vajram does the same immediately \- its output logic is not executed. This is because  `productDetails` is a mandatory dependency. When `getProductDetails` succeeds and `isProductAvailable` completes (either with success or failure, since it's optional), the output logic is executed and the return value of this logic is returned to the invokers of this vajram.
 
@@ -931,21 +939,22 @@ public class AvailableProductDetailsFetcher {
 For anyone reading the code, to infer that the `getProductDetails` is shielded by the `isProductAvailable` is not obvious at first glance \- we need to follow the code path to understand the control flow \- this is not very developer friendly.
 
 Let's see how the vajram code changes in this scenario:  
+```java
 ProductDetails? getAvailableProductDetails(  
-    **string** productId){
+    string productId){
 
-  **bool**? isAvailable \=  
-     isProductAvailable(productId \= productId);
+  bool? isAvailable =  
+     isProductAvailable(productId = productId);
 
-  ProductDetails productDetails \=   
-    getProductDetails(productId \= productId)  
-      **@skipIf** { isAvailable? \== **false** };
+  ProductDetails productDetails =   
+    getProductDetails(productId = productId)  
+      @skipIf { isAvailable? == false };
 
   {  
-    **if**(isAvailable?) productDetails **else nil**  
+    if(isAvailable?) productDetails else nil  
   }  
 }
-
+```
 Because the vajram doesn't deal with futures or other such concurrency wrappers, we have nothing to remove from the code to make the calls sequential. All we have to do is to add a `@skipIf` data code block to the control plane in which we use the `isAvailable` facet to decide whether to skip `getProductDetails`. The language runtime infers that the output of one dependency is used in the resolution of the other, so the invocations automatically become sequential. The key difference here is that the control flow is not based on the order of statements. Instead it is determined by the content of the code in the data plane. (To make the code more readable, a code linter can reorder the dependency definition order to reflect the topological order of execution to make the code more reader friendly \- this doesn't change the functionality of the code). This makes a huge difference when the number of dependencies is very high or the logic is very complicated. This allows code writers and readers to localise their thought process when reasoning through code instead of trying to follow a control flow in their head as to when which line will be executed, especially when multiple parallel control flows of different method calls are interleaved in the same sequence of statements.
 
 ## Mandatory, Optional and default values
@@ -987,142 +996,141 @@ public class AvailableProductDetailsFetcher {
 ```
 
 Vajram:  
-ProductDetails getAvailableProductDetails(  
-   **string** productId){
+```java
+ProductDetails getAvailableProductDetails(string productId){
 
-  **bool**? isAvailable \=  
-     isProductAvailable(productId \= productId.trim());  
+  bool isAvailable = isProductAvailable(productId = productId.trim());  
     
-  ProductDetails productDetails \=  
-     getProductDetails(productId \= productId.trim())  
-       ?default{ **new** ProductDetails(productId) }  
-       **@skipIf** { isAvailable? \== **false** };
+  ProductDetails productDetails =  
+     getProductDetails(productId = productId.trim())  
+       ?default{ new ProductDetails(productId) }  
+       @skipIf { isAvailable? == false };
 
  {  
    productDetails  
  }  
 }
-
+```
 Since the output logic has no logic as such \- it just forwards the value of a dependency facet, we can skip writing the output logic by annotating the facet with `@output`. Also, the `@skip` annotation accepts a reason parameter which acts as documentation and error message for when the dependency is skipped.
-
-ProductDetails getAvailableProductDetails(  
-   **string** productId){  
+```java
+ProductDetails getAvailableProductDetails(string productId){  
    
-  **bool**? isAvailable \=  
-     isProductAvailable(productId \= productId.trim());
+  bool? isAvailable =
+      isProductAvailable(productId = productId.trim());
 
-  **@output**  
-  ProductDetails productDetails \=  
-     getProductDetails(productId \= productId.trim())  
-       ?default{ **new** ProductDetails(productId) }  
-     **@skipIf**("Product is not available")  
-     { isAvailable? \== **false** };  
+  @output  
+  ProductDetails productDetails =  
+     getProductDetails(productId = productId.trim())  
+       ?default{ new ProductDetails(productId) }  
+     @skipIf("Product is not available")  
+     { isAvailable? == false };  
 }
-
+```
 This is how a developer would read and understand this vajram:
 
 * `getAvailableProductDetails` vajram returns a non-errable `ProductDetails`  
 * It takes a single `string` input called `productId`  
-* It has a dependency on `isProductAvailable` vajram which is invoked by passing the `productId` input to its input. The return value of this dependency vajram invocation is represented by an errable boolean facet called `isAvailable`  
-* This vajram also has a dependency on `getProductDetails` vajram which is also invoked by passing `productId` to it. If the vajram invocation fails or returns an empty value, then a default value is to be used.   
+* It has a dependency on `isProductAvailable` vajram which is invoked by passing the `productId` input to its input after trimming it. The return value of this dependency vajram invocation is represented by an errable boolean facet called `isAvailable`  
+* This vajram also has a dependency on `getProductDetails` vajram which is also invoked by passing the trimmed `productId` to it. If the vajram invocation fails or returns an empty value, then a default value is to be used.   
 * If `isAvailable` is false, then `getProductDetails` invocation is to be skipped and the default value is to be used.  
 * The result of this dependency vajram invocation is to be stored in the facet `productDetails` and this value is also to be used as the output of this vajram.
 
 ## Language-native batching {#language-native-batching}
 
-When we introduced batching in [Chapter 7](#chapter-7:-a-non-functional-requirement:-reduced-cost), it led to a huge amount of code changes \- not just in the parts of the code which actually needed batching, but all code which directly or indirectly depended on this code. vajram-lang prevents this kind of "contagiousness" of code changes. Let us introduce batching in the `getProductDetails` vajram:  
+When we introduced batching in [Chapter 7](#chapter-7:-a-non-functional-requirement:-reduced-cost), it led to a huge amount of code changes \- not just in the parts of the code which actually needed batching, but all code which directly or indirectly depended on this code. vajram-lang prevents this kind of "contagion" of code changes. Let us introduce batching in the `getProductDetails` vajram:  
+```java
 ProductDetails? getProductDetails(  
- **@batch**(type=\`*Batch*\`, name=\`*batches*\`)   
- **string** productId,  
- **@inject** ProductDB productDB){
+ @batch(type=`BatchItem`, name=`batches`)   
+ string productId,  
+ @inject ProductDB productDB){
 
- \~{  
-   List\<String\> productIds \=  
-       *batches*  
-       .map{\_.productId()}  
+ ~{  
+   List<String> productIds =  
+       batches  
+       .map{_.productId()}  
        .toList();  
-   BatchResults\<*Batch*, ProductDetails\>\~ productDetails \=  
+   BatchResults<BatchItem, ProductDetails>~ productDetails =  
      productDB.getProductDetails(productIds)  
-       \~.stream()  
-       \~.map(**new** Batch(\_.productId()), \_)  
- \~.collect(toBatchResults());
-
+       ~.stream()  
+       ~.map(new BatchItem(_.productId()), _)  
+        .collect(toBatchResults());
    productDetails  
  }  
 }
+```
 
-vajram-lang provides native support for batching. We tag the inputs that we want batched using `@batch` annotations. This annotation has the additional capability to interact with, and modify the behaviour of the language type system and runtime. This `@batch` annotation tells the vajram-lang compiler that even though the input types and output types of the vajram have not changed, there is a change in the way the output logic consumes the inputs and produces the output. Specifically, it says that all the inputs annotated with `@batch` can be accessed by the output logic only via an object containing these inputs . An iterable of these objects is accessible via the *'`batches`'* facet which is generated by the annotation processor. The tag also tells the compiler and runtime that while the return type of the vajram remains `ProductDetails?`, the output logic will return a special data structure which maps each batch (represented by the *`Batch`* data type) with a `ProductDetails?` (i.e `BatchResults<Batch, ProductDetails>`). The runtime then makes sure that each caller of this vajram gets the `ProductDetails?` object(s) corresponding to the inputs that they provided \- for example, if a client vajram provides just one `productId` it would receive just one `ProductDetails?`. Most importantly, this is how the language runtime is able to prevent contagious changes \- by making adding/removing batching support in a vajram a backward compatible change since the vajram's functional signature isn't affected. Hence, all the other vajrams which depend on this vajram remain unchanged \- they are unaware that this vajram has started executing its output logic with batched inputs \- that remains an internal detail to this vajram. Any future changes like opting out of batching, adding more inputs to the batch, removing input from the batch \- are guaranteed not to affect any other downstream vajrams.
+vajram-lang provides native support for batching. We tag the inputs that we want batched using an `@batch` annotation. This annotation has the additional capability to interact with, and modify the behaviour of the language type system and runtime. This `@batch` annotation tells the vajram-lang compiler that even though the input types and output types of the vajram have not changed, there is a change in the way the output logic consumes the inputs and produces the output. Specifically, it says that all the inputs annotated with `@batch` can be accessed by the output logic only via an object containing these inputs . An iterable of these objects is accessible via the *'`batches`'* facet which is generated by the annotation processor. The tag also tells the compiler and runtime that while the return type of the vajram remains `ProductDetails?`, the output logic will return a special data structure which maps each batch (represented by the *`BatchItem`* data type) to a `ProductDetails?` (i.e `BatchResults<Batch, ProductDetails>`). The runtime then makes sure that each caller of this vajram gets the `ProductDetails?` object(s) corresponding to the inputs that they provided \- for example, if a client vajram provides just one `productId` it would receive just one `ProductDetails?`. Most importantly, this is how the language runtime is able to prevent contagious changes \- by making adding/removing batching support in a vajram a backward compatible change since the vajram's functional signature isn't affected. Hence, all the other vajrams which depend on this vajram remain unchanged \- they are unaware that this vajram has started executing its output logic with batched inputs \- that remains an internal detail to this vajram. Any future changes like opting out of batching, adding more inputs to the batch, removing input from the batch \- are guaranteed not to affect any other downstream vajrams.
 
 At execution time, the language runtime allows for a plugin (let's call it a batcher) to be registered with the runtime. This plugin takes the responsibility of processing the inputs and creating these "batches". How these batches are created is an implementation detail of the batcher. For example, a naive batcher can implement a timer which waits for a specific amount of time to collect batches \- this would be similar to the java implementation of the graphql dataloader we spoke about in the discussion section of [Chapter 7](#chapter-7:-a-non-functional-requirement:-reduced-cost). More sophisticated batching implementations which achieve 100% optimal batching with zero time wastage are possible. A small note on "plugins": These plugins (the "batcher", for example) are called "decorators". Decoration is a core capability provided by the vajram-lang runtime. Decorators can enhance and add capabilities to the vajram (especially non-functional capabilities). A Vajram can opt-in to these decorators via annotations (`@annotationExample`). More on Decorators in a later section.
 
 ## Errability
 
 The `?` operator indicates that a data type is errable \- meaning it might have a missing/`nil` value with an optional error representing the reason the value is not present. This errability is native to the language's type system.
+```java
+void errabilityDemo() {
 
-**void** errabilityDemo() {
-
-  *// this dependency might fail*  
-  **string**? errableFacet \= tryGetString();
+  // this dependency might fail
+  string? errableFacet = tryGetString();
 
  {  
-   *//returns "" if value is absent*  
+   //returns "" if value is absent
    errableFacet?default("");
 
-   *// returns true if value is present*  
+   // returns true if value is present
    errableFacet?valuePresent();
 
-   *// returns true if value is absent*  
+   // returns true if value is absent  
    errableFacet?valueAbsent();
 
-   *// returns true if both value and error are absent.*  
+   // returns true if both value and error are absent.
    errableFacet?isNil();
 
-   *// returns true if error is present*  
+   // returns true if error is present
    errableFacet?errorPresent();
 
-   *// returns true if error is absent*  
+   // returns true if error is absent
    errableFacet?errorAbsent();
 
-   **nil**?default("fallback");     *// returns "fallback"*  
-   **nil**?valuePresent();  *// returns false*  
-   **nil**?valueAbsent();   *// returns true*  
-   **nil**?value();         *// returns nil*  
-   **nil**?isNil();         *// returns true*  
-   **nil**?errorPresent();  *// returns false*  
-   **nil**?errorAbsent();   *// returns true*  
-   **nil**?error();         *// returns nil*
+   nil?default("fallback");     // returns "fallback"  
+   nil?valuePresent();  // returns false  
+   nil?valueAbsent();   // returns true  
+   nil?value();         // returns nil  
+   nil?isNil();         // returns true  
+   nil?errorPresent();  // returns false  
+   nil?errorAbsent();   // returns true  
+   nil?error();         // returns nil
 
-   **string**? test \= "test";  
-   test?default("");     *// returns "test"*  
-   test?valuePresent();  *// returns true*  
-   test?valueAbsent();   *// returns false*  
-   test?value();         *// returns "test"*  
-   test?isNil();         *// returns false*  
-   test?errorPresent();  *// returns false*  
-   test?errorAbsent();   *// returns true*  
-   test?error();         *// returns nil*
+   string? test = "test";  
+   test?default("");     // returns "test"  
+   test?valuePresent();  // returns true  
+   test?valueAbsent();   // returns false  
+   test?value();         // returns "test"  
+   test?isNil();         // returns false  
+   test?errorPresent();  // returns false  
+   test?errorAbsent();   // returns true  
+   test?error();         // returns nil
 
-   **string**? error \= **err**("test error");  
-   error?default("fallback");     *// returns "fallback"*  
-   error?valuePresent();  *// returns false*  
-   error?valueAbsent();   *// returns true*  
-   error?value();         *// returns nil*  
-   error?isNil();         *// returns false*  
-   error?errorPresent();  *// returns true*  
-   error?errorAbsent();   *// returns false*  
-   error?error();         *// returns err("test error")*  
+   string? error = err("test error");  
+   error?default("fallback");     // returns "fallback"  
+   error?valuePresent();  // returns false  
+   error?valueAbsent();   // returns true  
+   error?value();         // returns nil  
+   error?isNil();         // returns false  
+   error?errorPresent();  // returns true  
+   error?errorAbsent();   // returns false  
+   error?error();         // returns err("test error")  
  }  
 }
-
+```
 ## Concurrency primitives \- Delegation and Futures
 
 vajram-lang supports concurrency as a native construct. As we saw before, the `~` operator before code block: `~{}` indicates that the logic in the code block delegates computation outside the execution thread, when used with data types, it indicates that the value will be available at a future point in time. For example java data types like `Future<Map<K, V>>` are defined instead as `Map<K,V>~`. The `~` indicates that the map value will be available at a future point in time, not immediately after the line is executed. This allows developers to chain method calls on these "futures", just as if they normal variables, without actually blocking on the delegated logic:
-
-**int\~** nameLength=   
+```java
+int~ nameLength=   
     productDB  
         .getProductDetails("productId")  
-       \~.productName()  
- \~.length();
+       ~.productName()  
+ ~.length();
 
 The `~.` operator is similar to the `.` operator \- it allows us to access the methods of the data type, but with the caveat that these methods are to be executed when the original variable is fulfilled. The datatype of the return value also has the `~` operator. Omitting this will throw a compilation error since the compiler knows that a "delegated call chain" must return a "future" value. This same code if written in java would look like this, assuming the `.getProductDetails` call returns `CompletableFuture<ProductDetails>`:
 ```java
@@ -1153,21 +1161,22 @@ The part of the code inside the outer `{}` and outside the inner `{}` is called 
 This restriction is deliberate \- dependency definitions are locations where we delegate computation to other vajrams which can potentially make network calls, and have failure modes which are not typical to local function calls. Restricting the kind of code that we can write in the control plane allows the build system as well as the runtime parse this part of the code and make inferences regarding the "structure" of the overall application and allow useful validations, optimizations and maintain overall code and system health through automation which is not possible in code in which these restrictions are imposed. 
 
 The restriction that iteration loops are not allowed in the control plane might seem extreme \- how do we call another vajram multiple times? Vajram-lang allows us to do this without loops. Let us assume we need to write a vajram which accepts a product collection object containing `N` productIds and we need to compute the average price of the products in the collection. For this we need to query the `getProductDetails` vajram `N` times. We cannot use iteration loops in the control plane; we can use iteration loops in the data plane, but we cannot invoke other vajrams there. So how do we achieve this? Vajram-lang supports dependency fanouts as a native feature where a vajram can declare a "fanout dependency" meaning that the dependency will be called multiple times depending on how many inputs are resolved by the resolvers. Let's take a look:  
-**double**? computeAveragePrice(ProductCollection collection){  
-  Fanout\<ProductDetails?\> productDetails \=\* getProductDetails(  
-     productId \=\* collection.productIds();  
+```java
+double? computeAveragePrice(ProductCollection collection){  
+  Fanout<ProductDetails?> productDetails =* getProductDetails(  
+     productId =* collection.productIds();  
   )
 
   {  
     productDetails.values()  
       .stream()  
-      .filter(\_?valuePresent())  
-      .map(\_.price())  
+      .filter(_?valuePresent())  
+      .map(_.price())  
       .mapToDouble()  
       .average()  
   }  
 }
-
+```
 The `=*` operator means that the facet `productDetails` is a fanout dependency which contains the outputs of the multiple calls to `getProductDetails` vajram. Within the vajram call `productId=*` means that the vajram is invoked with `N` productIds where `N` is the size of the list returned by the RHS which is `collection.productIds()`. This means if the `collection` input has 23 productIds, then `getProductDetails` is called 23 times \- once for each product id in the collection. In simple non-fanout dependency, the data type of the dependency facet is same as the output type of the dependency vajram (`ProductDetails?`). But in this case, the data type is `Fanout<ProductDetails?>`. This indicates that the data type of the facet is a data structure which maps the input values sent to `getProductDetails` to the corresponding output. The output logic above accesses the list of all the dependency outputs (in the same order corresponding to the list of productIds in `collection`) by calling `.values()` on the `productDetails` facet.
 
 ## Logic Decorators
@@ -1192,6 +1201,8 @@ With such a call graph available to the runtime, application owners can apply me
 
 ## Error handling
 
+//TK: WIP
+
 # "Krystalline" programming
 
 Let us take a step back. The previous section describes the design of vajram-lang \- a hypothetical programming language which aims to solve many of the problems of writing business logic in distributed environments. More generally, this language can be seen as a particular implementation of a philosophy or a paradigm. The tenets of this paradigm are:
@@ -1210,7 +1221,7 @@ Let us take a step back. The previous section describes the design of vajram-lan
 * The application runtime should be able to add metadata to nodes and edges of the call graph at runtime to modify the execution/performance characteristics of the execution plan without having to change the business logic and thus guaranteeing functional correctness of the business logic. As a corollary, various applications should be able to configure the performance characteristics of the same call graph differently based on their requirements without having to change the business logic (Ex: via annotations and tags).  
 * Errors should be treated like data where the errors should flow through the call graph just like data through facets and inter-facet dependencies rather than special control flows like throw-try-catch etc. (Ex: Errables)
 
-When code is written adhering to the above tenets, we say it follows the Krystal programming paradigm or simply that the code is "krystalline". The fundamental aim of the Krystal programming paradigm is to provide optimally calibrated abstractions to developers, so that they can write business logic with minimal ceremony, where the provided abstractions model realities of distributed systems, like failures, latencies, shared state and other such nuances which make programming for distributed systems in traditional programming languages painful.
+When code is written adhering to the above tenets, we say it follows the Krystalline programming paradigm or simply that the code is "krystalline". The fundamental aim of the Krystalline programming paradigm is to provide optimally calibrated abstractions to developers, so that they can write business logic with minimal ceremony, where the provided abstractions model realities of distributed systems, like failures, latencies, shared state and other such nuances which make programming for distributed systems in traditional programming languages painful.
 
 But how are we to be sure that the above tenets and abstractions are optimal? How do we know that we are not-overfitting to what we know about distributed systems *currently* and the problems we have faced *recently,* i.e how do we eliminate recency bias from our design? Only if we are able to do this will we be able to have confidence that what we are building will have a long shelf-life instead of being another temporary software development trend (of which, you might agree,  there are many). 
 
@@ -1247,44 +1258,44 @@ But we can also see a vajram as a state machine. And the complete vajram call gr
 3\. payment initiated   
 4\. payment confirmed   
 5\. tickets booked.   
-This how the linear state machine vajram might look like
+This is how the linear state machine vajram might look like
+```java
+@LinearStateMachine  
+bool bookTickets(@input Event event, @input int count, @input userId){  
+  TicketSelectionResponse? selectedTickets = selectTickets(forEvent = event, number = count);  
+  @State @field  
+  bool ticketsSelected = selectedTickets?valuePresent();
 
-**@LinearStateMachine**  
-**bool** bookTickets(**@input** Event event, **@input int** count, **@input** userId){  
-  TicketSelectionResponse? selectedTickets \= selectTickets(forEvent \= event, number \= count);  
-  **@State @field**  
-  **bool** ticketsSelected \= selectedTickets?valuePresent();
+  TicketReservationResponse? reservedTickets = reserveTickets(tickets = selectedTickets.tickets());  
+  @State @field  
+  bool ticketsReserved = reservedTickets?valuePresent();
 
-  TicketReservationResponse? reservedTickets \= reserveTickets(tickets \= selectedTickets.tickets());  
-  **@State @field**  
-  **bool** ticketsReserved \= reservedTickets?valuePresent();
+  TicketPrice? ticketPrice = getPrice(tickets = reservedTickets.tickets());
 
-  TicketPrice? ticketPrice \= getPrice(tickets \= reservedTickets.tickets());
+  PaymentInit? paymentInit = initPayment(  
+                                 user = userId,   
+                                 amount = ticketPrice.getPrice());  
+  @State @field  
+  bool paymentInitiated = paymentInit?valuePresent();
 
-  PaymentInit? paymentInit \= initPayment(  
-                                 user \= userId,   
-                                 amount \= ticketPrice.getPrice());  
-  **@State @field**  
-  **bool** paymentInitiated \= paymentInit?valuePresent();
+  PaymentConfirmation? paymentConfirmation = confirmPayment(  
+                                 paymentId = paymentInit.id());  
+  @State @field  
+  bool paymentConfirmed = paymentConfirmation?valuePresent();
 
-  PaymentConfirmation? paymentConfirmation \= confirmPayment(  
-                                 paymentId \= paymentInit.id());  
-  **@State @field**  
-  **bool** paymentConfirmed \= paymentConfirmation?valuePresent();
+  TicketBooking ticketBooking = confirmTickets(  
+                                 tickets = ticketsReserved.tickets(),  
+                                 paymentId = paymentConfirmation.paymentId());
 
-  TicketBooking ticketBooking \= confirmTickets(  
-                                 tickets \= ticketsReserved.tickets(),  
-                                 paymentId \= paymentConfirmation.paymentId());
-
-  **@State @output**  
+  @State @output  
   {  
     ticketBooking.isSuccessful()  
   }  
 }
-
+```
 (A small note on `@field`s: We have seen three types of facets in vajrams \- `@input`s, `@dep`endencies, and `@output`. Here we introduce a new kind of facet called a `@field`. A field is similar to a dependency \- it is immutable-after-set, and defined in the control plane; it is different in that it doesn't invoke another vajram, but is instead computed by a (non-delegated) data plane logic (a field computer). `@field`s are also useful in asynchronous orchestration code to compute intermediate data representations.)
 
-Generally, the value returned by the output logic (along with input facets) forms the client-facing contract of a vajram while the. But in this case, by being annotated by `@LinearStateMachine` and by annotating facets with `@State`, the vajram developer is opting-in to exposing these facets as states which are part of the contract of the vajram. What is more, the developer doesn't even have to provide the order of the states (like `@State(1)`, `@State(2)` etc..), since the inter-facet dependencies are part of the structure of the vajram (thanks to them being defined in the control plane), the runtime can infer the state order and provide it to the vajram's clients. Also, we can add build time checks that the inter-state dependencies are actually linear, etc. There is no fundamentally new programming paradigm we introduced to unlock the capability of modelling state machines. The same vajram is able to function as one. This is again due to the generality of the way vajrams are modelled \- type-safe immutable-after-set facets which are tied among each other into a DAG by logics which consume some facets and compute a facet.
+Generally, the value returned by the output logic (along with input facets) forms the client-facing contract of a vajram. But in this case, by being annotated by `@LinearStateMachine` and by annotating facets with `@State`, the vajram developer is opting-in to exposing these facets as states which are part of the contract of the vajram. What is more, the developer doesn't even have to provide the order of the states (like `@State(1)`, `@State(2)` etc..), since the inter-facet dependencies are part of the structure of the vajram (thanks to them being defined in the control plane), the runtime can infer the state order and provide it to the vajram's clients. Also, we can add build time checks that the inter-state dependencies are actually linear, etc. There is no fundamentally new programming paradigm we introduced to unlock the capability of modelling state machines. The same vajram is able to function as one. This is again due to the generality of the way vajrams are modelled \- type-safe immutable-after-set facets which are tied among each other into a DAG by logics which consume some facets and compute a facet.
 
 ### SIMD
 
@@ -1318,24 +1329,26 @@ void vectorComputation(float[] a, float[] b, float[] c) {
 ```
 
 The vajram-lang code without SIMD optimization looks almost exactly like the scalar java code, the only difference being that the vajram returns a new array rather than taking the array as input:  
-**float**\[\] computeForArray(**float**\[\] a, **float**\[\] b){{  
-  **float**\[\] c \= **new float**\[a.length\];  
-  **for** (**int** i \= a.indices()) {  
-    c\[i\] \= (a\[i\] \* a\[i\] \+ b\[i\] \* b\[i\]) \* \-1.0f;  
+```java
+float[] computeForArray(float[] a, float[] b){{  
+  float[] c = new float[a.length];  
+  for (int i = a.indices()) {  
+    c[i] = (a[i] * a[i] + b[i] * b[i]) * -1.0f;  
   }  
   c  
 }}
+```
 
-To optimize this code to use SIMD optimization, we first decompose this into two vajrams \- one to perform the core computation (`a*a + b*b * -1.0`) and one to pass the array values to this vajram:
-
-**float** computeValue(**float** a, **float** b){{  
-   (a\*a \+ b\*b) \* \-1.0f  
+To optimize this code to use SIMD optimization, we first decompose this into two vajrams - one to perform the core computation (`aa + bb  -1.0`) and one to pass the array values to this vajram:
+```java
+float computeValue(float a, float b){{  
+   (a*a + b*b) * -1.0f  
 }}
 
-**float**\[\] computeForArray(**float**\[\] a, **float**\[\] b){  
-  Fanout\<**float**\> computedValue \= computeValue(a,b \=\*  
-      **for**(i : a.indices()){  
-        **yield** a\[i\], b\[i\]  
+float[] computeForArray(float[] a, float[] b){  
+  Fanout<float> computedValue = computeValue(a,b =*  
+      for(i : a.indices()){  
+        yield a[i], b[i]  
       }  
   )
 
@@ -1343,54 +1356,58 @@ To optimize this code to use SIMD optimization, we first decompose this into two
     computedValue.values().toArray()  
   }  
 }
-
-Here we are using the fanout dependency capability to delegate the core computation to a different vajram. In the invocation of `computeValue` vajram, we use the `=*` operator to perform a fanout, and `yield` values from inside a `for` loop to create an iterable of tuples which are assigned to the inputs `a` and `b` of `computeValue` which will be called `N` times where `N` is the iterable item count. The next step is to optimize the `computeValue` vajram \- we do this by moving the mathematical computations from the data plane to the control plane \- we'll see how this gives the platform the ability to optimize.
-
-**float** computeValue(**float** a, **float** b){  
- **float** aSquare \= a \* a;  
- **float** bSquare \= b \* b;  
- **float** sum \= aSquare \+ bSquare;  
- **@output**  
- **float** result \= sum \* \-1.0;  
+```
+Here we are using the fanout dependency capability to delegate the core computation to a different vajram. In the invocation of `computeValue` vajram, we use the `=` operator to perform a fanout, and `yield` values from inside a `for` loop to create an iterable of tuples which are assigned to the inputs `a` and `b` of `computeValue` which will be called `N` times where `N` is the iterable item count. The next step is to optimize the `computeValue` vajram - we do this by moving the mathematical computations from the data plane to the control plane - we'll see how this gives the platform the ability to optimize.
+```java
+float computeValue(float a, float b){  
+ float aSquare = a * a;  
+ float bSquare = b * b;  
+ float sum = aSquare + bSquare;  
+ @output  
+ float result = sum * -1.0;  
 }
-
-This change might seem trivial and verbose. We are doing the exact same thing as before, but storing each intermediate operation as a facet. How does this help? The key is the fact that the computation is being performed in the control plane. Here, imagine the two-operand '`*`' operator as a language native vajram taking two operands as input. Also, imagine it has added the `#batch` tag to the input:  
-*// Invoked by the language runtime when two numbers are multiplied*  
-T binaryMultiply\<T\>(**\#batch** T operand1, **\#batch** T operand2){  
+```
+This change might seem trivial and verbose. We are doing the exact same thing as before, but storing each intermediate operation as a facet. How does this help? The key is the fact that the computation is being performed in the control plane. Here, imagine the two-operand '``' operator as a language native vajram taking two operands as input. Also, imagine it has added the `#batch` tag to the input:  
+```java
+// Invoked by the language runtime when two numbers are multiplied  
+T binaryMultiply<T>(#batch T operand1, #batch T operand2){  
  {  
-   **list**\<**\#batch**\> \= **\#batch**.batches();  
-   *// language native implementation of*  
-   *// SIMD-optimized multiplication logic*  
+   list<#batch> = #batch.batches();  
+   // language native implementation of  
+   // SIMD-optimized multiplication logic  
  }  
 }
-
-As you might predict, this changes things. The `binaryMultiply` vajram takes over from the traditional multiplication operator(`*`). When executing the call path `computeForArray:computedValue->computeValue:aSquared->binaryMultiply`, the language runtime knows that the `computedValue` facet in `computeForArray` is a fanout dependency \- which means `computeValue` will be called multiple times which inturn means `binaryMultiply` will be called multiple times. With this knowledge, the runtime can group all the multiplications into a single batch call (using the batching capability we spoke of above) and let the vajram perform the computation to the best of its capabilities. It might have the intelligence to look at the size of the batch and decide whether to perform a traditional multiplication or to perform a SIMD operation. And that's it\! The code is SIMD-optimized.
+```
+As you might predict, this changes things. The `binaryMultiply` vajram takes over from the traditional multiplication operator(`*`). When executing the call path `computeForArray:computedValue->computeValue:aSquared->binaryMultiply`, the language runtime knows that the `computedValue` facet in `computeForArray` is a fanout dependency - which means `computeValue` will be called multiple times which inturn means `binaryMultiply` will be called multiple times. With this knowledge, the runtime can group all the multiplications into a single batch call (using the batching capability we spoke of above) and let the vajram perform the computation to the best of its capabilities. It might have the intelligence to look at the size of the batch and decide whether to perform a traditional multiplication or to perform a SIMD operation. And that's it! The code is SIMD-optimized.
 
 Now that we have understood the functioning of the code, we can simplify the `computeValue` vajram a bit. We don't need one facet each for `aSquared`, `bSquared` and so on:  
-**float** computeValue(**float** a, **float** b){  
- **@output**  
- **float** result \= a\*a \+ b\*b \* (-1.0);  
+```java
+float computeValue(float a, float b){  
+ @output  
+ float result = a*a + b*b * (-1.0);  
 }
-
-The language runtime can parse the mathematical formula and infer the syntax tree, and make the same optimization as above. Not only that, the language runtime knows that `a*a` and `b*b` are independent of each other (the same way it's able to deduce that `aSquared` and `bSquared` are independent of each other since they do not consume each other's outputs directly or indirectly). This means that it can not only parallelize the batched `a*a` calls into a single vector operation, but also combine the `a*a` and `b*b` into a single vector operation\! Depending on the batch size and the number of lanes in the hardware architecture, this can be a huge win. So, here is the final concise code:  
-**float**\[\] computeForArray(**float**\[\] a, **float**\[\] b){  
-  computeValue(a,b \=\* {  
-    **for**(**int** i : a.indices()){  
-      **yield** a\[i\], b\[i\]  
+```
+The language runtime can parse the mathematical formula and infer the syntax tree, and make the same optimization as above. Not only that, the language runtime knows that `a*a` and `b*b` are independent of each other (the same way it's able to deduce that `aSquared` and `bSquared` are independent of each other since they do not consume each other's outputs directly or indirectly). This means that it can not only parallelize the batched `a*a` calls into a single vector operation, but also combine the `a*a` and `b*b` into a single vector operation! Depending on the batch size and the number of lanes in the hardware architecture, this can be a huge win. So, here is the final concise code:  
+```java
+float[] computeForArray(float[] a, float[] b){  
+  computeValue(a,b = {  
+    for(int i : a.indices()){  
+      yield a[i], b[i]  
     }  
   }).values()  
 }
 
-**float** computeValue(**float** a, **float** b){  
-   a\*a \+ b\*b \* (-1.0);  
-}  
+float computeValue(float a, float b){  
+   a*a + b*b * (-1.0);  
+}
+```
 The original vajram with the scalar implementation had 165 characters of code. This SIMD optimized code has 199 \- a 21% increase. Compare this to the java version \- the original scalar implementation had 139 characters, while the vectorized code using the new vector API has 536 characters \- a 385% increase. The increase in the amount of code is one thing, but the most important difference between the before and after is not the length of the code, but the new concepts introduced. To vectorize code reliably in traditional programming languages, developers generally have to learn new programming concepts and APIs. New ways to do age old things. Things as simple as multiplication `a*a` become `va.mul(va)`. This change in programming model should not be needed, ideally. As you can see in the vajram code, there is no new concept we have introduced to achieve vectorization, and there is nothing in the code related to the concept of vectors. We are able to achieve this because of the fundamental feature of vajram-lang \- the control plane. If we look at the original scalar java code, one might wonder why the java compiler/runtime cannot just auto-vectorize the code itself. The answer is that, in many cases, it can. But it is not always possible. Quoting from the [Vector API JEP](https://openjdk.org/jeps/460):   
 "*In general, even after decades of research — especially for FORTRAN and C array loops — it seems that auto-vectorization of scalar code is not a reliable tactic for optimizing ad-hoc user-written loops unless the user pays unusually careful attention to unwritten contracts about exactly which loops a compiler is prepared to auto-vectorize. It is too easy to write a loop that fails to auto-vectorize…*"    
 This "brittleness" of traditional loops comes from the fact that developers can do almost anything in the loops. This is where the restrictions of the vajram-lang control plane come into play. By placing strict restrictions on the kind of code that the control plan can contain, the language can reliably vectorize (sometimes maybe even better than a developer could do \- through dependency analysis in the syntax tree of the formula, as we discussed). This restriction in the control plane also allows the language to control the inter-vajram dispatch method as needed. When a method is called inside a traditional for-loop, the language runtime is forced to dispatch multiple calls to the method one at a time \- one per iteration \- at least this is what the semantics of the for loop dictates. But the control plane of vajram-lang allows to call another vajram using the fanout operator `=*` which is a replacement for a for loop and allows for parallel or sequential dispatch, as needed. To solve the vectorization problem, the restrictive control plane works well with the ability of the runtime to statically analyze the vajram call graph (for presence of fanouts) and the language native batching feature. 
 
 ### Reactive Streams
 
-Synchronous orchestration and asynchronous orchestration have traditionally had extremely different programming models as we have discussed above. Another example of a paradigm which has traditionally demanded a completely different programming model is reactive streams. The paradigm of Reactive streams is based on the [reactive manifesto](https://www.reactivemanifesto.org/) which documents the runtime characteristics that a system needs to have to be called a reactive system. The manifesto doesn't profess any particular programming model or developer experience. The [Flow](https://www.reactive-streams.org/) standard library since JDK9 provides base interfaces for the reactive streams programming model. This again is a new programming model which developers have to learn to write code which can stream events reactively. 
+Synchronous orchestration and asynchronous orchestration have traditionally had extremely different programming models as we have discussed above. Another example of a paradigm which has traditionally demanded a completely different programming model is reactive streams. The paradigm of Reactive streams is described in the [reactive manifesto](https://www.reactivemanifesto.org/) which documents the runtime characteristics that a system needs to have to be called a reactive system. The manifesto doesn't profess any particular programming model or developer experience. The [Flow](https://www.reactive-streams.org/) standard library since JDK9 provides base interfaces for the reactive streams programming model. This again is a new programming model which developers have to learn to write code which can stream events reactively. 
 
 The vajram-lang runtime is reactive by nature. Maybe the same programming model can be extended to the reactive streams paradigm as well? Let's take a simple java example written with [io.reactivex.rxjava3](https://github.com/ReactiveX/RxJava):
 ```java
@@ -1415,34 +1432,35 @@ void printNumbers() {
 }
 ```
 This code streams a few numbers, adds 1 to each, and then prints each. When the stream is closed, "Done\!" is printed. When an error is encountered, "Ouch\!" is printed. Same streaming code in vajram-lang:
+```java
+#stream int streamNumbers(){{ [1,2,3,4,5,6,7,8] }}
 
-**\#stream int** streamNumbers(){{ \[1,2,3,4,5,6,7,8\] }}
+int addOne(int input){{ input+1 }}
 
-**int** addOne(**int** input){{ input+1 }}
-
-**void** printNumbers(**@inject** ConsoleWriter writer){  
- **\#stream int**? number \= streamNumbers();  
- **\#stream int**? plusOne \= addOne(number);
+void printNumbers(@inject ConsoleWriter writer){  
+ #stream int? number = streamNumbers();  
+ #stream int? plusOne = addOne(number);
 
  {  
-   **switch**(plusOne){  
-     **int** \_ : writer.Out.println(\_);  
-     **err** \_ : writer.Err.println("Ouch\!");  
-     **nil**   : writer.Out.println("Done\!");  
+   switch(plusOne){  
+     int _ : writer.Out.println(_);  
+     err _ : writer.Err.println("Ouch!");  
+     nil   : writer.Out.println("Done!");  
    }  
  }  
-}  
-The number of new concepts introduced in the java code: 5 (`Flowable`, `map`, `subscribe`, `onNext`, `onComplete`, `onError`). The number of new concepts introduced in vajram-lang: 1 (`#stream`). The `#stream` tag allows for the compiler to do the heavy lifting. The `#stream` tag on the `streamNumbers` vajram tells the compiler that the vajram returns a stream of `int`s. It also tells the compiler that the output logic of the vajram may return an iterable \- the compiler plugin will do the conversion from iterable to stream. The developer doesn't have to do anything, or even learn a new data type to represent the stream. The `#stream` tag on the `number` facet tells the compiler that the multiple numbers are going to stream through this facet. The `#stream` tag on the `plusOne` facet tells the compiler that `addOne` should be invoked multiple times depending on the number of items in the `number` stream, and the result is to be streamed through the `plusOne` facet. Finally the runtime calls the output logic of `printNumbers` as many times as there are items in the `plusOne` stream. The beauty of the `#stream` tag is that the output logic can consume the number as if it were just a normal `int`. There is no need for developers to learn new APIs to consume values from a stream (like `map`, `subscribe`) etc. And finally, the "errability" feature spares the developer from learning about new api params (like onNext, onComplete, onError etc). Instead, a simple switch statement allows the dev to access the current element in the stream. If the `plusOne` facet has `nil` it means the stream is closed. If it has an `err`or, then the stream has errored out. 
+}
+```
+The number of new concepts introduced in the java code: 5 (`Flowable`, `map`, `subscribe`, `onNext`, `onComplete`, `onError`). The number of new concepts introduced in vajram-lang: 1 (`#stream`). The `#stream` tag allows for the compiler to do the heavy lifting. The `#stream` tag on the `streamNumbers` vajram tells the compiler that the vajram returns a stream of `int`s. It also tells the compiler that the output logic of the vajram may return an iterable \- the compiler plugin will do the conversion from iterable to stream. The developer doesn't have to do anything, or even learn a new data type to represent the stream. The `#stream` tag on the `number` facet tells the compiler that the multiple numbers are going to stream through this facet. The `#stream` tag on the `plusOne` facet tells the compiler that `addOne` should be invoked multiple times depending on the number of items in the `number` stream, and the result is to be streamed through the `plusOne` facet. Finally the runtime calls the output logic of `printNumbers` as many times as there are items in the `plusOne` stream. The beauty of the `#stream` tag is that the output logic can consume the number as if it were just a normal `int`. There is no need for developers to learn new APIs to consume values from a stream (like `map`, `subscribe`) etc. And finally, the "errability" feature spares the developer from learning about new api params (like onNext, onComplete, onError etc). Instead, a simple switch statement allows the dev to access the current element in the stream. If the `plusOne` facet has `nil` it means the stream is closed. If it has an error, then the stream has errored out. 
 
 It is important to note here that the above is in no way an exhaustive reactive-streams implementation. There is a lot more to solve to make vajram-lang fully compatible with the reactive streams specification. Not only that, we have only shown the applicability of vajram-lang's grammar to the reactive streams paradigm. The runtime is a different ball-game altogether. The language runtime might need to add a lot more custom capabilities to execute reactive streams. All these challenges notwithstanding, the hope is that this section at least shows the generality of the Krystalline programming model.
 
 ### SAGAs
 
-[The Saga pattern](https://www.cs.cornell.edu/andru/cs711/2002fa/reading/sagas.pdf) allows us to model business workflows involving multiple disjointed transactions. To design a saga, developers have to register a compensating transaction for each transaction which makes up the saga. The Saga Manager keeps track of each transaction and when one transaction fails in the list of transactions making up the saga, the compensating transactions of each of the other successful transactions is executed to undo their effect on data stores and bring the complete system to the original state before the saga was executed.  The Krystal programming model allows us to model these with ease and minimal developer overhead.
+[The Saga pattern](https://www.cs.cornell.edu/andru/cs711/2002fa/reading/sagas.pdf) allows us to model business workflows involving multiple disjointed transactions. To design a saga, developers have to register a compensating transaction for each transaction which makes up the saga. The Saga Manager keeps track of each transaction and when one transaction fails in the list of transactions making up the saga, the compensating transactions of each of the other successful transactions is executed to undo their effect on data stores and bring the complete system to the original state before the saga was executed.  The Krystal programming model allows us to model these with ease and minimal developer overhead. //TK: WIP
 
 ## A Final Note
 
-The generality with which we are able to extend the scope of vajram-lang from its initial limited scope is heartening. While most of what has been said in this section is theoretical, it does give us some confidence that the programming model and the tenets of Krystalline programming are not arbitrary. There is good reason to believe that the abstractions and concepts that the Krystalline programming paradigm is based on, would most probably stand the test of time. With this confidence that we are on the right track, we can go ahead with the implementation.
+The generality with which we are able to extend the scope of vajram-lang from its initial limited scope is heartening. While most of what has been said in this section is theoretical, it does give us some confidence that the programming model and the tenets of Krystalline programming are not arbitrary. There is good reason to believe that the abstractions and concepts that the Krystalline programming paradigm is based on would most probably stand the test of time. With this confidence that we are on the right track, we can go ahead with the implementation.
 
 # Vajram Java SDK
 
@@ -1529,7 +1547,7 @@ public abstract class GetAvailableProductDetails extends ComputeVajram<ProductDe
 }
 ```
 * Vajrams written using the vajram-java-sdk are abstract classes annotated with `@VajramDef` and either extend `ComputeVajram` (for non-delegated computation) or `IOVajram` (for delegated computation).   
-* The `@input`, `@inject` and `@dep` facets are all declared in an inner class which must be named `_Facets`.  
+* The `@input`, `@inject` and `@dep` facets are all declared in an inner classes which must be named `_Inputs` and `_InternalFacets`.  
 * Dependency facets can specify the Vajram they depend on using the `@Dependency` annotation's `onVajram` param.  
 * If the dependency is a fanout dependency, then the `canFanout` param of `@Dependency` must be set to true.  
 * The dependency resolvers are defined using static methods annotated with `@Resolve`. The `depName` annotation param specifies the name of the dependency being resolved and the `depInputs` annotation param specifies which inputs of the dependency are being resolved by the method. The resolver method can have any name.  
