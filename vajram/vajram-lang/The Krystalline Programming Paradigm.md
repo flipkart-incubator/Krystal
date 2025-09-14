@@ -1,6 +1,6 @@
-# The Krystal Programming Paradigm
+# The Krystalline Programming Paradigm
 
-## Author: [Ram Anvesh Reddy Kasam](mailto:ram.anvesh@flipkart.com)
+## Author: [Ram Anvesh Reddy Kasam](mailto:ramanvesh@gmail.com)
 
 # Introduction
 
@@ -10,7 +10,7 @@ In this paper, we try to answer the following question:
 
 The answer, we conclude, is: No, they are not.
 
-We take a critical look at today's high level programming languages in light of all the latest developments in the domain of distributed software systems, modern day business, product, and tech demands on such systems and our learnings from building large scale distributed systems at Flipkart \- what these languages offer, what they don't, and what they *should* offer. How they are structured, and how they *should* be. What kind of code, coding practices and patterns they directly or indirectly encourage, and how these can be improved, etc.  We know from the work of Alonzo Church and Alan Turing, that all modern Turing-complete languages are essentially, functionally equivalent \- meaning a task which can be accomplished by one Turing-complete language can definitely be accomplished by any other turing-complete language. So the area of focus here is not on the **what** question (the functional capabilities of modern high-level languages) but the ***how*** question (how do these languages accomplish a task and what are the implications of the design choices that the languages make).
+We take a critical look at today's high level programming languages in light of all the latest developments in the domain of distributed software systems, modern day business, product, and tech demands on such systems and our learnings from building large scale distributed systems at a large tech organization \- what these languages offer, what they don't, and what they *should* offer. How they are structured, and how they *should* be. What kind of code, coding practices and patterns they directly or indirectly encourage, and how these can be improved, etc.  We know from the work of Alonzo Church and Alan Turing, that all modern Turing-complete languages are essentially, functionally equivalent \- meaning a task which can be accomplished by one Turing-complete language can definitely be accomplished by any other turing-complete language. So the area of focus here is not on the **what** question (the functional capabilities of modern high-level languages) but the ***how*** question (how do these languages accomplish a task and what are the implications of the design choices that the languages make).
 
 Doing this, admittedly, is no small task \- some would also say foolhardy even. But, hey\! Isn't that what's fun about it?
 
@@ -319,7 +319,7 @@ That's enough theory, let's look at an example. Let us start with the customary 
 
 ## Hello\! World…
 
-**package** com.flipkart.krystal.vajram.lang.samples.helloWorld;
+**package** org.krystal.vajram.lang.samples.helloWorld;
 
 **void** helloWorld(**@inject** ConsoleWriter writer){  
  {  
@@ -909,9 +909,9 @@ The generality with which we are able to extend the scope of vajram-lang from it
 
 # Vajram Java SDK
 
-Conceiving, designing and building a new programming language from scratch, however exciting it might seem, is no trivial task. The amount of effort needed to build a new programming language is not even the biggest concern. Evangelizing, educating and then driving adoption of this new programming language across a company the size of Flipkart would be a humongous project. We cannot take an all or nothing approach. We need to find an incremental in-between milestone where we might not get all the goodness that vajram-lang can give us, but at least some of it.
+Conceiving, designing and building a new programming language from scratch, however exciting it might seem, is no trivial task. The amount of effort needed to build a new programming language is not even the biggest concern. Evangelizing, educating and then driving adoption of this new programming language across a large tech organization would be a humongous project. We cannot take an all-or-nothing approach. We need to find an incremental in-between milestone where we might not get all the goodness that vajram-lang can give us, but at least some of it.
 
-In this spirit, we started the Krystal project as a Java-based Software Development Kit (SDK) rather than an altogether new programming language.  This, we call the vajram-java-sdk. The vajram java sdk allows developers to write vajrams in the Java(17+) programming language which runs in the JVM. All the basic concepts and abstractions introduced in vajram-lang remain the same \- vajrams are the smallest units of work, they have immutable-after-set type-safe facets (inputs, injections, dependencies), these facets can be mandatory or optional, dependencies can fanout, there is control plane and data plane separation, dependency resolvers compute inputs to dependencies, and output logic computes the output of the vajrams, platform developers can extend platform capabilities with output logic decorators, facets and vajrams can be annotated, the sdk supports batching as a capability natively, and so on.. 
+The Krystal project with a Java-based Software Development Kit rather than an altogether new programming language (vajram-lang) caters to this spirit (Even though this was not the original motivation - the actual chronological journey was much more complicated).  This java based sdk is the vajram-java-sdk. The vajram-java-sdk allows developers to write vajrams in the Java(17+) programming language which runs on the JVM. All the basic concepts and abstractions introduced in vajram-lang remain the same \- vajrams are the smallest units of work, they have immutable-after-set type-safe facets (inputs, injections, dependencies), these facets can be mandatory or optional, dependencies can fanout, there is control plane and data plane separation, dependency-input resolvers compute inputs to dependencies, and output logic computes the output of the vajrams, platform developers can extend platform capabilities with decorators (output-logic-decorators, kryon/vajram decorators, dependency decorators), facets and vajrams can be annotated, the sdk supports batching as a capability natively, and so on.. 
 
 This adherence to the tenets of Krystalline programming gives us much of the goodness that we have aimed to deliver in the design of vajram-lang. The thing we miss out on is the brevity of vajram-lang. Given that the grammar of the java language was not designed to be compatible with Krystalline programming, it takes a bit more code to achieve the same thing that vajram-lang is able to do in a few lines of code. To mitigate this, vajram-java-sdk relies heavily on code-generation so that the vajram is executed in a performant way (without having to resort to reflection, for example) by the framework's runtime \-  called Krystex (from **Kryst**al **Ex**ecutor). The reliance on code-generation reduces unnecessary boilerplate to a huge extent and allows the framework to adapt to the developers' needs, but this needs some innovation and configuration of the IDE and build systems to make sure the code generation is being performed seamlessly.
 
