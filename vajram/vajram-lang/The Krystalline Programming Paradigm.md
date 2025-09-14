@@ -34,9 +34,31 @@ On our first day, we are asked to implement a piece of software called "getProdu
 2. Fetch data from ProductDB, and return the product details.
 
 Simple enough; we implement the code as follows:
+```java
+import com.mycompany.ProductDB;
 
-| import com.mycompany.ProductDB;  /\*\* \* Sample calling code:  \*  \* ProductDetails pd \=     \*     new ProductDetailsFetcher(productId).getProductDetails(); \*/public class ProductDetailsFetcher {		private String productId;      private ProductDB productDB;	public ProductDetailsFetcher(String productId){		this.productId \= productId;		this.productDB \= ProductDB.instance();      }	public ProductDetails getProductDetails(){		return productDB.getProductDetails(this.productId);      }} |
-| :---- |
+/**
+ * Sample calling code: 
+ * 
+ * ProductDetails pd =    
+ *     new ProductDetailsFetcher(productId).getProductDetails();
+ */
+public class ProductDetailsFetcher {
+	
+	private String productId;
+      private ProductDB productDB;
+
+	public ProductDetailsFetcher(String productId){
+		this.productId = productId;
+		this.productDB = ProductDB.instance();
+      }
+
+	public ProductDetails getProductDetails(){
+		return productDB.getProductDetails(this.productId);
+      }
+
+}
+```
 
 .. and immediately send this for code review to a senior team member, who is also our mentor, hoping to merge and deploy to production ASAP\!
 
@@ -51,20 +73,70 @@ So, our first day goes into reading about and understanding dependency injection
 
 So the next day, we make the necessary code changes:
 
-| import jakarta.inject.Inject;import com.mycompany.ProductDB;public class ProductDetailsFetcher {		private String productId;      private ProductDB productDB;            @Inject	public ProductDetailsFetcher(String productId, ProductDB productDB){		this.productId \= productId;		this.productDB \= productDB;      }	public ProductDetails getProductDetails(){		return productDB.getProductDetails(this.productId);      }} |
-| :---- |
+```java
+import jakarta.inject.Inject;
+import com.mycompany.ProductDB;
+
+public class ProductDetailsFetcher {
+	
+	private String productId;
+      private ProductDB productDB;
+      
+      @Inject
+	public ProductDetailsFetcher(String productId, ProductDB productDB){
+		this.productId = productId;
+		this.productDB = productDB;
+      }
+
+	public ProductDetails getProductDetails(){
+		return productDB.getProductDetails(this.productId);
+      }
+
+}
+```
 
 But this doesn't work\! The injected constructor accepts one parameter injected by the runtime (the ProductDB) and another provided by the calling code (productId). This is not allowed by the dependency injection framework.
 
 So the second day goes into reading about [Assisted injection](https://dagger.dev/dev-guide/assisted-injection.html) \- and why it is needed and how it's supposed to be used. We will have to replace the @Inject annotation with an @AssistedInject annotation, annotate the productId param with the @Assisted annotation\! And not only that, we need to create a new factory interface which has a method with only the productId param and the interface needs to be annotated with @AssistedFactory:
+```java
+import jakarta.inject.Inject;
+import com.mycompany.ProductDB;
+import com.diframework.Assisted;
+import com.diframework.AssitedInject;
+import com.diframework.AssistedFactory;
 
-| import jakarta.inject.Inject;import com.mycompany.ProductDB;import com.diframework.Assisted;import com.diframework.AssitedInject;import com.diframework.AssistedFactory;public class ProductDetailsFetcher {            @AssistedFactory      public interface ProductDetailsFetcherFactory {        ProductDetailsFetcher create(String productId);      }	private String productId;      private ProductDB productDB;            @AssitedInject	public ProductDetailsFetcher(              @Assisted String productId, ProductDB productDB){	    this.productId \= productId;	    this.productDB \= productDB;      }	public ProductDetails getProductDetails(){	    return productDB.getProductDetails(this.productId);      }} |
-| :---- |
+public class ProductDetailsFetcher {
+      
+      @AssistedFactory
+      public interface ProductDetailsFetcherFactory {
+        ProductDetailsFetcher create(String productId);
+      }
+
+	private String productId;
+      private ProductDB productDB;
+      
+      @AssitedInject
+	public ProductDetailsFetcher(
+              @Assisted String productId, ProductDB productDB){
+	    this.productId = productId;
+	    this.productDB = productDB;
+      }
+
+	public ProductDetails getProductDetails(){
+	    return productDB.getProductDetails(this.productId);
+      }
+
+}
+```
 
 Now our clients can't just call us like before:  
-new ProductDetailsFetcher(productId).getProductDetails();   
-They will have to inject the  ProductDetailsFetcherFactory and then do:  
-ProductDetailsFetcherFactory.create(productId).getProductDetails();
+```java
+new ProductDetailsFetcher(productId).getProductDetails();
+```
+They will have to inject the  `ProductDetailsFetcherFactory` and then do:  
+```
+java ProductDetailsFetcherFactory.create(productId).getProductDetails();
+```
 
 This is a bit confusing to us. If the data plane is supposed to have only business logic, why this new factory interface which is not part of my core algorithm? Why so many annotations instead of just one? Why should my client's call patterns be affected by my decision to use dependency injection? Our business requirement did not change \- then why did our code change? Our mentor nods understandingly and tells us that these concerns are valid. But when building modern enterprise-scale systems, we need to adopt some patterns, which, like it or not, happen to have these side-effects.
 
@@ -88,13 +160,80 @@ After many such new learnings and experiences, our code is finally deployed\! Al
 
 Thanking the gods that this issue was caught in a load test and not in production, we begin fixing the issue. One simple way to do this is to increase the number of threads in the server. But this only delays the inevitable. To truly fix this issue, we need to make the DB call in a thread from a dedicated thread pool with its own pool size. This way, if the getProductDetails query is latent, only those threads in the dedicated pool will be used up and the other threads will remain free to do other important work. We need to run load tests and perform some calculations taking DB latency and load estimations into account to determine the optimal pool size. Then we need to code in such a way that when the thread pool is exhausted, we instantly reject all requests to that DB so that incoming threads are not blocked unnecessarily, so that this DB call doesn't penalize other APIs which do not depend on this DB call. Not only this, we add a timeout to the DB get call to have an upper limit on how much time the DB can make us wait, so that bad requests do not penalize good requests- this is the "fail fast" idiom. After this, the code looks like this:
 
-| import jakarta.inject.Inject;import com.mycompany.ProductDB;import com.diframework.Assisted;import com.diframework.AssitedInject;import com.diframework.AssistedFactory;public class ProductDetailsFetcher {          @AssistedFactory    public interface ProductDetailsFetcherFactory {      ProductDetailsFetcher create(String productId);    }    private String productId;    private ProductDB productDB;    private ExecutorService threadPool;          @AssitedInject    public ProductDetailsFetcher(            @Assisted String productId,             ProductDB productDB,            ExecutorService threadPool){        this.productId \= productId;        this.productDB \= productDB;         this.threadPool \= threadPool;    }    public ProductDetails getProductDetails() throws        RejectedExecutionException,         ExecutionExceptoin,         InterruptedException {            return executorService.submit(() \-\>                 productDB                .getProductDetails(this.productId))                .get(20, SECONDS));    }} |
-| :---- |
+```java
+import jakarta.inject.Inject;
+import com.mycompany.ProductDB;
+import com.diframework.Assisted;
+import com.diframework.AssitedInject;
+import com.diframework.AssistedFactory;
+
+public class ProductDetailsFetcher {
+      
+    @AssistedFactory
+    public interface ProductDetailsFetcherFactory {
+      ProductDetailsFetcher create(String productId);
+    }
+
+    private String productId;
+    private ProductDB productDB;
+    private ExecutorService threadPool;
+      
+    @AssitedInject
+    public ProductDetailsFetcher(
+            @Assisted String productId, 
+            ProductDB productDB,
+            ExecutorService threadPool){
+        this.productId = productId;
+        this.productDB = productDB;
+        this.threadPool = threadPool;
+    }
+
+    public ProductDetails getProductDetails() throws
+        RejectedExecutionException, 
+        ExecutionExceptoin, 
+        InterruptedException {
+            return executorService.submit(() -> 
+                productDB
+                .getProductDetails(this.productId))
+                .get(20, SECONDS));
+    }
+}
+```
 
 Submitting a task to a threadpool brings with it three possible checked exceptions which can be thrown. Should we catch these exceptions, or declare them in throws? Catching and handling all of them is so much extra code. But if we don't do it, then our clients will have to do it\! The funny thing here is that even with all this extra code, the underlying business requirement has not changed. Is it right that we have to be making all these changes? Modern languages like Java allow us to reduce this code by using the Aspect Oriented Programming (AOP) pattern in which we can annotate the method in question with a special annotation which tells the AOP framework to wrap the method in a threadpool call. This avoids polluting the business logic:
 
-| import jakarta.inject.Inject;import com.mycompany.ProductDB;import com.diframework.Assisted;import com.diframework.AssitedInject;import com.diframework.AssistedFactory;public class ProductDetailsFetcher {            @AssistedFactory      public interface ProductDetailsFetcherFactory {        ProductDetailsFetcher create(String productId);      }	private String productId;      private ProductDB productDB;            @AssitedInject	public ProductDetailsFetcher(              @Assisted String productId, ProductDB productDB){	    this.productId \= productId;	    this.productDB \= productDB;      }       @ExecuteInFixedPool(30)       @Timeout(time= 20, units \= SECONDS)	public ProductDetails getProductDetails(){	    return productDB.getProductDetails(this.productId);      }} |
-| :---- |
+```java
+import jakarta.inject.Inject;
+import com.mycompany.ProductDB;
+import com.diframework.Assisted;
+import com.diframework.AssitedInject;
+import com.diframework.AssistedFactory;
+
+public class ProductDetailsFetcher {
+      
+      @AssistedFactory
+      public interface ProductDetailsFetcherFactory {
+        ProductDetailsFetcher create(String productId);
+      }
+
+	private String productId;
+      private ProductDB productDB;
+      
+      @AssitedInject
+	public ProductDetailsFetcher(
+              @Assisted String productId, ProductDB productDB){
+	    this.productId = productId;
+	    this.productDB = productDB;
+      }
+
+      @ExecuteInFixedPool(30)
+      @Timeout(time= 20, units = SECONDS)
+	public ProductDetails getProductDetails(){
+	    return productDB.getProductDetails(this.productId);
+      }
+
+}
+```
 
 where `@ExecuteInFixedPool` is a hypothetical AOP-enabled annotation. But this comes with its own limitations:   
 1\. How do we release the DB connection when the timeout expires? If we don't do this, the DB connection pool will choke\! To do this, we will need to make sure that the thread in which the DB call is made is interrupted on timeout and hope that the DB client library handles that interrupt properly by releasing the connection.
@@ -114,22 +253,123 @@ The combination of AOP, virtual threads, and scoped values significantly reduces
 After the successful launch of our e-commerce application, we get a new requirement from the product team:  
 *Do not return any  product details from product DB, if the product is unavailable to be bought.*  
 This task is assigned to us \- and this makes us super excited \- we will be able to use the existing code that we have written for a new use case\!  
-We leave the existing `ProductDetailsFetcher` as it is for backward compatibility, and write a new `AvailableProductDetailsFetcher` which uses, or depends on, the ProductDetailsFetcher.
+We leave the existing `ProductDetailsFetcher` as it is for backward compatibility, and write a new `AvailableProductDetailsFetcher` which uses, or depends on, the `ProductDetailsFetcher`.
 
-| //imports..public class AvailableProductDetailsFetcher {            @AssistedFactory      public interface AvailableProductDetailsFetcherFactory {        AvailableProductDetailsFetcher create(String productId);      }      private String productId;      private ProductDetailsFetcher productDetailsFetcher;       private AvailabilityDB availabilityDB;            @AssitedInject      public ProductDetailsFetcher(              @Assisted String productId,                ProductDetailsFetcherFactory productDetailsFetcherFactory,               AvailabilityDB availabilityDB){	    this.productId \= productId;	    this.productDetailsFetcher \=                productDetailsFetcherFactory.create(productId);	    this.availabilityDB \= availabilityDB;      }      @ConcurrencyLimit(30)      public Optional\<ProductDetails\> getProductDetails(){          if(availabilityDB.isProductAvailable(productId)){	        return Optional.of(                  productDetailsFetcher.getProductDetails());          } else {              return Optional.empty();          }      }} |
-| :---- |
+```java
+//imports..
+
+public class AvailableProductDetailsFetcher {
+      
+      @AssistedFactory
+      public interface AvailableProductDetailsFetcherFactory {
+        AvailableProductDetailsFetcher create(String productId);
+      }
+
+      private String productId;
+      private ProductDetailsFetcher productDetailsFetcher;
+      private AvailabilityDB availabilityDB;
+      
+      @AssitedInject
+      public ProductDetailsFetcher(
+              @Assisted String productId, 
+              ProductDetailsFetcherFactory productDetailsFetcherFactory,
+              AvailabilityDB availabilityDB){
+	    this.productId = productId;
+	    this.productDetailsFetcher = 
+              productDetailsFetcherFactory.create(productId);
+	    this.availabilityDB = availabilityDB;
+      }
+
+      @ConcurrencyLimit(30)
+      public Optional<ProductDetails> getProductDetails(){
+          if(availabilityDB.isProductAvailable(productId)){
+	        return Optional.of(
+                  productDetailsFetcher.getProductDetails());
+          } else {
+              return Optional.empty();
+          }
+      }
+}
+```
 
 While this code is functionally correct, over time we discover an issue with this implementation \- an increase in latency is causing customer engagement to trend downwards. It is clear why this latency increase is seen. It's because of the sequential call to `isProductAvailable` and `getProductDetails` methods. Business and product teams are not OK with this behaviour. So we are given a follow-up task to bring the latency back to the previous behaviour. The only way to do this is to parallelize both the DB calls. So, we get to work. But how do we do this? We speak to our mentor and explain the problem to them. They tell us that we need to offload the blocking calls to another threadpool. The moment we call `isProductAvailable`, the current thread blocks. So we cannot call it directly. We need to call it in a different virtual thread so that we can call getProductDetails parallelly. Taking all this in, we make changes so that the code looks like this now:
 
-| //imports..public class AvailableProductDetailsFetcher {  @AssistedFactory  public interface AvailableProductDetailsFetcherFactory {    AvailableProductDetailsFetcher create(String productId);  }  private final String productId;  private final ExecutorService virtualThreadsExecutor;  private final ProductDetailsFetcher productDetailsFetcher;  private final AvailabilityDB availabilityDB;  @AssitedInject  public AvailableProductDetailsFetcher(      @Assisted String productId,      ProductDetailsFetcherFactory productDetailsFetcherFactory,      AvailabilityDB availabilityDB,      ExecutorService virtualThreadsExecutor) {    this.productId \= productId;    this.virtualThreadsExecutor \= virtualThreadsExecutor;    this.productDetailsFetcher \=        productDetailsFetcherFactory.create(productId);    this.availabilityDB \= availabilityDB;  }  @ConcurrencyLimit(30)  public Optional\<ProductDetails\> getProductDetails() throws Exception {    Future\<Boolean\> isAvailableFuture \=        virtualThreadsExecutor.submit(() \-\>           availabilityDB.isProductAvailable(productId));    ProductDetails productDetails \=       productDetailsFetcher.getProductDetails();    if (isAvailableFuture.get()) {      return Optional.of(productDetails);    } else {      return Optional.empty();    }  }} |
-| :---- |
+```java
+//imports..
+
+public class AvailableProductDetailsFetcher {
+
+  @AssistedFactory
+  public interface AvailableProductDetailsFetcherFactory {
+    AvailableProductDetailsFetcher create(String productId);
+  }
+
+  private final String productId;
+  private final ExecutorService virtualThreadsExecutor;
+  private final ProductDetailsFetcher productDetailsFetcher;
+  private final AvailabilityDB availabilityDB;
+
+  @AssitedInject
+  public AvailableProductDetailsFetcher(
+      @Assisted String productId,
+      ProductDetailsFetcherFactory productDetailsFetcherFactory,
+      AvailabilityDB availabilityDB,
+      ExecutorService virtualThreadsExecutor) {
+    this.productId = productId;
+    this.virtualThreadsExecutor = virtualThreadsExecutor;
+    this.productDetailsFetcher = 
+       productDetailsFetcherFactory.create(productId);
+    this.availabilityDB = availabilityDB;
+  }
+
+  @ConcurrencyLimit(30)
+  public Optional<ProductDetails> getProductDetails() throws Exception {
+    Future<Boolean> isAvailableFuture =
+        virtualThreadsExecutor.submit(() -> 
+          availabilityDB.isProductAvailable(productId));
+    ProductDetails productDetails = 
+      productDetailsFetcher.getProductDetails();
+    if (isAvailableFuture.get()) {
+      return Optional.of(productDetails);
+    } else {
+      return Optional.empty();
+    }
+  }
+}
+```
 
 While it's a bit unfortunate that in order to achieve parallelization, we had to re-introduce the executor service which we avoided by using AOP in the previous chapter, we are happy that we were able to reduce the latency significantly and contribute to improved business metrics.
 
 While the above code works well in most scenarios, in 0.01% of the scenarios, it throws an error. A couple of weeks later, this point is brought to our team's attention. We debug and find out that `isProductAvailable` DB call is failing in 0.01% of the requests. While this is not a deal-breaker, this can be avoided \- the product team tells us to assume that the product is available in case the call to the DB fails. This must be a small change \- all we have to do is catch the exception and provide a default value. This time, we assign this task to our mentee \- a newly minted engineer who just joined the team. We proudly explain the code to them and ask them to make the changes. They make the changes, add a test case to check if the defaulting behaviour is working, and submit a PR. We review the code, check that all existing and new unit tests are succeeding \- which they are. We approve the PR, merge and trigger deployment. We congratulate our junior team mate for reducing these errors from a few 1000s per day, to zero\! They are very happy, and so are we. This is the new code:
 
-| //imports..public class AvailableProductDetailsFetcher {  //.. same as before  @ConcurrencyLimit(30)  public Optional\<ProductDetails\> getProductDetails() {    Future\<Boolean\> isAvailableFuture \=        virtualThreadsExecutor.submit(() \-\>           availabilityDB.isProductAvailable(productId));    boolean isAvailable;    try {      isAvailable \= isAvailableFuture.get();    } catch (Exception e) {      isAvailable \= true; // Error handling    }    ProductDetails productDetails \=       productDetailsFetcher.getProductDetails();    if (isAvailable) {      return Optional.of(productDetails);    } else {      return Optional.empty();    }  }} |
-| :---- |
+```java
+//imports..
+
+public class AvailableProductDetailsFetcher {
+
+  //.. same as before
+
+  @ConcurrencyLimit(30)
+  public Optional<ProductDetails> getProductDetails() {
+    Future<Boolean> isAvailableFuture =
+        virtualThreadsExecutor.submit(() -> 
+          availabilityDB.isProductAvailable(productId));
+    boolean isAvailable;
+    try {
+      isAvailable = isAvailableFuture.get();
+    } catch (Exception e) {
+      isAvailable = true; // Error handling
+    }
+    ProductDetails productDetails = 
+      productDetailsFetcher.getProductDetails();
+    if (isAvailable) {
+      return Optional.of(productDetails);
+    } else {
+      return Optional.empty();
+    }
+  }
+}
+```
 
 But there's a problem. If you have caught the issue, then you must be  a great code reviewer\! When this code gets deployed to production, the latency increase we solved a couple of weeks back, re-emerges causing a reduction in some key business metrics. Also, the increased latencies triggered some client timeouts which further impacted the availability and business metrics of our app. Our team oncall gets paged, we scramble and immediately rollback the deployment to mitigate the issue.
 
@@ -141,9 +381,15 @@ All this aside, we are concerned for our mentee. Causing a production issue with
 
 Then our mentee asks us this question:  
 In the code that we deployed…
-
-|     try {      isAvailable \= isAvailableFuture.get();    } catch (Exception e) {      isAvailable \= true; // Error handling    }    ProductDetails productDetails \=       productDetailsFetcher.getProductDetails(); |
-| :---- |
+```java
+    try {
+      isAvailable = isAvailableFuture.get();
+    } catch (Exception e) {
+      isAvailable = true; // Error handling
+    }
+    ProductDetails productDetails = 
+      productDetailsFetcher.getProductDetails();
+```
 
 … the `productDetailsFetcher.getProductDetails()` line of code has no data dependency on the `isAvailable` variable being computed in the try catch block \- these two are completely independent of each other. Then why didn't the runtime just run them concurrently and avoid this issue? We explain to them that unfortunately that is not how programming languages work. Even if these two lines of code have no explicit dependency on each other, they are implicitly linked \- because every line of code written is assumed to have an implicit dependency on the previous line of code \- it cannot execute until the previous line completes. Because of this assumption, the compiler and language have no way to know if the developer wants to avoid calling `getProductDetails` until `isAvailableFuture.get()` is called or if it's a bug \- "this, unfortunately", we say to them "is the cost of doing business".
 
@@ -164,7 +410,11 @@ Today, it's not just more cores, it's many computers \- each with many cores whi
 To summarize:   
 Linear instruction execution is one-dimensional in nature:
 
+//TK: Image
+
 What we need is a programming language which has has the ability to model two-dimensional code:
+
+//TK: Image
 
 This "two-dimensional" code is what achieves concurrency.
 
@@ -174,8 +424,34 @@ This "two-dimensional" code is what achieves concurrency.
 
 After the RCA is done, we fix the code and redeploy it:
 
-| //imports..public class AvailableProductDetailsFetcher {  //.. same as before  @ConcurrencyLimit(30)  public Optional\<ProductDetails\> getProductDetails() {    Future\<Boolean\> isAvailableFuture \=        virtualThreadsExecutor.submit(() \-\>           availabilityDB.isProductAvailable(productId));     ProductDetails productDetails \=         productDetailsFetcher.getProductDetails();    boolean isAvailable;    try {      isAvailable \= isAvailableFuture.get();    } catch (Exception e) {      isAvailable \= true; // Error handling    }    if (isAvailable) {      return Optional.of(productDetails);    } else {      return Optional.empty();    }  }} |
-| :---- |
+```java
+//imports..
+
+public class AvailableProductDetailsFetcher {
+
+  //.. same as before
+
+  @ConcurrencyLimit(30)
+  public Optional<ProductDetails> getProductDetails() {
+    Future<Boolean> isAvailableFuture =
+        virtualThreadsExecutor.submit(() -> 
+          availabilityDB.isProductAvailable(productId));
+    ProductDetails productDetails = 
+        productDetailsFetcher.getProductDetails();
+    boolean isAvailable;
+    try {
+      isAvailable = isAvailableFuture.get();
+    } catch (Exception e) {
+      isAvailable = true; // Error handling
+    }
+    if (isAvailable) {
+      return Optional.of(productDetails);
+    } else {
+      return Optional.empty();
+    }
+  }
+}
+```
 
 At last, this code works as expected. But we are a bit flabbergasted. All we had to do was to parallelize two network calls. And this is what we ended up with:
 
@@ -219,13 +495,83 @@ As our new e-commerce app becomes more successful, we see a lot of growth in the
 
 Let's get to work\! We have two classes that we know access the DB clients. THey are the `ProductDetailsFetcher` which accesses the productDB and the `AvailableProductDetailsFetcher` which accesses the availabilityDB. Let's first change the `ProductDetailsFetcher`. Instead of using the API `productDB.getProductDetails`, we need to call the `productDB.getProductDetailsBatch` which accepts a list of productIds and returns a list of `ProductDetails` objects \- one for each productId.
 
-| public class ProductDetailsFetcher {  @AssistedFactory  public interface ProductDetailsFetcherFactory {    ProductDetailsFetcher create(List\<String\> productIds);  }  private final List\<String\> productIds;  private final ProductDB productDB;  @AssitedInject  public ProductDetailsFetcher(      @Assisted List\<String\> productIds,       ProductDB productDB) {    this.productIds \= productIds;    this.productDB \= productDB;  }  @ConcurrencyLimit(30)  public Map\<String, ProductDetails\> getProductDetails() {    return productDB.getProductDetailsBatch(this.productIds);  }} |
-| :---- |
+```java
+public class ProductDetailsFetcher {
+
+  @AssistedFactory
+  public interface ProductDetailsFetcherFactory {
+    ProductDetailsFetcher create(List<String> productIds);
+  }
+
+  private final List<String> productIds;
+  private final ProductDB productDB;
+
+  @AssitedInject
+  public ProductDetailsFetcher(
+      @Assisted List<String> productIds, 
+      ProductDB productDB) {
+    this.productIds = productIds;
+    this.productDB = productDB;
+  }
+
+  @ConcurrencyLimit(30)
+  public Map<String, ProductDetails> getProductDetails() {
+    return productDB.getProductDetailsBatch(this.productIds);
+  }
+}
+```
 
 We change the DB client method and accordingly change the data types of the productId constructor param, field, and factory param to accept a `List` of `String`s. Similarly, we change the `AvailableProductDetailsFetcher` class:
 
-| public class AvailableProductDetailsFetcher {  @AssistedFactory  public interface AvailableProductDetailsFetcherFactory {    AvailableProductDetailsFetcher create(List\<String\> productIds);  }  private final List\<String\> productIds;  private final ExecutorService virtualThreadsExecutor;  private final ProductDetailsFetcher productDetailsFetcher;  private final AvailabilityDB availabilityDB;  @AssitedInject  public AvailableProductDetailsFetcher(      @Assisted List\<String\> productIds,      ProductDetailsFetcherFactory productDetailsFetcherFactory,      AvailabilityDB availabilityDB,      ExecutorService virtualThreadsExecutor) {    this.productIds \= productIds;    this.virtualThreadsExecutor \= virtualThreadsExecutor;    this.productDetailsFetcher \= productDetailsFetcherFactory.create(productId);    this.availabilityDB \= availabilityDB;  }  @ConcurrencyLimit(30)  public Map\<String, ProductDetails\> getProductDetails() {    Future\<Map\<String, Boolean\>\> isAvailableFuture \=        virtualThreadsExecutor.submit(() \-\>              availabilityDB.areProductsAvailable(productIds));    Map\<String, Boolean\> isAvailable \= new HashMap\<\>();    Map\<String, ProductDetails\> productDetailsMap \=          productDetailsFetcher.getProductDetails();    try {      isAvailable \= isAvailableFuture.get();    } catch (Exception ignored) {    }    Map\<String, ProductDetails\> result \= new HashMap\<\>();    for (Entry\<String, ProductDetails\> e : productDetailsMap.entrySet()) {      String productId \= e.getKey();      ProductDetails productDetails \= e.getValue();      if (isAvailable.getOrDefault(productId, true)) { //Error-handling        result.put(productId, productDetails);      }    }    return result;  }} |
-| :---- |
+```java
+public class AvailableProductDetailsFetcher {
+
+  @AssistedFactory
+  public interface AvailableProductDetailsFetcherFactory {
+    AvailableProductDetailsFetcher create(List<String> productIds);
+  }
+
+  private final List<String> productIds;
+  private final ExecutorService virtualThreadsExecutor;
+  private final ProductDetailsFetcher productDetailsFetcher;
+  private final AvailabilityDB availabilityDB;
+
+  @AssitedInject
+  public AvailableProductDetailsFetcher(
+      @Assisted List<String> productIds,
+      ProductDetailsFetcherFactory productDetailsFetcherFactory,
+      AvailabilityDB availabilityDB,
+      ExecutorService virtualThreadsExecutor) {
+    this.productIds = productIds;
+    this.virtualThreadsExecutor = virtualThreadsExecutor;
+    this.productDetailsFetcher = productDetailsFetcherFactory.create(productId);
+    this.availabilityDB = availabilityDB;
+  }
+
+  @ConcurrencyLimit(30)
+  public Map<String, ProductDetails> getProductDetails() {
+    Future<Map<String, Boolean>> isAvailableFuture =
+        virtualThreadsExecutor.submit(() -> 
+            availabilityDB.areProductsAvailable(productIds));
+    Map<String, Boolean> isAvailable = new HashMap<>();
+    Map<String, ProductDetails> productDetailsMap = 
+        productDetailsFetcher.getProductDetails();
+    try {
+      isAvailable = isAvailableFuture.get();
+    } catch (Exception ignored) {
+    }
+    Map<String, ProductDetails> result = new HashMap<>();
+    for (Entry<String, ProductDetails> e : productDetailsMap.entrySet()) {
+      String productId = e.getKey();
+      ProductDetails productDetails = e.getValue();
+      if (isAvailable.getOrDefault(productId, true)) { //Error-handling
+        result.put(productId, productDetails);
+      }
+    }
+    return result;
+  }
+}
+```
 
 Again, we make all the relevant changes to accept `List<String>` for productIds. Not only this, since the `ProductDetailsFetcher` returns a `Map`, we need to explicitly iterate through these maps to retrieve the ProductDetails after also querying the `Map` returned by availability.
 
@@ -249,9 +595,34 @@ As we scale up our operations and our backend team grows, we start to create dom
 
 * Move the code of `ProductDetailsFetcher` to their service  
 * Reimplement the `ProductDetailsFetcher` to accept an injection of the ProductCatalogService client instead of the productDB, and convert the response of the service into a `Map`:
+```java
 
-| public class ProductDetailsFetcher {  @AssistedFactory  public interface ProductDetailsFetcherFactory {    ProductDetailsFetcher create(List\<String\> productIds);  }  private final List\<String\> productIds;  private final ProductCatalogServiceClient svcClient;  @AssitedInject  public ProductDetailsFetcher(      @Assisted List\<String\> productIds, ProductCatalogServiceClient svcClient) {    this.productIds \= productIds;    this.svcClient \= svcClient;  }  @ConcurrencyLimit(30)  public Map\<String, ProductDetails\> getProductDetails() {    return svcClient        .getProductDetailsBatch(this.productIds)        .found().stream()        .collect(Collectors.toMap(ProductDetails::productId, Function.identity()));  }} |
-| :---- |
+public class ProductDetailsFetcher {
+
+  @AssistedFactory
+  public interface ProductDetailsFetcherFactory {
+    ProductDetailsFetcher create(List<String> productIds);
+  }
+
+  private final List<String> productIds;
+  private final ProductCatalogServiceClient svcClient;
+
+  @AssitedInject
+  public ProductDetailsFetcher(
+      @Assisted List<String> productIds, ProductCatalogServiceClient svcClient) {
+    this.productIds = productIds;
+    this.svcClient = svcClient;
+  }
+
+  @ConcurrencyLimit(30)
+  public Map<String, ProductDetails> getProductDetails() {
+    return svcClient
+        .getProductDetailsBatch(this.productIds)
+        .found().stream()
+        .collect(Collectors.toMap(ProductDetails::productId, Function.identity()));
+  }
+}
+```
 
 This code rewrite is an artefact of the fact that modern programming languages allow communications among various pieces of code only within a common runtime. This not only leads to unnecessary code changes when service boundaries change even if there are no functional changes, but also freeze the service boundaries globally. It is no longer possible to host `ProductDetailsFetcher` as a service in some contexts, but in other contexts, package it in the same runtime. If this was possible we could choose the right approach depending on the runtime characteristics of the client application (how chatty is the network call, serialization/deserialization cost et.) without the calling code needing any code changes, and without needing any additional application code.
 
@@ -268,18 +639,68 @@ The journey up until this point is just the tip of the iceberg. There are many m
 In this chapter, instead of going in-depth into one problem per chapter, we'll pick up pace. Let's do a quick walk through of more such problems which arise because modern programming languages and runtimes do not provide adequate abstractions to build distributed systems.
 
 * **Timeouts vs Deadlines**: Managing timeouts for various service calls within an application can be a pain. Figuring out the right timeouts is an involved process needing extensive performance testing across services to figure out the right limits. Moving to deadlines and client-provided request timeouts reduces this overhead. In this approach, clients provide a timeout per request. The server deduces a deadline (a point in time) by which the complete call needs to succeed. This pattern is called "deadline propagation". Now all we have to do is to make sure this computed deadline is available to and respected by all points in the code where network calls are being made. Before the availability of virtual threads in the JVM, concurrency of network calls were achieved using multi-threading. Passing the deadlines in such a setup was painful \- involving writing custom code to copy over thread locals to new threads and then cleaning up threadlocals after the task execution. The issues with thread local usage have been well documented on the internet. Now with the availability of virtual threads and (soon to be available) [scoped values](https://openjdk.org/jeps/464), we can set the deadline as a scoped value which is passed to all child virtual threads. While this improves the situation to some extent, it doesn't solve the problem completely. We have spoken about Level1 and Level2 calls where Level2 calls' inputs are derived from Level1 calls' outputs \- In such a situation, what happens if a Level 1 call takes up all the time until the deadline? The Level2 call will have zero time left, leading to guaranteed failure. This is not an issue if the Level1 call is mandatory. But if the Level1 call is optional, then it would have made much more sense to fail the Level1 call much before deadline expiration so that the Level2 call could have performed some error handling and continued execution. Doing this reliably in current programming languages is not easy. Developers will have to retrieve the current deadline, manually divide the available time into two chunks: one for the Level1 call and one for the Level2 call, then submit the Level1 call in a by setting the reduced deadline as a scoped value. For example, if we did the above in `getAvailableProductDetailsFetcher`, the code would look like this:
+```java
+public class AvailableProductDetailsFetcher {
+  //.. same as before
 
-| public class AvailableProductDetailsFetcher {  //.. same as before  public Map\<String, ProductDetails\> getProductDetails() {    double timeRatioForAvailabilityCall \= 0.5;    Future\<Map\<String, Boolean\>\> isAvailableFuture \=        virtualThreadsExecutor.submit(() \-\>            ScopedValue.where(                DEADLINE,                 getNewDeadline(timeRatioForAvailabilityCall))            .call(() \-\>                 availabilityDB.areProductsAvailable(productIds)));    Map\<String, Boolean\> isAvailable \= new HashMap\<\>();    Map\<String, ProductDetails\> productDetailsMap \=         productDetailsFetcher.getProductDetails();    try {      isAvailable \= isAvailableFuture.get();    } catch (Exception ignored) {    }    Map\<String, ProductDetails\> result \= new HashMap\<\>();    for (Entry\<String, ProductDetails\> e : productDetailsMap.entrySet()) {      String productId \= e.getKey();      ProductDetails productDetails \= e.getValue();      if (isAvailable.getOrDefault(productId, true)) { //Error-handling        result.put(productId, productDetails);      }    }    return result;  }  private static long getNewDeadline(double ratio) {    long currentDeadline \= DEADLINE.get();    long currentTime \= System.currentTimeMillis();    long timeRemaining \= currentDeadline \- currentTime;    //noinspection NumericCastThatLosesPrecision    return (long) (currentTime \+ (timeRemaining \* ratio));  }} |
-| :---- |
+  public Map<String, ProductDetails> getProductDetails() {
+    double timeRatioForAvailabilityCall = 0.5;
+    Future<Map<String, Boolean>> isAvailableFuture =
+        virtualThreadsExecutor.submit(() ->
+            ScopedValue.where(
+                DEADLINE, 
+                getNewDeadline(timeRatioForAvailabilityCall))
+            .call(() -> 
+                availabilityDB.areProductsAvailable(productIds)));
+
+    Map<String, Boolean> isAvailable = new HashMap<>();
+    Map<String, ProductDetails> productDetailsMap = 
+        productDetailsFetcher.getProductDetails();
+    try {
+      isAvailable = isAvailableFuture.get();
+    } catch (Exception ignored) {
+    }
+    Map<String, ProductDetails> result = new HashMap<>();
+    for (Entry<String, ProductDetails> e : productDetailsMap.entrySet()) {
+      String productId = e.getKey();
+      ProductDetails productDetails = e.getValue();
+      if (isAvailable.getOrDefault(productId, true)) { //Error-handling
+        result.put(productId, productDetails);
+      }
+    }
+    return result;
+  }
+
+  private static long getNewDeadline(double ratio) {
+    long currentDeadline = DEADLINE.get();
+    long currentTime = System.currentTimeMillis();
+    long timeRemaining = currentDeadline - currentTime;
+    //noinspection NumericCastThatLosesPrecision
+    return (long) (currentTime + (timeRemaining * ratio));
+  }
+}
+```
 
   Even with the above implementation, we have not completely solved the problem, or to put it another way, we have introduced a different problem. The above solution only works if IO call concurrency is achieved via virtual threads where each network call is executed in a dedicated virtual thread and there is a clean thread-hierarchy of parent and child threads (this is needed because the deadline scoped values are passed from parent to child). But, as we discussed in the chapter concerning batching, to achieve optimal batching, we would need to collect requests from multiple callers, and then dispatch them together in a single thread. Here, unfortunately, the parent-child thread relationship breaks down. The actual thread making the network call is not a child of any one caller thread, each with its own deadline scoped value. So we will have to write logic which accepts all the deadlines from caller threads, and then computes one acceptable value \- the max of all the deadlines (this is because we don't want one caller which is ok with a higher deadline to be penalised because of a caller with lower deadline). This, unfortunately, means that the above code no longer works as expected. Because the deadline is the max of multiple deadlines, it is possible that the code above ends up giving more time to the availability call than intended. This means the developer will also have to implement a timeout logic so that the availability call times out in time. 
 
   What we are doing here is an example of "bending over backwards" \-  we use an abstraction (virtual threads) to solve one problem (concurrency) but then another requirement (batching) interacts with the assumptions inherent to the abstraction in such a way that they no longer apply and we go into another loop of finding another abstraction to solve the new resultant problem. This should be avoidable. It would have been great if the programming language allowed us to just annotate the network call dependency with something like `@TimeAllocationRatio(0.5)` and the deadline is auto-computed and transferred in such a way that batching implementation and other such implementations interact with each other smoothly.
 
 * **Retry on error**: What if we want to retry some network calls for a limited number of times on failure? This is another example of a use case where annotating key interaction points would be helpful. The naive way of a doing this is to catch exceptions and put the calling code in a for loop:
+```java
 
-| public static \<T\> T retry(Callable\<T\> callable, int retryCount)    throws Exception {    Exception exception \= null;    for (int i \= 0; i \< retryCount; i++) {      try {        return callable.call();      } catch (Exception e) {        exception \= e;      }    }    throw exception;} |
-| :---- |
+public static <T> T retry(Callable<T> callable, int retryCount) 
+  throws Exception {
+    Exception exception = null;
+    for (int i = 0; i < retryCount; i++) {
+      try {
+        return callable.call();
+      } catch (Exception e) {
+        exception = e;
+      }
+    }
+    throw exception;
+}
+```
 
   This however works only if the callable encapsulates a blocking network call. If the network call returns a Future, we need a different retrying implementation \- which can be error prone \- we need to make sure we don't block on the futures prematurely (See [Chapter 4](#chapter-4:-a-new-functional-requirement!)). This retry logic will be different yet again if the returned value is a `CompletableFuture` and so on.. Not to mention how this retying mechanism interacts with other implementations like deadline. It would be great if the programming language allowed us to just annotate the call site with something like `Retry(3)` and let the runtime figure out how to do this.
 
@@ -325,16 +746,30 @@ That's enough theory, let's look at an example. Let us start with the customary 
  {  
    writer.Out.println("Hello\! World…")  
  }  
-}  
+}
 An interesting thing to note here is that the `println` line is inside not just one, but two pairs of curly braces. This allows the vajram to have both control plane and data plane code \- more on this later. Let's look at a more complicated, yet familiar, example:
 
 ## Compute delegation (ProductDetailsFetcher)
 
 Here we write the above `ProductDetailsFetcher` java code as a vajram. (To be concise, the java class has been migrated to a record)  
 Java:
+```java
+public record ProductDetailsFetcher(
+     @Assisted String productId, 
+     ProductDB productDB) {
+      
+      @AssistedFactory
+      public interface ProductDetailsFetcherFactory {
+        ProductDetailsFetcher create(String productId);
+      }
 
-| public record ProductDetailsFetcher(     @Assisted String productId,       ProductDB productDB) {            @AssistedFactory      public interface ProductDetailsFetcherFactory {        ProductDetailsFetcher create(String productId);      }       @Concurrency(30)	public ProductDetails getProductDetails(){	    return productDB.getProductDetails(this.productId);      }} |
-| :---- |
+      @Concurrency(30)
+	public ProductDetails getProductDetails(){
+	    return productDB.getProductDetails(this.productId);
+      }
+
+}
+```
 
 Vajram:  
 ProductDetails? getProductDetails(  
@@ -465,8 +900,33 @@ The control plane is the code which is directly inside the outermost set of `{}`
 
 To see the power of this structure with control plane and data plane separation, let's see how some changes in our backend systems impact our code. Let's say, we have heavily optimized the `isProductAvailable` and `getProductDetails` calls by adding caching layers. This means that even if we call them sequentially, the new combined latency will be the same as before. We use this to our advantage \- we can shield the `getProductDetails` call behind the `isProductAvailable` call to reduce the load on the productDB. In [chapter 4](#chapter-4:-a-new-functional-requirement!) we saw how such a change impacts the code in traditional programming languages. We either need to do away with Futures and call the blocking avatars of the methods \- which is a big change, or we need to move/inline the `getProductDetails` call into the final if block.
 
-| //imports..public class AvailableProductDetailsFetcher {     //… same code as above  @ConcurrencyLimit(30)  public Optional\<ProductDetails\> getProductDetails() {    Future\<Boolean\> isAvailableFuture \=        virtualThreadsExecutor.submit(() \-\>           availabilityDB.isProductAvailable(productId));    boolean isAvailable;    try {      isAvailable \= isAvailableFuture.get();    } catch (Exception e) {      isAvailable \= false; //Error handling    }    if (isAvailable) {      return Optional.of(         productDetailsFetcher.getProductDetails());    } else {      return Optional.empty();    }  }} |
-| :---- |
+```java
+//imports..
+
+public class AvailableProductDetailsFetcher {
+  
+  //… same code as above
+
+  @ConcurrencyLimit(30)
+  public Optional<ProductDetails> getProductDetails() {
+    Future<Boolean> isAvailableFuture =
+        virtualThreadsExecutor.submit(() -> 
+          availabilityDB.isProductAvailable(productId));
+    boolean isAvailable;
+    try {
+      isAvailable = isAvailableFuture.get();
+    } catch (Exception e) {
+      isAvailable = false; //Error handling
+    }
+    if (isAvailable) {
+      return Optional.of(
+        productDetailsFetcher.getProductDetails());
+    } else {
+      return Optional.empty();
+    }
+  }
+}
+```
 
 For anyone reading the code, to infer that the `getProductDetails` is shielded by the `isProductAvailable` is not obvious at first glance \- we need to follow the code path to understand the control flow \- this is not very developer friendly.
 
@@ -493,9 +953,38 @@ Because the vajram doesn't deal with futures or other such concurrency wrappers,
 Let's continue with code changes. What if we want to loosen the mandatory dependency on `getProductDetails`? i.e we want to return a default ProductDetails value if `getProductDetails` fails.
 
 Java:
+```java
+//imports..
 
-| //imports..public class AvailableProductDetailsFetcher {    //... same code as above   @ConcurrencyLimit(30)  public Optional\<ProductDetails\> getProductDetails() {    Future\<Boolean\> isAvailableFuture \=        virtualThreadsExecutor.submit(() \-\>              availabilityDB.isProductAvailable(productId));    boolean isAvailable;    try {      isAvailable \= isAvailableFuture.get();    } catch (Exception e) {      isAvailable \= false; // Error handling    }    if (isAvailable) {      ProductDetails productDetails;      try {        productDetails \= productDetailsFetcher.getProductDetails();      } catch (Exception e) {        productDetails \= new ProductDetails(productId);      }      return Optional.of(productDetails);    } else {      return Optional.empty();    }  }} |
-| :---- |
+public class AvailableProductDetailsFetcher {
+  
+  //... same code as above
+
+  @ConcurrencyLimit(30)
+  public Optional<ProductDetails> getProductDetails() {
+    Future<Boolean> isAvailableFuture =
+        virtualThreadsExecutor.submit(() -> 
+            availabilityDB.isProductAvailable(productId));
+    boolean isAvailable;
+    try {
+      isAvailable = isAvailableFuture.get();
+    } catch (Exception e) {
+      isAvailable = false; // Error handling
+    }
+    if (isAvailable) {
+      ProductDetails productDetails;
+      try {
+        productDetails = productDetailsFetcher.getProductDetails();
+      } catch (Exception e) {
+        productDetails = new ProductDetails(productId);
+      }
+      return Optional.of(productDetails);
+    } else {
+      return Optional.empty();
+    }
+  }
+}
+```
 
 Vajram:  
 ProductDetails getAvailableProductDetails(  
@@ -636,14 +1125,24 @@ vajram-lang supports concurrency as a native construct. As we saw before, the `~
  \~.length();
 
 The `~.` operator is similar to the `.` operator \- it allows us to access the methods of the data type, but with the caveat that these methods are to be executed when the original variable is fulfilled. The datatype of the return value also has the `~` operator. Omitting this will throw a compilation error since the compiler knows that a "delegated call chain" must return a "future" value. This same code if written in java would look like this, assuming the `.getProductDetails` call returns `CompletableFuture<ProductDetails>`:
-
-| CompletableFuture\<Integer\> productNameLength \=   productDB       .getProductDetails("productId")       .thenApply(ProductDetails::productName)       .thenApply(String::length); |
-| :---- |
+```java
+CompletableFuture<Integer> productNameLength =
+   productDB
+       .getProductDetails("productId")
+       .thenApply(ProductDetails::productName)
+       .thenApply(String::length);
+```
 
 The `thenApply` method is an unfortunate artefact of the fact that the language doesn't understand futures natively. Because of this developers have to learn the syntax and usage of the `CompletableFuture` class API which can be very complex \- this should not be necessary. Further, If we make a change here \- that the `productName` returns a `CompletableFuture<String>` instead of a `String`, the java code will change like this:
 
-| CompletableFuture\<Integer\> productNameLength \=   svcClient       .getProductDetails("productId")       .thenApply(ProductDetails::productName)        .thenCompose(Function.identity())       .thenApply(String::length); |
-| :---- |
+```java
+CompletableFuture<Integer> productNameLength =
+   svcClient
+       .getProductDetails("productId")
+       .thenApply(ProductDetails::productName)
+       .thenCompose(Function.identity())
+       .thenApply(String::length);
+```
 
 Since the `productName` method returns a `CompletableFuture<String>`  The additional `thenCompose` call needs to be added to convert a `CompletableFuture<CompletableFuture<String>>` into a `CompletableFuture<String>`. The vajram code on the other hand doesn't need to change since the language's type system coerces the nested futures into a single level future.
 
@@ -678,6 +1177,8 @@ A brief note on logic decorators. vajram-lang provides a way to extend the capab
 ## Vajram call graph
 
 The advantage of mandating that inter-vajram dependencies must be declared in the control plane in this specific way is that it gives a deep understanding of the structure of the application call flow to the runtime (and the build system). The runtime can model the code as a DAG where the nodes are vajrams and the edges are the dependency facets. All the vajrams written above will form the below vajram call graph
+
+//TK: Image
 
 This call graph is visible both at compile time and run time. From this we can see that `getAvailableProducts` has an optional dependency (named `isAvailable`) on `isProductAvailable`, and a mandatory dependency on `getProductDetails`. Similarly, `computeAveragePrice` has a fanout dependency on `getProductDetails`. This graph view of the vajrams and their dependencies is a fundamental feature of vajram lang. It unlocks many capabilities that would be almost impossible or at least extremely hard to implement otherwise. Let us look at a few examples…
 
@@ -787,15 +1288,34 @@ Generally, the value returned by the output logic (along with input facets) form
 
 ### SIMD
 
-[SIMD](https://en.wikipedia.org/wiki/Single_instruction,_multiple_data), or Single Instruction Multiple Data is a computation model where a single instruction is executed on multiple values. For example, adding 1 to each number in an array of numbers. In presence of such computations it is beneficial to offload computation to processors like GPU or via special CPU instructions which have the ability to execute such instructions parallelly at hardware level. This allows programs to achieve significant performance improvements depending on the number of channels available. Java, for example, is planning to introduce [new Vector APIs](https://openjdk.org/jeps/460) to write logic which needs to be optimized by the SIMD pattern. Let's look at how this new API looks. First a simple `for` loop which does scalar computation :
-
-| void scalarComputation(float\[\] a, float\[\] b, float\[\] c) {  for (int i \= 0; i \< a.length; i++) {     c\[i\] \= (a\[i\] \* a\[i\] \+ b\[i\] \* b\[i\]) \* \-1.0f;  }} |
-| :---- |
+[SIMD](https://en.wikipedia.org/wiki/Single_instruction,_multiple_data), or Single Instruction Multiple Data is a computation model where a single instruction is executed on multiple values. For example, adding 1 to each number in an array of numbers. In presence of such computations it is beneficial to offload computation to processors like GPU or via special CPU instructions which have the ability to execute such instructions parallelly at hardware level. This allows programs to achieve significant performance improvements depending on the number of channels available. Java, for example, is planning to introduce [new Vector APIs](https://openjdk.org/jeps/460) to write logic which needs to be optimized by the SIMD pattern. Let's look at how this new API looks. First a simple `for` loop which does scalar computation without vector APIs:
+```java
+void scalarComputation(float[] a, float[] b, float[] c) {
+  for (int i = 0; i < a.length; i++) {
+     c[i] = (a[i] * a[i] + b[i] * b[i]) * -1.0f;
+  }
+}
+```
 
 This code takes two arrays of the same size and computes a third array where each element of the third array is the negation of the sum of squares of the other two elements. The corresponding vector API code looks like this:
+```java
+static final VectorSpecies<Float> SPECIES = FloatVector.SPECIES_PREFERRED;
 
-| static final VectorSpecies\<Float\> SPECIES \= FloatVector.SPECIES\_PREFERRED;void vectorComputation(float\[\] a, float\[\] b, float\[\] c) {  int i \= 0;  int upperBound \= SPECIES.loopBound(a.length);  for (; i \< upperBound; i \+= SPECIES.length()) {    // FloatVector va, vb, vc;    var va \= FloatVector.fromArray(SPECIES, a, i);    var vb \= FloatVector.fromArray(SPECIES, b, i);    var vc \= va.mul(va).add(vb.mul(vb)).neg();    vc.intoArray(c, i);  }  for (; i \< a.length; i++) {    c\[i\] \= (a\[i\] \* a\[i\] \+ b\[i\] \* b\[i\]) \* \-1.0f;  }} |
-| :---- |
+void vectorComputation(float[] a, float[] b, float[] c) {
+  int i = 0;
+  int upperBound = SPECIES.loopBound(a.length);
+  for (; i < upperBound; i += SPECIES.length()) {
+    // FloatVector va, vb, vc;
+    var va = FloatVector.fromArray(SPECIES, a, i);
+    var vb = FloatVector.fromArray(SPECIES, b, i);
+    var vc = va.mul(va).add(vb.mul(vb)).neg();
+    vc.intoArray(c, i);
+  }
+  for (; i < a.length; i++) {
+    c[i] = (a[i] * a[i] + b[i] * b[i]) * -1.0f;
+  }
+}
+```
 
 The vajram-lang code without SIMD optimization looks almost exactly like the scalar java code, the only difference being that the vajram returns a new array rather than taking the array as input:  
 **float**\[\] computeForArray(**float**\[\] a, **float**\[\] b){{  
@@ -873,10 +1393,27 @@ This "brittleness" of traditional loops comes from the fact that developers can 
 Synchronous orchestration and asynchronous orchestration have traditionally had extremely different programming models as we have discussed above. Another example of a paradigm which has traditionally demanded a completely different programming model is reactive streams. The paradigm of Reactive streams is based on the [reactive manifesto](https://www.reactivemanifesto.org/) which documents the runtime characteristics that a system needs to have to be called a reactive system. The manifesto doesn't profess any particular programming model or developer experience. The [Flow](https://www.reactive-streams.org/) standard library since JDK9 provides base interfaces for the reactive streams programming model. This again is a new programming model which developers have to learn to write code which can stream events reactively. 
 
 The vajram-lang runtime is reactive by nature. Maybe the same programming model can be extended to the reactive streams paradigm as well? Let's take a simple java example written with [io.reactivex.rxjava3](https://github.com/ReactiveX/RxJava):
+```java
+private static Flowable<Integer> streamNumbers() {
+ return Flowable.fromArray(1, 2, 3, 4, 5, 6, 7, 8);
+}
 
-| private static Flowable\<Integer\> streamNumbers() {  return Flowable.*fromArray*(1, 2, 3, 4, 5, 6, 7, 8); } private static int addOne(int i) { return i \+ 1; } @Test void printNumbers() {  Flowable\<Integer\> number \= *streamNumbers*();  Flowable\<Object\> plusOne \= number.map(i \-\> *addOne*(i));  plusOne.subscribe(      System.*out*::println,      e \-\> System.*err*.println("Ouch\!"),      () \-\> System.*out*.println("Done\!")); } |
-| :---- |
 
+private static int addOne(int i) { return i + 1; }
+
+
+@Test
+void printNumbers() {
+ Flowable<Integer> number = streamNumbers();
+ Flowable<Object> plusOne = number.map(i -> addOne(i));
+
+
+ plusOne.subscribe(
+     System.out::println,
+     e -> System.err.println("Ouch!"),
+     () -> System.out.println("Done!"));
+}
+```
 This code streams a few numbers, adds 1 to each, and then prints each. When the stream is closed, "Done\!" is printed. When an error is encountered, "Ouch\!" is printed. Same streaming code in vajram-lang:
 
 **\#stream int** streamNumbers(){{ \[1,2,3,4,5,6,7,8\] }}
@@ -916,16 +1453,81 @@ The Krystal project with a Java-based Software Development Kit rather than an al
 This adherence to the tenets of Krystalline programming gives us much of the goodness that we have aimed to deliver in the design of vajram-lang. The thing we miss out on is the brevity of vajram-lang. Given that the grammar of the java language was not designed to be compatible with Krystalline programming, it takes a bit more code to achieve the same thing that vajram-lang is able to do in a few lines of code. To mitigate this, vajram-java-sdk relies heavily on code-generation so that the vajram is executed in a performant way (without having to resort to reflection, for example) by the framework's runtime \-  called Krystex (from **Kryst**al **Ex**ecutor). The reliance on code-generation reduces unnecessary boilerplate to a huge extent and allows the framework to adapt to the developers' needs, but this needs some innovation and configuration of the IDE and build systems to make sure the code generation is being performed seamlessly.
 
 Let's take a look at the `isProductAvailable`, `getProductDetails` and `getAvailableProductDetails` vajrams written using the vajram-java-sdk to get a better understanding.
+```java
+@VajramDef
+abstract class IsProductAvailable extends IOVajram<Boolean> {
+  class _Inputs {
+    @Input String productId;
+  }
+  class _InternalFacets {
+    @Inject AvailabilityDB availabilityDB;
+  }
 
-| @VajramDefabstract class IsProductAvailable extends IOVajram\<Boolean\> {  class \_Facets {    @Input String productId;    @Inject AvailabilityDB availabilityDB;  }  @Output  static CompletableFuture\<Boolean\> isProductAvailable(      IsProductAvailableFacets facets) {    return facets     .availabilityDB()     .isProductAvailableAsync(facets.productId());  }} |
-| :---- |
+  @Output
+  static CompletableFuture<Boolean> isProductAvailable(
+      IsProductAvailableFacets facets) {
+    return facets
+     .availabilityDB()
+     .isProductAvailableAsync(facets.productId());
+  }
+}
+```
+```java
+@VajramDef
+abstract class GetProductDetails extends IOVajram<ProductDetails> {
+ class _Facets {
+   @Input String productId;
+ }
+ class _InternalFacets {
+   @Inject ProductDB productDB;
+ }
 
-| @VajramDefabstract class GetProductDetails extends IOVajram\<ProductDetails\> { class \_Facets {   @Input String productId;   @Inject ProductDB productDB; }  @Output  static CompletableFuture\<ProductDetails\> getProductDetails(       String productId, ProductDB productDB) {    return productDB.getProductDetailsAsync(productId); }} |
-| :---- |
+  @Output
+  static CompletableFuture<ProductDetails> getProductDetails(
+      String productId, ProductDB productDB) {
+    return productDB.getProductDetailsAsync(productId);
+ }
+}
+```
 
-| @VajramDefpublic abstract class GetAvailableProductDetails extends ComputeVajram\<ProductDetails\> {  class \_Facets {    @Input String productId;    @Dependency(onVajram \= IsProductAvailable.class)    Optional\<Boolean\> isAvailable;    @Dependency(onVajram \= GetProductDetails.class)    Optional\<ProductDetails\> productDetails;  }  @Resolve(depName \= isAvailable\_n,      depInputs \= IsProductAvailableRequest.productId\_n)  static String productIdForIsAvailable(String productId) {    return productId;  }  @Resolve(depName \= productDetails\_n,      depInputs \= IsProductAvailableRequest.productId\_n)  static SingleExecute\<String\> productIdForProductDetails(      String productId, boolean isAvailable) {   if (isAvailable) {     return SingleExecute.executeWith(productId);   } else {     return SingleExecute.skipExecution("Product is not available");   } }  @Output  static ProductDetails getAvailableProductDetails(       ProductDetails productDetails) {    return productDetails;  }} |
-| :---- |
+```java
+@VajramDef
+public abstract class GetAvailableProductDetails extends ComputeVajram<ProductDetails> {
+  class _Facets {
+    @Input String productId;
+  }
+  class _InternalFacets {
+    @Dependency(onVajram = IsProductAvailable.class)
+    Optional<Boolean> isAvailable;
 
+    @Dependency(onVajram = GetProductDetails.class)
+    Optional<ProductDetails> productDetails;
+  }
+
+  @Resolve(depName = isAvailable_n, 
+    depInputs = IsProductAvailableRequest.productId_n)
+  static String productIdForIsAvailable(String productId) {
+    return productId;
+  }
+
+  @Resolve(depName = productDetails_n, 
+    depInputs = IsProductAvailableRequest.productId_n)
+  static SingleExecute<String> productIdForProductDetails(
+     String productId, boolean isAvailable) {
+   if (isAvailable) {
+     return SingleExecute.executeWith(productId);
+   } else {
+     return SingleExecute.skipExecution("Product is not available");
+   }
+ }
+
+  @Output
+  static ProductDetails getAvailableProductDetails(
+      ProductDetails productDetails) {
+    return productDetails;
+  }
+}
+```
 * Vajrams written using the vajram-java-sdk are abstract classes annotated with `@VajramDef` and either extend `ComputeVajram` (for non-delegated computation) or `IOVajram` (for delegated computation).   
 * The `@input`, `@inject` and `@dep` facets are all declared in an inner class which must be named `_Facets`.  
 * Dependency facets can specify the Vajram they depend on using the `@Dependency` annotation's `onVajram` param.  
@@ -935,7 +1537,3 @@ Let's take a look at the `isProductAvailable`, `getProductDetails` and `getAvail
 * The return type of the resolver matches the data type of the input being resolved for non-fanout dependencies  
 * The return type of the resolver method must be a `Collection` of objects if the dependency is a fanout dependency.  
 * If the dependency needs to be skipped in some scenarios, then the resolver method can return `SingleExecute.skipExecution("reason")` command (`MultiExecute.skipExecution()`) if this is a fanout resolver.
-
-## Applications
-
-The Vajram Java SDK has been deployed as part of the mAPI redesign (mAPI 2.0) \- details of which can be found [here](https://docs.google.com/document/d/1aGs3t79Cid8QlIVWSHSLmOERSx4PBVH6ytRH3UqOL_I/edit#heading=h.yk0u4g8bvegd)
