@@ -6,10 +6,12 @@ import static com.flipkart.krystal.codegen.common.models.Constants.CODEGEN_PHASE
 import static com.flipkart.krystal.vajram.codegen.common.models.Constants.VAJRAM_MODELS_GEN_DIR_NAME;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.flipkart.krystal.codegen.common.models.CodeGenUtility;
 import java.io.File;
 import java.util.List;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.logging.LogLevel;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.compile.JavaCompile;
@@ -29,7 +31,9 @@ public class VajramPlugin implements Plugin<Project> {
 
   @Override
   public void apply(Project project) {
-
+    if (project.getGradle().getStartParameter().getLogLevel() == LogLevel.DEBUG) {
+      CodeGenUtility.DEBUG = true;
+    }
     var mainModelsGenDir =
         new File(getBuildDir(project).getPath() + VAJRAM_MODELS_GEN_DIR + "/main");
     var mainImplsGenDir = new File(getBuildDir(project).getPath() + SRC_GEN_DIR + "/main");

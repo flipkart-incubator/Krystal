@@ -1,0 +1,319 @@
+package com.flipkart.krystal.vajram.samples.calculator;
+
+import static com.flipkart.krystal.data.Errable.errableFrom;
+
+import com.flipkart.krystal.annos.Generated;
+import com.flipkart.krystal.core.GraphExecutionData;
+import com.flipkart.krystal.core.OutputLogicExecutionInput;
+import com.flipkart.krystal.core.OutputLogicExecutionResults;
+import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.ExecutionItem;
+import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.data.One2OneDepResponse;
+import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.data.RequestResponse;
+import com.flipkart.krystal.data.RequestResponseFuture;
+import com.flipkart.krystal.facets.Facet;
+import com.flipkart.krystal.vajram.VajramInitData;
+import com.flipkart.krystal.vajram.exception.VajramDefinitionException;
+import com.flipkart.krystal.vajram.facets.resolution.FanoutInputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.One2OneInputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.SimpleFanoutInputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.SimpleInputResolver;
+import com.flipkart.krystal.vajram.facets.resolution.SimpleOne2OneInputResolver;
+import com.flipkart.krystal.vajram.samples.calculator.add.Add_Req;
+import com.flipkart.krystal.vajram.samples.calculator.add.Add_ReqImmut;
+import com.flipkart.krystal.vajram.samples.calculator.add.Add_ReqImmut.Builder;
+import com.flipkart.krystal.vajram.samples.calculator.add.Add_ReqImmutPojo;
+import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_Req;
+import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_ReqImmut;
+import com.flipkart.krystal.vajram.samples.calculator.divide.Divide_ReqImmutPojo;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
+/**
+ * @see com.flipkart.krystal.vajram.samples.calculator.Formula
+ */
+@SuppressWarnings({"unchecked", "ClassReferencesSubclass"})
+@Generated(by = "com.flipkart.krystal.vajram.codegen.processor.VajramWrapperGenProcessor")
+@javax.annotation.processing.Generated(
+    value = "com.flipkart.krystal.vajram.codegen.processor.VajramWrapperGenProcessor",
+    date = "2025-09-04T17:13:17.708835+05:30")
+public final class Formula_Wrpr extends Formula {
+
+  private final List<One2OneInputResolver> _sum_simpleInputResolvers;
+  private final List<One2OneInputResolver> _quotient_simpleInputResolvers;
+
+  private final Set<Facet> _sum_depFacets;
+  private final Set<Facet> _quotient_depFacets;
+
+  private final Supplier<Add_ReqImmut.Builder> _sum_reqBuilderSupplier;
+  private final Supplier<Divide_ReqImmut.Builder> _quotient_reqBuilderSupplier;
+
+  public Formula_Wrpr(VajramInitData vajramInitData) {
+    this._sum_reqBuilderSupplier =
+        (Supplier<Add_ReqImmut.Builder>)
+            vajramInitData
+                .vajramRequestBuilderSuppliers()
+                .getOrDefault(Formula_Fac.sum_s.onVajramId(), () -> Add_ReqImmutPojo._builder());
+    this._quotient_reqBuilderSupplier =
+        (Supplier<Divide_ReqImmut.Builder>)
+            vajramInitData
+                .vajramRequestBuilderSuppliers()
+                .getOrDefault(
+                    Formula_Fac.quotient_s.onVajramId(), () -> Divide_ReqImmutPojo._builder());
+
+    List<SimpleOne2OneInputResolver> _sum_simpleInputResolvers = new ArrayList<>();
+    List<SimpleOne2OneInputResolver> _quotient_simpleInputResolvers = new ArrayList<>();
+    Set<Facet> _sum_depFacets = new HashSet<>();
+    Set<Facet> _quotient_depFacets = new HashSet<>();
+    getInputResolvers()
+        .forEach(
+            resolver -> {
+              switch (resolver.definition().target().dependency().name()) {
+                case "sum" -> {
+                  if (resolver instanceof FanoutInputResolver) {
+                    throw new VajramDefinitionException(
+                        """
+                        Formula vajram's dependency 'sum' is not marked as canFanout=true, \
+                        but still has a simple fanout resolver defined. \
+                        Either mark the @Dependency as canFanout = true or remove the fanout resolver.
+                        """);
+                  }
+                  if (resolver
+                      instanceof SimpleOne2OneInputResolver<?, ?, ?, ?> _oneToOneResolver) {
+                    _sum_simpleInputResolvers.add(_oneToOneResolver);
+                  }
+                  _sum_depFacets.addAll(resolver.definition().sources());
+                }
+                case "quotient" -> {
+                  if (resolver instanceof FanoutInputResolver) {
+                    throw new VajramDefinitionException(
+                        """
+                        Formula vajram's dependency 'quotient' is not marked as canFanout=true, \
+                        but still has a fanout resolver defined. \
+                        Either mark the @Dependency as canFanout = true or remove the fanout resolver.
+                        """);
+                  }
+                  if (resolver
+                      instanceof SimpleOne2OneInputResolver<?, ?, ?, ?> _oneToOneResolver) {
+                    _quotient_simpleInputResolvers.add(_oneToOneResolver);
+                  }
+                  _quotient_depFacets.addAll(resolver.definition().sources());
+                }
+              }
+            });
+    this._sum_simpleInputResolvers = Collections.unmodifiableList(_sum_simpleInputResolvers);
+    this._quotient_simpleInputResolvers =
+        Collections.unmodifiableList(_quotient_simpleInputResolvers);
+    this._sum_depFacets = Collections.unmodifiableSet(_sum_depFacets);
+    this._quotient_depFacets = Collections.unmodifiableSet(_quotient_depFacets);
+  }
+
+  public Formula_FacImmutPojo.Builder facetsFromRequest(Request<?> request) {
+    return new Formula_FacImmutPojo.Builder((Formula_Req) request);
+  }
+
+  @Override
+  public void executeGraph(GraphExecutionData<Integer> _graphExecData) {
+    for (ExecutionItem<Integer> _executionItem : _graphExecData.executionItems()) {
+      Map<Facet, CompletableFuture<?>> _futuresByFacet = new HashMap<>();
+      Formula_FacImmutPojo.Builder _facetValues =
+          (Formula_FacImmutPojo.Builder) _executionItem.facetValues()._asBuilder();
+      var a = _facetValues.a();
+      var p = _facetValues.p();
+      var q = _facetValues.q();
+
+      var _sum_future = new CompletableFuture<RequestResponse<Add_Req, Integer>>();
+      var _quotient_future = new CompletableFuture<RequestResponse<Divide_Req, Integer>>();
+      var _fanoutDep_future = new CompletableFuture<FanoutDepResponses<Divide_Req, Integer>>();
+
+      Add_ReqImmut.Builder _sum_requestBuilder = _sum_reqBuilderSupplier.get();
+      Divide_ReqImmut.Builder _quotient_requestBuilder = _quotient_reqBuilderSupplier.get();
+      List<Divide_Req> _fanoutDep_requestBuilders = new ArrayList<>();
+
+      {
+        _sum_future.whenComplete(
+            (sum, _throwable) -> {
+              if (_throwable != null) {
+                _facetValues.sum(
+                    new RequestResponse<>(_sum_requestBuilder, Errable.withError(_throwable)));
+              } else {
+                _facetValues.sum(sum);
+              }
+            });
+        _futuresByFacet.put(Formula_Fac.sum_s, _sum_future);
+      }
+
+      {
+        _quotient_future.whenComplete(
+            (quotient, _throwable) -> {
+              if (_throwable != null) {
+                _facetValues.quotient(
+                    new RequestResponse<>(_quotient_requestBuilder, Errable.withError(_throwable)));
+              } else {
+                _facetValues.quotient(quotient);
+              }
+            });
+        _futuresByFacet.put(Formula_Fac.quotient_s, _quotient_future);
+      }
+
+      {
+        _fanoutDep_future.whenComplete(
+            (_fanoutDep, _throwable) -> {
+              if (_throwable != null) {
+                List<RequestResponse<Divide_Req, Integer>> _erroredRequests = new ArrayList<>();
+                for (Divide_Req _fanoutDep_request : _fanoutDep_requestBuilders) {
+                  _erroredRequests.add(
+                      new RequestResponse<>(_fanoutDep_request, Errable.withError(_throwable)));
+                }
+                _facetValues.quotient(new FanoutDepResponses<>(_erroredRequests));
+              } else {
+                _facetValues.quotient(_fanoutDep);
+              }
+            });
+      }
+
+      {
+        CompletableFuture.allOf(
+                CompletableFuture.allOf(
+                    Maps.filterKeys(_futuresByFacet, _sum_depFacets::contains)
+                        .values()
+                        .toArray(new CompletableFuture[0])))
+            .whenComplete(
+                (_unused, _throwable) -> {
+                  List<Add_ReqImmut.Builder> _sum_reqBuilders = List.of(_sum_requestBuilder);
+                  for (One2OneInputResolver _sum_simpleInputResolver : _sum_simpleInputResolvers) {
+                    _sum_reqBuilders =
+                        (List<Add_ReqImmut.Builder>)
+                            _sum_simpleInputResolver
+                                .resolve(_sum_reqBuilders, _facetValues)
+                                .getRequests();
+                  }
+                  _graphExecData
+                      .communicationFacade()
+                      .triggerDependency(_sum_requestBuilder, _sum_future);
+                });
+      }
+
+      {
+        CompletableFuture.allOf(
+                CompletableFuture.allOf(
+                    Maps.filterKeys(_futuresByFacet, _quotient_depFacets::contains)
+                        .values()
+                        .toArray(new CompletableFuture[0])))
+            .whenComplete(
+                (_unused, _throwable) -> {
+                  List<Divide_ReqImmut.Builder> _quotient_reqBuilders =
+                      List.of(_quotient_requestBuilder);
+                  for (One2OneInputResolver _quotient_simpleInputResolver :
+                      _quotient_simpleInputResolvers) {
+                    _quotient_reqBuilders =
+                        (List<Divide_ReqImmut.Builder>)
+                            _quotient_simpleInputResolver
+                                .resolve(_quotient_reqBuilders, _facetValues)
+                                .getRequests();
+                  }
+                  _graphExecData
+                      .communicationFacade()
+                      .triggerDependency(_quotient_requestBuilder, _quotient_future);
+                });
+      }
+      {
+        CompletableFuture.allOf(
+            CompletableFuture.allOf(
+                    Maps.filterKeys(_futuresByFacet, _quotient_depFacets::contains)
+                        .values()
+                        .toArray(new CompletableFuture[0]))
+                .whenComplete(
+                    (_unused, _throwable) -> {
+                      List<Divide_ReqImmut.Builder> _quotient_reqBuilders =
+                          List.of(_quotient_requestBuilder);
+                      for (One2OneInputResolver _quotient_simpleInputResolver :
+                          _quotient_simpleInputResolvers) {
+                        _quotient_reqBuilders =
+                            (List<Divide_ReqImmut.Builder>)
+                                _quotient_simpleInputResolver
+                                    .resolve(_quotient_reqBuilders, _facetValues)
+                                    .getRequests();
+                      }
+                      List<RequestResponseFuture<Divide_Req, Integer>> _requestResponseFutures =
+                          new ArrayList<>();
+                      List<CompletableFuture<RequestResponse<Divide_Req, Integer>>> _fanoutFutures =
+                          new ArrayList<>();
+                      for (Divide_ReqImmut.Builder _quotient_reqBuilder : _quotient_reqBuilders) {
+                        CompletableFuture<RequestResponse<Divide_Req, Integer>> _fanoutFuture =
+                            new CompletableFuture<>();
+                        _fanoutFutures.add(_fanoutFuture);
+                        _requestResponseFutures.add(
+                            new RequestResponseFuture<>(_quotient_reqBuilder, _fanoutFuture));
+                      }
+                      CompletableFuture.allOf(_fanoutFutures.toArray(CompletableFuture[]::new))
+                          .whenComplete(
+                              (_unused2, _throwable2) -> {
+                                List<RequestResponse<Divide_Req, Integer>> _requestResponses =
+                                    new ArrayList<>();
+                                for (CompletableFuture<RequestResponse<Divide_Req, Integer>>
+                                    _fanoutFuture : _fanoutFutures) {
+                                  if (_fanoutFuture.isDone()) {
+                                    _requestResponses.add(_fanoutFuture.join());
+                                  }
+                                }
+                                FanoutDepResponses<Divide_Req, Integer> x =
+                                    new FanoutDepResponses<>(_requestResponses);
+                                _fanoutDep_future.complete(x);
+                              });
+                      _graphExecData
+                          .communicationFacade()
+                          .triggerDependencyFanout(_requestResponseFutures);
+                    }));
+      }
+      {
+        CompletableFuture.allOf(_quotient_future)
+            .whenComplete(
+                (_unused, _throwable) -> {
+                  _graphExecData.communicationFacade().executeOutputLogic(_facetValues);
+                });
+      }
+    }
+  }
+
+  @Override
+  public OutputLogicExecutionResults execute(OutputLogicExecutionInput _logicInput) {
+    if (_logicInput.facetValues().isEmpty()) {
+      return OutputLogicExecutionResults.empty();
+    }
+    return new OutputLogicExecutionResults<>(
+        _logicInput.facetValues().stream()
+            .collect(
+                ImmutableMap.toImmutableMap(
+                    Function.identity(),
+                    _incomingFacets -> {
+                      Formula_Fac _facetValues = (Formula_Fac) _incomingFacets;
+                      var quotient = _facetValues.quotient().response();
+
+                      return errableFrom(() -> result(quotient)).toFuture();
+                    })));
+  }
+
+  @Override
+  public Formula_ReqImmutPojo.Builder newRequestBuilder() {
+    return Formula_ReqImmutPojo._builder();
+  }
+
+  @Override
+  public Class<Formula_Req> requestRootType() {
+    return Formula_Req.class;
+  }
+}

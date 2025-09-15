@@ -2,7 +2,12 @@ package com.flipkart.krystal.vajram.codegen.common.models;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.facets.FacetType.INJECTION;
-import static com.flipkart.krystal.vajram.utils.Constants.IMMUT_FACETS_CLASS_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.FACETS_CLASS_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.FACETS_IMMUT_CLASS_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_REQUEST_POJO_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.IMMUT_REQUEST_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.REQUEST_SUFFIX;
+import static com.flipkart.krystal.vajram.codegen.common.models.Constants.WRPR_SUFFIX;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableBiMap.toImmutableBiMap;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -215,7 +220,7 @@ public class VajramCodeGenUtility {
                     depField ->
                         Optional.ofNullable(
                             toDependencyModel(
-                                vajramInfoLite.vajramId(),
+                                vajramInfoLite,
                                 depField,
                                 givenIdsByName,
                                 takenFacetIds,
@@ -260,7 +265,12 @@ public class VajramCodeGenUtility {
     facetBuilder.documentation(elementUtils.getDocComment(facetField));
     TypeMirror facetFieldType = facetField.asType();
     if (TypeKind.ERROR.equals(facetFieldType.getKind())) {
-      throw new DeferCodeGenToNextRound();
+      throw new DeferCodeGenToNextRound(
+          "Vajram Id : "
+              + vajramInfoLite.vajramId()
+              + " facet : "
+              + facetName
+              + " has an error type");
     }
 
     CodeGenType dataType =
@@ -297,11 +307,12 @@ public class VajramCodeGenUtility {
   }
 
   private @Nullable DependencyModel toDependencyModel(
-      VajramID vajramId,
+      VajramInfoLite vajramInfo,
       VariableElement depField,
       BiMap<String, Integer> givenIdsByName,
       Set<Integer> takenFacetIds,
       AtomicInteger nextFacetId) {
+    VajramID vajramId = vajramInfo.vajramId();
     String facetName = depField.getSimpleName().toString();
     Dependency dependency = depField.getAnnotation(Dependency.class);
     DependencyModelBuilder depBuilder = DependencyModel.builder().facetField(depField);
@@ -368,7 +379,7 @@ public class VajramCodeGenUtility {
                 depField);
       }
       DependencyModel depModel =
-          depBuilder.dataType(declaredDataType).vajramInfo(depVajramInfoLite).build();
+          depBuilder.dataType(declaredDataType).vajramInfo(vajramInfo).build();
       givenIdsByName.putIfAbsent(facetName, depModel.id());
       return depModel;
     }
@@ -405,7 +416,7 @@ public class VajramCodeGenUtility {
       vajramId =
           vajramID(
               vajramClassSimpleName.substring(
-                  0, vajramClassSimpleName.length() - Constants.REQUEST_SUFFIX.length()));
+                  0, vajramClassSimpleName.length() - REQUEST_SUFFIX.length()));
       responseType =
           new DeclaredTypeVisitor(codegenUtil, responseTypeElement, DISALLOWED_FACET_TYPES)
               .visit(responseTypeMirror);
@@ -488,7 +499,7 @@ public class VajramCodeGenUtility {
     if (codegenUtil().isRawAssignable(from1, VajramDefRoot.class)) {
       return ClassName.get(
           elementUtils.getPackageOf(vajramClass).getQualifiedName().toString(),
-          vajramClass.getSimpleName() + Constants.REQUEST_SUFFIX);
+          vajramClass.getSimpleName() + REQUEST_SUFFIX);
     } else {
       TypeMirror from = vajramClass.asType();
       if (codegenUtil().isRawAssignable(from, Request.class)) {
@@ -516,27 +527,27 @@ public class VajramCodeGenUtility {
   }
 
   public static String getRequestInterfaceName(String vajramName) {
-    return vajramName + Constants.REQUEST_SUFFIX;
+    return vajramName + REQUEST_SUFFIX;
   }
 
   public static String getImmutRequestInterfaceName(String vajramName) {
-    return vajramName + Constants.IMMUT_REQUEST_SUFFIX;
+    return vajramName + IMMUT_REQUEST_SUFFIX;
   }
 
   public static String getImmutRequestPojoName(String vajramName) {
-    return vajramName + Constants.IMMUT_REQUEST_POJO_SUFFIX;
+    return vajramName + IMMUT_REQUEST_POJO_SUFFIX;
   }
 
   public static String getVajramImplClassName(String vajramId) {
-    return vajramId + Constants.IMPL_SUFFIX;
+    return vajramId + WRPR_SUFFIX;
   }
 
   public static String getFacetsInterfaceName(String vajramName) {
-    return vajramName + Constants.FACETS_CLASS_SUFFIX;
+    return vajramName + FACETS_CLASS_SUFFIX;
   }
 
   public static String getImmutFacetsClassName(String vajramName) {
-    return vajramName + IMMUT_FACETS_CLASS_SUFFIX;
+    return vajramName + FACETS_IMMUT_CLASS_SUFFIX;
   }
 
   TypeName responseType(DependencyModel dep) {

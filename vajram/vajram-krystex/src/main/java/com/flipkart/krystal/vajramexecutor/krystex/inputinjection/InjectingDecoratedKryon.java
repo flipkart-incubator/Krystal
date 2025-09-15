@@ -7,9 +7,7 @@ import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesBuilder;
-import com.flipkart.krystal.data.FacetValuesContainer;
 import com.flipkart.krystal.data.Failure;
-import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceive;
@@ -74,7 +72,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
 
   private CompletableFuture<KryonCommandResponse> injectFacets(
       ForwardReceive forwardBatch, VajramDefinition vajramDefinition, VajramDef<?> vajramDef) {
-    Map<InvocationId, ? extends FacetValuesContainer> requestIdToFacets =
+    Map<InvocationId, ? extends FacetValues> requestIdToFacets =
         forwardBatch.executableInvocations();
 
     ImmutableMap.Builder<InvocationId, FacetValues> newRequests = ImmutableMap.builder();
@@ -88,18 +86,10 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
               }
             });
 
-    for (Entry<InvocationId, ? extends FacetValuesContainer> entry : requestIdToFacets.entrySet()) {
+    for (Entry<InvocationId, ? extends FacetValues> entry : requestIdToFacets.entrySet()) {
       InvocationId invocationId = entry.getKey();
-      FacetValuesContainer container = entry.getValue();
       FacetValuesBuilder facetsBuilder;
-      if (container instanceof Request request) {
-        facetsBuilder = vajramDef.facetsFromRequest(request);
-      } else if (container instanceof FacetValues facetValues) {
-        facetsBuilder = facetValues._asBuilder();
-      } else {
-        throw new UnsupportedOperationException(
-            "Unknown facet container type " + container.getClass());
-      }
+      facetsBuilder = entry.getValue()._asBuilder();
       newRequests.put(
           invocationId, injectFacetsOfVajram(vajramDefinition, injectableFacets, facetsBuilder));
     }

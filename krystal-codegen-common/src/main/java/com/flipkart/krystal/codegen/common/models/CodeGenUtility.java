@@ -34,6 +34,7 @@ import com.squareup.javapoet.TypeSpec;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.nio.file.Path;
@@ -47,8 +48,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
@@ -80,7 +83,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Slf4j
 public class CodeGenUtility {
 
-  private static final boolean DEBUG = false;
+  public static boolean DEBUG = false;
 
   @Getter private final ProcessingEnvironment processingEnv;
   private final Types typeUtils;
@@ -391,7 +394,7 @@ public class CodeGenUtility {
     _note(message, null);
   }
 
-  public void note(CharSequence message, TypeElement typeElement) {
+  public void note(CharSequence message, @Nullable TypeElement typeElement) {
     _note(message, typeElement);
   }
 
@@ -515,6 +518,8 @@ public class CodeGenUtility {
   public TypeMirror box(TypeMirror type) {
     if (type instanceof PrimitiveType p) {
       return typeUtils.boxedClass(p).asType();
+    } else if (type.getKind() == TypeKind.VOID) {
+      return elementUtils.getTypeElement(requireNonNull(Void.class.getCanonicalName())).asType();
     } else {
       return type;
     }
@@ -622,6 +627,33 @@ public class CodeGenUtility {
 
   public TypeAndName getTypeName(CodeGenType dataType) {
     return getTypeName(dataType, List.of());
+  }
+
+  @SneakyThrows
+  public ExecutableElement getMethod(Callable<Method> methodSupplier) {
+    Method method = methodSupplier.call();
+
+    TypeElement typeElement =
+        requireNonNull(
+            processingEnv()
+                .getElementUtils()
+                .getTypeElement(requireNonNull(method.getDeclaringClass().getCanonicalName())));
+    int parameterCount = method.getParameterCount();
+    return typeElement.getEnclosedElements().stream()
+        .filter(element -> element instanceof ExecutableElement)
+        .map(element -> (ExecutableElement) element)
+        .filter(
+            element ->
+                element.getSimpleName().contentEquals(method.getName())
+                    && element.getParameters().size() == parameterCount
+                    && IntStream.range(0, parameterCount)
+                        .allMatch(
+                            i ->
+                                isSameRawType(
+                                    element.getParameters().get(i).asType(),
+                                    method.getParameterTypes()[i])))
+        .findFirst()
+        .orElseThrow(() -> new CodeGenerationException("Method " + method + " not found"));
   }
 
   @SuppressWarnings("method.invocation")

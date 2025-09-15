@@ -28,16 +28,16 @@ public record VajramInfoLite(
     return ClassName.get(packageName(), getRequestInterfaceName(vajramId().id()));
   }
 
-  public ClassName immutReqInterfaceType() {
+  public ClassName reqImmutInterfaceType() {
     return ClassName.get(packageName(), getImmutRequestInterfaceName(vajramId().id()));
   }
 
-  public ClassName immutReqPojoType() {
+  public ClassName reqImmutPojoType() {
     return ClassName.get(packageName(), getImmutRequestPojoName(vajramId().id()));
   }
 
   public TypeName builderInterfaceType() {
-    return immutReqInterfaceType().nestedClass("Builder");
+    return reqImmutInterfaceType().nestedClass("Builder");
   }
 
   @SneakyThrows

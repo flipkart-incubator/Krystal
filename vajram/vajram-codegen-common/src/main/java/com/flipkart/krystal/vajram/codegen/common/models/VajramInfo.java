@@ -65,7 +65,7 @@ public record VajramInfo(
     return List.of(
         lite.requestInterfaceType(),
         conformsToTraitInfo != null
-            ? conformsToTraitInfo.immutReqInterfaceType()
+            ? conformsToTraitInfo.reqImmutInterfaceType()
             : ParameterizedTypeName.get(
                 ClassName.get(ImmutableRequest.class),
                 util().codegenUtil().toTypeName(lite.responseType()).box()));
@@ -75,7 +75,7 @@ public record VajramInfo(
     return List.of(
         lite.requestInterfaceType(),
         conformsToTraitInfo != null
-            ? conformsToTraitInfo.immutReqInterfaceType().nestedClass("Builder")
+            ? conformsToTraitInfo.reqImmutInterfaceType().nestedClass("Builder")
             : ParameterizedTypeName.get(
                 ClassName.get(ImmutableRequest.Builder.class),
                 util().codegenUtil().toTypeName(lite.responseType()).box()));
@@ -87,5 +87,9 @@ public record VajramInfo(
 
   public ClassName facetsInterfaceType() {
     return ClassName.get(lite.packageName(), vajramName() + Constants.FACETS_CLASS_SUFFIX);
+  }
+
+  public ClassName facetsImmutPojoType() {
+    return ClassName.get(lite.packageName(), vajramName() + Constants.FACETS_IMMUT_CLASS_SUFFIX);
   }
 }

@@ -87,8 +87,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-@Slf4j
 /** The execution graph encompassing all registered vajrams. */
+@Slf4j
 public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajramExecutorConfig> {
 
   @Getter private final KryonDefinitionRegistry kryonDefinitionRegistry;

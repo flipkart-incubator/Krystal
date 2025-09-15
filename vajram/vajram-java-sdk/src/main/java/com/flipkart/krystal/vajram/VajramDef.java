@@ -63,7 +63,7 @@ public sealed interface VajramDef<T> extends VajramDefRoot<T>
 
   OutputLogicExecutionResults<T> execute(OutputLogicExecutionInput _logicInput);
 
-  void executeGraph(GraphExecutionData<T> _graphExecInput);
+  void executeGraph(GraphExecutionData<T> _graphExecData);
 
   FacetValuesBuilder facetsFromRequest(Request<?> _request);
 }

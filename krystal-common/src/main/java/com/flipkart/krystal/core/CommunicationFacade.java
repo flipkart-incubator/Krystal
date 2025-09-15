@@ -2,13 +2,12 @@ package com.flipkart.krystal.core;
 
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.Request;
+import com.flipkart.krystal.data.RequestResponseFuture;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 public interface CommunicationFacade {
-  <T> void triggerDependency(Request<T> request, CompletableFuture<T> responseFuture);
-
-  <T> CompletableFuture<T> triggerDependencyFanout(List<Request<T>> request);
+  <T, R extends Request<T>> void triggerDependency(
+      List<RequestResponseFuture<R, T>> responseFutures);
 
   <T> void executeOutputLogic(FacetValues facetValues);
 }
