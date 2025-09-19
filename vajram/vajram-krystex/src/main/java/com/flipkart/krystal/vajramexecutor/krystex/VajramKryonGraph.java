@@ -346,15 +346,14 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
       } else if (vajramDefRoot instanceof VajramDef<Object> vajramDef) {
         InputResolverCreationResult inputResolverCreationResult =
             createKryonLogicsForInputResolvers(vajramDefinition);
-        ImmutableMap<Dependency, VajramID> depIdToProviderKryon =
-            createKryonDefinitionsForDependencies(vajramDefinition, loadingInProgress);
+
+        createKryonDefinitionsForDependencies(vajramDefinition, loadingInProgress);
         OutputLogicDefinition<?> outputLogicDefinition =
             createKryonOutputLogic(vajramId, vajramDefinition, vajramDef);
         kryonDefinitionRegistry.newVajramKryonDefinition(
-            vajramId.id(),
+            vajramId,
             facets,
             outputLogicDefinition.kryonLogicId(),
-            depIdToProviderKryon,
             inputResolverCreationResult.resolversByDefinition(),
             createNewRequest,
             new LogicDefinition<>(
@@ -362,6 +361,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                 ImmutableSet.of(),
                 emptyTags(),
                 vajramDef::facetsFromRequest),
+            vajramDef::executeGraph,
             vajramDefinition.vajramTags());
       }
       vajramExecutables.add(vajramId);
@@ -558,7 +558,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     Map<Dependency, VajramID> depIdToProviderKryon = new HashMap<>();
     // Create and register sub graphs for dependencies of this vajram
     for (DependencySpec dependency : dependencies) {
-      var accessSpec = dependency.onVajramId();
+      var accessSpec = dependency.onVajramID();
       VajramDefinition dependencyVajram = vajramDefinitions.get(accessSpec);
       if (dependencyVajram == null) {
         throw new VajramDefinitionException(

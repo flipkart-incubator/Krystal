@@ -62,6 +62,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class FormulaTest {
@@ -99,8 +100,9 @@ class FormulaTest {
     Add.CALL_COUNTER.reset();
   }
 
-  @Test
-  void formula_success() {
+  @ParameterizedTest
+  @EnumSource(KryonExecStrategy.class)
+  void formula_success(KryonExecStrategy kryonExecStrategy) {
     CompletableFuture<Integer> future;
     VajramKryonGraph graph = this.graph.build();
     graph.registerInputBatchers(
@@ -113,6 +115,7 @@ class FormulaTest {
                 .kryonExecutorConfigBuilder(
                     KryonExecutorConfig.builder()
                         .executorId(REQUEST_ID)
+                        .kryonExecStrategy(kryonExecStrategy)
                         .executorService(executorLease.get()))
                 .build())) {
       future = executeVajram(krystexVajramExecutor, 0, requestContext);

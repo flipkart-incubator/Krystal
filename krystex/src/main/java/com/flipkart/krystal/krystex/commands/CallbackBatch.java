@@ -13,14 +13,14 @@ import java.util.Map;
 import java.util.Set;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public record CallbackCommand(
+public record CallbackBatch(
     VajramID vajramID,
     Dependency dependency,
     Map<InvocationId, DepResponse<Request<@Nullable Object>, @Nullable Object>> resultsByRequest,
     DependentChain dependentChain)
     implements MultiRequestCommand<BatchResponse> {
 
-  public CallbackCommand {
+  public CallbackBatch {
     resultsByRequest = unmodifiableMap(resultsByRequest);
   }
 

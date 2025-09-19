@@ -14,7 +14,7 @@ import java.util.concurrent.ExecutorService;
  *     needs to be executed in the same thread in which the executor service is running since it has
  *     the relevant logging context etc. configured.
  */
-public record GraphExecutionData<T>(
-    List<ExecutionItem<T>> executionItems,
+public record GraphExecutionData(
+    List<ExecutionItem> executionItems,
     CommunicationFacade communicationFacade,
     ExecutorService graphExecutor) {}

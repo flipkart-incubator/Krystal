@@ -143,7 +143,7 @@ public final class MainLogicExecReporter
       writer.write(content);
       writer.close();
     } catch (IOException e) {
-      log.error("Error writing file: {} with path: {}" + e.getMessage(), filePath);
+      log.error("Error writing file: with path: {}", filePath, e);
     }
   }
 

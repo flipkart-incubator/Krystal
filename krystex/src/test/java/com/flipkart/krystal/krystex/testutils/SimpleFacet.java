@@ -31,8 +31,8 @@ public @NonFinal sealed class SimpleFacet implements Facet, InputMirror permits 
     return new SimpleFacet(facetId, "input" + count++, INPUT);
   }
 
-  public static SimpleDep dependency(int facetId) {
-    return new SimpleDep(facetId, "dep" + count++);
+  public static SimpleDep dependency(int facetId, VajramID ofVajramID, VajramID onVajramID) {
+    return new SimpleDep(facetId, "dep" + count++, ofVajramID, onVajramID);
   }
 
   private static int count;

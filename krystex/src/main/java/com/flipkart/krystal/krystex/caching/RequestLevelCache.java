@@ -7,8 +7,7 @@ import static java.util.concurrent.CompletableFuture.allOf;
 import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.except.StackTracelessException;
-import com.flipkart.krystal.krystex.commands.Flush;
-import com.flipkart.krystal.krystex.commands.ForwardReceive;
+import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
 import com.flipkart.krystal.krystex.kryon.Kryon;
@@ -66,18 +65,13 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
     }
 
     @Override
-    public void executeCommand(Flush flushCommand) {
-      kryon.executeCommand(flushCommand);
-    }
-
-    @Override
     public VajramKryonDefinition getKryonDefinition() {
       return kryon.getKryonDefinition();
     }
 
     @Override
     public CompletableFuture<KryonCommandResponse> executeCommand(KryonCommand kryonCommand) {
-      if (kryonCommand instanceof ForwardReceive forwardBatch) {
+      if (kryonCommand instanceof ForwardReceiveBatch forwardBatch) {
         return readFromCache(kryon, forwardBatch);
       } else {
         // Let all other commands just pass through. Request level cache is supposed to intercept
@@ -88,7 +82,7 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
 
     @SuppressWarnings("FutureReturnValueIgnored")
     private CompletableFuture<KryonCommandResponse> readFromCache(
-        Kryon<KryonCommand, KryonCommandResponse> kryon, ForwardReceive forwardBatch) {
+        Kryon<KryonCommand, KryonCommandResponse> kryon, ForwardReceiveBatch forwardBatch) {
       var executableRequests = forwardBatch.executableInvocations();
       Map<InvocationId, FacetValues> cacheMisses = new LinkedHashMap<>();
       Map<InvocationId, CompletableFuture<@Nullable Object>> cacheHits = new LinkedHashMap<>();
@@ -113,7 +107,7 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
           (requestId, _f) -> skippedRequests.put(requestId, "Skipping due to cache hit!"));
       CompletableFuture<KryonCommandResponse> cacheMissesResponse =
           kryon.executeCommand(
-              new ForwardReceive(
+              new ForwardReceiveBatch(
                   forwardBatch.vajramID(),
                   cacheMisses,
                   forwardBatch.dependentChain(),

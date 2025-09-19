@@ -9,9 +9,7 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.commands.ClientSideCommand;
-import com.flipkart.krystal.krystex.commands.Flush;
-import com.flipkart.krystal.krystex.commands.ForwardSend;
-import com.flipkart.krystal.krystex.commands.VoidResponse;
+import com.flipkart.krystal.krystex.commands.ForwardSendBatch;
 import com.flipkart.krystal.krystex.dependencydecoration.VajramInvocation;
 import com.flipkart.krystal.krystex.dependencydecorators.TraitDispatchDecorator;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
@@ -25,10 +23,8 @@ import com.flipkart.krystal.vajram.exec.VajramDefinition;
 import com.flipkart.krystal.vajramexecutor.krystex.VajramKryonGraph;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -79,7 +75,7 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
         return invocationToDecorate.invokeDependency(commandToDispatch);
       } else if (traitDispatchPolicy instanceof PredicateDynamicDispatchPolicy dynamicPolicy) {
         ImmutableList<DispatchCase> dispatchCases = dynamicPolicy.dispatchCases();
-        if (kryonCommand instanceof ForwardSend forwardSend) {
+        if (kryonCommand instanceof ForwardSendBatch forwardSend) {
           var originalExecutableRequests = forwardSend.executableRequests();
           Map<InvocationId, String> originalSkippedInvocations = forwardSend.skippedInvocations();
           Map<VajramID, Map<InvocationId, Request<@Nullable Object>>> dispatchRequests =
@@ -143,14 +139,14 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
               skipRequests.putAll(requestsToSkip);
 
               commandToDispatch =
-                  new ForwardSend(
+                  new ForwardSendBatch(
                       dispatchTargetId,
                       ImmutableMap.of(),
                       forwardSend.dependentChain(),
                       skipRequests);
             } else {
               commandToDispatch =
-                  new ForwardSend(
+                  new ForwardSendBatch(
                       dispatchTargetId,
                       requestsForTarget,
                       forwardSend.dependentChain(),
@@ -193,22 +189,6 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
           @SuppressWarnings("unchecked")
           CompletableFuture<R> castMergedResponse = (CompletableFuture<R>) mergedResponse;
           return castMergedResponse;
-        } else if (kryonCommand instanceof Flush flush) {
-          List<CompletableFuture<VoidResponse>> flushResponses = new ArrayList<>();
-          for (VajramID dispatchTarget : dynamicPolicy.dispatchTargets()) {
-            @SuppressWarnings("unchecked")
-            CompletableFuture<VoidResponse> flushResponse =
-                (CompletableFuture<VoidResponse>)
-                    invocationToDecorate.invokeDependency(
-                        (ClientSideCommand<R>) new Flush(dispatchTarget, flush.dependentChain()));
-            flushResponses.add(flushResponse);
-          }
-          @SuppressWarnings("unchecked")
-          CompletableFuture<R> flushResponse =
-              (CompletableFuture<R>)
-                  allOf(flushResponses.toArray(CompletableFuture[]::new))
-                      .handle((unused, throwable) -> VoidResponse.getInstance());
-          return flushResponse;
         } else {
           throw new IllegalStateException("Unknown command type: " + kryonCommand);
         }
@@ -219,21 +199,18 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
   }
 
   @SuppressWarnings("unchecked")
-  private static <R extends KryonCommandResponse> @Nullable
-      ClientSideCommand<R> transformCommandForDispatch(
+  private static <R extends KryonCommandResponse>
+      @Nullable ClientSideCommand<R> transformCommandForDispatch(
           ClientSideCommand<R> kryonCommand, VajramID boundVajram) {
     ClientSideCommand<R> commandToDispatch = null;
-    if (kryonCommand instanceof ForwardSend forwardSend) {
+    if (kryonCommand instanceof ForwardSendBatch forwardSend) {
       commandToDispatch =
           (ClientSideCommand<R>)
-              new ForwardSend(
+              new ForwardSendBatch(
                   boundVajram,
                   forwardSend.executableRequests(),
                   forwardSend.dependentChain(),
                   forwardSend.skippedInvocations());
-    } else if (kryonCommand instanceof Flush) {
-      commandToDispatch =
-          (ClientSideCommand<R>) new Flush(boundVajram, kryonCommand.dependentChain());
     }
     return commandToDispatch;
   }

@@ -9,8 +9,7 @@ import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.except.StackTracelessException;
-import com.flipkart.krystal.krystex.commands.Flush;
-import com.flipkart.krystal.krystex.commands.ForwardReceive;
+import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.Kryon;
 import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
@@ -48,11 +47,6 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
   }
 
   @Override
-  public void executeCommand(Flush flushCommand) {
-    kryon.executeCommand(flushCommand);
-  }
-
-  @Override
   public VajramKryonDefinition getKryonDefinition() {
     return kryon.getKryonDefinition();
   }
@@ -63,7 +57,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
         vajramKryonGraph.getVajramDefinition(vajramID(kryonCommand.vajramID().id()));
     if (vajramDefinition.metadata().isInputInjectionNeeded()
         && vajramDefinition.def() instanceof VajramDef<?> vajramDef) {
-      if (kryonCommand instanceof ForwardReceive forwardBatch) {
+      if (kryonCommand instanceof ForwardReceiveBatch forwardBatch) {
         return injectFacets(forwardBatch, vajramDefinition, vajramDef);
       }
     }
@@ -71,7 +65,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
   }
 
   private CompletableFuture<KryonCommandResponse> injectFacets(
-      ForwardReceive forwardBatch, VajramDefinition vajramDefinition, VajramDef<?> vajramDef) {
+      ForwardReceiveBatch forwardBatch, VajramDefinition vajramDefinition, VajramDef<?> vajramDef) {
     Map<InvocationId, ? extends FacetValues> requestIdToFacets =
         forwardBatch.executableInvocations();
 
@@ -94,7 +88,7 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
           invocationId, injectFacetsOfVajram(vajramDefinition, injectableFacets, facetsBuilder));
     }
     return kryon.executeCommand(
-        new ForwardReceive(
+        new ForwardReceiveBatch(
             forwardBatch.vajramID(),
             newRequests.build(),
             forwardBatch.dependentChain(),

@@ -593,19 +593,11 @@ $L
   }
 
   private MethodSpec executeGraph() {
-    DeclaredType parametrizedVajramDefType =
-        typeUtils.getDeclaredType(
-            elementUtils.getTypeElement(VajramDef.class.getCanonicalName()),
-            util.codegenUtil()
-                .box(currentVajramInfo.lite().responseType().javaModelType(util.processingEnv())));
-
     MethodSpec.Builder executeGraph =
         overriding(
             util.codegenUtil()
                 .getMethod(
-                    () -> VajramDef.class.getMethod("executeGraph", GraphExecutionData.class)),
-            parametrizedVajramDefType,
-            typeUtils);
+                    () -> VajramDef.class.getMethod("executeGraph", GraphExecutionData.class)));
     boolean simpleInputResolversMethodPresent =
         currentVajramInfo.vajramClassElem().getEnclosedElements().stream()
             .filter(e -> e instanceof ExecutableElement)
@@ -627,11 +619,9 @@ $L
             util.codegenUtil().box(dependency.dataType().javaModelType(util.processingEnv())));
       } else {
         executionCode.addStatement(
-            "var _$L_future = new $T<$T<$T,$T>>()",
+            "var _$L_future = new $T<$T>()",
             dependency.name(),
             CompletableFuture.class,
-            RequestResponse.class,
-            dependency.depVajramInfo().requestInterfaceType(),
             util.codegenUtil().box(dependency.dataType().javaModelType(util.processingEnv())));
       }
     }
@@ -690,11 +680,8 @@ $L
             {
               _$facetName:L_future.whenComplete(
                 ($facetName:L, _throwable) -> {
-                  if (_throwable != null) {
-                    _facetValues.$facetName:L(new $requestResponse:T<>(_$facetName:L_requestBuilder, $errable:T.withError(_throwable)));
-                  } else {
-                    _facetValues.$facetName:L($facetName:L);
-                  }
+                  _facetValues.$facetName:L(new $requestResponse:T<>(
+                      _$facetName:L_requestBuilder, $errable:T.errableFrom($facetName:L, _throwable)));
                 });
             """,
             Map.ofEntries(

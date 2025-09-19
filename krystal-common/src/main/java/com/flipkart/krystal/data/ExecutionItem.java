@@ -1,12 +1,13 @@
 package com.flipkart.krystal.data;
 
 import java.util.concurrent.CompletableFuture;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * A wrapper class for a graph execution request and its response.
  *
  * @param facetValues
  * @param response
- * @param <T> The response type
  */
-public record ExecutionItem<T>(FacetValues facetValues, CompletableFuture<T> response) {}
+public record ExecutionItem(
+    FacetValues facetValues, CompletableFuture<@Nullable Object> response) {}

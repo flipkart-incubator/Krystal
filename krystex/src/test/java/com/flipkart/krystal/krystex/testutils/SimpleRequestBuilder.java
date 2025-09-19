@@ -25,7 +25,6 @@ public final class SimpleRequestBuilder<T> implements Builder<T> {
 
   public SimpleRequestBuilder(Set<? extends InputMirror> _facets, VajramID vajramID) {
     this(_facets, new LinkedHashMap<>(), vajramID);
-    ;
   }
 
   public SimpleRequestBuilder(

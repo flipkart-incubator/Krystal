@@ -11,7 +11,7 @@ import com.google.common.collect.Sets;
 import java.util.Map;
 import java.util.Set;
 
-public record ForwardReceive(
+public record ForwardReceiveBatch(
     VajramID vajramID,
     Map<InvocationId, FacetValues> executableInvocations,
     DependentChain dependentChain,
@@ -24,7 +24,7 @@ public record ForwardReceive(
    * @param dependentChain
    * @param invocationsToSkip Must not be mutated after passing to this constructor
    */
-  public ForwardReceive {
+  public ForwardReceiveBatch {
     executableInvocations = unmodifiableMap(executableInvocations);
     invocationsToSkip = unmodifiableMap(invocationsToSkip);
   }

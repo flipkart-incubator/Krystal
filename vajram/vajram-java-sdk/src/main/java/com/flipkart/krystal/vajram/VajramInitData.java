@@ -6,4 +6,9 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 public record VajramInitData(
-    Map<VajramID, Supplier<? extends ImmutableRequest.Builder<?>>> vajramRequestBuilderSuppliers) {}
+    Map<VajramID, Supplier<? extends ImmutableRequest.Builder<?>>> vajramRequestBuilderSuppliers) {
+
+  public VajramInitData() {
+    this(Map.of());
+  }
+}

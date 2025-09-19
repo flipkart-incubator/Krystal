@@ -20,7 +20,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @param dependentChain The dependant chain leading to this invocation
  * @param skippedInvocations The invocations which have been skipped
  */
-public record ForwardSend(
+public record ForwardSendBatch(
     VajramID vajramID,
     Map<InvocationId, Request<@Nullable Object>> executableRequests,
     DependentChain dependentChain,
@@ -33,7 +33,7 @@ public record ForwardSend(
    * @param dependentChain
    * @param skippedInvocations Must not be mutated after passing to this constructor
    */
-  public ForwardSend {
+  public ForwardSendBatch {
     executableRequests = unmodifiableMap(executableRequests);
     skippedInvocations = unmodifiableMap(skippedInvocations);
   }

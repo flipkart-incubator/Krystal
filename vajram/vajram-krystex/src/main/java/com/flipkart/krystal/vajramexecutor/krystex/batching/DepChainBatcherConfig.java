@@ -194,7 +194,7 @@ public record DepChainBatcherConfig(
       if (inputDef instanceof DependencySpec<?, ?, ?> dependency) {
         List<ResolverDefinition> resolverDefinition =
             getInputResolverDefinition(rootNode, dependency);
-        VajramDefinition childNode = graph.getVajramDefinition(dependency.onVajramId());
+        VajramDefinition childNode = graph.getVajramDefinition(dependency.onVajramID());
         if (inputDefGraph.get(inputDef) != null) {
           for (Facet inputDef1 : inputDefGraph.get(inputDef)) {
             VajramID prerequisiteVajramId =
@@ -246,7 +246,7 @@ public record DepChainBatcherConfig(
     for (Facet inputDef : node.facetSpecs()) {
       if (inputDef instanceof DependencySpec<?, ?, ?> dependency) {
         incrementTheLeafIONodeOfTheVajram(
-            graph.getVajramDefinition(dependency.onVajramId()), graph, ioNodeDepth);
+            graph.getVajramDefinition(dependency.onVajramID()), graph, ioNodeDepth);
       }
     }
   }
@@ -259,7 +259,7 @@ public record DepChainBatcherConfig(
     for (Facet inputDef : node.facetSpecs()) {
       if (inputDef instanceof DependencySpec<?, ?, ?> dependency) {
         decrementTheLeafIONodeOfTheVajram(
-            graph.getVajramDefinition(dependency.onVajramId()), graph, ioNodeDepth);
+            graph.getVajramDefinition(dependency.onVajramID()), graph, ioNodeDepth);
       }
     }
   }
@@ -269,7 +269,7 @@ public record DepChainBatcherConfig(
     for (ResolverDefinition depInput : depInputs) {
       if (inputDefinition instanceof DependencySpec<?, ?, ?> dependency) {
         if (depInput.sources().contains(inputDefinition)) {
-          return dependency.onVajramId();
+          return dependency.onVajramID();
         }
       }
     }
