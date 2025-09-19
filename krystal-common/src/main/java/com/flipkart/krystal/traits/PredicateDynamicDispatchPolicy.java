@@ -1,6 +1,5 @@
 package com.flipkart.krystal.traits;
 
-
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.traits.matchers.InputValueMatcher;
 import com.google.common.collect.ImmutableList;

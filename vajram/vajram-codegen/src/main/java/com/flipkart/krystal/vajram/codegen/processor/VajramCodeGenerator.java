@@ -70,6 +70,7 @@ import com.flipkart.krystal.facets.resolution.ResolutionTarget;
 import com.flipkart.krystal.facets.resolution.ResolverCommand;
 import com.flipkart.krystal.model.IfAbsent;
 import com.flipkart.krystal.model.IfAbsent.IfAbsentThen;
+import com.flipkart.krystal.model.Model;
 import com.flipkart.krystal.model.ModelRoot;
 import com.flipkart.krystal.model.ModelRoot.ModelType;
 import com.flipkart.krystal.serial.ReservedSerialIds;
@@ -2031,9 +2032,10 @@ public class VajramCodeGenerator implements CodeGenerator {
                 batchItemsIfaceType.simpleName(),
                 currentVajramInfo.vajramClass().getQualifiedName().toString())
             .addSuperinterface(ImmutableFacetValuesContainer.class)
+            .addSuperinterface(Model.class)
             .addAnnotation(
                 AnnotationSpec.builder(ModelRoot.class)
-                    .addMember("type", "$T.$L", ModelType.class, "NONE")
+                    .addMember("type", "$T.$L", ModelType.class, ModelType.NONE.name())
                     .addMember("suffixSeparator", "$S", "")
                     .build());
 

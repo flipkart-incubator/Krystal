@@ -214,7 +214,7 @@ public final class JavaModelsGenerator implements CodeGenerator {
     if (!extendsModel(modelRootType, util)) {
       util.error(
           "Interface with @ModelRoot annotation must extend Model: "
-          + modelRootType.getQualifiedName(),
+              + modelRootType.getQualifiedName(),
           modelRootType);
     }
   }
