@@ -39,7 +39,7 @@ Single Bill-Of-Materials artefact with all krystal artefacts versions defined.
 This README gives a high level view of the krysal project.
 To understand the basics of krystal. It's important to go through two more documents:
 
-* [Vajram README](./vajramDef/vajramDef-java-sdk/README.md)
+* [Vajram README](./vajram/vajram-java-sdk/README.md)
 * [Krystex README](./krystex/README.md)
 
 ## Introduction
