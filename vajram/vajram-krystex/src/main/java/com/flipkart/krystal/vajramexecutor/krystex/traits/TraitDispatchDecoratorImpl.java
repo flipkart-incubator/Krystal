@@ -219,8 +219,8 @@ public class TraitDispatchDecoratorImpl implements TraitDispatchDecorator {
   }
 
   @SuppressWarnings("unchecked")
-  private static <R extends KryonCommandResponse>
-      @Nullable ClientSideCommand<R> transformCommandForDispatch(
+  private static <R extends KryonCommandResponse> @Nullable
+      ClientSideCommand<R> transformCommandForDispatch(
           ClientSideCommand<R> kryonCommand, VajramID boundVajram) {
     ClientSideCommand<R> commandToDispatch = null;
     if (kryonCommand instanceof ForwardSend forwardSend) {

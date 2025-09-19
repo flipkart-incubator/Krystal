@@ -110,7 +110,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 @Slf4j
 public class CodeGenUtility {
 
-  private static final boolean DEBUG = false;
+  private static final boolean NOTE_LEVEL =
+      System.getProperty(Constants.LOG_LEVEL, "error").equalsIgnoreCase("note");
 
   private static final ImmutableMap<Class<?>, String> DISALLOWED_FACET_TYPES =
       ImmutableMap.<Class<?>, String>builder()
@@ -752,7 +753,7 @@ public class CodeGenUtility {
   }
 
   public void note(CharSequence message) {
-    if (DEBUG) {
+    if (NOTE_LEVEL) {
       processingEnv
           .getMessager()
           .printMessage(Kind.NOTE, "[%s] %s".formatted(getTimestamp(), message));
