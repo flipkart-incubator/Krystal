@@ -18,6 +18,7 @@ import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample_Req;
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample_ReqImmut;
 import com.flipkart.krystal.lattice.samples.grpc.proto.sampleProtoService.Proto3LatticeSample_ReqImmutProto;
+import com.flipkart.krystal.model.MandatoryFieldMissingException;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
 import com.flipkart.krystal.vajram.VajramDef;
@@ -225,7 +226,7 @@ class Proto3LatticeSampleTest {
     assertThat(result)
         .failsWithin(1, SECONDS)
         .withThrowableOfType(ExecutionException.class)
-        .withCauseInstanceOf(MandatoryFacetsMissingException.class)
+        .withCauseInstanceOf(MandatoryFieldMissingException.class)
         .withMessageContaining("mandatoryInput");
   }
 
@@ -258,7 +259,7 @@ class Proto3LatticeSampleTest {
     assertThat(result)
         .failsWithin(1, SECONDS)
         .withThrowableOfType(ExecutionException.class)
-        .withCauseInstanceOf(MandatoryFacetsMissingException.class)
+        .withCauseInstanceOf(MandatoryFieldMissingException.class)
         .withMessageContaining("mandatoryLongInput");
   }
 

@@ -97,13 +97,13 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
       return new OutputLogicExecutionResults<>(
           input.facetValues().stream()
               .collect(
-                  ImmutableMap
-                      .<FacetValues, FacetValues, CompletableFuture<@Nullable Object>>
-                          toImmutableMap(
-                              identity(),
-                              key ->
-                                  requireNonNullElseGet(
-                                      futureCache.get(key._build()), CompletableFuture::new))));
+                  ImmutableMap.
+                      /*<FacetValues, ImmutableFacetValues, CompletableFuture<@Nullable Object>>*/
+                      toImmutableMap(
+                      FacetValues::_build,
+                      key ->
+                          requireNonNullElseGet(
+                              futureCache.get(key._build()), CompletableFuture::new))));
     };
   }
 
@@ -153,7 +153,8 @@ public final class InputBatchingDecorator implements OutputLogicDecorator {
       } catch (Throwable e) {
         result =
             new OutputLogicExecutionResults<>(
-                facetsList.stream().collect(toImmutableMap(identity(), i -> failedFuture(e))));
+                facetsList.stream()
+                    .collect(toImmutableMap(FacetValues::_build, i -> failedFuture(e))));
       }
     }
     result

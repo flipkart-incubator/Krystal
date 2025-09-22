@@ -8,7 +8,7 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-public record BatchResponse(Map<InvocationId, Errable<@Nullable Object>> responses)
+public record BatchResponse(Map<InvocationId, Errable<Object>> responses)
     implements KryonCommandResponse {
 
   private static final BatchResponse EMPTY = new BatchResponse(ImmutableMap.of());

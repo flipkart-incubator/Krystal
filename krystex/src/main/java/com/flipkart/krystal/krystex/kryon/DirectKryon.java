@@ -1,17 +1,17 @@
 package com.flipkart.krystal.krystex.kryon;
 
-import static com.flipkart.krystal.data.Errable.nil;
-import static java.util.concurrent.CompletableFuture.allOf;
+import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static java.util.concurrent.CompletableFuture.failedFuture;
 
 import com.flipkart.krystal.concurrent.Futures;
 import com.flipkart.krystal.core.CommunicationFacade;
 import com.flipkart.krystal.core.GraphExecutionData;
 import com.flipkart.krystal.core.OutputLogicExecutionInput;
-import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponseFuture;
+import com.flipkart.krystal.except.StackTracelessException;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
@@ -23,13 +23,10 @@ import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
-import com.flipkart.krystal.krystex.request.InvocationId;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.NavigableSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -60,30 +57,63 @@ public final class DirectKryon
   public CompletableFuture<DirectResponse> executeCommand(
       MultiRequestDirectCommand<DirectResponse> kryonCommand) {
     DependentChain dependentChain = kryonCommand.dependentChain();
-    if (kryonCommand instanceof DirectForwardReceive directForwardReceive) {
-      kryonDefinition.executeGraph(
-          new GraphExecutionData(
-              directForwardReceive.executableRequests(),
-              new CommunicationFacade() {
-                @Override
-                public void triggerDependency(
-                    Dependency dependency,
-                    List<RequestResponseFuture<Request<@Nullable Object>, Object>>
-                        requestResponseFutureList) {
-                  kryonExecutor.executeCommand(
-                      new DirectForwardSend(
-                          dependency.onVajramID(),
-                          requestResponseFutureList,
-                          dependentChain.extend(kryonDefinition.vajramID(), dependency)));
-                }
+    VajramID vajramID = kryonDefinition.vajramID();
 
-                @Override
-                public void executeOutputLogic(ExecutionItem executionItem) {
-                  executeDecoratedOutputLogic(
-                      kryonDefinition.getOutputLogicDefinition(), executionItem, dependentChain);
+    if (kryonCommand instanceof DirectForwardReceive directForwardReceive) {
+      List<ExecutionItem> executionItems = directForwardReceive.executionItems();
+
+      try {
+        int[] outputLogicsExecuted = {0};
+        CommunicationFacade communicationFacade =
+            new CommunicationFacade() {
+              @Override
+              public void triggerDependency(
+                  Dependency dependency,
+                  List<? extends RequestResponseFuture<? extends Request<?>, ?>>
+                      requestResponseFutureList) {
+                kryonExecutor.executeCommand(
+                    new DirectForwardSend(
+                        dependency.onVajramID(),
+                        requestResponseFutureList,
+                        dependentChain.extend(vajramID, dependency)));
+              }
+
+              @Override
+              public void executeOutputLogic(ExecutionItem executionItem) {
+                outputLogicsExecuted[0]++;
+                executeDecoratedOutputLogic(
+                    kryonDefinition.getOutputLogicDefinition(), executionItem, dependentChain);
+                if (outputLogicsExecuted[0] == executionItems.size()) {
+                  flushDecorators(dependentChain);
                 }
-              },
-              kryonExecutor.commandQueue()));
+              }
+            };
+        if (executionItems.isEmpty()) {
+          // This means this vajram was skipped.
+          // Propagate this information to all dependencies by calling them with no requests
+          // So that this dependent chain are flushed all the way
+          kryonDefinition
+              .dependencies()
+              .forEach(
+                  dependency ->
+                      kryonExecutor.executeCommand(
+                          new DirectForwardSend(
+                              dependency.onVajramID(),
+                              ImmutableList.of(),
+                              dependentChain.extend(vajramID, dependency))));
+          // Flush output logic decorators since output logic will not be called anymore
+          flushDecorators(dependentChain);
+        }
+        kryonDefinition.executeGraph(
+            new GraphExecutionData(
+                executionItems, communicationFacade, kryonExecutor.commandQueue()));
+      } catch (Throwable e) {
+        for (ExecutionItem executionItem : executionItems) {
+          if (!executionItem.response().isDone()) {
+            executionItem.response().completeExceptionally(stackTracelessWrap(e));
+          }
+        }
+      }
     }
 
     return CompletableFuture.completedFuture(DirectResponse.INSTANCE);
@@ -110,7 +140,8 @@ public final class DirectKryon
               .results()
               .values()
               .iterator()
-              .next();
+              .next()
+              .whenCompleteAsync((o, throwable) -> {}, kryonExecutor.commandQueue());
     } catch (Throwable e) {
       result = failedFuture(e);
     }

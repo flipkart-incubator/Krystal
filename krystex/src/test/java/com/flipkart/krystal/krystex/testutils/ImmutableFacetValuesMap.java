@@ -5,9 +5,12 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.ImmutableFacetValues;
+import com.flipkart.krystal.data.One2OneDepResponse;
+import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.facets.Facet;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.lang.reflect.Type;
 import java.util.Objects;
 import java.util.Set;
 import lombok.Getter;
@@ -50,15 +53,17 @@ public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableF
   }
 
   @Override
-  public Errable<?> _getErrable(int facetId) {
+  public Errable<?> _getOne2OneResponse(int facetId) {
     if (_request._hasValue(facetId)) {
       return _request._get(facetId);
     } else {
       FacetValue datum = otherFacetValues.getOrDefault(facetId, Errable.nil());
-      if (datum instanceof Errable<?> errable) {
-        return errable;
+      if (datum instanceof One2OneDepResponse<?, ?> one2OneDepResponse) {
+        return one2OneDepResponse.response();
       } else {
-        throw new IllegalArgumentException("%s is not of type Errable".formatted(facetId));
+        throw new IllegalArgumentException(
+            "%s is not of type RequestResponse. It is of type %s"
+                .formatted(facetId, datum.getClass()));
       }
     }
   }
@@ -70,7 +75,7 @@ public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableF
     if (datum instanceof FanoutDepResponses errable) {
       return errable;
     } else {
-      throw new IllegalArgumentException("%s is not of type Responses".formatted(facetId));
+      throw new IllegalArgumentException("%s is not of type FanoutDepResponses.".formatted(facetId));
     }
   }
 

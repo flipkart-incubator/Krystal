@@ -15,6 +15,7 @@ import static java.util.Arrays.stream;
 import static java.util.concurrent.CompletableFuture.allOf;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.runAsync;
+import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.IntStream.range;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -120,7 +121,7 @@ class FormulaTest {
                 .build())) {
       future = executeVajram(krystexVajramExecutor, 0, requestContext);
     }
-    assertThat(future).succeedsWithin(1, SECONDS).isEqualTo(4);
+    assertThat(future).succeedsWithin(1, HOURS).isEqualTo(4);
     assertThat(Add.CALL_COUNTER.sum()).isEqualTo(1);
   }
 

@@ -1,7 +1,9 @@
 package com.flipkart.krystal.krystex.kryon;
 
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
@@ -69,6 +71,10 @@ public record KryonExecutorConfig(
     }
     if (graphTraversalStrategy == null) {
       graphTraversalStrategy = DEPTH;
+    }
+    if (kryonExecStrategy == DIRECT && graphTraversalStrategy == BREADTH) {
+      throw new UnsupportedOperationException(
+          "DIRECT kryon execution only supports DEPTH traversal strategy.");
     }
     if (kryonDecoratorConfigs == null) {
       kryonDecoratorConfigs = ImmutableMap.of();

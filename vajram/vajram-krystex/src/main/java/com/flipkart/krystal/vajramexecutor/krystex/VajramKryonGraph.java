@@ -18,6 +18,7 @@ import com.flipkart.krystal.data.Errable;
 import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FanoutDepResponses;
+import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.One2OneDepResponse;
 import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.facets.BasicFacetInfo;
@@ -185,7 +186,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
     Function<LogicExecutionContext, DepChainBatcherConfig> inputBatcherForLogicExecContext =
         logicExecutionContext ->
             batcherConfigByDepChain.computeIfAbsent(
-                logicExecutionContext.dependants(),
+                logicExecutionContext.dependents(),
                 d -> {
                   VajramID vajramID = logicExecutionContext.vajramID();
                   VajramDefinition vajramDefinition = vajramDefinitions.get(vajramID);
@@ -514,7 +515,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
         input -> {
           ImmutableList<? extends FacetValues> inputsList = input.facetValues();
           List<FacetValues> validInputs = new ArrayList<>();
-          Map<FacetValues, CompletableFuture<@Nullable Object>> failedValidations =
+          Map<ImmutableFacetValues, CompletableFuture<@Nullable Object>> failedValidations =
               new LinkedHashMap<>();
           inputsList.forEach(
               inputs -> {
@@ -522,7 +523,7 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
                   validateMandatory(vajramId, inputs, facetSpecs);
                   validInputs.add(inputs);
                 } catch (Throwable e) {
-                  failedValidations.put(inputs, failedFuture(e));
+                  failedValidations.put(inputs._build(), failedFuture(e));
                 }
               });
           OutputLogicExecutionResults<Object> validResults;
@@ -530,11 +531,12 @@ public final class VajramKryonGraph implements VajramExecutableGraph<KrystexVajr
             validResults = vajramDef.execute(input.withFacetValues(validInputs));
           } catch (Throwable e) {
             return new OutputLogicExecutionResults<>(
-                validInputs.stream().collect(toImmutableMap(identity(), i -> failedFuture(e))));
+                validInputs.stream()
+                    .collect(toImmutableMap(FacetValues::_build, i -> failedFuture(e))));
           }
 
           return validResults.withResults(
-              ImmutableMap.<FacetValues, CompletableFuture<@Nullable Object>>builder()
+              ImmutableMap.<ImmutableFacetValues, CompletableFuture<@Nullable Object>>builder()
                   .putAll(validResults.results())
                   .putAll(failedValidations)
                   .build());

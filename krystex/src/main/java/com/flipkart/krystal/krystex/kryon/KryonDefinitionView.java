@@ -3,6 +3,7 @@ package com.flipkart.krystal.krystex.kryon;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
 
 import com.flipkart.krystal.core.VajramID;
 import com.flipkart.krystal.facets.Dependency;
@@ -15,10 +16,13 @@ import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -55,11 +59,13 @@ record KryonDefinitionView(
     for (Facet facet : allFacets) {
       facetsByType.computeIfAbsent(facet.facetType(), _t -> new LinkedHashSet<>()).add(facet);
     }
-    ImmutableSet<Dependency> dependencies =
-        facetsByType.getOrDefault(FacetType.DEPENDENCY, ImmutableSet.of()).stream()
-            .filter(f -> f instanceof Dependency)
-            .map(Dependency.class::cast)
-            .collect(toImmutableSet());
+    List<Dependency> list = new ArrayList<>();
+    for (Facet f : facetsByType.getOrDefault(FacetType.DEPENDENCY, ImmutableSet.of())) {
+      if (f instanceof Dependency dependency) {
+        list.add(dependency);
+      }
+    }
+    ImmutableSet<Dependency> dependencies = ImmutableSet.copyOf(list);
     ImmutableSet<Dependency> dependenciesWithNoResolvers =
         dependencies.stream()
             .filter(

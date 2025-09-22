@@ -1,9 +1,11 @@
 package com.flipkart.krystal.krystex.logicdecorators.resilience4j;
 
 import static com.flipkart.krystal.annos.ComputeDelegationMode.SYNC;
+import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.testutils.SimpleFacet.input;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.time.Duration.ofSeconds;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
@@ -103,13 +105,16 @@ class Resilience4JBulkheadTest {
                     executorService));
     VajramKryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newVajramKryonDefinition(
-            "kryon",
+            vajramID("kryon"),
             Set.of(input(1)),
             outputLogicDef.kryonLogicId(),
             ImmutableMap.of(),
-            ImmutableMap.of(),
             newCreateNewRequestLogic(Set.of(input(1))),
             newFacetsFromRequestLogic(),
+            _graphExecData ->
+                _graphExecData
+                    .executionItems()
+                    .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
             ElementTags.of(
                 InvocableOutsideGraph.Creator.create(),
                 OutputLogicDelegationMode.Creator.create(SYNC)));
@@ -216,13 +221,16 @@ class Resilience4JBulkheadTest {
                         "THREADPOOL"))));
     VajramKryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newVajramKryonDefinition(
-            "kryon",
+            vajramID("kryon"),
             inputs,
             outputLogic.kryonLogicId(),
             ImmutableMap.of(),
-            ImmutableMap.of(),
             newCreateNewRequestLogic(inputs),
             newFacetsFromRequestLogic(),
+            _graphExecData ->
+                _graphExecData
+                    .executionItems()
+                    .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
             ElementTags.of(
                 InvocableOutsideGraph.Creator.create(),
                 OutputLogicDelegationMode.Creator.create(SYNC)));
@@ -297,7 +305,7 @@ class Resilience4JBulkheadTest {
             input ->
                 new OutputLogicExecutionResults<>(
                     input.facetValues().stream()
-                        .collect(ImmutableMap.toImmutableMap(Function.identity(), logic))),
+                        .collect(toImmutableMap(FacetValues::_build, logic))),
             emptyTags());
     logicDefinitionRegistry.addOutputLogic(def);
     return def;

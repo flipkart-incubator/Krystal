@@ -34,4 +34,5 @@ module flipkart.krystal.krystex {
   requires com.fasterxml.jackson.datatype.jdk8;
   requires jakarta.inject;
   requires org.jetbrains.annotations;
+  requires com.google.errorprone.annotations;
 }

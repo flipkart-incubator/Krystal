@@ -5,6 +5,7 @@ import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
+import com.flipkart.krystal.krystex.decoration.FlushCommand;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyExecutionContext;
 import com.flipkart.krystal.krystex.logicdecoration.LogicExecutionContext;
@@ -16,7 +17,9 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.function.Function;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonCommandResponse>
     implements Kryon<C, R> permits BatchKryon, DirectKryon {
   /**
@@ -99,5 +102,24 @@ abstract sealed class AbstractKryon<C extends KryonCommand, R extends KryonComma
   @Override
   public VajramKryonDefinition getKryonDefinition() {
     return kryonDefinition;
+  }
+
+  protected void flushDecorators(DependentChain dependentChain) {
+    Iterable<OutputLogicDecorator> reverseSortedDecorators =
+        getSortedOutputLogicDecorators(dependentChain)::descendingIterator;
+    for (OutputLogicDecorator decorator : reverseSortedDecorators) {
+      try {
+        decorator.executeCommand(new FlushCommand(dependentChain));
+      } catch (Throwable e) {
+        log.error(
+            """
+                Error while flushing decorator: {}. \
+                This is most probably a bug since decorator methods are not supposed to throw exceptions. \
+                This can cause unpredictable behaviour in the krystal graph execution. \
+                Please fix!""",
+            decorator,
+            e);
+      }
+    }
   }
 }

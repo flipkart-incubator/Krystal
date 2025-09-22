@@ -1,9 +1,11 @@
 package com.flipkart.krystal.krystex.caching;
 
+import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.data.Errable.computeErrableFrom;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Collections.emptySet;
@@ -35,6 +37,7 @@ import com.flipkart.krystal.krystex.resolution.FacetsFromRequest;
 import com.flipkart.krystal.krystex.testutils.FacetValuesMapBuilder;
 import com.flipkart.krystal.krystex.testutils.SimpleFacet;
 import com.flipkart.krystal.krystex.testutils.SimpleImmutRequest;
+import com.flipkart.krystal.krystex.testutils.SimpleRequest;
 import com.flipkart.krystal.krystex.testutils.SimpleRequestBuilder;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
@@ -92,7 +95,7 @@ class RequestLevelCacheTest {
   @MethodSource("executorConfigsToTest")
   void multiRequestExecution_withCache_cacheHitSuccess(
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
-    // This is redundant. This should Ideally move to a paramterized @BeforeEach method or after
+    // This is redundant. This should Ideally move to a parametrized @BeforeEach method or after
     // parametrizing this at the test class level.
     // This is currently not supported in jupiter-junit:5.9.x.
     // It is planned to be supported in jupiter-junit:5.10
@@ -102,10 +105,10 @@ class RequestLevelCacheTest {
     LongAdder adder = new LongAdder();
     VajramKryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newVajramKryonDefinition(
-            "kryon",
+            vajramID("kryon"),
             emptySet(),
             newComputeLogic(
-                    "kryon",
+                    vajramID("kryon"),
                     emptySet(),
                     dependencyValues -> {
                       adder.increment();
@@ -113,9 +116,12 @@ class RequestLevelCacheTest {
                     })
                 .kryonLogicId(),
             ImmutableMap.of(),
-            ImmutableMap.of(),
-            newCreateNewRequestLogic("kryon", emptySet()),
-            newFacetsFromRequestLogic("kryon"),
+            newCreateNewRequestLogic(vajramID("kryon"), emptySet()),
+            newFacetsFromRequestLogic(vajramID("kryon")),
+            _graphExecData ->
+                _graphExecData
+                    .executionItems()
+                    .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
             ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
@@ -129,7 +135,10 @@ class RequestLevelCacheTest {
     kryonExecutor.close();
     assertThat(future1).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
     assertThat(future2).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
-    assertThat(adder.sum()).isEqualTo(1);
+    switch (kryonExecStrategy) {
+      case BATCH -> assertThat(adder.sum()).isEqualTo(1);
+      case DIRECT -> assertThat(adder.sum()).isEqualTo(2);
+    }
   }
 
   @ParameterizedTest
@@ -143,23 +152,26 @@ class RequestLevelCacheTest {
     // (Ref: https://github.com/junit-team/junit5/issues/878)
     // Move this to the @BeforeEach method after 5.10 is released.
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy, false);
-    LongAdder adder = new LongAdder();
+    LongAdder outptuLogicInvocationCount = new LongAdder();
     VajramKryonDefinition kryonDefinition =
         kryonDefinitionRegistry.newVajramKryonDefinition(
-            "kryon",
+            vajramID("kryon"),
             emptySet(),
             newComputeLogic(
-                    "kryonLogic",
+                    vajramID("kryonLogic"),
                     emptySet(),
                     dependencyValues -> {
-                      adder.increment();
+                      outptuLogicInvocationCount.increment();
                       return "computed_value";
                     })
                 .kryonLogicId(),
             ImmutableMap.of(),
-            ImmutableMap.of(),
-            newCreateNewRequestLogic("kryon", emptySet()),
-            newFacetsFromRequestLogic("kryon"),
+            newCreateNewRequestLogic(vajramID("kryon"), emptySet()),
+            newFacetsFromRequestLogic(vajramID("kryon")),
+            _graphExecData ->
+                _graphExecData
+                    .executionItems()
+                    .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
             ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
 
     CompletableFuture<Object> future1 =
@@ -174,11 +186,7 @@ class RequestLevelCacheTest {
     kryonExecutor.close();
     assertThat(future1).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
     assertThat(future2).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
-    if (BATCH.equals(kryonExecStrategy)) {
-      assertThat(adder.sum()).isEqualTo(2);
-    } else {
-      assertThat(adder.sum()).isEqualTo(1);
-    }
+    assertThat(outptuLogicInvocationCount.sum()).isEqualTo(2);
   }
 
   private KryonExecutor getKryonExecutor(
@@ -197,15 +205,15 @@ class RequestLevelCacheTest {
   }
 
   private <T> OutputLogicDefinition<T> newComputeLogic(
-      String kryonId, Set<Facet> inputs, Function<FacetValues, T> logic) {
+      VajramID kryonId, Set<Facet> inputs, Function<FacetValues, T> logic) {
     ComputeLogicDefinition<T> def =
         new ComputeLogicDefinition<>(
-            new KryonLogicId(new VajramID(kryonId), kryonId),
+            new KryonLogicId(kryonId, kryonId.id()),
             inputs,
             input ->
                 new OutputLogicExecutionResults<>(
                     input.facetValues().stream()
-                        .collect(toImmutableMap(identity(), computeErrableFrom(logic)))
+                        .collect(toImmutableMap(FacetValues::_build, computeErrableFrom(logic)))
                         .entrySet()
                         .stream()
                         .collect(toImmutableMap(Entry::getKey, e -> e.getValue().toFuture()))),
@@ -215,25 +223,25 @@ class RequestLevelCacheTest {
     return def;
   }
 
-  private static LogicDefinition<FacetsFromRequest> newFacetsFromRequestLogic(String kryonName) {
-    VajramID vajramID = new VajramID(kryonName);
+  @SuppressWarnings("unchecked")
+  private static LogicDefinition<FacetsFromRequest> newFacetsFromRequestLogic(VajramID kryonName) {
     return new LogicDefinition<>(
-        new KryonLogicId(vajramID, kryonName + ":facetsFromRequest"),
+        new KryonLogicId(kryonName, kryonName.id() + ":facetsFromRequest"),
         request ->
             new FacetValuesMapBuilder(
-                (SimpleRequestBuilder<Object>) request._asBuilder(), Set.of(), vajramID));
+                ((SimpleRequest<Object>) request)._asBuilder(), Set.of(), kryonName));
   }
 
   @NonNull
   private static LogicDefinition<CreateNewRequest> newCreateNewRequestLogic(
-      String kryonName, Set<SimpleFacet> inputDefs) {
-    VajramID vajramID = new VajramID(kryonName);
+      VajramID vajramID, Set<SimpleFacet> inputDefs) {
     return new LogicDefinition<>(
-        new KryonLogicId(vajramID, kryonName + ":newRequest"),
-        () -> new SimpleRequestBuilder(inputDefs, vajramID));
+        new KryonLogicId(vajramID, vajramID.id() + ":newRequest"),
+        () -> new SimpleRequestBuilder<>(inputDefs, vajramID));
   }
 
   public static Stream<Arguments> executorConfigsToTest() {
-    return Stream.of(Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH));
+    return Stream.of(
+        Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH), Arguments.of(DIRECT, DEPTH));
   }
 }

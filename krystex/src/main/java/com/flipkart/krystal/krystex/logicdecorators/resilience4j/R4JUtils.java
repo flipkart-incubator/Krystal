@@ -7,6 +7,7 @@ import static java.util.function.Function.identity;
 import com.flipkart.krystal.core.OutputLogicExecutionInput;
 import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.data.FacetValues;
+import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -34,17 +35,17 @@ final class R4JUtils {
   static OutputLogicExecutionResults<Object> extractResponseMap(
       ImmutableList<? extends FacetValues> facetsList,
       CompletionStage<OutputLogicExecutionResults<Object>> decoratedCompletion) {
-    ImmutableMap.Builder<FacetValues, CompletableFuture<@Nullable Object>> result =
+    ImmutableMap.Builder<ImmutableFacetValues, CompletableFuture<@Nullable Object>> result =
         ImmutableMap.builderWithExpectedSize(facetsList.size());
     for (FacetValues facetValues : facetsList) {
       //noinspection RedundantTypeArguments : Excplicit types to avoid NullChecker errors
       result.put(
-          facetValues,
+          facetValues._build(),
           decoratedCompletion
               .<CompletableFuture<@Nullable Object>>thenApply(
                   resultMap ->
                       checkNotNull(
-                          resultMap.results().get(facetValues),
+                          resultMap.results().get(facetValues._build()),
                           "No future found for inputs " + facetValues))
               .toCompletableFuture()
               .thenCompose(identity()));

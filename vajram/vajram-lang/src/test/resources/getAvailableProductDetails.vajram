@@ -12,8 +12,3 @@ ProductDetails getAvailableProductDetails(
       @skipIf("Product is not available.")
       { isAvailable? == false };
 }
-
-@Sql("")
-public trait getAbc(String appId) {
-
-}

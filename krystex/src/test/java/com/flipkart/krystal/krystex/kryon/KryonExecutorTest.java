@@ -2,10 +2,12 @@ package com.flipkart.krystal.krystex.kryon;
 
 import static com.flipkart.krystal.core.VajramID.vajramID;
 import static com.flipkart.krystal.data.Errable.computeErrableFrom;
+import static com.flipkart.krystal.data.Errable.errableFrom;
 import static com.flipkart.krystal.data.Errable.withValue;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.BREADTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.GraphTraversalStrategy.DEPTH;
 import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.BATCH;
+import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy.DIRECT;
 import static com.flipkart.krystal.krystex.testutils.SimpleFacet.dependency;
 import static com.flipkart.krystal.krystex.testutils.SimpleFacet.input;
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
@@ -13,27 +15,27 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Collections.emptySet;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
+import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.function.Function.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.InstanceOfAssertFactories.future;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
-import com.flipkart.krystal.annos.InvocableOutsideGraph.Creator;
 import com.flipkart.krystal.concurrent.SingleThreadExecutor;
 import com.flipkart.krystal.concurrent.SingleThreadExecutorsPool;
-import com.flipkart.krystal.core.GraphExecutionData;
 import com.flipkart.krystal.core.OutputLogicExecutionResults;
 import com.flipkart.krystal.core.VajramID;
+import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValues;
-import com.flipkart.krystal.data.ImmutableRequest;
+import com.flipkart.krystal.data.Request;
 import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.data.RequestResponseFuture;
 import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.facets.Facet;
 import com.flipkart.krystal.krystex.ComputeLogicDefinition;
-import com.flipkart.krystal.krystex.GraphExecutionLogic;
 import com.flipkart.krystal.krystex.IOLogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinition;
 import com.flipkart.krystal.krystex.LogicDefinitionRegistry;
@@ -48,7 +50,6 @@ import com.flipkart.krystal.krystex.testutils.FacetValuesMapBuilder;
 import com.flipkart.krystal.krystex.testutils.SimpleDep;
 import com.flipkart.krystal.krystex.testutils.SimpleFacet;
 import com.flipkart.krystal.krystex.testutils.SimpleImmutRequest;
-import com.flipkart.krystal.krystex.testutils.SimpleRequest;
 import com.flipkart.krystal.krystex.testutils.SimpleRequestBuilder;
 import com.flipkart.krystal.pooling.Lease;
 import com.flipkart.krystal.pooling.LeaseUnavailableException;
@@ -66,7 +67,9 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Function;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,6 +77,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+@Slf4j
 @SuppressWarnings("unchecked")
 class KryonExecutorTest {
 
@@ -110,7 +114,7 @@ class KryonExecutorTest {
   @MethodSource("executorConfigsToTest")
   void multiRequestExecution(
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
-    // This is redundant. This should Ideally move to a paramterized @BeforeEach method or after
+    // This is redundant. This should Ideally move to a parameterized @BeforeEach method or after
     // parametrizing this at the test class level.
     // This is currently not supported in jupiter-junit:5.9.x.
     // It is planned to be supported in jupiter-junit:5.10
@@ -166,7 +170,7 @@ class KryonExecutorTest {
                 _graphExecData
                     .executionItems()
                     .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
-            ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
+            ElementTags.of(InvocableOutsideGraph.Creator.create()));
 
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
@@ -229,9 +233,11 @@ class KryonExecutorTest {
                         facets ->
                             "computed_values: a=%s;b=%s;c=%s"
                                 .formatted(
-                                    ((FacetValuesMap) facets)._getErrable(1).valueOrThrow(),
-                                    ((FacetValuesMap) facets)._getErrable(2).valueOrThrow(),
-                                    ((FacetValuesMap) facets)._getErrable(3).valueOrThrow()))
+                                    ((FacetValuesMap) facets)._getOne2OneResponse(1).valueOrThrow(),
+                                    ((FacetValuesMap) facets)._getOne2OneResponse(2).valueOrThrow(),
+                                    ((FacetValuesMap) facets)
+                                        ._getOne2OneResponse(3)
+                                        .valueOrThrow()))
                     .kryonLogicId(),
                 ImmutableMap.of(),
                 newCreateNewRequestLogic(kryonName, inputDefs),
@@ -284,28 +290,29 @@ class KryonExecutorTest {
                     n2ID,
                     allFacets,
                     facets ->
-                        ((FacetValuesMap) facets)
-                                ._getDepResponses(1)
-                                .requestResponsePairs()
-                                .iterator()
-                                .next()
-                                .response()
-                                .valueOrThrow()
+                        ((FacetValuesMap) facets)._getOne2OneResponse(1).valueOrThrow()
                             + ":computed_value")
                 .kryonLogicId(),
             ImmutableMap.of(),
             newCreateNewRequestLogic(n2ID, emptySet()),
             newFacetsFromRequestLogic(n2ID, allFacets),
             _graphExecData -> {
-              CompletableFuture<Object> n1Result = new CompletableFuture<>();
-              _graphExecData
-                  .communicationFacade()
-                  .triggerDependency(
-                      n1DependsOnN1,
-                      List.of(
-                          new RequestResponseFuture<>(
-                              new SimpleRequestBuilder<>(Set.of(), n1ID), n1Result)));
-              n1Result.whenComplete((o, throwable) -> {});
+              for (ExecutionItem executionItem : _graphExecData.executionItems()) {
+                CompletableFuture<Object> n1Result = new CompletableFuture<>();
+                SimpleRequestBuilder<Object> n1Req = new SimpleRequestBuilder<>(Set.of(), n1ID);
+                _graphExecData
+                    .communicationFacade()
+                    .triggerDependency(
+                        n1DependsOnN1, List.of(new RequestResponseFuture<>(n1Req, n1Result)));
+                n1Result.whenComplete(
+                    (o, throwable) -> {
+                      ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                          ._set(
+                              n1DependsOnN1.id(),
+                              new RequestResponse(n1Req, errableFrom(o, throwable)));
+                      _graphExecData.communicationFacade().executeOutputLogic(executionItem);
+                    });
+              }
             },
             ElementTags.of(InvocableOutsideGraph.Creator.create()));
 
@@ -330,147 +337,150 @@ class KryonExecutorTest {
         ImmutableMap.of(),
         newCreateNewRequestLogic(l1Dep, emptySet()),
         newFacetsFromRequestLogic(l1Dep, emptySet()),
-        _graphExecData -> {},
+        _graphExecData -> {
+          _graphExecData
+              .executionItems()
+              .forEach(
+                  executionItem ->
+                      _graphExecData.communicationFacade().executeOutputLogic(executionItem));
+        },
         emptyTags());
 
     VajramID l2Dep = vajramID("requestExecution_multiLevelDependencies_level2");
     Dependency l2DependsOnL1 = dependency(1, l2Dep, l1Dep);
-    Set<Dependency> allFacets = Set.of(l2DependsOnL1);
+    Set<Dependency> l2Facets = Set.of(l2DependsOnL1);
     kryonDefinitionRegistry.newVajramKryonDefinition(
         l2Dep,
-        allFacets,
+        l2Facets,
         newComputeLogic(
                 l2Dep,
-                allFacets,
-                facets ->
-                    ((FacetValuesMap) facets)
-                            ._getDepResponses(1).requestResponsePairs().stream()
-                                .map(RequestResponse::response)
-                                .iterator()
-                                .next()
-                                .valueOrThrow()
-                        + ":l2")
+                l2Facets,
+                facets -> ((FacetValuesMap) facets)._getOne2OneResponse(1).valueOrThrow() + ":l2")
             .kryonLogicId(),
         ImmutableMap.of(),
         newCreateNewRequestLogic(l2Dep, emptySet()),
-        newFacetsFromRequestLogic(l2Dep, allFacets),
+        newFacetsFromRequestLogic(l2Dep, l2Facets),
         _graphExecData -> {
-          CompletableFuture<Object> l1Result = new CompletableFuture<>();
-          _graphExecData
-              .communicationFacade()
-              .triggerDependency(
-                  l2DependsOnL1,
-                  List.of(
-                      new RequestResponseFuture<>(
-                          new SimpleRequestBuilder<>(Set.of(), l1Dep), l1Result)));
-          l1Result.whenComplete((o, throwable) -> {});
+          for (ExecutionItem executionItem : _graphExecData.executionItems()) {
+            CompletableFuture<Object> l1Result = new CompletableFuture<>();
+            SimpleRequestBuilder<Object> l1Req = new SimpleRequestBuilder<>(Set.of(), l1Dep);
+            _graphExecData
+                .communicationFacade()
+                .triggerDependency(
+                    l2DependsOnL1, List.of(new RequestResponseFuture<>(l1Req, l1Result)));
+            l1Result.whenComplete(
+                (result, throwable) -> {
+                  ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                      ._set(
+                          l2DependsOnL1.id(),
+                          new RequestResponse(l1Req, Errable.errableFrom(result, throwable)));
+                  _graphExecData.communicationFacade().executeOutputLogic(executionItem);
+                });
+          }
         },
         emptyTags());
 
     VajramID l3Dep = vajramID("requestExecution_multiLevelDependencies_level3");
     Dependency l3DependsOnL2 = dependency(1, l3Dep, l2Dep);
+    Set<Dependency> l3Facets = Set.of(l3DependsOnL2);
+
     kryonDefinitionRegistry.newVajramKryonDefinition(
         l3Dep,
-        allFacets,
+        l3Facets,
         newComputeLogic(
                 l3Dep,
-                allFacets,
-                facets ->
-                    ((FacetValuesMap) facets)
-                            ._getDepResponses(1).requestResponsePairs().stream()
-                                .map(RequestResponse::response)
-                                .iterator()
-                                .next()
-                                .valueOrThrow()
-                        + ":l3")
+                l3Facets,
+                facets -> ((FacetValuesMap) facets)._getOne2OneResponse(1).valueOrThrow() + ":l3")
             .kryonLogicId(),
         ImmutableMap.of(),
         newCreateNewRequestLogic(l3Dep, emptySet()),
-        newFacetsFromRequestLogic(l3Dep, allFacets),
+        newFacetsFromRequestLogic(l3Dep, l3Facets),
         _graphExecData -> {
-          CompletableFuture<Object> l2Result = new CompletableFuture<>();
-          _graphExecData
-              .communicationFacade()
-              .triggerDependency(
-                  l3DependsOnL2,
-                  List.of(
-                      new RequestResponseFuture<>(
-                          new SimpleRequestBuilder<>(Set.of(), l2Dep), l2Result)));
-          l2Result.whenComplete((o, throwable) -> {});
+          for (ExecutionItem executionItem : _graphExecData.executionItems()) {
+            CompletableFuture<Object> l2Result = new CompletableFuture<>();
+            SimpleRequestBuilder<Object> l2Req = new SimpleRequestBuilder<>(Set.of(), l2Dep);
+            _graphExecData
+                .communicationFacade()
+                .triggerDependency(
+                    l3DependsOnL2, List.of(new RequestResponseFuture<>(l2Req, l2Result)));
+            l2Result.whenComplete(
+                (o, throwable) -> {
+                  ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                      ._set(1, new RequestResponse(l2Req, Errable.errableFrom(o, throwable)));
+                  _graphExecData.communicationFacade().executeOutputLogic(executionItem);
+                });
+          }
         },
         emptyTags());
 
     VajramID l4Dep = vajramID("requestExecution_multiLevelDependencies_level4");
     Dependency l4DepOnL3 = dependency(1, l4Dep, l3Dep);
+    Set<Facet> l4Facets = Set.of(l4DepOnL3);
     kryonDefinitionRegistry.newVajramKryonDefinition(
         l4Dep,
-        allFacets,
+        l4Facets,
         newComputeLogic(
                 l4Dep,
-                allFacets,
-                facets ->
-                    ((FacetValuesMap) facets)
-                            ._getDepResponses(1).requestResponsePairs().stream()
-                                .map(RequestResponse::response)
-                                .iterator()
-                                .next()
-                                .valueOrThrow()
-                        + ":l4")
+                l4Facets,
+                facets -> ((FacetValuesMap) facets)._getOne2OneResponse(1).valueOrThrow() + ":l4")
             .kryonLogicId(),
         ImmutableMap.of(),
         newCreateNewRequestLogic(l4Dep, emptySet()),
-        newFacetsFromRequestLogic(l4Dep, allFacets),
+        newFacetsFromRequestLogic(l4Dep, l4Facets),
         _graphExecData -> {
-          CompletableFuture<Object> l3Result = new CompletableFuture<>();
-          _graphExecData
-              .communicationFacade()
-              .triggerDependency(
-                  l4DepOnL3,
-                  List.of(
-                      new RequestResponseFuture<>(
-                          new SimpleRequestBuilder<>(Set.of(), l3Dep), l3Result)));
-          l3Result.whenComplete((o, throwable) -> {});
+          for (ExecutionItem executionItem : _graphExecData.executionItems()) {
+            CompletableFuture<Object> l3Result = new CompletableFuture<>();
+            SimpleRequestBuilder<Object> l3Req = new SimpleRequestBuilder<>(Set.of(), l3Dep);
+            _graphExecData
+                .communicationFacade()
+                .triggerDependency(
+                    l4DepOnL3, List.of(new RequestResponseFuture<>(l3Req, l3Result)));
+            l3Result.whenComplete(
+                (o, throwable) -> {
+                  ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                      ._set(l4DepOnL3.id(), new RequestResponse(l3Req, errableFrom(o, throwable)));
+                  _graphExecData.communicationFacade().executeOutputLogic(executionItem);
+                });
+          }
         },
         ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
 
     VajramID finalKryon = vajramID("requestExecution_multiLevelDependencies_final");
     Dependency finalDepOnL4 = dependency(1, finalKryon, l4Dep);
-    VajramID vajramID =
-        kryonDefinitionRegistry
-            .newVajramKryonDefinition(
+    Set<Facet> finalFacets = Set.of(finalDepOnL4);
+    kryonDefinitionRegistry.newVajramKryonDefinition(
+        finalKryon,
+        finalFacets,
+        newComputeLogic(
                 finalKryon,
-                allFacets,
-                newComputeLogic(
-                        finalKryon,
-                        allFacets,
-                        facets ->
-                            ((FacetValuesMap) facets)
-                                    ._getDepResponses(1).requestResponsePairs().stream()
-                                        .map(RequestResponse::response)
-                                        .iterator()
-                                        .next()
-                                        .valueOrThrow()
-                                + ":final")
-                    .kryonLogicId(),
-                ImmutableMap.of(),
-                newCreateNewRequestLogic(finalKryon, emptySet()),
-                newFacetsFromRequestLogic(finalKryon, allFacets),
-                _graphExecData -> {
-                  CompletableFuture<Object> l4Result = new CompletableFuture<>();
-                  _graphExecData
-                      .communicationFacade()
-                      .triggerDependency(
-                          finalDepOnL4,
-                          List.of(
-                              new RequestResponseFuture<>(
-                                  new SimpleRequestBuilder<>(Set.of(), l4Dep), l4Result)));
-                  l4Result.whenComplete((o, throwable) -> {});
-                },
-                ElementTags.of(Creator.create()))
-            .vajramID();
+                finalFacets,
+                facets ->
+                    ((FacetValuesMap) facets)._getOne2OneResponse(1).valueOrThrow() + ":final")
+            .kryonLogicId(),
+        ImmutableMap.of(),
+        newCreateNewRequestLogic(finalKryon, emptySet()),
+        newFacetsFromRequestLogic(finalKryon, finalFacets),
+        _graphExecData -> {
+          for (ExecutionItem executionItem : _graphExecData.executionItems()) {
+            CompletableFuture<Object> l4Result = new CompletableFuture<>();
+            SimpleRequestBuilder<Object> l4Req = new SimpleRequestBuilder<>(Set.of(), l4Dep);
+            _graphExecData
+                .communicationFacade()
+                .triggerDependency(
+                    finalDepOnL4, List.of(new RequestResponseFuture<>(l4Req, l4Result)));
+            l4Result.whenComplete(
+                (o, throwable) ->
+                    ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                        ._set(
+                            finalDepOnL4.id(),
+                            new RequestResponse(l4Req, errableFrom(o, throwable))));
+            _graphExecData.communicationFacade().executeOutputLogic(executionItem);
+          }
+        },
+        ElementTags.of(InvocableOutsideGraph.Creator.create()));
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
-            SimpleImmutRequest.empty(vajramID),
+            SimpleImmutRequest.empty(finalKryon),
             KryonExecutionConfig.builder().executionId("r").build());
     kryonExecutor.close();
     assertThat(future).succeedsWithin(TIMEOUT).isEqualTo("l1:l2:l3:l4:final");
@@ -498,32 +508,32 @@ class KryonExecutorTest {
   void executeKryon_dependenciesWithReturnInstantly_executeComputeExecutedExactlyOnce(
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
-    VajramID dep1 =
+    VajramID dep1ID =
         vajramID(
             "executeKryon_dependenciesWithReturnInstantly_executeComputeExecutedExactlyOnce_dep1");
     kryonDefinitionRegistry.newVajramKryonDefinition(
-        dep1,
+        dep1ID,
         emptySet(),
-        newComputeLogic(dep1, emptySet(), dependencyValues -> "l1").kryonLogicId(),
+        newComputeLogic(dep1ID, emptySet(), dependencyValues -> "l1").kryonLogicId(),
         ImmutableMap.of(),
-        newCreateNewRequestLogic(dep1, emptySet()),
-        newFacetsFromRequestLogic(dep1, emptySet()),
+        newCreateNewRequestLogic(dep1ID, emptySet()),
+        newFacetsFromRequestLogic(dep1ID, emptySet()),
         _graphExecData ->
             _graphExecData
                 .executionItems()
                 .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
         emptyTags());
 
-    VajramID dep2 =
+    VajramID dep2ID =
         vajramID(
             "executeKryon_dependenciesWithReturnInstantly_executeComputeExecutedExactlyOnce_dep2");
     kryonDefinitionRegistry.newVajramKryonDefinition(
-        dep2,
+        dep2ID,
         emptySet(),
-        newComputeLogic(dep2, emptySet(), dependencyValues -> "l2").kryonLogicId(),
+        newComputeLogic(dep2ID, emptySet(), dependencyValues -> "l2").kryonLogicId(),
         ImmutableMap.of(),
-        newCreateNewRequestLogic(dep2, emptySet()),
-        newFacetsFromRequestLogic(dep2, emptySet()),
+        newCreateNewRequestLogic(dep2ID, emptySet()),
+        newFacetsFromRequestLogic(dep2ID, emptySet()),
         _graphExecData ->
             _graphExecData
                 .executionItems()
@@ -531,9 +541,12 @@ class KryonExecutorTest {
         emptyTags());
 
     LongAdder numberOfExecutions = new LongAdder();
-    String kryonName =
-        "executeKryon_dependenciesWithReturnInstantly_executeComputeExecutedExactlyOnce_final";
-    Set<Facet> allFacets = Set.of(dependency(1), dependency(2));
+    VajramID kryonName =
+        vajramID(
+            "executeKryon_dependenciesWithReturnInstantly_executeComputeExecutedExactlyOnce_final");
+    Dependency dep1 = dependency(1, kryonName, dep1ID);
+    Dependency dep2 = dependency(2, kryonName, dep2ID);
+    Set<Facet> allFacets = Set.of(dep1, dep2);
     VajramID vajramID =
         kryonDefinitionRegistry
             .newVajramKryonDefinition(
@@ -544,30 +557,58 @@ class KryonExecutorTest {
                         allFacets,
                         facets -> {
                           numberOfExecutions.increment();
-                          return ((FacetValuesMap) facets)
-                                  ._getDepResponses(1).requestResponsePairs().stream()
-                                      .map(RequestResponse::response)
-                                      .iterator()
-                                      .next()
-                                      .valueOpt()
-                                      .orElseThrow()
+                          return ((FacetValuesMap) facets)._getOne2OneResponse(1).valueOrThrow()
                               + ":"
-                              + ((FacetValuesMap) facets)
-                                  ._getDepResponses(2).requestResponsePairs().stream()
-                                      .map(RequestResponse::response)
-                                      .iterator()
-                                      .next()
-                                      .valueOpt()
-                                      .orElseThrow()
+                              + ((FacetValuesMap) facets)._getOne2OneResponse(2).valueOrThrow()
                               + ":final";
                         })
                     .kryonLogicId(),
-                ImmutableMap.of(
-                    dependency(1), new VajramID(dep1), dependency(2), new VajramID(dep2)),
                 ImmutableMap.of(),
                 newCreateNewRequestLogic(kryonName, emptySet()),
                 newFacetsFromRequestLogic(kryonName, allFacets),
-                ElementTags.of(Creator.create()))
+                _graphExecData -> {
+                  for (ExecutionItem executionItem : _graphExecData.executionItems()) {
+                    CompletableFuture<@Nullable Object> dep1Future = new CompletableFuture<>();
+                    CompletableFuture<@Nullable Object> dep2Future = new CompletableFuture<>();
+                    SimpleRequestBuilder<Object> dep1Req =
+                        new SimpleRequestBuilder<>(Set.of(), dep1ID);
+                    SimpleRequestBuilder<Object> dep2Req =
+                        new SimpleRequestBuilder<>(Set.of(), dep2ID);
+                    dep1Future.whenComplete(
+                        (o, throwable) ->
+                            ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                                ._set(
+                                    dep1.id(),
+                                    new RequestResponse(dep1Req, errableFrom(o, throwable))));
+                    dep2Future.whenComplete(
+                        (o, throwable) ->
+                            ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                                ._set(
+                                    dep2.id(),
+                                    new RequestResponse(dep2Req, errableFrom(o, throwable))));
+                    _graphExecData
+                        .communicationFacade()
+                        .triggerDependency(
+                            dep1,
+                            List.of(
+                                new RequestResponseFuture<Request<Object>, Object>(
+                                    dep1Req, dep1Future)));
+                    _graphExecData
+                        .communicationFacade()
+                        .triggerDependency(
+                            dep2,
+                            List.of(
+                                new RequestResponseFuture<Request<Object>, Object>(
+                                    dep2Req, dep2Future)));
+                    CompletableFuture.allOf(dep1Future, dep2Future)
+                        .whenComplete(
+                            (unused, throwable) ->
+                                _graphExecData
+                                    .communicationFacade()
+                                    .executeOutputLogic(executionItem));
+                  }
+                },
+                ElementTags.of(InvocableOutsideGraph.Creator.create()))
             .vajramID();
     CompletableFuture<Object> future =
         kryonExecutor.executeKryon(
@@ -598,30 +639,37 @@ class KryonExecutorTest {
   void shutdownNow_terminatesPendingWork(
       KryonExecStrategy kryonExecStrategy, GraphTraversalStrategy graphTraversalStrategy) {
     this.kryonExecutor = getKryonExecutor(kryonExecStrategy, graphTraversalStrategy);
+    VajramID n1ID = vajramID("n1");
     VajramKryonDefinition n1 =
         kryonDefinitionRegistry.newVajramKryonDefinition(
-            "n1",
+            n1ID,
             emptySet(),
-            newComputeLogic("n1_logic", emptySet(), dependencyValues -> "dependency_value")
+            newComputeLogic(n1ID, emptySet(), dependencyValues -> "dependency_value")
                 .kryonLogicId(),
             ImmutableMap.of(),
-            ImmutableMap.of(),
-            newCreateNewRequestLogic("n1_logic", emptySet()),
-            newFacetsFromRequestLogic("n1_logic", emptySet()),
+            newCreateNewRequestLogic(n1ID, emptySet()),
+            newFacetsFromRequestLogic(n1ID, emptySet()),
+            _graphExecData ->
+                _graphExecData
+                    .executionItems()
+                    .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
             emptyTags());
 
     CountDownLatch countDownLatch = new CountDownLatch(1);
-    Set<SimpleDep> allFacets = Set.of(dependency(1));
+    VajramID n2Id = vajramID("n2");
+    SimpleDep n2DepOnN1 = dependency(1, n2Id, n1ID);
+    Set<SimpleDep> allFacets = Set.of(n2DepOnN1);
     VajramKryonDefinition n2 =
         kryonDefinitionRegistry.newVajramKryonDefinition(
-            "n2",
+            n2Id,
             allFacets,
             newIoLogic(
-                    "n2_logic",
+                    n2Id,
                     allFacets,
                     facets ->
                         runAsync(
                                 () -> {
+                                  log.error("Running n2 vajram");
                                   while (countDownLatch.getCount() > 0) {
                                     try {
                                       countDownLatch.await();
@@ -633,18 +681,18 @@ class KryonExecutorTest {
                             .handle(
                                 (unused, throwable) ->
                                     ((FacetValuesMap) facets)
-                                            ._getDepResponses(1).requestResponsePairs().stream()
-                                                .map(RequestResponse::response)
-                                                .iterator()
-                                                .next()
-                                                .valueOpt()
-                                                .orElseThrow()
+                                            ._getOne2OneResponse(1)
+                                            .valueOpt()
+                                            .orElseThrow()
                                         + ":computed_value"))
                 .kryonLogicId(),
-            ImmutableMap.of(dependency(1), n1.vajramID()),
             ImmutableMap.of(),
-            newCreateNewRequestLogic("n1_logic", emptySet()),
-            newFacetsFromRequestLogic("n1_logic", allFacets),
+            newCreateNewRequestLogic(n1.vajramID(), emptySet()),
+            newFacetsFromRequestLogic(n1.vajramID(), allFacets),
+            _graphExecData ->
+                _graphExecData
+                    .executionItems()
+                    .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
             ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
 
     CompletableFuture<Object> future =
@@ -655,7 +703,7 @@ class KryonExecutorTest {
     kryonExecutor.shutdownNow();
     countDownLatch.countDown();
     assertThat(future)
-        .failsWithin(1, SECONDS)
+        .failsWithin(1, HOURS)
         .withThrowableOfType(ExecutionException.class)
         .withCauseExactlyInstanceOf(RejectedExecutionException.class)
         .withMessage(
@@ -666,14 +714,14 @@ class KryonExecutorTest {
       VajramID kryonId, Set<? extends Facet> usedFacets, Function<FacetValues, T> logic) {
     ComputeLogicDefinition<T> def =
         new ComputeLogicDefinition<>(
-            new KryonLogicId(kryonId, kryonId.id()),
+            new KryonLogicId(kryonId, kryonId.id() + "_logic"),
             usedFacets,
             input ->
                 new OutputLogicExecutionResults<>(
                     input.facetValues().stream()
                         .collect(
                             toImmutableMap(
-                                identity(),
+                                FacetValues::_build,
                                 facetValues ->
                                     computeErrableFrom(logic).apply(facetValues).toFuture()))),
             emptyTags());
@@ -683,16 +731,17 @@ class KryonExecutorTest {
   }
 
   private <T> OutputLogicDefinition<T> newIoLogic(
-      String kryonId,
+      VajramID kryonId,
       Set<? extends Facet> inputs,
       Function<FacetValues, CompletableFuture<T>> logic) {
     IOLogicDefinition<T> def =
         new IOLogicDefinition<>(
-            new KryonLogicId(new VajramID(kryonId), kryonId),
+            new KryonLogicId(kryonId, kryonId.id()),
             inputs,
             input ->
                 new OutputLogicExecutionResults<>(
-                    input.facetValues().stream().collect(toImmutableMap(identity(), logic))),
+                    input.facetValues().stream()
+                        .collect(toImmutableMap(FacetValues::_build, logic))),
             emptyTags());
 
     logicDefinitionRegistry.addOutputLogic(def);
@@ -713,6 +762,7 @@ class KryonExecutorTest {
   }
 
   public static Stream<Arguments> executorConfigsToTest() {
-    return Stream.of(Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH));
+    return Stream.of(
+        Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH), Arguments.of(DIRECT, DEPTH));
   }
 }

@@ -31,7 +31,7 @@ public record TraitKryonDefinition(
         createNewRequest,
         kryonDefinitionRegistry,
         tags,
-        KryonDefinitionView.createView(facets, ImmutableMap.of(), ImmutableMap.of()));
+        KryonDefinitionView.createView(facets, ImmutableMap.of()));
   }
 
   @Override

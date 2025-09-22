@@ -195,8 +195,8 @@ public record ParsedVajramData(
         .toList();
   }
 
-  private static ImmutableList<ExecutableElement> getAllMethods(TypeElement vajramCalss) {
-    return vajramCalss.getEnclosedElements().stream()
+  private static ImmutableList<ExecutableElement> getAllMethods(TypeElement vajramClass) {
+    return vajramClass.getEnclosedElements().stream()
         .filter(element -> element.getKind() == ElementKind.METHOD)
         .map(element -> (ExecutableElement) element)
         .collect(toImmutableList());

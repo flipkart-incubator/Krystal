@@ -64,7 +64,7 @@ public record DepChainBatcherConfig(
   public static DepChainBatcherConfig simple(Supplier<InputBatcher> inputBatcherSupplier) {
     return new DepChainBatcherConfig(
         logicExecutionContext -> true,
-        logicExecutionContext -> generateInstanceId(logicExecutionContext.dependants()).toString(),
+        logicExecutionContext -> generateInstanceId(logicExecutionContext.dependents()).toString(),
         outputLogicDecoratorContext ->
             new InputBatchingDecorator(
                 outputLogicDecoratorContext.instanceId(),
@@ -72,7 +72,7 @@ public record DepChainBatcherConfig(
                 dependantChain ->
                     outputLogicDecoratorContext
                         .logicExecutionContext()
-                        .dependants()
+                        .dependents()
                         .equals(dependantChain)));
   }
 
@@ -88,7 +88,7 @@ public record DepChainBatcherConfig(
       String instanceId,
       ImmutableSet<DependentChain> dependentChains) {
     return new DepChainBatcherConfig(
-        logicExecutionContext -> dependentChains.contains(logicExecutionContext.dependants()),
+        logicExecutionContext -> dependentChains.contains(logicExecutionContext.dependents()),
         logicExecutionContext -> instanceId,
         outputLogicDecoratorContext ->
             new InputBatchingDecorator(

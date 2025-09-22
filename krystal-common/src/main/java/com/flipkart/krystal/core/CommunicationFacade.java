@@ -10,7 +10,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public interface CommunicationFacade {
   void triggerDependency(
       Dependency dependency,
-      List<RequestResponseFuture<Request<@Nullable Object>, Object>> responseFutures);
+      List<? extends RequestResponseFuture<? extends Request<?>, ?>> responseFutures);
 
   void executeOutputLogic(ExecutionItem executionItem);
+
 }

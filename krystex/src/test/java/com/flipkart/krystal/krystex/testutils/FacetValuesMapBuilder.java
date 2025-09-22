@@ -54,15 +54,17 @@ public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesB
   }
 
   @Override
-  public Errable<?> _getErrable(int facetId) {
+  public Errable<?> _getOne2OneResponse(int facetId) {
     if (_request._hasValue(facetId)) {
       return _request._get(facetId);
     } else {
       FacetValue datum = otherFacetValues.getOrDefault(facetId, Errable.nil());
-      if (datum instanceof Errable<?> errable) {
-        return errable;
+      if (datum instanceof One2OneDepResponse<?, ?> one2OneDepResponse) {
+        return one2OneDepResponse.response();
       } else {
-        throw new IllegalArgumentException("%s is not of type Errable".formatted(facetId));
+        throw new IllegalArgumentException(
+            "%s is not of type One2OneDepResponse. It is of the type: %s"
+                .formatted(facetId, datum));
       }
     }
   }
@@ -73,12 +75,6 @@ public final class FacetValuesMapBuilder implements FacetValuesMap, FacetValuesB
     FacetValue datum = otherFacetValues.getOrDefault(facetId, Errable.nil());
     if (datum instanceof FanoutDepResponses fanoutDepResponses) {
       return fanoutDepResponses;
-    } else if (datum instanceof RequestResponse requestResponse) {
-      return new FanoutDepResponses(ImmutableList.of(requestResponse));
-    } else if (datum instanceof One2OneDepResponse.NoRequest noRequest) {
-      return new FanoutDepResponses(
-          ImmutableList.of(
-              new RequestResponse(SimpleImmutRequest.empty(_vajramID), noRequest.response())));
     } else {
       throw new IllegalArgumentException("%s is not of type Responses".formatted(facetId));
     }
