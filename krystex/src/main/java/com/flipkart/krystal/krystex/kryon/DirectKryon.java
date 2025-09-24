@@ -17,6 +17,7 @@ import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
 import com.flipkart.krystal.krystex.commands.DirectForwardSend;
+import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.MultiRequestDirectCommand;
 import com.flipkart.krystal.krystex.decoration.DecorationOrdering;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
@@ -26,14 +27,19 @@ import com.flipkart.krystal.krystex.logicdecoration.OutputLogicDecorator;
 import com.flipkart.krystal.krystex.request.RequestIdGenerator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 public final class DirectKryon
     extends AbstractKryon<MultiRequestDirectCommand<DirectResponse>, DirectResponse> {
+
+  private final Set<DependentChain> flushedDependentChains = new LinkedHashSet<>();
 
   DirectKryon(
       VajramKryonDefinition definition,
@@ -54,6 +60,11 @@ public final class DirectKryon
   }
 
   @Override
+  public void flush(Flush flush) {
+    flushedDependentChains.add(flush.dependentChain());
+  }
+
+  @Override
   public CompletableFuture<DirectResponse> executeCommand(
       MultiRequestDirectCommand<DirectResponse> kryonCommand) {
     DependentChain dependentChain = kryonCommand.dependentChain();
@@ -63,7 +74,6 @@ public final class DirectKryon
       List<ExecutionItem> executionItems = directForwardReceive.executionItems();
 
       try {
-        int[] outputLogicsExecuted = {0};
         CommunicationFacade communicationFacade =
             new CommunicationFacade() {
               @Override
@@ -80,10 +90,10 @@ public final class DirectKryon
 
               @Override
               public void executeOutputLogic(ExecutionItem executionItem) {
-                outputLogicsExecuted[0]++;
                 executeDecoratedOutputLogic(
                     kryonDefinition.getOutputLogicDefinition(), executionItem, dependentChain);
-                if (outputLogicsExecuted[0] == executionItems.size()) {
+
+                if (flushedDependentChains.remove(dependentChain)) {
                   flushDecorators(dependentChain);
                 }
               }
@@ -101,8 +111,6 @@ public final class DirectKryon
                               dependency.onVajramID(),
                               ImmutableList.of(),
                               dependentChain.extend(vajramID, dependency))));
-          // Flush output logic decorators since output logic will not be called anymore
-          flushDecorators(dependentChain);
         }
         kryonDefinition.executeGraph(
             new GraphExecutionData(

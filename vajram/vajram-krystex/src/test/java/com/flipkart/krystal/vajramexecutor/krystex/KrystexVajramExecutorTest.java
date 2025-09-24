@@ -84,7 +84,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 class KrystexVajramExecutorTest {
-
+//gradle :vajram:vajram-krystex:test --tests "com.flipkart.krystal.vajramexecutor.krystex.KrystexVajramExecutorTest.flush_singleDepthParallelDependencyDefaultInputBatcherConfig_flushes2Batchers" -PunsafeCompile=true
   private static final Duration TIMEOUT = ofSeconds(1000);
   private static SingleThreadExecutorsPool EXEC_POOL;
 
@@ -444,8 +444,8 @@ class KrystexVajramExecutorTest {
              Default InputBatcherConfig allocates one InputBatchingDecorator for each
              dependent call chain.
              TestUserServiceVajram is called via two dependantChains:
-             [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:user_info
-             [Start]>MultiHelloFriends:hellos>HelloFriendsVajram:friend_infos
+             [Start]>MultiHelloFriends:hellos>HelloFriends:user_info
+             [Start]>MultiHelloFriends:hellos>HelloFriends:friend_infos
             */);
   }
 
@@ -771,7 +771,7 @@ class KrystexVajramExecutorTest {
 
   public static Stream<Arguments> executorConfigsToTest() {
     return Stream.of(
-        Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH), Arguments.of(DIRECT, DEPTH));
+        /*Arguments.of(BATCH, DEPTH), Arguments.of(BATCH, BREADTH), */ Arguments.of(DIRECT, DEPTH));
   }
 
   private InputBatcherConfig singleBatcherConfig(

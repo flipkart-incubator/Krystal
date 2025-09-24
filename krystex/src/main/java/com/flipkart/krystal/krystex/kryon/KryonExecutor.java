@@ -29,9 +29,11 @@ import com.flipkart.krystal.facets.Dependency;
 import com.flipkart.krystal.krystex.KrystalExecutor;
 import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
 import com.flipkart.krystal.krystex.commands.DirectForwardSend;
+import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.ForwardSendBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
+import com.flipkart.krystal.krystex.commands.VoidResponse;
 import com.flipkart.krystal.krystex.decoration.InitiateActiveDepChains;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecorator;
 import com.flipkart.krystal.krystex.dependencydecoration.DependencyDecoratorConfig;
@@ -58,6 +60,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -532,7 +535,22 @@ public final class KryonExecutor implements KrystalExecutor {
             case BATCH -> submitBatch(unFlushedExecutions);
             case DIRECT -> submitDirect(unFlushedExecutions);
           }
+          flushKryons();
         });
+  }
+
+  private void flushKryons() {
+    Set<VajramID> uniqueValues = new HashSet<>();
+    for (InvocationId requestId : unFlushedExecutions) {
+      VajramID vajramID = getKryonExecution(requestId).vajramID();
+      if (uniqueValues.add(vajramID)) {
+        executorConfig
+            .traitDispatchDecorator()
+            .<VoidResponse>decorateDependency(this::executeCommand)
+            .invokeDependency(
+                new Flush(vajramID, kryonDefinitionRegistry.getDependentChainsStart()));
+      }
+    }
   }
 
   private void computeDisabledDependentChains() {

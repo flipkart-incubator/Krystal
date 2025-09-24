@@ -9,6 +9,7 @@ import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.FacetValuesBuilder;
 import com.flipkart.krystal.data.Failure;
 import com.flipkart.krystal.except.StackTracelessException;
+import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.Kryon;
@@ -49,6 +50,11 @@ class InjectingDecoratedKryon implements Kryon<KryonCommand, KryonCommandRespons
   @Override
   public VajramKryonDefinition getKryonDefinition() {
     return kryon.getKryonDefinition();
+  }
+
+  @Override
+  public void flush(Flush flush) {
+    kryon.flush(flush);
   }
 
   @Override
