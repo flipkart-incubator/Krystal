@@ -9,7 +9,6 @@ import static com.flipkart.krystal.krystex.kryon.KryonExecutor.KryonExecStrategy
 import static com.flipkart.krystal.tags.ElementTags.emptyTags;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Collections.emptySet;
-import static java.util.function.Function.identity;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
@@ -118,10 +117,7 @@ class RequestLevelCacheTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(vajramID("kryon"), emptySet()),
             newFacetsFromRequestLogic(vajramID("kryon")),
-            _graphExecData ->
-                _graphExecData
-                    .executionItems()
-                    .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
+            _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
             ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
     CompletableFuture<Object> future1 =
         kryonExecutor.executeKryon(
@@ -135,10 +131,7 @@ class RequestLevelCacheTest {
     kryonExecutor.close();
     assertThat(future1).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
     assertThat(future2).succeedsWithin(TIMEOUT).isEqualTo("computed_value");
-    switch (kryonExecStrategy) {
-      case BATCH -> assertThat(adder.sum()).isEqualTo(1);
-      case DIRECT -> assertThat(adder.sum()).isEqualTo(2);
-    }
+    assertThat(adder.sum()).isEqualTo(1);
   }
 
   @ParameterizedTest
@@ -168,10 +161,7 @@ class RequestLevelCacheTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(vajramID("kryon"), emptySet()),
             newFacetsFromRequestLogic(vajramID("kryon")),
-            _graphExecData ->
-                _graphExecData
-                    .executionItems()
-                    .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
+            _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
             ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
 
     CompletableFuture<Object> future1 =

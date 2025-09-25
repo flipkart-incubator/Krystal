@@ -1,6 +1,5 @@
 package com.flipkart.krystal.core;
 
-import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;

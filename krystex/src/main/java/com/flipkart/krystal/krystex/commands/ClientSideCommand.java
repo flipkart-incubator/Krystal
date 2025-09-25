@@ -4,4 +4,4 @@ import com.flipkart.krystal.krystex.kryon.KryonCommandResponse;
 
 /** A Client-side manifestation of a Kryon command. */
 public sealed interface ClientSideCommand<R extends KryonCommandResponse> extends KryonCommand<R>
-    permits DirectForwardSend, Flush, ForwardSendBatch {}
+    permits DirectForwardSend, ForwardSendBatch {}

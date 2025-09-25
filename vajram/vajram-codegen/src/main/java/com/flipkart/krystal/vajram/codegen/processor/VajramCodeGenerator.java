@@ -528,7 +528,7 @@ public class VajramCodeGenerator implements CodeGenerator {
       for (DependencyModel dependency : currentVajramInfo.dependencies()) {
         cases.add(
             CodeBlock.of(
-"""
+                """
                 case $S -> {
                   if (_resolver instanceof $T _fanoutResolver) {
 $L
@@ -543,7 +543,7 @@ $L
                 dependency.canFanout()
                     ? CodeBlock.of("_$L_fanoutInputResolver = _fanoutResolver;", dependency.name())
                     : CodeBlock.of(
-"""
+                        """
                     throw new $T(
                         \"""
                         $S vajram's dependency '$L' is not marked as canFanout=true,
@@ -558,7 +558,7 @@ $L
                 dependency.name(),
                 simpleInputResolversMethodPresent
                     ? CodeBlock.of(
-"""
+                        """
                   if(_resolver instanceof $T _simpleResolver){
                     _$L_depFacets.addAll(_simpleResolver.getResolverSpec().sources());
                   }
@@ -607,40 +607,49 @@ $L
             .anyMatch(e -> e.getSimpleName().contentEquals(GET_SIMPLE_INPUT_RESOLVERS));
 
     CodeBlock.Builder executionCode = CodeBlock.builder();
-    for (DefaultFacetModel givenFacet : currentVajramInfo.givenFacets()) {
-      executionCode.addStatement(
-          "var $L = _facetValues.$L()", givenFacet.name(), givenFacet.name());
-    }
-    for (DependencyModel dependency : currentVajramInfo.dependencies()) {
-      if (dependency.canFanout()) {
-        executionCode.addStatement(
-            "var _$L_future = new $T<$T<$T,$T>>()",
-            dependency.name(),
-            CompletableFuture.class,
-            FanoutDepResponses.class,
-            dependency.depVajramInfo().requestInterfaceType(),
-            util.codegenUtil().box(dependency.dataType().javaModelType(util.processingEnv())));
-      } else {
-        executionCode.addStatement(
-            "var _$L_future = new $T<$T>()",
-            dependency.name(),
-            CompletableFuture.class,
-            util.codegenUtil().box(dependency.dataType().javaModelType(util.processingEnv())));
-      }
-    }
-
-    for (DependencyModel dependency : currentVajramInfo.dependencies()) {
-      executionCode.add(
-          "_futuresByFacet.put($T.$L_s, _$L_future);",
-          currentVajramInfo.facetsInterfaceType(),
-          dependency.name(),
-          dependency.name());
-    }
 
     Map<String, List<ExecutableElement>> resolverMethodsByDependency =
         getResolverMethodsByDependency();
 
     for (DependencyModel dependency : currentVajramInfo.dependencies()) {
+      Map<String, Object> commonNamesMap =
+          Map.ofEntries(
+              entry("list", List.class),
+              entry("facetName", dependency.name()),
+              entry("facetSpec", dependency.name() + FACET_SPEC_SUFFIX),
+              entry("req", dependency.depVajramInfo().requestInterfaceType()),
+              entry("depReqIface", dependency.depVajramInfo().requestInterfaceType()),
+              entry("reqImmutType", dependency.depVajramInfo().reqImmutInterfaceType()),
+              entry("facImmutPojo", currentVajramInfo.facetsImmutPojoType()),
+              entry(
+                  "depType",
+                  util.codegenUtil()
+                      .box(
+                          dependency
+                              .depVajramInfo()
+                              .responseType()
+                              .javaModelType(util.processingEnv()))),
+              entry("fac", currentVajramInfo.facetsInterfaceType()),
+              entry("one2OneInputResolver", One2OneInputResolver.class),
+              entry(
+                  "reqBuilder",
+                  dependency.depVajramInfo().reqImmutInterfaceType().nestedClass("Builder")),
+              entry(
+                  "respType",
+                  util.codegenUtil()
+                      .box(
+                          dependency
+                              .depVajramInfo()
+                              .responseType()
+                              .javaModelType(util.processingEnv()))),
+              entry("completableFuture", CompletableFuture.class),
+              entry("arrayList", ArrayList.class),
+              entry("fanoutDepResponses", FanoutDepResponses.class),
+              entry("requestResponse", RequestResponse.class),
+              entry("errable", Errable.class),
+              entry("executionItem", ExecutionItem.class),
+              entry("reqRespFuture", RequestResponseFuture.class));
+
       List<ExecutableElement> resolverMethods =
           resolverMethodsByDependency.getOrDefault(dependency.name(), List.of());
 
@@ -651,98 +660,112 @@ $L
               .collect(toSet());
 
       executionCode.addNamed(
-"""
+          """
           {
             $completableFuture:T.allOf(
                     $allUsedFutures:L)
                 .whenComplete(
                   (_unused, _throwable) -> {
-                    var _$facetName:L_requestBuilder = _$facetName:L_reqBuilderSupplier.get();
-                    $list:T<$reqImmutType:T.Builder> _$facetName:L_reqBuilders = $list:T.of(_$facetName:L_requestBuilder);
-$executeFanoutResolver:L
-                    for ($one2OneInputResolver:T _$facetName:L_inputResolver :
-                        _$facetName:L_one2oneInputResolvers) {
-                      _$facetName:L_reqBuilders =
-                          ($list:T<$reqImmutType:T.Builder>)
-                              _$facetName:L_inputResolver
-                                  .resolve(_$facetName:L_reqBuilders, _facetValues)
-                                  .getRequests();
+                    $list:T<$reqRespFuture:T<$reqImmutType:T.Builder, $depType:T>> _$facetName:L_reqs = new $arrayList:T<>();
+                    $list:T<$executionItem:T> _executionItems = _graphExecData.executionItems();
+                    var _$facetName:L_futures = new $completableFuture:T[_executionItems.size()];
+                    for (int i = 0; i < _executionItems.size(); i++) {
+                      var _executionItem = _executionItems.get(i);
+                      $facImmutPojo:T.Builder _facetValues =
+                          ($facImmutPojo:T.Builder) _executionItem.facetValues()._asBuilder();
+                      var _$facetName:L_requestBuilder = _$facetName:L_reqBuilderSupplier.get();
+                      $list:T<$reqImmutType:T.Builder> _$facetName:L_reqBuilders = $list:T.of(_$facetName:L_requestBuilder);
+  $executeFanoutResolver:L
+                      for ($one2OneInputResolver:T _$facetName:L_inputResolver :
+                          _$facetName:L_one2oneInputResolvers) {
+                        _$facetName:L_reqBuilders =
+                            ($list:T<$reqImmutType:T.Builder>)
+                                _$facetName:L_inputResolver
+                                    .resolve(_$facetName:L_reqBuilders, _facetValues)
+                                    .getRequests();
+                      }
+                      $reassignReqBuilder:L
+                      $setupFutures:L
                     }
-                    $reassignReqBuilder:L
-                    $triggerDependency:L
+                    $completableFuture:T.allOf(_$facetName:L_futures)
+                        .whenComplete((_unused2, _throwable2) -> _$facetName:L_ready.complete(null));
+                    _graphExecData
+                        .communicationFacade()
+                        .triggerDependency($fac:T.$facetSpec:L, _$facetName:L_reqs);
                   });
           }
-          """,
-          Map.ofEntries(
-              entry("completableFuture", CompletableFuture.class),
-              entry(
-                  "allUsedFutures",
-                  stream(
-                          new CodeBlock[] {
-                            usedFacetsInResolverMethods.stream()
-                                .map(f -> CodeBlock.of("_$L_future", f.name()))
-                                .collect(CodeBlock.joining(", ")),
-                            simpleInputResolversMethodPresent
-                                ? CodeBlock.of(
-                                    """
-                                    $T.allOf(
-                                        $T.filterKeys(_futuresByFacet, _$L_depFacets::contains)
-                                          .values()
-                                          .toArray($T[]::new)
-                                    )
-                                    """,
-                                    CompletableFuture.class,
-                                    Maps.class,
-                                    dependency.name(),
-                                    CompletableFuture.class)
-                                : EMPTY_CODE_BLOCK
-                          })
-                      .filter(Objects::nonNull)
-                      .filter(c -> !c.isEmpty())
-                      .collect(CodeBlock.joining(", "))),
-              entry("reqImmutType", dependency.depVajramInfo().reqImmutInterfaceType()),
-              entry("facetName", dependency.name()),
-              entry(
-                  "reassignReqBuilder",
-                  dependency.canFanout()
-                      ? CodeBlock.of(
-                          "$T<$T> _$L_requestBuilders = _$L_reqBuilders;",
-                          List.class,
-                          dependency.depVajramInfo().reqImmutInterfaceType().nestedClass("Builder"),
-                          dependency.name(),
-                          dependency.name())
-                      : EMPTY_CODE_BLOCK),
-              entry("one2OneInputResolver", One2OneInputResolver.class),
-              entry(
-                  "executeFanoutResolver",
-                  dependency.canFanout()
-                      ? CodeBlock.builder()
-                          .addNamed(
-"""
+  """,
+          merge(
+              commonNamesMap,
+              Map.ofEntries(
+                  entry(
+                      "allUsedFutures",
+                      stream(
+                              new CodeBlock[] {
+                                usedFacetsInResolverMethods.stream()
+                                    .map(f -> CodeBlock.of("_$L_ready", f.name()))
+                                    .collect(CodeBlock.joining(", ")),
+                                simpleInputResolversMethodPresent
+                                    ? CodeBlock.of(
+                                        """
+                                $T.allOf(
+                                    $T.filterKeys(_futuresByFacet, _$L_depFacets::contains)
+                                      .values()
+                                      .toArray($T[]::new)
+                                )
+                                """,
+                                        CompletableFuture.class,
+                                        Maps.class,
+                                        dependency.name(),
+                                        CompletableFuture.class)
+                                    : EMPTY_CODE_BLOCK
+                              })
+                          .filter(Objects::nonNull)
+                          .filter(c -> !c.isEmpty())
+                          .collect(CodeBlock.joining(", "))),
+                  entry(
+                      "reassignReqBuilder",
+                      dependency.canFanout()
+                          ? CodeBlock.of(
+                              "$T<$T> _$L_requestBuilders = _$L_reqBuilders;",
+                              List.class,
+                              dependency
+                                  .depVajramInfo()
+                                  .reqImmutInterfaceType()
+                                  .nestedClass("Builder"),
+                              dependency.name(),
+                              dependency.name())
+                          : EMPTY_CODE_BLOCK),
+                  entry(
+                      "executeFanoutResolver",
+                      dependency.canFanout()
+                          ? CodeBlock.builder()
+                              .addNamed(
+                                  """
                       if(_$facetName:L_fanoutInputResolver != null){
                           _$facetName:L_reqBuilders = ($list:T<$reqImmutType:T.Builder>) _$facetName:L_fanoutInputResolver
                               .resolve(_$facetName:L_reqBuilderSupplier.get(), _facetValues)
                               .getRequests();
                       }
 """,
-                              Map.ofEntries(
-                                  entry("facetName", dependency.name()),
-                                  entry("list", List.class),
-                                  entry(
-                                      "reqImmutType",
-                                      dependency.depVajramInfo().reqImmutInterfaceType())))
-                          .build()
-                      : EMPTY_CODE_BLOCK),
-              entry("list", List.class),
-              entry(
-                  "triggerDependency",
-                  dependency.canFanout()
-                      ? CodeBlock.builder()
-                          .addNamed(
-"""
-$list:T<$reqRestFuture:T<$reqBuilder:T, $respType:T>> _$facetName:L_reqRespFutures =
-    $reqRestFuture:T.forRequests(_$facetName:L_reqBuilders);
-$completableFuture:T.allOf($reqRestFuture:T.getFutures(_$facetName:L_reqRespFutures))
+                                  Map.ofEntries(
+                                      entry("facetName", dependency.name()),
+                                      entry("list", List.class),
+                                      entry(
+                                          "reqImmutType",
+                                          dependency.depVajramInfo().reqImmutInterfaceType())))
+                              .build()
+                          : EMPTY_CODE_BLOCK),
+                  entry(
+                      "setupFutures",
+                      dependency.canFanout()
+                          ? CodeBlock.builder()
+                              .addNamed(
+                                  """
+$list:T<$reqRespFuture:T<$reqBuilder:T, $respType:T>> _$facetName:L_reqRespFutures =
+    $reqRespFuture:T.forRequests(_$facetName:L_reqBuilders);
+_$facetName:L_reqs.addAll(_$facetName:L_reqRespFutures);
+_$facetName:L_futures[i] = $completableFuture:T.allOf($reqRespFuture:T.getFutures(_$facetName:L_reqRespFutures))
     .whenComplete(
         (_unused2, _throwable2) -> {
           $fanoutDepResponses:T<$req:T, $respType:T> _fanoutResponses;
@@ -757,7 +780,7 @@ $completableFuture:T.allOf($reqRestFuture:T.getFutures(_$facetName:L_reqRespFutu
             $list:T<$requestResponse:T<$req:T, $respType:T>>
                 _requestResponsePairs =
                     new $arrayList:T<>(_$facetName:L_reqRespFutures.size());
-            for ($reqRestFuture:T<$reqBuilder:T, $respType:T>
+            for ($reqRespFuture:T<$reqBuilder:T, $respType:T>
                 _$facetName:L_reqRespFuture : _$facetName:L_reqRespFutures) {
               _requestResponsePairs.add(
                   new $requestResponse:T<>(
@@ -770,87 +793,24 @@ $completableFuture:T.allOf($reqRestFuture:T.getFutures(_$facetName:L_reqRespFutu
             _fanoutResponses = new $fanoutDepResponses:T<>(_requestResponsePairs);
           }
           _facetValues.$facetName:L(_fanoutResponses);
-          _$facetName:L_future.complete(_fanoutResponses);
         });
-_graphExecData
-    .communicationFacade()
-    .triggerDependency($fac:T.$facetSpec:L, _$facetName:L_reqRespFutures);
 """,
-                              Map.ofEntries(
-                                  entry("list", List.class),
-                                  entry("reqRestFuture", RequestResponseFuture.class),
-                                  entry("facetName", dependency.name()),
-                                  entry("facetSpec", dependency.name() + FACET_SPEC_SUFFIX),
-                                  entry("req", dependency.depVajramInfo().requestInterfaceType()),
-                                  entry(
-                                      "depReqIface",
-                                      dependency.depVajramInfo().requestInterfaceType()),
-                                  entry(
-                                      "depType",
-                                      util.codegenUtil()
-                                          .box(
-                                              dependency
-                                                  .depVajramInfo()
-                                                  .responseType()
-                                                  .javaModelType(util.processingEnv()))),
-                                  entry("fac", currentVajramInfo.facetsInterfaceType()),
-                                  entry(
-                                      "reqBuilder",
-                                      dependency
-                                          .depVajramInfo()
-                                          .reqImmutInterfaceType()
-                                          .nestedClass("Builder")),
-                                  entry(
-                                      "respType",
-                                      util.codegenUtil()
-                                          .box(
-                                              dependency
-                                                  .depVajramInfo()
-                                                  .responseType()
-                                                  .javaModelType(util.processingEnv()))),
-                                  entry("completableFuture", CompletableFuture.class),
-                                  entry("arrayList", ArrayList.class),
-                                  entry("fanoutDepResponses", FanoutDepResponses.class),
-                                  entry("requestResponse", RequestResponse.class),
-                                  entry("errable", Errable.class)))
-                          .build()
-                      : CodeBlock.builder()
-                          .addNamed(
-"""
-var _$depName:L_resultFuture = new $completableFuture:T<$respType:T>();
-_graphExecData
-    .communicationFacade()
-    .triggerDependency(
-        $facetsInterfaceType:T.$depName:L_s, $list:T.of(
-            new $requestResponseFuture:T<>(
-                _$depName:L_requestBuilder, _$depName:L_resultFuture)));
-_$depName:L_resultFuture.whenComplete(
-  (_r, _throwable2) -> {
-    var _errable = $errable:T.errableFrom(_r, _throwable);
-    _facetValues.$depName:L(new $requestResponse:T<>(_$depName:L_requestBuilder, _errable));
-    $futures:T.linkFutures(_errable.toFuture(), _$depName:L_future);
-  });
+                                  commonNamesMap)
+                              .build()
+                          : CodeBlock.builder()
+                              .addNamed(
+                                  """
+var _$facetName:L_future = new $completableFuture:T<$depType:T>();
+_$facetName:L_futures[i] =
+    _$facetName:L_future.whenComplete(
+        (_unused2, _throwable2) -> {
+          var _errable = $errable:T.errableFrom(_unused2, _throwable);
+          _facetValues.$facetName:L(new $requestResponse:T<>(_$facetName:L_requestBuilder, _errable));
+        });
+_$facetName:L_reqs.add(new $reqRespFuture:T<>(_$facetName:L_requestBuilder, _$facetName:L_future));
 """,
-                              Map.ofEntries(
-                                  entry("depName", dependency.name()),
-                                  entry("completableFuture", CompletableFuture.class),
-                                  entry(
-                                      "respType",
-                                      util.codegenUtil()
-                                          .box(
-                                              dependency
-                                                  .depVajramInfo()
-                                                  .responseType()
-                                                  .javaModelType(util.processingEnv()))),
-                                  entry(
-                                      "facetsInterfaceType",
-                                      currentVajramInfo.facetsInterfaceType()),
-                                  entry("list", List.class),
-                                  entry("requestResponseFuture", RequestResponseFuture.class),
-                                  entry("errable", Errable.class),
-                                  entry("requestResponse", RequestResponse.class),
-                                  entry("futures", Futures.class)))
-                          .build())));
+                                  commonNamesMap)
+                              .build()))));
     }
     OutputLogics outputLogics = requireNonNull(getParsedVajramData().logicMethods()).outputLogics();
     List<VariableElement> outputLogicParams = new ArrayList<>();
@@ -870,13 +830,13 @@ _$depName:L_resultFuture.whenComplete(
     CodeBlock executeOutputLogic =
         CodeBlock.of(
             """
-               _graphExecData.communicationFacade().executeOutputLogic(_executionItem);
+            _graphExecData.communicationFacade().executeOutputLogic();
             """);
     if (computedOutputLogicSources.isEmpty()) {
       executionCode.add(executeOutputLogic);
     } else {
       executionCode.add(
-"""
+          """
     $L
         .whenComplete(
             (_unused, _throwable) -> {
@@ -884,37 +844,43 @@ _$depName:L_resultFuture.whenComplete(
             });
 """,
           switch (computedOutputLogicSources.size()) {
-            case 1 ->
-                CodeBlock.of("_$L_future", computedOutputLogicSources.iterator().next().name());
-            default ->
-                CodeBlock.of(
-                    "$T.allOf($L)",
-                    CompletableFuture.class,
-                    computedOutputLogicSources.stream()
-                        .map(f -> CodeBlock.of("_$L_future", f.name()))
-                        .collect(CodeBlock.joining(", ")));
+            case 1 -> CodeBlock.of(
+                "_$L_ready", computedOutputLogicSources.iterator().next().name());
+            default -> CodeBlock.of(
+                "$T.allOf($L)",
+                CompletableFuture.class,
+                computedOutputLogicSources.stream()
+                    .map(f -> CodeBlock.of("_$L_ready", f.name()))
+                    .collect(CodeBlock.joining(", ")));
           },
           executeOutputLogic);
     }
     executeGraph.addCode(
-        """
-        for ($T _executionItem : _graphExecData.executionItems()) {
-          $T _facetValues =
-              ($T) _executionItem.facetValues()._asBuilder();
-          $T<$T, $T<?>> _futuresByFacet = new $T<>();
-          $L
-        }
-        """,
-        ExecutionItem.class,
-        currentVajramInfo.facetsImmutPojoType().nestedClass("Builder"),
-        currentVajramInfo.facetsImmutPojoType().nestedClass("Builder"),
+        "$T<$T, $T<$T>> _futuresByFacet = new $T<>();",
         Map.class,
         Facet.class,
         CompletableFuture.class,
-        HashMap.class,
-        executionCode.build());
-
+        Void.class,
+        HashMap.class);
+    for (DependencyModel dependency : currentVajramInfo.dependencies()) {
+      executeGraph.addCode(
+          "var _$L_ready = new $T<$T>();", dependency.name(), CompletableFuture.class, Void.class);
+      executeGraph.addCode(
+          "_futuresByFacet.put($T.$L_s, _$L_ready);",
+          currentVajramInfo.facetsInterfaceType(),
+          dependency.name(),
+          dependency.name());
+      executeGraph.addCode("\n");
+    }
+    executeGraph.addCode(executionCode.build());
     return executeGraph.build();
+  }
+
+  private static Map<String, Object> merge(
+      Map<String, Object> commonNamesMap, Map<String, Object> customNamesMap) {
+    Map<String, Object> map = new HashMap<>(commonNamesMap);
+    map.putAll(customNamesMap);
+    return map;
   }
 
   private FacetGenModel inferFacetId(VariableElement parameter) {
@@ -1604,7 +1570,7 @@ _$depName:L_resultFuture.whenComplete(
           CodeBlock.builder()
               .addStatement(
                   "var $2L = (($1T)_depRequests)",
-                  ParameterizedTypeName.get(ClassName.get(ImmutableList.class), requestBuilderType),
+                  ParameterizedTypeName.get(ClassName.get(List.class), requestBuilderType),
                   RESOLVER_REQUESTS);
     }
     codeBuilder.addStatement(
@@ -1854,7 +1820,10 @@ _$depName:L_resultFuture.whenComplete(
      * here which proactively fails if the data type mismatches.
      */
     String resolverResultVar = fanoutResolver ? RESOLVER_RESULTS : RESOLVER_RESULT;
-    methodCodeBuilder.add("var $L = $L(", resolverResultVar, resolverMethod.getSimpleName());
+    methodCodeBuilder.add(
+        """
+try {
+  var $L = $L(""", resolverResultVar, resolverMethod.getSimpleName());
     ImmutableList<FacetGenModel> resolverSources = getResolverSources(resolverMethod).asList();
     for (int i = 0; i < resolverSources.size(); i++) {
       methodCodeBuilder.add("$L", resolverSources.get(i).name());
@@ -2007,6 +1976,15 @@ _$depName:L_resultFuture.whenComplete(
       // close the else block of "if($L.shouldSkip())"
       methodCodeBuilder.endControlFlow();
     }
+    methodCodeBuilder.add(
+        """
+        } catch (Exception e) {
+          return $T.skip(
+              "Got exception while executing the resolver of the dependency '$L'", e);
+        }
+        """,
+        ResolverCommand.class,
+        dependencyModel.name());
   }
 
   private void modelsClassMembers(
@@ -2788,11 +2766,9 @@ _$depName:L_resultFuture.whenComplete(
           initializerCodeBlock.add("$T.$L,", FacetType.class, facet.facetType().name());
         }
       }
-      initializerCodeBlock.add(
-          """
+      initializerCodeBlock.add("""
                 $T.class,
-              """,
-          vajramReqClass);
+              """, vajramReqClass);
       if (facet instanceof DependencyModel vajramDepDef) {
         ClassName depReqInterfaceClass =
             ClassName.get(

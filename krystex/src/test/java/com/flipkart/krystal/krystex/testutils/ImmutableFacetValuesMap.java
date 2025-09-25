@@ -6,11 +6,9 @@ import com.flipkart.krystal.data.FacetValue;
 import com.flipkart.krystal.data.FanoutDepResponses;
 import com.flipkart.krystal.data.ImmutableFacetValues;
 import com.flipkart.krystal.data.One2OneDepResponse;
-import com.flipkart.krystal.data.RequestResponse;
 import com.flipkart.krystal.facets.Facet;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import java.lang.reflect.Type;
 import java.util.Objects;
 import java.util.Set;
 import lombok.Getter;
@@ -75,7 +73,8 @@ public final class ImmutableFacetValuesMap implements FacetValuesMap, ImmutableF
     if (datum instanceof FanoutDepResponses errable) {
       return errable;
     } else {
-      throw new IllegalArgumentException("%s is not of type FanoutDepResponses.".formatted(facetId));
+      throw new IllegalArgumentException(
+          "%s is not of type FanoutDepResponses.".formatted(facetId));
     }
   }
 

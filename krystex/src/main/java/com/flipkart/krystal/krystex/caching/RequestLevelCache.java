@@ -4,10 +4,12 @@ import static com.flipkart.krystal.concurrent.Futures.linkFutures;
 import static com.flipkart.krystal.except.StackTracelessException.stackTracelessWrap;
 import static java.util.concurrent.CompletableFuture.allOf;
 
+import com.flipkart.krystal.concurrent.Futures;
 import com.flipkart.krystal.data.Errable;
+import com.flipkart.krystal.data.ExecutionItem;
 import com.flipkart.krystal.data.FacetValues;
 import com.flipkart.krystal.except.StackTracelessException;
-import com.flipkart.krystal.krystex.commands.Flush;
+import com.flipkart.krystal.krystex.commands.DirectForwardReceive;
 import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.KryonCommand;
 import com.flipkart.krystal.krystex.kryon.BatchResponse;
@@ -21,7 +23,9 @@ import com.flipkart.krystal.krystex.kryondecoration.KryonDecorator;
 import com.flipkart.krystal.krystex.kryondecoration.KryonDecoratorConfig;
 import com.flipkart.krystal.krystex.request.InvocationId;
 import com.google.common.collect.Iterables;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
@@ -71,19 +75,34 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
     }
 
     @Override
-    public void flush(Flush flush) {
-      kryon.flush(flush);
-    }
-
-    @Override
     public CompletableFuture<KryonCommandResponse> executeCommand(KryonCommand kryonCommand) {
       if (kryonCommand instanceof ForwardReceiveBatch forwardBatch) {
         return readFromCache(kryon, forwardBatch);
+      } else if (kryonCommand instanceof DirectForwardReceive directForwardReceive) {
+        return readFromCache(kryon, directForwardReceive);
       } else {
         // Let all other commands just pass through. Request level cache is supposed to intercept
         // ForwardBatch only.
         return kryon.executeCommand(kryonCommand);
       }
+    }
+
+    private CompletableFuture<KryonCommandResponse> readFromCache(
+        Kryon<KryonCommand, KryonCommandResponse> kryon, DirectForwardReceive command) {
+      List<ExecutionItem> cacheMisses = new ArrayList<>();
+      for (ExecutionItem executionItem : command.executionItems()) {
+        FacetValues facetValues = executionItem.facetValues();
+        var cacheKey = new CacheKey(facetValues._build());
+        var cachedFuture = getCachedValue(cacheKey);
+        if (cachedFuture != null) {
+          Futures.propagateCompletion(cachedFuture, executionItem.response());
+        } else {
+          cache.put(cacheKey, executionItem.response());
+          cacheMisses.add(executionItem);
+        }
+      }
+      return kryon.executeCommand(
+          new DirectForwardReceive(command.vajramID(), cacheMisses, command.dependentChain()));
     }
 
     @SuppressWarnings("FutureReturnValueIgnored")
@@ -158,8 +177,8 @@ public sealed class RequestLevelCache implements KryonDecorator, KryonExecutorCo
               (unused, throwable) -> {
                 Map<InvocationId, Errable<Object>> responses = new LinkedHashMap<>();
                 for (Entry<InvocationId, CompletableFuture<@Nullable Object>> e : allFutures) {
-                  responses.put(e.getKey(),
-                      e.getValue().handle(Errable::errableFrom).getNow(UNKNOWN_ERROR));
+                  responses.put(
+                      e.getKey(), e.getValue().handle(Errable::errableFrom).getNow(UNKNOWN_ERROR));
                 }
                 finalResponse.complete(new BatchResponse(responses));
               });

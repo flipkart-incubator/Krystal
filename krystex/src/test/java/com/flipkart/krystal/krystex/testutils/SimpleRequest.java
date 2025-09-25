@@ -1,7 +1,6 @@
 package com.flipkart.krystal.krystex.testutils;
 
 import com.flipkart.krystal.data.Errable;
-import com.flipkart.krystal.data.ImmutableRequest.Builder;
 import com.flipkart.krystal.data.Request;
 import java.util.Map;
 

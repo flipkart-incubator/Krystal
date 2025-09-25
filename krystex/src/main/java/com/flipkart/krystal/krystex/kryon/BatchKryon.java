@@ -33,7 +33,6 @@ import com.flipkart.krystal.facets.resolution.ResolverCommand.SkipDependency;
 import com.flipkart.krystal.krystex.OutputLogic;
 import com.flipkart.krystal.krystex.OutputLogicDefinition;
 import com.flipkart.krystal.krystex.commands.CallbackBatch;
-import com.flipkart.krystal.krystex.commands.Flush;
 import com.flipkart.krystal.krystex.commands.ForwardReceiveBatch;
 import com.flipkart.krystal.krystex.commands.ForwardSendBatch;
 import com.flipkart.krystal.krystex.commands.MultiRequestCommand;
@@ -136,9 +135,6 @@ final class BatchKryon extends AbstractKryon<MultiRequestCommand<BatchResponse>,
         decorationOrdering,
         requestIdGenerator);
   }
-
-  @Override
-  public void flush(Flush flush) {}
 
   @Override
   public CompletableFuture<BatchResponse> executeCommand(MultiRequestCommand kryonCommand) {

@@ -111,10 +111,7 @@ class Resilience4JBulkheadTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(Set.of(input(1))),
             newFacetsFromRequestLogic(),
-            _graphExecData ->
-                _graphExecData
-                    .executionItems()
-                    .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
+            _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
             ElementTags.of(
                 InvocableOutsideGraph.Creator.create(),
                 OutputLogicDelegationMode.Creator.create(SYNC)));
@@ -227,10 +224,7 @@ class Resilience4JBulkheadTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(inputs),
             newFacetsFromRequestLogic(),
-            _graphExecData ->
-                _graphExecData
-                    .executionItems()
-                    .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
+            _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
             ElementTags.of(
                 InvocableOutsideGraph.Creator.create(),
                 OutputLogicDelegationMode.Creator.create(SYNC)));

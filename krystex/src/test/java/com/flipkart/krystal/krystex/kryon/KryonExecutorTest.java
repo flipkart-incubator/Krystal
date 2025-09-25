@@ -15,11 +15,9 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Collections.emptySet;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
-import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.InstanceOfAssertFactories.future;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.flipkart.krystal.annos.InvocableOutsideGraph;
@@ -57,6 +55,7 @@ import com.flipkart.krystal.tags.ElementTags;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -131,10 +130,7 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(kryonName, emptySet()),
             newFacetsFromRequestLogic(kryonName, emptySet()),
-            _graphExecData ->
-                _graphExecData
-                    .executionItems()
-                    .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
+            _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
             ElementTags.of(InvocableOutsideGraph.Creator.create()));
 
     CompletableFuture<Object> future1 =
@@ -166,10 +162,7 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(kryonName, emptySet()),
             newFacetsFromRequestLogic(kryonName, emptySet()),
-            _graphExecData ->
-                _graphExecData
-                    .executionItems()
-                    .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
+            _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
             ElementTags.of(InvocableOutsideGraph.Creator.create()));
 
     CompletableFuture<Object> future1 =
@@ -201,10 +194,7 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(kryonName, emptySet()),
             newFacetsFromRequestLogic(kryonName, emptySet()),
-            _graphExecData ->
-                _graphExecData
-                    .executionItems()
-                    .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
+            _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
             ElementTags.of(InvocableOutsideGraph.Creator.create()));
 
     CompletableFuture<Object> future =
@@ -242,10 +232,7 @@ class KryonExecutorTest {
                 ImmutableMap.of(),
                 newCreateNewRequestLogic(kryonName, inputDefs),
                 newFacetsFromRequestLogic(kryonName, inputDefs),
-                _graphExecData ->
-                    _graphExecData
-                        .executionItems()
-                        .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
+                _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
                 ElementTags.of(InvocableOutsideGraph.Creator.create()))
             .vajramID();
     CompletableFuture<Object> future =
@@ -273,10 +260,7 @@ class KryonExecutorTest {
         ImmutableMap.of(),
         newCreateNewRequestLogic(n1ID, emptySet()),
         newFacetsFromRequestLogic(n1ID, emptySet()),
-        _graphExecData ->
-            _graphExecData
-                .executionItems()
-                .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
+        _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
         emptyTags());
 
     VajramID n2ID = vajramID("n2");
@@ -297,6 +281,7 @@ class KryonExecutorTest {
             newCreateNewRequestLogic(n2ID, emptySet()),
             newFacetsFromRequestLogic(n2ID, allFacets),
             _graphExecData -> {
+              List<CompletableFuture<Object>> list = new ArrayList<>();
               for (ExecutionItem executionItem : _graphExecData.executionItems()) {
                 CompletableFuture<Object> n1Result = new CompletableFuture<>();
                 SimpleRequestBuilder<Object> n1Req = new SimpleRequestBuilder<>(Set.of(), n1ID);
@@ -304,15 +289,19 @@ class KryonExecutorTest {
                     .communicationFacade()
                     .triggerDependency(
                         n1DependsOnN1, List.of(new RequestResponseFuture<>(n1Req, n1Result)));
-                n1Result.whenComplete(
-                    (o, throwable) -> {
-                      ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
-                          ._set(
-                              n1DependsOnN1.id(),
-                              new RequestResponse(n1Req, errableFrom(o, throwable)));
-                      _graphExecData.communicationFacade().executeOutputLogic(executionItem);
-                    });
+                list.add(
+                    n1Result.whenComplete(
+                        (o, throwable) -> {
+                          ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                              ._set(
+                                  n1DependsOnN1.id(),
+                                  new RequestResponse(n1Req, errableFrom(o, throwable)));
+                        }));
               }
+              CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
+                  .whenComplete(
+                      (unused, throwable) ->
+                          _graphExecData.communicationFacade().executeOutputLogic());
             },
             ElementTags.of(InvocableOutsideGraph.Creator.create()));
 
@@ -338,11 +327,7 @@ class KryonExecutorTest {
         newCreateNewRequestLogic(l1Dep, emptySet()),
         newFacetsFromRequestLogic(l1Dep, emptySet()),
         _graphExecData -> {
-          _graphExecData
-              .executionItems()
-              .forEach(
-                  executionItem ->
-                      _graphExecData.communicationFacade().executeOutputLogic(executionItem));
+          _graphExecData.communicationFacade().executeOutputLogic();
         },
         emptyTags());
 
@@ -361,6 +346,7 @@ class KryonExecutorTest {
         newCreateNewRequestLogic(l2Dep, emptySet()),
         newFacetsFromRequestLogic(l2Dep, l2Facets),
         _graphExecData -> {
+          List<CompletableFuture<Object>> list = new ArrayList<>();
           for (ExecutionItem executionItem : _graphExecData.executionItems()) {
             CompletableFuture<Object> l1Result = new CompletableFuture<>();
             SimpleRequestBuilder<Object> l1Req = new SimpleRequestBuilder<>(Set.of(), l1Dep);
@@ -368,15 +354,20 @@ class KryonExecutorTest {
                 .communicationFacade()
                 .triggerDependency(
                     l2DependsOnL1, List.of(new RequestResponseFuture<>(l1Req, l1Result)));
-            l1Result.whenComplete(
-                (result, throwable) -> {
-                  ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
-                      ._set(
-                          l2DependsOnL1.id(),
-                          new RequestResponse(l1Req, Errable.errableFrom(result, throwable)));
-                  _graphExecData.communicationFacade().executeOutputLogic(executionItem);
-                });
+            list.add(
+                l1Result.whenComplete(
+                    (result, throwable) -> {
+                      ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                          ._set(
+                              l2DependsOnL1.id(),
+                              new RequestResponse(l1Req, Errable.errableFrom(result, throwable)));
+                    }));
           }
+          CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
+              .whenComplete(
+                  (unused, throwable) -> {
+                    _graphExecData.communicationFacade().executeOutputLogic();
+                  });
         },
         emptyTags());
 
@@ -396,6 +387,7 @@ class KryonExecutorTest {
         newCreateNewRequestLogic(l3Dep, emptySet()),
         newFacetsFromRequestLogic(l3Dep, l3Facets),
         _graphExecData -> {
+          List<CompletableFuture<Object>> list = new ArrayList<>();
           for (ExecutionItem executionItem : _graphExecData.executionItems()) {
             CompletableFuture<Object> l2Result = new CompletableFuture<>();
             SimpleRequestBuilder<Object> l2Req = new SimpleRequestBuilder<>(Set.of(), l2Dep);
@@ -403,13 +395,16 @@ class KryonExecutorTest {
                 .communicationFacade()
                 .triggerDependency(
                     l3DependsOnL2, List.of(new RequestResponseFuture<>(l2Req, l2Result)));
-            l2Result.whenComplete(
-                (o, throwable) -> {
-                  ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
-                      ._set(1, new RequestResponse(l2Req, Errable.errableFrom(o, throwable)));
-                  _graphExecData.communicationFacade().executeOutputLogic(executionItem);
-                });
+            list.add(
+                l2Result.whenComplete(
+                    (o, throwable) -> {
+                      ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                          ._set(1, new RequestResponse(l2Req, Errable.errableFrom(o, throwable)));
+                    }));
           }
+          CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
+              .whenComplete(
+                  (unused, throwable) -> _graphExecData.communicationFacade().executeOutputLogic());
         },
         emptyTags());
 
@@ -428,6 +423,7 @@ class KryonExecutorTest {
         newCreateNewRequestLogic(l4Dep, emptySet()),
         newFacetsFromRequestLogic(l4Dep, l4Facets),
         _graphExecData -> {
+          List<CompletableFuture<Object>> list = new ArrayList<>();
           for (ExecutionItem executionItem : _graphExecData.executionItems()) {
             CompletableFuture<Object> l3Result = new CompletableFuture<>();
             SimpleRequestBuilder<Object> l3Req = new SimpleRequestBuilder<>(Set.of(), l3Dep);
@@ -435,13 +431,18 @@ class KryonExecutorTest {
                 .communicationFacade()
                 .triggerDependency(
                     l4DepOnL3, List.of(new RequestResponseFuture<>(l3Req, l3Result)));
-            l3Result.whenComplete(
-                (o, throwable) -> {
-                  ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
-                      ._set(l4DepOnL3.id(), new RequestResponse(l3Req, errableFrom(o, throwable)));
-                  _graphExecData.communicationFacade().executeOutputLogic(executionItem);
-                });
+            list.add(
+                l3Result.whenComplete(
+                    (o, throwable) -> {
+                      ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                          ._set(
+                              l4DepOnL3.id(),
+                              new RequestResponse(l3Req, errableFrom(o, throwable)));
+                    }));
           }
+          CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
+              .whenComplete(
+                  (unused, throwable) -> _graphExecData.communicationFacade().executeOutputLogic());
         },
         ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
 
@@ -461,6 +462,7 @@ class KryonExecutorTest {
         newCreateNewRequestLogic(finalKryon, emptySet()),
         newFacetsFromRequestLogic(finalKryon, finalFacets),
         _graphExecData -> {
+          List<CompletableFuture<Object>> list = new ArrayList<>();
           for (ExecutionItem executionItem : _graphExecData.executionItems()) {
             CompletableFuture<Object> l4Result = new CompletableFuture<>();
             SimpleRequestBuilder<Object> l4Req = new SimpleRequestBuilder<>(Set.of(), l4Dep);
@@ -468,14 +470,17 @@ class KryonExecutorTest {
                 .communicationFacade()
                 .triggerDependency(
                     finalDepOnL4, List.of(new RequestResponseFuture<>(l4Req, l4Result)));
-            l4Result.whenComplete(
-                (o, throwable) ->
-                    ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
-                        ._set(
-                            finalDepOnL4.id(),
-                            new RequestResponse(l4Req, errableFrom(o, throwable))));
-            _graphExecData.communicationFacade().executeOutputLogic(executionItem);
+            list.add(
+                l4Result.whenComplete(
+                    (o, throwable) ->
+                        ((FacetValuesMapBuilder) executionItem.facetValues()._asBuilder())
+                            ._set(
+                                finalDepOnL4.id(),
+                                new RequestResponse(l4Req, errableFrom(o, throwable)))));
           }
+          CompletableFuture.allOf(list.toArray(CompletableFuture[]::new))
+              .whenComplete(
+                  (unused, throwable) -> _graphExecData.communicationFacade().executeOutputLogic());
         },
         ElementTags.of(InvocableOutsideGraph.Creator.create()));
     CompletableFuture<Object> future =
@@ -518,10 +523,7 @@ class KryonExecutorTest {
         ImmutableMap.of(),
         newCreateNewRequestLogic(dep1ID, emptySet()),
         newFacetsFromRequestLogic(dep1ID, emptySet()),
-        _graphExecData ->
-            _graphExecData
-                .executionItems()
-                .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
+        _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
         emptyTags());
 
     VajramID dep2ID =
@@ -534,10 +536,7 @@ class KryonExecutorTest {
         ImmutableMap.of(),
         newCreateNewRequestLogic(dep2ID, emptySet()),
         newFacetsFromRequestLogic(dep2ID, emptySet()),
-        _graphExecData ->
-            _graphExecData
-                .executionItems()
-                .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
+        _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
         emptyTags());
 
     LongAdder numberOfExecutions = new LongAdder();
@@ -567,6 +566,7 @@ class KryonExecutorTest {
                 newCreateNewRequestLogic(kryonName, emptySet()),
                 newFacetsFromRequestLogic(kryonName, allFacets),
                 _graphExecData -> {
+                  List<CompletableFuture<?>> list = new ArrayList<>();
                   for (ExecutionItem executionItem : _graphExecData.executionItems()) {
                     CompletableFuture<@Nullable Object> dep1Future = new CompletableFuture<>();
                     CompletableFuture<@Nullable Object> dep2Future = new CompletableFuture<>();
@@ -600,13 +600,27 @@ class KryonExecutorTest {
                             List.of(
                                 new RequestResponseFuture<Request<Object>, Object>(
                                     dep2Req, dep2Future)));
-                    CompletableFuture.allOf(dep1Future, dep2Future)
-                        .whenComplete(
-                            (unused, throwable) ->
-                                _graphExecData
-                                    .communicationFacade()
-                                    .executeOutputLogic(executionItem));
+                    list.add(
+                        CompletableFuture.allOf(dep1Future, dep2Future)
+                            .whenComplete(
+                                (unused, throwable) -> {
+                                  FacetValuesMapBuilder f =
+                                      (FacetValuesMapBuilder)
+                                          executionItem.facetValues()._asBuilder();
+                                  f._set(
+                                      dep1.id(),
+                                      new RequestResponse(
+                                          dep1Req, errableFrom(dep1Future.join(), throwable)));
+                                  f._set(
+                                      dep2.id(),
+                                      new RequestResponse(
+                                          dep2Req, errableFrom(dep2Future.join(), throwable)));
+                                }));
                   }
+                  CompletableFuture.allOf(list.toArray(new CompletableFuture<?>[0]))
+                      .whenComplete(
+                          (unused, throwable) ->
+                              _graphExecData.communicationFacade().executeOutputLogic());
                 },
                 ElementTags.of(InvocableOutsideGraph.Creator.create()))
             .vajramID();
@@ -649,10 +663,7 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(n1ID, emptySet()),
             newFacetsFromRequestLogic(n1ID, emptySet()),
-            _graphExecData ->
-                _graphExecData
-                    .executionItems()
-                    .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
+            _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
             emptyTags());
 
     CountDownLatch countDownLatch = new CountDownLatch(1);
@@ -689,10 +700,7 @@ class KryonExecutorTest {
             ImmutableMap.of(),
             newCreateNewRequestLogic(n1.vajramID(), emptySet()),
             newFacetsFromRequestLogic(n1.vajramID(), allFacets),
-            _graphExecData ->
-                _graphExecData
-                    .executionItems()
-                    .forEach(e -> _graphExecData.communicationFacade().executeOutputLogic(e)),
+            _graphExecData -> _graphExecData.communicationFacade().executeOutputLogic(),
             ElementTags.of(List.of(InvocableOutsideGraph.Creator.create())));
 
     CompletableFuture<Object> future =
@@ -703,7 +711,7 @@ class KryonExecutorTest {
     kryonExecutor.shutdownNow();
     countDownLatch.countDown();
     assertThat(future)
-        .failsWithin(1, HOURS)
+        .failsWithin(TIMEOUT)
         .withThrowableOfType(ExecutionException.class)
         .withCauseExactlyInstanceOf(RejectedExecutionException.class)
         .withMessage(
